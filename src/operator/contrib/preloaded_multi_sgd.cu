@@ -30,14 +30,16 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(preloaded_multi_sgd_update)
-.set_attr<FCompute>("FCompute<gpu>", PreloadedMultiSGDUpdate<gpu, preloaded_type_identity, 2>);
+    .set_attr<FCompute>("FCompute<gpu>", PreloadedMultiSGDUpdate<gpu, preloaded_type_identity, 2>);
 NNVM_REGISTER_OP(preloaded_multi_sgd_mom_update)
-.set_attr<FCompute>("FCompute<gpu>", PreloadedMultiSGDMomUpdate<gpu, preloaded_type_identity, 3>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        PreloadedMultiSGDMomUpdate<gpu, preloaded_type_identity, 3>);
 NNVM_REGISTER_OP(preloaded_multi_mp_sgd_update)
-.set_attr<FCompute>("FCompute<gpu>", PreloadedMultiSGDUpdate<gpu, preloaded_single_precision, 3>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        PreloadedMultiSGDUpdate<gpu, preloaded_single_precision, 3>);
 NNVM_REGISTER_OP(preloaded_multi_mp_sgd_mom_update)
-.set_attr<FCompute>("FCompute<gpu>",
-                    PreloadedMultiSGDMomUpdate<gpu, preloaded_single_precision, 4>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        PreloadedMultiSGDMomUpdate<gpu, preloaded_single_precision, 4>);
 
 }  // namespace op
 }  // namespace mxnet

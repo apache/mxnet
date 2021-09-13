@@ -29,8 +29,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(multi_lars)
-.set_attr<FCompute>("FCompute<gpu>", MultiLARS<gpu>);
+NNVM_REGISTER_OP(multi_lars).set_attr<FCompute>("FCompute<gpu>", MultiLARS<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

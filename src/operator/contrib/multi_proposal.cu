@@ -24,7 +24,7 @@
  * \file multi_proposal.cu
  * \brief MultiProposal Operator
  * \author Shaoqing Ren, Xizhou Zhu, Jian Guo
-*/
+ */
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -47,12 +47,12 @@
 
 #define DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
 
-#define FRCNN_CUDA_CHECK(condition) \
-  /* Code block avoids redefinition of cudaError_t error */ \
-  do { \
-    cudaError_t error = condition; \
+#define FRCNN_CUDA_CHECK(condition)                                   \
+  /* Code block avoids redefinition of cudaError_t error */           \
+  do {                                                                \
+    cudaError_t error = condition;                                    \
     CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
-} while (0)
+  } while (0)
 
 namespace mshadow {
 namespace cuda {
@@ -62,7 +62,7 @@ namespace multi_proposal {
 // workspace_proposals are (b, h * w * anchor, 5)
 // w defines "x" and h defines "y"
 // count should be total anchors numbers, h * w * anchors
-template<typename Dtype>
+template <typename Dtype>
 __global__ void ProposalGridKernel(const int count,
                                    const int num_anchors,
                                    const int height,
@@ -70,8 +70,7 @@ __global__ void ProposalGridKernel(const int count,
                                    const int feature_stride,
                                    const Dtype* scores,
                                    Dtype* workspace_proposals) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-       index < count;
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
        index += blockDim.x * gridDim.x) {
     int a = index % num_anchors;
     int w = (index / num_anchors) % width;
@@ -92,7 +91,7 @@ __global__ void ProposalGridKernel(const int count,
 // out_pred_boxes are (b, h * w * anchor, 5)
 // count should be total anchors numbers, b * h * w * anchors
 // in-place write: boxes and out_pred_boxes are the same location
-template<typename Dtype>
+template <typename Dtype>
 __global__ void BBoxPredKernel(const int count,
                                const int num_anchors,
                                const int feat_height,
@@ -102,8 +101,7 @@ __global__ void BBoxPredKernel(const int count,
                                const Dtype* boxes,
                                const Dtype* deltas,
                                Dtype* out_pred_boxes) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-       index < count;
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
        index += blockDim.x * gridDim.x) {
     int a = index % num_anchors;
     int w = (index / num_anchors) % feat_width;
@@ -111,16 +109,16 @@ __global__ void BBoxPredKernel(const int count,
     int b = index / num_anchors / feat_width / feat_height;
 
     float im_height = im_infos[b * 3];
-    float im_width = im_infos[b * 3 + 1];
+    float im_width  = im_infos[b * 3 + 1];
     int real_height = static_cast<int>(im_height / feature_stride);
-    int real_width = static_cast<int>(im_width / feature_stride);
+    int real_width  = static_cast<int>(im_width / feature_stride);
 
-    float width = boxes[index * 5 + 2] - boxes[index * 5 + 0] + 1.0f;
+    float width  = boxes[index * 5 + 2] - boxes[index * 5 + 0] + 1.0f;
     float height = boxes[index * 5 + 3] - boxes[index * 5 + 1] + 1.0f;
-    float ctr_x = boxes[index * 5 + 0] + 0.5f * (width - 1.0f);
-    float ctr_y = boxes[index * 5 + 1] + 0.5f * (height - 1.0f);
+    float ctr_x  = boxes[index * 5 + 0] + 0.5f * (width - 1.0f);
+    float ctr_y  = boxes[index * 5 + 1] + 0.5f * (height - 1.0f);
 
-    int ba = (b * num_anchors + a);
+    int ba   = (b * num_anchors + a);
     float dx = deltas[((ba * 4) * feat_height + h) * feat_width + w];
     float dy = deltas[((ba * 4 + 1) * feat_height + h) * feat_width + w];
     float dw = deltas[((ba * 4 + 2) * feat_height + h) * feat_width + w];
@@ -128,8 +126,8 @@ __global__ void BBoxPredKernel(const int count,
 
     float pred_ctr_x = dx * width + ctr_x;
     float pred_ctr_y = dy * height + ctr_y;
-    float pred_w = exp(dw) * width;
-    float pred_h = exp(dh) * height;
+    float pred_w     = exp(dw) * width;
+    float pred_h     = exp(dh) * height;
 
     float pred_x1 = pred_ctr_x - 0.5f * (pred_w - 1.0f);
     float pred_y1 = pred_ctr_y - 0.5f * (pred_h - 1.0f);
@@ -157,7 +155,7 @@ __global__ void BBoxPredKernel(const int count,
 // out_pred_boxes are (b, h * w * anchor, 5)
 // count should be total anchors numbers, b * h * w * anchors
 // in-place write: boxes and out_pred_boxes are the same location
-template<typename Dtype>
+template <typename Dtype>
 __global__ void IoUPredKernel(const int count,
                               const int num_anchors,
                               const int feat_height,
@@ -167,8 +165,7 @@ __global__ void IoUPredKernel(const int count,
                               const Dtype* boxes,
                               const Dtype* deltas,
                               Dtype* out_pred_boxes) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-       index < count;
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
        index += blockDim.x * gridDim.x) {
     int a = index % num_anchors;
     int w = (index / num_anchors) % feat_width;
@@ -176,16 +173,16 @@ __global__ void IoUPredKernel(const int count,
     int b = index / num_anchors / feat_width / feat_height;
 
     float im_height = im_infos[b * 3];
-    float im_width = im_infos[b * 3 + 1];
+    float im_width  = im_infos[b * 3 + 1];
     int real_height = static_cast<int>(im_height / feature_stride);
-    int real_width = static_cast<int>(im_width / feature_stride);
+    int real_width  = static_cast<int>(im_width / feature_stride);
 
     float x1 = boxes[index * 5 + 0];
     float y1 = boxes[index * 5 + 1];
     float x2 = boxes[index * 5 + 2];
     float y2 = boxes[index * 5 + 3];
 
-    int ba = (b * num_anchors + a);
+    int ba    = (b * num_anchors + a);
     float dx1 = deltas[((ba * 4) * feat_height + h) * feat_width + w];
     float dy1 = deltas[((ba * 4 + 1) * feat_height + h) * feat_width + w];
     float dx2 = deltas[((ba * 4 + 2) * feat_height + h) * feat_width + w];
@@ -210,18 +207,17 @@ __global__ void IoUPredKernel(const int count,
 // filter box with stride less than rpn_min_size
 // filter: set score to zero
 // dets (b, n, 5)
-template<typename Dtype>
+template <typename Dtype>
 __global__ void FilterBoxKernel(const int count,
                                 const int count_anchors,
                                 const float original_min_size,
                                 const Dtype* im_infos,
                                 Dtype* dets) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-       index < count;
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
        index += blockDim.x * gridDim.x) {
-    int b = index / count_anchors;
-    float iw = dets[index * 5 + 2] - dets[index * 5 + 0] + 1.0f;
-    float ih = dets[index * 5 + 3] - dets[index * 5 + 1] + 1.0f;
+    int b          = index / count_anchors;
+    float iw       = dets[index * 5 + 2] - dets[index * 5 + 0] + 1.0f;
+    float ih       = dets[index * 5 + 3] - dets[index * 5 + 1] + 1.0f;
     float min_size = original_min_size * im_infos[b * 3 + 2];
     if (iw < min_size || ih < min_size) {
       dets[index * 5 + 0] -= min_size / 2;
@@ -236,13 +232,9 @@ __global__ void FilterBoxKernel(const int count,
 // copy score and init order
 // dets (n, 5); score (n, ); order (n, )
 // count should be n (total anchors or proposals)
-template<typename Dtype>
-__global__ void CopyScoreKernel(const int count,
-                                const Dtype* dets,
-                                Dtype* score,
-                                int* order) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-       index < count;
+template <typename Dtype>
+__global__ void CopyScoreKernel(const int count, const Dtype* dets, Dtype* score, int* order) {
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
        index += blockDim.x * gridDim.x) {
     score[index] = dets[index * 5 + 4];
     order[index] = index;
@@ -252,43 +244,42 @@ __global__ void CopyScoreKernel(const int count,
 // reorder proposals according to order and keep the top_n proposals
 // prev_dets (n, 5); order (n, ); dets (n, 5)
 // count should be output anchor numbers (top_n)
-template<typename Dtype>
+template <typename Dtype>
 __global__ void ReorderProposalsKernel(const int count,
                                        const Dtype* prev_dets,
                                        const int* order,
                                        Dtype* dets) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-       index < count;
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
        index += blockDim.x * gridDim.x) {
     const int order_i = order[index];
-    for (int j = 0; j < 5; j ++) {
+    for (int j = 0; j < 5; j++) {
       dets[index * 5 + j] = prev_dets[order_i * 5 + j];
     }
   }
 }
 
-__device__ inline float devIoU(float const * const a, float const * const b) {
+__device__ inline float devIoU(float const* const a, float const* const b) {
   float left = max(a[0], b[0]), right = min(a[2], b[2]);
   float top = max(a[1], b[1]), bottom = min(a[3], b[3]);
   float width = max(right - left + 1, 0.f), height = max(bottom - top + 1, 0.f);
   float interS = width * height;
-  float Sa = (a[2] - a[0] + 1) * (a[3] - a[1] + 1);
-  float Sb = (b[2] - b[0] + 1) * (b[3] - b[1] + 1);
+  float Sa     = (a[2] - a[0] + 1) * (a[3] - a[1] + 1);
+  float Sb     = (b[2] - b[0] + 1) * (b[3] - b[1] + 1);
   return interS / (Sa + Sb - interS);
 }
 
-__global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
-                           const float *dev_boxes, uint64_t *dev_mask) {
+__global__ void nms_kernel(const int n_boxes,
+                           const float nms_overlap_thresh,
+                           const float* dev_boxes,
+                           uint64_t* dev_mask) {
   const int threadsPerBlock = sizeof(uint64_t) * 8;
-  const int row_start = blockIdx.y;
-  const int col_start = blockIdx.x;
+  const int row_start       = blockIdx.y;
+  const int col_start       = blockIdx.x;
 
   // if (row_start > col_start) return;
 
-  const int row_size =
-        min(n_boxes - row_start * threadsPerBlock, threadsPerBlock);
-  const int col_size =
-        min(n_boxes - col_start * threadsPerBlock, threadsPerBlock);
+  const int row_size = min(n_boxes - row_start * threadsPerBlock, threadsPerBlock);
+  const int col_size = min(n_boxes - col_start * threadsPerBlock, threadsPerBlock);
 
   __shared__ float block_boxes[threadsPerBlock * 5];
   if (threadIdx.x < col_size) {
@@ -307,10 +298,10 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
 
   if (threadIdx.x < row_size) {
     const int cur_box_idx = threadsPerBlock * row_start + threadIdx.x;
-    const float *cur_box = dev_boxes + cur_box_idx * 5;
-    int i = 0;
-    uint64_t t = 0;
-    int start = 0;
+    const float* cur_box  = dev_boxes + cur_box_idx * 5;
+    int i                 = 0;
+    uint64_t t            = 0;
+    int start             = 0;
     if (row_start == col_start) {
       start = threadIdx.x + 1;
     }
@@ -319,35 +310,30 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
         t |= 1ULL << i;
       }
     }
-    const int col_blocks = DIVUP(n_boxes, threadsPerBlock);
+    const int col_blocks                           = DIVUP(n_boxes, threadsPerBlock);
     dev_mask[cur_box_idx * col_blocks + col_start] = t;
   }
 }
 
-void _nms(mshadow::Stream<gpu> *s,
+void _nms(mshadow::Stream<gpu>* s,
           const mshadow::Tensor<gpu, 2>& boxes,
           const float nms_overlap_thresh,
           const int rpn_post_nms_top_n,
-          int *keep,
-          int *num_out) {
+          int* keep,
+          int* num_out) {
   const int threadsPerBlock = sizeof(uint64_t) * 8;
-  const int boxes_num = boxes.size(0);
-  const int boxes_dim = boxes.size(1);
+  const int boxes_num       = boxes.size(0);
+  const int boxes_dim       = boxes.size(1);
 
-  float* boxes_dev = boxes.dptr_;
+  float* boxes_dev   = boxes.dptr_;
   uint64_t* mask_dev = nullptr;
 
   const int col_blocks = DIVUP(boxes_num, threadsPerBlock);
-  FRCNN_CUDA_CHECK(cudaMalloc(&mask_dev,
-                              boxes_num * col_blocks * sizeof(uint64_t)));
+  FRCNN_CUDA_CHECK(cudaMalloc(&mask_dev, boxes_num * col_blocks * sizeof(uint64_t)));
 
-  dim3 blocks(DIVUP(boxes_num, threadsPerBlock),
-              DIVUP(boxes_num, threadsPerBlock));
+  dim3 blocks(DIVUP(boxes_num, threadsPerBlock), DIVUP(boxes_num, threadsPerBlock));
   dim3 threads(threadsPerBlock);
-  nms_kernel<<<blocks, threads>>>(boxes_num,
-                                  nms_overlap_thresh,
-                                  boxes_dev,
-                                  mask_dev);
+  nms_kernel<<<blocks, threads>>>(boxes_num, nms_overlap_thresh, boxes_dev, mask_dev);
   FRCNN_CUDA_CHECK(cudaGetLastError());
   std::vector<uint64_t> mask_host(boxes_num * col_blocks);
 
@@ -355,7 +341,8 @@ void _nms(mshadow::Stream<gpu> *s,
   FRCNN_CUDA_CHECK(cudaMemcpyAsync(&mask_host[0],
                                    mask_dev,
                                    sizeof(uint64_t) * boxes_num * col_blocks,
-                                   cudaMemcpyDeviceToHost, stream));
+                                   cudaMemcpyDeviceToHost,
+                                   stream));
   FRCNN_CUDA_CHECK(cudaStreamSynchronize(stream));
 
   std::vector<uint64_t> remv(col_blocks);
@@ -363,13 +350,14 @@ void _nms(mshadow::Stream<gpu> *s,
 
   int num_to_keep = 0;
   for (int i = 0; i < boxes_num; i++) {
-    int nblock = i / threadsPerBlock;
+    int nblock  = i / threadsPerBlock;
     int inblock = i % threadsPerBlock;
 
     if (!(remv[nblock] & (1ULL << inblock))) {
       keep[num_to_keep++] = i;
-      if (num_to_keep >= rpn_post_nms_top_n) break;
-      uint64_t *p = &mask_host[0] + i * col_blocks;
+      if (num_to_keep >= rpn_post_nms_top_n)
+        break;
+      uint64_t* p = &mask_host[0] + i * col_blocks;
       for (int j = nblock; j < col_blocks; j++) {
         remv[j] |= p[j];
       }
@@ -383,7 +371,7 @@ void _nms(mshadow::Stream<gpu> *s,
 // copy proposals to output
 // dets (top_n, 5); keep (top_n, ); out (top_n, )
 // count should be top_n (total anchors or proposals)
-template<typename Dtype>
+template <typename Dtype>
 __global__ void PrepareOutput(const int count,
                               const Dtype* dets,
                               const int* keep,
@@ -391,8 +379,7 @@ __global__ void PrepareOutput(const int count,
                               const int image_index,
                               Dtype* out,
                               Dtype* score) {
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-       index < count;
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
        index += blockDim.x * gridDim.x) {
     out[index * 5] = image_index;
     if (index < out_size) {
@@ -417,18 +404,18 @@ __global__ void PrepareOutput(const int count,
 namespace mxnet {
 namespace op {
 
-template<typename xpu>
-class MultiProposalGPUOp : public Operator{
+template <typename xpu>
+class MultiProposalGPUOp : public Operator {
  public:
   explicit MultiProposalGPUOp(MultiProposalParam param) {
     this->param_ = param;
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_states) {
+  virtual void Forward(const OpContext& ctx,
+                       const std::vector<TBlob>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& out_data,
+                       const std::vector<TBlob>& aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
     using namespace mshadow::cuda;
@@ -440,25 +427,25 @@ class MultiProposalGPUOp : public Operator{
     /*CHECK_EQ(in_data[proposal::kClsProb].shape_[0], 1)
       << "Sorry, multiple images each device is not implemented.";*/
 
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
 
-    Tensor<xpu, 4> scores = in_data[proposal::kClsProb].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4> scores      = in_data[proposal::kClsProb].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> bbox_deltas = in_data[proposal::kBBoxPred].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 2> im_info = in_data[proposal::kImInfo].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2> im_info     = in_data[proposal::kImInfo].get<xpu, 2, real_t>(s);
 
-    Tensor<xpu, 2> out = out_data[proposal::kOut].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2> out       = out_data[proposal::kOut].get<xpu, 2, real_t>(s);
     Tensor<xpu, 2> out_score = out_data[proposal::kScore].get<xpu, 2, real_t>(s);
 
-    int num_images = scores.size(0);
-    int num_anchors = scores.size(1) / 2;
-    int height = scores.size(2);
-    int width = scores.size(3);
+    int num_images    = scores.size(0);
+    int num_anchors   = scores.size(1) / 2;
+    int height        = scores.size(2);
+    int width         = scores.size(3);
     int count_anchors = num_anchors * height * width;  // count of total anchors
-    int count = num_images * count_anchors;
+    int count         = num_images * count_anchors;
     // set to -1 for max
-    int rpn_pre_nms_top_n = (param_.rpn_pre_nms_top_n > 0) ? param_.rpn_pre_nms_top_n
-                                                           : count_anchors;
-    rpn_pre_nms_top_n = std::min(rpn_pre_nms_top_n, count_anchors);
+    int rpn_pre_nms_top_n =
+        (param_.rpn_pre_nms_top_n > 0) ? param_.rpn_pre_nms_top_n : count_anchors;
+    rpn_pre_nms_top_n      = std::min(rpn_pre_nms_top_n, count_anchors);
     int rpn_post_nms_top_n = std::min(param_.rpn_post_nms_top_n, rpn_pre_nms_top_n);
 
     // Generate first anchors based on base anchor
@@ -469,55 +456,68 @@ class MultiProposalGPUOp : public Operator{
     base_anchor[3] = param_.feature_stride - 1.0;
     CHECK_EQ(num_anchors, param_.ratios.ndim() * param_.scales.ndim());
     std::vector<float> anchors;
-    utils::GenerateAnchors(base_anchor,
-                           param_.ratios,
-                           param_.scales,
-                           &anchors);
+    utils::GenerateAnchors(base_anchor, param_.ratios, param_.scales, &anchors);
 
     // Copy generated anchors to GPU
     float* workspace_proposals_ptr = nullptr;
-    FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr,
-                                sizeof(float) * num_images * count_anchors * 5));
+    FRCNN_CUDA_CHECK(
+        cudaMalloc(&workspace_proposals_ptr, sizeof(float) * num_images * count_anchors * 5));
     Tensor<xpu, 3> workspace_proposals(workspace_proposals_ptr,
                                        Shape3(num_images, count_anchors, 5));
 
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
 
-    FRCNN_CUDA_CHECK(cudaMemcpyAsync(workspace_proposals.dptr_, &anchors[0],
+    FRCNN_CUDA_CHECK(cudaMemcpyAsync(workspace_proposals.dptr_,
+                                     &anchors[0],
                                      sizeof(float) * anchors.size(),
-                                     cudaMemcpyHostToDevice, stream));
+                                     cudaMemcpyHostToDevice,
+                                     stream));
 
     // Copy proposals to a mesh grid
     dim3 dimGrid((count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
     dim3 dimBlock(kMaxThreadsPerBlock);
     CheckLaunchParam(dimGrid, dimBlock, "ProposalGrid");
-    ProposalGridKernel<<<dimGrid, dimBlock>>>(
-      count, num_anchors, height, width, param_.feature_stride,
-      scores.dptr_, workspace_proposals.dptr_);
+    ProposalGridKernel<<<dimGrid, dimBlock>>>(count,
+                                              num_anchors,
+                                              height,
+                                              width,
+                                              param_.feature_stride,
+                                              scores.dptr_,
+                                              workspace_proposals.dptr_);
     FRCNN_CUDA_CHECK(cudaGetLastError());
 
     // Transform anchors and bbox_deltas into bboxes
     CheckLaunchParam(dimGrid, dimBlock, "BBoxPred");
     if (param_.iou_loss) {
-      IoUPredKernel<<<dimGrid, dimBlock>>>(
-        count, num_anchors, height, width, param_.feature_stride, im_info.dptr_,
-        workspace_proposals.dptr_, bbox_deltas.dptr_, workspace_proposals.dptr_);
+      IoUPredKernel<<<dimGrid, dimBlock>>>(count,
+                                           num_anchors,
+                                           height,
+                                           width,
+                                           param_.feature_stride,
+                                           im_info.dptr_,
+                                           workspace_proposals.dptr_,
+                                           bbox_deltas.dptr_,
+                                           workspace_proposals.dptr_);
     } else {
-      BBoxPredKernel<<<dimGrid, dimBlock>>>(
-        count, num_anchors, height, width, param_.feature_stride, im_info.dptr_,
-        workspace_proposals.dptr_, bbox_deltas.dptr_, workspace_proposals.dptr_);
+      BBoxPredKernel<<<dimGrid, dimBlock>>>(count,
+                                            num_anchors,
+                                            height,
+                                            width,
+                                            param_.feature_stride,
+                                            im_info.dptr_,
+                                            workspace_proposals.dptr_,
+                                            bbox_deltas.dptr_,
+                                            workspace_proposals.dptr_);
     }
     FRCNN_CUDA_CHECK(cudaGetLastError());
 
     // filter boxes with less than rpn_min_size
     CheckLaunchParam(dimGrid, dimBlock, "FilterBox");
     FilterBoxKernel<<<dimGrid, dimBlock>>>(
-      count, count_anchors, param_.rpn_min_size, im_info.dptr_, workspace_proposals.dptr_);
+        count, count_anchors, param_.rpn_min_size, im_info.dptr_, workspace_proposals.dptr_);
     FRCNN_CUDA_CHECK(cudaGetLastError());
 
-
-
-    dimGrid = dim3((count_anchors + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
+    dimGrid  = dim3((count_anchors + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
     dimBlock = dim3(kMaxThreadsPerBlock);
     // Copy score to a continuous memory
     float* score_ptr = nullptr;
@@ -528,58 +528,65 @@ class MultiProposalGPUOp : public Operator{
     Tensor<xpu, 1, int> order(order_ptr, Shape1(count_anchors));
 
     float* workspace_ordered_proposals_ptr = nullptr;
-    FRCNN_CUDA_CHECK(cudaMalloc(&workspace_ordered_proposals_ptr,
-        sizeof(float) * rpn_pre_nms_top_n * 5));
+    FRCNN_CUDA_CHECK(
+        cudaMalloc(&workspace_ordered_proposals_ptr, sizeof(float) * rpn_pre_nms_top_n * 5));
     Tensor<xpu, 2> workspace_ordered_proposals(workspace_ordered_proposals_ptr,
-        Shape2(rpn_pre_nms_top_n, 5));
+                                               Shape2(rpn_pre_nms_top_n, 5));
 
     int* keep;
     FRCNN_CUDA_CHECK(cudaMalloc(&keep, sizeof(int) * rpn_pre_nms_top_n));
 
     for (int b = 0; b < num_images; b++) {
       CheckLaunchParam(dimGrid, dimBlock, "CopyScore");
-      CopyScoreKernel << <dimGrid, dimBlock >> >(
-          count_anchors, workspace_proposals.dptr_ + b * count_anchors * 5,
-          score.dptr_, order.dptr_);
+      CopyScoreKernel<<<dimGrid, dimBlock>>>(count_anchors,
+                                             workspace_proposals.dptr_ + b * count_anchors * 5,
+                                             score.dptr_,
+                                             order.dptr_);
       FRCNN_CUDA_CHECK(cudaGetLastError());
 
       // argsort score, save order
       thrust::stable_sort_by_key(thrust::device,
-          score.dptr_,
-          score.dptr_ + score.size(0),
-          order.dptr_,
-          thrust::greater<real_t>());
+                                 score.dptr_,
+                                 score.dptr_ + score.size(0),
+                                 order.dptr_,
+                                 thrust::greater<real_t>());
       FRCNN_CUDA_CHECK(cudaGetLastError());
 
       // Reorder proposals according to order
 
       dimGrid.x = (rpn_pre_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
       CheckLaunchParam(dimGrid, dimBlock, "ReorderProposals");
-      ReorderProposalsKernel << <dimGrid, dimBlock >> >(
-          rpn_pre_nms_top_n, workspace_proposals.dptr_ + b * count_anchors * 5,
-          order.dptr_, workspace_ordered_proposals.dptr_);
+      ReorderProposalsKernel<<<dimGrid, dimBlock>>>(
+          rpn_pre_nms_top_n,
+          workspace_proposals.dptr_ + b * count_anchors * 5,
+          order.dptr_,
+          workspace_ordered_proposals.dptr_);
       FRCNN_CUDA_CHECK(cudaGetLastError());
 
       // perform nms
       std::vector<int> _keep(workspace_ordered_proposals.size(0));
       int out_size = 0;
-      _nms(s, workspace_ordered_proposals,
+      _nms(s,
+           workspace_ordered_proposals,
            param_.threshold,
            rpn_post_nms_top_n,
            &_keep[0],
            &out_size);
 
       // copy nms result to gpu
-      FRCNN_CUDA_CHECK(cudaMemcpyAsync(keep, &_keep[0], sizeof(int) * _keep.size(),
-                                       cudaMemcpyHostToDevice, stream));
+      FRCNN_CUDA_CHECK(cudaMemcpyAsync(
+          keep, &_keep[0], sizeof(int) * _keep.size(), cudaMemcpyHostToDevice, stream));
 
       // copy results after nms
       dimGrid.x = (param_.rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
       CheckLaunchParam(dimGrid, dimBlock, "PrepareOutput");
-      PrepareOutput << <dimGrid, dimBlock >> >(
-          param_.rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
-          out.dptr_ + b * param_.rpn_post_nms_top_n * 5,
-          out_score.dptr_ + b * param_.rpn_post_nms_top_n);
+      PrepareOutput<<<dimGrid, dimBlock>>>(param_.rpn_post_nms_top_n,
+                                           workspace_ordered_proposals.dptr_,
+                                           keep,
+                                           out_size,
+                                           b,
+                                           out.dptr_ + b * param_.rpn_post_nms_top_n * 5,
+                                           out_score.dptr_ + b * param_.rpn_post_nms_top_n);
       FRCNN_CUDA_CHECK(cudaGetLastError());
     }
     // free temporary memory
@@ -590,21 +597,21 @@ class MultiProposalGPUOp : public Operator{
     FRCNN_CUDA_CHECK(cudaFree(order_ptr));
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_states) {
+  virtual void Backward(const OpContext& ctx,
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_grad.size(), 3);
 
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s         = ctx.get_stream<xpu>();
     Tensor<xpu, 4> gscores = in_grad[proposal::kClsProb].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> gbbox = in_grad[proposal::kBBoxPred].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 2> ginfo = in_grad[proposal::kImInfo].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 4> gbbox   = in_grad[proposal::kBBoxPred].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 2> ginfo   = in_grad[proposal::kImInfo].get<xpu, 2, real_t>(s);
 
     // can not assume the grad would be zero
     Assign(gscores, req[proposal::kClsProb], 0);
@@ -616,7 +623,7 @@ class MultiProposalGPUOp : public Operator{
   MultiProposalParam param_;
 };  // class MultiProposalGPUOp
 
-template<>
+template <>
 Operator* CreateOp<gpu>(MultiProposalParam param) {
   return new MultiProposalGPUOp<gpu>(param);
 }

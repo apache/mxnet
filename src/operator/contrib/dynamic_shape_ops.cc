@@ -19,7 +19,7 @@
 /*!
  * Copyright (c) 2018 by Contributors
  * \file dynamic_shape_ops.cc
-*/
+ */
 
 #include "./dynamic_shape_ops-inl.h"
 #include "../tensor/elemwise_binary_op.h"
@@ -29,8 +29,8 @@ namespace mxnet {
 namespace op {
 
 inline bool DynamicReshapeType(const nnvm::NodeAttrs& attrs,
-                               std::vector<int> *in_attrs,
-                               std::vector<int> *out_attrs) {
+                               std::vector<int>* in_attrs,
+                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
@@ -41,8 +41,8 @@ inline bool DynamicReshapeType(const nnvm::NodeAttrs& attrs,
 bool DynamicReshapeStorageType(const nnvm::NodeAttrs& attrs,
                                const int dev_mask,
                                DispatchMode* dispatch_mode,
-                               std::vector<int> *in_attrs,
-                               std::vector<int> *out_attrs) {
+                               std::vector<int>* in_attrs,
+                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   for (size_t i = 0; i < in_attrs->size(); ++i) {
@@ -58,8 +58,8 @@ bool DynamicReshapeStorageType(const nnvm::NodeAttrs& attrs,
 bool DynamicReshapeBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                        const int dev_mask,
                                        DispatchMode* dispatch_mode,
-                                       std::vector<int> *in_attrs,
-                                       std::vector<int> *out_attrs) {
+                                       std::vector<int>* in_attrs,
+                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
   for (size_t i = 0; i < in_attrs->size(); ++i) {
@@ -73,7 +73,7 @@ bool DynamicReshapeBackwardStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_dynamic_reshape)
-.describe(R"code(
+    .describe(R"code(
 Experimental support for reshape operator with dynamic shape.
 
 Accepts 2 inputs - data and shape.
@@ -119,26 +119,26 @@ Example::
    // out will be of shape (2,75)
 
 )code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "shape"};
-  })
-.set_attr<nnvm::FInferType>("FInferType", DynamicReshapeType)
-.set_attr<FInferStorageType>("FInferStorageType", DynamicReshapeStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", DynamicReshapeForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_contrib_dynamic_reshape"})
-.add_argument("data", "NDArray-or-Symbol", "Data")
-.add_argument("shape", "NDArray-or-Symbol", "Shape");
-
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data", "shape"};
+                                     })
+    .set_attr<nnvm::FInferType>("FInferType", DynamicReshapeType)
+    .set_attr<FInferStorageType>("FInferStorageType", DynamicReshapeStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DynamicReshapeForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               ElemwiseGradUseNone{"_backward_contrib_dynamic_reshape"})
+    .add_argument("data", "NDArray-or-Symbol", "Data")
+    .add_argument("shape", "NDArray-or-Symbol", "Shape");
 
 NNVM_REGISTER_OP(_backward_contrib_dynamic_reshape)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", DynamicReshapeBackwardStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", DynamicReshapeBackward<cpu>);
+    .set_num_inputs(1)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FInferStorageType>("FInferStorageType", DynamicReshapeBackwardStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DynamicReshapeBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

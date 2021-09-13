@@ -150,7 +150,7 @@ T* ObjectPool<T>::New(Args&&... args) {
     if (head_->next == nullptr) {
       AllocateChunk();
     }
-    ret = head_;
+    ret   = head_;
     head_ = head_->next;
   }
   return new (static_cast<void*>(ret)) T(std::forward<Args>(args)...);
@@ -163,7 +163,7 @@ void ObjectPool<T>::Delete(T* ptr) {
   {
     std::lock_guard<std::mutex> lock{m_};
     linked_list_ptr->next = head_;
-    head_ = linked_list_ptr;
+    head_                 = linked_list_ptr;
   }
 }
 
@@ -199,12 +199,12 @@ void ObjectPool<T>::AllocateChunk() {
 #endif
   allocated_.emplace_back(new_chunk_ptr);
   auto new_chunk = static_cast<LinkedList*>(new_chunk_ptr);
-  auto size = kPageSize / sizeof(LinkedList);
+  auto size      = kPageSize / sizeof(LinkedList);
   for (std::size_t i = 0; i < size - 1; ++i) {
     new_chunk[i].next = &new_chunk[i + 1];
   }
   new_chunk[size - 1].next = head_;
-  head_ = new_chunk;
+  head_                    = new_chunk;
 }
 
 template <typename T>

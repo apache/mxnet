@@ -20,7 +20,7 @@
 /*!
  * \file histogram-inl.h
  * \brief Function definition of histogram operator
-*/
+ */
 #ifndef MXNET_OPERATOR_TENSOR_HISTOGRAM_INL_H_
 #define MXNET_OPERATOR_TENSOR_HISTOGRAM_INL_H_
 
@@ -51,17 +51,18 @@ struct HistogramParam : public dmlc::Parameter<HistogramParam> {
   dmlc::optional<mxnet::Tuple<double>> range;
   DMLC_DECLARE_PARAMETER(HistogramParam) {
     DMLC_DECLARE_FIELD(bin_cnt)
-      .set_default(dmlc::optional<int>())
-      .describe("Number of bins for uniform case");
+        .set_default(dmlc::optional<int>())
+        .describe("Number of bins for uniform case");
     DMLC_DECLARE_FIELD(range)
-      .set_default(dmlc::optional<mxnet::Tuple<double>>())
-      .describe("The lower and upper range of the bins. if not provided, "
-                "range is simply (a.min(), a.max()). values outside the "
-                "range are ignored. the first element of the range must be "
-                "less than or equal to the second. range affects the automatic "
-                "bin computation as well. while bin width is computed to be "
-                "optimal based on the actual data within range, the bin count "
-                "will fill the entire range including portions containing no data.");
+        .set_default(dmlc::optional<mxnet::Tuple<double>>())
+        .describe(
+            "The lower and upper range of the bins. if not provided, "
+            "range is simply (a.min(), a.max()). values outside the "
+            "range are ignored. the first element of the range must be "
+            "less than or equal to the second. range affects the automatic "
+            "bin computation as well. while bin width is computed to be "
+            "optimal based on the actual data within range, the bin count "
+            "will fill the entire range including portions containing no data.");
   }
 
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
@@ -69,12 +70,12 @@ struct HistogramParam : public dmlc::Parameter<HistogramParam> {
     bin_cnt_s << bin_cnt;
     range_s << range;
     (*dict)["bin_cnt"] = bin_cnt_s.str();
-    (*dict)["range"] = range_s.str();
+    (*dict)["range"]   = range_s.str();
   }
 };
 
 struct FillBinBoundsKernel {
-  template<typename DType>
+  template <typename DType>
   static MSHADOW_XINLINE void Map(int i, DType* bin_bounds, int bin_cnt, double min, double max) {
     if (i <= bin_cnt) {
       bin_bounds[i] = DType((max * i + (bin_cnt - i) * min) / bin_cnt);
@@ -85,9 +86,9 @@ struct FillBinBoundsKernel {
 inline bool HistogramOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector* in_attrs,
                              mxnet::ShapeVector* out_attrs) {
-  HistogramParam param = nnvm::get<HistogramParam>(attrs.parsed);
-  const bool has_cnt = param.bin_cnt.has_value();
-  const bool has_range = param.range.has_value();
+  HistogramParam param   = nnvm::get<HistogramParam>(attrs.parsed);
+  const bool has_cnt     = param.bin_cnt.has_value();
+  const bool has_range   = param.range.has_value();
   const bool legal_param = (has_cnt && has_range) || (!has_cnt && !has_range);
   CHECK_EQ(in_attrs->size(), has_cnt ? 1U : 2U);
   CHECK_EQ(out_attrs->size(), 2U);
@@ -125,14 +126,14 @@ inline bool HistogramOpType(const nnvm::NodeAttrs& attrs,
   return !type_is_none(out_attrs->at(0)) && !type_is_none(out_attrs->at(1));
 }
 
-template<typename xpu>
+template <typename xpu>
 void HistogramForwardImpl(const OpContext& ctx,
                           const TBlob& in_data,
                           const TBlob& bin_bounds,
                           const TBlob& out_data,
                           const TBlob& out_bins);
 
-template<typename xpu>
+template <typename xpu>
 void HistogramForwardImpl(const OpContext& ctx,
                           const TBlob& in_data,
                           const TBlob& out_data,
@@ -141,7 +142,7 @@ void HistogramForwardImpl(const OpContext& ctx,
                           const double min,
                           const double max);
 
-template<typename xpu>
+template <typename xpu>
 void HistogramOpForward(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
                         const std::vector<TBlob>& inputs,
@@ -151,22 +152,22 @@ void HistogramOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req[0], kWriteTo);
   CHECK_EQ(req[1], kWriteTo);
   const HistogramParam& param = nnvm::get<HistogramParam>(attrs.parsed);
-  const bool has_cnt = param.bin_cnt.has_value();
-  const bool has_range = param.range.has_value();
-  const bool legal_params = (has_cnt && has_range) || (!has_cnt && !has_range);
+  const bool has_cnt          = param.bin_cnt.has_value();
+  const bool has_range        = param.range.has_value();
+  const bool legal_params     = (has_cnt && has_range) || (!has_cnt && !has_range);
   CHECK(legal_params) << "width and range should both or neither be specified";
 
-  const TBlob& in_data = inputs[0];
+  const TBlob& in_data  = inputs[0];
   const TBlob& out_data = outputs[0];
   const TBlob& out_bins = outputs[1];
 
   if (has_cnt) {
     CHECK((param.range.value().ndim() == 2U)) << "range should be a tuple with only 2 elements";
     CHECK(param.range.value()[0] <= param.range.value()[1])
-      << "left hand side of range(" << param.range.value()[0]
-      << ")should be less than or equal to right hand side(" << param.range.value()[1] << ")";
-    double max = param.range.value()[1];
-    double min = param.range.value()[0];
+        << "left hand side of range(" << param.range.value()[0]
+        << ")should be less than or equal to right hand side(" << param.range.value()[1] << ")";
+    double max        = param.range.value()[1];
+    double min        = param.range.value()[0];
     const int bin_cnt = param.bin_cnt.value();
     if (min == max) {
       min -= 0.5f;
@@ -180,7 +181,7 @@ void HistogramOpForward(const nnvm::NodeAttrs& attrs,
   }
 }
 
-}   // namespace op
-}   // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_TENSOR_HISTOGRAM_INL_H_

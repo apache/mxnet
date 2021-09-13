@@ -28,8 +28,8 @@ namespace mxnet {
 namespace op {
 
 inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
-                          mxnet::ShapeVector *in_attrs,
-                          mxnet::ShapeVector *out_attrs) {
+                          mxnet::ShapeVector* in_attrs,
+                          mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -68,7 +68,7 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
     tmp_shape[a_shape.ndim() - 1] = b_shape[0];
     SHAPE_ASSIGN_CHECK(*in_attrs, 0, tmp_shape);
 
-    tmp_shape = TShape(1, -1);
+    tmp_shape    = TShape(1, -1);
     tmp_shape[0] = a_shape[a_shape.ndim() - 1];
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, tmp_shape);
 
@@ -84,7 +84,7 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
     tmp_shape[a_shape.ndim() - 1] = b_shape[b_shape.ndim() - 2];
     SHAPE_ASSIGN_CHECK(*in_attrs, 0, tmp_shape);
 
-    tmp_shape = TShape(b_shape.ndim(), -1);
+    tmp_shape                     = TShape(b_shape.ndim(), -1);
     tmp_shape[b_shape.ndim() - 2] = a_shape[a_shape.ndim() - 1];
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, tmp_shape);
 
@@ -102,7 +102,7 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_dot)
-.describe(R"doc(Dot product of two arrays. Specifically,
+    .describe(R"doc(Dot product of two arrays. Specifically,
 
 - If both a and b are 1-D arrays, it is inner product of vectors.
 
@@ -119,33 +119,35 @@ NNVM_REGISTER_OP(_npi_dot)
     dot(a, b)[i,j,k,m] = sum(a[i,j,:] * b[k,:,m])
 
 )doc" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "b"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyDotShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", NumpyDotForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_dot"})
-.add_argument("a", "NDArray-or-Symbol", "First input")
-.add_argument("b", "NDArray-or-Symbol", "Second input");
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyDotShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyDotForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_dot"})
+    .add_argument("a", "NDArray-or-Symbol", "First input")
+    .add_argument("b", "NDArray-or-Symbol", "Second input");
 
 NNVM_REGISTER_OP(_backward_npi_dot)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyDotBackward<cpu>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyDotBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

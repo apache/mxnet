@@ -50,13 +50,12 @@ class StreamManager {
   RunContext GetRunContext(Context const& ctx);
   RunContext GetIORunContext(Context const& ctx);
   void Finalize();
+
  private:
   std::mutex mutex_;
 #if MXNET_USE_CUDA
-  std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus>
-      gpu_streams_;
-  std::array<std::array<GPUAuxStream*, kStreams>, kNumGpus>
-      gpu_aux_streams_;
+  std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus> gpu_streams_;
+  std::array<std::array<GPUAuxStream*, kStreams>, kNumGpus> gpu_aux_streams_;
   std::array<mshadow::Stream<gpu>*, kNumGpus> gpu_io_streams_;
   std::array<int, kNumGpus> gpu_cnt_;
 #endif  // MXNET_USE_CUDA
@@ -64,8 +63,7 @@ class StreamManager {
 };  // class StreamManager
 
 template <std::size_t kNumGpus, std::size_t kStreams>
-RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
-    Context const& ctx) {
+RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(Context const& ctx) {
   RunContext ret;
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
@@ -85,12 +83,12 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
           int idx = 0;
           for (auto&& aux_stream : gpu_aux_streams_.at(ctx.dev_id)) {
             auto primary_stream = gpu_streams_.at(ctx.dev_id).at(idx++);
-            aux_stream = new GPUAuxStream(primary_stream);
+            aux_stream          = new GPUAuxStream(primary_stream);
           }
           counter = 0;
         }
         use_counter = counter;
-        counter = (counter + 1) % kStreams;
+        counter     = (counter + 1) % kStreams;
       }
       ret = RunContext{ctx,
                        gpu_streams_.at(ctx.dev_id).at(use_counter),
@@ -100,16 +98,15 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif  // MXNET_USE_CUDA
-    default:
-      LOG(FATAL) << "Not Reached";
+      default:
+        LOG(FATAL) << "Not Reached";
     }
   }
   return ret;
 }
 
 template <std::size_t kNumGpus, std::size_t kStreams>
-RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
-    Context const& ctx) {
+RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(Context const& ctx) {
   RunContext ret;
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
@@ -129,8 +126,8 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif  // MXNET_USE_CUDA
-    default:
-      LOG(FATAL) << "Not Reached";
+      default:
+        LOG(FATAL) << "Not Reached";
     }
   }
   return ret;

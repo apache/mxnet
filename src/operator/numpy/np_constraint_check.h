@@ -33,20 +33,21 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu>
-void GetReduceOutput(mshadow::Stream<xpu> *s, const TBlob &output_blob, bool *red_output);
+template <typename xpu>
+void GetReduceOutput(mshadow::Stream<xpu>* s, const TBlob& output_blob, bool* red_output);
 
 struct ConstraintCheckParam : public dmlc::Parameter<ConstraintCheckParam> {
   std::string msg;
   DMLC_DECLARE_PARAMETER(ConstraintCheckParam) {
     DMLC_DECLARE_FIELD(msg)
-    .set_default("Constraint violated.")
-    .describe("Error message raised when constraint violated");
+        .set_default("Constraint violated.")
+        .describe("Error message raised when constraint violated");
   }
 };
 
 template <typename xpu>
-void ConstraintCheckForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void ConstraintCheckForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
                             const std::vector<TBlob>& inputs,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
@@ -54,15 +55,12 @@ void ConstraintCheckForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   using namespace mxnet_op;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const ConstraintCheckParam& param =
-      nnvm::get<ConstraintCheckParam>(attrs.parsed);
+  const ConstraintCheckParam& param = nnvm::get<ConstraintCheckParam>(attrs.parsed);
 #if !defined(__CUDACC__)
-  ReduceAxesComputeImpl<xpu, mshadow_op::product, false, false,
-                        op::mshadow_op::identity>(ctx, inputs, req, outputs,
-                                                  outputs[0].shape_);
+  ReduceAxesComputeImpl<xpu, mshadow_op::product, false, false, op::mshadow_op::identity>(
+      ctx, inputs, req, outputs, outputs[0].shape_);
 #else
-  ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs,
-                           outputs[0].shape_, "red::product{}");
+  ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, outputs[0].shape_, "red::product{}");
 #endif
   std::string msg = param.msg;
   bool red_output = true;

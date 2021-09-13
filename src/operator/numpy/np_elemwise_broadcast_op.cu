@@ -28,59 +28,58 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"add"});
+NNVM_REGISTER_OP(_npi_add).set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"add"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "one"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "one"});
 
 NNVM_REGISTER_OP(_npi_subtract)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_sub)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "negone"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "negone"});
 
 NNVM_REGISTER_OP(_npi_multiply)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mul"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mul"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"right", "left"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"right", "left"});
 
-NNVM_REGISTER_OP(_npi_mod)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mod"});
+NNVM_REGISTER_OP(_npi_mod).set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_mod)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"mod_grad", "mod_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"mod_grad", "mod_rgrad"});
 
 NNVM_REGISTER_OP(_npi_power)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"power"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"power"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_power)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"power_grad", "power_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        BinaryBroadcastRTCBackwardUseIn{"power_grad", "power_rgrad"});
 
 NNVM_REGISTER_OP(_npi_add_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"add"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"add"});
 
 NNVM_REGISTER_OP(_npi_subtract_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"sub"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"sub"});
 
 NNVM_REGISTER_OP(_npi_rsubtract_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rsub"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rsub"});
 
 NNVM_REGISTER_OP(_npi_multiply_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mul"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mul"});
 
 NNVM_REGISTER_OP(_npi_mod_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mod"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_npi_rmod_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rmod"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rmod"});
 
 NNVM_REGISTER_OP(_npi_power_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"power"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"power"});
 
 NNVM_REGISTER_OP(_npi_rpower_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rpow"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rpow"});
 
 }  // namespace op
 }  // namespace mxnet

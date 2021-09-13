@@ -81,52 +81,52 @@ inline int mshadowTypeToVectorLength(int type) {
   return 0;
 }
 
-inline void replaceString(std::string *input, const std::string old, const std::string repl) {
-    size_t pos = 0;
-    while ((pos = input->find(old, pos)) != std::string::npos) {
-        input->replace(pos, old.size(), repl);
-        pos += repl.size();
-    }
+inline void replaceString(std::string* input, const std::string old, const std::string repl) {
+  size_t pos = 0;
+  while ((pos = input->find(old, pos)) != std::string::npos) {
+    input->replace(pos, old.size(), repl);
+    pos += repl.size();
+  }
 }
 
 inline std::vector<int> splitStringToVector(const std::string& input, const std::string def) {
-    size_t pos_start = 0, pos_end;
-    const std::string& s = input.substr(1, input.length()-2);
-    std::vector<int> res;
+  size_t pos_start     = 0, pos_end;
+  const std::string& s = input.substr(1, input.length() - 2);
+  std::vector<int> res;
 
-    auto convert_token = [def](std::string token){
-        if (token == def) {
-            return 0;
-        }
-        return std::stoi(token);
-    };
-
-    while ((pos_end = s.find(",", pos_start)) != std::string::npos) {
-        std::string token = s.substr(pos_start, pos_end - pos_start);
-        pos_start = pos_end + 1;
-        if (token.length() > 0) {
-            res.push_back(convert_token(token));
-        }
+  auto convert_token = [def](std::string token) {
+    if (token == def) {
+      return 0;
     }
+    return std::stoi(token);
+  };
 
-    if (pos_start < s.length()) {
-        res.push_back(convert_token(s.substr(pos_start)));
+  while ((pos_end = s.find(",", pos_start)) != std::string::npos) {
+    std::string token = s.substr(pos_start, pos_end - pos_start);
+    pos_start         = pos_end + 1;
+    if (token.length() > 0) {
+      res.push_back(convert_token(token));
     }
-    return res;
+  }
+
+  if (pos_start < s.length()) {
+    res.push_back(convert_token(s.substr(pos_start)));
+  }
+  return res;
 }
 
 std::string ParseOpDescription(const std::vector<std::string>& op_desc,
                                const std::map<std::pair<int, int>, std::string>& variables,
                                const nnvm::IndexedGraph::Node& node) {
   const auto* source = node.source;
-  std::string fmt = op_desc[0];
+  std::string fmt    = op_desc[0];
   for (size_t j = 1; j < op_desc.size(); ++j) {
     const std::string& desc = op_desc[j];
     std::string sub;
     if (desc[0] == '_') {
       // Argument
       const int arg_id = std::stoi(desc.substr(1));
-      sub = variables.at({node.inputs[arg_id].node_id, node.inputs[arg_id].index});
+      sub              = variables.at({node.inputs[arg_id].node_id, node.inputs[arg_id].index});
     } else {
       sub = source->attrs.dict.at(desc);
     }
@@ -137,27 +137,26 @@ std::string ParseOpDescription(const std::vector<std::string>& op_desc,
   return fmt;
 }
 
-void AddShape(const mxnet::TShape& shape,
-              std::vector<std::vector<int>>* shapes) {
+void AddShape(const mxnet::TShape& shape, std::vector<std::vector<int>>* shapes) {
   // We need alignment to 8 bytes for size_t in the Shape struct
   // so if ndim is odd, there will be 4B of padding
-  int ndim = shape.ndim();
+  int ndim         = shape.ndim();
   const int offset = ndim % 2 == 0 ? 2 : 3;
   shapes->push_back(std::vector<int>(ndim + offset));
   std::vector<int>& tensor_shapes = shapes->back();
-  size_t total_size = 1;
-  for (int i = ndim-1; i >= 0; i--) {
+  size_t total_size               = 1;
+  for (int i = ndim - 1; i >= 0; i--) {
     tensor_shapes[i] = shape[i];
     total_size *= shape[i];
   }
-  size_t * shape_size_ptr = reinterpret_cast<size_t*>(&tensor_shapes[ndim + offset - 2]);
-  *shape_size_ptr = total_size;
+  size_t* shape_size_ptr = reinterpret_cast<size_t*>(&tensor_shapes[ndim + offset - 2]);
+  *shape_size_ptr        = total_size;
 }
 
 void AddPointerAndShape(const TBlob& data,
-                        std::vector<void*> *ptrs,
+                        std::vector<void*>* ptrs,
                         std::vector<std::vector<int>>* shapes,
-                        mshadow::Stream<gpu> * s) {
+                        mshadow::Stream<gpu>* s) {
   using namespace mshadow;
   MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
     Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
@@ -168,20 +167,20 @@ void AddPointerAndShape(const TBlob& data,
 
 }  // namespace
 
-std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
-                           const std::vector<int> &in_dtypes,
-                           const std::vector<int> &out_dtypes,
-                           const std::vector<int> &in_ndims,
-                           const std::vector<int> &out_ndims,
-                           const mxnet::ShapeVector &node_shapes,
-                           const std::vector<int> &node_dtypes,
-                           const int nvec,
-                           const std::string &kernel_name,
-                           std::vector<uint32_t>* check_shapes) {
-  const auto& g = subgraph_.indexed_graph();
-  std::string code = "";
+std::string FusedOp::GenerateCode(const std::vector<OpReqType>& req,
+                                  const std::vector<int>& in_dtypes,
+                                  const std::vector<int>& out_dtypes,
+                                  const std::vector<int>& in_ndims,
+                                  const std::vector<int>& out_ndims,
+                                  const mxnet::ShapeVector& node_shapes,
+                                  const std::vector<int>& node_dtypes,
+                                  const int nvec,
+                                  const std::string& kernel_name,
+                                  std::vector<uint32_t>* check_shapes) {
+  const auto& g         = subgraph_.indexed_graph();
+  std::string code      = "";
   int temp_name_counter = 0;
-  using NodeEntry = nnvm::IndexedGraph::NodeEntry;
+  using NodeEntry       = nnvm::IndexedGraph::NodeEntry;
   std::map<std::pair<int, int>, std::string> variables;
   std::map<int, int> load_index;
   bool check_shapes_compile = true;
@@ -198,42 +197,42 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   }
 
   for (size_t i = 0; i < g.num_nodes(); ++i) {
-    const auto& node = g[i];
+    const auto& node   = g[i];
     const auto* source = node.source;
     if (source != nullptr) {
-        if (source->is_variable()) {
-            load_index[i] = 1;
-        } else {
-            std::string op_name = source->op()->name;
-            if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-                load_index[node.inputs[0].node_id] = 0;
-            }
+      if (source->is_variable()) {
+        load_index[i] = 1;
+      } else {
+        std::string op_name = source->op()->name;
+        if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
+          load_index[node.inputs[0].node_id] = 0;
         }
+      }
     }
   }
   for (size_t i = 0; i < g.num_nodes(); ++i) {
-    const auto& node = g[i];
+    const auto& node   = g[i];
     const auto* source = node.source;
     if (source != nullptr) {
       if (source->is_variable()) {
         if (load_index[i]) {
           const auto& var_name = source->attrs.name;
-          code += "const auto vec_" + var_name + " = op::load_index<nvec>(" +
-                   var_name + ", offset, " + var_name + "_shape);\n";
+          code += "const auto vec_" + var_name + " = op::load_index<nvec>(" + var_name +
+                  ", offset, " + var_name + "_shape);\n";
           variables[{i, 0}] = var_name;
         }
         CHECK_EQ(outputs[i], 1);
       } else {
         std::string op_name = source->op()->name;
         if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-          int node_id = node.inputs[0].node_id;
+          int node_id                   = node.inputs[0].node_id;
           const uint32_t input_entry_id = g.entry_id(node.inputs[0]);
-          const auto& shape = node_shapes[input_entry_id];
-          const int ndim = shape.ndim();
-          const auto& var_name = g[node_id].source->attrs.name;
-          const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-          load_index[node_id] = 0;
-          auto parse_tuple = [ndim](const std::string& input, const std::string& def) {
+          const auto& shape             = node_shapes[input_entry_id];
+          const int ndim                = shape.ndim();
+          const auto& var_name          = g[node_id].source->attrs.name;
+          const auto vec_name           = "vec_" + var_name + "_" + std::to_string(i);
+          load_index[node_id]           = 0;
+          auto parse_tuple              = [ndim](const std::string& input, const std::string& def) {
             std::string out = input;
             replaceString(&out, " ", "");
             if (out[0] == '(') {
@@ -270,8 +269,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             return out;
           };
           auto build_tuple = [ndim](int axis, const std::string str, const std::string def) {
-            if (axis < 0 &&
-                axis >= -ndim) {
+            if (axis < 0 && axis >= -ndim) {
               axis += ndim;
             }
             if (axis < 0 || axis >= ndim) {
@@ -279,37 +277,37 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             }
             std::string tuple = "{";
             for (int i = 0; i < axis; i++) {
-                tuple += def + ",";
+              tuple += def + ",";
             }
             tuple += str;
             for (int i = axis + 1; i < ndim; i++) {
-                tuple += "," + def;
+              tuple += "," + def;
             }
             tuple += "}";
             return tuple;
           };
           auto check_tuple = [ndim, nvec](const std::string str) {
             std::vector<int> tuple = splitStringToVector(str, "INT_MAX");
-            if (tuple[ndim-1] % nvec == 0) {
+            if (tuple[ndim - 1] % nvec == 0) {
               return true;
             }
             return false;
           };
           auto build_string_end = [i, ndim, var_name](std::string* code) {
             std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
-            *code += "op::Shape<" + std::to_string(ndim) + "> "+ end_var_name + ";\n";
+            *code += "op::Shape<" + std::to_string(ndim) + "> " + end_var_name + ";\n";
             *code += end_var_name + ".set(INT_MAX);\n";
             return end_var_name;
           };
           std::string begin;
           std::string end;
           if (op_name == "broadcast_like" || op_name == "slice_like") {
-            uint32_t like_id = g.entry_id(i, 0);
-            begin = build_tuple(0, "0", "0");
+            uint32_t like_id           = g.entry_id(i, 0);
+            begin                      = build_tuple(0, "0", "0");
             std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
             if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) ==
                 extra_shape_args_.end()) {
-                extra_shape_args_.push_back(like_id);
+              extra_shape_args_.push_back(like_id);
             }
             if (check_shapes) {
               check_shapes->push_back(like_id);
@@ -318,14 +316,14 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             end = extra_var_name;
           } else {
             if (op_name == "slice_axis") {
-              begin = parse_int(source->attrs.dict.at("begin"), "0");
-              end = parse_int(source->attrs.dict.at("end"), "INT_MAX");
+              begin    = parse_int(source->attrs.dict.at("begin"), "0");
+              end      = parse_int(source->attrs.dict.at("end"), "INT_MAX");
               int axis = std::stoi(source->attrs.dict.at("axis"));
-              begin = build_tuple(axis, begin, "0");
-              end = build_tuple(axis, end, "INT_MAX");
+              begin    = build_tuple(axis, begin, "0");
+              end      = build_tuple(axis, end, "INT_MAX");
             } else {
               begin = parse_tuple(source->attrs.dict.at("begin"), "0");
-              end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
+              end   = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             }
             if (check_shapes) {
               if (check_tuple(begin) && check_tuple(end)) {
@@ -339,9 +337,8 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           if (!check_shapes) {
             slice_func = "fast_" + slice_func;
           }
-          code += "const auto " + vec_name + " = op::" + slice_func + "<nvec>(" +
-                  var_name + ", " + var_name + "_shape," + begin +
-                  "," + end + ", offset);\n";
+          code += "const auto " + vec_name + " = op::" + slice_func + "<nvec>(" + var_name + ", " +
+                  var_name + "_shape," + begin + "," + end + ", offset);\n";
           CHECK_EQ(outputs[i], 1);
           variables[{i, 0}] = vec_name;
           continue;
@@ -351,41 +348,38 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   }
 
   if (!check_shapes_compile) {
-      check_shapes->clear();
+    check_shapes->clear();
   }
 
   size_t counter = 0;
   for (const auto& entry : g.outputs()) {
     std::string var_name = "output" + std::to_string(counter);
-    code += "vector::VectorizedStorage<DType_" + var_name + \
-            ", nvec> vec_" + var_name + ";\n";
+    code += "vector::VectorizedStorage<DType_" + var_name + ", nvec> vec_" + var_name + ";\n";
     ++counter;
   }
 
   code += "for (int j = 0; j < nvec; j++ ) {\n";
 
-
   for (size_t i = 0; i < g.num_nodes(); ++i) {
-    const auto& node = g[i];
+    const auto& node   = g[i];
     const auto* source = node.source;
     if (source != nullptr) {
       std::string var_name = "temp" + std::to_string(temp_name_counter++);
       if (source->is_variable()) {
         if (load_index[i]) {
-            code += "const auto " + var_name + " = op::load(vec_" +
-                    variables[{i, 0}] + ".scratch_.separate[j]);\n";
-            CHECK_EQ(outputs[i], 1);
-            variables[{i, 0}] = var_name;
+          code += "const auto " + var_name + " = op::load(vec_" + variables[{i, 0}] +
+                  ".scratch_.separate[j]);\n";
+          CHECK_EQ(outputs[i], 1);
+          variables[{i, 0}] = var_name;
         }
       } else {
         std::string op_name = source->op()->name;
         if (fusion::ops_desc.find(op_name) != fusion::ops_desc.end()) {
-          const std::vector<std::vector<std::string>>& op_descs =
-            fusion::ops_desc.at(op_name);
+          const std::vector<std::vector<std::string>>& op_descs = fusion::ops_desc.at(op_name);
           CHECK_EQ(outputs[i], op_descs.size());
           size_t count = 0;
           for (const auto& op_desc : op_descs) {
-            var_name = "temp" + std::to_string(temp_name_counter++);
+            var_name               = "temp" + std::to_string(temp_name_counter++);
             const std::string& fmt = ParseOpDescription(op_desc, variables, node);
             code += "const auto " + var_name + " = " + fmt + ";\n";
             variables[{i, count}] = var_name;
@@ -395,13 +389,11 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         }
 
         if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-          code += "const auto " + var_name +
-                  " = op::load(" + variables[{i, 0}] +
+          code += "const auto " + var_name + " = op::load(" + variables[{i, 0}] +
                   ".scratch_.separate[j]);\n";
           variables[{i, 0}] = var_name;
           continue;
         }
-
 
         // Special cases with variable number
         // of inputs/outputs, listed in
@@ -423,15 +415,13 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           std::string act_type = node.source->attrs.dict.at("act_type");
           std::string ograd, input;
           ograd = variables[{node.inputs[0].node_id, node.inputs[0].index}];
-          if (act_type == "relu" ||
-              act_type == "sigmoid" ||
-              act_type == "tanh") {
+          if (act_type == "relu" || act_type == "sigmoid" || act_type == "tanh") {
             input = variables[{node.inputs[1].node_id, node.inputs[1].index}];
           } else {
             input = variables[{node.inputs[2].node_id, node.inputs[2].index}];
           }
-          code += "const auto " + var_name + " = op::backward_" + act_type +
-                  "(" + ograd + ", " + input + ");\n";
+          code += "const auto " + var_name + " = op::backward_" + act_type + "(" + ograd + ", " +
+                  input + ");\n";
 
           variables[{i, 0}] = var_name;
           continue;
@@ -441,8 +431,8 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           CHECK_EQ(outputs[i], node.inputs.size());
           for (size_t counter = 0; counter < outputs[i]; ++counter) {
             const auto& input = node.inputs[counter];
-            var_name = "temp" + std::to_string(temp_name_counter++);
-            const auto& arg = variables[{input.node_id, input.index}];
+            var_name          = "temp" + std::to_string(temp_name_counter++);
+            const auto& arg   = variables[{input.node_id, input.index}];
             code += "const auto " + var_name + " = " + arg + ";\n";
             variables[{i, counter}] = var_name;
           }
@@ -452,7 +442,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         if (op_name == "_backward_cast") {
           CHECK_EQ(outputs[i], 1);
           const int output_type = node_dtypes[g.entry_id(i, 0)];
-          const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          const auto& arg       = variables[{node.inputs[0].node_id, node.inputs[0].index}];
           code += "const auto " + var_name + " = op::cast<" + mshadowTypeToString(output_type) +
                   ">(" + arg + ");\n";
           variables[{i, 0}] = var_name;
@@ -461,38 +451,38 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 
         // LeakyReLU, look for act_type
         if (op_name == "LeakyReLU") {
-            std::string act_type = node.source->attrs.dict.at("act_type");
-            const std::vector<std::vector<std::string>>& op_descs =
-                fusion::LeakyReLU_ops.at(act_type);
-            if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_ops.end()) {
-              CHECK_EQ(outputs[i], op_descs.size());
-              size_t count = 0;
-              for (const auto& op_desc : op_descs) {
-                var_name = "temp" + std::to_string(temp_name_counter++);
-                const std::string& fmt = ParseOpDescription(op_desc, variables, node);
-                code += "const auto " + var_name + " = " + fmt + ";\n";
-                variables[{i, count}] = var_name;
-                ++count;
-              }
-              continue;
+          std::string act_type = node.source->attrs.dict.at("act_type");
+          const std::vector<std::vector<std::string>>& op_descs =
+              fusion::LeakyReLU_ops.at(act_type);
+          if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_ops.end()) {
+            CHECK_EQ(outputs[i], op_descs.size());
+            size_t count = 0;
+            for (const auto& op_desc : op_descs) {
+              var_name               = "temp" + std::to_string(temp_name_counter++);
+              const std::string& fmt = ParseOpDescription(op_desc, variables, node);
+              code += "const auto " + var_name + " = " + fmt + ";\n";
+              variables[{i, count}] = var_name;
+              ++count;
             }
+            continue;
+          }
         }
         if (op_name == "_backward_LeakyReLU") {
-            std::string act_type = node.source->attrs.dict.at("act_type");
-            const std::vector<std::vector<std::string>>& op_descs =
-                fusion::LeakyReLU_bwd_ops.at(act_type);
-            if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_bwd_ops.end()) {
-              CHECK_EQ(outputs[i], op_descs.size());
-              size_t count = 0;
-              for (const auto& op_desc : op_descs) {
-                var_name = "temp" + std::to_string(temp_name_counter++);
-                const std::string& fmt = ParseOpDescription(op_desc, variables, node);
-                code += "const auto " + var_name + " = " + fmt + ";\n";
-                variables[{i, count}] = var_name;
-                ++count;
-              }
-              continue;
+          std::string act_type = node.source->attrs.dict.at("act_type");
+          const std::vector<std::vector<std::string>>& op_descs =
+              fusion::LeakyReLU_bwd_ops.at(act_type);
+          if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_bwd_ops.end()) {
+            CHECK_EQ(outputs[i], op_descs.size());
+            size_t count = 0;
+            for (const auto& op_desc : op_descs) {
+              var_name               = "temp" + std::to_string(temp_name_counter++);
+              const std::string& fmt = ParseOpDescription(op_desc, variables, node);
+              code += "const auto " + var_name + " = " + fmt + ";\n";
+              variables[{i, count}] = var_name;
+              ++count;
             }
+            continue;
+          }
         }
 
         LOG(FATAL) << "Unrecognized op " + op_name;
@@ -505,8 +495,9 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   counter = 0;
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
-    const auto var_name = "output" + std::to_string(counter);
-    code += "vec_" + var_name + ".scratch_.separate[j] = op::store("+ var +", " + var_name + ");\n";
+    const auto var_name    = "output" + std::to_string(counter);
+    code +=
+        "vec_" + var_name + ".scratch_.separate[j] = op::store(" + var + ", " + var_name + ");\n";
     ++counter;
   }
 
@@ -518,12 +509,12 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     const std::string& var = variables[{entry.node_id, entry.index}];
     if (req[counter] == kWriteTo || req[counter] == kWriteInplace) {
       const auto var_name = "output" + std::to_string(counter);
-      code += "op::store_index(vec_" + var_name + ", i, " + var_name + ", " +
-              var_name + "_shape);\n";
+      code +=
+          "op::store_index(vec_" + var_name + ", i, " + var_name + ", " + var_name + "_shape);\n";
     } else if (req[counter] == kAddTo) {
       const auto var_name = "output" + std::to_string(counter);
-      code += "op::store_add_index(vec_" + var_name + ", i, " + var_name + ", " +
-              var_name + "_shape);\n";
+      code += "op::store_add_index(vec_" + var_name + ", i, " + var_name + ", " + var_name +
+              "_shape);\n";
     } else if (req[counter] == kNullOp) {
       // nullptr req, do not do anything
     } else {
@@ -536,43 +527,43 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   std::string kernel_params = "";
   std::string tensor_params = "";
   nnvm::Symbol sym;
-  sym.outputs = subgraph_.outputs;
+  sym.outputs                                = subgraph_.outputs;
   const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
-  size_t num_params = in_dtypes.size() + out_dtypes.size();
-  size_t i = 0;
+  size_t num_params                          = in_dtypes.size() + out_dtypes.size();
+  size_t i                                   = 0;
   std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
 
-  for (const auto &shape_id : extra_shape_args_) {
-      std::string shape_name = "extra_" + std::to_string(shape_id) + "_shape";
-      int ndim = node_shapes[shape_id].ndim();
-      kernel_params += " const op::Shape<" + std::to_string(ndim) + "> " + shape_name;
-      kernel_params += ", ";
+  for (const auto& shape_id : extra_shape_args_) {
+    std::string shape_name = "extra_" + std::to_string(shape_id) + "_shape";
+    int ndim               = node_shapes[shape_id].ndim();
+    kernel_params += " const op::Shape<" + std::to_string(ndim) + "> " + shape_name;
+    kernel_params += ", ";
   }
-  for (const auto &type : in_dtypes) {
+  for (const auto& type : in_dtypes) {
     std::string type_name = mshadowTypeToString(type);
     std::string dtype_var = "DType_" + input_names[i];
-    std::string dim_var = "ndim_" + input_names[i];
-    std::string dim_val = std::to_string(in_ndims[i]);
-    aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
-    aux_code = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
-    tensor_params += dtype_var + "* " +input_names[i];
-    kernel_params += " const op::Shape<" + dim_val + "> " + input_names[i]+"_shape";
+    std::string dim_var   = "ndim_" + input_names[i];
+    std::string dim_val   = std::to_string(in_ndims[i]);
+    aux_code              = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
+    aux_code              = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
+    tensor_params += dtype_var + "* " + input_names[i];
+    kernel_params += " const op::Shape<" + dim_val + "> " + input_names[i] + "_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
     }
     kernel_params += ", ";
   }
-  for (const auto &type : out_dtypes) {
+  for (const auto& type : out_dtypes) {
     std::string type_name = mshadowTypeToString(type);
-    std::string out_name = "output" + std::to_string(i - in_dtypes.size());
+    std::string out_name  = "output" + std::to_string(i - in_dtypes.size());
     std::string dtype_var = "DType_" + out_name;
-    std::string dim_var = "ndim_" + out_name;
-    std::string dim_val = std::to_string(out_ndims[i - in_dtypes.size()]);
-    aux_code = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
-    aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
+    std::string dim_var   = "ndim_" + out_name;
+    std::string dim_val   = std::to_string(out_ndims[i - in_dtypes.size()]);
+    aux_code              = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
+    aux_code              = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
     tensor_params += dtype_var + "* " + out_name;
-    kernel_params += " const op::Shape<" + dim_val + "> " + out_name+"_shape";
+    kernel_params += " const op::Shape<" + dim_val + "> " + out_name + "_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -582,29 +573,24 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   kernel_params += tensor_params;
 
   // Create kernel source (minus the common header)
-  return aux_code + "\n" +
-         "__launch_bounds__(" + std::to_string(FusedOp::NTHREADS) + ")\n" +
-         "__global__ void FusedKernel_" + kernel_name +
-         "(size_t N, " + kernel_params + ") {\n" +
-         fusion::kernel_begin + "\n" +
-         code + "\n" +
-         fusion::kernel_end;
+  return aux_code + "\n" + "__launch_bounds__(" + std::to_string(FusedOp::NTHREADS) + ")\n" +
+         "__global__ void FusedKernel_" + kernel_name + "(size_t N, " + kernel_params + ") {\n" +
+         fusion::kernel_begin + "\n" + code + "\n" + fusion::kernel_end;
 }
 
-CUfunction FusedOp::CompileCode(const std::string &code,
-                                const std::string &kernel_name,
+CUfunction FusedOp::CompileCode(const std::string& code,
+                                const std::string& kernel_name,
                                 int dev_id) {
   return common::cuda::rtc::get_function(code, "FusedKernel_" + kernel_name, "", dev_id);
 }
 
-
-void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
-                                  const std::vector<TBlob> &outputs,
-                                  std::vector<int> *in_dtypes,
-                                  std::vector<int> *in_ndims,
-                                  std::vector<int> *out_dtypes,
-                                  std::vector<int> *out_ndims,
-                                  int *nvec) {
+void FusedOp::CheckShapesAndTypes(const std::vector<TBlob>& inputs,
+                                  const std::vector<TBlob>& outputs,
+                                  std::vector<int>* in_dtypes,
+                                  std::vector<int>* in_ndims,
+                                  std::vector<int>* out_dtypes,
+                                  std::vector<int>* out_ndims,
+                                  int* nvec) {
   std::vector<mxnet::TShape> in_shapes;
   std::vector<mxnet::TShape> out_shapes;
   CHECK_EQ(inputs.size(), inputs_.size());
@@ -615,11 +601,11 @@ void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
     in_dtypes->push_back(blob.type_flag_);
     in_ndims->push_back(blob.ndim());
     in_shapes.push_back(blob.shape_);
-    initialized_ = initialized_ && blob.type_flag_ == inputs_[counter].dtype;
-    initialized_ = initialized_ && blob.ndim() == inputs_[counter].ndim;
+    initialized_           = initialized_ && blob.type_flag_ == inputs_[counter].dtype;
+    initialized_           = initialized_ && blob.ndim() == inputs_[counter].ndim;
     inputs_[counter].dtype = blob.type_flag_;
-    inputs_[counter].ndim = blob.ndim();
-    *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
+    inputs_[counter].ndim  = blob.ndim();
+    *nvec                  = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
   }
 
   for (size_t counter = 0; counter < outputs.size(); ++counter) {
@@ -627,24 +613,20 @@ void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
     out_dtypes->push_back(blob.type_flag_);
     out_ndims->push_back(blob.ndim());
     out_shapes.push_back(blob.shape_);
-    initialized_ = initialized_ && blob.type_flag_ == outputs_[counter].dtype;
-    initialized_ = initialized_ && blob.ndim() == outputs_[counter].ndim;
+    initialized_            = initialized_ && blob.type_flag_ == outputs_[counter].dtype;
+    initialized_            = initialized_ && blob.ndim() == outputs_[counter].ndim;
     outputs_[counter].dtype = blob.type_flag_;
-    outputs_[counter].ndim = blob.ndim();
-    *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
+    outputs_[counter].ndim  = blob.ndim();
+    *nvec                   = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
   }
 
-  for (auto it = intermediate_shapes_.begin();
-       it != intermediate_shapes_.end();
-       ++it) {
+  for (auto it = intermediate_shapes_.begin(); it != intermediate_shapes_.end(); ++it) {
     if (it->input_attr == in_shapes && it->output_attr == out_shapes) {
       intermediate_shapes_.erase(intermediate_shapes_.begin(), it);
       break;
     }
   }
-  for (auto it = intermediate_dtypes_.begin();
-       it != intermediate_dtypes_.end();
-       ++it) {
+  for (auto it = intermediate_dtypes_.begin(); it != intermediate_dtypes_.end(); ++it) {
     if (it->input_attr == *in_dtypes && it->output_attr == *out_dtypes) {
       intermediate_dtypes_.erase(intermediate_dtypes_.begin(), it);
       break;
@@ -654,10 +636,10 @@ void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
 
 template <>
 void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
-                           const OpContext &ctx,
-                           const std::vector<TBlob> &inputs,
-                           const std::vector<OpReqType> &req,
-                           const std::vector<TBlob> &outputs) {
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   std::lock_guard<std::mutex> lock(my_mutex_);
   CHECK_GE(outputs.size(), 1) << "There needs to be at least 1 output.";
@@ -668,8 +650,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<int> out_ndims;
   int nvec = 1;
 
-  CheckShapesAndTypes(inputs, outputs, &in_dtypes, &in_ndims,
-                      &out_dtypes, &out_ndims, &nvec);
+  CheckShapesAndTypes(inputs, outputs, &in_dtypes, &in_ndims, &out_dtypes, &out_ndims, &nvec);
 
   const auto& node_shapes = intermediate_shapes_[0].internal_attr;
   const auto& node_dtypes = intermediate_dtypes_[0].internal_attr;
@@ -678,25 +659,41 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
 
   // A change between training and inference modes may require different kernel functions
   initialized_ = initialized_ && (req == saved_reqs_);
-  saved_reqs_ = req;
+  saved_reqs_  = req;
 
   if (!initialized_) {
-    const auto& code = GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims,
-                       node_shapes, node_dtypes, nvec, attrs.name, &check_shape_args_);
+    const auto& code                    = GenerateCode(req,
+                                    in_dtypes,
+                                    out_dtypes,
+                                    in_ndims,
+                                    out_ndims,
+                                    node_shapes,
+                                    node_dtypes,
+                                    nvec,
+                                    attrs.name,
+                                    &check_shape_args_);
     kernel_functions_[fusion::kGeneral] = CompileCode(code, attrs.name, dev_id);
     if (check_shape_args_.size() > 0) {
-      const auto& code = GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims,
-                           node_shapes, node_dtypes, nvec, attrs.name, nullptr);
+      const auto& code                           = GenerateCode(req,
+                                      in_dtypes,
+                                      out_dtypes,
+                                      in_ndims,
+                                      out_ndims,
+                                      node_shapes,
+                                      node_dtypes,
+                                      nvec,
+                                      attrs.name,
+                                      nullptr);
       kernel_functions_[fusion::kShapeOptimized] = CompileCode(code, attrs.name, dev_id);
     }
-    initialized_ = true;
+    initialized_            = true;
     kernel_function_dev_id_ = dev_id;
   }
 
   // A change in device would force recompiling, but this is unexpected so signal as an error
   if (dev_id != kernel_function_dev_id_)
     LOG(FATAL) << "Fused op compiled for device " << kernel_function_dev_id_
-               <<  ", not expecting switch to device " << dev_id;
+               << ", not expecting switch to device " << dev_id;
 
   Stream<gpu>* s = ctx.get_stream<gpu>();
   std::vector<const void*> args;
@@ -704,7 +701,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   for (const auto& output : outputs) {
     N = std::max(N, output.shape_.Size());
   }
-  N = (N + nvec - 1)/nvec;
+  N = (N + nvec - 1) / nvec;
   args.push_back(&N);
 
   unsigned int num_blocks = (N + FusedOp::NTHREADS - 1) / FusedOp::NTHREADS;
@@ -712,48 +709,49 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> shapes;
 
-  for (const auto &shape_id : extra_shape_args_) {
+  for (const auto& shape_id : extra_shape_args_) {
     AddShape(node_shapes[shape_id], &shapes);
   }
-  for (const auto &data : inputs) {
+  for (const auto& data : inputs) {
     AddPointerAndShape(data, &ptrs, &shapes, s);
   }
-  for (const auto &data : outputs) {
+  for (const auto& data : outputs) {
     AddPointerAndShape(data, &ptrs, &shapes, s);
   }
 
-  for (auto &tensor_shapes : shapes) {
+  for (auto& tensor_shapes : shapes) {
     args.push_back(tensor_shapes.data());
   }
-  for (auto &ptr : ptrs) {
-    args.push_back(reinterpret_cast<void *>(&ptr));
+  for (auto& ptr : ptrs) {
+    args.push_back(reinterpret_cast<void*>(&ptr));
   }
   int kernel_variant = fusion::kGeneral;
   if (check_shape_args_.size() > 0) {
     kernel_variant = fusion::kShapeOptimized;
-      for (const auto &shape_id : check_shape_args_) {
-          const auto& shape = node_shapes[shape_id];
-          if (shape[shape.ndim()-1] % nvec != 0) {
-            kernel_variant = fusion::kGeneral;
-          }
+    for (const auto& shape_id : check_shape_args_) {
+      const auto& shape = node_shapes[shape_id];
+      if (shape[shape.ndim() - 1] % nvec != 0) {
+        kernel_variant = fusion::kGeneral;
       }
+    }
   }
   common::cuda::rtc::launch(kernel_functions_[kernel_variant],
                             {num_blocks, 1, 1},
                             {static_cast<unsigned int>(FusedOp::NTHREADS), 1, 1},
-                            0, s, &args);
+                            0,
+                            s,
+                            &args);
 }
 
 void FusedOpForwardGPU(const nnvm::NodeAttrs& attrs,
-                    const OpContext &ctx,
-                    const std::vector<TBlob> &inputs,
-                    const std::vector<OpReqType> &req,
-                    const std::vector<TBlob> &outputs) {
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
   const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
   op->Forward<gpu>(attrs, ctx, inputs, req, outputs);
 }
 
-NNVM_REGISTER_OP(_FusedOp)
-.set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
+NNVM_REGISTER_OP(_FusedOp).set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
 
 }  // namespace mxnet

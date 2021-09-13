@@ -32,38 +32,39 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyBernoulliParam);
 
 NNVM_REGISTER_OP(_npi_bernoulli)
-.set_num_inputs(
-  [](const nnvm::NodeAttrs& attrs) {
-    const NumpyBernoulliParam& param = nnvm::get<NumpyBernoulliParam>(attrs.parsed);
-    int num_inputs = 1;
-    if (param.logit.has_value() || param.prob.has_value()) {
-      num_inputs -= 1;
-    }
-    return num_inputs;
-  }
-)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    const NumpyBernoulliParam& param = nnvm::get<NumpyBernoulliParam>(attrs.parsed);
-    int num_inputs = 1;
-    if (param.logit.has_value() || param.prob.has_value()) {
-      num_inputs -= 1;
-    }
-    return (num_inputs == 0) ? std::vector<std::string>() : std::vector<std::string>{"input1"};
-  })
-.set_attr_parser(ParamParser<NumpyBernoulliParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyBernoulliParam>)
-.set_attr<nnvm::FInferType>("FInferType", NumpyBernoulliOpType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const nnvm::NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{
-        ResourceRequest::kRandom, ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyBernoulliForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("input1", "NDArray-or-Symbol", "Source input")
-.add_arguments(NumpyBernoulliParam::__FIELDS__());
+    .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+      const NumpyBernoulliParam& param = nnvm::get<NumpyBernoulliParam>(attrs.parsed);
+      int num_inputs                   = 1;
+      if (param.logit.has_value() || param.prob.has_value()) {
+        num_inputs -= 1;
+      }
+      return num_inputs;
+    })
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       const NumpyBernoulliParam& param =
+                                           nnvm::get<NumpyBernoulliParam>(attrs.parsed);
+                                       int num_inputs = 1;
+                                       if (param.logit.has_value() || param.prob.has_value()) {
+                                         num_inputs -= 1;
+                                       }
+                                       return (num_inputs == 0)
+                                                  ? std::vector<std::string>()
+                                                  : std::vector<std::string>{"input1"};
+                                     })
+    .set_attr_parser(ParamParser<NumpyBernoulliParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyBernoulliParam>)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyBernoulliOpType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const nnvm::NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kRandom,
+                                                                      ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyBernoulliForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("input1", "NDArray-or-Symbol", "Source input")
+    .add_arguments(NumpyBernoulliParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 
-template<>
+template <>
 void L2NormComputeEx<gpu>(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<NDArray>& inputs,
@@ -36,12 +36,12 @@ void L2NormComputeEx<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  const NormParam& param          = nnvm::get<NormParam>(attrs.parsed);
+  mshadow::Stream<gpu>* s         = ctx.get_stream<gpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
   const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape(0, -1);
   if ((istype == kRowSparseStorage || istype == kCSRStorage) && axis.ndim() == 0 &&
-       param.ord == 2) {
+      param.ord == 2) {
     // l2 norm on the entire array
     L2NormComputeSparseImpl<gpu>(s, inputs[0], req[0], outputs[0].data());
   } else {
@@ -50,11 +50,10 @@ void L2NormComputeEx<gpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(norm)
-.set_attr<FCompute>("FCompute<gpu>", LpNormCompute<gpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", L2NormComputeEx<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", LpNormCompute<gpu>)
+    .set_attr<FComputeEx>("FComputeEx<gpu>", L2NormComputeEx<gpu>);
 
-NNVM_REGISTER_OP(_backward_norm)
-.set_attr<FCompute>("FCompute<gpu>", LpNormGradCompute<gpu>);
+NNVM_REGISTER_OP(_backward_norm).set_attr<FCompute>("FCompute<gpu>", LpNormGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -29,17 +29,14 @@ namespace mxnet {
 namespace op {
 
 namespace index_array_enum {
-enum IndexArrayOpInputs {kIn};
-enum IndexArrayOpOutputs {kOut};
-enum IndexArrayOpResource {kTempSpace};
+enum IndexArrayOpInputs { kIn };
+enum IndexArrayOpOutputs { kOut };
+enum IndexArrayOpResource { kTempSpace };
 }  // namespace index_array_enum
 
-template<int req>
+template <int req>
 struct IndexArrayKernel {
-  MSHADOW_XINLINE static void Map(int i,
-                                  int64_t* out_data,
-                                  const int n,
-                                  const int64_t* workspace) {
+  MSHADOW_XINLINE static void Map(int i, int64_t* out_data, const int n, const int64_t* workspace) {
     for (ptrdiff_t j = 0; j < n; j++) {
       int64_t upper = workspace[ptrdiff_t(2) * j];
       int64_t lower = workspace[ptrdiff_t(2) * j + ptrdiff_t(1)];
@@ -48,12 +45,9 @@ struct IndexArrayKernel {
   }
 };
 
-template<int req>
+template <int req>
 struct IndexArrayDefaultKernel {
-  MSHADOW_XINLINE static void Map(int i,
-                                  int64_t* out_data,
-                                  const int ndim,
-                                  const dim_t* shape) {
+  MSHADOW_XINLINE static void Map(int i, int64_t* out_data, const int ndim, const dim_t* shape) {
     int64_t index = i;
     for (ptrdiff_t j = ndim - 1; j >= 0; j--) {
       KERNEL_ASSIGN(out_data[ptrdiff_t(i) * ptrdiff_t(ndim) + j], req, index % shape[j]);
@@ -62,7 +56,7 @@ struct IndexArrayDefaultKernel {
   }
 };
 
-inline std::vector<int64_t> IndexArrayComputeIndexProducts(const TShape &inshape) {
+inline std::vector<int64_t> IndexArrayComputeIndexProducts(const TShape& inshape) {
   const int ndim = inshape.ndim();
 
   std::vector<int64_t> index_products(static_cast<size_t>(ndim + 1));
@@ -76,15 +70,15 @@ inline std::vector<int64_t> IndexArrayComputeIndexProducts(const TShape &inshape
   return index_products;
 }
 
-inline void IndexArrayBuildSelectedAxesWorkspace(const mxnet::Tuple<int> &axes,
-                                                 const std::vector<int64_t> &index_products,
+inline void IndexArrayBuildSelectedAxesWorkspace(const mxnet::Tuple<int>& axes,
+                                                 const std::vector<int64_t>& index_products,
                                                  int64_t* workspace,
                                                  const int ndim) {
   for (int i = 0; i < axes.ndim(); i++) {
     // Make sure that the axis is between 0 and ndim.
     const int axis = ((axes[i] % ndim) + ndim) % ndim;
 
-    workspace[ptrdiff_t(2) * ptrdiff_t(i)] = index_products[axis];
+    workspace[ptrdiff_t(2) * ptrdiff_t(i)]                = index_products[axis];
     workspace[ptrdiff_t(2) * ptrdiff_t(i) + ptrdiff_t(1)] = index_products[axis + 1];
   }
 }
@@ -92,8 +86,9 @@ inline void IndexArrayBuildSelectedAxesWorkspace(const mxnet::Tuple<int> &axes,
 struct IndexArrayParam : public dmlc::Parameter<IndexArrayParam> {
   dmlc::optional<mxnet::Tuple<int>> axes;
   DMLC_DECLARE_PARAMETER(IndexArrayParam) {
-    DMLC_DECLARE_FIELD(axes).set_default(dmlc::optional<mxnet::Tuple<int>>())
-      .describe("The axes to include in the index array. Supports negative values.");
+    DMLC_DECLARE_FIELD(axes)
+        .set_default(dmlc::optional<mxnet::Tuple<int>>())
+        .describe("The axes to include in the index array. Supports negative values.");
   }
 };  // struct IndexArrayParam
 

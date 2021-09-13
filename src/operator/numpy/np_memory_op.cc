@@ -28,8 +28,8 @@ namespace mxnet {
 namespace op {
 
 inline bool NumpyShareMemoryType(const nnvm::NodeAttrs& attrs,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
+                                 std::vector<int>* in_attrs,
+                                 std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kBool);
@@ -37,8 +37,8 @@ inline bool NumpyShareMemoryType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NumpyShareMemoryShape(const nnvm::NodeAttrs& attrs,
-                                  mxnet::ShapeVector *in_attrs,
-                                  mxnet::ShapeVector *out_attrs) {
+                                  mxnet::ShapeVector* in_attrs,
+                                  mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, -1));
@@ -46,17 +46,17 @@ inline bool NumpyShareMemoryShape(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_share_memory)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "b"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyShareMemoryShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyShareMemoryType)
-.set_attr<FCompute>("FCompute<cpu>", NumpyShareMemoryCompute<cpu>)
-.add_argument("a", "NDArray-or-Symbol", "First input")
-.add_argument("b", "NDArray-or-Symbol", "Second input");
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyShareMemoryShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyShareMemoryType)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyShareMemoryCompute<cpu>)
+    .add_argument("a", "NDArray-or-Symbol", "First input")
+    .add_argument("b", "NDArray-or-Symbol", "Second input");
 
 }  // namespace op
 }  // namespace mxnet

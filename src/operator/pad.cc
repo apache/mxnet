@@ -22,7 +22,7 @@
  * \file pad.cc
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 #include "./pad-inl.h"
 
 namespace mshadow {
@@ -35,20 +35,21 @@ namespace mshadow {
 // https://github.com/torch/nn/blob/master/lib/THNN/generic/SpatialReplicationPadding.c
 template <typename DType>
 void single_image_edge(const Tensor<cpu, 3, DType> dst,
-                       const Tensor<cpu, 3, DType> src, mxnet::TShape pad) {
-  const int nslices = src.size(0);
+                       const Tensor<cpu, 3, DType> src,
+                       mxnet::TShape pad) {
+  const int nslices     = src.size(0);
   const index_t iheight = src.size(1);
-  const index_t iwidth = src.size(2);
+  const index_t iwidth  = src.size(2);
 
   const index_t oheight = dst.size(1);
-  const index_t owidth = dst.size(2);
+  const index_t owidth  = dst.size(2);
 
   const index_t pad_t = pad[4];
   const index_t pad_l = pad[6];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
 
   index_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
@@ -73,31 +74,31 @@ void single_image_edge(const Tensor<cpu, 3, DType> dst,
         }
         ip_y = ip_y - oStartY + iStartY;
 
-        DType *dest_p = dst.dptr_ + k * owidth * oheight + i * owidth + j;
-        DType *src_p = src.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
-        *dest_p = *src_p;
+        DType* dest_p = dst.dptr_ + k * owidth * oheight + i * owidth + j;
+        DType* src_p  = src.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
+        *dest_p       = *src_p;
       }
     }
   }
 }
 
 template <typename DType>
-void single_image_edge_grad(const Tensor<cpu, 3, DType> &grad_in,
+void single_image_edge_grad(const Tensor<cpu, 3, DType>& grad_in,
                             const Tensor<cpu, 3, DType> grad_out,
                             mxnet::TShape pad) {
-  const int nslices = grad_in.size(0);
+  const int nslices     = grad_in.size(0);
   const index_t iheight = grad_in.size(1);
-  const index_t iwidth = grad_in.size(2);
+  const index_t iwidth  = grad_in.size(2);
 
   const index_t oheight = grad_out.size(1);
-  const index_t owidth = grad_out.size(2);
+  const index_t owidth  = grad_out.size(2);
 
   const index_t pad_t = pad[4];
   const index_t pad_l = pad[6];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
 
   index_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
@@ -123,9 +124,8 @@ void single_image_edge_grad(const Tensor<cpu, 3, DType> &grad_in,
         }
         ip_y = ip_y - oStartY + iStartY;
 
-        DType *src_p = grad_out.dptr_ + k * owidth * oheight + i * owidth + j;
-        DType *dest_p =
-            grad_in.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
+        DType* src_p  = grad_out.dptr_ + k * owidth * oheight + i * owidth + j;
+        DType* dest_p = grad_in.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
         *dest_p += *src_p;
       }
     }
@@ -134,8 +134,9 @@ void single_image_edge_grad(const Tensor<cpu, 3, DType> &grad_in,
 
 // Case 2: Zero Padding
 template <typename DType>
-void single_image_constant(const Tensor<cpu, 3, DType> &dst,
-                           const Tensor<cpu, 3, DType> src, mxnet::TShape pad,
+void single_image_constant(const Tensor<cpu, 3, DType>& dst,
+                           const Tensor<cpu, 3, DType> src,
+                           mxnet::TShape pad,
                            DType constant_value) {
   const index_t pad_t = pad[4];
   const index_t pad_l = pad[6];
@@ -150,8 +151,7 @@ void single_image_constant(const Tensor<cpu, 3, DType> &dst,
   for (c = 0; c < dst0; ++c) {
     for (h = 0; h < dst1; ++h) {
       for (w = 0; w < dst2; ++w) {
-        if ((w < pad_l) || (h < pad_t) || (h >= (src1 + pad_t)) ||
-            (w >= (src2 + pad_l))) {
+        if ((w < pad_l) || (h < pad_t) || (h >= (src1 + pad_t)) || (w >= (src2 + pad_l))) {
           dst[c][h][w] = constant_value;
         } else {
           dst[c][h][w] = src[c][h - pad_t][w - pad_l];
@@ -162,7 +162,7 @@ void single_image_constant(const Tensor<cpu, 3, DType> &dst,
 }
 
 template <typename DType>
-void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
+void single_image_constant_grad(const Tensor<cpu, 3, DType>& in_grad,
                                 const Tensor<cpu, 3, DType> out_grad,
                                 mxnet::TShape pad) {
   const index_t pad_t = pad[4];
@@ -184,21 +184,22 @@ void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
 
 // Case 3: Reflection Padding
 template <typename DType>
-void single_image_reflect(const Tensor<cpu, 3, DType> &dst,
-                           const Tensor<cpu, 3, DType> src, mxnet::TShape pad) {
-  const int nslices = src.size(0);
+void single_image_reflect(const Tensor<cpu, 3, DType>& dst,
+                          const Tensor<cpu, 3, DType> src,
+                          mxnet::TShape pad) {
+  const int nslices     = src.size(0);
   const index_t iheight = src.size(1);
-  const index_t iwidth = src.size(2);
+  const index_t iwidth  = src.size(2);
 
   const index_t oheight = dst.size(1);
-  const index_t owidth = dst.size(2);
+  const index_t owidth  = dst.size(2);
 
   const index_t pad_t = pad[4];
   const index_t pad_l = pad[6];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
 
   index_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
@@ -225,31 +226,31 @@ void single_image_reflect(const Tensor<cpu, 3, DType> &dst,
         }
         ip_y = ip_y - oStartY + iStartY;
 
-        DType *dest_p = dst.dptr_ + k * owidth * oheight + i * owidth + j;
-        DType *src_p = src.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
-        *dest_p = *src_p;
+        DType* dest_p = dst.dptr_ + k * owidth * oheight + i * owidth + j;
+        DType* src_p  = src.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
+        *dest_p       = *src_p;
       }
     }
   }
 }
 
 template <typename DType>
-void single_image_reflect_grad(const Tensor<cpu, 3, DType> &grad_in,
-                            const Tensor<cpu, 3, DType> grad_out,
-                            mxnet::TShape pad) {
-  const int nslices = grad_in.size(0);
+void single_image_reflect_grad(const Tensor<cpu, 3, DType>& grad_in,
+                               const Tensor<cpu, 3, DType> grad_out,
+                               mxnet::TShape pad) {
+  const int nslices     = grad_in.size(0);
   const index_t iheight = grad_in.size(1);
-  const index_t iwidth = grad_in.size(2);
+  const index_t iwidth  = grad_in.size(2);
 
   const index_t oheight = grad_out.size(1);
-  const index_t owidth = grad_out.size(2);
+  const index_t owidth  = grad_out.size(2);
 
   const index_t pad_t = pad[4];
   const index_t pad_l = pad[6];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
 
   index_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
@@ -276,8 +277,8 @@ void single_image_reflect_grad(const Tensor<cpu, 3, DType> &grad_in,
         }
         ip_y = ip_y - oStartY + iStartY;
 
-        DType *src_p = grad_out.dptr_ + k * owidth * oheight + i * owidth + j;
-        DType *dest_p = grad_in.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
+        DType* src_p  = grad_out.dptr_ + k * owidth * oheight + i * owidth + j;
+        DType* dest_p = grad_in.dptr_ + k * iwidth * iheight + ip_y * iwidth + ip_x;
         *dest_p += *src_p;
       }
     }
@@ -292,25 +293,26 @@ void single_image_reflect_grad(const Tensor<cpu, 3, DType> &grad_in,
 // https://github.com/torch/nn/blob/master/lib/THNN/generic/VolumetricReplicationPadding.c
 template <typename DType>
 void single_image_edge(const Tensor<cpu, 4, DType> dst,
-                       const Tensor<cpu, 4, DType> src, mxnet::TShape pad) {
-  const int nslices = src.size(0);
-  const index_t idepth = src.size(1);
+                       const Tensor<cpu, 4, DType> src,
+                       mxnet::TShape pad) {
+  const int nslices     = src.size(0);
+  const index_t idepth  = src.size(1);
   const index_t iheight = src.size(2);
-  const index_t iwidth = src.size(3);
+  const index_t iwidth  = src.size(3);
 
-  const index_t odepth = dst.size(1);
+  const index_t odepth  = dst.size(1);
   const index_t oheight = dst.size(2);
-  const index_t owidth = dst.size(3);
+  const index_t owidth  = dst.size(3);
 
   const index_t pad_f = pad[4];
   const index_t pad_t = pad[6];
   const index_t pad_l = pad[8];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t iStartZ = std::max(index_t{0}, -pad_f);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
-  index_t oStartZ = std::max(index_t{0}, pad_f);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t iStartZ     = std::max(index_t{0}, -pad_f);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
+  index_t oStartZ     = std::max(index_t{0}, pad_f);
 
   index_t k, ip_x, ip_y, ip_z;
 #pragma omp parallel for private(k, ip_x, ip_y, ip_z)
@@ -346,10 +348,10 @@ void single_image_edge(const Tensor<cpu, 4, DType> dst,
           }
           ip_z = ip_z - oStartZ + iStartZ;
 
-          DType *dest_p = dst.dptr_ + k * owidth * oheight * odepth +
-                          z * owidth * oheight + i * owidth + j;
-          DType *src_p = src.dptr_ + k * iwidth * iheight * idepth +
-                         ip_z * iwidth * iheight + ip_y * iwidth + ip_x;
+          DType* dest_p =
+              dst.dptr_ + k * owidth * oheight * odepth + z * owidth * oheight + i * owidth + j;
+          DType* src_p = src.dptr_ + k * iwidth * iheight * idepth + ip_z * iwidth * iheight +
+                         ip_y * iwidth + ip_x;
           *dest_p = *src_p;
         }
       }
@@ -358,27 +360,27 @@ void single_image_edge(const Tensor<cpu, 4, DType> dst,
 }
 
 template <typename DType>
-void single_image_edge_grad(const Tensor<cpu, 4, DType> &grad_in,
+void single_image_edge_grad(const Tensor<cpu, 4, DType>& grad_in,
                             const Tensor<cpu, 4, DType> grad_out,
                             mxnet::TShape pad) {
-  const int nslices = grad_in.size(0);
-  const index_t idepth = grad_in.size(1);
+  const int nslices     = grad_in.size(0);
+  const index_t idepth  = grad_in.size(1);
   const index_t iheight = grad_in.size(2);
-  const index_t iwidth = grad_in.size(3);
+  const index_t iwidth  = grad_in.size(3);
 
-  const index_t odepth = grad_out.size(1);
+  const index_t odepth  = grad_out.size(1);
   const index_t oheight = grad_out.size(2);
-  const index_t owidth = grad_out.size(3);
+  const index_t owidth  = grad_out.size(3);
 
   const index_t pad_f = pad[4];
   const index_t pad_t = pad[6];
   const index_t pad_l = pad[8];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t iStartZ = std::max(index_t{0}, -pad_f);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
-  index_t oStartZ = std::max(index_t{0}, pad_f);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t iStartZ     = std::max(index_t{0}, -pad_f);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
+  index_t oStartZ     = std::max(index_t{0}, pad_f);
 
   index_t k, ip_x, ip_y, ip_z;
 #pragma omp parallel for private(k, ip_x, ip_y, ip_z)
@@ -414,10 +416,10 @@ void single_image_edge_grad(const Tensor<cpu, 4, DType> &grad_in,
           }
           ip_z = ip_z - oStartZ + iStartZ;
 
-          DType *src_p = grad_out.dptr_ + k * owidth * oheight * odepth +
-                         z * owidth * oheight + i * owidth + j;
-          DType *dest_p = grad_in.dptr_ + k * iwidth * iheight * idepth +
-                          ip_z * iwidth * iheight + ip_y * iwidth + ip_x;
+          DType* src_p = grad_out.dptr_ + k * owidth * oheight * odepth + z * owidth * oheight +
+                         i * owidth + j;
+          DType* dest_p = grad_in.dptr_ + k * iwidth * iheight * idepth + ip_z * iwidth * iheight +
+                          ip_y * iwidth + ip_x;
           *dest_p += *src_p;
         }
       }
@@ -427,8 +429,9 @@ void single_image_edge_grad(const Tensor<cpu, 4, DType> &grad_in,
 
 // Case 2: Zero Padding
 template <typename DType>
-void single_image_constant(const Tensor<cpu, 4, DType> &dst,
-                           const Tensor<cpu, 4, DType> src, mxnet::TShape pad,
+void single_image_constant(const Tensor<cpu, 4, DType>& dst,
+                           const Tensor<cpu, 4, DType> src,
+                           mxnet::TShape pad,
                            DType constant_value) {
   const index_t pad_f = pad[4];
   const index_t pad_t = pad[6];
@@ -448,9 +451,8 @@ void single_image_constant(const Tensor<cpu, 4, DType> &dst,
     for (d = 0; d < dst1; ++d) {
       for (h = 0; h < dst2; ++h) {
         for (w = 0; w < dst3; ++w) {
-          if ((w < pad_l) || (h < pad_t) || (d < pad_f) ||
-              (d >= (src1 + pad_f)) || (h >= (src2 + pad_t)) ||
-              (w >= (src3 + pad_l))) {
+          if ((w < pad_l) || (h < pad_t) || (d < pad_f) || (d >= (src1 + pad_f)) ||
+              (h >= (src2 + pad_t)) || (w >= (src3 + pad_l))) {
             dst[c][d][h][w] = constant_value;
           } else {
             dst[c][d][h][w] = src[c][d - pad_f][h - pad_t][w - pad_l];
@@ -462,18 +464,18 @@ void single_image_constant(const Tensor<cpu, 4, DType> &dst,
 }
 
 template <typename DType>
-void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
+void single_image_constant_grad(const Tensor<cpu, 4, DType>& in_grad,
                                 const Tensor<cpu, 4, DType> out_grad,
                                 mxnet::TShape pad) {
-  const index_t pad_f = pad[4];
-  const index_t pad_t = pad[6];
-  const index_t pad_l = pad[8];
+  const index_t pad_f    = pad[4];
+  const index_t pad_t    = pad[6];
+  const index_t pad_l    = pad[8];
   const index_t in_grad0 = in_grad.size(0);
   const index_t in_grad1 = in_grad.size(1);
   const index_t in_grad2 = in_grad.size(2);
   const index_t in_grad3 = in_grad.size(3);
   index_t c, d, w, h;
-  #pragma omp parallel for private(c, d, w, h)
+#pragma omp parallel for private(c, d, w, h)
   for (c = 0; c < in_grad0; ++c) {
     for (d = 0; d < in_grad1; ++d) {
       for (h = 0; h < in_grad2; ++h) {
@@ -487,26 +489,27 @@ void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
 
 // Case 3: Reflection Padding
 template <typename DType>
-void single_image_reflect(const Tensor<cpu, 4, DType> &dst,
-                           const Tensor<cpu, 4, DType> src, mxnet::TShape pad) {
-  const int nslices = src.size(0);
-  const index_t idepth = src.size(1);
+void single_image_reflect(const Tensor<cpu, 4, DType>& dst,
+                          const Tensor<cpu, 4, DType> src,
+                          mxnet::TShape pad) {
+  const int nslices     = src.size(0);
+  const index_t idepth  = src.size(1);
   const index_t iheight = src.size(2);
-  const index_t iwidth = src.size(3);
+  const index_t iwidth  = src.size(3);
 
-  const index_t odepth = dst.size(1);
+  const index_t odepth  = dst.size(1);
   const index_t oheight = dst.size(2);
-  const index_t owidth = dst.size(3);
+  const index_t owidth  = dst.size(3);
 
   const index_t pad_f = pad[4];
   const index_t pad_t = pad[6];
   const index_t pad_l = pad[8];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t iStartZ = std::max(index_t{0}, -pad_f);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
-  index_t oStartZ = std::max(index_t{0}, pad_f);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t iStartZ     = std::max(index_t{0}, -pad_f);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
+  index_t oStartZ     = std::max(index_t{0}, pad_f);
 
   index_t l, ip_x, ip_y, ip_z;
 #pragma omp parallel for private(l, ip_x, ip_y, ip_z)
@@ -542,10 +545,10 @@ void single_image_reflect(const Tensor<cpu, 4, DType> &dst,
           }
           ip_z = ip_z - oStartZ + iStartZ;
 
-          DType *dest_p = dst.dptr_ + l * owidth * oheight * odepth +
-                          k * owidth * oheight + i * owidth + j;
-          DType *src_p = src.dptr_ + l * iwidth * iheight * idepth +
-                         ip_z * iwidth * iheight + ip_y * iwidth + ip_x;
+          DType* dest_p =
+              dst.dptr_ + l * owidth * oheight * odepth + k * owidth * oheight + i * owidth + j;
+          DType* src_p = src.dptr_ + l * iwidth * iheight * idepth + ip_z * iwidth * iheight +
+                         ip_y * iwidth + ip_x;
           *dest_p = *src_p;
         }
       }
@@ -554,30 +557,30 @@ void single_image_reflect(const Tensor<cpu, 4, DType> &dst,
 }
 
 template <typename DType>
-void single_image_reflect_grad(const Tensor<cpu, 4, DType> &grad_in,
-                                const Tensor<cpu, 4, DType> grad_out,
-                                mxnet::TShape pad) {
-  const int nslices = grad_in.size(0);
-  const index_t idepth = grad_in.size(1);
+void single_image_reflect_grad(const Tensor<cpu, 4, DType>& grad_in,
+                               const Tensor<cpu, 4, DType> grad_out,
+                               mxnet::TShape pad) {
+  const int nslices     = grad_in.size(0);
+  const index_t idepth  = grad_in.size(1);
   const index_t iheight = grad_in.size(2);
-  const index_t iwidth = grad_in.size(3);
+  const index_t iwidth  = grad_in.size(3);
 
-  const index_t odepth = grad_out.size(1);
+  const index_t odepth  = grad_out.size(1);
   const index_t oheight = grad_out.size(2);
-  const index_t owidth = grad_out.size(3);
+  const index_t owidth  = grad_out.size(3);
 
   const index_t pad_f = pad[4];
   const index_t pad_t = pad[6];
   const index_t pad_l = pad[8];
-  index_t iStartX = std::max(index_t{0}, -pad_l);
-  index_t iStartY = std::max(index_t{0}, -pad_t);
-  index_t iStartZ = std::max(index_t{0}, -pad_f);
-  index_t oStartX = std::max(index_t{0}, pad_l);
-  index_t oStartY = std::max(index_t{0}, pad_t);
-  index_t oStartZ = std::max(index_t{0}, pad_f);
+  index_t iStartX     = std::max(index_t{0}, -pad_l);
+  index_t iStartY     = std::max(index_t{0}, -pad_t);
+  index_t iStartZ     = std::max(index_t{0}, -pad_f);
+  index_t oStartX     = std::max(index_t{0}, pad_l);
+  index_t oStartY     = std::max(index_t{0}, pad_t);
+  index_t oStartZ     = std::max(index_t{0}, pad_f);
 
   index_t l, ip_x, ip_y, ip_z;
-/*#pragma omp parallel for private(l, ip_x, ip_y, ip_z)*/
+  /*#pragma omp parallel for private(l, ip_x, ip_y, ip_z)*/
   for (l = 0; l < nslices; l++) {
     index_t i, j, k;
     for (k = 0; k < odepth; k++) {
@@ -610,10 +613,10 @@ void single_image_reflect_grad(const Tensor<cpu, 4, DType> &grad_in,
           }
           ip_z = ip_z - oStartZ + iStartZ;
 
-          DType *src_p = grad_out.dptr_ + l * owidth * oheight * odepth +
-                         k * owidth * oheight + i * owidth + j;
-          DType *dest_p = grad_in.dptr_ + l * iwidth * iheight * idepth +
-                          ip_z * iwidth * iheight + ip_y * iwidth + ip_x;
+          DType* src_p = grad_out.dptr_ + l * owidth * oheight * odepth + k * owidth * oheight +
+                         i * owidth + j;
+          DType* dest_p = grad_in.dptr_ + l * iwidth * iheight * idepth + ip_z * iwidth * iheight +
+                          ip_y * iwidth + ip_x;
           *dest_p += *src_p;
         }
       }
@@ -625,8 +628,10 @@ void single_image_reflect_grad(const Tensor<cpu, 4, DType> &grad_in,
 // Interface to 2d and 3d image pad methods
 
 template <int dim, typename DType>
-void pad_image(const Tensor<cpu, dim, DType> &dst,
-               const Tensor<cpu, dim, DType> src, mxnet::TShape pad, int mode,
+void pad_image(const Tensor<cpu, dim, DType>& dst,
+               const Tensor<cpu, dim, DType> src,
+               mxnet::TShape pad,
+               int mode,
                DType constant_value) {
   for (index_t n = 0; n < dst.size(0); ++n) {
     switch (mode) {
@@ -644,8 +649,9 @@ void pad_image(const Tensor<cpu, dim, DType> &dst,
 }
 
 template <int dim, typename DType>
-void pad_image_grad(const Tensor<cpu, dim, DType> &in_grad,
-                    const Tensor<cpu, dim, DType> out_grad, mxnet::TShape pad,
+void pad_image_grad(const Tensor<cpu, dim, DType>& in_grad,
+                    const Tensor<cpu, dim, DType> out_grad,
+                    mxnet::TShape pad,
                     int mode) {
   for (index_t n = 0; n < in_grad.size(0); ++n) {
     switch (mode) {
@@ -667,22 +673,23 @@ void pad_image_grad(const Tensor<cpu, dim, DType> &in_grad,
 namespace mxnet {
 namespace op {
 template <>
-Operator *CreateOp<cpu>(PadParam param, int dtype) {
-  Operator *op = nullptr;
+Operator* CreateOp<cpu>(PadParam param, int dtype) {
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new PadOp<cpu, DType>(param); })
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *PadProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                                    std::vector<int> *in_type) const {
+Operator* PadProp::CreateOperatorEx(Context ctx,
+                                    mxnet::ShapeVector* in_shape,
+                                    std::vector<int>* in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
-.describe(R"code(Pads an input array with a constant or edge values of the array.
+    .describe(R"code(Pads an input array with a constant or edge values of the array.
 
 .. note:: `Pad` is deprecated. Use `pad` instead.
 
@@ -764,12 +771,10 @@ Example::
 
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "An n-dimensional input array.")
-.add_arguments(PadParam::__FIELDS__());
+    .add_argument("data", "NDArray-or-Symbol", "An n-dimensional input array.")
+    .add_arguments(PadParam::__FIELDS__());
 
-NNVM_REGISTER_OP(Pad)
-.add_alias("pad")
-.add_alias("_npx_pad");
+NNVM_REGISTER_OP(Pad).add_alias("pad").add_alias("_npx_pad");
 
 }  // namespace op
 }  // namespace mxnet

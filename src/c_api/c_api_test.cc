@@ -29,10 +29,10 @@
 #include "../common/cuda/rtc.h"
 
 int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
-                              const char* prop_name,
-                              const uint32_t num_ops,
-                              const char** op_names,
-                              SymbolHandle* ret_sym_handle) {
+                             const char* prop_name,
+                             const uint32_t num_ops,
+                             const char** op_names,
+                             SymbolHandle* ret_sym_handle) {
   nnvm::Symbol* s = new nnvm::Symbol();
   API_BEGIN();
   std::unordered_set<std::string> op_name_set;
@@ -40,10 +40,9 @@ int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
     op_name_set.emplace(op_names[i]);
   }
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
-  *s = sym->Copy();
+  *s                = sym->Copy();
   if (!op_name_set.empty()) {
-    auto& backend =
-        mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
+    auto& backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
     LOG(INFO) << "Subgraph backend " << backend->GetName() << " is activated.";
     const auto& subgraph_prop_list = backend->GetSubgraphProperties();
     for (auto property : subgraph_prop_list) {
@@ -52,7 +51,7 @@ int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
       property->SetAttr("graph", g);
       property->SetAttr("op_names", op_name_set);
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
-      g = nnvm::ApplyPass(std::move(g), "BuildSubgraph");
+      g                            = nnvm::ApplyPass(std::move(g), "BuildSubgraph");
       property->RemoveAttr("graph");
       g.attrs.erase("subgraph_property");
       s->outputs = g.outputs;
@@ -75,15 +74,14 @@ int MXSetSubgraphPropertyOpNames(const char* prop_name,
 }
 
 int MXSetSubgraphPropertyOpNamesV2(const char* prop_name,
-                                 const uint32_t num_ops,
-                                 const char** op_names) {
+                                   const uint32_t num_ops,
+                                   const char** op_names) {
   API_BEGIN();
   std::unordered_set<std::string> op_name_set;
   for (size_t i = 0; i < num_ops; ++i) {
     op_name_set.emplace(op_names[i]);
   }
-  auto& backend =
-      mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
+  auto& backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto& property : subgraph_prop_list) {
     property->SetAttr("op_names", op_name_set);
@@ -99,8 +97,7 @@ int MXRemoveSubgraphPropertyOpNames(const char* prop_name) {
 
 int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name) {
   API_BEGIN();
-  auto& backend =
-      mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
+  auto& backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto& property : subgraph_prop_list) {
     property->RemoveAttr("op_names");
@@ -108,15 +105,13 @@ int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name) {
   API_END();
 }
 
-int MXGetEnv(const char* name,
-             const char** value) {
+int MXGetEnv(const char* name, const char** value) {
   API_BEGIN();
   *value = getenv(name);
   API_END();
 }
 
-int MXSetEnv(const char* name,
-             const char* value) {
+int MXSetEnv(const char* name, const char* value) {
   API_BEGIN();
 #ifdef _WIN32
   auto value_arg = (value == nullptr) ? "" : value;
@@ -130,7 +125,7 @@ int MXSetEnv(const char* name,
   API_END();
 }
 
-int MXGetMaxSupportedArch(uint32_t *max_arch) {
+int MXGetMaxSupportedArch(uint32_t* max_arch) {
   API_BEGIN();
 #if MXNET_USE_CUDA
   *max_arch = static_cast<uint32_t>(mxnet::common::cuda::rtc::GetMaxSupportedArch());

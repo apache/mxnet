@@ -27,16 +27,14 @@
 namespace mxnet {
 namespace op {
 
-#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(__name$, __kernel$)       \
-  NNVM_REGISTER_OP(__name$)                                               \
-  .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{#__kernel$})
+#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(__name$, __kernel$) \
+  NNVM_REGISTER_OP(__name$).set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{#__kernel$})
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npx_relu, relu);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npx_sigmoid, sigmoid);
 
-NNVM_REGISTER_OP(_npi_copy)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+NNVM_REGISTER_OP(_npi_copy).set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_negative, negation);
 
@@ -116,80 +114,78 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arccosh, arccosh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arctanh, arctanh);
 
-NNVM_REGISTER_OP(_npi_around)
-.set_attr<FCompute>("FCompute<gpu>", AroundOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_around).set_attr<FCompute>("FCompute<gpu>", AroundOpForward<gpu>);
 
-NNVM_REGISTER_OP(_npi_nan_to_num)
-.set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_nan_to_num).set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpForward<gpu>);
 
 NNVM_REGISTER_OP(_npi_backward_nan_to_num)
-.set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_exp)
-.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"mul"});
+    .set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"mul"});
 
 NNVM_REGISTER_OP(_backward_npi_log)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log"});
 
 NNVM_REGISTER_OP(_backward_npi_log10)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log10"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log10"});
 
 NNVM_REGISTER_OP(_backward_npi_log2)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log2"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log2"});
 
 NNVM_REGISTER_OP(_backward_npi_log1p)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log1p"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log1p"});
 
 NNVM_REGISTER_OP(_backward_npi_expm1)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_expm1"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_expm1"});
 
 NNVM_REGISTER_OP(_backward_npi_sqrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_sqrt"});
+    .set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_sqrt"});
 
 NNVM_REGISTER_OP(_backward_npi_cbrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_cbrt"});
+    .set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_cbrt"});
 
 NNVM_REGISTER_OP(_backward_npi_sin)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sin"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sin"});
 
 NNVM_REGISTER_OP(_backward_npi_cos)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cos"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cos"});
 
 NNVM_REGISTER_OP(_backward_npi_tan)
-.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_tan"});
+    .set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_tan"});
 
 NNVM_REGISTER_OP(_backward_npi_arcsin)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arcsin"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arcsin"});
 
 NNVM_REGISTER_OP(_backward_npi_arccos)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arccos"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arccos"});
 
 NNVM_REGISTER_OP(_backward_npi_arctan)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arctan"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arctan"});
 
 NNVM_REGISTER_OP(_backward_npi_degrees)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_degrees"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_degrees"});
 
 NNVM_REGISTER_OP(_backward_npi_radians)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_radians"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_radians"});
 
 NNVM_REGISTER_OP(_backward_npi_cosh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cosh"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cosh"});
 
 NNVM_REGISTER_OP(_backward_npi_sinh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sinh"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sinh"});
 
 NNVM_REGISTER_OP(_backward_npi_tanh)
-.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_tanh"});
+    .set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_tanh"});
 
 NNVM_REGISTER_OP(_backward_npi_arcsinh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arcsinh"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arcsinh"});
 
 NNVM_REGISTER_OP(_backward_npi_arccosh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arccosh"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arccosh"});
 
 NNVM_REGISTER_OP(_backward_npi_arctanh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arctanh"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arctanh"});
 
 }  // namespace op
 }  // namespace mxnet

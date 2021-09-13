@@ -38,22 +38,25 @@
 #include "./nvtx.h"
 #include "../common/utils.h"
 
-
 namespace mxnet {
 namespace profiler {
-
-
 
 /*!
  * \brief Constant-sized character array class with simple string API to avoid allocations
  * \tparam string_size Maximum size of the string (including zero-terminator)
  */
-template<size_t string_size>
+template <size_t string_size>
 struct static_string {
-  inline static_string() { string_[0] = '\0'; }
-  inline explicit static_string(const char *s) { set(s); }
-  inline const char *c_str() const { return &string_[0]; }
-  inline void set(const char *s) {
+  inline static_string() {
+    string_[0] = '\0';
+  }
+  inline explicit static_string(const char* s) {
+    set(s);
+  }
+  inline const char* c_str() const {
+    return &string_[0];
+  }
+  inline void set(const char* s) {
 #pragma GCC diagnostic push
 #if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
@@ -62,13 +65,14 @@ struct static_string {
 #pragma GCC diagnostic pop
     string_[string_size - 1] = '\0';
   }
-  inline void append(const char *s) {
+  inline void append(const char* s) {
     const size_t l = strlen(&string_[0]);
     if (l < string_size - 1) {
       strncpy(&string_[0] + l, s, string_size - l - 1);
       string_[string_size - 1] = '\0';
     }
   }
+
  private:
   /*! \brief The actual character array */
   std::array<char, string_size> string_;
@@ -82,31 +86,33 @@ using profile_stat_string = static_string<128>;
 struct ProfileStat {
   /*!
    * \brief Event type as used for chrome://tracing support
-   * \note Tracing formats: https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview NOLINT(*)
+   * \note Tracing formats:
+   * https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
+   * NOLINT(*)
    */
   enum EventType {
-    kDurationBegin = 'B',
-    kDurationEnd = 'E',
-    kComplete = 'X',
-    kInstant = 'i',
-    kCounter = 'C',
-    kAsyncNestableStart = 'b',
+    kDurationBegin        = 'B',
+    kDurationEnd          = 'E',
+    kComplete             = 'X',
+    kInstant              = 'i',
+    kCounter              = 'C',
+    kAsyncNestableStart   = 'b',
     kAsyncNestableInstant = 'n',
-    kAsyncNestableEnd = 'e',
-    kFlowStart = 's',
-    kFlowStep = 't',
-    kFlowEnd = 'f',
-    kSample = 'P',
-    kObjectCreated = 'N',
-    kObjectSnapshot = 'O',
-    kObjectDestroyed = 'D',
-    kMetadata = 'M',
-    kMemoryDumpGlobal = 'V',
-    kMemoryDumpProcess = 'v',
-    kMark = 'R',
-    kClockSync = 'c',
-    kContextEnter = '(',
-    kContextLeave = ')'
+    kAsyncNestableEnd     = 'e',
+    kFlowStart            = 's',
+    kFlowStep             = 't',
+    kFlowEnd              = 'f',
+    kSample               = 'P',
+    kObjectCreated        = 'N',
+    kObjectSnapshot       = 'O',
+    kObjectDestroyed      = 'D',
+    kMetadata             = 'M',
+    kMemoryDumpGlobal     = 'V',
+    kMemoryDumpProcess    = 'v',
+    kMark                 = 'R',
+    kClockSync            = 'c',
+    kContextEnter         = '(',
+    kContextLeave         = ')'
   };
 
   struct SubEvent {
@@ -151,7 +157,8 @@ struct ProfileStat {
     return counter.QuadPart * 1000000 / frequency.QuadPart;
 #else
     return std::chrono::duration_cast<std::chrono::microseconds>(
-      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+               std::chrono::high_resolution_clock::now().time_since_epoch())
+        .count();
 #endif
   }
 
@@ -160,7 +167,7 @@ struct ProfileStat {
    * \param os Output stream to write the data
    * \note Emits all sub-even statistics
    */
-  void EmitEvents(std::ostream *os) {
+  void EmitEvents(std::ostream* os) {
     size_t count = 0;
     for (size_t i = 0; i < sizeof(items_) / sizeof(items_[0]); ++i) {
       if (items_[i].enabled_) {
@@ -182,7 +189,7 @@ struct ProfileStat {
    * \brief Save aggregate data for this stat
    * \param data Stat data
    */
-  virtual void SaveAggregate(AggregateStats::StatData *data) const {
+  virtual void SaveAggregate(AggregateStats::StatData* data) const {
     if (data) {
       data->type_ = AggregateStats::StatData::kOther;
     }
@@ -194,19 +201,20 @@ struct ProfileStat {
    * \param os Output stream to write data to
    * \param idx Sub-even index (index into items_) to write
    */
-  virtual void EmitExtra(std::ostream *os, size_t idx) {}
+  virtual void EmitExtra(std::ostream* os, size_t idx) {}
 
   /*!
    * \brief Emit sub-event statistics
    * \param os Output stream
    * \param idx Sub-even index (index into items_) to write
    */
-  void EmitSubEvent(std::ostream *os, size_t idx) {
-    const SubEvent &ev = items_[idx];
+  void EmitSubEvent(std::ostream* os, size_t idx) {
+    const SubEvent& ev = items_[idx];
     if (ev.enabled_) {
       *os << "    {\n"
           << "        \"name\": \"" << name_.c_str() << "\",\n"
-          << "        \"cat\": " << "\"" << categories_.c_str() << "\",\n"
+          << "        \"cat\": "
+          << "\"" << categories_.c_str() << "\",\n"
           << "        \"ph\": \"" << static_cast<char>(ev.event_type_) << "\",\n"
           << "        \"ts\": " << ev.timestamp_ << ",\n";
       EmitExtra(os, idx);
@@ -221,14 +229,14 @@ struct ProfileStat {
  * \brief Device statistics
  */
 struct DeviceStats {
-  using TQueue = dmlc::moodycamel::ConcurrentQueue<ProfileStat *>;
+  using TQueue = dmlc::moodycamel::ConcurrentQueue<ProfileStat*>;
   /*!
    * \brief Destructor, clean up allocated objects
    */
   ~DeviceStats() {
     std::shared_ptr<TQueue> es = opr_exec_stats_;
     if (es) {
-      ProfileStat *stat = nullptr;
+      ProfileStat* stat = nullptr;
       while (es->try_dequeue(stat)) {
         delete stat;
       }
@@ -255,16 +263,8 @@ struct DeviceStats {
  */
 class Profiler {
  public:
-  enum ProfilerMode {
-      kSymbolic = 1,
-      kImperative = 2,
-      kAPI = 4,
-      kMemory = 8
-  };
-  enum ProfilerState {
-      kNotRunning = 0,
-      kRunning = 1
-  };
+  enum ProfilerMode { kSymbolic = 1, kImperative = 2, kAPI = 4, kMemory = 8 };
+  enum ProfilerState { kNotRunning = 0, kRunning = 1 };
 
   /*! \brief set state of profiler */
   void SetState(ProfilerState state);
@@ -279,7 +279,8 @@ class Profiler {
    * \param continuous_dump true if profile information should be periodically dumped
    * \param dump_period Period (in seconds) of profile info dumping
    */
-  void SetConfig(int mode, std::string output_filename,
+  void SetConfig(int mode,
+                 std::string output_filename,
                  bool continuous_dump,
                  float dump_period,
                  bool aggregate_stats);
@@ -319,7 +320,7 @@ class Profiler {
    *       callback.  Another option is to use the CreateProfileStat()/AddProfileStat() pair,
    *       adding it only after
    */
-  template<typename StatType, typename SetExtraInfoFunction, typename ...Args>
+  template <typename StatType, typename SetExtraInfoFunction, typename... Args>
   void AddNewProfileStat(SetExtraInfoFunction set_extra_info_function, Args... args) {
     if (!paused_) {
       std::unique_ptr<StatType> stat = CreateProfileStat<StatType>(args...);
@@ -341,7 +342,7 @@ class Profiler {
    * \return Profiler singleton
    * \param sp Profiler shared pointer, only use for singleton ownership
    */
-  static Profiler* Get(std::shared_ptr<Profiler> *sp = nullptr);
+  static Profiler* Get(std::shared_ptr<Profiler>* sp = nullptr);
 
   /*!
    * \brief Set whether statistic collection is to be paused
@@ -349,14 +350,18 @@ class Profiler {
    * resume statistic collection
    * \note Pause/Resume is not recursive
    */
-  void set_paused(bool paused) { paused_ = paused; }
+  void set_paused(bool paused) {
+    paused_ = paused;
+  }
 
   /*!
    * \brief Get the calculated device count (numb er of devices to track in profile data).
    * \return Device count
    * \note Number of CPU's + Number of GPU's + One for CPU-Pinned
    */
-  size_t DeviceCount() const { return cpu_num_ + gpu_num_ + 2; }
+  size_t DeviceCount() const {
+    return cpu_num_ + gpu_num_ + 2;
+  }
 
   /*!
    * \brief Compute device index given device type and id
@@ -372,8 +377,7 @@ class Profiler {
    * \param dev_id Device ID
    * \return Character pointer to device name
    */
-  const char *DeviceName(mxnet::Context::DeviceType dev_type, int32_t dev_id);
-
+  const char* DeviceName(mxnet::Context::DeviceType dev_type, int32_t dev_id);
 
   /*!
    * \brief Device name
@@ -381,7 +385,7 @@ class Profiler {
    * \param dev_id Device ID
    * \return Character pointer to device name
    */
-  const char *DeviceName(const size_t index);
+  const char* DeviceName(const size_t index);
 
   /*!
    * \brief Whether aggregate stats are being collected
@@ -418,9 +422,10 @@ class Profiler {
    * \param args Arguments to pass to the new object's constructor
    * \return A unique_ptr to the new statistic object
    */
-  template<typename StatType, typename ...Args>
-  static std::unique_ptr<typename std::enable_if<std::is_base_of<ProfileStat, StatType>::value,
-    StatType>::type> CreateProfileStat(Args... args) {
+  template <typename StatType, typename... Args>
+  static std::unique_ptr<
+      typename std::enable_if<std::is_base_of<ProfileStat, StatType>::value, StatType>::type>
+  CreateProfileStat(Args... args) {
     return std::unique_ptr<StatType>(new StatType(args...));
   }
 
@@ -429,13 +434,13 @@ class Profiler {
    * \tparam StatType Type of the statistic object
    * \param stat The statistic object
    */
-  template<typename StatType>
-  inline void AddProfileStat(std::unique_ptr<StatType> *stat) {
+  template <typename StatType>
+  inline void AddProfileStat(std::unique_ptr<StatType>* stat) {
     general_stats_.opr_exec_stats_->enqueue(stat->release());
   }
 
   /*! \brief generate device information following chrome profile file format */
-  void EmitPid(std::ostream *os, const std::string& name, size_t pid);
+  void EmitPid(std::ostream* os, const std::string& name, size_t pid);
 
   /*!
    * \brief Set continuous asynchronous profile dump
@@ -457,7 +462,7 @@ class Profiler {
   /*! \brief profile statistics consist of multiple device statistics */
   std::unique_ptr<DeviceStats[]> profile_stat;
   /*! \brief Stats not associated directly with a device */
-  DeviceStats  general_stats_;
+  DeviceStats general_stats_;
   /*! \brief Map category -> pid */
   std::unordered_map<std::string, size_t> category_to_pid_;
   /*! \brief cpu number on the machine */
@@ -484,15 +489,15 @@ class Profiler {
 };
 
 #ifdef MXNET_USE_VTUNE
-#define VTUNE_ONLY_CODE(...) __VA_ARGS__  /* This is undefined at the bottom of this file */
+#define VTUNE_ONLY_CODE(...) __VA_ARGS__ /* This is undefined at the bottom of this file */
 #else
-#define VTUNE_ONLY_CODE(...) /* */        /* This is undefined at the bottom of this file */
+#define VTUNE_ONLY_CODE(...) /* */ /* This is undefined at the bottom of this file */
 #endif
 
 #ifdef MXNET_USE_NVTX
-#define NVTX_ONLY_CODE(...) __VA_ARGS__  /* This is undefined at the bottom of this file */
+#define NVTX_ONLY_CODE(...) __VA_ARGS__ /* This is undefined at the bottom of this file */
 #else
-#define NVTX_ONLY_CODE(...) /* */        /* This is undefined at the bottom of this file */
+#define NVTX_ONLY_CODE(...) /* */ /* This is undefined at the bottom of this file */
 #endif
 
 /**
@@ -506,13 +511,7 @@ class Profiler {
  *                                       |___/             |__/
  */
 
-enum ProfileObjectType {
-  kDomain,
-  kCounter,
-  kTask,
-  kEvent,
-  kFrame
-};
+enum ProfileObjectType { kDomain, kCounter, kTask, kEvent, kFrame };
 
 class ProfileObject {
  public:
@@ -536,8 +535,7 @@ struct ProfileDomain : public ProfileObject {
    * \brief Constructor
    * \param name Name of the domain
    */
-  explicit ProfileDomain(const char *name) noexcept
-    : name_(name) {
+  explicit ProfileDomain(const char* name) noexcept : name_(name) {
     CHECK_NOTNULL(name);
     CHECK_NE(name[0], '\0');
     VTUNE_ONLY_CODE(vtune_domain_.reset(new vtune::VTuneDomain(name)));
@@ -546,9 +544,14 @@ struct ProfileDomain : public ProfileObject {
    * \brief Get domain name
    * \return Domain name
    */
-  const char *name() const { return name_.c_str(); }
-  ProfileObjectType type() const override { return kDomain; }
-  VTUNE_ONLY_CODE(inline vtune::VTuneDomain *dom() { return vtune_domain_.get(); });
+  const char* name() const {
+    return name_.c_str();
+  }
+  ProfileObjectType type() const override {
+    return kDomain;
+  }
+  VTUNE_ONLY_CODE(inline vtune::VTuneDomain* dom() { return vtune_domain_.get(); });
+
  private:
   /*! \brief Name of the domain */
   profile_stat_string name_;
@@ -565,38 +568,36 @@ struct ProfileCounter : public ProfileObject {
    * \param name Counter name
    * \param domain Counter domain
    */
-  ProfileCounter(const char *name, ProfileDomain *domain) noexcept
-    : name_(name)
-      , domain_(domain)
-      , value_(0) {
+  ProfileCounter(const char* name, ProfileDomain* domain) noexcept
+      : name_(name), domain_(domain), value_(0) {
     CHECK_NOTNULL(domain);
     VTUNE_ONLY_CODE(vtune_.reset(new vtune::VTuneCounter(name, domain->dom())));
   }
   ~ProfileCounter() {}
   /*! \brief operator: ++object */
-  inline uint64_t operator ++() {
+  inline uint64_t operator++() {
     return IncrementValue(1);
   }
   /*! \brief operator: object++ */
-  inline uint64_t operator ++(int) {
+  inline uint64_t operator++(int) {
     const uint64_t old = value_;
     IncrementValue(1);
     return old;
   }
   /*! \brief operator: --object */
-  inline uint64_t operator --() {
+  inline uint64_t operator--() {
     CHECK_GT(value_, 0);
     return DecrementValue(1);
   }
   /*! \brief operator: object-- */
-  inline uint64_t operator --(int) {
+  inline uint64_t operator--(int) {
     CHECK_GT(value_, 0);
     const uint64_t old = value_;
     DecrementValue(1);
     return old;
   }
   /*! \brief operator: object += v */
-  inline uint64_t operator +=(int64_t v) {
+  inline uint64_t operator+=(int64_t v) {
     if (v >= 0) {
       return IncrementValue(static_cast<uint64_t>(v));
     } else {
@@ -605,7 +606,7 @@ struct ProfileCounter : public ProfileObject {
     }
   }
   /*! \brief operator: object -= v */
-  inline uint64_t operator -=(int64_t v) {
+  inline uint64_t operator-=(int64_t v) {
     CHECK_GE(value_, static_cast<uint64_t>(v));
     if (v >= 0) {
       return DecrementValue(static_cast<uint64_t>(v));
@@ -615,18 +616,20 @@ struct ProfileCounter : public ProfileObject {
     }
   }
 
-  inline bool operator >=(int64_t v) {
-      CHECK_GE(v, 0);
-      return value_ >= static_cast<uint64_t>(v);
+  inline bool operator>=(int64_t v) {
+    CHECK_GE(v, 0);
+    return value_ >= static_cast<uint64_t>(v);
   }
 
   /*! \brief operator: object = v */
-  inline ProfileCounter& operator = (uint64_t v) {
+  inline ProfileCounter& operator=(uint64_t v) {
     SetValue(v);
     return *this;
   }
 
-  ProfileObjectType type() const override { return kCounter; }
+  ProfileObjectType type() const override {
+    return kCounter;
+  }
 
  protected:
   /*!
@@ -634,10 +637,10 @@ struct ProfileCounter : public ProfileObject {
    */
   struct ProfileCounterStat : public ProfileStat {
     uint64_t value_;
-    explicit ProfileCounterStat(const char *name, uint64_t value) : value_(value) {
-      items_[0].enabled_ = true;
+    explicit ProfileCounterStat(const char* name, uint64_t value) : value_(value) {
+      items_[0].enabled_    = true;
       items_[0].event_type_ = kCounter;
-      items_->timestamp_ = NowInMicrosec();
+      items_->timestamp_    = NowInMicrosec();
       name_.set(name);
     }
 
@@ -646,7 +649,7 @@ struct ProfileCounter : public ProfileObject {
      * \param os Output stream to write data to
      * \param idx Sub-even index (index into items_) to write
      */
-    void EmitExtra(std::ostream *os, size_t idx) override {
+    void EmitExtra(std::ostream* os, size_t idx) override {
       ProfileStat::EmitExtra(os, idx);
       *os << "        \"args\": { \"" << name_.c_str() << "\": " << value_ << " },\n";
     }
@@ -655,7 +658,7 @@ struct ProfileCounter : public ProfileObject {
      * \brief Save aggregate data for this stat
      * \param data Stat data
      */
-    void SaveAggregate(AggregateStats::StatData *data) const override {
+    void SaveAggregate(AggregateStats::StatData* data) const override {
       if (data) {
         data->type_ = AggregateStats::StatData::kCounter;
         ++data->total_count_;
@@ -675,11 +678,10 @@ struct ProfileCounter : public ProfileObject {
    * \brief Send this object's statistical datapoint to the profiler
    */
   inline void SendStat(uint64_t value) {
-    Profiler::Get()->AddNewProfileStat<ProfileCounterStat>([this](ProfileCounterStat *stat) {
-                                                             stat->categories_.set(domain_->name());
-                                                           },
-                                                           name_.c_str(),
-                                                           value);
+    Profiler::Get()->AddNewProfileStat<ProfileCounterStat>(
+        [this](ProfileCounterStat* stat) { stat->categories_.set(domain_->name()); },
+        name_.c_str(),
+        value);
   }
 
   /*!
@@ -713,9 +715,9 @@ struct ProfileCounter : public ProfileObject {
   /*! \brief Name of the counter */
   profile_stat_string name_;
   /*! \brief Domain of the counter */
-  ProfileDomain *domain_;
+  ProfileDomain* domain_;
   /*! \brief Value of the counter */
-  std::atomic<uint64_t>  value_;
+  std::atomic<uint64_t> value_;
   /*! \brief VTune counter object */
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneCounter> vtune_);
 };
@@ -723,33 +725,31 @@ struct ProfileCounter : public ProfileObject {
 class ProfileDuration : public ProfileObject {
  public:
   virtual void start() = 0;
-  virtual void stop() = 0;
+  virtual void stop()  = 0;
 
  protected:
   /*!
    * \brief Basic duration statistic (start time, stop time)
    */
   struct DurationStat : public ProfileStat {
-    enum DurationStatIndex {
-      kStart, kStop
-    };
+    enum DurationStatIndex { kStart, kStop };
     /*!
      * \brief Constructor
      * \param begin_event Event type for start point (default is kDurationBegin)
      * \param end_event Event type for stop point (default is kDurationEnd)
      */
     DurationStat(ProfileStat::EventType begin_event = ProfileStat::kDurationBegin,
-                 ProfileStat::EventType end_event = ProfileStat::kDurationEnd) {
+                 ProfileStat::EventType end_event   = ProfileStat::kDurationEnd) {
       items_[kStart].enabled_ = items_[kStop].enabled_ = true;
-      items_[kStart].event_type_ = begin_event;
-      items_[kStop].event_type_ = end_event;
+      items_[kStart].event_type_                       = begin_event;
+      items_[kStop].event_type_                        = end_event;
     }
 
     /*!
      * \brief Save aggregate data for this stat
      * \param data Stat data
      */
-    void SaveAggregate(AggregateStats::StatData *data) const override {
+    void SaveAggregate(AggregateStats::StatData* data) const override {
       if (data) {
         data->type_ = AggregateStats::StatData::kDuration;
         ++data->total_count_;
@@ -776,9 +776,7 @@ struct ProfileTask : public ProfileDuration {
    * \param name Name of the task
    * \param domain Domain of the task
    */
-  ProfileTask(const char *name, ProfileDomain *domain)
-    : name_(name)
-      , domain_(domain) {
+  ProfileTask(const char* name, ProfileDomain* domain) : name_(name), domain_(domain) {
     CHECK_NOTNULL(domain);
     categories_.set(domain_->name());
     categories_.append(",task");
@@ -811,7 +809,9 @@ struct ProfileTask : public ProfileDuration {
     SendStat();
   }
 
-  ProfileObjectType type() const override { return kTask; }
+  ProfileObjectType type() const override {
+    return kTask;
+  }
 
   /*!
    * \brief Whether to add stat to AggregateStats
@@ -825,13 +825,13 @@ struct ProfileTask : public ProfileDuration {
    * \brief Task statistic object
    */
   struct ProfileTaskStat : public DurationStat {
-    explicit ProfileTaskStat(const char *name, uint64_t start_time, uint64_t stop_time)
-      : DurationStat(ProfileStat::kAsyncNestableStart, ProfileStat::kAsyncNestableEnd) {
+    explicit ProfileTaskStat(const char* name, uint64_t start_time, uint64_t stop_time)
+        : DurationStat(ProfileStat::kAsyncNestableStart, ProfileStat::kAsyncNestableEnd) {
       name_.set(name);
       items_[0].timestamp_ = start_time;
       items_[1].timestamp_ = stop_time;
     }
-    void EmitExtra(std::ostream *os, size_t idx) override {
+    void EmitExtra(std::ostream* os, size_t idx) override {
       DurationStat::EmitExtra(os, idx);
       *os << "        \"id\": " << std::hash<std::thread::id>{}(thread_id_) << ",\n";
     }
@@ -842,17 +842,21 @@ struct ProfileTask : public ProfileDuration {
    * \brief Send this object's statistical datapoint to the profiler
    */
   inline void SendStat() {
-    Profiler::Get()->AddNewProfileStat<ProfileTaskStat>([this](ProfileTaskStat *stat) {
-      stat->categories_.set(domain_->name());
-      stat->enable_aggregate_ = enable_aggregate_;
-    }, name_.c_str(), start_time_, ProfileStat::NowInMicrosec());
+    Profiler::Get()->AddNewProfileStat<ProfileTaskStat>(
+        [this](ProfileTaskStat* stat) {
+          stat->categories_.set(domain_->name());
+          stat->enable_aggregate_ = enable_aggregate_;
+        },
+        name_.c_str(),
+        start_time_,
+        ProfileStat::NowInMicrosec());
   }
   /*! \brief Task name */
-  const profile_stat_string  name_;
+  const profile_stat_string name_;
   /*! \brief Task categories */
   profile_stat_string categories_;
   /*! \brief domain */
-  ProfileDomain *domain_;
+  ProfileDomain* domain_;
   /*! \brief VTune task object */
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneTask> vtune_task_);
   /*! \brief NVTX duration object */
@@ -868,14 +872,12 @@ struct ProfileTask : public ProfileDuration {
 /*!
  * \brief Event - Thread-granular time block
  */
-struct ProfileEvent  : public ProfileDuration {
+struct ProfileEvent : public ProfileDuration {
   /*!
    * \brief Constructor
    * \param name Name of the event
    */
-  explicit inline ProfileEvent(const char *name)
-    : name_(name)
-      , categories_("event") {
+  explicit inline ProfileEvent(const char* name) : name_(name), categories_("event") {
     VTUNE_ONLY_CODE(vtune_event_ = vtune::VTuneEvent::registry_.get(name));
     NVTX_ONLY_CODE(nvtx_duration_.reset(new nvtx::NVTXDuration(name)));
   }
@@ -901,19 +903,21 @@ struct ProfileEvent  : public ProfileDuration {
    * \brief Set catagories (used for chrome tracing)
    * \param categories Comma-delimited categories
    */
-  void SetCategories(const char *categories) {
+  void SetCategories(const char* categories) {
     categories_.set(categories);
   }
 
-  ProfileObjectType type() const override { return kEvent; }
+  ProfileObjectType type() const override {
+    return kEvent;
+  }
 
  protected:
   /*!
    * \brief Event statistic object
    */
   struct ProfileEventStat : public DurationStat {
-    explicit ProfileEventStat(const char *name, uint64_t start_time, uint64_t stop_time)
-      : DurationStat(ProfileStat::kDurationBegin, ProfileStat::kDurationEnd) {
+    explicit ProfileEventStat(const char* name, uint64_t start_time, uint64_t stop_time)
+        : DurationStat(ProfileStat::kDurationBegin, ProfileStat::kDurationEnd) {
       name_.set(name);
       items_[0].timestamp_ = start_time;
       items_[1].timestamp_ = stop_time;
@@ -925,16 +929,18 @@ struct ProfileEvent  : public ProfileDuration {
    * \brief Send this object's statistical datapoint to the profiler
    */
   virtual void SendStat() {
-    Profiler::Get()->AddNewProfileStat<ProfileEventStat>([this](ProfileEventStat *stat) {
-      stat->categories_.set(categories_.c_str());
-    }, name_.c_str(), start_time_, ProfileStat::NowInMicrosec());
+    Profiler::Get()->AddNewProfileStat<ProfileEventStat>(
+        [this](ProfileEventStat* stat) { stat->categories_.set(categories_.c_str()); },
+        name_.c_str(),
+        start_time_,
+        ProfileStat::NowInMicrosec());
   }
   /*! \brief Event name */
-  const profile_stat_string  name_;
+  const profile_stat_string name_;
   /*! \brief Event categories (comma-delimited) */
   profile_stat_string categories_;
   /*! \brief VTune event object */
-  VTUNE_ONLY_CODE(vtune::VTuneEvent *vtune_event_);
+  VTUNE_ONLY_CODE(vtune::VTuneEvent* vtune_event_);
   /*! \brief NVTX duration object */
   NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_;);
 
@@ -952,9 +958,7 @@ struct ProfileFrame : public ProfileDuration {
    * \param name Name of the frame
    * \param domain Domain of the frame
    */
-  ProfileFrame(const char *name, ProfileDomain *domain)
-    : name_(name)
-      , domain_(domain) {
+  ProfileFrame(const char* name, ProfileDomain* domain) : name_(name), domain_(domain) {
     CHECK_NOTNULL(domain);
     categories_.set(domain_->name());
     categories_.append(",frame");
@@ -979,15 +983,17 @@ struct ProfileFrame : public ProfileDuration {
     SendStat();
   }
 
-  ProfileObjectType type() const override { return kFrame; }
+  ProfileObjectType type() const override {
+    return kFrame;
+  }
 
  protected:
   /*!
    * \brief Frame statistic object
    */
   struct ProfileFrameStat : public DurationStat {
-    explicit ProfileFrameStat(const char *name, uint64_t start_time, uint64_t stop_time)
-      : DurationStat(ProfileStat::kContextEnter, ProfileStat::kContextLeave) {
+    explicit ProfileFrameStat(const char* name, uint64_t start_time, uint64_t stop_time)
+        : DurationStat(ProfileStat::kContextEnter, ProfileStat::kContextLeave) {
       name_.set(name);
       items_[0].timestamp_ = start_time;
       items_[1].timestamp_ = stop_time;
@@ -999,16 +1005,18 @@ struct ProfileFrame : public ProfileDuration {
    * \brief Send this object's statistical datapoint to the profiler
    */
   inline void SendStat() {
-    Profiler::Get()->AddNewProfileStat<ProfileFrameStat>([this](ProfileFrameStat *stat) {
-      stat->categories_.set(categories_.c_str());
-    }, name_.c_str(), start_time_, ProfileStat::NowInMicrosec());
+    Profiler::Get()->AddNewProfileStat<ProfileFrameStat>(
+        [this](ProfileFrameStat* stat) { stat->categories_.set(categories_.c_str()); },
+        name_.c_str(),
+        start_time_,
+        ProfileStat::NowInMicrosec());
   }
   /*! \brief Frame name */
-  const profile_stat_string  name_;
+  const profile_stat_string name_;
   /*! \brief Frame categories (comma-delimited) */
   profile_stat_string categories_;
   /*! \brief Pointer to the domain */
-  ProfileDomain *domain_;
+  ProfileDomain* domain_;
   /*! \brief VTune Frame object */
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneFrame> vtune_frame_);
   /*! \brief NVTX duration object */
@@ -1024,7 +1032,12 @@ struct ProfileFrame : public ProfileDuration {
  */
 struct ProfileMarker {
   enum MarkerScope {  // Should equal VTune values
-    kUnknown, kGlobal, kProcess, kThread, kTask, kMarker
+    kUnknown,
+    kGlobal,
+    kProcess,
+    kThread,
+    kTask,
+    kMarker
   };
 
   /*!
@@ -1034,18 +1047,15 @@ struct ProfileMarker {
    * \param scope Scope of the instant marker
    * \param nestable true if the instant marker is nestable
    */
-  ProfileMarker(const char *name,
-                       ProfileDomain *domain,
-                       const MarkerScope scope,
-                       bool nestable = true)
-    : name_(name)
-      , domain_(domain)
-      , scope_(scope)
-      , nestable_(nestable) {
+  ProfileMarker(const char* name,
+                ProfileDomain* domain,
+                const MarkerScope scope,
+                bool nestable = true)
+      : name_(name), domain_(domain), scope_(scope), nestable_(nestable) {
     categories_.set(domain_->name());
     categories_.append(",instant_marker");
     VTUNE_ONLY_CODE(vtune_instant_marker_.reset(
-      new vtune::VTuneInstantMarker(name, domain->dom(), static_cast<__itt_scope>(scope))));
+        new vtune::VTuneInstantMarker(name, domain->dom(), static_cast<__itt_scope>(scope))));
   }
 
   /*!
@@ -1061,14 +1071,14 @@ struct ProfileMarker {
    * \brief Instant-marker statistic object
    */
   struct ProfileMarkerStat : public ProfileStat {
-    explicit ProfileMarkerStat(const char *name, const char scope_char, bool nestable)
-    : scope_char_(scope_char) {
-      items_[0].enabled_ = true;
+    explicit ProfileMarkerStat(const char* name, const char scope_char, bool nestable)
+        : scope_char_(scope_char) {
+      items_[0].enabled_    = true;
       items_[0].event_type_ = nestable ? kAsyncNestableInstant : kInstant;
-      items_->timestamp_ = NowInMicrosec();
+      items_->timestamp_    = NowInMicrosec();
       name_.set(name);
     }
-    virtual void EmitExtra(std::ostream *os, size_t idx) {
+    virtual void EmitExtra(std::ostream* os, size_t idx) {
       ProfileStat::EmitExtra(os, idx);
       *os << "        \"s\": \"" << scope_char_ << "\",\n";
     }
@@ -1080,9 +1090,11 @@ struct ProfileMarker {
    * \brief Send this object's statistical datapoint to the profiler
    */
   virtual void SendStat() {
-    Profiler::Get()->AddNewProfileStat<ProfileMarkerStat>([this](ProfileMarkerStat *stat) {
-      stat->categories_.set(categories_.c_str());
-    }, name_.c_str(), vtune_scope_to_chrome_scope(scope_), nestable_);
+    Profiler::Get()->AddNewProfileStat<ProfileMarkerStat>(
+        [this](ProfileMarkerStat* stat) { stat->categories_.set(categories_.c_str()); },
+        name_.c_str(),
+        vtune_scope_to_chrome_scope(scope_),
+        nestable_);
   }
 
   static char vtune_scope_to_chrome_scope(const MarkerScope scope) {
@@ -1105,7 +1117,7 @@ struct ProfileMarker {
   /*! \brief Categories of the instant marker (comma-delimited) */
   profile_stat_string categories_;
   /*! \brief Pointer to the domain of this instant marker */
-  ProfileDomain *domain_;
+  ProfileDomain* domain_;
   /*! \brief VTune scope */
   const MarkerScope scope_;
   /*! \brief Whether this marker is nestabe */
@@ -1151,7 +1163,7 @@ struct ProfileOperator : public ProfileEvent {
         ss << "]";
       }
       if (!attr_.empty()) {
-        for (const auto &tt : attr_) {
+        for (const auto& tt : attr_) {
           ss << " (" << tt.first << "=" << tt.second << ")";
         }
       }
@@ -1163,12 +1175,12 @@ struct ProfileOperator : public ProfileEvent {
    * \brief Constructor
    * \param name Name of the operator
    */
-  explicit inline ProfileOperator(const char *name, Attributes *attributes)
-    : ProfileEvent(name)
-      , as_task_(name, &domain_)
-      , name_(name)
-      , attributes_(attributes)
-      , profiling_(!IsDeprecatedOperator(name)) {
+  explicit inline ProfileOperator(const char* name, Attributes* attributes)
+      : ProfileEvent(name),
+        as_task_(name, &domain_),
+        name_(name),
+        attributes_(attributes),
+        profiling_(!IsDeprecatedOperator(name)) {
     if (IsSubOperatorOfCustom(name)) {
       as_task_.setDomain(&custom_op_domain);
       SetCategories(custom_op_domain.name());
@@ -1185,7 +1197,7 @@ struct ProfileOperator : public ProfileEvent {
    */
   void startForDevice(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
     dev_type_ = dev_type;
-    dev_id_ = dev_id;
+    dev_id_   = dev_id;
     if (profiling_) {
       ProfileEvent::start();
       as_task_.start();
@@ -1213,12 +1225,15 @@ struct ProfileOperator : public ProfileEvent {
      * \param start_time Time when operator starts
      * \param stop_time Time when operator completes
      */
-    inline OprExecStat(const char *name, mxnet::Context::DeviceType dev_type, uint32_t dev_id,
-                       uint64_t start_time, uint64_t stop_time,
-                       const Attributes *attributes)
-      : DurationStat(ProfileStat::kDurationBegin, ProfileStat::kDurationEnd)
-        , dev_type_(dev_type)
-        , dev_id_(dev_id) {
+    inline OprExecStat(const char* name,
+                       mxnet::Context::DeviceType dev_type,
+                       uint32_t dev_id,
+                       uint64_t start_time,
+                       uint64_t stop_time,
+                       const Attributes* attributes)
+        : DurationStat(ProfileStat::kDurationBegin, ProfileStat::kDurationEnd),
+          dev_type_(dev_type),
+          dev_id_(dev_id) {
       name_.set(name);
       if (attributes) {
         name_.append(attributes->to_string().c_str());
@@ -1229,7 +1244,7 @@ struct ProfileOperator : public ProfileEvent {
         categories_.set("operator");
       }
       items_[kStart].timestamp_ = start_time;
-      items_[kStop].timestamp_ = stop_time;
+      items_[kStop].timestamp_  = stop_time;
     }
     /*! \brief device type: CPU: 1, GPU: 2, CPUPinned: 3 */
     mxnet::Context::DeviceType dev_type_;
@@ -1242,18 +1257,21 @@ struct ProfileOperator : public ProfileEvent {
    * \brief Send this object's statistical datapoint to the profiler
    */
   void SendStat() override {
-    Profiler::Get()->AddNewProfileStat<OprExecStat>(
-      [](OprExecStat *stat) {}, name_.c_str(), dev_type_, dev_id_,
-      start_time_, ProfileStat::NowInMicrosec(),
-      attributes_.get());
+    Profiler::Get()->AddNewProfileStat<OprExecStat>([](OprExecStat* stat) {},
+                                                    name_.c_str(),
+                                                    dev_type_,
+                                                    dev_id_,
+                                                    start_time_,
+                                                    ProfileStat::NowInMicrosec(),
+                                                    attributes_.get());
   }
   /*!
    * \brief Check if this operator is no longer profiled
    * Notice that this operator may still be used for e.g synchronization
    */
   inline static bool IsDeprecatedOperator(const char* name) {
-    return strcmp(name, "CustomOperatorWait") == 0 ||
-           strcmp(name, "Custom") == 0 || strcmp(name, "_backward_Custom") == 0;
+    return strcmp(name, "CustomOperatorWait") == 0 || strcmp(name, "Custom") == 0 ||
+           strcmp(name, "_backward_Custom") == 0;
   }
   /*!
    * \brief Check if this operator a sub-operator of a custom operator
@@ -1280,11 +1298,11 @@ struct ProfileOperator : public ProfileEvent {
 /*
  * Profiler inline functions
  */
-inline const char *Profiler::DeviceName(mxnet::Context::DeviceType dev_type, int32_t dev_id) {
+inline const char* Profiler::DeviceName(mxnet::Context::DeviceType dev_type, int32_t dev_id) {
   return profile_stat[DeviceIndex(dev_type, dev_id)].dev_name_.c_str();
 }
 
-inline const char *Profiler::DeviceName(const size_t index) {
+inline const char* Profiler::DeviceName(const size_t index) {
   return profile_stat[index].dev_name_.c_str();
 }
 
@@ -1308,9 +1326,9 @@ inline size_t Profiler::DeviceIndex(mxnet::Context::DeviceType dev_type, int32_t
  * \brief Explicit 'Profiler::AddProfileStat' override for 'OprExecStat'
  * \param opr_stat Unique pointer to the operator statistic
  */
-template<>
+template <>
 inline void Profiler::AddProfileStat<ProfileOperator::OprExecStat>(
-  std::unique_ptr<ProfileOperator::OprExecStat> *opr_stat) {
+    std::unique_ptr<ProfileOperator::OprExecStat>* opr_stat) {
   const size_t idx = DeviceIndex((*opr_stat)->dev_type_, (*opr_stat)->dev_id_);
   CHECK_LT(idx, DeviceCount());
   DeviceStats& dev_stat = profile_stat[idx];
@@ -1327,6 +1345,7 @@ class ProfilerScope {
   void SetCurrentProfilerScope(const std::string& scope);
   /*! \brief Get the current profiler scope */
   std::string GetCurrentProfilerScope() const;
+
  private:
   std::string current_profiler_scope_ = MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR;
 };

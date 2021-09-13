@@ -48,11 +48,11 @@ static_assert(sizeof(int64) == 8, "Size of int64 is expected to be 8B");
 
 )code"
 #if MSHADOW_INT64_TENSOR_SIZE == 1
-"typedef int64 index_t;\n"
+                                   "typedef int64 index_t;\n"
 #else
-"typedef int32 index_t;\n"
+                                   "typedef int32 index_t;\n"
 #endif
-R"code(
+                                   R"code(
 // bool and int8 need to be accumulated in index_t
 // but bool needs to be treated in the special way
 // for ops like bitwise_not

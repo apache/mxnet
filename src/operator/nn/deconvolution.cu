@@ -22,7 +22,7 @@
  * \file deconvolution.cu
  * \brief
  * \author Wei Wu, Da Zheng
-*/
+ */
 
 #include "./deconvolution-inl.h"
 #if MXNET_USE_CUDNN == 1
@@ -33,8 +33,8 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_CUDNN == 1
-template<typename DType>
-static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& param,
+template <typename DType>
+static CuDNNDeconvolutionOp<DType>& GetCuDNNDeconvOp(const DeconvolutionParam& param,
                                                      int forward_compute_type,
                                                      int backward_compute_type,
                                                      const mxnet::ShapeVector& in_shape,
@@ -42,25 +42,22 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
                                                      const RunContext& rctx,
                                                      bool add_to_weight) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DeconvSignature,
-                                         std::shared_ptr<CuDNNDeconvolutionOp<DType> >,
-                                         OpHash> ops;
+  static thread_local std::
+      unordered_map<DeconvSignature, std::shared_ptr<CuDNNDeconvolutionOp<DType>>, OpHash>
+          ops;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DeconvSignature,
-                                            std::shared_ptr<CuDNNDeconvolutionOp<DType> >,
-                                            OpHash> ops;
+  static MX_THREAD_LOCAL
+      std::unordered_map<DeconvSignature, std::shared_ptr<CuDNNDeconvolutionOp<DType>>, OpHash>
+          ops;
 #endif
   DeconvSignature key(param);
   size_t ndim = 0;
-  for (auto &s : in_shape)
+  for (auto& s : in_shape)
     ndim += s.ndim();
-  for (auto &s : out_shape)
+  for (auto& s : out_shape)
     ndim += s.ndim();
-  key.Reserve(1 /* for forward_compute_type */ +
-              1 /* for backward_compute_type */ +
-              ndim /* for in and out shapes */ +
-              1 /* for dev_id */ +
-              1 /* for add_to_weight */);
+  key.Reserve(1 /* for forward_compute_type */ + 1 /* for backward_compute_type */ +
+              ndim /* for in and out shapes */ + 1 /* for dev_id */ + 1 /* for add_to_weight */);
 
   key.AddSign(forward_compute_type);
   key.AddSign(backward_compute_type);
@@ -73,24 +70,29 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
   if (it == ops.end()) {
     std::shared_ptr<CuDNNDeconvolutionOp<DType>> op(new CuDNNDeconvolutionOp<DType>());
     auto ins_ret = ops.insert(
-            std::pair<DeconvSignature, std::shared_ptr<CuDNNDeconvolutionOp<DType>>>(key, op));
+        std::pair<DeconvSignature, std::shared_ptr<CuDNNDeconvolutionOp<DType>>>(key, op));
     CHECK(ins_ret.second);
     it = ins_ret.first;
-    it->second->Init(param, forward_compute_type, backward_compute_type, in_shape,
-                     out_shape, rctx, add_to_weight);
+    it->second->Init(param,
+                     forward_compute_type,
+                     backward_compute_type,
+                     in_shape,
+                     out_shape,
+                     rctx,
+                     add_to_weight);
   }
   return *it->second;
 }
 #endif
 
-template<>
+template <>
 void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                const OpContext& ctx,
                                const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  int dtype = inputs[0].type_flag_;
+  int dtype                       = inputs[0].type_flag_;
 
 #if MXNET_USE_CUDNN == 1
   // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).
@@ -101,10 +103,10 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       DeconvolutionOp<gpu, DType> op;
       op.Init(param);
       op.Forward(ctx, inputs, req, outputs);
-    } else if (!CuDNNDeconvolutionOp<DType>::Supports(param,
-          compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
-      LOG(WARNING) <<
-        "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
+    } else if (!CuDNNDeconvolutionOp<DType>::Supports(
+                   param, compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
+      LOG(WARNING)
+          << "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
       DeconvolutionOp<gpu, DType> op;
       op.Init(param);
       op.Forward(ctx, inputs, req, outputs);
@@ -116,8 +118,9 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       }
       // req[deconv::kWeight] is only set for backward, so assume the typical 'write' for now.
       auto add_to_weight = false;
-      GetCuDNNDeconvOp<DType>(param, compute_type, compute_type,
-          in_shape, out_shape, ctx.run_ctx, add_to_weight).Forward(ctx, inputs, req, outputs);
+      GetCuDNNDeconvOp<DType>(
+          param, compute_type, compute_type, in_shape, out_shape, ctx.run_ctx, add_to_weight)
+          .Forward(ctx, inputs, req, outputs);
     }
   })
 #else
@@ -129,7 +132,7 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
 #endif  // MXNET_USE_CUDNN
 }
 
-template<>
+template <>
 void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
                                    const std::vector<TBlob>& inputs,
@@ -137,9 +140,9 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                    const std::vector<TBlob>& outputs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
-  const TBlob &out_grad = inputs[0];
-  const std::vector<TBlob> &in_grad = outputs;
-  int dtype = out_grad.type_flag_;
+  const TBlob& out_grad             = inputs[0];
+  const std::vector<TBlob>& in_grad = outputs;
+  int dtype                         = out_grad.type_flag_;
 
 #if MXNET_USE_CUDNN == 1
   // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).
@@ -150,10 +153,10 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       DeconvolutionOp<gpu, DType> op;
       op.Init(param);
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
-    } else if (!CuDNNDeconvolutionOp<DType>::Supports(param,
-          compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
-      LOG(WARNING) <<
-        "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
+    } else if (!CuDNNDeconvolutionOp<DType>::Supports(
+                   param, compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
+      LOG(WARNING)
+          << "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
       DeconvolutionOp<gpu, DType> op;
       op.Init(param);
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
@@ -164,9 +167,9 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
         in_shape[i] = in_data[i].shape_;
       }
       auto add_to_weight = req[deconv::kWeight] == kAddTo;
-      GetCuDNNDeconvOp<DType>(param, compute_type, compute_type,
-          in_shape, out_shape, ctx.run_ctx, add_to_weight).Backward(ctx,
-            std::vector<TBlob>{out_grad}, in_data, req, in_grad);
+      GetCuDNNDeconvOp<DType>(
+          param, compute_type, compute_type, in_shape, out_shape, ctx.run_ctx, add_to_weight)
+          .Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     }
   })
 #else
@@ -178,11 +181,10 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 #endif  // MXNET_USE_CUDNN
 }
 
-NNVM_REGISTER_OP(Deconvolution)
-.set_attr<FCompute>("FCompute<gpu>", DeconvolutionCompute<gpu>);
+NNVM_REGISTER_OP(Deconvolution).set_attr<FCompute>("FCompute<gpu>", DeconvolutionCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_Deconvolution)
-.set_attr<FCompute>("FCompute<gpu>", DeconvolutionGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", DeconvolutionGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -33,13 +33,12 @@
 #include "../../common/utils.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
-
 namespace mxnet {
 namespace op {
 
 inline bool NumpyPolyvalShape(const nnvm::NodeAttrs& attrs,
-                              mxnet::ShapeVector *in_attrs,
-                              mxnet::ShapeVector *out_attrs) {
+                              mxnet::ShapeVector* in_attrs,
+                              mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -52,9 +51,9 @@ inline bool NumpyPolyvalShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
-template<int req>
+template <int req>
 struct polyval_forward {
-  template<typename DType>
+  template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i,
                                   DType* out_data,
                                   const DType* p_data,
@@ -62,13 +61,13 @@ struct polyval_forward {
                                   const index_t p_size) {
     DType val = 0;
     for (index_t j = 0; j < p_size; j++) {
-        val = val * x_data[i] + p_data[j];
+      val = val * x_data[i] + p_data[j];
     }
     KERNEL_ASSIGN(out_data[i], req, val);
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void NumpyPolyvalForward(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<TBlob>& inputs,
@@ -78,18 +77,21 @@ void NumpyPolyvalForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& p_data = inputs[0];
-  const TBlob& x_data = inputs[1];
-  const TBlob& out_data = outputs[0];
-  const size_t p_size = p_data.Size();
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  const TBlob& p_data     = inputs[0];
+  const TBlob& x_data     = inputs[1];
+  const TBlob& out_data   = outputs[0];
+  const size_t p_size     = p_data.Size();
   using namespace mxnet_op;
 
   MSHADOW_TYPE_SWITCH(x_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<polyval_forward<req_type>, xpu>::Launch(
-          s, out_data.Size(), out_data.dptr<DType>(),
-          p_data.dptr<DType>(), x_data.dptr<DType>(), p_size);
+      Kernel<polyval_forward<req_type>, xpu>::Launch(s,
+                                                     out_data.Size(),
+                                                     out_data.dptr<DType>(),
+                                                     p_data.dptr<DType>(),
+                                                     x_data.dptr<DType>(),
+                                                     p_size);
     });
   });
 }

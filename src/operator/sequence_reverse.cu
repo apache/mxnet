@@ -22,19 +22,18 @@
  * \file sequence_reverse.cu
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 
 #include "./sequence_reverse-inl.h"
 
 namespace mxnet {
 namespace op {
-template <> Operator *CreateOp<gpu>(SequenceReverseParam param, int dtype, int itype) {
-  Operator *op = nullptr;
+template <>
+Operator* CreateOp<gpu>(SequenceReverseParam param, int dtype, int itype) {
+  Operator* op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceReverseOp<gpu, DType, IType>(param);
-        });
-    });
+    MSHADOW_TYPE_SWITCH(itype, IType, { op = new SequenceReverseOp<gpu, DType, IType>(param); });
+  });
   return op;
 }
 

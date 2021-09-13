@@ -28,11 +28,12 @@ namespace pass {
 
 class InvalidGraphError : public std::exception {
  public:
-  explicit InvalidGraphError(const std::string& msg = "invalid graph error"): msg_(msg) { }
+  explicit InvalidGraphError(const std::string& msg = "invalid graph error") : msg_(msg) {}
   ~InvalidGraphError() throw() {}
   virtual const char* what() const throw() {
     return msg_.c_str();
   }
+
  private:
   std::string msg_;
 };

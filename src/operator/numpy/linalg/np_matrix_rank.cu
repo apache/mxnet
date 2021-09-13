@@ -29,10 +29,9 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_matrix_rank_none_tol)
-.set_attr<FCompute>("FCompute<gpu>", MatrixRankNoneTolForward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", MatrixRankNoneTolForward<gpu>);
 
-NNVM_REGISTER_OP(_npi_matrix_rank)
-.set_attr<FCompute>("FCompute<gpu>", MatrixRankForward<gpu>);
+NNVM_REGISTER_OP(_npi_matrix_rank).set_attr<FCompute>("FCompute<gpu>", MatrixRankForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

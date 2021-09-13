@@ -7,9 +7,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -68,7 +68,7 @@ inline Tuple<Tuple<int>> BroadcastPadWidth(int ndim, runtime::ADT adt) {
     } else {
       CHECK_EQ(adt_size, 2) << "Invalid Input pad_width";
       int pad_before = static_cast<int>(pad->value);
-      int pad_after = static_cast<int>(Downcast<runtime::Integer, ObjectRef>(adt[1])->value);
+      int pad_after  = static_cast<int>(Downcast<runtime::Integer, ObjectRef>(adt[1])->value);
       if (ndim == 1) {
         temp.emplace_back(mxnet::Tuple<int>({pad_before}));
         temp.emplace_back(mxnet::Tuple<int>({pad_after}));
@@ -82,10 +82,8 @@ inline Tuple<Tuple<int>> BroadcastPadWidth(int ndim, runtime::ADT adt) {
     if (adt_size == 1) {
       if (ndim == 1) {
         runtime::ADT pad_adt = Downcast<runtime::ADT, ObjectRef>(adt[0]);
-        int pad_before =
-            static_cast<int>(Downcast<runtime::Integer, ObjectRef>(pad_adt[0])->value);
-        int pad_after =
-            static_cast<int>(Downcast<runtime::Integer, ObjectRef>(pad_adt[1])->value);
+        int pad_before = static_cast<int>(Downcast<runtime::Integer, ObjectRef>(pad_adt[0])->value);
+        int pad_after  = static_cast<int>(Downcast<runtime::Integer, ObjectRef>(pad_adt[1])->value);
         temp.emplace_back(mxnet::Tuple<int>({pad_before}));
         temp.emplace_back(mxnet::Tuple<int>({pad_after}));
       } else {
@@ -103,32 +101,31 @@ inline Tuple<Tuple<int>> BroadcastPadWidth(int ndim, runtime::ADT adt) {
   return Tuple<Tuple<int>>(temp.begin(), temp.end());
 }
 
-MXNET_REGISTER_API("_npi.pad")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.pad").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_pad");
   nnvm::NodeAttrs attrs;
   op::NumpyPadParam param;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  NDArray* inputs[]    = {args[0].operator mxnet::NDArray*()};
   mxnet::TShape ashape = inputs[0]->shape();
-  int ndim = ashape.ndim();
-  ADT adt = Downcast<ADT, ObjectRef>(args[1].operator ObjectRef());
+  int ndim             = ashape.ndim();
+  ADT adt              = Downcast<ADT, ObjectRef>(args[1].operator ObjectRef());
   // broadcast pad_width to (ndim, 2)
   param.pad_width = BroadcastPadWidth(ndim, adt);
-  param.mode = String2MXNetPadType(args[2].operator std::string());
+  param.mode      = String2MXNetPadType(args[2].operator std::string());
   if (args[3].type_code() != kNull) {
     param.constant_values = args[3].operator double();
   }
   if (args[4].type_code() != kNull) {
     param.reflect_type = args[4].operator std::string();
   }
-  attrs.op = op;
+  attrs.op     = op;
   attrs.parsed = param;
   SetAttrDict<op::NumpyPadParam>(&attrs);
-  int num_inputs = 1;
+  int num_inputs  = 1;
   int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret            = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 });
 
 }  // namespace mxnet

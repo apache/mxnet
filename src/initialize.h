@@ -1,4 +1,4 @@
-  /*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,13 +28,10 @@
 #include <map>
 #include "dmlc/io.h"
 
-
 #ifndef MXNET_INITIALIZE_H_
 #define MXNET_INITIALIZE_H_
 
 namespace mxnet {
-
-
 
 void pthread_atfork_prepare();
 void pthread_atfork_parent();
@@ -63,7 +60,6 @@ class LibraryInitializer {
    * @return true if the current pid doesn't match the one that initialized the library
    */
   bool was_forked() const;
-
 
   // Library loading
   bool lib_is_loaded(const std::string& path) const;
@@ -113,8 +109,8 @@ class LibraryInitializer {
  * \param func_name function name to search for in the library
  * \return func a function pointer
  */
-template<typename T>
-T get_func(void *lib, const char *func_name) {
+template <typename T>
+T get_func(void* lib, const char* func_name) {
   T func;
   LibraryInitializer::Get()->get_sym(lib, reinterpret_cast<void**>(&func), func_name);
   if (!func)

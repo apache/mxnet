@@ -24,31 +24,31 @@ namespace op {
 
 using namespace mshadow::cuda;
 
-void IndexArrayForwardGPU(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const std::vector<TBlob> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<TBlob> &outputs) {
+void IndexArrayForwardGPU(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const TBlob& in_data = inputs[0];
+  const TBlob& in_data  = inputs[0];
   const TBlob& out_data = outputs[0];
 
   const IndexArrayParam& param = nnvm::get<IndexArrayParam>(attrs.parsed);
 
   const TShape inshape = in_data.shape_;
-  const int ndim = inshape.ndim();
+  const int ndim       = inshape.ndim();
 
-  Stream<gpu> *s = ctx.get_stream<gpu>();
+  Stream<gpu>* s      = ctx.get_stream<gpu>();
   cudaStream_t stream = Stream<gpu>::GetStream(s);
 
   using namespace mxnet_op;
 
   if (param.axes.has_value()) {
     const mxnet::Tuple<int>& axes = param.axes.value();
-    const int naxes = axes.ndim();
+    const int naxes               = axes.ndim();
 
     std::vector<int64_t> index_products = IndexArrayComputeIndexProducts(inshape);
 
@@ -58,29 +58,31 @@ void IndexArrayForwardGPU(const nnvm::NodeAttrs &attrs,
     Tensor<gpu, 1, int64_t> workspace =
         ctx.requested[0].get_space_typed<gpu, 1, int64_t>(Shape1(2 * naxes), s);
 
-    CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, cpu_workspace.data(), sizeof(int64_t) * (2 * naxes),
-                              cudaMemcpyHostToDevice, stream));
+    CUDA_CALL(cudaMemcpyAsync(workspace.dptr_,
+                              cpu_workspace.data(),
+                              sizeof(int64_t) * (2 * naxes),
+                              cudaMemcpyHostToDevice,
+                              stream));
 
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayKernel<req_type>, gpu>::Launch(s, in_data.Size(),
-          out_data.dptr<int64_t>(), naxes, workspace.dptr_);
+      Kernel<IndexArrayKernel<req_type>, gpu>::Launch(
+          s, in_data.Size(), out_data.dptr<int64_t>(), naxes, workspace.dptr_);
     });
   } else {
     Tensor<gpu, 1, dim_t> workspace =
         ctx.requested[0].get_space_typed<gpu, 1, dim_t>(Shape1(ndim), s);
 
-    CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, inshape.data(), sizeof(dim_t) * ndim,
-                              cudaMemcpyHostToDevice, stream));
+    CUDA_CALL(cudaMemcpyAsync(
+        workspace.dptr_, inshape.data(), sizeof(dim_t) * ndim, cudaMemcpyHostToDevice, stream));
 
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayDefaultKernel<req_type>, gpu>::Launch(s, in_data.Size(),
-          out_data.dptr<int64_t>(), ndim, workspace.dptr_);
+      Kernel<IndexArrayDefaultKernel<req_type>, gpu>::Launch(
+          s, in_data.Size(), out_data.dptr<int64_t>(), ndim, workspace.dptr_);
     });
   }
 }
 
-NNVM_REGISTER_OP(_contrib_index_array)
-.set_attr<FCompute>("FCompute<gpu>", IndexArrayForwardGPU);
+NNVM_REGISTER_OP(_contrib_index_array).set_attr<FCompute>("FCompute<gpu>", IndexArrayForwardGPU);
 
 }  // namespace op
 }  // namespace mxnet

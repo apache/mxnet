@@ -28,26 +28,23 @@
 namespace mxnet {
 
 IntImm::IntImm(MXNetDataType dtype, int64_t value) {
-  CHECK(dtype.is_scalar())
-      << "ValueError: IntImm can only take scalar.";
-  CHECK(dtype.is_int() || dtype.is_uint())
-      << "ValueError: IntImm can only take scalar.";
+  CHECK(dtype.is_scalar()) << "ValueError: IntImm can only take scalar.";
+  CHECK(dtype.is_int() || dtype.is_uint()) << "ValueError: IntImm can only take scalar.";
   if (dtype.is_uint()) {
     CHECK_GE(value, 0U);
   }
   runtime::ObjectPtr<IntImmNode> node = make_object<IntImmNode>();
-  node->dtype = dtype;
-  node->value = value;
-  data_ = std::move(node);
+  node->dtype                         = dtype;
+  node->value                         = value;
+  data_                               = std::move(node);
 }
 
 FloatImm::FloatImm(MXNetDataType dtype, double value) {
-  CHECK_EQ(dtype.lanes(), 1)
-      << "ValueError: FloatImm can only take scalar.";
+  CHECK_EQ(dtype.lanes(), 1) << "ValueError: FloatImm can only take scalar.";
   runtime::ObjectPtr<FloatImmNode> node = make_object<FloatImmNode>();
-  node->dtype = dtype;
-  node->value = value;
-  data_ = std::move(node);
+  node->dtype                           = dtype;
+  node->value                           = value;
+  data_                                 = std::move(node);
 }
 
 }  // namespace mxnet

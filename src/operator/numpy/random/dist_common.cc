@@ -30,12 +30,12 @@ namespace mxnet {
 namespace op {
 
 template <>
-void _copy<cpu>(mshadow::Stream<cpu> *s, float *dst, float *src) {
+void _copy<cpu>(mshadow::Stream<cpu>* s, float* dst, float* src) {
   *dst = *src;
 }
 
 template <>
-void _copy<cpu>(mshadow::Stream<cpu> *s, double *dst, double *src) {
+void _copy<cpu>(mshadow::Stream<cpu>* s, double* dst, double* src) {
   *dst = *src;
 }
 

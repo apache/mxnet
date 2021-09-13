@@ -24,7 +24,6 @@
  * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez, Shuai Zheng
  */
 
-
 #ifndef MXNET_OPERATOR_CONTRIB_MULTI_SUM_SQ_INL_H_
 #define MXNET_OPERATOR_CONTRIB_MULTI_SUM_SQ_INL_H_
 
@@ -33,7 +32,7 @@
 #include "../operator_common.h"
 
 namespace multi_sum_sq {
-enum MultiSumSqUpdateResource {kTempSpace};
+enum MultiSumSqUpdateResource { kTempSpace };
 }  // namespace multi_sum_sq
 
 namespace mxnet {
@@ -44,18 +43,15 @@ struct MultiSumSqParam : public dmlc::Parameter<MultiSumSqParam> {
   float scale;
 
   DMLC_DECLARE_PARAMETER(MultiSumSqParam) {
-    DMLC_DECLARE_FIELD(num_arrays)
-    .describe("number of input arrays.");
-    DMLC_DECLARE_FIELD(scale)
-    .set_default(1.0f)
-    .describe("Scaling factor for l2 norm");
+    DMLC_DECLARE_FIELD(num_arrays).describe("number of input arrays.");
+    DMLC_DECLARE_FIELD(scale).set_default(1.0f).describe("Scaling factor for l2 norm");
   }
 };
 
 inline bool MultiSumSqShape(const NodeAttrs& attrs,
                             std::vector<mxnet::TShape>* in_shape,
                             std::vector<mxnet::TShape>* out_shape) {
-  const auto &p = dmlc::get<MultiSumSqParam>(attrs.parsed);
+  const auto& p = dmlc::get<MultiSumSqParam>(attrs.parsed);
   out_shape->resize(1);
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, mxnet::TShape{p.num_arrays});
@@ -87,22 +83,25 @@ inline bool MultiSumSqType(const NodeAttrs& attrs,
   return true;
 }
 
-template<typename xpu>
-size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs,
+template <typename xpu>
+size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob>& inputs,
                                     int* param_max_chunks_per_tensor = nullptr);
 
-template<typename xpu>
-void MultiSumSqRun(const std::vector<TBlob> &inputs, int nInputs,
-                   float *out_ptr, const OpContext &ctx, float scale = 1.0f);
+template <typename xpu>
+void MultiSumSqRun(const std::vector<TBlob>& inputs,
+                   int nInputs,
+                   float* out_ptr,
+                   const OpContext& ctx,
+                   float scale = 1.0f);
 
-template<typename xpu>
+template <typename xpu>
 void MultiSumSq(const nnvm::NodeAttrs& attrs,
-                const OpContext &ctx,
-                const std::vector<TBlob> &inputs,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &outputs) {
-  auto s = ctx.get_stream<xpu>();
-  const auto& p = dmlc::get<MultiSumSqParam>(attrs.parsed);
+                const OpContext& ctx,
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
+  auto s         = ctx.get_stream<xpu>();
+  const auto& p  = dmlc::get<MultiSumSqParam>(attrs.parsed);
   float* out_ptr = outputs[0].FlatTo2D<xpu, float>(s).dptr_;
   MultiSumSqRun<xpu>(inputs, p.num_arrays, out_ptr, ctx, p.scale);
 }

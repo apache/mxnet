@@ -28,8 +28,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_laplace)
-.set_attr<FCompute>("FCompute<gpu>", NumpyLaplaceForward<gpu>);
+NNVM_REGISTER_OP(_npi_laplace).set_attr<FCompute>("FCompute<gpu>", NumpyLaplaceForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

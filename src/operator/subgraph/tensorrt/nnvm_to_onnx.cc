@@ -22,7 +22,7 @@
  * \file nnvm_to_onnx.cc
  * \brief Conversion from NNVM to ONNX for TensorRT
  * \author Marek Kolodziej, Clement Fuji Tsang
-*/
+ */
 
 #if MXNET_USE_TENSORRT
 
@@ -52,19 +52,17 @@ namespace mxnet {
 namespace op {
 namespace nnvm_to_onnx {
 
-std::string ConvertNnvmGraphToOnnx(
-    const nnvm::Graph& g,
-    std::unordered_map<std::string, NDArray>* params_map) {
-
-  static std::atomic_ulong subgraph_count = { 0 };
+std::string ConvertNnvmGraphToOnnx(const nnvm::Graph& g,
+                                   std::unordered_map<std::string, NDArray>* params_map) {
+  static std::atomic_ulong subgraph_count = {0};
 
   std::string serialized_onnx_graph;
 
   const nnvm::IndexedGraph& ig = g.indexed_graph();
-  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
-  const auto& dtype_inputs = g.GetAttr<DTypeVector>("dtype_inputs");
-  const auto& shape_inputs = g.GetAttr<ShapeVector>("shape_inputs");
+  const auto& dtypes           = g.GetAttr<DTypeVector>("dtype");
+  const auto& shapes           = g.GetAttr<ShapeVector>("shape");
+  const auto& dtype_inputs     = g.GetAttr<DTypeVector>("dtype_inputs");
+  const auto& shape_inputs     = g.GetAttr<ShapeVector>("shape_inputs");
 
   ModelProto model_proto;
 
@@ -73,8 +71,8 @@ std::string ConvertNnvmGraphToOnnx(
   // More information on ONNX versions and opsets can be found at:
   // https://github.com/onnx/onnx/blob/master/docs/IR.md
 
-  auto opset_proto = model_proto.add_opset_import();
-  const int64 onnx_opset = 8;
+  auto opset_proto               = model_proto.add_opset_import();
+  const int64 onnx_opset         = 8;
   const int64 onnx_major_version = 3;
 
   // Declare our ONNX versions in our protobuf model.
@@ -82,33 +80,33 @@ std::string ConvertNnvmGraphToOnnx(
   model_proto.set_ir_version(onnx_major_version);
 
   GraphProto* graph_proto = model_proto.mutable_graph();
-  auto subgraph_name_id = subgraph_count.fetch_add(1);
+  auto subgraph_name_id   = subgraph_count.fetch_add(1);
   graph_proto->set_name("MXNetTRTSubgraph" + std::to_string(subgraph_name_id));
 
   auto placeholder_shapes = GetPlaceholderShapes(shape_inputs, ig);
   auto placeholder_dtypes = GetPlaceholderDTypes(dtype_inputs, ig);
-  auto output_lookup = GetOutputLookup(ig);
+  auto output_lookup      = GetOutputLookup(ig);
 
   for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
-      const IndexedGraph::Node& node = ig[node_idx];
-      const nnvm::Node* source = node.source;
-      // If this is a op
-      if (!source->is_variable()) {
-        auto mightNeedPreprocessNode = preprocess_map.find(source->op()->name);
-        // if this op is defined in preprocess_map
-        if (mightNeedPreprocessNode != preprocess_map.end()) {
-          mightNeedPreprocessNode->second(source->attrs, source->inputs, params_map);
-        }
+    const IndexedGraph::Node& node = ig[node_idx];
+    const nnvm::Node* source       = node.source;
+    // If this is a op
+    if (!source->is_variable()) {
+      auto mightNeedPreprocessNode = preprocess_map.find(source->op()->name);
+      // if this op is defined in preprocess_map
+      if (mightNeedPreprocessNode != preprocess_map.end()) {
+        mightNeedPreprocessNode->second(source->attrs, source->inputs, params_map);
       }
+    }
   }
 
   uint32_t current_input = 0;
   // Can't do a foreach over IndexedGraph since it doesn't implement begin(), etc.
   for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
     const IndexedGraph::Node& node = ig[node_idx];
-    const nnvm::Node* source = node.source;
-    const NodeAttrs& attrs = source->attrs;
-    const Op* op = source->op();
+    const nnvm::Node* source       = node.source;
+    const NodeAttrs& attrs         = source->attrs;
+    const Op* op                   = source->op();
 
     std::string node_name = attrs.name;
     // Here, "variable" actually means anything that's not an op i.e. a constant (weights) or a
@@ -130,8 +128,7 @@ std::string ConvertNnvmGraphToOnnx(
     } else {
       // It's an op, rather than a "variable" (constant or placeholder)
       if (converter_map.count(op->name) == 0) {
-        LOG(FATAL) << "Conversion for node of type " << op->name << " (node "
-                   << node_name << ") "
+        LOG(FATAL) << "Conversion for node of type " << op->name << " (node " << node_name << ") "
                    << " is not supported yet.";
       }
       // Find function ptr to a converter based on the op name, and invoke the converter. This
@@ -156,7 +153,7 @@ std::string ConvertNnvmGraphToOnnx(
   return serialized_onnx_graph;
 }
 
-void DefaultConnectInputsOutputs(NodeProto *node_proto,
+void DefaultConnectInputsOutputs(NodeProto* node_proto,
                                  const array_view<IndexedGraph::NodeEntry>& inputs,
                                  const nnvm::IndexedGraph& ig,
                                  const std::string& node_name) {
@@ -173,8 +170,10 @@ void DefaultConnectInputsOutputs(NodeProto *node_proto,
   node_proto->add_output(node_name);
 }
 
-TensorProto* const Make1DTensor(GraphProto* const graph_proto, const int64_t& size,
-                                const std::string& name, const TensorProto_DataType& dtype) {
+TensorProto* const Make1DTensor(GraphProto* const graph_proto,
+                                const int64_t& size,
+                                const std::string& name,
+                                const TensorProto_DataType& dtype) {
   TensorProto* const initializer_proto = graph_proto->add_initializer();
   initializer_proto->set_name(name);
   initializer_proto->set_data_type(dtype);
@@ -250,7 +249,9 @@ void ConvertSlice(GraphProto* const graph_proto, const Node* node, const Graph& 
 }
 */
 
-void ConvertIdentity(GraphProto *graph_proto, const std::string& node_name, const NodeAttrs& attrs,
+void ConvertIdentity(GraphProto* graph_proto,
+                     const std::string& node_name,
+                     const NodeAttrs& attrs,
                      const nnvm::IndexedGraph& ig,
                      const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
@@ -260,7 +261,8 @@ void ConvertIdentity(GraphProto *graph_proto, const std::string& node_name, cons
 }
 
 template <class ConvDeconvParam>
-void ConvDeconvConvertHelper(NodeProto *node_proto, const NodeAttrs& attrs,
+void ConvDeconvConvertHelper(NodeProto* node_proto,
+                             const NodeAttrs& attrs,
                              const nnvm::IndexedGraph& ig,
                              const array_view<IndexedGraph::NodeEntry>& inputs,
                              const ConvDeconvParam& param,
@@ -274,8 +276,8 @@ void ConvDeconvConvertHelper(NodeProto *node_proto, const NodeAttrs& attrs,
   const mxnet::TShape kernel = param.kernel;
   const mxnet::TShape stride = param.stride;
   const mxnet::TShape dilate = param.dilate;
-  const mxnet::TShape pad = param.pad;
-  const uint32_t num_group = param.num_group;
+  const mxnet::TShape pad    = param.pad;
+  const uint32_t num_group   = param.num_group;
   // const bool no_bias = conv_param.no_bias;
   const dmlc::optional<int> layout = param.layout;
 
@@ -307,7 +309,7 @@ void ConvDeconvConvertHelper(NodeProto *node_proto, const NodeAttrs& attrs,
   pads->set_name("pads");
   pads->set_type(AttributeProto::INTS);
 
-  for (int i =0; i < 2; i++) {
+  for (int i = 0; i < 2; i++) {
     for (dim_t kval : pad) {
       pads->add_ints(static_cast<int64>(kval));
     }
@@ -322,31 +324,33 @@ void ConvDeconvConvertHelper(NodeProto *node_proto, const NodeAttrs& attrs,
   }
 }
 
-void ConvertConvolution(GraphProto *graph_proto, const std::string& node_name,
+void ConvertConvolution(GraphProto* graph_proto,
+                        const std::string& node_name,
                         const NodeAttrs& attrs,
                         const nnvm::IndexedGraph& ig,
                         const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
   node_proto->set_name(node_name);
   const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
-  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, conv_param,
-      ConvDeconvType::Convolution);
+  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, conv_param, ConvDeconvType::Convolution);
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }  // end ConvertConvolution
 
-void ConvertDeconvolution(GraphProto *graph_proto, const std::string& node_name,
+void ConvertDeconvolution(GraphProto* graph_proto,
+                          const std::string& node_name,
                           const NodeAttrs& attrs,
                           const nnvm::IndexedGraph& ig,
                           const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
   node_proto->set_name(node_name);
   const auto& deconv_param = nnvm::get<op::DeconvolutionParam>(attrs.parsed);
-  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, deconv_param,
-      ConvDeconvType::Deconvolution);
+  ConvDeconvConvertHelper(
+      node_proto, attrs, ig, inputs, deconv_param, ConvDeconvType::Deconvolution);
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }  // end ConvertDeconvolution
 
-void ConvertPooling(GraphProto *graph_proto, const std::string& node_name,
+void ConvertPooling(GraphProto* graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& ig,
                     const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -356,9 +360,9 @@ void ConvertPooling(GraphProto *graph_proto, const std::string& node_name,
 
   const mxnet::TShape kernel = pooling_param.kernel;
   const mxnet::TShape stride = pooling_param.stride;
-  const mxnet::TShape pad = pooling_param.pad;
-  const int pool_type = pooling_param.pool_type;
-  const bool global_pool = pooling_param.global_pool;
+  const mxnet::TShape pad    = pooling_param.pad;
+  const int pool_type        = pooling_param.pool_type;
+  const bool global_pool     = pooling_param.global_pool;
 
   if (global_pool) {
     if (pool_type == pool_enum::kMaxPooling) {
@@ -386,7 +390,7 @@ void ConvertPooling(GraphProto *graph_proto, const std::string& node_name,
   pads->set_type(AttributeProto::INTS);
 
   // Convert from MXNet symetric pads to ONNX non-symetric by running through padding twice.
-  for (int i =0; i < 2; i++) {
+  for (int i = 0; i < 2; i++) {
     for (dim_t kval : pad) {
       pads->add_ints(static_cast<int64>(kval));
     }
@@ -426,7 +430,9 @@ void ConvertPooling(GraphProto *graph_proto, const std::string& node_name,
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }  // end ConvertPooling
 
-void ConvertRelu(GraphProto *graph_proto, const std::string& node_name, const NodeAttrs& /*attrs*/,
+void ConvertRelu(GraphProto* graph_proto,
+                 const std::string& node_name,
+                 const NodeAttrs& /*attrs*/,
                  const nnvm::IndexedGraph& ig,
                  const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
@@ -435,7 +441,8 @@ void ConvertRelu(GraphProto *graph_proto, const std::string& node_name, const No
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertActivation(GraphProto *graph_proto, const std::string& node_name,
+void ConvertActivation(GraphProto* graph_proto,
+                       const std::string& node_name,
                        const NodeAttrs& attrs,
                        const nnvm::IndexedGraph& ig,
                        const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -465,7 +472,8 @@ void ConvertActivation(GraphProto *graph_proto, const std::string& node_name,
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertFullyConnected(GraphProto *graph_proto, const std::string& node_name,
+void ConvertFullyConnected(GraphProto* graph_proto,
+                           const std::string& node_name,
                            const NodeAttrs& attrs,
                            const nnvm::IndexedGraph& ig,
                            const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -474,28 +482,28 @@ void ConvertFullyConnected(GraphProto *graph_proto, const std::string& node_name
   // by Transpose+MatMul+Add
   if (!act_param.flatten && !act_param.no_bias) {
     NodeProto* tranpose_node_proto = graph_proto->add_node();
-    NodeProto* matmul_node_proto = graph_proto->add_node();
-    NodeProto* add_node_proto = graph_proto->add_node();
-    tranpose_node_proto->set_name(node_name+"_Transpose");
-    matmul_node_proto->set_name(node_name+"_MatMul");
-    add_node_proto->set_name(node_name+"_Add");
+    NodeProto* matmul_node_proto   = graph_proto->add_node();
+    NodeProto* add_node_proto      = graph_proto->add_node();
+    tranpose_node_proto->set_name(node_name + "_Transpose");
+    matmul_node_proto->set_name(node_name + "_MatMul");
+    add_node_proto->set_name(node_name + "_Add");
 
     tranpose_node_proto->set_op_type("Transpose");
     matmul_node_proto->set_op_type("MatMul");
     add_node_proto->set_op_type("Add");
 
-    std::string input_node_name = ig[inputs[op::conv::kData].node_id].source->attrs.name;
+    std::string input_node_name  = ig[inputs[op::conv::kData].node_id].source->attrs.name;
     std::string weight_node_name = ig[inputs[op::conv::kWeight].node_id].source->attrs.name;
-    std::string bias_node_name = ig[inputs[op::conv::kBias].node_id].source->attrs.name;
+    std::string bias_node_name   = ig[inputs[op::conv::kBias].node_id].source->attrs.name;
 
     tranpose_node_proto->add_input(weight_node_name);
-    tranpose_node_proto->add_output(node_name+"_Transpose");
+    tranpose_node_proto->add_output(node_name + "_Transpose");
 
     matmul_node_proto->add_input(input_node_name);
-    matmul_node_proto->add_input(node_name+"_Transpose");
-    matmul_node_proto->add_output(node_name+"_MatMul");
+    matmul_node_proto->add_input(node_name + "_Transpose");
+    matmul_node_proto->add_output(node_name + "_MatMul");
 
-    add_node_proto->add_input(node_name+"_MatMul");
+    add_node_proto->add_input(node_name + "_MatMul");
     add_node_proto->add_input(bias_node_name);
     // Add's output is the output of the Transpose+MatMul+Add subgraph
     add_node_proto->add_output(node_name);
@@ -503,35 +511,37 @@ void ConvertFullyConnected(GraphProto *graph_proto, const std::string& node_name
     NodeProto* node_proto = graph_proto->add_node();
     node_proto->set_name(node_name);
     if (act_param.no_bias) {
-        node_proto->set_op_type("MatMul");
+      node_proto->set_op_type("MatMul");
     } else {
-        node_proto->set_op_type("Gemm");
+      node_proto->set_op_type("Gemm");
 
-        AttributeProto* const alpha = node_proto->add_attribute();
-        alpha->set_name("alpha");
-        alpha->set_type(AttributeProto::FLOAT);
-        alpha->set_f(1.0f);
+      AttributeProto* const alpha = node_proto->add_attribute();
+      alpha->set_name("alpha");
+      alpha->set_type(AttributeProto::FLOAT);
+      alpha->set_f(1.0f);
 
-        AttributeProto* const beta = node_proto->add_attribute();
-        beta->set_name("beta");
-        beta->set_type(AttributeProto::FLOAT);
-        beta->set_f(1.0f);
+      AttributeProto* const beta = node_proto->add_attribute();
+      beta->set_name("beta");
+      beta->set_type(AttributeProto::FLOAT);
+      beta->set_f(1.0f);
 
-        AttributeProto* const transA = node_proto->add_attribute();
-        transA->set_name("transA");
-        transA->set_type(AttributeProto::INT);
-        transA->set_i(0);
+      AttributeProto* const transA = node_proto->add_attribute();
+      transA->set_name("transA");
+      transA->set_type(AttributeProto::INT);
+      transA->set_i(0);
 
-        AttributeProto* const transB = node_proto->add_attribute();
-        transB->set_name("transB");
-        transB->set_type(AttributeProto::INT);
-        transB->set_i(1);
+      AttributeProto* const transB = node_proto->add_attribute();
+      transB->set_name("transB");
+      transB->set_type(AttributeProto::INT);
+      transB->set_i(1);
     }
     DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
   }
 }
 
-void ConvertSlice(GraphProto *graph_proto, const std::string& node_name, const NodeAttrs& attrs,
+void ConvertSlice(GraphProto* graph_proto,
+                  const std::string& node_name,
+                  const NodeAttrs& attrs,
                   const nnvm::IndexedGraph& ig,
                   const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
@@ -570,7 +580,8 @@ void ConvertSlice(GraphProto *graph_proto, const std::string& node_name, const N
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertFlatten(GraphProto *graph_proto, const std::string& node_name,
+void ConvertFlatten(GraphProto* graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs& /*attrs*/,
                     const nnvm::IndexedGraph& ig,
                     const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -588,7 +599,8 @@ void ConvertFlatten(GraphProto *graph_proto, const std::string& node_name,
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertBatchNorm(GraphProto *graph_proto, const std::string& node_name,
+void ConvertBatchNorm(GraphProto* graph_proto,
+                      const std::string& node_name,
                       const NodeAttrs& attrs,
                       const nnvm::IndexedGraph& ig,
                       const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -617,7 +629,8 @@ void ConvertBatchNorm(GraphProto *graph_proto, const std::string& node_name,
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertElementwiseAdd(GraphProto *graph_proto, const std::string& node_name,
+void ConvertElementwiseAdd(GraphProto* graph_proto,
+                           const std::string& node_name,
                            const NodeAttrs& /*attrs*/,
                            const nnvm::IndexedGraph& ig,
                            const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -627,7 +640,8 @@ void ConvertElementwiseAdd(GraphProto *graph_proto, const std::string& node_name
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertElementwiseSub(GraphProto *graph_proto, const std::string& node_name,
+void ConvertElementwiseSub(GraphProto* graph_proto,
+                           const std::string& node_name,
                            const NodeAttrs& /*attrs*/,
                            const nnvm::IndexedGraph& ig,
                            const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -637,7 +651,8 @@ void ConvertElementwiseSub(GraphProto *graph_proto, const std::string& node_name
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertElementwiseMul(GraphProto *graph_proto, const std::string& node_name,
+void ConvertElementwiseMul(GraphProto* graph_proto,
+                           const std::string& node_name,
                            const NodeAttrs& /*attrs*/,
                            const nnvm::IndexedGraph& ig,
                            const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -647,7 +662,8 @@ void ConvertElementwiseMul(GraphProto *graph_proto, const std::string& node_name
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertConcatenate(GraphProto *graph_proto, const std::string& node_name,
+void ConvertConcatenate(GraphProto* graph_proto,
+                        const std::string& node_name,
                         const NodeAttrs& attrs,
                         const nnvm::IndexedGraph& ig,
                         const array_view<IndexedGraph::NodeEntry>& inputs) {
@@ -685,11 +701,11 @@ inline TensorProto_DataType ConvertDType(int dtype) {
   }
 }
 
-std::unordered_map<std::string, TShape> GetPlaceholderShapes(
-    const ShapeVector& shape_inputs, const nnvm::IndexedGraph& ig) {
+std::unordered_map<std::string, TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
+                                                             const nnvm::IndexedGraph& ig) {
   std::unordered_map<std::string, mxnet::TShape> placeholder_shapes;
   for (uint32_t i = 0; i < shape_inputs.size(); ++i) {
-    std::string name = ig[ig.input_nodes()[i]].source->attrs.name;
+    std::string name  = ig[ig.input_nodes()[i]].source->attrs.name;
     mxnet::TShape shp = shape_inputs[i];
     if (!mxnet::op::shape_is_none(shp)) {
       // TODO(@reminisce): confirm
@@ -699,40 +715,37 @@ std::unordered_map<std::string, TShape> GetPlaceholderShapes(
   return placeholder_shapes;
 }
 
-std::unordered_map<std::string, int> GetPlaceholderDTypes(
-    const DTypeVector& dtype_inputs, const nnvm::IndexedGraph& ig) {
+std::unordered_map<std::string, int> GetPlaceholderDTypes(const DTypeVector& dtype_inputs,
+                                                          const nnvm::IndexedGraph& ig) {
   std::unordered_map<std::string, int> placeholder_dtypes;
   for (uint32_t i = 0; i < dtype_inputs.size(); ++i) {
     std::string name = ig[ig.input_nodes()[i]].source->attrs.name;
-    int dtype = dtype_inputs[i];
+    int dtype        = dtype_inputs[i];
     placeholder_dtypes.emplace(name, dtype);
   }
   return placeholder_dtypes;
 }
 
-std::unordered_map<std::string, uint32_t> GetOutputLookup(
-    const nnvm::IndexedGraph& ig) {
+std::unordered_map<std::string, uint32_t> GetOutputLookup(const nnvm::IndexedGraph& ig) {
   std::unordered_map<std::string, uint32_t> output_lookup;
-  const std::vector<nnvm::IndexedGraph::NodeEntry>& graph_outputs =
-      ig.outputs();
+  const std::vector<nnvm::IndexedGraph::NodeEntry>& graph_outputs = ig.outputs();
   for (uint32_t i = 0; i < graph_outputs.size(); ++i) {
-    const uint32_t id = graph_outputs[i].node_id;
+    const uint32_t id                = graph_outputs[i].node_id;
     const IndexedGraph::Node ig_node = ig[id];
-    const nnvm::Node* const source = ig_node.source;
-    const std::string name = source->attrs.name;
+    const nnvm::Node* const source   = ig_node.source;
+    const std::string name           = source->attrs.name;
     output_lookup.emplace(name, i);
   }
   return output_lookup;
 }
 
-void ConvertPlaceholder(
-    const std::string& node_name,
-    const std::unordered_map<std::string, TShape>& placeholder_shapes,
-    const std::unordered_map<std::string, int>& placeholder_dtypes,
-    GraphProto* const graph_proto) {
+void ConvertPlaceholder(const std::string& node_name,
+                        const std::unordered_map<std::string, TShape>& placeholder_shapes,
+                        const std::unordered_map<std::string, int>& placeholder_dtypes,
+                        GraphProto* const graph_proto) {
   auto val_info_proto = graph_proto->add_input();
-  auto type_proto = val_info_proto->mutable_type()->mutable_tensor_type();
-  auto shape_proto = type_proto->mutable_shape();
+  auto type_proto     = val_info_proto->mutable_type()->mutable_tensor_type();
+  auto shape_proto    = type_proto->mutable_shape();
 
   val_info_proto->set_name(node_name);
   auto entry_shape = placeholder_shapes.find(node_name)->second;
@@ -744,18 +757,18 @@ void ConvertPlaceholder(
   }
 }
 
-void ConvertConstant(
-    GraphProto* const graph_proto, const std::string& node_name,
-    const std::unordered_map<std::string, NDArray>* const params_map) {
-    TensorProto* const initializer_proto = graph_proto->add_initializer();
+void ConvertConstant(GraphProto* const graph_proto,
+                     const std::string& node_name,
+                     const std::unordered_map<std::string, NDArray>* const params_map) {
+  TensorProto* const initializer_proto = graph_proto->add_initializer();
 
   // Create initializer for constants
   initializer_proto->set_name(node_name);
 
-  const NDArray nd = params_map->find(node_name)->second;
-  const TBlob& blob = nd.data();
+  const NDArray nd   = params_map->find(node_name)->second;
+  const TBlob& blob  = nd.data();
   const TShape shape = blob.shape_;
-  const auto dtype = ConvertDType(nd.dtype());
+  const auto dtype   = ConvertDType(nd.dtype());
   initializer_proto->set_data_type(dtype);
 
   for (auto& dim : shape) {
@@ -777,8 +790,7 @@ void ConvertConstant(
     uint16_t* const data_ptr = shared_data_ptr.get();
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
     for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
-      initializer_proto->add_int32_data(
-          reinterpret_cast<int32_t*>(data_ptr)[blob_idx]);
+      initializer_proto->add_int32_data(reinterpret_cast<int32_t*>(data_ptr)[blob_idx]);
     }
   } else {
     LOG(FATAL) << "dtype not supported for variables: " << node_name;
@@ -795,15 +807,16 @@ void ConvertConstant(
   }
 }
 
-void ConvertOutput(
-    GraphProto* const graph_proto,
-    const std::unordered_map<std::string, uint32_t>::iterator& out_iter,
-    const std::string& node_name, const ShapeVector& shapes,
-    const DTypeVector& dtypes, const nnvm::IndexedGraph &ig) {
-  uint32_t out_idx = ig.entry_id(ig.outputs()[out_iter->second]);
-  int dtype = dtypes[out_idx];
-  auto graph_out = graph_proto->add_output();
-  auto tensor_type = graph_out->mutable_type()->mutable_tensor_type();
+void ConvertOutput(GraphProto* const graph_proto,
+                   const std::unordered_map<std::string, uint32_t>::iterator& out_iter,
+                   const std::string& node_name,
+                   const ShapeVector& shapes,
+                   const DTypeVector& dtypes,
+                   const nnvm::IndexedGraph& ig) {
+  uint32_t out_idx        = ig.entry_id(ig.outputs()[out_iter->second]);
+  int dtype               = dtypes[out_idx];
+  auto graph_out          = graph_proto->add_output();
+  auto tensor_type        = graph_out->mutable_type()->mutable_tensor_type();
   auto tensor_shape_proto = tensor_type->mutable_shape();
   graph_out->set_name(node_name);
 
@@ -816,7 +829,9 @@ void ConvertOutput(
   }
 }
 
-void ConvertClip(GraphProto *graph_proto, const std::string& node_name, const NodeAttrs& attrs,
+void ConvertClip(GraphProto* graph_proto,
+                 const std::string& node_name,
+                 const NodeAttrs& attrs,
                  const nnvm::IndexedGraph& ig,
                  const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
@@ -839,7 +854,9 @@ void ConvertClip(GraphProto *graph_proto, const std::string& node_name, const No
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertPad(GraphProto *graph_proto, const std::string& node_name, const NodeAttrs& attrs,
+void ConvertPad(GraphProto* graph_proto,
+                const std::string& node_name,
+                const NodeAttrs& attrs,
                 const nnvm::IndexedGraph& ig,
                 const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
@@ -874,8 +891,7 @@ void ConvertPad(GraphProto *graph_proto, const std::string& node_name, const Nod
   std::vector<int64> pad_begin;
   std::vector<int64> pad_end;
   for (int st = 0; st < 2; ++st) {
-    for (auto it = param.pad_width.begin() + st;
-         it != param.pad_width.end(); it += 2) {
+    for (auto it = param.pad_width.begin() + st; it != param.pad_width.end(); it += 2) {
       pads->add_ints(static_cast<int64>(*it));
     }
   }
@@ -888,7 +904,9 @@ void ConvertPad(GraphProto *graph_proto, const std::string& node_name, const Nod
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void ConvertDropout(GraphProto *graph_proto, const std::string& node_name, const NodeAttrs& attrs,
+void ConvertDropout(GraphProto* graph_proto,
+                    const std::string& node_name,
+                    const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& ig,
                     const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
@@ -897,14 +915,14 @@ void ConvertDropout(GraphProto *graph_proto, const std::string& node_name, const
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 
-void PreprocessBatchNorm(const NodeAttrs &attrs,
-                         const std::vector<nnvm::NodeEntry> &inputs,
-                         std::unordered_map<std::string, NDArray> *params_map) {
+void PreprocessBatchNorm(const NodeAttrs& attrs,
+                         const std::vector<nnvm::NodeEntry>& inputs,
+                         std::unordered_map<std::string, NDArray>* params_map) {
   const auto& param = nnvm::get<op::BatchNormParam>(attrs.parsed);
   if (param.fix_gamma) {
     // if mxnet is specify fix_gamma, we will need to preprocess the params map
     // to convert the gamma associate with this batch norm layer to 1.
-    std::string gammaNodeName = inputs[batchnorm::kGamma].node->attrs.name;
+    std::string gammaNodeName    = inputs[batchnorm::kGamma].node->attrs.name;
     (*params_map)[gammaNodeName] = 1.0f;
   }
 }

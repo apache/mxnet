@@ -30,40 +30,45 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyLaplaceParam);
 
 NNVM_REGISTER_OP(_npi_laplace)
-.describe("numpy behavior Laplace")
-.set_num_inputs(
-  [](const nnvm::NodeAttrs& attrs) {
-    const NumpyLaplaceParam& param = nnvm::get<NumpyLaplaceParam>(attrs.parsed);
-    int num_inputs = 2;
-    if (param.loc.has_value()) num_inputs -= 1;
-    if (param.scale.has_value()) num_inputs -= 1;
-    return num_inputs;
-  }
-)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    const NumpyLaplaceParam& param = nnvm::get<NumpyLaplaceParam>(attrs.parsed);
-    int num_inputs = 2;
-    if (param.loc.has_value()) num_inputs -= 1;
-    if (param.scale.has_value()) num_inputs -= 1;
-    if (num_inputs == 0) return std::vector<std::string>();
-    if (num_inputs == 1) return std::vector<std::string>{"input1"};
-    return std::vector<std::string>{"input1", "input2"};
-  })
-.set_attr_parser(ParamParser<NumpyLaplaceParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyLaplaceParam>)
-.set_attr<nnvm::FInferType>("FInferType", NumpyLaplaceOpType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const nnvm::NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{
-        ResourceRequest::kRandom, ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyLaplaceForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("input1", "NDArray-or-Symbol", "Source input")
-.add_argument("input2", "NDArray-or-Symbol", "Source input")
-.add_arguments(NumpyLaplaceParam::__FIELDS__());
+    .describe("numpy behavior Laplace")
+    .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+      const NumpyLaplaceParam& param = nnvm::get<NumpyLaplaceParam>(attrs.parsed);
+      int num_inputs                 = 2;
+      if (param.loc.has_value())
+        num_inputs -= 1;
+      if (param.scale.has_value())
+        num_inputs -= 1;
+      return num_inputs;
+    })
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       const NumpyLaplaceParam& param =
+                                           nnvm::get<NumpyLaplaceParam>(attrs.parsed);
+                                       int num_inputs = 2;
+                                       if (param.loc.has_value())
+                                         num_inputs -= 1;
+                                       if (param.scale.has_value())
+                                         num_inputs -= 1;
+                                       if (num_inputs == 0)
+                                         return std::vector<std::string>();
+                                       if (num_inputs == 1)
+                                         return std::vector<std::string>{"input1"};
+                                       return std::vector<std::string>{"input1", "input2"};
+                                     })
+    .set_attr_parser(ParamParser<NumpyLaplaceParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyLaplaceParam>)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyLaplaceOpType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const nnvm::NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kRandom,
+                                                                      ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyLaplaceForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("input1", "NDArray-or-Symbol", "Source input")
+    .add_argument("input2", "NDArray-or-Symbol", "Source input")
+    .add_arguments(NumpyLaplaceParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

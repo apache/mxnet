@@ -23,7 +23,7 @@
  * \file deformable_convolution.cc
  * \brief
  * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai
-*/
+ */
 
 #include "./deformable_convolution-inl.h"
 
@@ -31,22 +31,21 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(DeformableConvolutionParam);
 
-template<>
-Operator* CreateOp<cpu>(DeformableConvolutionParam param, int dtype,
-                        mxnet::ShapeVector *in_shape,
-                        mxnet::ShapeVector *out_shape,
+template <>
+Operator* CreateOp<cpu>(DeformableConvolutionParam param,
+                        int dtype,
+                        mxnet::ShapeVector* in_shape,
+                        mxnet::ShapeVector* out_shape,
                         Context ctx) {
-  Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new DeformableConvolutionOp<cpu, DType>(param);
-  })
+  Operator* op = nullptr;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new DeformableConvolutionOp<cpu, DType>(param); })
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *DeformableConvolutionProp::CreateOperatorEx(Context ctx,
-                                            mxnet::ShapeVector *in_shape,
-                                            std::vector<int> *in_type) const {
+Operator* DeformableConvolutionProp::CreateOperatorEx(Context ctx,
+                                                      mxnet::ShapeVector* in_shape,
+                                                      std::vector<int>* in_type) const {
   mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
@@ -55,7 +54,7 @@ Operator *DeformableConvolutionProp::CreateOperatorEx(Context ctx,
 }
 
 MXNET_REGISTER_OP_PROPERTY(_npx_deformable_convolution, DeformableConvolutionProp)
-.describe(R"code(Compute 2-D deformable convolution on 4-D input.
+    .describe(R"code(Compute 2-D deformable convolution on 4-D input.
 
 The deformable convolution operation is described in https://arxiv.org/abs/1703.06211
 
@@ -98,11 +97,11 @@ Both ``weight`` and ``bias`` are learnable parameters.
 
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data to the DeformableConvolutionOp.")
-.add_argument("offset", "NDArray-or-Symbol", "Input offset to the DeformableConvolutionOp.")
-.add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
-.add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
-.add_arguments(DeformableConvolutionParam::__FIELDS__());
+    .add_argument("data", "NDArray-or-Symbol", "Input data to the DeformableConvolutionOp.")
+    .add_argument("offset", "NDArray-or-Symbol", "Input offset to the DeformableConvolutionOp.")
+    .add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
+    .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
+    .add_arguments(DeformableConvolutionParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

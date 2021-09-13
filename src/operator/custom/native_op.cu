@@ -22,11 +22,11 @@
  * \file native_op.cu
  * \brief
  * \author Junyuan Xie
-*/
+ */
 #include "./native_op-inl.h"
 namespace mxnet {
 namespace op {
-template<>
+template <>
 Operator* CreateOp<gpu>(NativeOpParam param) {
   return new NativeOp<gpu>(param);
 }

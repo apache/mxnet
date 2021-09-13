@@ -28,31 +28,33 @@
 namespace mxnet {
 namespace op {
 
-template<typename T>
-size_t GetAdditionalMemory(mshadow::Stream<gpu> *s, const int num_items) {
-  T *d_in = nullptr;
-  T *d_out = nullptr;
+template <typename T>
+size_t GetAdditionalMemory(mshadow::Stream<gpu>* s, const int num_items) {
+  T* d_in                   = nullptr;
+  T* d_out                  = nullptr;
   size_t temp_storage_bytes = 0;
-  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  cudaStream_t stream       = mshadow::Stream<gpu>::GetStream(s);
   cub::DeviceReduce::Min(nullptr, temp_storage_bytes, d_in, d_out, num_items, stream);
   return temp_storage_bytes;
 }
 
-template<>
-size_t GetAdditionalMemoryLogical<gpu>(mshadow::Stream<gpu> *s, const int num_items) {
+template <>
+size_t GetAdditionalMemoryLogical<gpu>(mshadow::Stream<gpu>* s, const int num_items) {
   return GetAdditionalMemory<INTERM_DATA_TYPE>(s, num_items);
 }
 
-template<>
-void GetResultLogical<gpu>(mshadow::Stream<gpu> *s, INTERM_DATA_TYPE *workMem,
-                           size_t extraStorageBytes, int num_items, INTERM_DATA_TYPE *outPntr) {
+template <>
+void GetResultLogical<gpu>(mshadow::Stream<gpu>* s,
+                           INTERM_DATA_TYPE* workMem,
+                           size_t extraStorageBytes,
+                           int num_items,
+                           INTERM_DATA_TYPE* outPntr) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  cub::DeviceReduce::Min(workMem + num_items, extraStorageBytes,
-                         workMem, outPntr, num_items, stream);
+  cub::DeviceReduce::Min(
+      workMem + num_items, extraStorageBytes, workMem, outPntr, num_items, stream);
 }
 
-NNVM_REGISTER_OP(_contrib_allclose)
-.set_attr<FCompute>("FCompute<gpu>", AllClose<gpu>);
+NNVM_REGISTER_OP(_contrib_allclose).set_attr<FCompute>("FCompute<gpu>", AllClose<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

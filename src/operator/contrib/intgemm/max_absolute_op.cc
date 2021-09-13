@@ -35,8 +35,8 @@ namespace mxnet {
 namespace op {
 
 inline bool MaxAbsoluteOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector* in_attrs,
-                             mxnet::ShapeVector* out_attrs) {
+                               mxnet::ShapeVector* in_attrs,
+                               mxnet::ShapeVector* out_attrs) {
   // One in, one out.
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -46,8 +46,8 @@ inline bool MaxAbsoluteOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool MaxAbsoluteOpType(const nnvm::NodeAttrs& attrs,
-                            std::vector<int>* in_attrs,
-                            std::vector<int>* out_attrs) {
+                              std::vector<int>* in_attrs,
+                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -57,10 +57,10 @@ inline bool MaxAbsoluteOpType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool MaxAbsoluteOpStorageType(const nnvm::NodeAttrs& attrs,
-                                   const int dev_mask,
-                                   DispatchMode* dispatch_mode,
-                                   std::vector<int>* in_attrs,
-                                   std::vector<int>* out_attrs) {
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int>* in_attrs,
+                                     std::vector<int>* out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -84,36 +84,37 @@ void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
 
   const std::size_t size = in.shape_.Size();
 
-  const float *data = in.dptr<float>();
+  const float* data = in.dptr<float>();
   // To maintain alignment, be a multiple of AVX512 register size.
   const std::size_t kMultiple = 512 / 8;
   CHECK_EQ(reinterpret_cast<intptr_t>(data) % kMultiple, 0)
-    << "Data must be aligned to " << kMultiple << " bytes.";
+      << "Data must be aligned to " << kMultiple << " bytes.";
 
   float result = ::intgemm::MaxAbsolute(data, data + size);
   KERNEL_ASSIGN(*out.dptr<float>(), req[0], result);
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_maxabsolute)
-.add_alias("_npx_intgemm_maxabsolute")
-.describe(R"code(Compute the maximum absolute value in a tensor of float32 fast on a CPU.  The tensor's total size must be a multiple of 16 and aligned to a multiple of 64 bytes.
+    .add_alias("_npx_intgemm_maxabsolute")
+    .describe(
+        R"code(Compute the maximum absolute value in a tensor of float32 fast on a CPU.  The tensor's total size must be a multiple of 16 and aligned to a multiple of 64 bytes.
 mxnet.nd.contrib.intgemm_maxabsolute(arr) == arr.abs().max()
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", MaxAbsoluteOpShape)
-.set_attr<nnvm::FInferType>("FInferType", MaxAbsoluteOpType)
-.set_attr<FInferStorageType>("FInferStorageType", MaxAbsoluteOpStorageType)
-.set_attr<FCompute>("FCompute<cpu>", MaxAbsoluteOpForwardCPU)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.add_argument("data", "NDArray-or-Symbol", "Tensor to compute maximum absolute value of");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", MaxAbsoluteOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", MaxAbsoluteOpType)
+    .set_attr<FInferStorageType>("FInferStorageType", MaxAbsoluteOpStorageType)
+    .set_attr<FCompute>("FCompute<cpu>", MaxAbsoluteOpForwardCPU)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}};
+                                    })
+    .add_argument("data", "NDArray-or-Symbol", "Tensor to compute maximum absolute value of");
 
 }  // namespace op
 }  // namespace mxnet

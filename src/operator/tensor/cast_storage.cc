@@ -32,7 +32,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(CastStorageParam);
 NNVM_REGISTER_OP(cast_storage)
 MXNET_ADD_SPARSE_OP_ALIAS(cast_storage)
-.describe(R"code(Casts tensor storage type to the new type.
+    .describe(R"code(Casts tensor storage type to the new type.
 
 When an NDArray with default storage type is cast to csr or row_sparse storage,
 the result is compact, which means:
@@ -69,22 +69,22 @@ Example::
     csr.indptr = [0, 1, 3, 3, 3]
 
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<CastStorageParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", CastStorageInferStorageType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", CastStorageComputeEx<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
-.add_argument("data", "NDArray-or-Symbol", "The input.")
-.add_arguments(CastStorageParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<CastStorageParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FInferStorageType>("FInferStorageType", CastStorageInferStorageType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", CastStorageComputeEx<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
+    .add_argument("data", "NDArray-or-Symbol", "The input.")
+    .add_arguments(CastStorageParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
