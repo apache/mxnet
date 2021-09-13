@@ -36,6 +36,10 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& data, const 
   const int out_dtype = output.dtype();
   const int axis      = CheckAxis(param.axis, ndim);
 
+  if (param.temperature.has_value() && param.temperature.value() == 0.0) {
+    return false;
+  }
+
   // Currently, MKLDNN shows bad performance when softmax is not performed on the last dimension
   if (in_dtype != mshadow::kFloat32 || in_dtype != out_dtype || axis != (ndim - 1)) {
     return false;
