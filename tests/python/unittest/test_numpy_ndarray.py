@@ -167,7 +167,7 @@ def test_np_ones():
             self._dtype = dtype
 
         def forward(self, x, *args, **kwargs):
-            return x * np.ones(shape, dtype)
+            return x * np.ones(shape, dtype=dtype)
 
     class TestOnesOutputType(HybridBlock):
         def forward(self, x, *args, **kwargs):

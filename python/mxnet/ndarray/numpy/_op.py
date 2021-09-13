@@ -391,7 +391,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
             dtype = _np.int64 if dtype is None else dtype
     elif isinstance(fill_value, numeric_types):
         if dtype is None or dtype is float:
-            dtype = _np.float64
+            dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
     return _api_internal.full(shape, dtype, fill_value, ctx, out)

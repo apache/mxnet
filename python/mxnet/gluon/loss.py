@@ -27,7 +27,7 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
 import numpy as _np
 from ..base import numeric_types
 from .block import HybridBlock
-from ..util import use_np, is_np_default_dtype
+from ..util import use_np
 from .. import np, npx
 
 
@@ -894,8 +894,7 @@ class CosineEmbeddingLoss(Loss):
         x_norm = npx.reshape(npx.norm(x, axis=axis), (-1, 1))
         y_norm = npx.reshape(npx.norm(y, axis=axis), (-1, 1))
         x_dot_y = npx.reshape(np.sum(x * y, axis=axis), (-1, 1))
-        default_dtype = "float64" if is_np_default_dtype() else "float32"
-        eps_arr = np.full((1, 1), 1e-12, dtype=default_dtype)
+        eps_arr = np.full((1, 1), 1e-12)
         return (x_dot_y / np.maximum(x_norm * y_norm, eps_arr))
 
 

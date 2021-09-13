@@ -205,25 +205,14 @@ NNVM_REGISTER_OP(_npi_full_like)
     .add_arguments(FullLikeOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_full)
-<<<<<<< HEAD
-  .describe("fill target with a scalar value")
-  .set_num_inputs(0)
-  .set_num_outputs(1)
-  .set_attr_parser(ParamParser<NumpyInitOpWithScalarParam>)
-  .set_attr<mxnet::FInferShape>("FInferShape", InitShape<NumpyInitOpWithScalarParam>)
-  .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyInitOpWithScalarParam>)
-  .set_attr<FCompute>("FCompute<cpu>", NumpyInitFillWithScalarCompute<cpu>)
-.add_arguments(NumpyInitOpWithScalarParam::__FIELDS__());
-=======
-    .describe("fill target with a scalar value")
-    .set_num_inputs(0)
-    .set_num_outputs(1)
-    .set_attr_parser(ParamParser<InitOpWithScalarParam>)
-    .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpWithScalarParam>)
-    .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpWithScalarParam>)
-    .set_attr<FCompute>("FCompute<cpu>", InitFillWithScalarCompute<cpu>)
-    .add_arguments(InitOpWithScalarParam::__FIELDS__());
->>>>>>> upstream/master
+      .describe("fill target with a scalar value")
+      .set_num_inputs(0)
+      .set_num_outputs(1)
+      .set_attr_parser(ParamParser<NumpyInitOpWithScalarParam>)
+      .set_attr<mxnet::FInferShape>("FInferShape", InitShape<NumpyInitOpWithScalarParam>)
+      .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyInitOpWithScalarParam>)
+      .set_attr<FCompute>("FCompute<cpu>", NumpyInitFillWithScalarCompute<cpu>)
+    .add_arguments(NumpyInitOpWithScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_arange)
     .set_num_inputs(0)
