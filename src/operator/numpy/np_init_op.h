@@ -164,12 +164,16 @@ void NumpyInitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
 }
 
 struct NumpyLinspaceParam : public dmlc::Parameter<NumpyLinspaceParam> {
+#if __GNUC__ >= 6
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
   double start_double;
   double stop_double;
   int64_t start_int;
   int64_t stop_int;
   uint64_t start_uint;
   uint64_t stop_uint;
+#pragma GCC diagnostic pop
   index_t num;
   bool endpoint;
   std::string ctx;
