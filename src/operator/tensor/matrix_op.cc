@@ -24,6 +24,7 @@
 // this will be invoked by gcc and compile CPU version
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
+#include "../numpy/np_matrix_op-inl.h"
 #if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_base-inl.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
@@ -306,6 +307,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
+  NumpyTransposeParam p;
   if (req[0] == kNullOp) {
     return;
   }
@@ -315,7 +317,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNRun(MKLDNNTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNNDArrayTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);

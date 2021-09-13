@@ -179,17 +179,17 @@ void MKLDNNLayerNormBackward(const nnvm::NodeAttrs& attrs,
 
 void MKLDNNSum(const mkldnn::memory& arr1, const mkldnn::memory& arr2, const mkldnn::memory& out);
 
-void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const NDArray& data,
-                            const OpReqType& req,
-                            const NDArray& output);
+void MKLDNNNDArrayTransposeForward(const nnvm::NodeAttrs& attrs,
+                                   const OpContext& ctx,
+                                   const NDArray& data,
+                                   const OpReqType& req,
+                                   const NDArray& output);
 
 void MKLDNNNumpyTransposeForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const NDArray& data,
-                            const OpReqType& req,
-                            const NDArray& output);
+                                 const OpContext& ctx,
+                                 const NDArray& data,
+                                 const OpReqType& req,
+                                 const NDArray& output);
 
 void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,

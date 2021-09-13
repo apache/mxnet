@@ -181,7 +181,6 @@ struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
 struct SoftmaxOutputParam;
-struct NumpyTransposeParam;
 struct ReshapeParam;
 struct LayerNormParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
