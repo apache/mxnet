@@ -77,7 +77,7 @@ $ ./gradlew build
 # Windows -> mkl-winJar
 $ ./gradlew :native:buildLocalLibraryJarDefault
 # Build native lib for macos
-$ ./gradlew :mkl-osxJar
+$ ./gradlew mkl-osxJar
 # Check the lib for osx
 $ ls native/build/libs | grep osx
 native-2.0.0-SNAPSHOT-osx-x86_64.jar
