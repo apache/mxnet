@@ -1287,4 +1287,3 @@ def dtype_from_number(number):
             return _np.float64
         else:
             return _np.float64 if is_np_default_dtype() else _np.float32
-
