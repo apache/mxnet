@@ -60,13 +60,13 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'power', 'bitwise_not',
            'delete', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
-           'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
-           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
+           'arctan2', 'atan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
+           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin','asin', 'arccos','acos', 'arctan', 'atan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh','asinh','arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort',
            'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero', 'tril_indices',
-           'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'concatenate', 'concat','stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'amax', 'amin', 'max', 'min',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
@@ -3075,7 +3075,7 @@ def take(a, indices, axis=None, mode='raise', out=None):
 
 
 @set_module('mxnet.numpy')
-def unique(ar, return_index=False, return_inverse=False, return_counts=False, axis=None):
+def unique(ar, return_index=False, return_inverse=False, return_counts=False):
     """
     Find the unique elements of an array.
 
@@ -3148,13 +3148,6 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
 
     Return the unique rows of a 2D array
 
-    >>> a = np.array([[1, 0, 0], [1, 0, 0], [2, 3, 4]])
-    >>> np.unique(a, axis=0)
-    array([[1., 0., 0.],
-           [2., 3., 4.]])
-
-    Return the indices of the original array that give the unique values:
-
     >>> a = np.array([1, 2, 6, 4, 2, 3, 2])
     >>> u, indices = np.unique(a, return_index=True)
     >>> u
@@ -3175,7 +3168,7 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
     >>> u[indices]
     array([1., 2., 6., 4., 2., 3., 2.])
     """
-    return _mx_nd_np.unique(ar, return_index, return_inverse, return_counts, axis)
+    return _mx_nd_np.unique(ar, return_index, return_inverse, return_counts)
 
 
 @set_module('mxnet.numpy')
@@ -4168,6 +4161,61 @@ def expm1(x, out=None, **kwargs):
     """
     return _mx_nd_np.expm1(x, out=out, **kwargs)
 
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def asin(x, out=None):
+    r"""
+    Inverse sine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        `y`-coordinate on the unit circle.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    angle : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+        The inverse sine of each element in `x`, in radians and in the
+        closed interval ``[-pi/2, pi/2]``.
+
+    Examples
+    --------
+    >>> np.asin(1)     # pi/2
+    1.5707963267948966
+    >>> np.asin(-1)    # -pi/2
+    -1.5707963267948966
+    >>> np.asin(0)
+    0.0
+
+    .. note::
+       `arcsin` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that :math:`sin(z) = x`.  The convention is to
+       return the angle `z` whose real part lies in [-pi/2, pi/2].
+       For real-valued input data types, *arcsin* always returns real output.
+       For each value that cannot be expressed as a real number or infinity,
+       it yields ``nan`` and sets the `invalid` floating point error flag.
+       The inverse sine is also known as `asin` or sin^{-1}.
+       The output `ndarray` has the same `ctx` as the input `ndarray`.
+       This function differs from the original `numpy.arcsin
+       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+       the following aspects:
+
+       * Only support ndarray or scalar now.
+       * `where` argument is not supported.
+       * Complex input is not supported.
+
+    References
+    ----------
+    Abramowitz, M. and Stegun, I. A., *Handbook of Mathematical Functions*,
+    10th printing, New York: Dover, 1964, pp. 79ff.
+    http://www.math.sfu.ca/~cbm/aands/
+    """
+    return _mx_nd_np.arcsin(x, out=out)
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -4225,6 +4273,44 @@ def arcsin(x, out=None, **kwargs):
     """
     return _mx_nd_np.arcsin(x, out=out, **kwargs)
 
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def acos(x, out=None):
+    """
+    Trigonometric inverse cosine, element-wise.
+    The inverse of cos so that, if y = cos(x), then x = arccos(y).
+
+    Parameters
+    ----------
+    x : ndarray
+        x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that
+        the inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+        A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    ----------
+    angle : ndarray
+        The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi].
+        This is a scalar if x is a scalar.
+
+    Notes
+    ----------
+    arccos is a multivalued function: for each x there are infinitely many numbers z such that
+    cos(z) = x. The convention is to return the angle z whose real part lies in [0, pi].
+    For real-valued input data types, arccos always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it yields nan and sets
+    the invalid floating point error flag.
+    The inverse cos is also known as acos or cos^-1.
+
+    Examples
+    ----------
+    >>> np.acos([1, -1])
+    array([ 0.        ,  3.14159265])
+    """
+    return _mx_nd_np.arccos(x, out=out)
+
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -4263,6 +4349,50 @@ def arccos(x, out=None, **kwargs):
     array([ 0.        ,  3.14159265])
     """
     return _mx_nd_np.arccos(x, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def atan(x, out=None):
+    r"""
+    Trigonometric inverse tangent, element-wise.
+    The inverse of tan, so that if ``y = tan(x)`` then ``x = arctan(y)``.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Out has the same shape as `x`. It lies is in
+        ``[-pi/2, pi/2]`` (``arctan(+/-inf)`` returns ``+/-pi/2``).
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    `arctan` is a multi-valued function: for each `x` there are infinitely
+    many numbers `z` such that tan(`z`) = `x`.  The convention is to return
+    the angle `z` whose real part lies in [-pi/2, pi/2].
+    For real-valued input data types, `arctan` always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    For complex-valued input, we do not have support for them yet.
+    The inverse tangent is also known as `atan` or tan^{-1}.
+
+    Examples
+    --------
+    >>> x = np.array([0, 1])
+    >>> np.atan(x)
+    array([0.       , 0.7853982])
+    >>> np.pi/4
+    0.7853981633974483
+    """
+    return _mx_nd_np.arctan(x, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -5136,6 +5266,51 @@ def logical_not(x, out=None, **kwargs):
     """
     return _mx_nd_np.logical_not(x, out=out, **kwargs)
 
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def asinh(x, out=None):
+    r"""
+    Inverse hyperbolic cosine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    asinh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    .. note::
+       `asinh` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that `sinh(z) = x`.
+
+       For real-valued input data types, `asinh` always returns real output.
+       For each value that cannot be expressed as a real number or infinity, it
+       yields ``nan`` and sets the `invalid` floating point error flag.
+
+       This function differs from the original numpy.asinh in the following aspects:
+
+       * Do not support `where`, a parameter in numpy which indicates where to calculate.
+       * Do not support complex-valued input.
+       * Cannot cast type automatically. DType of `out` must be same as the expected one.
+       * Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+       * If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([3.2, 5.0])
+    >>> np.asinh(a)
+    array([1.8309381, 2.2924316])
+
+    >>> np.asinh(1)
+    0.0
+    """
+    return _mx_nd_np.arcsinh(x, out=out)
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -5183,6 +5358,51 @@ def arcsinh(x, out=None, **kwargs):
     """
     return _mx_nd_np.arcsinh(x, out=out, **kwargs)
 
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def acosh(x, out=None):
+    r"""
+    Inverse hyperbolic cosine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    arccosh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    .. note::
+       `arccosh` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that `cosh(z) = x`.
+
+       For real-valued input data types, `arccosh` always returns real output.
+       For each value that cannot be expressed as a real number or infinity, it
+       yields ``nan`` and sets the `invalid` floating point error flag.
+
+       This function differs from the original numpy.arccosh in the following aspects:
+
+       * Do not support `where`, a parameter in numpy which indicates where to calculate.
+       * Do not support complex-valued input.
+       * Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+       * Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+       * If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([3.2, 5.0])
+    >>> np.acosh(a)
+    array([1.8309381, 2.2924316])
+
+    >>> np.acosh(1)
+    0.0
+    """
+    return _mx_nd_np.arccosh(x, out=out)
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -5229,6 +5449,52 @@ def arccosh(x, out=None, **kwargs):
     0.0
     """
     return _mx_nd_np.arccosh(x, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def atanh(x, out=None):
+    r"""
+    Inverse hyperbolic tangent, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    atanh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    .. note::
+       `atanh` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that `tanh(z) = x`.
+
+       For real-valued input data types, `atanh` always returns real output.
+       For each value that cannot be expressed as a real number or infinity, it
+       yields ``nan`` and sets the `invalid` floating point error flag.
+
+       This function differs from the original numpy.atanh in the following aspects:
+
+       * Do not support `where`, a parameter in numpy which indicates where to calculate.
+       * Do not support complex-valued input.
+       * Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+       * Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+       * If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([0.0, -0.5])
+    >>> np.atanh(a)
+    array([0., -0.54930615])
+
+    >>> np.atanh(1)
+    0.0
+    """
+    return _mx_nd_np.arctanh(x, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -6533,6 +6799,56 @@ def dsplit(ary, indices_or_sections):
     """
     return _mx_nd_np.dsplit(ary, indices_or_sections)
 
+@set_module('mxnet.numpy')
+def concat(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+
+    See Also
+    --------
+    split : Split array into a list of multiple sub-arrays of equal size.
+    hsplit : Split array into multiple sub-arrays horizontally (column wise)
+    vsplit : Split array into multiple sub-arrays vertically (row wise)
+    dsplit : Split array into multiple sub-arrays along the 3rd axis (depth).
+    stack : Stack a sequence of arrays along a new axis.
+    hstack : Stack arrays in sequence horizontally (column wise)
+    vstack : Stack arrays in sequence vertically (row wise)
+    dstack : Stack arrays in sequence depth wise (along third dimension)
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> b = np.array([[5, 6]])
+    >>> np.concat((a, b), axis=0)
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+
+    >>> np.concat((a, b.T), axis=1)
+    array([[1., 2., 5.],
+           [3., 4., 6.]])
+
+    >>> np.concat((a, b), axis=None)
+    array([1., 2., 3., 4., 5., 6.])
+    """
+    return _mx_nd_np.concatenate(seq, axis=axis, out=out)
 
 @set_module('mxnet.numpy')
 def concatenate(seq, axis=0, out=None):
@@ -8584,6 +8900,94 @@ def round_(x, decimals=0, out=None, **kwargs):
     around : equivalent function; see for details.
     """
     return _mx_nd_np.round_(x, decimals, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def atan2(x1, x2, out=None):
+    r"""
+    Element-wise arc tangent of ``x1/x2`` choosing the quadrant correctly.
+
+    The quadrant (i.e., branch) is chosen so that ``atan2(x1, x2)`` is
+    the signed angle in radians between the ray ending at the origin and
+    passing through the point (1,0), and the ray ending at the origin and
+    passing through the point (`x2`, `x1`).  (Note the role reversal: the
+    "`y`-coordinate" is the first function parameter, the "`x`-coordinate"
+    is the second.)  By IEEE convention, this function is defined for
+    `x2` = +/-0 and for either or both of `x1` and `x2` = +/-inf (see
+    Notes for specific values).
+
+    This function is not defined for complex-valued arguments; for the
+    so-called argument of complex values, use `angle`.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        `y`-coordinates.
+    x2 : ndarray or scalar
+        `x`-coordinates. `x2` must be broadcastable to match the shape of
+        `x1` or vice versa.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Array of angles in radians, in the range ``[-pi, pi]``. This is a scalar if
+        `x1` and `x2` are scalars.
+
+    .. notes::
+       *atan2* is identical to the ``atan2`` function of the underlying
+       C library.  The following special values are defined in the C
+       standard: [1]_
+
+       +========+========+==================+
+       | `x1`   | `x2`   | `atan2(x1,x2)` |
+       +========+========+==================+
+       | +/- 0  | +0     | +/- 0            |
+       +========+========+==================+
+       | +/- 0  | -0     | +/- pi           |
+       +========+========+==================+
+       | > 0    | +/-inf | +0 / +pi         |
+       +========+========+==================+
+       | < 0    | +/-inf | -0 / -pi         |
+       +========+========+==================+
+       | +/-inf | +inf   | +/- (pi/4)       |
+       +========+========+==================+
+       | +/-inf | -inf   | +/- (3*pi/4)     |
+       +========+========+==================+
+
+       Note that +0 and -0 are distinct floating point numbers, as are +inf
+       and -inf.
+
+       This function differs from the original numpy.arange in the following aspects:
+
+       * Only support float16, float32 and float64.
+
+    References
+    ----------
+    .. [1] ISO/IEC standard 9899:1999, "Programming language C."
+
+    Examples
+    --------
+    Consider four points in different quadrants:
+
+    >>> x = np.array([-1, +1, +1, -1])
+    >>> y = np.array([-1, -1, +1, +1])
+    >>> np.atan2(y, x) * 180 / np.pi
+    array([-135.,  -45.,   45.,  135.])
+
+    Note the order of the parameters. `atan2` is defined also when `x2` = 0
+    and at several other special points, obtaining values in
+    the range ``[-pi, pi]``:
+
+    >>> x = np.array([1, -1])
+    >>> y = np.array([0, 0])
+    >>> np.atan2(x, y)
+    array([ 1.5707964, -1.5707964])
+    """
+    return _mx_nd_np.arctan2(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')

@@ -839,7 +839,7 @@ def eigvals(a):
     return _mx_nd_np.linalg.eigvals(a)
 
 
-def eigvalsh(a, UPLO='L'):
+def eigvalsh(a, upper=False):
     r"""Compute the eigenvalues real symmetric matrix.
 
     Main difference from eigh: the eigenvectors are not computed.
@@ -890,9 +890,13 @@ def eigvalsh(a, UPLO='L'):
     >>> a = np.array([[ 5.4119368 ,  8.996273  , -5.086096  ],
     ...               [ 0.8866155 ,  1.7490431 , -4.6107802 ],
     ...               [-0.08034172,  4.4172044 ,  1.4528792 ]])
-    >>> LA.eigvalsh(a, UPLO='L')
+    >>> LA.eigvalsh(a, upper=False)
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
+    if(upper==False):
+        UPLO='L'
+    else:
+        UPLO='U'
     return _mx_nd_np.linalg.eigvalsh(a, UPLO)
 
 
@@ -963,7 +967,7 @@ def eig(a):
     return _mx_nd_np.linalg.eig(a)
 
 
-def eigh(a, UPLO='L'):
+def eigh(a, upper=False):
     r"""Return the eigenvalues and eigenvectors real symmetric matrix.
 
     Returns two objects, a 1-D array containing the eigenvalues of `a`, and
@@ -1018,7 +1022,7 @@ def eigh(a, UPLO='L'):
     >>> a = np.array([[ 6.8189726 , -3.926585  ,  4.3990498 ],
     ...               [-0.59656644, -1.9166266 ,  9.54532   ],
     ...               [ 2.1093285 ,  0.19688708, -1.1634291 ]])
-    >>> w, v = LA.eigh(a, UPLO='L')
+    >>> w, v = LA.eigh(a, upper=False)
     >>> w
     array([-2.175445 , -1.4581827,  7.3725457])
     >>> v
@@ -1026,4 +1030,8 @@ def eigh(a, UPLO='L'):
            [ 0.8242942 ,  0.56326365, -0.05721384],
            [-0.53661287,  0.80949366,  0.23825769]])
     """
+    if(upper == False):
+        UPLO = 'L'
+    else:
+        UPLO = 'U'
     return _mx_nd_np.linalg.eigh(a, UPLO)
