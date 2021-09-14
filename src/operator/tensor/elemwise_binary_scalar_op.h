@@ -345,7 +345,7 @@ class BinaryScalarOp : public UnaryOp {
     } else {
       temp_tblob = inputs[0];
     }
-    MSHADOW_TYPE_SWITCH_WITH_BOOL(temp_tblob.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(temp_tblob.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
             s, inputs[0].Size(), outputs[0].dptr<bool>(), temp_tblob.dptr<DType>(), DType(alpha));

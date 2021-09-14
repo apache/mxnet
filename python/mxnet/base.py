@@ -49,8 +49,12 @@ numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
 error_types = {}
 
+# Upper bound of uint64
 _MAX_VALUE_64_BIT_SIGNED_ = 9_223_372_036_854_775_807
+# Upper bound of int64
 _MAX_VALUE_64_BIT_UNSIGNED_ = 18_446_744_073_709_551_615
+# Upper bound of float32
+_MAX_VALUE_FLOAT32_REPRESENT_ = 16_777_216
 
 # this function is needed for python3
 # to convert ctypes.char_p .value back to python str

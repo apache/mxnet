@@ -164,16 +164,12 @@ void NumpyInitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
 }
 
 struct NumpyLinspaceParam : public dmlc::Parameter<NumpyLinspaceParam> {
-#if __GNUC__ >= 6
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
   double start_double;
   double stop_double;
   int64_t start_int;
   int64_t stop_int;
   uint64_t start_uint;
   uint64_t stop_uint;
-#pragma GCC diagnostic pop
   index_t num;
   bool endpoint;
   std::string ctx;
@@ -181,16 +177,22 @@ struct NumpyLinspaceParam : public dmlc::Parameter<NumpyLinspaceParam> {
   int value_type;
   DMLC_DECLARE_PARAMETER(NumpyLinspaceParam) {
     DMLC_DECLARE_FIELD(start_double)
+    .set_default(0.0)
     .describe("The double type starting value of the sequence.");
     DMLC_DECLARE_FIELD(stop_double)
+    .set_default(0.0)
     .describe("The double type ending value of the sequence");
     DMLC_DECLARE_FIELD(start_int)
+    .set_default(0)
     .describe("The int type starting value of the sequence.");
     DMLC_DECLARE_FIELD(stop_int)
+    .set_default(0)
     .describe("The int type ending value of the sequence");
     DMLC_DECLARE_FIELD(start_uint)
+    .set_default(0)
     .describe("The unsigned int type starting value of the sequence.");
     DMLC_DECLARE_FIELD(stop_uint)
+    .set_default(0)
     .describe("The unsigned int type ending value of the sequence");
     DMLC_DECLARE_FIELD(num)
     .describe("Number of samples to generate. Must be non-negative.");
@@ -258,11 +260,7 @@ struct numpy_linspace_fwd {
       // Special cases : start = 9007199254740993
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(start));
     } else {
-      if (std::is_integral<DType>::value) {
-        KERNEL_ASSIGN(out[i], req, static_cast<DType>(std::floor(start + step * i)));
-      } else {
-        KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
-      }
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
     }
     if (endpoint && i != 0 && i == size - 1) {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(stop));

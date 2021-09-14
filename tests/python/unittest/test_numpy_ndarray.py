@@ -114,7 +114,7 @@ def test_np_zeros():
             self._dtype = dtype
 
         def forward(self, x, *args, **kwargs):
-            return x + np.zeros(shape, dtype)
+            return x + np.zeros(shape, dtype=dtype)
 
     class TestZerosOutputType(HybridBlock):
         def forward(self, x, *args, **kwargs):

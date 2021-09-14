@@ -46,7 +46,7 @@ from ..runtime import Features
 from ..context import Context
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype, wrap_data_api_creation_func,\
-                   numpy_eye_standardized
+                   numpy_eye_standardized, dtype_from_number
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -12367,15 +12367,12 @@ def asarray(obj, /, *, dtype=None, device=None, copy=None):
             [1, 7]])
     """
     if isinstance(obj, (integer_types, numeric_types)):
+        dtype = dtype_from_number(obj) if dtype is None else dtype
         obj = _np.asarray(obj, dtype=dtype)
-    if isinstance(obj, _np.ndarray):
+    elif isinstance(obj, _np.ndarray):
         dtype = obj.dtype if dtype is None else dtype
-    if isinstance(obj, ndarray):
+    elif isinstance(obj, ndarray):
         dtype = obj.dtype if dtype is None else dtype
-    else:
-        if dtype is None:
-            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
-            dtype = obj.dtype if hasattr(obj, "dtype") else default_dtype
     array = _as_mx_np_array(obj, ctx=device, zero_copy=copy)
     return array.astype(dtype)
 

@@ -21,7 +21,12 @@ import functools
 import inspect
 import threading
 
-from .base import _LIB, check_call, c_str, py_str
+from struct import calcsize
+from .base import (_LIB, check_call, c_str, py_str,
+                   numeric_types, integer_types,
+                   _MAX_VALUE_64_BIT_UNSIGNED_,
+                   _MAX_VALUE_64_BIT_SIGNED_,
+                   _MAX_VALUE_FLOAT32_REPRESENT_)
 
 
 _np_ufunc_default_kwargs = {
@@ -1260,3 +1265,26 @@ def set_flush_denorms(value):
     passed_value = ctypes.c_bool(value)
     check_call(_LIB.MXSetFlushDenorms(passed_value, ctypes.byref(ret)))
     return ret.value
+
+
+def dtype_from_number(number):
+    """Get the data type from the given int or float number
+    """
+    assert isinstance(number, (integer_types, numeric_types)),\
+        "The input number should be either integer for float types"
+    import numpy as _np
+    if isinstance(number, integer_types):
+        if number > _MAX_VALUE_64_BIT_UNSIGNED_:
+            raise OverflowError("Integer out of bounds")
+        if number > _MAX_VALUE_64_BIT_SIGNED_:
+            return _np.uint64
+        elif calcsize("P") == 8:
+            return _np.int64
+        else:
+            return _np.int32
+    else:
+        if abs(number) > _MAX_VALUE_FLOAT32_REPRESENT_:
+            return _np.float64
+        else:
+            return _np.float64 if is_np_default_dtype() else _np.float32
+
