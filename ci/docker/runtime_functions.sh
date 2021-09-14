@@ -1204,7 +1204,12 @@ build_docs() {
     mkdir -p $python_doc_folder && tar -xzf python-artifacts.tgz --directory $python_doc_folder
     mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api
 
-     # check if .htaccess file exists
+    # check if .asf.yaml file exists
+    if [ ! -f "html/.asf.yaml" ]; then
+        echo "html/.asf.yaml file does not exist. Exiting 1"
+        exit 1
+    fi
+    # check if .htaccess file exists
     if [ ! -f "html/.htaccess" ]; then
         echo "html/.htaccess file does not exist. Exiting 1"
         exit 1
