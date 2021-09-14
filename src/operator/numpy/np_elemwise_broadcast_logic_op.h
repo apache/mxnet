@@ -19,10 +19,13 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_elemwise_binary_logic_op.h
+ * \file np_elemwise_broadcast_logic_op.h
  * \brief Function definition of basic logic functions for elementwise numpy binary
  * broadcast operator.
  */
+
+#ifndef MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_LOGIC_OP_H_
+#define MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_LOGIC_OP_H_
 
 #if MXNET_USE_TVM_OP
 #include <tvm/runtime/c_runtime_api.h>
@@ -30,6 +33,9 @@
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 
+#include <string>
+#include <utility>
+#include <vector>
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
 
@@ -397,3 +403,5 @@ static constexpr char func_logical_xor_scalar_gpu[]   = "logical_xor_scalar_gpu"
 
 }  // namespace op
 }  // namespace mxnet
+
+#endif  // MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_LOGIC_OP_H_
