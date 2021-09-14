@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_COMMON_NVTX_H_
-#define MXNET_COMMON_NVTX_H_
+#ifndef MXNET_COMMON_CUDA_NVTX_H_
+#define MXNET_COMMON_CUDA_NVTX_H_
 
 #if MXNET_USE_CUDA && MXNET_USE_NVTX
 #include <cuda.h>
@@ -101,4 +101,4 @@ class nvtx {
 }  // namespace mxnet
 
 #endif  // MXNET_UDE_CUDA && MXNET_USE_NVTX
-#endif  // MXNET_COMMON_NVTX_H_
+#endif  // MXNET_COMMON_CUDA_NVTX_H_

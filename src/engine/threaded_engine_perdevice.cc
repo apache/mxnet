@@ -35,7 +35,7 @@
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
 #include "../common/utils.h"
-#include "../common/nvtx.h"
+#include "../common/cuda/nvtx.h"
 
 namespace mxnet {
 namespace engine {

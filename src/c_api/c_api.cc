@@ -81,7 +81,7 @@
 #if MXNET_USE_CUDA
 #include <cuda_profiler_api.h>
 #endif
-#include "../common/nvtx.h"
+#include "../common/cuda/nvtx.h"
 
 using namespace mxnet;
 

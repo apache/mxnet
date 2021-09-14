@@ -35,7 +35,7 @@
 #include <array>
 #include "./vtune.h"
 #include "./aggregate_stats.h"
-#include "../common/nvtx.h"
+#include "../common/cuda/nvtx.h"
 #include "../common/utils.h"
 
 namespace mxnet {
