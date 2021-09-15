@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 #include <string>
 
