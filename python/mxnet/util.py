@@ -674,19 +674,6 @@ def wrap_data_api_creation_func(func):
     return _wrap_api_creation_func
 
 
-def numpy_eye_standardized(func):
-    """decorator for numpy.eye operator because k is positional
-       arg in numpy while key-word in api standard
-    """
-    @functools.wraps(func)
-    def _wrap_numpy_eye_func(*args, **kwargs):
-        if len(args) > 2:
-            kwargs["k"] = args[2]
-            args = args[0:2]
-        return func(*args, **kwargs)
-    return _wrap_numpy_eye_func
-
-
 # pylint: disable=exec-used
 def numpy_fallback(func):
     """decorator for falling back to offical numpy for a specific function"""

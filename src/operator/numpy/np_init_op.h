@@ -133,12 +133,12 @@ struct NumpyInitOpWithScalarParam : public dmlc::Parameter<NumpyInitOpWithScalar
     int_value_s << int_value;
     uint_value_s << uint_value;
     value_type_s << value_type;
-    (*dict)["shape"] = shape_s.str();
-    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
-    (*dict)["int_value"] = int_value_s.str();
-    (*dict)["uint_value"] = uint_value_s.str();
+    (*dict)["shape"]        = shape_s.str();
+    (*dict)["dtype"]        = MXNetTypeWithBool2String(dtype);
+    (*dict)["int_value"]    = int_value_s.str();
+    (*dict)["uint_value"]   = uint_value_s.str();
     (*dict)["double_value"] = double_value_s.str();
-    (*dict)["value_type"] = value_type_s.str();
+    (*dict)["value_type"]   = value_type_s.str();
     // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
     // Setting ctx here results in an error.
   }
@@ -164,12 +164,12 @@ void NumpyInitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
 }
 
 struct NumpyLinspaceParam : public dmlc::Parameter<NumpyLinspaceParam> {
-  double start_double;
-  double stop_double;
-  int64_t start_int;
-  int64_t stop_int;
-  uint64_t start_uint;
-  uint64_t stop_uint;
+  double start_double = 0.0;
+  double stop_double  = 0.0;
+  int64_t start_int   = 0;
+  int64_t stop_int    = 0;
+  uint64_t start_uint = 0;
+  uint64_t stop_uint  = 0;
   index_t num;
   bool endpoint;
   std::string ctx;
@@ -177,22 +177,16 @@ struct NumpyLinspaceParam : public dmlc::Parameter<NumpyLinspaceParam> {
   int value_type;
   DMLC_DECLARE_PARAMETER(NumpyLinspaceParam) {
     DMLC_DECLARE_FIELD(start_double)
-    .set_default(0.0)
     .describe("The double type starting value of the sequence.");
     DMLC_DECLARE_FIELD(stop_double)
-    .set_default(0.0)
     .describe("The double type ending value of the sequence");
     DMLC_DECLARE_FIELD(start_int)
-    .set_default(0)
     .describe("The int type starting value of the sequence.");
     DMLC_DECLARE_FIELD(stop_int)
-    .set_default(0)
     .describe("The int type ending value of the sequence");
     DMLC_DECLARE_FIELD(start_uint)
-    .set_default(0)
     .describe("The unsigned int type starting value of the sequence.");
     DMLC_DECLARE_FIELD(stop_uint)
-    .set_default(0)
     .describe("The unsigned int type ending value of the sequence");
     DMLC_DECLARE_FIELD(num)
     .describe("Number of samples to generate. Must be non-negative.");
@@ -226,15 +220,15 @@ struct NumpyLinspaceParam : public dmlc::Parameter<NumpyLinspaceParam> {
     endpoint_s << endpoint;
     dtype_s << dtype;
     (*dict)["start_double"] = start_double_s.str();
-    (*dict)["stop_double"] = stop_double_s.str();
-    (*dict)["start_int"] = start_int_s.str();
-    (*dict)["stop_int"] = stop_int_s.str();
-    (*dict)["start_uint"] = start_uint_s.str();
-    (*dict)["stop_uint"] = stop_uint_s.str();
-    (*dict)["value_type"] = value_type_s.str();
-    (*dict)["num"] = num_s.str();
-    (*dict)["endpoint"] = endpoint_s.str();
-    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["stop_double"]  = stop_double_s.str();
+    (*dict)["start_int"]    = start_int_s.str();
+    (*dict)["stop_int"]     = stop_int_s.str();
+    (*dict)["start_uint"]   = start_uint_s.str();
+    (*dict)["stop_uint"]    = stop_uint_s.str();
+    (*dict)["value_type"]   = value_type_s.str();
+    (*dict)["num"]          = num_s.str();
+    (*dict)["endpoint"]     = endpoint_s.str();
+    (*dict)["dtype"]        = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -281,8 +275,8 @@ void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
       index_t step_num = param.endpoint ? param.num - 1 : param.num;
       if (param.value_type == 0) {
         int64_t start = param.start_int;
-        int64_t stop = param.stop_int;
-        double step = step_num > 0 ? \
+        int64_t stop  = param.stop_int;
+        double step   = step_num > 0 ? \
             (static_cast<double>(stop) - static_cast<double>(start)) / step_num : 0.0f;
         Kernel<numpy_linspace_fwd, xpu>::Launch(s,
                                                 outputs[0].Size(),
@@ -295,8 +289,8 @@ void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
                                                 outputs[0].dptr<DType>());
       } else if (param.value_type == 1) {
         uint64_t start = param.start_uint;
-        uint64_t stop = param.stop_uint;
-        double step = step_num > 0 ? \
+        uint64_t stop  = param.stop_uint;
+        double step    = step_num > 0 ? \
             (static_cast<double>(stop) - static_cast<double>(start)) / step_num : 0.0f;
         Kernel<numpy_linspace_fwd, xpu>::Launch(s,
                                                 outputs[0].Size(),
@@ -309,8 +303,8 @@ void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
                                                 outputs[0].dptr<DType>());
       } else {
         double start = param.start_double;
-        double stop = param.stop_double;
-        double step = step_num > 0 ? (stop - start) / step_num : 0.0f;
+        double stop  = param.stop_double;
+        double step  = step_num > 0 ? (stop - start) / step_num : 0.0f;
         Kernel<numpy_linspace_fwd, xpu>::Launch(s,
                                                 outputs[0].Size(),
                                                 outputs[0].Size(),

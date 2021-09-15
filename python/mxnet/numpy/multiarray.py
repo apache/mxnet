@@ -46,7 +46,7 @@ from ..runtime import Features
 from ..context import Context
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype, wrap_data_api_creation_func,\
-                   numpy_eye_standardized, dtype_from_number
+                   dtype_from_number
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -2498,7 +2498,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def empty(shape, *, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
+def empty(shape, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -2660,7 +2660,7 @@ def shape(a):
 
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def zeros(shape, *, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
+def zeros(shape, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2705,7 +2705,7 @@ def zeros(shape, *, dtype=None, order='C', device=None):  # pylint: disable=rede
 
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def ones(shape, *, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
+def ones(shape, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2783,7 +2783,7 @@ def broadcast_to(array, shape):  # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def full(shape, fill_value, *, dtype=None, order='C', device=None, out=None):
+def full(shape, fill_value, dtype=None, order='C', device=None, out=None):
     r"""Return a new array of given shape and type, filled with `fill_value`.
 
     Parameters
@@ -2844,7 +2844,7 @@ def full(shape, fill_value, *, dtype=None, order='C', device=None, out=None):
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def empty_like(prototype, /, *, dtype=None, device=None, order='C', subok=False, shape=None): # pylint: disable=W0621
+def empty_like(prototype, dtype=None, device=None, order='C', subok=False, shape=None): # pylint: disable=W0621
     """
     Return a new array with the same shape and type as a given array.
 
@@ -5550,8 +5550,7 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-@numpy_eye_standardized
-def eye(N, M=None, /, *, k=0, dtype=None, device=None, **kwargs):
+def eye(N, M=None, k=0, dtype=None, device=None, **kwargs):
     """
     Return a 2-D array with ones on the diagonal and zeros elsewhere.
 
@@ -5596,7 +5595,7 @@ def eye(N, M=None, /, *, k=0, dtype=None, device=None, **kwargs):
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def linspace(start, stop, /, num=50, *, endpoint=True, retstep=False, dtype=None, axis=0, device=None):  # pylint: disable=too-many-arguments
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, device=None):  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
 
@@ -6280,7 +6279,7 @@ def triu(m, k=0):
 
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def arange(start, /, stop=None, step=1, *, dtype=None, device=None):
+def arange(start, stop=None, step=1, dtype=None, device=None):
     """Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
@@ -10663,7 +10662,7 @@ def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=to
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def full_like(a, /, fill_value, *, dtype=None, order='C', device=None, out=None): # pylint: disable=too-many-arguments
+def full_like(a, fill_value, dtype=None, order='C', device=None, out=None): # pylint: disable=too-many-arguments
     """
     Return a full array with the same shape and type as a given array.
 
@@ -10722,7 +10721,7 @@ def full_like(a, /, fill_value, *, dtype=None, order='C', device=None, out=None)
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def zeros_like(a, /, *, dtype=None, order='C', device=None, out=None):
+def zeros_like(a, dtype=None, order='C', device=None, out=None):
     """
     Return an array of zeros with the same shape and type as a given array.
 
@@ -10783,7 +10782,7 @@ def zeros_like(a, /, *, dtype=None, order='C', device=None, out=None):
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def ones_like(a, /, *, dtype=None, order='C', device=None, out=None):
+def ones_like(a, dtype=None, order='C', device=None, out=None):
     """
     Return an array of ones with the same shape and type as a given array.
 
@@ -12318,7 +12317,7 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def asarray(obj, /, *, dtype=None, device=None, copy=None):
+def asarray(obj, dtype=None, device=None, copy=None):
     """
     Convert the input to an array.
 
@@ -12380,7 +12379,7 @@ def asarray(obj, /, *, dtype=None, device=None, copy=None):
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
-def from_dlpack(x, /):
+def from_dlpack(x):
     """
     Returns a np.ndarray backed by a dlpack tensor.
 
