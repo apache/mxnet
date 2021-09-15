@@ -24,6 +24,7 @@
 #include "dnnl_conv_property.h"
 #include "dnnl_fc_property.h"
 #include "dnnl_identity_property.h"
+#include "dnnl_post_amp_property.h"
 #include "dnnl_post_quantize_align_scale_property.h"
 #include "dnnl_post_quantize_property.h"
 #include "dnnl_transformer_qk_property.h"
@@ -59,6 +60,9 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLPostQuantizeProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLPostQuantizeAlignScaleProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLFCSumFuseProperty)
     .set_attr("quantize", true);
+
+MXNET_REGISTER_SUBGRAPH_BACKEND(ONEDNN_AMP).set_attr("context", Context::CPU());
+MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_AMP, SgDNNLPostAMPProperty);
 
 }  // namespace op
 }  // namespace mxnet

@@ -99,10 +99,11 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*out_types, 2, mshadow::kFloat32);
     }
   } else {
-    CHECK_EQ(in_types->size(), 1U);
-    CHECK_EQ(out_types->size(), 1U);
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
+    bool result = DefaultSubgraphOpType(attrs, in_types, out_types);
+    if (param.amp_out_dtype.has_value()) {
+      (*out_types)[0] = param.amp_out_dtype.value();
+    }
+    return result;
   }
 
   return true;
@@ -457,11 +458,11 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*out_types, 2, mshadow::kFloat32);
     }
   } else {
-    CHECK_EQ(in_types->size(), 2U);
-    CHECK_EQ(out_types->size(), 1U);
-    TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
+    bool result = DefaultSubgraphOpType(attrs, in_types, out_types);
+    if (param.amp_out_dtype.has_value()) {
+      (*out_types)[0] = param.amp_out_dtype.value();
+    }
+    return result;
   }
 
   return true;

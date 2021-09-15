@@ -32,6 +32,8 @@ struct DNNLSelfAttParam : public dmlc::Parameter<DNNLSelfAttParam> {
   bool enable_float_output;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  dmlc::optional<int> amp_out_dtype;
+
   DMLC_DECLARE_PARAMETER(DNNLSelfAttParam) {
     DMLC_DECLARE_FIELD(heads).describe("Set number of heads.");
     DMLC_DECLARE_FIELD(quantized).set_default(false).describe(
@@ -51,6 +53,9 @@ struct DNNLSelfAttParam : public dmlc::Parameter<DNNLSelfAttParam> {
             "The maximum scalar value in the form of float32 obtained "
             "through calibration. If present, it will be used to by "
             "quantized self-attention op to calculate primitive scale.");
+    DMLC_DECLARE_FIELD(amp_out_dtype)
+        .set_default(dmlc::optional<int>()) MXNET_ADD_ALL_TYPES.describe(
+            "What is the output type, that came from the fused amp_cast.");
   }
 };
 

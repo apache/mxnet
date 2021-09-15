@@ -662,7 +662,11 @@ static bool SgDNNLFCInferType(const nnvm::NodeAttrs& attrs,
     }
     return true;
   } else {
-    return DefaultSubgraphOpType(attrs, in_types, out_types);
+    bool result = DefaultSubgraphOpType(attrs, in_types, out_types);
+    if (full_param.mkldnn_param.amp_out_dtype.has_value()) {
+      (*out_types)[0] = full_param.mkldnn_param.amp_out_dtype.value();
+    }
+    return result;
   }
 }
 
