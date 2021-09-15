@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.cholesky")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_cholesky");
       nnvm::NodeAttrs attrs;
-      op::LaCholeskyParam param;
+      op::LaCholeskyParam param = {};
       param.lower  = args[1].operator bool();
       attrs.parsed = param;
       attrs.op     = op;

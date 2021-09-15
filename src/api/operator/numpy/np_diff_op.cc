@@ -31,7 +31,7 @@ MXNET_REGISTER_API("_npi.diff").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_diff");
   nnvm::NodeAttrs attrs;
-  op::DiffParam param;
+  op::DiffParam param = {};
   param.n    = args[1].operator int();
   param.axis = args[2].operator int();
 

@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.ediff1d")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_ediff1d");
       nnvm::NodeAttrs attrs;
-      op::EDiff1DParam param;
+      op::EDiff1DParam param = {};
       int num_inputs = 1;
       NDArray* inputs[3];
       inputs[0] = args[0].operator mxnet::NDArray*();

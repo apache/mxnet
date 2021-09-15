@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.delete")
       using namespace runtime;
       static const nnvm::Op* op = Op::Get("_npi_delete");
       nnvm::NodeAttrs attrs;
-      op::NumpyDeleteParam param;
+      op::NumpyDeleteParam param = {};
       int num_inputs = 0;
       param.start    = dmlc::nullopt;
       param.step     = dmlc::nullopt;

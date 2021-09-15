@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.argmax")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_argmax");
       nnvm::NodeAttrs attrs;
-      op::ReduceAxisParam param;
+      op::ReduceAxisParam param = {};
       // param.axis
       if (args[1].type_code() == kNull) {
         param.axis = dmlc::nullopt;

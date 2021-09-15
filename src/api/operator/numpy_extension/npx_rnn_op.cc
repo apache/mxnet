@@ -49,7 +49,7 @@ MXNET_REGISTER_API("_npx.rnn").set_body([](runtime::MXNetArgs args, runtime::MXN
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npx_rnn");
-  op::RNNParam param;
+  op::RNNParam param = {};
   int args_size  = args.size();
   int num_inputs = 0;
 

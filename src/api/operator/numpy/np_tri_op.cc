@@ -31,7 +31,7 @@ MXNET_REGISTER_API("_npi.tri").set_body([](runtime::MXNetArgs args, runtime::MXN
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tri");
   nnvm::NodeAttrs attrs;
-  op::TriParam param;
+  op::TriParam param = {};
   param.N = args[0].operator nnvm::dim_t();
   if (args[1].type_code() == kNull) {
     param.M = dmlc::nullopt;

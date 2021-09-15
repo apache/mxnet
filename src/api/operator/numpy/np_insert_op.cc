@@ -37,7 +37,7 @@ MXNET_REGISTER_API("_npi.insert_scalar")
       using namespace runtime;
       static const nnvm::Op* op = Op::Get("_npi_insert_scalar");
       nnvm::NodeAttrs attrs;
-      op::NumpyInsertParam param;
+      op::NumpyInsertParam param = {};
       int num_inputs = 0;
       param.start    = dmlc::nullopt;
       param.step     = dmlc::nullopt;
@@ -78,7 +78,7 @@ MXNET_REGISTER_API("_npi.insert_slice")
       using namespace runtime;
       static const nnvm::Op* op = Op::Get("_npi_insert_slice");
       nnvm::NodeAttrs attrs;
-      op::NumpyInsertParam param;
+      op::NumpyInsertParam param = {};
       int num_inputs = 0;
       if (args[1].type_code() == kDLInt || args[1].type_code() == kDLUInt ||
           args[1].type_code() == kDLFloat) {
@@ -126,7 +126,7 @@ MXNET_REGISTER_API("_npi.insert_tensor")
       using namespace runtime;
       static const nnvm::Op* op = Op::Get("_npi_insert_tensor");
       nnvm::NodeAttrs attrs;
-      op::NumpyInsertParam param;
+      op::NumpyInsertParam param = {};
       param.start    = dmlc::nullopt;
       param.step     = dmlc::nullopt;
       param.stop     = dmlc::nullopt;

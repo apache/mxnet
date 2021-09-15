@@ -52,7 +52,7 @@ inline static void _npi_where_scalar1(runtime::MXNetArgs args,
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = isl ? Op::Get("_npi_where_lscalar") : Op::Get("_npi_where_rscalar");
-  op::NumpyWhereScalarParam param;
+  op::NumpyWhereScalarParam param = {};
   param.scalar = isl ? args[1].operator double() : args[2].operator double();
   attrs.op     = op;
   attrs.parsed = param;
@@ -69,7 +69,7 @@ inline static void _npi_where_scalar1(runtime::MXNetArgs args,
 inline static void _npi_where_scalar2(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_where_scalar2");
-  op::NumpyWhereScalar2Param param;
+  op::NumpyWhereScalar2Param param = {};
   nnvm::NodeAttrs attrs;
   param.x      = args[1].operator double();
   param.y      = args[2].operator double();

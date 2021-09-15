@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.interp")
       using namespace runtime;
       static const nnvm::Op* op = Op::Get("_npi_interp");
       nnvm::NodeAttrs attrs;
-      op::NumpyInterpParam param;
+      op::NumpyInterpParam param = {};
       if (args[3].type_code() == kNull) {
         param.left = dmlc::nullopt;
       } else {

@@ -68,7 +68,7 @@ MXNET_REGISTER_API("_npx.deconvolution")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_deconvolution");
-      op::DeconvolutionParam param;
+      op::DeconvolutionParam param = {};
       int args_size = args.size();
       // no_bias
       if (args[args_size - 4].type_code() == kNull) {
