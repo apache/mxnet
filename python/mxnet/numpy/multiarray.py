@@ -2841,7 +2841,7 @@ def full(shape, fill_value, dtype=None, order='C', device=None, out=None):
 # pylint: enable=too-many-arguments, redefined-outer-name
 
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, too-many-arguments
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
 def empty_like(prototype, dtype=None, device=None, order='C', subok=False, shape=None): # pylint: disable=W0621
