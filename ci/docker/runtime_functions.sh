@@ -734,13 +734,6 @@ sanity_clang() {
 
     git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
     git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
-
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    echo "| clang-format failures found! Run: "
-    echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
-    echo "| to fix this error. "
-    echo "| For more info, see: "
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     
     tools/lint/clang_format_ci.sh "${BASE_SHA}"
     GIT_DIFFERENCE=$(git diff)
@@ -748,6 +741,14 @@ sanity_clang() {
         git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
         exit 0
     fi
+    
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "| clang-format failures found! Run: "
+    echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
+    echo "| to fix this error. "
+    echo "| For more info, see: "
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    
     echo "$GIT_DIFFERENCE"
     git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
     exit 1
