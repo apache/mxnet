@@ -29,7 +29,7 @@
 #if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../nn/mkldnn/mkldnn_base-inl.h"
-#include "../nn/mkldnn/mkldnn_slice-inl.h"
+#include "../nn/mkldnn/mkldnn_transpose-inl.h"
 #endif
 namespace mxnet {
 namespace op {
@@ -120,7 +120,7 @@ static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNRun(MKLDNNNumpyTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(NumpyTranspose<cpu>, attrs, ctx, inputs, req, outputs);

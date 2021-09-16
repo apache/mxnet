@@ -29,6 +29,7 @@
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../nn/mkldnn/mkldnn_reshape-inl.h"
 #include "../nn/mkldnn/mkldnn_slice-inl.h"
+#include "../nn/mkldnn/mkldnn_transpose-inl.h"
 #endif
 
 namespace mxnet {
@@ -315,7 +316,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNRun(MKLDNNNDArrayTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNTransposeForward<TransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
