@@ -713,7 +713,7 @@ math::pow(0.5f, static_cast<int64_t>(b)) * math::log(0.5f));
 
 MXNET_BINARY_MATH_OP(rbitwise_right_shift, static_cast<int64_t>(b) >> static_cast<int64_t>(a));
 
-MXNET_BINARY_MATH_OP(rbitwise_right_shift_grad, -static_cast<int64_t>(b) * \
+MXNET_BINARY_MATH_OP(rbitwise_right_shift_grad, static_cast<int64_t>(b) * \
 math::pow(0.5f, static_cast<int64_t>(a)) * math::log(0.5f));
 
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
