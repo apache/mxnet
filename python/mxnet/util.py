@@ -1257,8 +1257,8 @@ def set_flush_denorms(value):
 def dtype_from_number(number):
     """Get the data type from the given int or float number
     """
-    assert isinstance(number, (integer_types, numeric_types)),\
-        "The input number should be either integer for float types"
+    assert isinstance(number, numeric_types),\
+        "The input number should be either int for float types"
     import numpy as _np
     if isinstance(number, integer_types):
         if number > _MAX_VALUE_64_BIT_UNSIGNED_:

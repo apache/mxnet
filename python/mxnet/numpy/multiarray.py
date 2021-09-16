@@ -12365,7 +12365,7 @@ def asarray(obj, dtype=None, device=None, copy=None):
     array([[0, 6],
             [1, 7]])
     """
-    if isinstance(obj, (integer_types, numeric_types)):
+    if isinstance(obj, numeric_types):
         dtype = dtype_from_number(obj) if dtype is None else dtype
         obj = _np.asarray(obj, dtype=dtype)
     elif isinstance(obj, _np.ndarray):

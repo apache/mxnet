@@ -20,8 +20,7 @@
 """Namespace for numpy operators used in Gluon dispatched by F=ndarray."""
 
 import numpy as _np
-from ...base import numeric_types, integer_types,\
-                    _MAX_VALUE_64_BIT_SIGNED_, _MAX_VALUE_FLOAT32_REPRESENT_
+from ...base import numeric_types, integer_types
 from ...util import _sanity_check_params, set_module
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...util import is_np_default_dtype, dtype_from_number
@@ -384,7 +383,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
         dtype = _np.bool if dtype is None else dtype
-    elif isinstance(fill_value, (integer_types, numeric_types)):
+    elif isinstance(fill_value, numeric_types):
         if dtype is None or dtype is float:
             dtype = dtype_from_number(fill_value)
     if dtype is not None and not isinstance(dtype, str):
@@ -1973,16 +1972,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
     if dtype is None:
-        if isinstance(start, numeric_types) or isinstance(stop, numeric_types):
-            if abs(start) > _MAX_VALUE_FLOAT32_REPRESENT_ or \
-                abs(stop) > _MAX_VALUE_FLOAT32_REPRESENT_:
-                dtype = _np.float64
-            else:
-                dtype = _np.float64 if is_np_default_dtype() else _np.float32
-        elif start > _MAX_VALUE_64_BIT_SIGNED_ or stop > _MAX_VALUE_64_BIT_SIGNED_:
-            dtype = _np.uint64
-        else:
-            dtype = _np.int64
+        dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if retstep:
         step = (stop - start) / (num - 1)
         return _api_internal.linspace(start, stop, num, endpoint, ctx, dtype), step
