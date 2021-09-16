@@ -1038,6 +1038,16 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return bitwise_xor(self, other)
 
     @wrap_mxnp_np_ufunc
+    def __lshift__(self, other):
+        """x.__lshift__(y) <=> x << y"""
+        return bitwise_left_shift(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __rshift__(self, other):
+        """x.__rshift__(y) <=> x >> y"""
+        return bitwise_right_shift(self, other)
+
+    @wrap_mxnp_np_ufunc
     def __iand__(self, other):
         """x.__iand__(y) <=> x &= y"""
         return bitwise_and(self, other, out=self)
@@ -1051,6 +1061,26 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __ixor__(self, other):
         """x.__ixor__(y) <=> x ^= y"""
         return bitwise_xor(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __ilshift__(self, other):
+        """x.__ilshift__(y) <=> x <<= y"""
+        return bitwise_left_shift(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __irshift__(self, other):
+        """x.__irshift__(y) <=> x >>= y"""
+        return bitwise_right_shift(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rlshift__(self, other):
+        """x.__rlshift__(y) <=> y << x"""
+        return bitwise_left_shift(other, self)
+
+    @wrap_mxnp_np_ufunc
+    def __rrshift__(self, other):
+        """x.__rrshift__(y) <=> y >> x"""
+        return bitwise_right_shift(other, self)
 
     def __round__(self, n=0):
         """x.__round__(n)"""
