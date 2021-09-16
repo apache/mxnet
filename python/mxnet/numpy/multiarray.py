@@ -58,9 +58,9 @@ from . import fallback
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
-           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'power', 'bitwise_not',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'pow', 'power', 'bitwise_not',
            'delete', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
-           'arctan2', 'atan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
+           'arctan2', 'atan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'bitwise_invert', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin','asin', 'arccos','acos', 'arctan', 'atan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh','asinh','arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort',
@@ -1162,6 +1162,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
         return power(other, self)
+
+    @wrap_mxnp_np_ufunc
+    def __ipow__(self, other):
+        """x.__ipow__(y) <=> x *= y"""
+        return power(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
     def __eq__(self, other):
@@ -3584,6 +3589,55 @@ def remainder(x1, x2, out=None, **kwargs):
     """
     return _mx_nd_np.remainder(x1, x2, out=out)
 
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def pow(x1, x2):
+    """
+        First array elements raised to powers from second array, element-wise.
+
+        Parameters
+        ----------
+        x1 : ndarray or scalar
+            The bases.
+
+        x2 : ndarray or scalar
+            The exponent.
+
+        out : ndarray
+            A location into which the result is stored. If provided, it must have a shape
+            that the inputs broadcast to. If not provided or None, a freshly-allocated array
+            is returned.
+
+        Returns
+        -------
+        out : ndarray or scalar
+            The bases in x1 raised to the exponents in x2.
+            This is a scalar if both x1 and x2 are scalars.
+
+        Examples
+        --------
+        >>> x1 = np.arange(6)
+        >>> np.pow(x1, 3)
+        array([  0.,   1.,   8.,  27.,  64., 125.])
+
+        Raise the bases to different exponents.
+
+        >>> x2 = np.array([1.0, 2.0, 3.0, 3.0, 2.0, 1.0])
+        >>> np.pow(x1, x2)
+        array([ 0.,  1.,  8., 27., 16.,  5.])
+
+        The effect of broadcasting.
+
+        >>> x2 = np.array([[1, 2, 3, 3, 2, 1], [1, 2, 3, 3, 2, 1]])
+        >>> x2
+        array([[1., 2., 3., 3., 2., 1.],
+               [1., 2., 3., 3., 2., 1.]])
+
+        >>> np.pow(x1, x2)
+        array([[ 0.,  1.,  8., 27., 16.,  5.],
+               [ 0.,  1.,  8., 27., 16.,  5.]])
+        """
+    return _mx_nd_np.pow(x1, x2)
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
@@ -5082,6 +5136,59 @@ def floor(x, out=None, **kwargs):
     array(3.)
     """
     return _mx_nd_np.floor(x, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def bitwise_invert(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+
+    >>> x = np.bitwise_invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _mx_nd_np.bitwise_not(x, out=out, **kwargs)
+
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func

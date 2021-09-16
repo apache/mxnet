@@ -18,6 +18,7 @@
 """Namespace for ops used in imperative programming."""
 
 from ..ndarray import numpy as _mx_nd_np
+from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg
 
@@ -838,7 +839,7 @@ def eigvals(a):
     """
     return _mx_nd_np.linalg.eigvals(a)
 
-
+@wrap_data_api_linalg_func
 def eigvalsh(a, upper=False):
     r"""Compute the eigenvalues real symmetric matrix.
 
@@ -966,7 +967,7 @@ def eig(a):
     """
     return _mx_nd_np.linalg.eig(a)
 
-
+@wrap_data_api_linalg_func
 def eigh(a, upper=False):
     r"""Return the eigenvalues and eigenvectors real symmetric matrix.
 
