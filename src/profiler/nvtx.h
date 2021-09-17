@@ -17,7 +17,6 @@
  * under the License.
  */
 
-
 #ifndef MXNET_PROFILER_NVTX_H_
 #define MXNET_PROFILER_NVTX_H_
 
@@ -33,8 +32,7 @@ namespace nvtx {
 
 class NVTXDuration {
  public:
-  explicit NVTXDuration(const char *name) noexcept
-      : range_id_(0), name_(name) {}
+  explicit NVTXDuration(const char* name) noexcept : range_id_(0), name_(name) {}
 
   inline void start() {
     range_id_ = nvtxRangeStartA(name_);
@@ -46,10 +44,8 @@ class NVTXDuration {
 
  private:
   nvtxRangeId_t range_id_;
-  const char *name_;
+  const char* name_;
 };
-
-
 
 }  // namespace nvtx
 }  // namespace profiler

@@ -47,11 +47,11 @@
 namespace mxnet {
 namespace io {
 // parser to parse image recordio
-template<typename DType>
+template <typename DType>
 class ImageRecordIOParser {
  public:
   // initialize the parser
-  inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs);
+  inline void Init(const std::vector<std::pair<std::string, std::string>>& kwargs);
 
   // set record to the head
   inline void BeforeFirst() {
@@ -59,19 +59,19 @@ class ImageRecordIOParser {
   }
   // parse next set of records, return an array of
   // instance vector to the user
-  inline bool ParseNext(std::vector<InstVector<DType>> *out);
+  inline bool ParseNext(std::vector<InstVector<DType>>* out);
 
  private:
   // magic number to see prng
   static const int kRandMagic = 111;
   /*! \brief parameters */
   ImageRecParserParam param_;
-  #if MXNET_USE_OPENCV
+#if MXNET_USE_OPENCV
   /*! \brief augmenters */
-  std::vector<std::vector<std::unique_ptr<ImageAugmenter> > > augmenters_;
-  #endif
+  std::vector<std::vector<std::unique_ptr<ImageAugmenter>>> augmenters_;
+#endif
   /*! \brief random samplers */
-  std::vector<std::unique_ptr<common::RANDOM_ENGINE> > prnds_;
+  std::vector<std::unique_ptr<common::RANDOM_ENGINE>> prnds_;
   /*! \brief data source */
   std::unique_ptr<dmlc::InputSplit> source_;
   /*! \brief label information, if any */
@@ -80,24 +80,22 @@ class ImageRecordIOParser {
   mshadow::TensorContainer<cpu, 3> img_;
 };
 
-template<typename DType>
+template <typename DType>
 inline void ImageRecordIOParser<DType>::Init(
-    const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    const std::vector<std::pair<std::string, std::string>>& kwargs) {
 #if MXNET_USE_OPENCV
   // initialize parameter
   // init image rec param
   param_.InitAllowUnknown(kwargs);
   int maxthread, threadget;
-  #pragma omp parallel
+#pragma omp parallel
   {
     // be conservative, set number of real cores
     maxthread = std::max(omp_get_num_procs() / 2 - 1, 1);
   }
   param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
-  #pragma omp parallel num_threads(param_.preprocess_threads)
-  {
-    threadget = omp_get_num_threads();
-  }
+#pragma omp parallel num_threads(param_.preprocess_threads)
+  { threadget = omp_get_num_threads(); }
   param_.preprocess_threads = threadget;
 
   std::vector<std::string> aug_names = dmlc::Split(param_.aug_seq, ',');
@@ -112,39 +110,39 @@ inline void ImageRecordIOParser<DType>::Init(
     prnds_.emplace_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
   if (param_.path_imglist.length() != 0) {
-    label_map_ = std::make_unique<ImageLabelMap>(param_.path_imglist.c_str(),
-      param_.label_width, !param_.verbose);
+    label_map_ = std::make_unique<ImageLabelMap>(
+        param_.path_imglist.c_str(), param_.label_width, !param_.verbose);
   }
-  CHECK(param_.path_imgrec.length() != 0)
-      << "ImageRecordIOIterator: must specify image_rec";
+  CHECK(param_.path_imgrec.length() != 0) << "ImageRecordIOIterator: must specify image_rec";
 
   if (param_.verbose) {
-    LOG(INFO) << "ImageRecordIOParser: " << param_.path_imgrec
-              << ", use " << threadget << " threads for decoding..";
+    LOG(INFO) << "ImageRecordIOParser: " << param_.path_imgrec << ", use " << threadget
+              << " threads for decoding..";
   }
   source_.reset(dmlc::InputSplit::Create(
-      param_.path_imgrec.c_str(), param_.part_index,
-      param_.num_parts, "recordio"));
+      param_.path_imgrec.c_str(), param_.part_index, param_.num_parts, "recordio"));
   if (param_.shuffle_chunk_size > 0) {
     if (param_.shuffle_chunk_size > 4096) {
       LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
-                 << " MB which is larger than 4096 MB, please set "
-                    "smaller chunk size";
+                << " MB which is larger than 4096 MB, please set "
+                   "smaller chunk size";
     }
     if (param_.shuffle_chunk_size < 4) {
       LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
-                 << " MB which is less than 4 MB, please set "
-                    "larger chunk size";
+                << " MB which is less than 4 MB, please set "
+                   "larger chunk size";
     }
     // 1.1 ratio is for a bit more shuffle parts to avoid boundary issue
-    unsigned num_shuffle_parts =
-        std::ceil(source_->GetTotalSize() * 1.1 /
-                  (param_.num_parts * (param_.shuffle_chunk_size << 20UL)));
+    unsigned num_shuffle_parts = std::ceil(
+        source_->GetTotalSize() * 1.1 / (param_.num_parts * (param_.shuffle_chunk_size << 20UL)));
 
     if (num_shuffle_parts > 1) {
-      source_.reset(dmlc::InputSplitShuffle::Create(
-          param_.path_imgrec.c_str(), param_.part_index,
-          param_.num_parts, "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
+      source_.reset(dmlc::InputSplitShuffle::Create(param_.path_imgrec.c_str(),
+                                                    param_.part_index,
+                                                    param_.num_parts,
+                                                    "recordio",
+                                                    num_shuffle_parts,
+                                                    param_.shuffle_chunk_seed));
     }
     source_->HintChunkSize(param_.shuffle_chunk_size << 17UL);
   } else {
@@ -156,16 +154,16 @@ inline void ImageRecordIOParser<DType>::Init(
 #endif
 }
 
-template<typename DType>
-inline bool ImageRecordIOParser<DType>::
-ParseNext(std::vector<InstVector<DType>> *out_vec) {
+template <typename DType>
+inline bool ImageRecordIOParser<DType>::ParseNext(std::vector<InstVector<DType>>* out_vec) {
   CHECK(source_ != nullptr);
   dmlc::InputSplit::Blob chunk;
-  if (!source_->NextChunk(&chunk)) return false;
+  if (!source_->NextChunk(&chunk))
+    return false;
 #if MXNET_USE_OPENCV
   // save opencv out
   out_vec->resize(param_.preprocess_threads);
-  #pragma omp parallel num_threads(param_.preprocess_threads)
+#pragma omp parallel num_threads(param_.preprocess_threads)
   {
     CHECK(omp_get_num_threads() == param_.preprocess_threads);
     int tid = omp_get_thread_num();
@@ -173,7 +171,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
     ImageRecordIO rec;
     dmlc::InputSplit::Blob blob;
     // image data
-    InstVector<DType> &out = (*out_vec)[tid];
+    InstVector<DType>& out = (*out_vec)[tid];
     out.Clear();
     while (reader.NextRecord(&blob)) {
       // Opencv decode and augments
@@ -181,21 +179,20 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       rec.Load(blob.dptr, blob.size);
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
       switch (param_.data_shape[0]) {
-       case 1:
-        res = cv::imdecode(buf, 0);
-        break;
-       case 3:
-        res = cv::imdecode(buf, 1);
-        break;
-       case 4:
-        // -1 to keep the number of channel of the encoded image, and not force gray or color.
-        res = cv::imdecode(buf, -1);
-        CHECK_EQ(res.channels(), 4)
-          << "Invalid image with index " << rec.image_index()
-          << ". Expected 4 channels, got " << res.channels();
-        break;
-       default:
-        LOG(FATAL) << "Invalid output shape " << param_.data_shape;
+        case 1:
+          res = cv::imdecode(buf, 0);
+          break;
+        case 3:
+          res = cv::imdecode(buf, 1);
+          break;
+        case 4:
+          // -1 to keep the number of channel of the encoded image, and not force gray or color.
+          res = cv::imdecode(buf, -1);
+          CHECK_EQ(res.channels(), 4) << "Invalid image with index " << rec.image_index()
+                                      << ". Expected 4 channels, got " << res.channels();
+          break;
+        default:
+          LOG(FATAL) << "Invalid output shape " << param_.data_shape;
       }
       const int n_channels = res.channels();
       for (auto& aug : augmenters_[tid]) {
@@ -210,15 +207,18 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       // For RGB or RGBA data, swap the B and R channel:
       // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
       std::vector<int> swap_indices;
-      if (n_channels == 1) swap_indices = {0};
-      if (n_channels == 3) swap_indices = {2, 1, 0};
-      if (n_channels == 4) swap_indices = {2, 1, 0, 3};
+      if (n_channels == 1)
+        swap_indices = {0};
+      if (n_channels == 3)
+        swap_indices = {2, 1, 0};
+      if (n_channels == 4)
+        swap_indices = {2, 1, 0, 3};
 
       for (int i = 0; i < res.rows; ++i) {
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
           for (int k = 0; k < n_channels; ++k) {
-              data[k][i][j] = im_data[swap_indices[k]];
+            data[k][i][j] = im_data[swap_indices[k]];
           }
           im_data += n_channels;
         }
@@ -228,15 +228,14 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       if (label_map_ != nullptr) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));
       } else if (rec.label != nullptr) {
-        CHECK_EQ(param_.label_width, rec.num_label)
-          << "rec file provide " << rec.num_label << "-dimensional label "
-             "but label_width is set to " << param_.label_width;
-        mshadow::Copy(label, mshadow::Tensor<cpu, 1>(rec.label,
-                                                     mshadow::Shape1(rec.num_label)));
+        CHECK_EQ(param_.label_width, rec.num_label) << "rec file provide " << rec.num_label
+                                                    << "-dimensional label "
+                                                       "but label_width is set to "
+                                                    << param_.label_width;
+        mshadow::Copy(label, mshadow::Tensor<cpu, 1>(rec.label, mshadow::Shape1(rec.num_label)));
       } else {
-        CHECK_EQ(param_.label_width, 1)
-          << "label_width must be 1 unless an imglist is provided "
-             "or the rec file is packed with multi dimensional label";
+        CHECK_EQ(param_.label_width, 1) << "label_width must be 1 unless an imglist is provided "
+                                           "or the rec file is packed with multi dimensional label";
         label[0] = rec.header.label;
       }
       res.release();
@@ -249,30 +248,31 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
 }
 
 // iterator on image recordio
-template<typename DType = real_t>
+template <typename DType = real_t>
 class ImageRecordIter : public IIterator<DataInst> {
  public:
-  ImageRecordIter() : data_(nullptr) { }
+  ImageRecordIter() : data_(nullptr) {}
   // destructor
   ~ImageRecordIter() override {
     iter_.Destroy();
     delete data_;
   }
   // constructor
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+  void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     // use the kwarg to init parser
     parser_.Init(kwargs);
     // prefetch at most 4 minbatches
     iter_.set_max_capacity(4);
     // init thread iter
-    iter_.Init([this](std::vector<InstVector<DType>> **dptr) {
-        if (*dptr == nullptr) {
-          *dptr = new std::vector<InstVector<DType>>();
-        }
-        return parser_.ParseNext(*dptr);
-      },
-      [this]() { parser_.BeforeFirst(); });
+    iter_.Init(
+        [this](std::vector<InstVector<DType>>** dptr) {
+          if (*dptr == nullptr) {
+            *dptr = new std::vector<InstVector<DType>>();
+          }
+          return parser_.ParseNext(*dptr);
+        },
+        [this]() { parser_.BeforeFirst(); });
     inst_ptr_ = 0;
     rnd_.seed(kRandMagic + param_.seed);
   }
@@ -287,12 +287,14 @@ class ImageRecordIter : public IIterator<DataInst> {
     while (true) {
       if (inst_ptr_ < inst_order_.size()) {
         std::pair<unsigned, unsigned> p = inst_order_[inst_ptr_];
-        out_ = (*data_)[p.first][p.second];
+        out_                            = (*data_)[p.first][p.second];
         ++inst_ptr_;
         return true;
       } else {
-        if (data_ != nullptr) iter_.Recycle(&data_);
-        if (!iter_.Next(&data_)) return false;
+        if (data_ != nullptr)
+          iter_.Recycle(&data_);
+        if (!iter_.Next(&data_))
+          return false;
         inst_order_.clear();
         for (unsigned i = 0; i < data_->size(); ++i) {
           const InstVector<DType>& tmp = (*data_)[i];
@@ -310,7 +312,7 @@ class ImageRecordIter : public IIterator<DataInst> {
     return false;
   }
 
-  const DataInst &Value() const override {
+  const DataInst& Value() const override {
     return out_;
   }
 
@@ -322,13 +324,13 @@ class ImageRecordIter : public IIterator<DataInst> {
   // data ptr
   size_t inst_ptr_;
   // internal instance order
-  std::vector<std::pair<unsigned, unsigned> > inst_order_;
+  std::vector<std::pair<unsigned, unsigned>> inst_order_;
   // data
-  std::vector<InstVector<DType>> *data_;
+  std::vector<InstVector<DType>>* data_;
   // internal parser
   ImageRecordIOParser<DType> parser_;
   // backend thread
-  dmlc::ThreadedIter<std::vector<InstVector<DType>> > iter_;
+  dmlc::ThreadedIter<std::vector<InstVector<DType>>> iter_;
   // parameters
   ImageRecordParam param_;
   // random number generator
@@ -337,7 +339,7 @@ class ImageRecordIter : public IIterator<DataInst> {
 
 // OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
-.describe(R"code(Iterating on image RecordIO files
+    .describe(R"code(Iterating on image RecordIO files
 
 .. note::
 
@@ -351,22 +353,20 @@ One can use ``tools/im2rec.py`` to pack individual image files into RecordIO
 files.
 
 )code" ADD_FILELINE)
-.add_arguments(ImageRecParserParam::__FIELDS__())
-.add_arguments(ImageRecordParam::__FIELDS__())
-.add_arguments(BatchParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
-.add_arguments(ListDefaultAugParams())
-.add_arguments(ImageNormalizeParam::__FIELDS__())
-.set_body([]() {
-    return new PrefetcherIter(
-        new BatchLoader(
-            new ImageNormalizeIter(
-                new ImageRecordIter<real_t>())));
-  });
+    .add_arguments(ImageRecParserParam::__FIELDS__())
+    .add_arguments(ImageRecordParam::__FIELDS__())
+    .add_arguments(BatchParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .add_arguments(ListDefaultAugParams())
+    .add_arguments(ImageNormalizeParam::__FIELDS__())
+    .set_body([]() {
+      return new PrefetcherIter(
+          new BatchLoader(new ImageNormalizeIter(new ImageRecordIter<real_t>())));
+    });
 
 // OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter_v1)
-.describe(R"code(Iterating on image RecordIO files
+    .describe(R"code(Iterating on image RecordIO files
 
 .. note::
 
@@ -376,15 +376,11 @@ This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
 the data type instead of ``float``.
 
 )code" ADD_FILELINE)
-.add_arguments(ImageRecParserParam::__FIELDS__())
-.add_arguments(ImageRecordParam::__FIELDS__())
-.add_arguments(BatchParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
-.add_arguments(ListDefaultAugParams())
-.set_body([]() {
-    return new PrefetcherIter(
-        new BatchLoader(
-            new ImageRecordIter<uint8_t>()));
-  });
+    .add_arguments(ImageRecParserParam::__FIELDS__())
+    .add_arguments(ImageRecordParam::__FIELDS__())
+    .add_arguments(BatchParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .add_arguments(ListDefaultAugParams())
+    .set_body([]() { return new PrefetcherIter(new BatchLoader(new ImageRecordIter<uint8_t>())); });
 }  // namespace io
 }  // namespace mxnet

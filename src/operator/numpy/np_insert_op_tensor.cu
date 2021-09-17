@@ -30,7 +30,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_insert_tensor)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertTensorCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyInsertTensorCompute<gpu>);
 
 }
-}
+}  // namespace mxnet

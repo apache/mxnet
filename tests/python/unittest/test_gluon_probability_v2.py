@@ -77,7 +77,7 @@ def test_gluon_uniform():
         net = TestUniform("log_prob")
         if hybridize:
             net.hybridize()
-        for i in range(2):
+        for _ in range(2):
             mx_out = net(low, high, samples).asnumpy()
             np_out = ss.uniform(low.asnumpy(),
                                 (high - low).asnumpy()).logpdf(samples.asnumpy())

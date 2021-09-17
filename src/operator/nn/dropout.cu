@@ -22,20 +22,17 @@
  * \file dropout.cc
  * \brief
  * \author Bing Xu, Da Zheng, Hang Zhang
-*/
+ */
 
 #include "./dropout-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(Dropout)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutCompute<gpu>);
+NNVM_REGISTER_OP(Dropout).set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_Dropout)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutGradCompute<gpu>);
+    .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-
-

@@ -60,12 +60,12 @@ class TVMOpModule {
    * a unique kernel.
    * \param tvm_args Arguments to be passed to kernel function.
    */
-  void CallEx(const std::string &func_name,
+  void CallEx(const std::string& func_name,
               const mxnet::OpContext& ctx,
               const std::vector<mxnet::TBlob>& tblobs,
               TVMArgs tvm_args) const;
 
-  static TVMOpModule *Get() {
+  static TVMOpModule* Get() {
     static TVMOpModule inst;
     return &inst;
   }
@@ -77,11 +77,12 @@ class TVMOpModule {
 
 class OtherOptionEntity {
  public:
-  explicit OtherOptionEntity(int val): val_(val) {}
-  OtherOptionEntity(): val_(0) {}
+  explicit OtherOptionEntity(int val) : val_(val) {}
+  OtherOptionEntity() : val_(0) {}
   inline int get_val() const {
     return val_;
   }
+
  private:
   int val_;
 };
@@ -97,11 +98,11 @@ class OtherOptionSpace {
 
   OtherOptionSpace() {}
 
-  inline OtherOptionEntity &operator[] (int idx) {
+  inline OtherOptionEntity& operator[](int idx) {
     return entities_[idx];
   }
 
-  inline const OtherOptionEntity &operator[] (int idx) const {
+  inline const OtherOptionEntity& operator[](int idx) const {
     return entities_[idx];
   }
 
@@ -118,8 +119,8 @@ class TVMOpConfig {
   std::string name;
 
   inline TVMOpConfig& add_space(const std::string& name, const std::vector<int>& val) {
-    int size = val.size();
-    space_map_[name] = OtherOptionSpace(val);
+    int size          = val.size();
+    space_map_[name]  = OtherOptionSpace(val);
     weight_map_[name] = weight_acc_;
     weight_acc_ *= size;
     return *this;
@@ -129,7 +130,7 @@ class TVMOpConfig {
     return *this;
   }
 
-  TVMOpConfig(): weight_acc_(1) {}
+  TVMOpConfig() : weight_acc_(1) {}
 
   inline const OtherOptionSpace& get_space(const std::string& name) const {
     return space_map_.at(name);

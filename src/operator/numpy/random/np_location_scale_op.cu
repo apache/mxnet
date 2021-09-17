@@ -29,20 +29,24 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_logistic)
-.set_attr<FCompute>("FCompute<gpu>", NumpyLocationScaleForward<gpu,
-                    mxnet_op::logistic_two_scalar_kernel, mxnet_op::logistic_one_scalar_kernel,
-                    mxnet_op::logistic_kernel>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        NumpyLocationScaleForward<gpu,
+                                                  mxnet_op::logistic_two_scalar_kernel,
+                                                  mxnet_op::logistic_one_scalar_kernel,
+                                                  mxnet_op::logistic_kernel>);
 
 NNVM_REGISTER_OP(_backward_broadcast_logistic)
-.set_attr<FCompute>("FCompute<gpu>", LocationScaleReparamBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", LocationScaleReparamBackward<gpu>);
 
 NNVM_REGISTER_OP(_npi_gumbel)
-.set_attr<FCompute>("FCompute<gpu>", NumpyLocationScaleForward<gpu,
-                    mxnet_op::gumbel_two_scalar_kernel, mxnet_op::gumbel_one_scalar_kernel,
-                    mxnet_op::gumbel_kernel>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        NumpyLocationScaleForward<gpu,
+                                                  mxnet_op::gumbel_two_scalar_kernel,
+                                                  mxnet_op::gumbel_one_scalar_kernel,
+                                                  mxnet_op::gumbel_kernel>);
 
 NNVM_REGISTER_OP(_backward_broadcast_gumbel)
-.set_attr<FCompute>("FCompute<gpu>", LocationScaleReparamBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", LocationScaleReparamBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

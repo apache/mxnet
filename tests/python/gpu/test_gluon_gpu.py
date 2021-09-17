@@ -108,7 +108,7 @@ def test_lstmp():
     assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
-    for k, v in weights.items():
+    for k, _ in weights.items():
         layer_grad = layer_params['l0_' + k].grad()
         cell_grad = cell_params[k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
@@ -414,7 +414,7 @@ def test_sync_batchnorm():
         return
     ndev = 2
     # check with unsync version
-    for i in range(10):
+    for _ in range(10):
         _check_batchnorm_result(mx.np.random.uniform(size=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
 

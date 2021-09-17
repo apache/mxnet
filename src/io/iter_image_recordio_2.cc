@@ -49,11 +49,11 @@ namespace mxnet {
 
 namespace io {
 // parser to parse image recordio
-template<typename DType>
+template <typename DType>
 class ImageRecordIOParser2 {
  public:
   // initialize the parser
-  inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs);
+  inline void Init(const std::vector<std::pair<std::string, std::string>>& kwargs);
 
   // set record to the head
   inline void BeforeFirst() {
@@ -66,24 +66,28 @@ class ImageRecordIOParser2 {
   }
   // parse next set of records, return an array of
   // instance vector to the user
-  inline bool ParseNext(DataBatch *out);
+  inline bool ParseNext(DataBatch* out);
 
  private:
 #if MXNET_USE_OPENCV
-  template<int n_channels>
+  template <int n_channels>
   void ProcessImage(const cv::Mat& res,
-    mshadow::Tensor<cpu, 3, DType>* data_ptr, const bool is_mirrored, const float contrast_scaled,
-    const float illumination_scaled);
+                    mshadow::Tensor<cpu, 3, DType>* data_ptr,
+                    const bool is_mirrored,
+                    const float contrast_scaled,
+                    const float illumination_scaled);
 #if MXNET_USE_LIBJPEG_TURBO
   cv::Mat TJimdecode(cv::Mat buf, int color);
 #endif
 #endif
-  inline size_t ParseChunk(DType* data_dptr, real_t* label_dptr, const size_t current_size,
-    dmlc::InputSplit::Blob * chunk);
+  inline size_t ParseChunk(DType* data_dptr,
+                           real_t* label_dptr,
+                           const size_t current_size,
+                           dmlc::InputSplit::Blob* chunk);
   inline void CreateMeanImg();
 
   // magic number to seed prng
-  static const int kRandMagic = 111;
+  static const int kRandMagic          = 111;
   static const int kRandMagicNormalize = 0;
   /*! \brief parameters */
   ImageRecParserParam param_;
@@ -91,12 +95,12 @@ class ImageRecordIOParser2 {
   BatchParam batch_param_;
   ImageNormalizeParam normalize_param_;
 
-  #if MXNET_USE_OPENCV
+#if MXNET_USE_OPENCV
   /*! \brief augmenters */
-  std::vector<std::vector<std::unique_ptr<ImageAugmenter> > > augmenters_;
-  #endif
+  std::vector<std::vector<std::unique_ptr<ImageAugmenter>>> augmenters_;
+#endif
   /*! \brief random samplers */
-  std::vector<std::unique_ptr<common::RANDOM_ENGINE> > prnds_;
+  std::vector<std::unique_ptr<common::RANDOM_ENGINE>> prnds_;
   common::RANDOM_ENGINE rnd_;
   /*! \brief data source */
   std::unique_ptr<dmlc::InputSplit> source_;
@@ -107,7 +111,7 @@ class ImageRecordIOParser2 {
   /*! \brief temp space */
   mshadow::TensorContainer<cpu, 3> img_;
   /*! \brief internal instance order */
-  std::vector<std::pair<size_t, size_t> > inst_order_;
+  std::vector<std::pair<size_t, size_t>> inst_order_;
   size_t inst_index_;
   /*! \brief internal counter tracking number of already parsed entries */
   size_t n_parsed_;
@@ -126,9 +130,9 @@ class ImageRecordIOParser2 {
   dmlc::OMPException omp_exc_;
 };
 
-template<typename DType>
+template <typename DType>
 inline void ImageRecordIOParser2<DType>::Init(
-    const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    const std::vector<std::pair<std::string, std::string>>& kwargs) {
 #if MXNET_USE_OPENCV
   // initialize parameter
   // init image rec param
@@ -139,22 +143,20 @@ inline void ImageRecordIOParser2<DType>::Init(
   PrefetcherParam prefetch_param;
   prefetch_param.InitAllowUnknown(kwargs);
   n_parsed_ = 0;
-  overflow = false;
+  overflow  = false;
   rnd_.seed(kRandMagic + record_param_.seed);
   int maxthread, threadget;
   if (prefetch_param.ctx == PrefetcherParam::CtxType::kCPU) {
     threadget = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   } else {
-    #pragma omp parallel
+#pragma omp parallel
     {
       // be conservative, set number of real cores
       maxthread = std::max(omp_get_num_procs() / 2, 1);
     }
     param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
-    #pragma omp parallel num_threads(param_.preprocess_threads)
-    {
-      threadget = omp_get_num_threads();
-    }
+#pragma omp parallel num_threads(param_.preprocess_threads)
+    { threadget = omp_get_num_threads(); }
   }
   param_.preprocess_threads = threadget;
 
@@ -170,52 +172,52 @@ inline void ImageRecordIOParser2<DType>::Init(
     prnds_.emplace_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
   if (param_.path_imglist.length() != 0) {
-    label_map_ = std::make_unique<ImageLabelMap>(param_.path_imglist.c_str(),
-      param_.label_width, !param_.verbose);
+    label_map_ = std::make_unique<ImageLabelMap>(
+        param_.path_imglist.c_str(), param_.label_width, !param_.verbose);
   }
-  CHECK(param_.path_imgrec.length() != 0)
-      << "ImageRecordIter2: must specify image_rec";
+  CHECK(param_.path_imgrec.length() != 0) << "ImageRecordIter2: must specify image_rec";
 
   if (param_.verbose) {
-    LOG(INFO) << "ImageRecordIOParser2: " << param_.path_imgrec
-              << ", use " << threadget << " threads for decoding..";
+    LOG(INFO) << "ImageRecordIOParser2: " << param_.path_imgrec << ", use " << threadget
+              << " threads for decoding..";
   }
   legacy_shuffle_ = false;
   if (param_.path_imgidx.length() != 0) {
-    source_.reset(dmlc::InputSplit::Create(
-        param_.path_imgrec.c_str(),
-        param_.path_imgidx.c_str(),
-        param_.part_index,
-        param_.num_parts, "indexed_recordio",
-        record_param_.shuffle,
-        record_param_.seed,
-        batch_param_.batch_size));
+    source_.reset(dmlc::InputSplit::Create(param_.path_imgrec.c_str(),
+                                           param_.path_imgidx.c_str(),
+                                           param_.part_index,
+                                           param_.num_parts,
+                                           "indexed_recordio",
+                                           record_param_.shuffle,
+                                           record_param_.seed,
+                                           batch_param_.batch_size));
   } else {
     source_.reset(dmlc::InputSplit::Create(
-        param_.path_imgrec.c_str(), param_.part_index,
-        param_.num_parts, "recordio"));
+        param_.path_imgrec.c_str(), param_.part_index, param_.num_parts, "recordio"));
     if (record_param_.shuffle)
       legacy_shuffle_ = true;
     if (param_.shuffle_chunk_size > 0) {
       if (param_.shuffle_chunk_size > 4096) {
         LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
-                   << " MB which is larger than 4096 MB, please set "
-                      "smaller chunk size";
+                  << " MB which is larger than 4096 MB, please set "
+                     "smaller chunk size";
       }
       if (param_.shuffle_chunk_size < 4) {
         LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
-                   << " MB which is less than 4 MB, please set "
-                      "larger chunk size";
+                  << " MB which is less than 4 MB, please set "
+                     "larger chunk size";
       }
       // 1.1 ratio is for a bit more shuffle parts to avoid boundary issue
-      size_t num_shuffle_parts =
-          std::ceil(source_->GetTotalSize() * 1.1 /
-                    (param_.num_parts * (param_.shuffle_chunk_size << 20UL)));
+      size_t num_shuffle_parts = std::ceil(
+          source_->GetTotalSize() * 1.1 / (param_.num_parts * (param_.shuffle_chunk_size << 20UL)));
 
       if (num_shuffle_parts > 1) {
-        source_.reset(dmlc::InputSplitShuffle::Create(
-            param_.path_imgrec.c_str(), param_.part_index,
-            param_.num_parts, "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
+        source_.reset(dmlc::InputSplitShuffle::Create(param_.path_imgrec.c_str(),
+                                                      param_.part_index,
+                                                      param_.num_parts,
+                                                      "recordio",
+                                                      num_shuffle_parts,
+                                                      param_.shuffle_chunk_seed));
       }
       source_->HintChunkSize(param_.shuffle_chunk_size << 17UL);
     } else {
@@ -241,12 +243,11 @@ inline void ImageRecordIOParser2<DType>::Init(
         std::vector<NDArray> data;
         std::vector<std::string> keys;
         {
-          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(normalize_param_.mean_img.c_str(),
-                                                                "r"));
+          std::unique_ptr<dmlc::Stream> fi(
+              dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "r"));
           NDArray::Load(fi.get(), &data, &keys);
         }
-        CHECK_EQ(data.size(), 1)
-          << "Invalid mean image file format";
+        CHECK_EQ(data.size(), 1) << "Invalid mean image file format";
         data[0].WaitToRead();
         mshadow::Tensor<cpu, 3> src = data[0].data().get<cpu, 3, real_t>();
         meanimg_.Resize(src.shape_);
@@ -263,8 +264,8 @@ inline void ImageRecordIOParser2<DType>::Init(
 #endif
 }
 
-template<typename DType>
-inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
+template <typename DType>
+inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch* out) {
   if (overflow) {
     return false;
   }
@@ -293,7 +294,7 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     shape_vec.push_back(param_.label_width);
     mxnet::TShape label_shape(shape_vec.begin(), shape_vec.end());
 
-    auto ctx = Context::CPU(0);
+    auto ctx    = Context::CPU(0);
     auto dev_id = param_.device_id;
     if (dev_id != -1) {
       ctx = Context::CPUPinned(dev_id);
@@ -302,11 +303,9 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     const std::string profiler_scope =
         profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "image_io:";
 
-    out->data.at(0) = NDArray(data_shape, ctx, false,
-      mshadow::DataType<DType>::kFlag);
+    out->data.at(0) = NDArray(data_shape, ctx, false, mshadow::DataType<DType>::kFlag);
     out->data.at(0).AssignStorageInfo(profiler_scope, "data");
-    out->data.at(1) = NDArray(label_shape, ctx, false,
-      mshadow::DataType<real_t>::kFlag);
+    out->data.at(1) = NDArray(label_shape, ctx, false, mshadow::DataType<real_t>::kFlag);
     out->data.at(1).AssignStorageInfo(profiler_scope, "label");
     unit_size_[0] = param_.data_shape.Size();
     unit_size_[1] = param_.label_width;
@@ -318,8 +317,8 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     if (n_parsed_ == 0) {
       if (source_->NextBatch(&chunk, batch_param_.batch_size)) {
         inst_order_.clear();
-        inst_index_ = 0;
-        DType* data_dptr = static_cast<DType*>(out->data[0].data().dptr_);
+        inst_index_        = 0;
+        DType* data_dptr   = static_cast<DType*>(out->data[0].data().dptr_);
         real_t* label_dptr = static_cast<real_t*>(out->data[1].data().dptr_);
         if (!legacy_shuffle_) {
           n_to_out = ParseChunk(data_dptr, label_dptr, current_size, &chunk);
@@ -344,27 +343,27 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
           current_size = batch_param_.batch_size;
         }
         out->num_batch_padd = batch_param_.batch_size - current_size;
-        n_to_out = 0;
+        n_to_out            = 0;
       }
     } else {
-      size_t n_to_copy = std::min(n_parsed_,
-                                  static_cast<size_t>(batch_param_.batch_size) - current_size);
+      size_t n_to_copy =
+          std::min(n_parsed_, static_cast<size_t>(batch_param_.batch_size) - current_size);
       n_parsed_ -= n_to_copy;
-      // Copy
-      #pragma omp parallel for num_threads(param_.preprocess_threads)
+// Copy
+#pragma omp parallel for num_threads(param_.preprocess_threads)
       for (int i = 0; i < static_cast<int>(n_to_copy); ++i) {
         omp_exc_.Run([&] {
-        std::pair<size_t, size_t> place = inst_order_[inst_index_ + i];
-        const DataInst& batch = temp_[place.first][place.second];
-        for (size_t j = 0; j < batch.data.size(); ++j) {
-          CHECK_EQ(unit_size_[j], batch.data[j].Size());
-          MSHADOW_TYPE_SWITCH(out->data[j].data().type_flag_, dtype, {
-          mshadow::Copy(
-              out->data[j].data().FlatTo1D<cpu, dtype>().Slice((current_size + i) * unit_size_[j],
-                (current_size + i + 1) * unit_size_[j]),
-              batch.data[j].get_with_shape<cpu, 1, dtype>(mshadow::Shape1(unit_size_[j])));
-          });
-        }
+          std::pair<size_t, size_t> place = inst_order_[inst_index_ + i];
+          const DataInst& batch           = temp_[place.first][place.second];
+          for (size_t j = 0; j < batch.data.size(); ++j) {
+            CHECK_EQ(unit_size_[j], batch.data[j].Size());
+            MSHADOW_TYPE_SWITCH(out->data[j].data().type_flag_, dtype, {
+              mshadow::Copy(
+                  out->data[j].data().FlatTo1D<cpu, dtype>().Slice(
+                      (current_size + i) * unit_size_[j], (current_size + i + 1) * unit_size_[j]),
+                  batch.data[j].get_with_shape<cpu, 1, dtype>(mshadow::Shape1(unit_size_[j])));
+            });
+          }
         });
       }
       omp_exc_.Rethrow();
@@ -378,15 +377,17 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
 }
 
 #if MXNET_USE_OPENCV
-template<typename DType>
-template<int n_channels>
+template <typename DType>
+template <int n_channels>
 void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
-  mshadow::Tensor<cpu, 3, DType>* data_ptr, const bool is_mirrored, const float contrast_scaled,
-  const float illumination_scaled) {
-  float RGBA_MULT[4] = { 0 };
-  float RGBA_BIAS[4] = { 0 };
-  float RGBA_MEAN[4] = { 0 };
-  int16_t RGBA_MEAN_INT[4] = {0};
+                                               mshadow::Tensor<cpu, 3, DType>* data_ptr,
+                                               const bool is_mirrored,
+                                               const float contrast_scaled,
+                                               const float illumination_scaled) {
+  float RGBA_MULT[4]                   = {0};
+  float RGBA_BIAS[4]                   = {0};
+  float RGBA_MEAN[4]                   = {0};
+  int16_t RGBA_MEAN_INT[4]             = {0};
   mshadow::Tensor<cpu, 3, DType>& data = (*data_ptr);
   if (!std::is_same<DType, uint8_t>::value) {
     RGBA_MULT[0] = contrast_scaled / normalize_param_.std_r;
@@ -398,10 +399,10 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
     RGBA_BIAS[2] = illumination_scaled / normalize_param_.std_b;
     RGBA_BIAS[3] = illumination_scaled / normalize_param_.std_a;
     if (!meanfile_ready_) {
-      RGBA_MEAN[0] = normalize_param_.mean_r;
-      RGBA_MEAN[1] = normalize_param_.mean_g;
-      RGBA_MEAN[2] = normalize_param_.mean_b;
-      RGBA_MEAN[3] = normalize_param_.mean_a;
+      RGBA_MEAN[0]     = normalize_param_.mean_r;
+      RGBA_MEAN[1]     = normalize_param_.mean_g;
+      RGBA_MEAN[2]     = normalize_param_.mean_b;
+      RGBA_MEAN[3]     = normalize_param_.mean_a;
       RGBA_MEAN_INT[0] = std::round(normalize_param_.mean_r);
       RGBA_MEAN_INT[1] = std::round(normalize_param_.mean_g);
       RGBA_MEAN_INT[2] = std::round(normalize_param_.mean_b);
@@ -409,7 +410,7 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
     }
   }
 
-  int swap_indices[n_channels]; // NOLINT(*)
+  int swap_indices[n_channels];  // NOLINT(*)
   if (n_channels == 1) {
     swap_indices[0] = 0;
   } else if (n_channels == 3) {
@@ -430,8 +431,8 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
       if (std::is_same<DType, int8_t>::value) {
         if (meanfile_ready_) {
           for (int k = 0; k < n_channels; ++k) {
-            RGBA[k] = cv::saturate_cast<int8_t>(im_data[swap_indices[k]] -
-                                    static_cast<int16_t>(std::round(meanimg_[k][i][j])));
+            RGBA[k] = cv::saturate_cast<int8_t>(
+                im_data[swap_indices[k]] - static_cast<int16_t>(std::round(meanimg_[k][i][j])));
           }
         } else {
           for (int k = 0; k < n_channels; ++k) {
@@ -470,7 +471,7 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
 
 #if MXNET_USE_LIBJPEG_TURBO
 
-bool is_jpeg(unsigned char * file) {
+bool is_jpeg(unsigned char* file) {
   if ((file[0] == 255) && (file[1] == 216)) {
     return true;
   } else {
@@ -478,10 +479,10 @@ bool is_jpeg(unsigned char * file) {
   }
 }
 
-template<typename DType>
+template <typename DType>
 cv::Mat ImageRecordIOParser2<DType>::TJimdecode(cv::Mat image, int color) {
   unsigned char* jpeg = image.ptr();
-  size_t jpeg_size = image.rows * image.cols;
+  size_t jpeg_size    = image.rows * image.cols;
 
   if (!is_jpeg(jpeg)) {
     // If it is not JPEG then fall back to OpenCV
@@ -490,24 +491,13 @@ cv::Mat ImageRecordIOParser2<DType>::TJimdecode(cv::Mat image, int color) {
 
   tjhandle handle = tjInitDecompress();
   int h, w, subsamp;
-  int err = tjDecompressHeader2(handle,
-                                jpeg,
-                                jpeg_size,
-                                &w, &h, &subsamp);
+  int err = tjDecompressHeader2(handle, jpeg, jpeg_size, &w, &h, &subsamp);
   if (err != 0) {
     // If it is a malformed JPEG then fall back to OpenCV
     return cv::imdecode(image, color);
   }
   cv::Mat ret = cv::Mat(h, w, color ? CV_8UC3 : CV_8UC1);
-  err = tjDecompress2(handle,
-                      jpeg,
-                      jpeg_size,
-                      ret.ptr(),
-                      w,
-                      0,
-                      h,
-                      color ? TJPF_BGR : TJPF_GRAY,
-                      0);
+  err = tjDecompress2(handle, jpeg, jpeg_size, ret.ptr(), w, 0, h, color ? TJPF_BGR : TJPF_GRAY, 0);
   if (err != 0) {
     // If it is a malformed JPEG then fall back to OpenCV
     return cv::imdecode(image, color);
@@ -519,142 +509,148 @@ cv::Mat ImageRecordIOParser2<DType>::TJimdecode(cv::Mat image, int color) {
 #endif
 
 // Returns the number of images that are put into output
-template<typename DType>
-inline size_t ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t* label_dptr,
-  const size_t current_size, dmlc::InputSplit::Blob * chunk) {
+template <typename DType>
+inline size_t ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr,
+                                                      real_t* label_dptr,
+                                                      const size_t current_size,
+                                                      dmlc::InputSplit::Blob* chunk) {
   temp_.resize(param_.preprocess_threads);
 #if MXNET_USE_OPENCV
   // save opencv out
   dmlc::RecordIOChunkReader reader(*chunk, 0, 1);
   size_t gl_idx = current_size;
-  #pragma omp parallel num_threads(param_.preprocess_threads)
+#pragma omp parallel num_threads(param_.preprocess_threads)
   {
     omp_exc_.Run([&] {
-    CHECK(omp_get_num_threads() == param_.preprocess_threads);
-    int tid = omp_get_thread_num();
-    // dmlc::RecordIOChunkReader reader(*chunk, tid, param_.preprocess_threads);
-    ImageRecordIO rec;
-    dmlc::InputSplit::Blob blob;
-    // image data
-    InstVector<DType> &out_tmp = temp_[tid];
-    out_tmp.Clear();
-    while (true) {
-      bool reader_has_data;
-      size_t idx;
-      #pragma omp critical
-      {
-        reader_has_data = reader.NextRecord(&blob);
-        if (reader_has_data) {
-          idx = gl_idx++;
-          if (idx >= batch_param_.batch_size) {
-            inst_order_.push_back(std::make_pair(tid, out_tmp.Size()));
+      CHECK(omp_get_num_threads() == param_.preprocess_threads);
+      int tid = omp_get_thread_num();
+      // dmlc::RecordIOChunkReader reader(*chunk, tid, param_.preprocess_threads);
+      ImageRecordIO rec;
+      dmlc::InputSplit::Blob blob;
+      // image data
+      InstVector<DType>& out_tmp = temp_[tid];
+      out_tmp.Clear();
+      while (true) {
+        bool reader_has_data;
+        size_t idx;
+#pragma omp critical
+        {
+          reader_has_data = reader.NextRecord(&blob);
+          if (reader_has_data) {
+            idx = gl_idx++;
+            if (idx >= batch_param_.batch_size) {
+              inst_order_.push_back(std::make_pair(tid, out_tmp.Size()));
+            }
           }
         }
-      }
-      if (!reader_has_data) break;
-      // Opencv decode and augments
-      cv::Mat res;
-      rec.Load(blob.dptr, blob.size);
-      cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
+        if (!reader_has_data)
+          break;
+        // Opencv decode and augments
+        cv::Mat res;
+        rec.Load(blob.dptr, blob.size);
+        cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
 
-      // If augmentation seed is supplied
-      // Re-seed RNG to guarantee reproducible results
-      if (param_.seed_aug.has_value()) {
-        prnds_[tid]->seed(idx + param_.seed_aug.value() + kRandMagic);
-      }
+        // If augmentation seed is supplied
+        // Re-seed RNG to guarantee reproducible results
+        if (param_.seed_aug.has_value()) {
+          prnds_[tid]->seed(idx + param_.seed_aug.value() + kRandMagic);
+        }
 
-      switch (param_.data_shape[0]) {
-       case 1:
+        switch (param_.data_shape[0]) {
+          case 1:
 #if MXNET_USE_LIBJPEG_TURBO
-        res = TJimdecode(buf, 0);
+            res = TJimdecode(buf, 0);
 #else
-        res = cv::imdecode(buf, 0);
+            res = cv::imdecode(buf, 0);
 #endif
-        break;
-       case 3:
+            break;
+          case 3:
 #if MXNET_USE_LIBJPEG_TURBO
-        res = TJimdecode(buf, 1);
+            res = TJimdecode(buf, 1);
 #else
-        res = cv::imdecode(buf, 1);
+            res = cv::imdecode(buf, 1);
 #endif
-        break;
-       case 4:
-        // -1 to keep the number of channel of the encoded image, and not force gray or color.
-        res = cv::imdecode(buf, -1);
-        CHECK_EQ(res.channels(), 4)
-          << "Invalid image with index " << rec.image_index()
-          << ". Expected 4 channels, got " << res.channels();
-        break;
-       default:
-        LOG(FATAL) << "Invalid output shape " << param_.data_shape;
-      }
-      const int n_channels = res.channels();
-      // load label before augmentations
-      std::vector<float> label_buf;
-      if (label_map_ != nullptr) {
-        label_buf = label_map_->FindCopy(rec.image_index());
-      } else if (rec.label != nullptr) {
-        CHECK_EQ(param_.label_width, rec.num_label)
-          << "rec file provide " << rec.num_label << "-dimensional label "
-             "but label_width is set to " << param_.label_width;
-        label_buf.assign(rec.label, rec.label + rec.num_label);
-      } else {
-        CHECK_EQ(param_.label_width, 1)
-          << "label_width must be 1 unless an imglist is provided "
-             "or the rec file is packed with multi dimensional label";
-        label_buf.assign(&rec.header.label, &rec.header.label + 1);
-      }
-      for (auto& aug : augmenters_[tid]) {
-        res = aug->Process(res, &label_buf, prnds_[tid].get());
-      }
-      mshadow::Tensor<cpu, 3, DType> data;
-      if (idx < batch_param_.batch_size) {
-        data = mshadow::Tensor<cpu, 3, DType>(data_dptr + idx*unit_size_[0],
-          mshadow::Shape3(n_channels, res.rows, res.cols));
-      } else {
-        out_tmp.Push(static_cast<size_t>(rec.image_index()),
-                 mshadow::Shape3(n_channels, res.rows, res.cols),
-                 mshadow::Shape1(param_.label_width));
-        data = out_tmp.data().Back();
-      }
+            break;
+          case 4:
+            // -1 to keep the number of channel of the encoded image, and not force gray or color.
+            res = cv::imdecode(buf, -1);
+            CHECK_EQ(res.channels(), 4) << "Invalid image with index " << rec.image_index()
+                                        << ". Expected 4 channels, got " << res.channels();
+            break;
+          default:
+            LOG(FATAL) << "Invalid output shape " << param_.data_shape;
+        }
+        const int n_channels = res.channels();
+        // load label before augmentations
+        std::vector<float> label_buf;
+        if (label_map_ != nullptr) {
+          label_buf = label_map_->FindCopy(rec.image_index());
+        } else if (rec.label != nullptr) {
+          CHECK_EQ(param_.label_width, rec.num_label) << "rec file provide " << rec.num_label
+                                                      << "-dimensional label "
+                                                         "but label_width is set to "
+                                                      << param_.label_width;
+          label_buf.assign(rec.label, rec.label + rec.num_label);
+        } else {
+          CHECK_EQ(param_.label_width, 1)
+              << "label_width must be 1 unless an imglist is provided "
+                 "or the rec file is packed with multi dimensional label";
+          label_buf.assign(&rec.header.label, &rec.header.label + 1);
+        }
+        for (auto& aug : augmenters_[tid]) {
+          res = aug->Process(res, &label_buf, prnds_[tid].get());
+        }
+        mshadow::Tensor<cpu, 3, DType> data;
+        if (idx < batch_param_.batch_size) {
+          data = mshadow::Tensor<cpu, 3, DType>(data_dptr + idx * unit_size_[0],
+                                                mshadow::Shape3(n_channels, res.rows, res.cols));
+        } else {
+          out_tmp.Push(static_cast<size_t>(rec.image_index()),
+                       mshadow::Shape3(n_channels, res.rows, res.cols),
+                       mshadow::Shape1(param_.label_width));
+          data = out_tmp.data().Back();
+        }
 
-      std::uniform_real_distribution<float> rand_uniform(0, 1);
-      std::bernoulli_distribution coin_flip(0.5);
-      bool is_mirrored = (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid])))
-                         || normalize_param_.mirror;
-      float contrast_scaled = 1;
-      float illumination_scaled = 0;
-      if (!std::is_same<DType, uint8_t>::value) {
-        contrast_scaled =
-          (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2
-          - normalize_param_.max_random_contrast + 1)*normalize_param_.scale;
-        illumination_scaled =
-          (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
-          - normalize_param_.max_random_illumination) * normalize_param_.scale;
-      }
-      // For RGB or RGBA data, swap the B and R channel:
-      // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
-      if (n_channels == 1) {
-        ProcessImage<1>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
-      } else if (n_channels == 3) {
-        ProcessImage<3>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
-      } else if (n_channels == 4) {
-        ProcessImage<4>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
-      }
+        std::uniform_real_distribution<float> rand_uniform(0, 1);
+        std::bernoulli_distribution coin_flip(0.5);
+        bool is_mirrored =
+            (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid]))) || normalize_param_.mirror;
+        float contrast_scaled     = 1;
+        float illumination_scaled = 0;
+        if (!std::is_same<DType, uint8_t>::value) {
+          contrast_scaled =
+              (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2 -
+               normalize_param_.max_random_contrast + 1) *
+              normalize_param_.scale;
+          illumination_scaled =
+              (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2 -
+               normalize_param_.max_random_illumination) *
+              normalize_param_.scale;
+        }
+        // For RGB or RGBA data, swap the B and R channel:
+        // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
+        if (n_channels == 1) {
+          ProcessImage<1>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
+        } else if (n_channels == 3) {
+          ProcessImage<3>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
+        } else if (n_channels == 4) {
+          ProcessImage<4>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
+        }
 
-      mshadow::Tensor<cpu, 1, real_t> label;
-      if (idx < batch_param_.batch_size) {
-        label = mshadow::Tensor<cpu, 1, real_t>(label_dptr + idx*unit_size_[1],
-          mshadow::Shape1(param_.label_width));
-      } else {
-        label = out_tmp.label().Back();
-      }
+        mshadow::Tensor<cpu, 1, real_t> label;
+        if (idx < batch_param_.batch_size) {
+          label = mshadow::Tensor<cpu, 1, real_t>(label_dptr + idx * unit_size_[1],
+                                                  mshadow::Shape1(param_.label_width));
+        } else {
+          label = out_tmp.label().Back();
+        }
 
-      mshadow::Copy(label, mshadow::Tensor<cpu, 1>(dmlc::BeginPtr(label_buf),
-        mshadow::Shape1(label_buf.size())));
-      res.release();
-    }
-  });
+        mshadow::Copy(
+            label,
+            mshadow::Tensor<cpu, 1>(dmlc::BeginPtr(label_buf), mshadow::Shape1(label_buf.size())));
+        res.release();
+      }
+    });
   }
   omp_exc_.Rethrow();
   return (std::min(static_cast<size_t>(batch_param_.batch_size), gl_idx) - current_size);
@@ -665,118 +661,117 @@ inline size_t ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t* 
 }
 
 // create mean image.
-template<typename DType>
+template <typename DType>
 inline void ImageRecordIOParser2<DType>::CreateMeanImg() {
-    if (param_.verbose) {
-      LOG(INFO) << "Cannot find " << normalize_param_.mean_img
-                << ": create mean image, this will take some time...";
-    }
-    double start = dmlc::GetTime();
-    dmlc::InputSplit::Blob chunk;
-    size_t imcnt = 0;  // NOLINT(*)
-    while (source_->NextChunk(&chunk)) {
-      inst_order_.clear();
-      // Parse chunk w/o putting anything in out
-      ParseChunk(nullptr, nullptr, batch_param_.batch_size, &chunk);
-      for (auto place : inst_order_) {
-        mshadow::Tensor<cpu, 3> outimg =
+  if (param_.verbose) {
+    LOG(INFO) << "Cannot find " << normalize_param_.mean_img
+              << ": create mean image, this will take some time...";
+  }
+  double start = dmlc::GetTime();
+  dmlc::InputSplit::Blob chunk;
+  size_t imcnt = 0;  // NOLINT(*)
+  while (source_->NextChunk(&chunk)) {
+    inst_order_.clear();
+    // Parse chunk w/o putting anything in out
+    ParseChunk(nullptr, nullptr, batch_param_.batch_size, &chunk);
+    for (auto place : inst_order_) {
+      mshadow::Tensor<cpu, 3> outimg =
           temp_[place.first][place.second].data[0].template get<cpu, 3, real_t>();
-        if (imcnt == 0) {
-          meanimg_.Resize(outimg.shape_);
-          mshadow::Copy(meanimg_, outimg);
-        } else {
-          meanimg_ += outimg;
-        }
-        imcnt += 1;
-        double elapsed = dmlc::GetTime() - start;
-        if (imcnt % 10000L == 0 && param_.verbose) {
-          LOG(INFO) << imcnt << " images processed, " << elapsed << " sec elapsed";
-        }
+      if (imcnt == 0) {
+        meanimg_.Resize(outimg.shape_);
+        mshadow::Copy(meanimg_, outimg);
+      } else {
+        meanimg_ += outimg;
+      }
+      imcnt += 1;
+      double elapsed = dmlc::GetTime() - start;
+      if (imcnt % 10000L == 0 && param_.verbose) {
+        LOG(INFO) << imcnt << " images processed, " << elapsed << " sec elapsed";
       }
     }
-    meanimg_ *= (1.0f / imcnt);
-    // save as mxnet python compatible format.
-    TBlob tmp = meanimg_;
-    {
-      std::unique_ptr<dmlc::Stream> fo(
-          dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "w"));
-      NDArray::Save(fo.get(),
-                    {NDArray(tmp, 0)},
-                    {"mean_img"});
-    }
-    if (param_.verbose) {
-      LOG(INFO) << "Save mean image to " << normalize_param_.mean_img << "..";
-    }
-    meanfile_ready_ = true;
-    this->BeforeFirst();
+  }
+  meanimg_ *= (1.0f / imcnt);
+  // save as mxnet python compatible format.
+  TBlob tmp = meanimg_;
+  {
+    std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "w"));
+    NDArray::Save(fo.get(), {NDArray(tmp, 0)}, {"mean_img"});
+  }
+  if (param_.verbose) {
+    LOG(INFO) << "Save mean image to " << normalize_param_.mean_img << "..";
+  }
+  meanfile_ready_ = true;
+  this->BeforeFirst();
 }
 
-template<typename DType = real_t>
+template <typename DType = real_t>
 class ImageRecordIter2 : public IIterator<DataBatch> {
  public:
-    ImageRecordIter2()  = default;
+  ImageRecordIter2() = default;
 
-    ~ImageRecordIter2() override {
-      iter_.Destroy();
-    }
+  ~ImageRecordIter2() override {
+    iter_.Destroy();
+  }
 
-    void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-      prefetch_param_.InitAllowUnknown(kwargs);
-      parser_.Init(kwargs);
-      // maximum prefetch threaded iter internal size
-      const int kMaxPrefetchBuffer = 16;
-      // init thread iter
-      iter_.set_max_capacity(kMaxPrefetchBuffer);
-      // init thread iter
-      iter_.Init([this](DataBatch **dptr) {
+  void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) override {
+    prefetch_param_.InitAllowUnknown(kwargs);
+    parser_.Init(kwargs);
+    // maximum prefetch threaded iter internal size
+    const int kMaxPrefetchBuffer = 16;
+    // init thread iter
+    iter_.set_max_capacity(kMaxPrefetchBuffer);
+    // init thread iter
+    iter_.Init(
+        [this](DataBatch** dptr) {
           if (*dptr == nullptr) {
             *dptr = new DataBatch();
           }
           return parser_.ParseNext(*dptr);
-          },
-          [this]() { parser_.BeforeFirst(); });
-    }
+        },
+        [this]() { parser_.BeforeFirst(); });
+  }
 
-    void BeforeFirst() override {
-      iter_.BeforeFirst();
-    }
+  void BeforeFirst() override {
+    iter_.BeforeFirst();
+  }
 
-    // From iter_prefetcher.h
-    bool Next() override {
-      if (out_ != nullptr) {
-        recycle_queue_.push(out_); out_ = nullptr;
+  // From iter_prefetcher.h
+  bool Next() override {
+    if (out_ != nullptr) {
+      recycle_queue_.push(out_);
+      out_ = nullptr;
+    }
+    // do recycle
+    if (recycle_queue_.size() == prefetch_param_.prefetch_buffer) {
+      DataBatch* old_batch = recycle_queue_.front();
+      // can be more efficient on engine
+      for (NDArray& arr : old_batch->data) {
+        arr.WaitToWrite();
       }
-      // do recycle
-      if (recycle_queue_.size() == prefetch_param_.prefetch_buffer) {
-        DataBatch *old_batch =  recycle_queue_.front();
-        // can be more efficient on engine
-        for (NDArray& arr : old_batch->data) {
-          arr.WaitToWrite();
-        }
-        recycle_queue_.pop();
-        iter_.Recycle(&old_batch);
-      }
-      return iter_.Next(&out_);
+      recycle_queue_.pop();
+      iter_.Recycle(&old_batch);
     }
+    return iter_.Next(&out_);
+  }
 
-    const DataBatch &Value() const override {
-      return *out_;
-    }
+  const DataBatch& Value() const override {
+    return *out_;
+  }
 
  private:
-    /*! \brief Backend thread */
-    dmlc::ThreadedIter<DataBatch> iter_;
-    /*! \brief Parameters */
-    PrefetcherParam prefetch_param_;
-    /*! \brief output data */
-    DataBatch *out_{nullptr};
-    /*! \brief queue to be recycled */
-    std::queue<DataBatch*> recycle_queue_;
-    /* \brief parser */
-    ImageRecordIOParser2<DType> parser_;
+  /*! \brief Backend thread */
+  dmlc::ThreadedIter<DataBatch> iter_;
+  /*! \brief Parameters */
+  PrefetcherParam prefetch_param_;
+  /*! \brief output data */
+  DataBatch* out_{nullptr};
+  /*! \brief queue to be recycled */
+  std::queue<DataBatch*> recycle_queue_;
+  /* \brief parser */
+  ImageRecordIOParser2<DType> parser_;
 };
 
-template<typename DType = real_t>
+template <typename DType = real_t>
 class ImageRecordIter2CPU : public IIterator<DataBatch> {
  public:
   ImageRecordIter2CPU() {
@@ -793,22 +788,28 @@ class ImageRecordIter2CPU : public IIterator<DataBatch> {
     parser_.Init(kwargs);
   }
 
-  void BeforeFirst() override { parser_.BeforeFirst(); }
+  void BeforeFirst() override {
+    parser_.BeforeFirst();
+  }
 
   // From iter_prefetcher.h
   bool Next() override {
-    bool result = false;
+    bool result       = false;
     const auto engine = Engine::Get();
-    engine->PushSync(
-        [this, &result](RunContext ctx) {
-          result = this->parser_.ParseNext(out_);
-        },
-        Context::CPU(), {}, {var_}, FnProperty::kNormal, 0, "DataLoader");
+    engine->PushSync([this, &result](RunContext ctx) { result = this->parser_.ParseNext(out_); },
+                     Context::CPU(),
+                     {},
+                     {var_},
+                     FnProperty::kNormal,
+                     0,
+                     "DataLoader");
     engine->WaitForVar(var_);
     return result;
   }
 
-  const DataBatch& Value() const override { return *out_; }
+  const DataBatch& Value() const override {
+    return *out_;
+  }
 
  private:
   /*! \brief Backend thread */
@@ -825,7 +826,8 @@ class ImageRecordIter2CPU : public IIterator<DataBatch> {
 class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
  public:
   ~ImageRecordIter2Wrapper() override {
-    if (record_iter_) delete record_iter_;
+    if (record_iter_)
+      delete record_iter_;
   }
   void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) override {
     PrefetcherParam prefetch_param;
@@ -867,25 +869,27 @@ class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
       }
     }
     record_iter_->Init(kwargs);
-    }
+  }
 
-    void BeforeFirst() override {
-      record_iter_->BeforeFirst();
-    }
+  void BeforeFirst() override {
+    record_iter_->BeforeFirst();
+  }
 
-    // From iter_prefetcher.h
-    bool Next() override { return record_iter_->Next(); }
+  // From iter_prefetcher.h
+  bool Next() override {
+    return record_iter_->Next();
+  }
 
-    const DataBatch &Value() const override {
-      return record_iter_->Value();
-    }
+  const DataBatch& Value() const override {
+    return record_iter_->Value();
+  }
 
  private:
   IIterator<DataBatch>* record_iter_ = nullptr;
 };
 
 MXNET_REGISTER_IO_ITER(ImageRecordIter)
-.describe(R"code(Iterates on image RecordIO files
+    .describe(R"code(Iterates on image RecordIO files
 
 Reads batches of images from .rec RecordIO files. One can use ``im2rec.py`` tool
 (in tools/) to pack raw image files into RecordIO files. This iterator is less
@@ -909,18 +913,16 @@ Example::
   data_iter.reset() # To restart the iterator from the beginning.
 
 )code" ADD_FILELINE)
-.add_arguments(ImageRecParserParam::__FIELDS__())
-.add_arguments(ImageRecordParam::__FIELDS__())
-.add_arguments(BatchParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
-.add_arguments(ListDefaultAugParams())
-.add_arguments(ImageNormalizeParam::__FIELDS__())
-.set_body([]() {
-    return new ImageRecordIter2Wrapper();
-    });
+    .add_arguments(ImageRecParserParam::__FIELDS__())
+    .add_arguments(ImageRecordParam::__FIELDS__())
+    .add_arguments(BatchParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .add_arguments(ListDefaultAugParams())
+    .add_arguments(ImageNormalizeParam::__FIELDS__())
+    .set_body([]() { return new ImageRecordIter2Wrapper(); });
 
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter)
-.describe(R"code(Iterating on image RecordIO files
+    .describe(R"code(Iterating on image RecordIO files
 
 .. note:: ImageRecordUInt8Iter is deprecated. Use ImageRecordIter(dtype='uint8') instead.
 
@@ -928,17 +930,15 @@ This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
 the data type instead of ``float``.
 
 )code" ADD_FILELINE)
-.add_arguments(ImageRecParserParam::__FIELDS__())
-.add_arguments(ImageRecordParam::__FIELDS__())
-.add_arguments(BatchParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
-.add_arguments(ListDefaultAugParams())
-.set_body([]() {
-    return new ImageRecordIter2<uint8_t>();
-  });
+    .add_arguments(ImageRecParserParam::__FIELDS__())
+    .add_arguments(ImageRecordParam::__FIELDS__())
+    .add_arguments(BatchParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .add_arguments(ListDefaultAugParams())
+    .set_body([]() { return new ImageRecordIter2<uint8_t>(); });
 
 MXNET_REGISTER_IO_ITER(ImageRecordInt8Iter)
-.describe(R"code(Iterating on image RecordIO files
+    .describe(R"code(Iterating on image RecordIO files
 
 .. note:: ``ImageRecordInt8Iter`` is deprecated. Use ImageRecordIter(dtype='int8') instead.
 
@@ -946,14 +946,12 @@ This iterator is identical to ``ImageRecordIter`` except for using ``int8`` as
 the data type instead of ``float``.
 
 )code" ADD_FILELINE)
-.add_arguments(ImageRecParserParam::__FIELDS__())
-.add_arguments(ImageRecordParam::__FIELDS__())
-.add_arguments(BatchParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
-.add_arguments(ListDefaultAugParams())
-.set_body([]() {
-    return new ImageRecordIter2<int8_t>();
-  });
+    .add_arguments(ImageRecParserParam::__FIELDS__())
+    .add_arguments(ImageRecordParam::__FIELDS__())
+    .add_arguments(BatchParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .add_arguments(ListDefaultAugParams())
+    .set_body([]() { return new ImageRecordIter2<int8_t>(); });
 
 }  // namespace io
 }  // namespace mxnet

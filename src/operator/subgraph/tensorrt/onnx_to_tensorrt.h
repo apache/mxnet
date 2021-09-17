@@ -42,20 +42,20 @@
 namespace onnx_to_tensorrt {
 
 struct InferDeleter {
-  template<typename T>
-    void operator()(T* obj) const {
-      if ( obj ) {
-        obj->destroy();
-      }
+  template <typename T>
+  void operator()(T* obj) const {
+    if (obj) {
+      obj->destroy();
     }
+  }
 };
 
-template<typename T>
+template <typename T>
 using unique_ptr = std::unique_ptr<T, InferDeleter>;
 
-template<typename T>
+template <typename T>
 inline unique_ptr<T> InferObject(T* obj) {
-  if ( !obj ) {
+  if (!obj) {
     throw std::runtime_error("Failed to create object");
   }
   return unique_ptr<T>(obj, InferDeleter());
@@ -64,20 +64,20 @@ inline unique_ptr<T> InferObject(T* obj) {
 class TRT_Logger : public nvinfer1::ILogger {
   nvinfer1::ILogger::Severity _verbosity;
   std::ostream* _ostream;
+
  public:
-  TRT_Logger(Severity verbosity = Severity::kWARNING,
-             std::ostream& ostream = std::cout) :
-               _verbosity(verbosity), _ostream(&ostream) {}
+  TRT_Logger(Severity verbosity = Severity::kWARNING, std::ostream& ostream = std::cout)  // NOLINT
+      : _verbosity(verbosity), _ostream(&ostream) {}
   void log(Severity severity, const char* msg) override {
     if (severity <= _verbosity) {
       time_t rawtime = std::time(0);
       char buf[256];
       strftime(&buf[0], 256, "%Y-%m-%d %H:%M:%S", std::gmtime(&rawtime));
-      const char* sevstr = (severity == Severity::kINTERNAL_ERROR ? "    BUG" :
-                            severity == Severity::kERROR          ? "  ERROR" :
-                            severity == Severity::kWARNING        ? "WARNING" :
-                            severity == Severity::kINFO           ? "   INFO" :
-                            "UNKNOWN");
+      const char* sevstr = (severity == Severity::kINTERNAL_ERROR ? "    BUG"
+                            : severity == Severity::kERROR        ? "  ERROR"
+                            : severity == Severity::kWARNING      ? "WARNING"
+                            : severity == Severity::kINFO         ? "   INFO"
+                                                                  : "UNKNOWN");
       (*_ostream) << "[" << buf << " " << sevstr << "] " << msg << std::endl;
     }
   }
@@ -85,12 +85,12 @@ class TRT_Logger : public nvinfer1::ILogger {
 
 std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
            unique_ptr<nvonnxparser::IParser>,
-           std::unique_ptr<TRT_Logger> > onnxToTrtCtx(
-        const std::string& onnx_model,
-        int32_t max_batch_size = 32,
-        size_t max_workspace_size = 1L << 30,
-        nvinfer1::ILogger::Severity verbosity = nvinfer1::ILogger::Severity::kWARNING,
-        bool debug_builder = false);
+           std::unique_ptr<TRT_Logger> >
+onnxToTrtCtx(const std::string& onnx_model,
+             int32_t max_batch_size                = 32,
+             size_t max_workspace_size             = 1L << 30,
+             nvinfer1::ILogger::Severity verbosity = nvinfer1::ILogger::Severity::kWARNING,
+             bool debug_builder                    = false);
 }  // namespace onnx_to_tensorrt
 
 #endif  // MXNET_USE_TENSORRT

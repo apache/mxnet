@@ -34,9 +34,8 @@ namespace mxnet {
 namespace op {
 
 struct GesvdVecSign {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int m, int n, DType* UT,
-                                  DType* V, int ldut, int ldv) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int i, int m, int n, DType* UT, DType* V, int ldut, int ldv) {
     DType* vrow(V + i * ldv);
     DType maxval(fabs(vrow[0])), vval(0.0);
     int maxind(0);
@@ -63,7 +62,7 @@ struct GesvdVecSign {
 // - V can overwrite A
 // - Needs workspace (DType), size of which is determined by a workspace query
 struct gesvd {
-  template<typename xpu, typename DType>
+  template <typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A,
                  const Tensor<xpu, 3, DType>& UT,
                  const Tensor<xpu, 2, DType>& L,
@@ -71,18 +70,17 @@ struct gesvd {
                  const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs,
                  TBlob* workspace = nullptr) {
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    if (A.dptr_ != V.dptr_) Copy(V, A, s);
+    Stream<xpu>* s = ctx.get_stream<xpu>();
+    if (A.dptr_ != V.dptr_)
+      Copy(V, A, s);
     // From here on, we work on V only
     // Reserve workspace (size determined by query)
     size_t lwork(linalg_gesvd_workspace_query(UT[0], L[0], V[0], s));
     Tensor<xpu, 1, DType> work;
     if (!workspace) {
-      work = ctx.requested[0]
-        .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
+      work = ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
     } else {
-      work = workspace
-        ->get_with_shape<xpu, 1, DType>(Shape1(lwork), s);
+      work = workspace->get_with_shape<xpu, 1, DType>(Shape1(lwork), s);
     }
     // Loop over items in batch
     for (index_t i = 0; i < UT.size(0); ++i) {
@@ -90,14 +88,13 @@ struct gesvd {
     }
     // Set signs in a deterministic way
     using namespace mxnet_op;
-    Kernel<GesvdVecSign, xpu>::Launch
-      (s, V.size(0) * V.size(1), V.size(1), V.size(2),
-       UT.dptr_, V.dptr_, UT.stride_, V.stride_);
+    Kernel<GesvdVecSign, xpu>::Launch(
+        s, V.size(0) * V.size(1), V.size(1), V.size(2), UT.dptr_, V.dptr_, UT.stride_, V.stride_);
   }
 };
 
 // (A) => (UT, L, V)
-template<typename xpu, typename laop>
+template <typename xpu, typename laop>
 void NumpyLaGesvdForward(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<TBlob>& inputs,
@@ -110,42 +107,44 @@ void NumpyLaGesvdForward(const nnvm::NodeAttrs& attrs,
     return;
   }
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
     laop::op(inputs[0].FlatToKD<xpu, 3, OType>(s),
              outputs[0].FlatToKD<xpu, 3, OType>(s),
              outputs[1].FlatToKD<xpu, 2, OType>(s),
-             outputs[2].FlatToKD<xpu, 3, OType>(s), ctx, attrs);
+             outputs[2].FlatToKD<xpu, 3, OType>(s),
+             ctx,
+             attrs);
   });
 }
 
 // Helper for gesvd_backward. See technical report
 // `Auto-Differentiating Linear Algebra` for details
 // on https://arxiv.org/pdf/1710.08717.pdf
-template<typename DType>
+template <typename DType>
 DType gesvd_back_helper_eps(DType* X);
 
-template<>
+template <>
 MSHADOW_XINLINE float gesvd_back_helper_eps(float* X) {
   return 1e-30;
 }
 
-template<>
+template <>
 MSHADOW_XINLINE double gesvd_back_helper_eps(double* X) {
   return 1e-100;
 }
 
 // dA overwritten by L^-1 dA
 struct GesvdBackHelper_dV {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int k, int m, int n, DType* L, int ldl,
-                                  DType* dA, int ldda) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int k, int m, int n, DType* L, int ldl, DType* dA, int ldda) {
     const int offl(k * ldl);
     const int offda(k * m * ldda);
     DType denom(0.0);
     const DType eps(gesvd_back_helper_eps(dA));
     for (int i = 0; i < m; ++i) {
       denom = L[offl + i];
-      if (denom < eps) denom = eps;
+      if (denom < eps)
+        denom = eps;
       for (int j = 0; j < n; ++j) {
         dA[offda + i * ldda + j] /= denom;
       }
@@ -156,9 +155,9 @@ struct GesvdBackHelper_dV {
 // X (square) overwritten by X L
 // Y overwritten by the diagonal of X
 struct GesvdBackHelper_G1 {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int k, int m, int n, DType* X, int ldx,
-                                  DType* L, int ldl, DType* Y, int ldy) {
+  template <typename DType>
+  MSHADOW_XINLINE static void
+  Map(int k, int m, int n, DType* X, int ldx, DType* L, int ldl, DType* Y, int ldy) {
     const int offl(k * ldl);
     const int offy(k * ldy);
     const int offx(k * m * ldx);
@@ -174,10 +173,18 @@ struct GesvdBackHelper_G1 {
 };
 
 struct GesvdBackHelper_G2 {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int k, int m, int n, DType* X, int ldx,
-                                  DType* L, int ldl, DType* dL, int lddl,
-                                  DType* Y, int ldy) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int k,
+                                  int m,
+                                  int n,
+                                  DType* X,
+                                  int ldx,
+                                  DType* L,
+                                  int ldl,
+                                  DType* dL,
+                                  int lddl,
+                                  DType* Y,
+                                  int ldy) {
     const int offx(k * m * ldx);
     const int offl(k * ldl);
     const int offdl(k * lddl);
@@ -189,9 +196,11 @@ struct GesvdBackHelper_G2 {
       for (int j = i + 1; j < m; ++j) {
         denom1 = L[offl + i] - L[offl + j];
         denom2 = L[offl + i] + L[offl + j];
-        if (denom1 < eps) denom1 = eps;
-        if (denom2 < eps) denom2 = eps;
-        elem = (X[offx + i * ldx + j] - X[offx + j * ldx + i]) / denom1 / denom2;
+        if (denom1 < eps)
+          denom1 = eps;
+        if (denom2 < eps)
+          denom2 = eps;
+        elem                  = (X[offx + i * ldx + j] - X[offx + j * ldx + i]) / denom1 / denom2;
         X[offx + i * ldx + j] = elem * L[offl + j];
         X[offx + j * ldx + i] = elem * L[offl + i];
       }
@@ -201,7 +210,7 @@ struct GesvdBackHelper_G2 {
 };
 
 struct gesvd_backward {
-  template<typename xpu, typename DType>
+  template <typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& dUT,
                  const Tensor<xpu, 2, DType>& dL,
                  const Tensor<xpu, 3, DType>& dV,
@@ -211,7 +220,8 @@ struct gesvd_backward {
                  const Tensor<xpu, 3, DType>& dA,
                  const Tensor<xpu, 3, DType>& tempM,
                  const Tensor<xpu, 2, DType>& tempMd,
-                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
+                 Stream<xpu>* s,
+                 const nnvm::NodeAttrs& attrs) {
     // Backward of (UT, L, V) = gesvd(A)
     using namespace mxnet_op;
     if (dA.dptr_ != dV.dptr_) {
@@ -222,34 +232,40 @@ struct gesvd_backward {
 
     // Need temporal space, same shape as dUT
     // invdV:
-    Kernel<GesvdBackHelper_dV, xpu>::Launch
-      (s, k, m, n, L.dptr_, L.stride_, dA.dptr_, dA.stride_);
+    Kernel<GesvdBackHelper_dV, xpu>::Launch(s, k, m, n, L.dptr_, L.stride_, dA.dptr_, dA.stride_);
 
     // G1:
     // This is just to make sure there are no invalid values (NaN, infinity) in tempM and tempMd
-    tempM.FlatTo1D() = 0;
+    tempM.FlatTo1D()  = 0;
     tempMd.FlatTo1D() = 0;
     gemm::op(dA, V, tempM, DType(1.0), DType(0.0), false, true, s);
-    Kernel<GesvdBackHelper_G1, xpu>::Launch
-      (s, k, m, n, tempM.dptr_, tempM.stride_,
-       L.dptr_, L.stride_, tempMd.dptr_, tempMd.stride_);
+    Kernel<GesvdBackHelper_G1, xpu>::Launch(
+        s, k, m, n, tempM.dptr_, tempM.stride_, L.dptr_, L.stride_, tempMd.dptr_, tempMd.stride_);
     gemm::op(dUT, UT, tempM, DType(1.0), DType(1.0), true, false, s);
 
     // G2:
-    Kernel<GesvdBackHelper_G2, xpu>::Launch
-      (s, k, m, n, tempM.dptr_, tempM.stride_,
-       L.dptr_, L.stride_, dL.dptr_, dL.stride_,
-       tempMd.dptr_, tempMd.stride_);
+    Kernel<GesvdBackHelper_G2, xpu>::Launch(s,
+                                            k,
+                                            m,
+                                            n,
+                                            tempM.dptr_,
+                                            tempM.stride_,
+                                            L.dptr_,
+                                            L.stride_,
+                                            dL.dptr_,
+                                            dL.stride_,
+                                            tempMd.dptr_,
+                                            tempMd.stride_);
 
     // G3:
     gemm::op(tempM, V, dA, DType(1.0), DType(1.0), false, false, s);
     // dA <- dot(UT, dA). Loop over (k, m, m) blocks to avoid large temporary memory
     for (int i = 0; i < n; i += m) {
       int ncols = n - i < m ? n - i : m;
-      Tensor<xpu, 3, DType> t = Tensor<xpu, 3, DType>(dA.dptr_ + i,
-        Shape3(k, m, ncols), dA.stride_, dA.stream_);
-      Tensor<xpu, 3, DType> out = Tensor<xpu, 3, DType>(tempM.dptr_,
-        Shape3(k, m, ncols), tempM.stride_, tempM.stream_);
+      Tensor<xpu, 3, DType> t =
+          Tensor<xpu, 3, DType>(dA.dptr_ + i, Shape3(k, m, ncols), dA.stride_, dA.stream_);
+      Tensor<xpu, 3, DType> out =
+          Tensor<xpu, 3, DType>(tempM.dptr_, Shape3(k, m, ncols), tempM.stride_, tempM.stream_);
       gemm::op(UT, t, out, DType(1.0), DType(0.0), false, false, s);
       Copy(t, out, s);
     }
@@ -257,14 +273,14 @@ struct gesvd_backward {
 };
 
 // (dUT, dL, dV, UT, L, V) => (dA)
-template<typename xpu, typename laop>
+template <typename xpu, typename laop>
 void NumpyLaGesvdBackward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), 6);
   CHECK_EQ(outputs.size(), 1);
   if (outputs[0].shape_.Size() == 0) {
@@ -275,17 +291,17 @@ void NumpyLaGesvdBackward(const nnvm::NodeAttrs& attrs,
     TBlob tempM, tempMd;
     int kmn = outputs[0].shape_.Size();
     int kmm = inputs[0].shape_.Size();
-    int km = inputs[1].shape_.Size();
+    int km  = inputs[1].shape_.Size();
     if (req[0] == kAddTo) {
-      Tensor<xpu, 1, OType> tempspace = ctx.requested[0]
-        .get_space_typed<xpu, 1, OType>(Shape1(kmn + kmm + km), s);
+      Tensor<xpu, 1, OType> tempspace =
+          ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(kmn + kmm + km), s);
       tspace = TBlob(tempspace.Slice(0, kmn)).reshape(outputs[0].shape_);
-      tempM = TBlob(tempspace.Slice(kmn, kmn + kmm)).reshape(inputs[0].shape_);
+      tempM  = TBlob(tempspace.Slice(kmn, kmn + kmm)).reshape(inputs[0].shape_);
       tempMd = TBlob(tempspace.Slice(kmn + kmm, kmn + kmm + km)).reshape(inputs[1].shape_);
     } else {
-      Tensor<xpu, 1, OType> tempspace = ctx.requested[0]
-        .get_space_typed<xpu, 1, OType>(Shape1(kmm + km), s);
-      tempM = TBlob(tempspace.Slice(0, kmm)).reshape(inputs[0].shape_);
+      Tensor<xpu, 1, OType> tempspace =
+          ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(kmm + km), s);
+      tempM  = TBlob(tempspace.Slice(0, kmm)).reshape(inputs[0].shape_);
       tempMd = TBlob(tempspace.Slice(kmm, kmm + km)).reshape(inputs[1].shape_);
     }
     laop::op(inputs[0].FlatToKD<xpu, 3, OType>(s),  // dUT
@@ -294,10 +310,11 @@ void NumpyLaGesvdBackward(const nnvm::NodeAttrs& attrs,
              inputs[3].FlatToKD<xpu, 3, OType>(s),  // UT
              inputs[4].FlatToKD<xpu, 2, OType>(s),  // L
              inputs[5].FlatToKD<xpu, 3, OType>(s),  // V
-             tspace.FlatToKD<xpu, 3, OType>(s),  // dA
-             tempM.FlatToKD<xpu, 3, OType>(s),  // tempM
-             tempMd.FlatToKD<xpu, 2, OType>(s),  // tempMd
-             s, attrs);
+             tspace.FlatToKD<xpu, 3, OType>(s),     // dA
+             tempM.FlatToKD<xpu, 3, OType>(s),      // tempM
+             tempMd.FlatToKD<xpu, 2, OType>(s),     // tempMd
+             s,
+             attrs);
     if (req[0] == kAddTo) {
       Tensor<xpu, 1, OType> out = outputs[0].FlatTo1D<xpu, OType>(s);
       out += tspace.FlatTo1D<xpu, OType>(s);

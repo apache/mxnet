@@ -40,7 +40,7 @@ int SplitSch(const ::tvm::runtime::TVMOpConfig& config,
              const ::std::string& name,
              const std::vector<int>& size) {
   const ::tvm::runtime::OtherOptionSpace& space = config.get_space(name);
-  int weight = config.get_weight(name);
+  int weight                                    = config.get_weight(name);
   int num_space = space.size(), num_size = size.size();
   for (int i = 0; i < num_space; ++i) {
     bool flag = true;
@@ -62,12 +62,12 @@ std::string DotSch(const std::string name,
                    const mxnet::ShapeVector& in_attrs,
                    const mxnet::ShapeVector& out_attrs) {
   const ::tvm::runtime::TVMOpConfig& config = tvm::runtime::GetOpConfig(name);
-  int m = in_attrs[0][0];
-  int k = in_attrs[0][1];
-  int n = in_attrs[1][1];
-  int idx_bn = SplitSch(config, "bn", {m, n});
-  int idx_factor = SplitSch(config, "factor", {k});
-  int idx = idx_bn + idx_factor;
+  int m                                     = in_attrs[0][0];
+  int k                                     = in_attrs[0][1];
+  int n                                     = in_attrs[1][1];
+  int idx_bn                                = SplitSch(config, "bn", {m, n});
+  int idx_factor                            = SplitSch(config, "factor", {k});
+  int idx                                   = idx_bn + idx_factor;
   if (idx_bn == -1 || idx_factor == -1) {
     return "fallback";
   }
@@ -75,33 +75,33 @@ std::string DotSch(const std::string name,
 }
 
 void TVMDotForward(const nnvm::NodeAttrs& attrs,
-                const mxnet::OpContext& ctx,
-                const std::vector<TBlob>& inputs,
-                const std::vector<OpReqType>& req,
-                const std::vector<TBlob>& outputs) {
+                   const mxnet::OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   std::string funcname = "dot";
-  std::string sch = DotSch(funcname, attrs, {inputs[0].shape_, inputs[1].shape_},
-                           {outputs[0].shape_});
+  std::string sch =
+      DotSch(funcname, attrs, {inputs[0].shape_, inputs[1].shape_}, {outputs[0].shape_});
   tvm::runtime::TVMOpModule::Get()->Call(funcname + sch, ctx, {inputs[0], inputs[1], outputs[0]});
 }
 
 void TVMDotFallbackForward(const nnvm::NodeAttrs& attrs,
-                        const mxnet::OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
+                           const mxnet::OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   std::string funcname = "dot";
-  std::string sch = "fallback";
+  std::string sch      = "fallback";
   tvm::runtime::TVMOpModule::Get()->Call(funcname + sch, ctx, {inputs[0], inputs[1], outputs[0]});
 }
 
 bool TVMDotShape(const nnvm::NodeAttrs& attrs,
-              mxnet::ShapeVector *in_attrs,
-              mxnet::ShapeVector *out_attrs) {
+                 mxnet::ShapeVector* in_attrs,
+                 mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& a_shape = in_attrs->at(0);
@@ -128,9 +128,9 @@ NNVM_REGISTER_OP(_contrib_tvm_dot)
     .add_argument("a", "NDArray-or-Symbol", "first input")
     .add_argument("b", "NDArray-or-Symbol", "second input")
     .set_attr<nnvm::FListInputNames>("FListInputNames",
-      [](const NodeAttrs& attrs) {
-        return std::vector<std::string>{"a", "b"};
-      })
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
     .set_attr<mxnet::FInferShape>("FInferShape", TVMDotShape)
     .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
     .set_attr<mxnet::FCompute>("FCompute<cpu>", TVMDotForward);
@@ -141,9 +141,9 @@ NNVM_REGISTER_OP(_contrib_tvm_dot_fallback)
     .add_argument("a", "NDArray-or-Symbol", "first input")
     .add_argument("b", "NDArray-or-Symbol", "second input")
     .set_attr<nnvm::FListInputNames>("FListInputNames",
-      [](const NodeAttrs& attrs) {
-        return std::vector<std::string>{"a", "b"};
-      })
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
     .set_attr<mxnet::FInferShape>("FInferShape", TVMDotShape)
     .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
     .set_attr<mxnet::FCompute>("FCompute<cpu>", TVMDotFallbackForward);

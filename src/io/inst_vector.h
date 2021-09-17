@@ -42,19 +42,19 @@ namespace io {
  *
  * data are stored in memory continuously
  */
-template<int dim, typename DType>
+template <int dim, typename DType>
 class TensorVector {
  public:
   TensorVector(void) {
     this->Clear();
   }
   /*! \brief get the buffer to the i-th tensor */
-  inline mshadow::Tensor<cpu, dim, DType>
-  operator[](size_t i) const {
+  inline mshadow::Tensor<cpu, dim, DType> operator[](size_t i) const {
     CHECK_LT(i + 1, offset_.size());
     CHECK_EQ(shape_[i].Size(), offset_[i + 1] - offset_[i]);
-    return mshadow::Tensor<cpu, dim, DType>
-        ((DType*)dmlc::BeginPtr(content_) + offset_[i], shape_[i]);  // NOLINT(*)
+    return mshadow::Tensor<cpu, dim, DType>(
+        (DType*)dmlc::BeginPtr(content_) + offset_[i],  // NOLINT(*)
+        shape_[i]);                                     // NOLINT(*)
   }
   inline mshadow::Tensor<cpu, dim, DType> Back() const {
     return (*this)[Size() - 1];
@@ -87,7 +87,7 @@ class TensorVector {
 /*!
  * \brief a list of (label, example) pairs, examples can have various shape
  */
-template<typename DType = real_t>
+template <typename DType = real_t>
 class InstVector {
  public:
   /*! \brief return the number of (label, example) pairs */
@@ -124,9 +124,7 @@ class InstVector {
    * \brief push a (label, example) pair
    * only reserved the space, while the data is not copied
    */
-  inline void Push(unsigned index,
-                   mshadow::Shape<3> dshape,
-                   mshadow::Shape<1> lshape) {
+  inline void Push(unsigned index, mshadow::Shape<3> dshape, mshadow::Shape<1> lshape) {
     index_.push_back(index);
     data_.Push(dshape);
     label_.Push(lshape);
@@ -157,11 +155,12 @@ class InstVector {
 struct TBlobBatch {
  public:
   /*! \brief unique id for instance, can be NULL, sometimes is useful */
-  unsigned *inst_index;
+  unsigned* inst_index;
   /*! \brief number of instance */
   mshadow::index_t batch_size;
   /*! \brief number of padding elements in this batch,
-       this is used to indicate the last elements in the batch are only padded up to match the batch, and should be discarded */
+       this is used to indicate the last elements in the batch are only padded up to match the
+     batch, and should be discarded */
   mshadow::index_t num_batch_padd;
   /*! \brief content of dense data */
   std::vector<TBlob> data;
@@ -169,8 +168,9 @@ struct TBlobBatch {
   std::string extra_data;
   /*! \brief constructor */
   TBlobBatch(void) {
-    inst_index = nullptr;
-    batch_size = 0; num_batch_padd = 0;
+    inst_index     = nullptr;
+    batch_size     = 0;
+    num_batch_padd = 0;
   }
   /*! \brief destructor */
   ~TBlobBatch() {
@@ -180,21 +180,20 @@ struct TBlobBatch {
 
 class TBlobContainer : public TBlob {
  public:
-  TBlobContainer(void)
-    : TBlob(), tensor_container_(nullptr) {}
+  TBlobContainer(void) : TBlob(), tensor_container_(nullptr) {}
   ~TBlobContainer() {
     if (tensor_container_) {
       release();
     }
   }
-  void resize(const mxnet::TShape &shape, int type_flag) {
+  void resize(const mxnet::TShape& shape, int type_flag) {
     if (tensor_container_) {
       CHECK_EQ(this->type_flag_, type_flag);
       this->shape_ = shape;
       resize();
     } else {
       this->type_flag_ = type_flag;
-      this->shape_ = shape;
+      this->shape_     = shape;
       create();
     }
   }
@@ -204,24 +203,22 @@ class TBlobContainer : public TBlob {
     CHECK(tensor_container_ == nullptr);
     CHECK_EQ(this->dev_mask(), mshadow::cpu::kDevMask);
     MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
-        auto tensor_container = new mshadow::TensorContainer<mshadow::cpu, 1, DType>(false);
-        tensor_container->Resize(mshadow::Shape1(shape_.Size()));
-        dptr_ = tensor_container->dptr_;
-        tensor_container_ = tensor_container;
+      auto tensor_container = new mshadow::TensorContainer<mshadow::cpu, 1, DType>(false);
+      tensor_container->Resize(mshadow::Shape1(shape_.Size()));
+      dptr_             = tensor_container->dptr_;
+      tensor_container_ = tensor_container;
     });
   }
   void resize() {
     MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
-        auto tensor_container =
-          (mshadow::TensorContainer<mshadow::cpu, 1, DType>*) tensor_container_;
-        tensor_container->Resize(mshadow::Shape1(shape_.Size()));
+      auto tensor_container = (mshadow::TensorContainer<mshadow::cpu, 1, DType>*)tensor_container_;
+      tensor_container->Resize(mshadow::Shape1(shape_.Size()));
     });
   }
   void release() {
     MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
-        auto tensor_container =
-          (mshadow::TensorContainer<mshadow::cpu, 1, DType>*) tensor_container_;
-        delete tensor_container;
+      auto tensor_container = (mshadow::TensorContainer<mshadow::cpu, 1, DType>*)tensor_container_;
+      delete tensor_container;
     });
   }
 

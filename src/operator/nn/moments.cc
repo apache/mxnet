@@ -22,7 +22,7 @@
  * \file moments.cc
  * \brief Moments operator
  * \author Hao Jin
-*/
+ */
 
 #include "./moments-inl.h"
 
@@ -32,7 +32,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(MomentsParam);
 
 NNVM_REGISTER_OP(moments)
-.describe(R"code(
+    .describe(R"code(
 Calculate the mean and variance of `data`.
 
 The mean and variance are calculated by aggregating the contents of data across axes.
@@ -52,35 +52,35 @@ Example:
      var = [2.9166667]
 
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<MomentsParam>)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", MomentsShape)
-.set_attr<nnvm::FInferType>("FInferType", MomentsType)
-.set_attr<FCompute>("FCompute<cpu>", MomentsForward<cpu>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_moments"})
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(MomentsParam::__FIELDS__());
+    .set_attr_parser(ParamParser<MomentsParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(2)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", MomentsShape)
+    .set_attr<nnvm::FInferType>("FInferType", MomentsType)
+    .set_attr<FCompute>("FCompute<cpu>", MomentsForward<cpu>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_moments"})
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}};
+                                    })
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(MomentsParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_moments)
-.set_attr_parser(ParamParser<MomentsParam>)
-.set_num_inputs(5)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", MomentsBackward<cpu>);
+    .set_attr_parser(ParamParser<MomentsParam>)
+    .set_num_inputs(5)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", MomentsBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

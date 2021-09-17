@@ -18,10 +18,10 @@
  */
 
 /*!
-* Copyright (c) 2019 by Contributors
-* \file np_repeat_op.cc
-* \brief CPU implementation of numpy repeat operator
-*/
+ * Copyright (c) 2019 by Contributors
+ * \file np_repeat_op.cc
+ * \brief CPU implementation of numpy repeat operator
+ */
 
 #include "./np_repeat_op-inl.h"
 #include "../tensor/matrix_op-inl.h"
@@ -32,19 +32,19 @@ namespace op {
 DMLC_REGISTER_PARAMETER(RepeatsParam);
 
 NNVM_REGISTER_OP(_npi_repeats)
-.set_attr_parser(ParamParser<RepeatsParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", RepeatsOpShape)
-.set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& n) {
-     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_attr<FCompute>("FCompute<cpu>", NumpyRepeatsOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "NDArray-or-Symbol", "Input data array")
-.add_arguments(RepeatsParam::__FIELDS__());
+    .set_attr_parser(ParamParser<RepeatsParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<mxnet::FInferShape>("FInferShape", RepeatsOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyRepeatsOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("data", "NDArray-or-Symbol", "Input data array")
+    .add_arguments(RepeatsParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

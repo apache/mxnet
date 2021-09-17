@@ -49,16 +49,15 @@ struct PreloadedMultiSGDParam : public dmlc::Parameter<PreloadedMultiSGDParam> {
   int num_weights;
   DMLC_DECLARE_PARAMETER(PreloadedMultiSGDParam) {
     DMLC_DECLARE_FIELD(rescale_grad)
-    .set_default(1.0f)
-    .describe("Rescale gradient to grad = rescale_grad*grad.");
+        .set_default(1.0f)
+        .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
-    .set_default(-1.0f)
-    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
-              "If clip_gradient <= 0, gradient clipping is turned off. "
-              "grad = max(min(grad, clip_gradient), -clip_gradient).");
-    DMLC_DECLARE_FIELD(num_weights)
-    .set_default(1)
-    .describe("Number of updated weights.");
+        .set_default(-1.0f)
+        .describe(
+            "Clip gradient to the range of [-clip_gradient, clip_gradient] "
+            "If clip_gradient <= 0, gradient clipping is turned off. "
+            "grad = max(min(grad, clip_gradient), -clip_gradient).");
+    DMLC_DECLARE_FIELD(num_weights).set_default(1).describe("Number of updated weights.");
   }
 };
 
@@ -68,45 +67,42 @@ struct PreloadedMultiSGDMomParam : public dmlc::Parameter<PreloadedMultiSGDMomPa
   float clip_gradient;
   int num_weights;
   DMLC_DECLARE_PARAMETER(PreloadedMultiSGDMomParam) {
-    DMLC_DECLARE_FIELD(momentum)
-    .set_default(0.0f)
-    .describe("The decay rate of momentum estimates at each epoch.");
+    DMLC_DECLARE_FIELD(momentum).set_default(0.0f).describe(
+        "The decay rate of momentum estimates at each epoch.");
     DMLC_DECLARE_FIELD(rescale_grad)
-    .set_default(1.0f)
-    .describe("Rescale gradient to grad = rescale_grad*grad.");
+        .set_default(1.0f)
+        .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
-    .set_default(-1.0f)
-    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
-              "If clip_gradient <= 0, gradient clipping is turned off. "
-              "grad = max(min(grad, clip_gradient), -clip_gradient).");
-    DMLC_DECLARE_FIELD(num_weights)
-    .set_default(1)
-    .describe("Number of updated weights.");
+        .set_default(-1.0f)
+        .describe(
+            "Clip gradient to the range of [-clip_gradient, clip_gradient] "
+            "If clip_gradient <= 0, gradient clipping is turned off. "
+            "grad = max(min(grad, clip_gradient), -clip_gradient).");
+    DMLC_DECLARE_FIELD(num_weights).set_default(1).describe("Number of updated weights.");
   }
 };
 
-template<typename ParamType, int input_stride>
+template <typename ParamType, int input_stride>
 inline bool PreloadedMultiSGDShape(const nnvm::NodeAttrs& attrs,
-                                   std::vector<mxnet::TShape> *in_attrs,
-                                   std::vector<mxnet::TShape> *out_attrs) {
+                                   std::vector<mxnet::TShape>* in_attrs,
+                                   std::vector<mxnet::TShape>* out_attrs) {
   const ParamType& param = dmlc::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), input_stride * param.num_weights + 2);
   CHECK_EQ(out_attrs->size(), param.num_weights);
 
-  bool all_inferred = true;
-  auto& input_shapes = *in_attrs;
+  bool all_inferred   = true;
+  auto& input_shapes  = *in_attrs;
   auto& output_shapes = *out_attrs;
   // Learning rates
   CHECK_EQ(in_attrs->at(param.num_weights * input_stride).Size(), param.num_weights)
-    << "Number of learning rates is inconsistent with num_weights "
-    << "parameter passed. Expected number of learning rates: "
-    << param.num_weights << ", and got " << in_attrs->at(param.num_weights * input_stride).Size();
+      << "Number of learning rates is inconsistent with num_weights "
+      << "parameter passed. Expected number of learning rates: " << param.num_weights
+      << ", and got " << in_attrs->at(param.num_weights * input_stride).Size();
   // Weight decays
   CHECK_EQ(in_attrs->at(param.num_weights * input_stride + 1).Size(), param.num_weights)
-    << "Number of weight decays is inconsistent with num_weights "
-    << "parameter passed. Expected number of weight decays: "
-    << param.num_weights << ", and got "
-    << in_attrs->at(param.num_weights * input_stride + 1).Size();
+      << "Number of weight decays is inconsistent with num_weights "
+      << "parameter passed. Expected number of weight decays: " << param.num_weights << ", and got "
+      << in_attrs->at(param.num_weights * input_stride + 1).Size();
   // Weights and gradients
   for (int i = 0; i < param.num_weights; ++i) {
     std::vector<mxnet::TShape> input_vec;
@@ -121,14 +117,14 @@ inline bool PreloadedMultiSGDShape(const nnvm::NodeAttrs& attrs,
 
 template <typename ParamType, int input_stride, int num_fp32_inputs>
 inline bool MP_PreloadedMultiSGD_InferType(const nnvm::NodeAttrs& attrs,
-                                           std::vector<int> *in_attrs,
-                                           std::vector<int> *out_attrs) {
+                                           std::vector<int>* in_attrs,
+                                           std::vector<int>* out_attrs) {
   const ParamType& param = dmlc::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), input_stride * param.num_weights + 2);
   CHECK_EQ(out_attrs->size(), param.num_weights);
 
-  bool all_inferred = true;
-  auto& input_types = *in_attrs;
+  bool all_inferred  = true;
+  auto& input_types  = *in_attrs;
   auto& output_types = *out_attrs;
   // Weights and gradients
   for (int i = 0; i < param.num_weights; ++i) {
@@ -151,19 +147,19 @@ inline bool MP_PreloadedMultiSGD_InferType(const nnvm::NodeAttrs& attrs,
   return all_inferred;
 }
 
-template<typename DType, typename MPDType>
+template <typename DType, typename MPDType>
 struct PreloadedMultiSGDKernelParam {
   static const int N = 60;
   int count;
   size_t max_size;
   size_t sizes[N];
-  DType * weights[N];
-  DType * grads[N];
-  MPDType * mom[N];
-  MPDType * weights32[N];
-  DType * out_data[N];
-  float * lrs;
-  float * wds;
+  DType* weights[N];
+  DType* grads[N];
+  MPDType* mom[N];
+  MPDType* weights32[N];
+  DType* out_data[N];
+  float* lrs;
+  float* wds;
   MPDType clip_gradient;
   MPDType rescale_grad;
   MPDType momentum;
@@ -171,25 +167,24 @@ struct PreloadedMultiSGDKernelParam {
 
 template <typename MPDType, bool has_momentum, bool has_mixed_precision>
 struct PreloadedMultiSGDKernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const PreloadedMultiSGDKernelParam<DType, MPDType>& param,
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  const PreloadedMultiSGDKernelParam<DType, MPDType>& param,
                                   const OpReqType req) {
     for (int index = 0; index < param.count; ++index) {
       if ((size_t)i < param.sizes[index]) {
-        MPDType w = has_mixed_precision ? param.weights32[index][i] :
-                                          MPDType(param.weights[index][i]);
+        MPDType w =
+            has_mixed_precision ? param.weights32[index][i] : MPDType(param.weights[index][i]);
         MPDType mom = has_momentum ? param.mom[index][i] : MPDType(0);
         if (param.clip_gradient >= 0.0f) {
-          mom = param.momentum*mom
-                - param.lrs[index]*param.wds[index]*w
-                - param.lrs[index]
-                *mshadow_op::clip::Map(param.rescale_grad *
-                                       static_cast<MPDType>(param.grads[index][i]),
-                                     param.clip_gradient);
+          mom = param.momentum * mom - param.lrs[index] * param.wds[index] * w -
+                param.lrs[index] *
+                    mshadow_op::clip::Map(
+                        param.rescale_grad * static_cast<MPDType>(param.grads[index][i]),
+                        param.clip_gradient);
         } else {
-          mom = param.momentum*mom
-                - param.lrs[index]*param.wds[index]*w
-                - param.lrs[index]*param.rescale_grad*static_cast<MPDType>(param.grads[index][i]);
+          mom = param.momentum * mom - param.lrs[index] * param.wds[index] * w -
+                param.lrs[index] * param.rescale_grad * static_cast<MPDType>(param.grads[index][i]);
         }
         if (has_momentum) {
           param.mom[index][i] = mom;
@@ -204,62 +199,62 @@ struct PreloadedMultiSGDKernel {
   }
 };
 
-template<typename xpu,
-         typename DType,
-         typename MPDType,
-         typename ParamType = PreloadedMultiSGDParam,
-         int input_stride = 2>
+template <typename xpu,
+          typename DType,
+          typename MPDType,
+          typename ParamType = PreloadedMultiSGDParam,
+          int input_stride   = 2>
 PreloadedMultiSGDKernelParam<DType, MPDType> FillPreloadedMultiSGDKernelParam(
-    const nnvm::NodeAttrs& attrs, const OpContext &ctx, const std::vector<TBlob> &inputs,
-    const std::vector<TBlob> &outputs) {
+    const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   const ParamType& p = nnvm::get<ParamType>(attrs.parsed);
-  Stream<xpu>* s = ctx.get_stream<xpu>();
+  Stream<xpu>* s     = ctx.get_stream<xpu>();
   PreloadedMultiSGDKernelParam<DType, MPDType> param;
   param.clip_gradient = p.clip_gradient;
-  param.rescale_grad = p.rescale_grad;
-  param.momentum = 0;
-  param.count = p.num_weights;
-  param.max_size = 0;
+  param.rescale_grad  = p.rescale_grad;
+  param.momentum      = 0;
+  param.count         = p.num_weights;
+  param.max_size      = 0;
   for (int i = 0; i < param.count; ++i) {
     param.sizes[i] = inputs[i * input_stride].shape_.Size();
     if (param.max_size < param.sizes[i]) {
       param.max_size = param.sizes[i];
     }
     param.weights[i] = inputs[i * input_stride].FlatTo2D<xpu, DType>(s).dptr_;
-    param.grads[i] = inputs[i * input_stride + 1].FlatTo2D<xpu, DType>(s).dptr_;
+    param.grads[i]   = inputs[i * input_stride + 1].FlatTo2D<xpu, DType>(s).dptr_;
     // if mixed precision, then the last input in a set
     // is 32-bit master copy of the weights
     if (!std::is_same<DType, MPDType>::value) {
-      param.weights32[i] = inputs[i * input_stride + input_stride - 1]
-                           .FlatTo2D<xpu, MPDType>(s).dptr_;
+      param.weights32[i] =
+          inputs[i * input_stride + input_stride - 1].FlatTo2D<xpu, MPDType>(s).dptr_;
     }
     param.out_data[i] = outputs[i].FlatTo2D<xpu, DType>(s).dptr_;
   }
   const int lrs_idx = param.count * input_stride;
   const int wds_idx = param.count * input_stride + 1;
-  param.lrs = inputs[lrs_idx].FlatTo2D<xpu, float>(s).dptr_;
-  param.wds = inputs[wds_idx].FlatTo2D<xpu, float>(s).dptr_;
+  param.lrs         = inputs[lrs_idx].FlatTo2D<xpu, float>(s).dptr_;
+  param.wds         = inputs[wds_idx].FlatTo2D<xpu, float>(s).dptr_;
   return param;
 }
 
-
-template<typename xpu,
-         typename DType,
-         typename MPDType,
-         int input_stride = 3>
+template <typename xpu, typename DType, typename MPDType, int input_stride = 3>
 PreloadedMultiSGDKernelParam<DType, MPDType> FillPreloadedMultiSGDMomKernelParam(
-    const nnvm::NodeAttrs& attrs, const OpContext &ctx, const std::vector<TBlob> &inputs,
-    const std::vector<TBlob> &outputs) {
+    const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   const PreloadedMultiSGDMomParam& p = nnvm::get<PreloadedMultiSGDMomParam>(attrs.parsed);
-  Stream<xpu>* s = ctx.get_stream<xpu>();
+  Stream<xpu>* s                     = ctx.get_stream<xpu>();
   PreloadedMultiSGDKernelParam<DType, MPDType> param =
-    FillPreloadedMultiSGDKernelParam<xpu,
-                                     DType,
-                                     MPDType,
-                                     PreloadedMultiSGDMomParam,
-                                     input_stride>(attrs, ctx, inputs, outputs);
+      FillPreloadedMultiSGDKernelParam<xpu,
+                                       DType,
+                                       MPDType,
+                                       PreloadedMultiSGDMomParam,
+                                       input_stride>(attrs, ctx, inputs, outputs);
   param.momentum = p.momentum;
   for (int i = 0; i < param.count; ++i) {
     param.mom[i] = inputs[i * input_stride + 2].FlatTo2D<xpu, MPDType>(s).dptr_;
@@ -268,65 +263,55 @@ PreloadedMultiSGDKernelParam<DType, MPDType> FillPreloadedMultiSGDMomKernelParam
   return param;
 }
 
-template<typename T>
+template <typename T>
 class preloaded_type_identity {
  public:
   using type = T;
 };
 
-template<typename T>
+template <typename T>
 class preloaded_single_precision {
  public:
   using type = float;
 };
 
-template<typename xpu, template<typename> class MPTypeChooser, int input_stride>
+template <typename xpu, template <typename> class MPTypeChooser, int input_stride>
 inline void PreloadedMultiSGDUpdate(const nnvm::NodeAttrs& attrs,
-                                    const OpContext &ctx,
-                                    const std::vector<TBlob> &inputs,
-                                    const std::vector<OpReqType> &req,
-                                    const std::vector<TBlob> &outputs) {
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     using MPDType = typename MPTypeChooser<DType>::type;
     PreloadedMultiSGDKernelParam<DType, MPDType> param =
-      FillPreloadedMultiSGDKernelParam<xpu,
-                                       DType,
-                                       MPDType,
-                                       PreloadedMultiSGDParam,
-                                       input_stride>(attrs, ctx, inputs, outputs);
-    Kernel<PreloadedMultiSGDKernel<MPDType,
-                                   false,
-                                   !std::is_same<DType, MPDType>::value>,
-                                   xpu>::Launch(s, param.max_size, param, req[0]);
+        FillPreloadedMultiSGDKernelParam<xpu, DType, MPDType, PreloadedMultiSGDParam, input_stride>(
+            attrs, ctx, inputs, outputs);
+    Kernel<PreloadedMultiSGDKernel<MPDType, false, !std::is_same<DType, MPDType>::value>,
+           xpu>::Launch(s, param.max_size, param, req[0]);
   });
 }
 
-template<typename xpu, template<typename> class MPTypeChooser, int input_stride>
+template <typename xpu, template <typename> class MPTypeChooser, int input_stride>
 inline void PreloadedMultiSGDMomUpdate(const nnvm::NodeAttrs& attrs,
-                                       const OpContext &ctx,
-                                       const std::vector<TBlob> &inputs,
-                                       const std::vector<OpReqType> &req,
-                                       const std::vector<TBlob> &outputs) {
+                                       const OpContext& ctx,
+                                       const std::vector<TBlob>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     using MPDType = typename MPTypeChooser<DType>::type;
     PreloadedMultiSGDKernelParam<DType, MPDType> param =
-      FillPreloadedMultiSGDMomKernelParam<xpu,
-                                          DType,
-                                          MPDType,
-                                          input_stride>(attrs, ctx, inputs, outputs);
-    Kernel<PreloadedMultiSGDKernel<MPDType,
-                                   true,
-                                   !std::is_same<DType, MPDType>::value>,
-                                   xpu>::Launch(s, param.max_size, param, req[0]);
+        FillPreloadedMultiSGDMomKernelParam<xpu, DType, MPDType, input_stride>(
+            attrs, ctx, inputs, outputs);
+    Kernel<PreloadedMultiSGDKernel<MPDType, true, !std::is_same<DType, MPDType>::value>,
+           xpu>::Launch(s, param.max_size, param, req[0]);
   });
 }
 
 }  // namespace op
 }  // namespace mxnet
-
 
 #endif  // MXNET_OPERATOR_CONTRIB_PRELOADED_MULTI_SGD_INL_H_

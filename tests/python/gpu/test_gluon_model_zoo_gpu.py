@@ -79,7 +79,7 @@ def test_inference(model_name):
         gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))
 
     cpu_data = mx.np.array(data, ctx=mx.cpu())
-    for i in range(5):
+    for _ in range(5):
         # Run inference.
         with autograd.record(train_mode=False):
             cpu_out = cpu_model(cpu_data)

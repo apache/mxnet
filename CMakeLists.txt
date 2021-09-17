@@ -865,6 +865,11 @@ if(USE_TVM_OP)
   BuildTVMOP()
   find_package(Python3 REQUIRED)
   set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")
+  if(UNIX AND NOT APPLE)
+    set(LD_LIBRARY_PATH "LD_LIBRARY_PATH")
+  elseif(APPLE)
+    set(LD_LIBRARY_PATH "DYLD_LIBRARY_PATH")
+  endif()
   if(USE_CUDA)
     set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "\"${CUDA_ARCH_FLAGS}\"")
   endif()
@@ -872,7 +877,7 @@ if(USE_TVM_OP)
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env
     PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
-    LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
+    ${LD_LIBRARY_PATH}=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{${LD_LIBRARY_PATH}}
     ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
   )
 endif()

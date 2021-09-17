@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file cross_device_copy.cc
  * \brief Special operator that copys NDArray
-*/
+ */
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
 
@@ -30,11 +30,11 @@ namespace op {
 
 class CrossDeviceCopyOp : public Operator {
  public:
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_args) override {
+  void Forward(const OpContext& ctx,
+               const std::vector<TBlob>& in_data,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& out_data,
+               const std::vector<TBlob>& aux_args) override {
     // CrossDeviceCopy is specially handled by graph executor,
     // We still re-use things such as InferShape in OperatorProperty
     LOG(FATAL) << "Not Reached";
@@ -42,29 +42,30 @@ class CrossDeviceCopyOp : public Operator {
 };
 
 class CrossDeviceCopyProp : public OperatorProperty {
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-  }
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {}
 
   std::map<std::string, std::string> GetParams() const override {
     return std::map<std::string, std::string>();
   }
 
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
-    const mxnet::TShape &dshape = in_shape->at(0);
-    if (dshape.ndim() == 0) return false;
+    const mxnet::TShape& dshape = in_shape->at(0);
+    if (dshape.ndim() == 0)
+      return false;
     out_shape->clear();
     out_shape->push_back(dshape);
     return true;
   }
 
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
+  bool InferType(std::vector<int>* in_type,
+                 std::vector<int>* out_type,
+                 std::vector<int>* aux_type) const override {
     CHECK_EQ(in_type->size(), 1) << "Input:[data]";
-    if (in_type->at(0) == -1) return false;
+    if (in_type->at(0) == -1)
+      return false;
     out_type->clear();
     out_type->push_back(in_type->at(0));
     return true;
@@ -89,8 +90,7 @@ class CrossDeviceCopyProp : public OperatorProperty {
   }
 };
 
-
 MXNET_REGISTER_OP_PROPERTY(_CrossDeviceCopy, CrossDeviceCopyProp)
-.describe("Special op to copy data cross device");
+    .describe("Special op to copy data cross device");
 }  // namespace op
 }  // namespace mxnet

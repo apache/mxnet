@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cu
  * \brief GPU implementation of elementwise sum operator
-*/
+ */
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
 #include "../../common/cuda/rtc.h"
@@ -103,36 +103,39 @@ __global__ void elementwise_sum_kernel(
 }
 )code";
 
-void VectorizedElementwiseSum(const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const std::vector<TBlob> &inputs,
-                              const std::vector<OpReqType> &req,
-                              const std::vector<TBlob> &outputs) {
+void VectorizedElementwiseSum(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
   using namespace mxnet::common::cuda::rtc;
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-  if (req[0] == kNullOp) return;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  if (req[0] == kNullOp)
+    return;
   CHECK_EQ(outputs.size(), 1U);
   size_t output_type_size = common::mshadow_type_info(outputs[0].type_flag_).size;
-  const int nvec = output_type_size <= sizeof(uint2)
-                     ? (sizeof(uint2) / output_type_size)
-                     : 1;
+  const int nvec     = output_type_size <= sizeof(uint2) ? (sizeof(uint2) / output_type_size) : 1;
   const index_t size = inputs[0].Size();
   for (size_t i = 0; i < inputs.size(); i += num_inputs_per_kernel) {
-    const std::string code = std::string("const OpReqType req = ") +
-                             util::to_string(i == 0 ? req[0] : kAddTo) +
-                             ";\n";
+    const std::string code =
+        std::string("const OpReqType req = ") + util::to_string(i == 0 ? req[0] : kAddTo) + ";\n";
     elementwise_sum_params params{};
     params.num_inputs = std::min(num_inputs_per_kernel, inputs.size() - i);
     for (int j = 0; j < params.num_inputs; ++j) {
       params.inputs[j] = inputs[i + j].dptr_;
     }
     params.outputs[0] = outputs[0].dptr_;
-    const std::vector<TBlob> new_inputs(inputs.begin() + i,
-                                        inputs.begin() + i + params.num_inputs);
-    VectorizedKernelRTCLauncher(code, "elementwise_sum_kernel",
-                                elementwise_sum_kernel, nvec,
-                                size, 1, s, params,
-                                new_inputs, outputs,
+    const std::vector<TBlob> new_inputs(inputs.begin() + i, inputs.begin() + i + params.num_inputs);
+    VectorizedKernelRTCLauncher(code,
+                                "elementwise_sum_kernel",
+                                elementwise_sum_kernel,
+                                nvec,
+                                size,
+                                1,
+                                s,
+                                params,
+                                new_inputs,
+                                outputs,
                                 ctx.run_ctx.get_ctx().dev_id);
   }
 }
@@ -145,7 +148,8 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
   CHECK(!inputs.empty());
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   CHECK_EQ(req[0], kWriteTo) << "ElementWiseSumComputeExGPU only supports req = kWriteTo";
   if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) ||
       (inputs.size() == 3U && inputs[0].storage_type() == kDefaultStorage &&
@@ -153,7 +157,7 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
       (inputs.size() > 4U && common::ContainsStorageType(inputs, kDefaultStorage) &&
        outputs[0].storage_type() == kDefaultStorage)) {
     mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
-    NDArray out_nd = outputs[0];
+    NDArray out_nd          = outputs[0];
     mxnet::ndarray::ElementwiseSum<gpu>(s, ctx.requested[0], inputs, &out_nd);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
@@ -163,8 +167,8 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
 }  // namespace
 
 NNVM_REGISTER_OP(add_n)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedElementwiseSum)
-.set_attr<FComputeEx>("FComputeEx<gpu>", ElementWiseSumComputeExGPU);
+    .set_attr<FCompute>("FCompute<gpu>", VectorizedElementwiseSum)
+    .set_attr<FComputeEx>("FComputeEx<gpu>", ElementWiseSumComputeExGPU);
 
 }  // namespace op
 }  // namespace mxnet

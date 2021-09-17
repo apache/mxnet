@@ -37,12 +37,12 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NPXForeachParam);
 
-class ForeachState: public LoopState {
+class ForeachState : public LoopState {
  public:
   NPXForeachParam params;
   int num_iterations;
 
-  ForeachState(const nnvm::Symbol &g, const NPXForeachParam &params) : LoopState(g, false) {
+  ForeachState(const nnvm::Symbol& g, const NPXForeachParam& params) : LoopState(g, false) {
     this->params = params;
   }
 };
@@ -52,18 +52,18 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  ForeachState &state = state_ptr.get_state<ForeachState>();
+  ForeachState& state           = state_ptr.get_state<ForeachState>();
   const NPXForeachParam& params = state.params;
-  const size_t iter_dim = 0;
-  CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
+  const size_t iter_dim         = 0;
+  CHECK_EQ(outputs.size(), (size_t)params.num_outputs);
   CHECK_GT(params.in_data_locs.ndim(), 0);
-  size_t len = inputs[0].shape()[iter_dim];
+  size_t len           = inputs[0].shape()[iter_dim];
   state.num_iterations = len;
   for (int i = 1; i < params.in_data_locs.ndim(); i++)
     CHECK_EQ(inputs[i].shape()[iter_dim], len);
-  for (size_t i = 0; i < (size_t) params.num_out_data; i++)
+  for (size_t i = 0; i < (size_t)params.num_out_data; i++)
     CHECK_EQ(len, outputs[i].shape()[iter_dim]);
-  for (const auto &arr : outputs)
+  for (const auto& arr : outputs)
     CHECK_EQ(arr.storage_type(), kDefaultStorage)
         << "The for operator doesn't support the sparse format";
 
@@ -73,21 +73,19 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   // of the subgraph share the same memory.
   std::vector<NDArray> subg_outputs1(outputs.size());
   std::vector<NDArray> subg_outputs2(outputs.size());
-  std::vector<NDArray> *subg_outputs[2]{&subg_outputs1, &subg_outputs2};
+  std::vector<NDArray>* subg_outputs[2]{&subg_outputs1, &subg_outputs2};
   // If the length is an odd number, the last iteration will use the first set
   // of outputs. In this way, we don't need to copy the results from the
   // subgraph to the final outputs of the loop.
   if (len % 2 == 1) {
     for (size_t i = params.num_out_data; i < subg_outputs1.size(); i++) {
       subg_outputs1[i] = outputs[i];
-      subg_outputs2[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), true,
-                                 outputs[i].dtype());
+      subg_outputs2[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
     }
   } else {
     // Otherwise, we'll use the second set of outputs.
     for (size_t i = params.num_out_data; i < subg_outputs1.size(); i++) {
-      subg_outputs1[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), true,
-                                 outputs[i].dtype());
+      subg_outputs1[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
       subg_outputs2[i] = outputs[i];
     }
   }
@@ -99,23 +97,23 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   // The remaining arrays (other than input data and states) only need to be set once.
   for (int j = 0; j < params.remain_locs.ndim(); j++) {
     CHECK_LT(params.remain_locs[j], subg_inputs.size());
-    subg_inputs[params.remain_locs[j]] = inputs[j + params.in_data_locs.ndim()
-        + params.in_state_locs.ndim()];
+    subg_inputs[params.remain_locs[j]] =
+        inputs[j + params.in_data_locs.ndim() + params.in_state_locs.ndim()];
   }
 
   // Here we iterate over the first dimension of the first input array.
   for (size_t i = 0; i < len; i++) {
     // Initialize outputs for the subgraph.
-    std::vector<NDArray> *subg_out_curr = subg_outputs[i % 2];
-    std::vector<NDArray> *subg_out_prev = subg_outputs[(i + 1) % 2];
+    std::vector<NDArray>* subg_out_curr = subg_outputs[i % 2];
+    std::vector<NDArray>* subg_out_prev = subg_outputs[(i + 1) % 2];
     for (int j = 0; j < params.num_out_data; j++)
       (*subg_out_curr)[j] = outputs[j].At(i);
     // When recording for backward computation, we should make sure
     // that output arrays are actually different in each iteration.
     if (ctx.need_grad && i < len - 1) {
       for (size_t j = params.num_out_data; j < subg_out_curr->size(); j++)
-        (*subg_out_curr)[j] = NDArray(outputs[j].shape(), outputs[j].ctx(),
-                                      true, outputs[j].dtype());
+        (*subg_out_curr)[j] =
+            NDArray(outputs[j].shape(), outputs[j].ctx(), true, outputs[j].dtype());
     } else if (ctx.need_grad && i == len - 1) {
       // For the last iteration, we need to write data to the output array
       // directly.
@@ -126,7 +124,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     // Initialize inputs for the subgraph.
     // Get a slice from the input data arrays.
     for (int j = 0; j < params.in_data_locs.ndim(); j++) {
-      size_t loc = params.in_data_locs[j];
+      size_t loc       = params.in_data_locs[j];
       subg_inputs[loc] = inputs[j].At(i);
     }
     // For the rest of the iterations, the states are the outputs
@@ -135,7 +133,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
       for (size_t j = 0; j < params.in_state_locs.ndim(); ++j) {
         CHECK_LT(params.in_state_locs[j], subg_inputs.size());
         for (size_t k = params.num_out_data; k < subg_out_prev->size(); ++k) {
-          if (params.in_state_index[j] == k-params.num_out_data) {
+          if (params.in_state_index[j] == k - params.num_out_data) {
             subg_inputs[params.in_state_locs[j]] = (*subg_out_prev)[k];
             break;
           }
@@ -157,14 +155,14 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  ForeachState &state = state_ptr.get_state<ForeachState>();
+  ForeachState& state           = state_ptr.get_state<ForeachState>();
   const NPXForeachParam& params = state.params;
-  CHECK_EQ(outputs.size(), (size_t) params.num_args);
+  CHECK_EQ(outputs.size(), (size_t)params.num_args);
   CHECK_GT(params.in_data_locs.ndim(), 0);
-  for (const auto &arr : outputs)
+  for (const auto& arr : outputs)
     CHECK_EQ(arr.storage_type(), kDefaultStorage)
         << "The for operator doesn't support the sparse format";
-  int len = state.num_iterations;
+  int len                = state.num_iterations;
   size_t num_output_data = params.num_out_data;
 
   // In backward computation, we need to run iterations from backwards.
@@ -185,10 +183,10 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
 
   // [remaining vars]
   for (int i = 0; i < params.remain_locs.ndim(); i++) {
-    size_t loc = params.remain_locs[i];
-    size_t orig_loc = i + params.in_data_locs.ndim() + params.in_state_locs.ndim();
+    size_t loc       = params.remain_locs[i];
+    size_t orig_loc  = i + params.in_data_locs.ndim() + params.in_state_locs.ndim();
     subg_igrads[loc] = outputs[orig_loc];
-    subg_req[loc] = req[orig_loc];
+    subg_req[loc]    = req[orig_loc];
   }
 
   for (int iter_num = len - 1; iter_num >= 0; iter_num--) {
@@ -198,21 +196,21 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
       // For the rest of the iterations, we should add graidents to the
       // remaining vars.
       for (int i = 0; i < params.remain_locs.ndim(); i++) {
-        size_t loc = params.remain_locs[i];
+        size_t loc    = params.remain_locs[i];
         subg_req[loc] = kAddTo;
       }
     }
 
     // [data vars]
     for (int i = 0; i < params.in_data_locs.ndim(); i++) {
-      size_t loc = params.in_data_locs[i];
+      size_t loc       = params.in_data_locs[i];
       subg_igrads[loc] = outputs[i].At(iter_num);
-      subg_req[loc] = req[i];
+      subg_req[loc]    = req[i];
     }
     // [loop vars]
     for (int i = 0; i < params.in_state_locs.ndim(); i++) {
-      size_t loc = params.in_state_locs[i];
-      const NDArray &output = outputs[i + params.in_data_locs.ndim()];
+      size_t loc            = params.in_state_locs[i];
+      const NDArray& output = outputs[i + params.in_data_locs.ndim()];
       if (iter_num != 0) {
         // For state gradients, we need to allocate new NDArrays
         // because intermediate state gradients won't be returned to the users.
@@ -243,17 +241,19 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   state.Cleanup();
 }
 
-template<typename T>
-static void remap(const std::vector<T> &op_in, size_t start,
-                  const mxnet::Tuple<dim_t> &locs, std::vector<T> *subg_in) {
+template <typename T>
+static void remap(const std::vector<T>& op_in,
+                  size_t start,
+                  const mxnet::Tuple<dim_t>& locs,
+                  std::vector<T>* subg_in) {
   auto op_in_it = op_in.begin() + start;
   for (int i = 0; i < locs.ndim(); i++) {
-    dim_t loc = locs[i];
+    dim_t loc        = locs[i];
     subg_in->at(loc) = *(op_in_it + i);
   }
 }
 
-static inline mxnet::TShape SliceFirstDim(const mxnet::TShape &s) {
+static inline mxnet::TShape SliceFirstDim(const mxnet::TShape& s) {
   if (s.ndim() > 1) {
     return mxnet::TShape(s.begin() + 1, s.end());
   } else {
@@ -262,10 +262,10 @@ static inline mxnet::TShape SliceFirstDim(const mxnet::TShape &s) {
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
-                         mxnet::ShapeVector *in_shape,
-                         mxnet::ShapeVector *out_shape) {
+                         mxnet::ShapeVector* in_shape,
+                         mxnet::ShapeVector* out_shape) {
   const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
+  CHECK_EQ(out_shape->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
 
   mxnet::ShapeVector subg_in_shape(in_shape->size());
@@ -278,11 +278,12 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     subg_in_shape[loc] = SliceFirstDim(in_shape->at(i));
   }
   // state shape
-  remap(*in_shape, params.in_data_locs.ndim(), params.in_state_locs,
-        &subg_in_shape);
+  remap(*in_shape, params.in_data_locs.ndim(), params.in_state_locs, &subg_in_shape);
   // remaining shape
-  remap(*in_shape, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
-        params.remain_locs, &subg_in_shape);
+  remap(*in_shape,
+        params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs,
+        &subg_in_shape);
 
   mxnet::ShapeVector subg_out_shape = *out_shape;
   for (int i = 0; i < params.num_out_data; i++) {
@@ -293,8 +294,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     subg_out_shape[i] = SliceFirstDim(shape);
   }
 
-  bool infer_success = InferSubgraphShape(*attrs.subgraphs[0],
-                                          &subg_in_shape, &subg_out_shape);
+  bool infer_success = InferSubgraphShape(*attrs.subgraphs[0], &subg_in_shape, &subg_out_shape);
 
   // After inference, we need to move inferred information back to in_shape and
   // out_shape.
@@ -308,7 +308,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
       continue;
 
     auto out = mxnet::TShape(g_out_shape.ndim() + 1, -1);
-    out[0] = len;
+    out[0]   = len;
     for (int i = 1; i < out.ndim(); i++)
       out[i] = g_out_shape[i - 1];
     SHAPE_ASSIGN_CHECK(*out_shape, i, out);
@@ -319,8 +319,8 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 
   // For the shape of input data.
   for (int i = 0; i < params.in_data_locs.ndim(); i++) {
-    size_t loc = params.in_data_locs[i];
-    const auto &shape = subg_in_shape[loc];
+    size_t loc        = params.in_data_locs[i];
+    const auto& shape = subg_in_shape[loc];
     // If the input data shape isn't inferred, we don't need to propogate the
     // info.
     if (!mxnet::ndim_is_known(shape))
@@ -332,7 +332,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
       SHAPE_ASSIGN_CHECK(*in_shape, i, s);
     } else {
       auto in = mxnet::TShape(shape.ndim() + 1, -1);
-      in[0] = len;
+      in[0]   = len;
       for (int i = 1; i < in.ndim(); i++)
         in[i] = shape[i - 1];
       SHAPE_ASSIGN_CHECK(*in_shape, i, in);
@@ -341,8 +341,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   // For the shape of state.
   for (int i = 0; i < params.in_state_locs.ndim(); i++) {
     size_t loc = params.in_state_locs[i];
-    SHAPE_ASSIGN_CHECK(*in_shape, i + params.in_data_locs.ndim(),
-                       subg_in_shape[loc]);
+    SHAPE_ASSIGN_CHECK(*in_shape, i + params.in_data_locs.ndim(), subg_in_shape[loc]);
   }
   // For the shape of remaining data.
   for (int i = 0; i < params.remain_locs.ndim(); i++) {
@@ -370,15 +369,18 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 }
 
 static bool ForeachType(const nnvm::NodeAttrs& attrs,
-                        std::vector<int> *in_type, std::vector<int> *out_type) {
+                        std::vector<int>* in_type,
+                        std::vector<int>* out_type) {
   const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
+  CHECK_EQ(out_type->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   std::vector<int> subg_in_type(in_type->size(), 0);
   remap(*in_type, 0, params.in_data_locs, &subg_in_type);
   remap(*in_type, params.in_data_locs.ndim(), params.in_state_locs, &subg_in_type);
-  remap(*in_type, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
-        params.remain_locs, &subg_in_type);
+  remap(*in_type,
+        params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs,
+        &subg_in_type);
   bool success = InferSubgraphDataType(*attrs.subgraphs[0], &subg_in_type, out_type);
   for (int i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
@@ -390,8 +392,8 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   }
   for (int i = 0; i < params.remain_locs.ndim(); i++) {
     size_t loc = params.remain_locs[i];
-    TYPE_ASSIGN_CHECK(*in_type, i + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
-                      subg_in_type[loc]);
+    TYPE_ASSIGN_CHECK(
+        *in_type, i + params.in_data_locs.ndim() + params.in_state_locs.ndim(), subg_in_type[loc]);
   }
   return success;
 }
@@ -399,26 +401,27 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
 static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
                                const int dev_mask,
                                DispatchMode* dispatch_mode,
-                               std::vector<int> *in_attrs,
-                               std::vector<int> *out_attrs) {
+                               std::vector<int>* in_attrs,
+                               std::vector<int>* out_attrs) {
   const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
+  CHECK_EQ(out_attrs->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   std::vector<int> subg_in_attrs(in_attrs->size(), kUndefinedStorage);
   remap(*in_attrs, 0, params.in_data_locs, &subg_in_attrs);
   remap(*in_attrs, params.in_data_locs.ndim(), params.in_state_locs, &subg_in_attrs);
-  remap(*in_attrs, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
-        params.remain_locs, &subg_in_attrs);
-  bool success = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask,
-                                      dispatch_mode, &subg_in_attrs, out_attrs);
+  remap(*in_attrs,
+        params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs,
+        &subg_in_attrs);
+  bool success =
+      InferSubgraphStorage(*attrs.subgraphs[0], dev_mask, dispatch_mode, &subg_in_attrs, out_attrs);
   for (int i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
     STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, subg_in_attrs[loc]);
   }
   for (int i = 0; i < params.in_state_locs.ndim(); i++) {
     size_t loc = params.in_state_locs[i];
-    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i + params.in_data_locs.ndim(),
-                              subg_in_attrs[loc]);
+    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i + params.in_data_locs.ndim(), subg_in_attrs[loc]);
   }
   for (int i = 0; i < params.remain_locs.ndim(); i++) {
     size_t loc = params.remain_locs[i];
@@ -432,28 +435,30 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
 static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
                                        const int dev_mask,
                                        DispatchMode* dispatch_mode,
-                                       std::vector<int> *in_attrs,
-                                       std::vector<int> *out_attrs) {
+                                       std::vector<int>* in_attrs,
+                                       std::vector<int>* out_attrs) {
   const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  CHECK_EQ(out_attrs->size(), (size_t) params.num_args);
-  CHECK_EQ(in_attrs->size(), (size_t) params.num_args + params.num_outputs * 2);
+  CHECK_EQ(out_attrs->size(), (size_t)params.num_args);
+  CHECK_EQ(in_attrs->size(), (size_t)params.num_args + params.num_outputs * 2);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  CachedOp op(*attrs.subgraphs[0],
-              std::vector<std::pair<std::string, std::string> >());
+  CachedOp op(*attrs.subgraphs[0], std::vector<std::pair<std::string, std::string> >());
   // map the operator inputs to the subgraph inputs.
   std::vector<int> subg_forward_ins(params.num_args, kUndefinedStorage);
   remap(*in_attrs, params.num_outputs, params.in_data_locs, &subg_forward_ins);
-  remap(*in_attrs, params.num_outputs + params.in_data_locs.ndim(),
-        params.in_state_locs, &subg_forward_ins);
-  remap(*in_attrs, params.num_outputs + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
-        params.remain_locs, &subg_forward_ins);
+  remap(*in_attrs,
+        params.num_outputs + params.in_data_locs.ndim(),
+        params.in_state_locs,
+        &subg_forward_ins);
+  remap(*in_attrs,
+        params.num_outputs + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs,
+        &subg_forward_ins);
 
   // Copy backward input storage to backward subgraph input storage.
   std::vector<int> subg_in_attrs = *in_attrs;
   for (size_t i = 0; i < subg_forward_ins.size(); i++)
     subg_in_attrs[i + params.num_outputs] = subg_forward_ins[i];
-  return op.BackwardStorageType(attrs, dev_mask, dispatch_mode,
-                                &subg_in_attrs, out_attrs);
+  return op.BackwardStorageType(attrs, dev_mask, dispatch_mode, &subg_in_attrs, out_attrs);
 }
 
 static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
@@ -464,8 +469,8 @@ static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
   return OpStatePtr::Create<ForeachState>(*attrs.subgraphs[0], params);
 }
 
-static std::vector<nnvm::NodeEntry>
-ForeachGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+static std::vector<nnvm::NodeEntry> ForeachGradient(const nnvm::ObjectPtr& n,
+                                                    const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
   for (auto& h : n->inputs) {
     heads.push_back(h);
@@ -475,17 +480,19 @@ ForeachGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& og
     heads.emplace_back(n, i, 0);
   }
 
-  auto p = nnvm::Node::Create();
-  p->attrs.op = nnvm::Op::Get("_backward_npx_foreach");
+  auto p        = nnvm::Node::Create();
+  p->attrs.op   = nnvm::Op::Get("_backward_npx_foreach");
   p->attrs.name = n->attrs.name;
   p->attrs.dict = n->attrs.dict;
-  p->inputs = heads;
+  p->inputs     = heads;
   p->control_deps.emplace_back(n);
   p->attrs.parsed = n->attrs.parsed;
   CHECK_EQ(p->num_inputs(), p->inputs.size())
-    << "Number of inputs to operator " << "_backward_npx_foreach" << " (" << p->num_inputs()
-    << ") does not match the actual number of inputs provided to operator "
-    << n->attrs.name << " (" << p->inputs.size() << ").";
+      << "Number of inputs to operator "
+      << "_backward_npx_foreach"
+      << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator " << n->attrs.name
+      << " (" << p->inputs.size() << ").";
 
   std::vector<nnvm::NodeEntry> entries;
   for (uint32_t i = 0; i < p->num_outputs(); ++i)
@@ -497,7 +504,7 @@ ForeachGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& og
 
 DMLC_REGISTER_PARAMETER(NPXWhileLoopParam);
 
-class WhileLoopState: public LoopState {
+class WhileLoopState : public LoopState {
  public:
   NPXWhileLoopParam params;
   size_t n_iterations;  // the actual number of steps taken in this while loop, <= max_iterations
@@ -506,17 +513,17 @@ class WhileLoopState: public LoopState {
   // indicates to which index the output of `func' will be copied to the input of `cond'
   std::vector<int> oi_map;
 
-  WhileLoopState(const NPXWhileLoopParam &params,
-                 const nnvm::Symbol &cond,
-                 const nnvm::Symbol &func) :
-                 LoopState(func),
-                 params(params),
-                 n_iterations(0U),
-                 cond_op(LoopState::MakeSharedOp(cond)),
-                 oi_map(params.func_var_locs.ndim(), -1) {
-    const mxnet::Tuple<dim_t> &func_input_locs = params.func_input_locs;
-    const mxnet::Tuple<dim_t> &func_var_locs = params.func_var_locs;
-    const mxnet::Tuple<dim_t> &cond_input_locs = params.cond_input_locs;
+  WhileLoopState(const NPXWhileLoopParam& params,
+                 const nnvm::Symbol& cond,
+                 const nnvm::Symbol& func)
+      : LoopState(func),
+        params(params),
+        n_iterations(0U),
+        cond_op(LoopState::MakeSharedOp(cond)),
+        oi_map(params.func_var_locs.ndim(), -1) {
+    const mxnet::Tuple<dim_t>& func_input_locs = params.func_input_locs;
+    const mxnet::Tuple<dim_t>& func_var_locs   = params.func_var_locs;
+    const mxnet::Tuple<dim_t>& cond_input_locs = params.cond_input_locs;
     for (int i = 0; i < func_var_locs.ndim(); ++i) {
       dim_t pos_i = func_input_locs[func_var_locs[i]];
       for (int j = 0; j < cond_input_locs.ndim(); ++j) {
@@ -540,20 +547,18 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   // [0: num_out_data) are outputs at each step.
   // [num_out_data: ) are new_loop_vars
   // TODO(Junru): avoid dynamic NDArray allocation
-  WhileLoopState &state = state_ptr.get_state<WhileLoopState>();
+  WhileLoopState& state           = state_ptr.get_state<WhileLoopState>();
   const NPXWhileLoopParam& params = state.params;
   // a helper function, converting std::vector<NDArray> to std::vector<NDArray*>
-  const auto to_ptr_vec = [](std::vector<NDArray> &in, std::vector<NDArray*> *out) {
+  const auto to_ptr_vec = [](std::vector<NDArray>& in, std::vector<NDArray*>* out) {
     out->clear();
     out->reserve(in.size());
-    std::transform(std::begin(in),
-                   std::end(in),
-                   std::back_inserter(*out),
-                   [](NDArray &a) {return &a;});
+    std::transform(
+        std::begin(in), std::end(in), std::back_inserter(*out), [](NDArray& a) { return &a; });
   };
   // sanity checks
-  CHECK_EQ(inputs.size(), (size_t) params.num_args);
-  CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
+  CHECK_EQ(inputs.size(), (size_t)params.num_args);
+  CHECK_EQ(outputs.size(), (size_t)params.num_outputs);
   CHECK_EQ(outputs.size(), req.size());
   // construct inputs and outputs for cond
   std::vector<NDArray> cond_inputs, cond_outputs = {NDArray()};
@@ -564,7 +569,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   // construct inputs and outputs for func
   std::vector<NDArray> func_inputs, func_outputs(outputs.size());
   extract_by_loc(inputs, params.func_input_locs, &func_inputs);
-  for (size_t &step = state.n_iterations = 0; step < (size_t) params.max_iterations; ++step) {
+  for (size_t& step = state.n_iterations = 0; step < (size_t)params.max_iterations; ++step) {
     CHECK(inputs.size() > 0) << "while loop forward requires at least 1 input";
     Context default_ctx = inputs[0].ctx();
     state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr, default_ctx);
@@ -588,7 +593,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
         for (int j = 0; j < step_shape.ndim(); ++j) {
           shape[j + 1] = step_shape[j];
         }
-        const_cast<NDArray &>(outputs[i]).Init(shape);
+        const_cast<NDArray&>(outputs[i]).Init(shape);
       }
     }
     for (int i = 0; i < params.num_out_data; ++i) {
@@ -598,11 +603,11 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
     // func_inputs on the next step:
     // the output (new_loop_vars) will become the new inputs (loop_vars)
     for (size_t i = params.num_out_data; i < outputs.size(); ++i) {
-      int j = params.func_var_locs[i - params.num_out_data];
+      int j   = params.func_var_locs[i - params.num_out_data];
       int loc = -1;
       for (size_t m = 0; m < params.func_input_locs.ndim(); ++m) {
         if (m == j) {
-          loc = params.func_input_locs[m];
+          loc            = params.func_input_locs[m];
           func_inputs[m] = func_outputs[i];
         } else {
           if (params.func_input_locs[m] == loc) {
@@ -613,7 +618,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
       int k = state.oi_map[i - params.num_out_data];
       if (k != -1) {
         // I actually don't need to update cond_inputs
-        cond_inputs[k] = func_outputs[i];
+        cond_inputs[k]    = func_outputs[i];
         cond_input_ptr[k] = &func_outputs[i];
       }
     }
@@ -627,17 +632,17 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   for (size_t i = params.num_out_data; i < outputs.size(); ++i) {
     size_t j = params.func_var_locs[i - params.num_out_data];
     if (!shape_is_known(outputs[i].shape())) {
-      const_cast<NDArray &>(outputs[i]).Init(func_inputs[j].shape());
+      const_cast<NDArray&>(outputs[i]).Init(func_inputs[j].shape());
     }
     mxnet::CopyFromTo(func_inputs[j], &outputs[i]);
   }
   for (int i = 0; i < params.num_out_data; ++i) {
-    const_cast<NDArray &>(outputs[i]).SetShapeFromChunk();
+    const_cast<NDArray&>(outputs[i]).SetShapeFromChunk();
   }
   if (state.n_iterations == 0) {
-    for (const auto & output : outputs) {
+    for (const auto& output : outputs) {
       if (!shape_is_known(output.shape())) {
-        const_cast<NDArray &>(output).ReshapeAndAlloc({1});
+        const_cast<NDArray&>(output).ReshapeAndAlloc({1});
       }
     }
   }
@@ -653,10 +658,10 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
   // where f is the current function,
   // x is the input to the current function,
   // TODO(Junru): avoid dynamic NDArray allocation
-  WhileLoopState &state = state_ptr.get_state<WhileLoopState>();
+  WhileLoopState& state           = state_ptr.get_state<WhileLoopState>();
   const NPXWhileLoopParam& params = state.params;
   // sanity checks
-  CHECK_EQ(_outputs.size(), (size_t) params.num_args);
+  CHECK_EQ(_outputs.size(), (size_t)params.num_args);
   CHECK_EQ(_outputs.size(), _req.size());
   for (auto x : _req) {
     CHECK_NE(x, kWriteInplace);
@@ -680,7 +685,7 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
   // ...
   // (var_locs[-2], var_locs[-1] = params.num_args)
   std::vector<dim_t> var_locs(params.func_var_locs.begin(), params.func_var_locs.end());
-  var_locs.push_back((dim_t) params.num_args);
+  var_locs.push_back((dim_t)params.num_args);
   sort(var_locs.begin(), var_locs.end());
   // vectors for the backward loop
   std::vector<NDArray> ograds(params.num_outputs);
@@ -695,7 +700,7 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
     std::transform(std::begin(inputs),
                    std::begin(inputs) + params.num_out_data,
                    std::begin(ograds),
-                   [step] (const NDArray &a) { return a.At(step); } );
+                   [step](const NDArray& a) { return a.At(step); });
     // igrads[i] =
     //    outputs[i]            (step == 0)
     //    outputs[i]            (step != 0 && i not in loop_var_locs)
@@ -708,21 +713,18 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
     {
       size_t i = 0;
       for (size_t loc : var_locs) {
-        for ( ; i < loc; ++i) {
+        for (; i < loc; ++i) {
           // locs other that var_locs
-          igrads[i] = outputs[i];
-          iter_req[i] = (step + 1 == n_iter || req[i] == kNullOp)
-                      ? req[i]
-                      : kAddTo;
+          igrads[i]   = outputs[i];
+          iter_req[i] = (step + 1 == n_iter || req[i] == kNullOp) ? req[i] : kAddTo;
         }
-        if (i < (size_t) params.num_args) {
+        if (i < (size_t)params.num_args) {
           // a var
           igrads[i] = (step == 0)
-                    ? outputs[i]
-                    : NDArray(outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
-          iter_req[i] = (step == 0 || req[i] == kNullOp)
-                      ? req[i]
-                      : kWriteTo;
+                          ? outputs[i]
+                          : NDArray(outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
+
+          iter_req[i] = (step == 0 || req[i] == kNullOp) ? req[i] : kWriteTo;
           ++i;
         } else {
           break;
@@ -732,10 +734,10 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
     state.Backward(step, ograds, iter_req, igrads);
     for (int i = params.num_out_data; i < params.num_outputs; ++i) {
       size_t j = params.func_var_locs[i - params.num_out_data];
-      int loc = -1;
+      int loc  = -1;
       for (size_t m = 0; m < params.func_input_locs.ndim(); ++m) {
         if (m == j) {
-          loc = params.func_input_locs[m];
+          loc       = params.func_input_locs[m];
           ograds[i] = igrads[m];
         } else {
           if (params.func_input_locs[m] == loc) {
@@ -749,24 +751,23 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
 }
 
 static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
-                           mxnet::ShapeVector *in_shape,
-                           mxnet::ShapeVector *out_shape) {
+                           mxnet::ShapeVector* in_shape,
+                           mxnet::ShapeVector* out_shape) {
   const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
+  CHECK_EQ(out_shape->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 2U);
 
   mxnet::ShapeVector subg_in_shape(params.func_input_locs.ndim());
   for (int i = 0; i < params.func_input_locs.ndim(); ++i) {
-    size_t loc = params.func_input_locs[i];
+    size_t loc       = params.func_input_locs[i];
     subg_in_shape[i] = in_shape->at(loc);
   }
   mxnet::ShapeVector subg_out_shape = *out_shape;
-  int num_out_data = params.num_out_data;
-  int num_outputs = params.num_outputs;
+  int num_out_data                  = params.num_out_data;
+  int num_outputs                   = params.num_outputs;
   for (size_t i = num_out_data; i < num_outputs; i++)
-    SHAPE_ASSIGN_CHECK(subg_out_shape, i, (*in_shape)[i-num_out_data]);
-  bool infer_success = InferSubgraphShape(*attrs.subgraphs[1],
-                                          &subg_in_shape, &subg_out_shape);
+    SHAPE_ASSIGN_CHECK(subg_out_shape, i, (*in_shape)[i - num_out_data]);
+  bool infer_success = InferSubgraphShape(*attrs.subgraphs[1], &subg_in_shape, &subg_out_shape);
   for (int i = 0; i < params.num_out_data; i++) {
     // If the output shape isn't inferred, we don't need to propogate the info.
     const auto& g_out_shape = subg_out_shape[i];
@@ -784,18 +785,19 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_shape, i, subg_out_shape[i]);
   if (infer_success) {
     for (size_t i = num_out_data; i < num_outputs; i++)
-      CHECK_EQ((*out_shape)[i], (*in_shape)[i-num_out_data]);
+      CHECK_EQ((*out_shape)[i], (*in_shape)[i - num_out_data]);
   }
   // Check if we have inferred the shapes correctly.
   return infer_success;
 }
 
 static bool WhileLoopType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_type, std::vector<int> *out_type) {
-  const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  static const std::function<bool(const int &)> is_udf = is_type_udf;
-  CHECK_EQ(in_type->size(), (size_t) params.num_args);
-  CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
+                          std::vector<int>* in_type,
+                          std::vector<int>* out_type) {
+  const NPXWhileLoopParam& params                     = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
+  static const std::function<bool(const int&)> is_udf = is_type_udf;
+  CHECK_EQ(in_type->size(), (size_t)params.num_args);
+  CHECK_EQ(out_type->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 2U);
   CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
   std::vector<int> cond_in_type;
@@ -816,12 +818,12 @@ static bool WhileLoopType(const nnvm::NodeAttrs& attrs,
 static bool WhileLoopStorageType(const nnvm::NodeAttrs& attrs,
                                  const int dev_mask,
                                  DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
-  const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  CHECK_EQ(in_attrs->size(), (size_t) params.num_args);
-  CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
+                                 std::vector<int>* in_attrs,
+                                 std::vector<int>* out_attrs) {
+  const NPXWhileLoopParam& params                     = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
+  static const std::function<bool(const int&)> is_udf = is_stype_udf;
+  CHECK_EQ(in_attrs->size(), (size_t)params.num_args);
+  CHECK_EQ(out_attrs->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 2U);
   CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
   std::vector<int> cond_in_attrs;
@@ -829,16 +831,16 @@ static bool WhileLoopStorageType(const nnvm::NodeAttrs& attrs,
   extract_by_loc(*in_attrs, params.cond_input_locs, &cond_in_attrs);
   extract_by_loc(*in_attrs, params.func_input_locs, &func_in_attrs);
   std::vector<int> cond_out_attrs = {kDefaultStorage};
-  DispatchMode cond_mode = DispatchMode::kUndefined;
-  DispatchMode func_mode = DispatchMode::kUndefined;
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  DispatchMode cond_mode          = DispatchMode::kUndefined;
+  DispatchMode func_mode          = DispatchMode::kUndefined;
+  *dispatch_mode                  = DispatchMode::kFComputeEx;
   CHECK(params.sync_in_out(in_attrs, out_attrs, is_udf));
-  bool succ_0 = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask, \
-                                     &cond_mode, &cond_in_attrs, &cond_out_attrs);
+  bool succ_0 = InferSubgraphStorage(
+      *attrs.subgraphs[0], dev_mask, &cond_mode, &cond_in_attrs, &cond_out_attrs);
   CHECK(params.sync_in_out(in_attrs, out_attrs, is_udf));
   CHECK(sync_in_in(params.cond_input_locs, in_attrs, &cond_in_attrs, is_udf));
-  bool succ_1 = InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, \
-                                     &func_mode, &func_in_attrs, out_attrs);
+  bool succ_1 =
+      InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, &func_mode, &func_in_attrs, out_attrs);
   CHECK(params.sync_in_out(in_attrs, out_attrs, is_udf));
   CHECK(sync_in_in(params.func_input_locs, in_attrs, &func_in_attrs, is_udf));
   return succ_0 && succ_1;
@@ -847,15 +849,14 @@ static bool WhileLoopStorageType(const nnvm::NodeAttrs& attrs,
 static bool BackwardWhileLoopStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
                                          DispatchMode* dispatch_mode,
-                                         std::vector<int> *in_attrs,
-                                         std::vector<int> *out_attrs) {
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
   // `cond' is not backwarded, don't check
   const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  CHECK_EQ(out_attrs->size(), (size_t) params.num_args);
+  CHECK_EQ(out_attrs->size(), (size_t)params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 2U);
   CachedOp op(*attrs.subgraphs[1], {});
-  return op.BackwardStorageType(attrs, dev_mask, dispatch_mode,
-                                in_attrs, out_attrs);
+  return op.BackwardStorageType(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 }
 
 static OpStatePtr CreateWhileLoopState(const NodeAttrs& attrs,
@@ -866,8 +867,8 @@ static OpStatePtr CreateWhileLoopState(const NodeAttrs& attrs,
   return OpStatePtr::Create<WhileLoopState>(params, *attrs.subgraphs[0], *attrs.subgraphs[1]);
 }
 
-static std::vector<nnvm::NodeEntry>
-WhileLoopGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+static std::vector<nnvm::NodeEntry> WhileLoopGradient(const nnvm::ObjectPtr& n,
+                                                      const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
   for (auto& h : n->inputs) {
     heads.push_back(h);
@@ -877,17 +878,19 @@ WhileLoopGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& 
     heads.emplace_back(n, i, 0);
   }
 
-  auto p = nnvm::Node::Create();
-  p->attrs.op = nnvm::Op::Get("_backward_npx_while_loop");
+  auto p        = nnvm::Node::Create();
+  p->attrs.op   = nnvm::Op::Get("_backward_npx_while_loop");
   p->attrs.name = n->attrs.name;
   p->attrs.dict = n->attrs.dict;
-  p->inputs = heads;
+  p->inputs     = heads;
   p->control_deps.emplace_back(n);
   p->attrs.parsed = n->attrs.parsed;
   CHECK_EQ(p->num_inputs(), p->inputs.size())
-    << "Number of inputs to operator " << "_backward_npx_while_loop" << " (" << p->num_inputs()
-    << ") does not match the actual number of inputs provided to operator "
-    << n->attrs.name << " (" << p->inputs.size() << ").";
+      << "Number of inputs to operator "
+      << "_backward_npx_while_loop"
+      << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator " << n->attrs.name
+      << " (" << p->inputs.size() << ").";
 
   std::vector<nnvm::NodeEntry> entries;
   for (uint32_t i = 0; i < p->num_outputs(); ++i)
@@ -908,15 +911,14 @@ class CondState {
   int branch_selection;  // 1 if then branch; 0 if else branch; -1 if undefined
 
   CondState(NPXCondParam params,
-            const nnvm::Symbol &cond,
-            const nnvm::Symbol &then_sym,
-            const nnvm::Symbol &else_sym):
-            params(std::move(params)),
-            cond_op(LoopState::MakeSharedOp(cond)),
-            then_branch(then_sym),
-            else_branch(else_sym),
-            branch_selection(-1) {
-  }
+            const nnvm::Symbol& cond,
+            const nnvm::Symbol& then_sym,
+            const nnvm::Symbol& else_sym)
+      : params(std::move(params)),
+        cond_op(LoopState::MakeSharedOp(cond)),
+        then_branch(then_sym),
+        else_branch(else_sym),
+        branch_selection(-1) {}
 };
 
 static void CondComputeExCPU(const OpStatePtr& state_ptr,
@@ -929,20 +931,18 @@ static void CondComputeExCPU(const OpStatePtr& state_ptr,
   // The argument `outputs' are output and new_loop_vars
   // [0: num_out_data) are outputs at each step.
   // [num_out_data: ) are new_loop_vars
-  CondState &state = state_ptr.get_state<CondState>();
+  CondState& state           = state_ptr.get_state<CondState>();
   const NPXCondParam& params = state.params;
   // a helper function, converting std::vector<NDArray> to std::vector<NDArray*>
-  const auto to_ptr_vec = [](std::vector<NDArray> &in, std::vector<NDArray*> *out) {
+  const auto to_ptr_vec = [](std::vector<NDArray>& in, std::vector<NDArray*>* out) {
     out->clear();
     out->reserve(in.size());
-    std::transform(std::begin(in),
-                   std::end(in),
-                   std::back_inserter(*out),
-                   [](NDArray &a) {return &a;});
+    std::transform(
+        std::begin(in), std::end(in), std::back_inserter(*out), [](NDArray& a) { return &a; });
   };
   // sanity checks
-  CHECK_EQ(inputs.size(), (size_t) params.num_args);
-  CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
+  CHECK_EQ(inputs.size(), (size_t)params.num_args);
+  CHECK_EQ(outputs.size(), (size_t)params.num_outputs);
   CHECK_EQ(outputs.size(), req.size());
   // construct inputs and outputs for cond
   std::vector<NDArray> cond_inputs;
@@ -952,19 +952,16 @@ static void CondComputeExCPU(const OpStatePtr& state_ptr,
   extract_by_loc(inputs, params.cond_input_locs, &cond_inputs);
   to_ptr_vec(cond_inputs, &cond_input_ptr);
   to_ptr_vec(cond_outputs, &cond_output_ptr);
-  int &branch_selection = state.branch_selection;
+  int& branch_selection = state.branch_selection;
   // run cond
   CHECK(cond_input_ptr.size() > 0) << "condition requires at least 1 input";
   Context default_ctx = cond_inputs[0].ctx();
   state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr, default_ctx);
   branch_selection = as_bool_scalar(*cond_output_ptr[0]);
   // select the right branch
-  const mxnet::Tuple<dim_t> &func_input_locs = branch_selection
-                                            ? params.then_input_locs
-                                            : params.else_input_locs;
-  LoopState &loop_state = branch_selection
-                        ? state.then_branch
-                        : state.else_branch;
+  const mxnet::Tuple<dim_t>& func_input_locs =
+      branch_selection ? params.then_input_locs : params.else_input_locs;
+  LoopState& loop_state = branch_selection ? state.then_branch : state.else_branch;
   // extract inputs for the branch
   std::vector<NDArray> func_inputs;
   extract_by_loc(inputs, func_input_locs, &func_inputs);
@@ -976,20 +973,17 @@ static void CondGradComputeExCPU(const OpStatePtr& state_ptr,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& _req,
                                  const std::vector<NDArray>& outputs) {
-  CondState &state = state_ptr.get_state<CondState>();
+  CondState& state           = state_ptr.get_state<CondState>();
   const NPXCondParam& params = state.params;
   // sanity checks
-  CHECK_EQ(outputs.size(), (size_t) params.num_args);
+  CHECK_EQ(outputs.size(), (size_t)params.num_args);
   CHECK_EQ(outputs.size(), _req.size());
   // select the right branch
   int branch_selection = state.branch_selection;
   CHECK_NE(branch_selection, -1);
-  const mxnet::Tuple<dim_t> &func_input_locs = branch_selection
-                                            ? params.then_input_locs
-                                            : params.else_input_locs;
-  LoopState &loop_state = branch_selection
-                        ? state.then_branch
-                        : state.else_branch;
+  const mxnet::Tuple<dim_t>& func_input_locs =
+      branch_selection ? params.then_input_locs : params.else_input_locs;
+  LoopState& loop_state = branch_selection ? state.then_branch : state.else_branch;
   // construct parameters
   std::vector<NDArray> ograds(inputs.begin(), inputs.begin() + params.num_outputs);
   std::vector<OpReqType> req;
@@ -1001,12 +995,12 @@ static void CondGradComputeExCPU(const OpStatePtr& state_ptr,
 }
 
 static bool CondType(const nnvm::NodeAttrs& attrs,
-                     std::vector<int> *in_type,
-                     std::vector<int> *out_type) {
-  const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  static const std::function<bool(const int &)> is_udf = is_type_udf;
-  CHECK_EQ(in_type->size(), (size_t) params.num_args);
-  CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
+                     std::vector<int>* in_type,
+                     std::vector<int>* out_type) {
+  const NPXCondParam& params                          = nnvm::get<NPXCondParam>(attrs.parsed);
+  static const std::function<bool(const int&)> is_udf = is_type_udf;
+  CHECK_EQ(in_type->size(), (size_t)params.num_args);
+  CHECK_EQ(out_type->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
   CHECK_EQ(attrs.subgraphs[1]->outputs.size(), attrs.subgraphs[2]->outputs.size());
@@ -1029,12 +1023,12 @@ static bool CondType(const nnvm::NodeAttrs& attrs,
 static bool CondStorageType(const nnvm::NodeAttrs& attrs,
                             const int dev_mask,
                             DispatchMode* dispatch_mode,
-                            std::vector<int> *in_attrs,
-                            std::vector<int> *out_attrs) {
-  const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  CHECK_EQ(in_attrs->size(), (size_t) params.num_args);
-  CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
+                            std::vector<int>* in_attrs,
+                            std::vector<int>* out_attrs) {
+  const NPXCondParam& params                          = nnvm::get<NPXCondParam>(attrs.parsed);
+  static const std::function<bool(const int&)> is_udf = is_stype_udf;
+  CHECK_EQ(in_attrs->size(), (size_t)params.num_args);
+  CHECK_EQ(out_attrs->size(), (size_t)params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
   CHECK_EQ(attrs.subgraphs[1]->outputs.size(), attrs.subgraphs[2]->outputs.size());
@@ -1045,18 +1039,18 @@ static bool CondStorageType(const nnvm::NodeAttrs& attrs,
   extract_by_loc(*in_attrs, params.then_input_locs, &then_in_attrs);
   extract_by_loc(*in_attrs, params.else_input_locs, &else_in_attrs);
   std::vector<int> cond_out_attrs = {kDefaultStorage};
-  DispatchMode cond_mode = DispatchMode::kUndefined;
-  DispatchMode then_mode = DispatchMode::kUndefined;
-  DispatchMode else_mode = DispatchMode::kUndefined;
-  *dispatch_mode = DispatchMode::kFComputeEx;
-  bool succ_0 = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask, \
-                                     &cond_mode, &cond_in_attrs, &cond_out_attrs);
+  DispatchMode cond_mode          = DispatchMode::kUndefined;
+  DispatchMode then_mode          = DispatchMode::kUndefined;
+  DispatchMode else_mode          = DispatchMode::kUndefined;
+  *dispatch_mode                  = DispatchMode::kFComputeEx;
+  bool succ_0                     = InferSubgraphStorage(
+      *attrs.subgraphs[0], dev_mask, &cond_mode, &cond_in_attrs, &cond_out_attrs);
   CHECK(sync_in_in(params.cond_input_locs, in_attrs, &cond_in_attrs, is_udf));
-  bool succ_1 = InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, \
-                                     &then_mode, &then_in_attrs, out_attrs);
+  bool succ_1 =
+      InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, &then_mode, &then_in_attrs, out_attrs);
   CHECK(sync_in_in(params.then_input_locs, in_attrs, &then_in_attrs, is_udf));
-  bool succ_2 = InferSubgraphStorage(*attrs.subgraphs[2], dev_mask, \
-                                     &else_mode, &else_in_attrs, out_attrs);
+  bool succ_2 =
+      InferSubgraphStorage(*attrs.subgraphs[2], dev_mask, &else_mode, &else_in_attrs, out_attrs);
   CHECK(sync_in_in(params.else_input_locs, in_attrs, &else_in_attrs, is_udf));
   return succ_0 && succ_1 && succ_2;
 }
@@ -1064,31 +1058,28 @@ static bool CondStorageType(const nnvm::NodeAttrs& attrs,
 static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
                                     const int dev_mask,
                                     DispatchMode* dispatch_mode,
-                                    std::vector<int> *in_attrs,
-                                    std::vector<int> *out_attrs) {
+                                    std::vector<int>* in_attrs,
+                                    std::vector<int>* out_attrs) {
   const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  CHECK_EQ(out_attrs->size(), (size_t) params.num_args);
+  CHECK_EQ(out_attrs->size(), (size_t)params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
-  static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  auto sub_pass = [&](const std::shared_ptr<nnvm::Symbol> &subg,
-                      const mxnet::Tuple<dim_t> &input_locs) {
+  static const std::function<bool(const int&)> is_udf = is_stype_udf;
+  auto sub_pass = [&](const std::shared_ptr<nnvm::Symbol>& subg,
+                      const mxnet::Tuple<dim_t>& input_locs) {
     // A. first construct subg_in_attrs
     // need subg_in_attrs as subg_bwd_out (copy), subg_fwd_in (extract), subg_fwd_out (copy)
     std::vector<int> subg_in_attrs;
     size_t num_elts = params.num_outputs * 2 + input_locs.ndim();
     subg_in_attrs.reserve(num_elts);
     // part 1. subg_bwd_out (copy)
-    subg_in_attrs.insert(subg_in_attrs.end(),
-                         in_attrs->begin(),
-                         in_attrs->begin() + params.num_outputs);
+    subg_in_attrs.insert(
+        subg_in_attrs.end(), in_attrs->begin(), in_attrs->begin() + params.num_outputs);
     // part 2. subg_fwd_in (extract)
     std::vector<int> fwd_in(in_attrs->begin() + params.num_outputs,
                             in_attrs->begin() + params.num_outputs + params.num_args);
     std::vector<int> subg_fwd_in;
     extract_by_loc(fwd_in, input_locs, &subg_fwd_in);
-    subg_in_attrs.insert(subg_in_attrs.end(),
-                         subg_fwd_in.begin(),
-                         subg_fwd_in.end());
+    subg_in_attrs.insert(subg_in_attrs.end(), subg_fwd_in.begin(), subg_fwd_in.end());
     // part 3. subg_fwd_out (copy)
     subg_in_attrs.insert(subg_in_attrs.end(),
                          in_attrs->begin() + params.num_outputs + params.num_args,
@@ -1100,12 +1091,12 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
     extract_by_loc(*out_attrs, input_locs, &subg_out_attrs);
     // then we construct the subgraph and do inference
     CachedOp op(*subg, {});
-    bool ret = op.BackwardStorageType(attrs, dev_mask, dispatch_mode, \
-                                      &subg_in_attrs, &subg_out_attrs);
+    bool ret =
+        op.BackwardStorageType(attrs, dev_mask, dispatch_mode, &subg_in_attrs, &subg_out_attrs);
     CHECK(sync_in_in(input_locs, out_attrs, &subg_out_attrs, is_udf));
     return ret;
   };
-  for (const dim_t &cond_in : params.cond_input_locs) {
+  for (const dim_t& cond_in : params.cond_input_locs) {
     (*out_attrs)[cond_in] = kDefaultStorage;
   }
   bool succ_0 = sub_pass(attrs.subgraphs[1], params.then_input_locs);
@@ -1119,14 +1110,11 @@ static OpStatePtr CreateCondState(const NodeAttrs& attrs,
                                   const std::vector<int>& itype) {
   const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
   return OpStatePtr::Create<CondState>(
-    params,
-    *attrs.subgraphs[0],
-    *attrs.subgraphs[1],
-    *attrs.subgraphs[2]);
+      params, *attrs.subgraphs[0], *attrs.subgraphs[1], *attrs.subgraphs[2]);
 }
 
-static std::vector<nnvm::NodeEntry>
-CondGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+static std::vector<nnvm::NodeEntry> CondGradient(const nnvm::ObjectPtr& n,
+                                                 const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
   for (auto& h : n->inputs) {
     heads.push_back(h);
@@ -1136,17 +1124,19 @@ CondGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograd
     heads.emplace_back(n, i, 0);
   }
 
-  auto p = nnvm::Node::Create();
-  p->attrs.op = nnvm::Op::Get("_backward_npx_cond");
+  auto p        = nnvm::Node::Create();
+  p->attrs.op   = nnvm::Op::Get("_backward_npx_cond");
   p->attrs.name = n->attrs.name;
   p->attrs.dict = n->attrs.dict;
-  p->inputs = heads;
+  p->inputs     = heads;
   p->control_deps.emplace_back(n);
   p->attrs.parsed = n->attrs.parsed;
   CHECK_EQ(p->num_inputs(), p->inputs.size())
-    << "Number of inputs to operator " << "_backward_npx_cond" << " (" << p->num_inputs()
-    << ") does not match the actual number of inputs provided to operator "
-    << n->attrs.name << " (" << p->inputs.size() << ").";
+      << "Number of inputs to operator "
+      << "_backward_npx_cond"
+      << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator " << n->attrs.name
+      << " (" << p->inputs.size() << ").";
 
   std::vector<nnvm::NodeEntry> entries;
   for (uint32_t i = 0; i < p->num_outputs(); ++i)
@@ -1157,192 +1147,190 @@ CondGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograd
 }
 
 NNVM_REGISTER_OP(_npx_foreach)
-.add_alias("_npx_foreach")
-.MXNET_DESCRIBE("Run a for loop over an NDArray with user-defined computation")
-.set_attr_parser(ParamParser<NPXForeachParam>)
-.set_attr<FInferStorageType>("FInferStorageType", ForeachStorageType)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  return params.num_args;
-})
-.set_num_outputs([](const NodeAttrs& attrs) {
-  const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  return params.num_outputs;
-})
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-    [](const NodeAttrs& attrs) {
-  const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  std::vector<std::string> names;
-  names.emplace_back("fn");
-  for (int i = 0; i < params.num_args - 1; i++)
-    names.push_back("data" + std::to_string(i));
-  return names;
-})
-.set_attr<nnvm::FInputGraph>("FInputGraph",
-    [](const NodeAttrs& attrs) {
-  return std::vector<uint32_t>{0};
-})
-.set_attr<nnvm::FGradient>("FGradient", ForeachGradient)
-.set_attr<FCreateOpState>("FCreateOpState", CreateForeachState)
-.set_attr<mxnet::FInferShape>("FInferShape", ForeachShape)
-.set_attr<nnvm::FInferType>("FInferType", ForeachType)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachComputeExCPU)
-// Foreach operator works like an executor. Its code will always run on CPU.
-// So the same code can be registered for both CPU and GPU.
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForeachComputeExCPU)
-.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-  return ExecType::kSubgraphExec;
-})
-.set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("fn", "Symbol", "Input graph.")
-.add_argument("data", "NDArray-or-Symbol[]",
-              "The input arrays that include data arrays and states.")
-.add_arguments(NPXForeachParam::__FIELDS__());
+    .add_alias("_npx_foreach")
+    .MXNET_DESCRIBE("Run a for loop over an NDArray with user-defined computation")
+    .set_attr_parser(ParamParser<NPXForeachParam>)
+    .set_attr<FInferStorageType>("FInferStorageType", ForeachStorageType)
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
+      return params.num_args;
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
+      return params.num_outputs;
+    })
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       const NPXForeachParam& params =
+                                           nnvm::get<NPXForeachParam>(attrs.parsed);
+                                       std::vector<std::string> names;
+                                       names.emplace_back("fn");
+                                       for (int i = 0; i < params.num_args - 1; i++)
+                                         names.push_back("data" + std::to_string(i));
+                                       return names;
+                                     })
+    .set_attr<nnvm::FInputGraph>("FInputGraph",
+                                 [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+    .set_attr<nnvm::FGradient>("FGradient", ForeachGradient)
+    .set_attr<FCreateOpState>("FCreateOpState", CreateForeachState)
+    .set_attr<mxnet::FInferShape>("FInferShape", ForeachShape)
+    .set_attr<nnvm::FInferType>("FInferType", ForeachType)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachComputeExCPU)
+    // Foreach operator works like an executor. Its code will always run on CPU.
+    // So the same code can be registered for both CPU and GPU.
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForeachComputeExCPU)
+    .set_attr<FExecType>("FExecType",
+                         [](const NodeAttrs& attrs) { return ExecType::kSubgraphExec; })
+    .set_attr<std::string>("key_var_num_args", "num_args")
+    .add_argument("fn", "Symbol", "Input graph.")
+    .add_argument("data",
+                  "NDArray-or-Symbol[]",
+                  "The input arrays that include data arrays and states.")
+    .add_arguments(NPXForeachParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npx_foreach)
-.set_num_inputs([](const NodeAttrs& attrs){
-  const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  return params.num_outputs * 2 + params.num_args;
-})
-.set_num_outputs([](const NodeAttrs& attrs){
-  const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
-  return params.num_args;
-})
-.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-  return ExecType::kSubgraphExec;
-})
-.set_attr<FInferStorageType>("FInferStorageType", BackwardForeachStorageType)
-.set_attr_parser(ParamParser<NPXForeachParam>)
-.set_attr<bool>("TIsLayerOpBackward", true)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachGradComputeExCPU)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForeachGradComputeExCPU);
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
+      return params.num_outputs * 2 + params.num_args;
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const NPXForeachParam& params = nnvm::get<NPXForeachParam>(attrs.parsed);
+      return params.num_args;
+    })
+    .set_attr<FExecType>("FExecType",
+                         [](const NodeAttrs& attrs) { return ExecType::kSubgraphExec; })
+    .set_attr<FInferStorageType>("FInferStorageType", BackwardForeachStorageType)
+    .set_attr_parser(ParamParser<NPXForeachParam>)
+    .set_attr<bool>("TIsLayerOpBackward", true)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachGradComputeExCPU)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForeachGradComputeExCPU);
 
 NNVM_REGISTER_OP(_npx_while_loop)
-.add_alias("_npx_while_loop")
-.MXNET_DESCRIBE("Run a while loop over with user-defined condition and computation")
-.set_attr_parser(ParamParser<NPXWhileLoopParam>)
-.set_attr<FInferStorageType>("FInferStorageType", WhileLoopStorageType)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  return params.num_args;
-})
-.set_num_outputs([](const NodeAttrs& attrs) {
-  const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  return params.num_outputs;
-})
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-    [](const NodeAttrs& attrs) {
-  const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  std::vector<std::string> names;
-  names.reserve(params.num_args);
-  names.emplace_back("cond");
-  names.emplace_back("func");
-  for (int i = 2; i < params.num_args; i++)
-    names.push_back("data" + std::to_string(i - 2));
-  return names;
-})
-.set_attr<nnvm::FInputGraph>("FInputGraph",
-    [](const NodeAttrs& attrs) {
-  return std::vector<uint32_t>{0, 1};
-})
-.set_attr<nnvm::FGradient>("FGradient", WhileLoopGradient)
-.set_attr<FCreateOpState>("FCreateOpState", CreateWhileLoopState)
-.set_attr<mxnet::FInferShape>("FInferShape", WhileLoopShape)
-.set_attr<nnvm::FInferType>("FInferType", WhileLoopType)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", WhileLoopComputeExCPU)
-.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-  return ExecType::kSubgraphExec;
-})
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", WhileLoopComputeExCPU)
-.set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("cond", "Symbol", "Input graph for the loop condition.")
-.add_argument("func", "Symbol", "Input graph for the loop body.")
-.add_argument("data", "NDArray-or-Symbol[]",
-              "The input arrays that include data arrays and states.")
-.add_arguments(NPXWhileLoopParam::__FIELDS__());
+    .add_alias("_npx_while_loop")
+    .MXNET_DESCRIBE("Run a while loop over with user-defined condition and computation")
+    .set_attr_parser(ParamParser<NPXWhileLoopParam>)
+    .set_attr<FInferStorageType>("FInferStorageType", WhileLoopStorageType)
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
+      return params.num_args;
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
+      return params.num_outputs;
+    })
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       const NPXWhileLoopParam& params =
+                                           nnvm::get<NPXWhileLoopParam>(attrs.parsed);
+                                       std::vector<std::string> names;
+                                       names.reserve(params.num_args);
+                                       names.emplace_back("cond");
+                                       names.emplace_back("func");
+                                       for (int i = 2; i < params.num_args; i++)
+                                         names.push_back("data" + std::to_string(i - 2));
+                                       return names;
+                                     })
+    .set_attr<nnvm::FInputGraph>("FInputGraph",
+                                 [](const NodeAttrs& attrs) {
+                                   return std::vector<uint32_t>{0, 1};
+                                 })
+    .set_attr<nnvm::FGradient>("FGradient", WhileLoopGradient)
+    .set_attr<FCreateOpState>("FCreateOpState", CreateWhileLoopState)
+    .set_attr<mxnet::FInferShape>("FInferShape", WhileLoopShape)
+    .set_attr<nnvm::FInferType>("FInferType", WhileLoopType)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", WhileLoopComputeExCPU)
+    .set_attr<FExecType>("FExecType",
+                         [](const NodeAttrs& attrs) { return ExecType::kSubgraphExec; })
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", WhileLoopComputeExCPU)
+    .set_attr<std::string>("key_var_num_args", "num_args")
+    .add_argument("cond", "Symbol", "Input graph for the loop condition.")
+    .add_argument("func", "Symbol", "Input graph for the loop body.")
+    .add_argument("data",
+                  "NDArray-or-Symbol[]",
+                  "The input arrays that include data arrays and states.")
+    .add_arguments(NPXWhileLoopParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npx_while_loop)
-.set_num_inputs([](const NodeAttrs& attrs){
-  const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  return params.num_outputs * 2 + params.num_args;
-})
-.set_num_outputs([](const NodeAttrs& attrs){
-  const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
-  return params.num_args;
-})
-.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-  return ExecType::kSubgraphExec;
-})
-.set_attr<FInferStorageType>("FInferStorageType", BackwardWhileLoopStorageType)
-.set_attr_parser(ParamParser<NPXWhileLoopParam>)
-.set_attr<bool>("TIsLayerOpBackward", true)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", WhileLoopGradComputeExCPU)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", WhileLoopGradComputeExCPU);
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
+      return params.num_outputs * 2 + params.num_args;
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const NPXWhileLoopParam& params = nnvm::get<NPXWhileLoopParam>(attrs.parsed);
+      return params.num_args;
+    })
+    .set_attr<FExecType>("FExecType",
+                         [](const NodeAttrs& attrs) { return ExecType::kSubgraphExec; })
+    .set_attr<FInferStorageType>("FInferStorageType", BackwardWhileLoopStorageType)
+    .set_attr_parser(ParamParser<NPXWhileLoopParam>)
+    .set_attr<bool>("TIsLayerOpBackward", true)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", WhileLoopGradComputeExCPU)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", WhileLoopGradComputeExCPU);
 
 NNVM_REGISTER_OP(_npx_cond)
-.add_alias("_npx_cond")
-.MXNET_DESCRIBE("Run a if-then-else using user-defined condition and computation")
-.set_attr_parser(ParamParser<NPXCondParam>)
-.set_attr<FInferStorageType>("FInferStorageType", CondStorageType)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  return params.num_args;
-})
-.set_num_outputs([](const NodeAttrs& attrs) {
-  const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  return params.num_outputs;
-})
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-    [](const NodeAttrs& attrs) {
-  const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  std::vector<std::string> names;
-  names.reserve(params.num_args);
-  names.emplace_back("cond");
-  names.emplace_back("then_branch");
-  names.emplace_back("else_branch");
-  for (int i = 3; i < params.num_args; ++i)
-    names.push_back("data" + std::to_string(i - 3));
-  return names;
-})
-.set_attr<nnvm::FInputGraph>("FInputGraph",
-    [](const NodeAttrs& attrs) {
-  return std::vector<uint32_t>{0, 1, 2};
-})
-.set_attr<nnvm::FGradient>("FGradient", CondGradient)
-.set_attr<FCreateOpState>("FCreateOpState", CreateCondState)
-.set_attr<nnvm::FInferType>("FInferType", CondType)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CondComputeExCPU)
-.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-  return ExecType::kSubgraphExec;
-})
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CondComputeExCPU)
-.set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("cond", "Symbol", "Input graph for the condition.")
-.add_argument("then_branch", "Symbol", "Input graph for the then branch.")
-.add_argument("else_branch", "Symbol", "Input graph for the else branch.")
-.add_argument("data", "NDArray-or-Symbol[]",
-              "The input arrays that include data arrays and states.")
-.add_arguments(NPXCondParam::__FIELDS__());
+    .add_alias("_npx_cond")
+    .MXNET_DESCRIBE("Run a if-then-else using user-defined condition and computation")
+    .set_attr_parser(ParamParser<NPXCondParam>)
+    .set_attr<FInferStorageType>("FInferStorageType", CondStorageType)
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
+      return params.num_args;
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
+      return params.num_outputs;
+    })
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       const NPXCondParam& params =
+                                           nnvm::get<NPXCondParam>(attrs.parsed);
+                                       std::vector<std::string> names;
+                                       names.reserve(params.num_args);
+                                       names.emplace_back("cond");
+                                       names.emplace_back("then_branch");
+                                       names.emplace_back("else_branch");
+                                       for (int i = 3; i < params.num_args; ++i)
+                                         names.push_back("data" + std::to_string(i - 3));
+                                       return names;
+                                     })
+    .set_attr<nnvm::FInputGraph>("FInputGraph",
+                                 [](const NodeAttrs& attrs) {
+                                   return std::vector<uint32_t>{0, 1, 2};
+                                 })
+    .set_attr<nnvm::FGradient>("FGradient", CondGradient)
+    .set_attr<FCreateOpState>("FCreateOpState", CreateCondState)
+    .set_attr<nnvm::FInferType>("FInferType", CondType)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CondComputeExCPU)
+    .set_attr<FExecType>("FExecType",
+                         [](const NodeAttrs& attrs) { return ExecType::kSubgraphExec; })
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CondComputeExCPU)
+    .set_attr<std::string>("key_var_num_args", "num_args")
+    .add_argument("cond", "Symbol", "Input graph for the condition.")
+    .add_argument("then_branch", "Symbol", "Input graph for the then branch.")
+    .add_argument("else_branch", "Symbol", "Input graph for the else branch.")
+    .add_argument("data",
+                  "NDArray-or-Symbol[]",
+                  "The input arrays that include data arrays and states.")
+    .add_arguments(NPXCondParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npx_cond)
-.set_num_inputs([](const NodeAttrs& attrs){
-  const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  return params.num_outputs * 2 + params.num_args;
-})
-.set_num_outputs([](const NodeAttrs& attrs){
-  const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
-  return params.num_args;
-})
-.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-  return ExecType::kSubgraphExec;
-})
-.set_attr<FInferStorageType>("FInferStorageType", BackwardCondStorageType)
-.set_attr_parser(ParamParser<NPXCondParam>)
-.set_attr<bool>("TIsLayerOpBackward", true)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CondGradComputeExCPU)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CondGradComputeExCPU);
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
+      return params.num_outputs * 2 + params.num_args;
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const NPXCondParam& params = nnvm::get<NPXCondParam>(attrs.parsed);
+      return params.num_args;
+    })
+    .set_attr<FExecType>("FExecType",
+                         [](const NodeAttrs& attrs) { return ExecType::kSubgraphExec; })
+    .set_attr<FInferStorageType>("FInferStorageType", BackwardCondStorageType)
+    .set_attr_parser(ParamParser<NPXCondParam>)
+    .set_attr<bool>("TIsLayerOpBackward", true)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CondGradComputeExCPU)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CondGradComputeExCPU);
 }  // namespace op
 }  // namespace mxnet

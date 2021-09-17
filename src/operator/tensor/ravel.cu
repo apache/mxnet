@@ -26,11 +26,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_ravel_multi_index)
-.set_attr<FCompute>("FCompute<gpu>", RavelForward<gpu>);
+NNVM_REGISTER_OP(_ravel_multi_index).set_attr<FCompute>("FCompute<gpu>", RavelForward<gpu>);
 
-NNVM_REGISTER_OP(_unravel_index)
-.set_attr<FCompute>("FCompute<gpu>", UnravelForward<gpu>);
+NNVM_REGISTER_OP(_unravel_index).set_attr<FCompute>("FCompute<gpu>", UnravelForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

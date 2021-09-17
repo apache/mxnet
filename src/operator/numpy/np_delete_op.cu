@@ -28,8 +28,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_delete)
-.set_attr<FComputeEx>("FComputeEx<gpu>", NumpyDeleteCompute<gpu>);
+NNVM_REGISTER_OP(_npi_delete).set_attr<FComputeEx>("FComputeEx<gpu>", NumpyDeleteCompute<gpu>);
 
 }
-}
+}  // namespace mxnet

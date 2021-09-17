@@ -28,26 +28,27 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_sample_uniform)
-.set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, UniformSampler<gpu>, 2>);
+    .set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, UniformSampler<gpu>, 2>);
 
 NNVM_REGISTER_OP(_sample_normal)
-.set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, NormalSampler<gpu>, 2>);
+    .set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, NormalSampler<gpu>, 2>);
 
 NNVM_REGISTER_OP(_sample_gamma)
-.set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, GammaSampler<gpu>, 2>);
+    .set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, GammaSampler<gpu>, 2>);
 
 NNVM_REGISTER_OP(_sample_exponential)
-.set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, ExponentialSampler<gpu>, 1>);
+    .set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, ExponentialSampler<gpu>, 1>);
 
 NNVM_REGISTER_OP(_sample_poisson)
-.set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, PoissonSampler<gpu>, 1>);
+    .set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, PoissonSampler<gpu>, 1>);
 
 NNVM_REGISTER_OP(_sample_negative_binomial)
-.set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, NegativeBinomialSampler<gpu>, 2>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        MultiSampleOpForward<gpu, NegativeBinomialSampler<gpu>, 2>);
 
 NNVM_REGISTER_OP(_sample_generalized_negative_binomial)
-.set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu,
-                    GeneralizedNegativeBinomialSampler<gpu>, 2>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        MultiSampleOpForward<gpu, GeneralizedNegativeBinomialSampler<gpu>, 2>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -30,18 +30,16 @@ namespace mxnet {
 namespace op {
 
 template <>
-void _copy<gpu>(mshadow::Stream<gpu> *s, float *dst, float *src) {
+void _copy<gpu>(mshadow::Stream<gpu>* s, float* dst, float* src) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  CUDA_CALL(cudaMemcpyAsync(dst, src, sizeof(float), cudaMemcpyDeviceToHost,
-                            stream));
+  CUDA_CALL(cudaMemcpyAsync(dst, src, sizeof(float), cudaMemcpyDeviceToHost, stream));
   CUDA_CALL(cudaStreamSynchronize(stream));
 }
 
 template <>
-void _copy<gpu>(mshadow::Stream<gpu> *s, double *dst, double *src) {
+void _copy<gpu>(mshadow::Stream<gpu>* s, double* dst, double* src) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  CUDA_CALL(cudaMemcpyAsync(dst, src, sizeof(double), cudaMemcpyDeviceToHost,
-                            stream));
+  CUDA_CALL(cudaMemcpyAsync(dst, src, sizeof(double), cudaMemcpyDeviceToHost, stream));
   CUDA_CALL(cudaStreamSynchronize(stream));
 }
 

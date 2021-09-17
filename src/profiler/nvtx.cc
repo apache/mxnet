@@ -17,5 +17,4 @@
  * under the License.
  */
 
-
 #include "nvtx.h"

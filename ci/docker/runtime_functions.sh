@@ -806,6 +806,22 @@ unittest_ubuntu_python3_cpu_onednn() {
     pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
 }
 
+unittest_array_api_standardization() {
+    set -ex
+    python3 -m pip install -e /work/mxnet/python --user
+    cd ..
+    git clone https://github.com/data-apis/array-api-tests.git
+    pushd /work/array-api-tests
+    export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
+    # OverflowError: Python int too large to convert to C long
+    # when cython is enabled
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+    popd
+}
+
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -1188,7 +1204,12 @@ build_docs() {
     mkdir -p $python_doc_folder && tar -xzf python-artifacts.tgz --directory $python_doc_folder
     mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api
 
-     # check if .htaccess file exists
+    # check if .asf.yaml file exists
+    if [ ! -f "html/.asf.yaml" ]; then
+        echo "html/.asf.yaml file does not exist. Exiting 1"
+        exit 1
+    fi
+    # check if .htaccess file exists
     if [ ! -f "html/.htaccess" ]; then
         echo "html/.htaccess file does not exist. Exiting 1"
         exit 1

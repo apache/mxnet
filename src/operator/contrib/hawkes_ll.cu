@@ -28,11 +28,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_contrib_hawkesll)
-.set_attr<FCompute>("FCompute<gpu>", HawkesLLForward<gpu>);
+NNVM_REGISTER_OP(_contrib_hawkesll).set_attr<FCompute>("FCompute<gpu>", HawkesLLForward<gpu>);
 
 NNVM_REGISTER_OP(_contrib_backward_hawkesll)
-.set_attr<FCompute>("FCompute<gpu>", HawkesLLBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", HawkesLLBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -22,38 +22,36 @@
  * \file sequence_last.cc
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 #include "./sequence_last-inl.h"
 
 namespace mxnet {
 namespace op {
 template <>
-Operator *CreateOp<cpu>(SequenceLastParam param, int dtype, int itype) {
-  Operator *op = nullptr;
+Operator* CreateOp<cpu>(SequenceLastParam param, int dtype, int itype) {
+  Operator* op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceLastOp<cpu, DType, IType>(param);
-        });
-    });
+    MSHADOW_TYPE_SWITCH(itype, IType, { op = new SequenceLastOp<cpu, DType, IType>(param); });
+  });
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
-                                             mxnet::ShapeVector *in_shape,
-                                             std::vector<int> *in_type) const {
+Operator* SequenceLastProp::CreateOperatorEx(Context ctx,
+                                             mxnet::ShapeVector* in_shape,
+                                             std::vector<int>* in_type) const {
   if (in_type->size() >= 2 && (*in_type)[1] != -1) {
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);
   }
 
-  // sequence_length not passed in, so fall back to using int32/int64 dtype for second argument
-  // second argument is the dtype of the sequence_length NDArray
-  // use int32 or int64 as index dtype based on build flag
-  #if MXNET_USE_INT64_TENSOR_SIZE == 1
-      DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], mshadow::kInt64);
-  #else
-      DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], mshadow::kInt32);
-  #endif
+// sequence_length not passed in, so fall back to using int32/int64 dtype for second argument
+// second argument is the dtype of the sequence_length NDArray
+// use int32 or int64 as index dtype based on build flag
+#if MXNET_USE_INT64_TENSOR_SIZE == 1
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], mshadow::kInt64);
+#else
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], mshadow::kInt32);
+#endif
 }
 
 DMLC_REGISTER_PARAMETER(SequenceLastParam);
@@ -104,15 +102,16 @@ Example::
              [  25.,  26.,  27.]]
 
 )code" ADD_FILELINE)
-    .add_argument("data", "NDArray-or-Symbol",
+    .add_argument("data",
+                  "NDArray-or-Symbol",
                   "n-dimensional input array of the form [max_sequence_length,"
                   " batch_size, other_feature_dims] where n>2")
-    .add_argument("sequence_length", "NDArray-or-Symbol",
+    .add_argument("sequence_length",
+                  "NDArray-or-Symbol",
                   "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceLastParam::__FIELDS__());
 
-NNVM_REGISTER_OP(SequenceLast)
-.add_alias("_npx_sequence_last");
+NNVM_REGISTER_OP(SequenceLast).add_alias("_npx_sequence_last");
 
 }  // namespace op
 }  // namespace mxnet

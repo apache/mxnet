@@ -52,9 +52,9 @@ inline bool NumpyPadOpShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
-inline bool NumpyPadOpType(const nnvm::NodeAttrs &attrs,
-                           std::vector<int> *in_attrs,
-                           std::vector<int> *out_attrs) {
+inline bool NumpyPadOpType(const nnvm::NodeAttrs& attrs,
+                           std::vector<int>* in_attrs,
+                           std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -66,34 +66,32 @@ inline bool NumpyPadOpType(const nnvm::NodeAttrs &attrs,
 DMLC_REGISTER_PARAMETER(NumpyPadParam);
 
 NNVM_REGISTER_OP(_npi_pad)
-.set_attr_parser(ParamParser<NumpyPadParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyPadOpShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyPadOpType)
-.set_attr<FCompute>("FCompute<cpu>", NumpyPadOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_pad"})
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(NumpyPadParam::__FIELDS__())
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  });
+    .set_attr_parser(ParamParser<NumpyPadParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyPadOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyPadOpType)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyPadOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_pad"})
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(NumpyPadParam::__FIELDS__())
+    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    });
 
 NNVM_REGISTER_OP(_backward_npi_pad)
-.set_attr_parser(ParamParser<NumpyPadParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NumpyPadOpBackward<cpu>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  });
+    .set_attr_parser(ParamParser<NumpyPadParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyPadOpBackward<cpu>)
+    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    });
 
 }  // namespace op
 }  // namespace mxnet

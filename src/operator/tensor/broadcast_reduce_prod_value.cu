@@ -27,19 +27,20 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(prod)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>
-                                     {"identity", "red::product{}", false});
+NNVM_REGISTER_OP(prod).set_attr<FCompute>("FCompute<gpu>",
+                                          ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
+                                                                                   "red::product{}",
+                                                                                   false});
 
 NNVM_REGISTER_OP(_backward_prod)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
+    .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
 
-NNVM_REGISTER_OP(nanprod)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>
-                                     {"identity", "red::nanprod{}", false});
+NNVM_REGISTER_OP(nanprod).set_attr<FCompute>(
+    "FCompute<gpu>",
+    ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity", "red::nanprod{}", false});
 
 NNVM_REGISTER_OP(_backward_nanprod)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nanprod_grad>);
+    .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nanprod_grad>);
 
 }  // namespace op
 }  // namespace mxnet

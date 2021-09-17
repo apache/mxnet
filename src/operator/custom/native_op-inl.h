@@ -22,7 +22,7 @@
  * \file native_op-inl.h
  * \brief
  * \author Junyuan Xie
-*/
+ */
 
 #ifndef MXNET_OPERATOR_CUSTOM_NATIVE_OP_INL_H_
 #define MXNET_OPERATOR_CUSTOM_NATIVE_OP_INL_H_
@@ -41,33 +41,35 @@ namespace mxnet {
 namespace op {
 
 struct NativeOpParam : public dmlc::Parameter<NativeOpParam> {
-  void *info;
+  void* info;
   bool need_top_grad;
 
-  NativeOpInfo *pinfo;
+  NativeOpInfo* pinfo;
   int num_inputs_, num_outputs_;
   DMLC_DECLARE_PARAMETER(NativeOpParam) {
     DMLC_DECLARE_FIELD(info);
-    DMLC_DECLARE_FIELD(need_top_grad).set_default(true)
-    .describe("Whether this layer needs out grad for backward. "
-      "Should be false for loss layers.");
+    DMLC_DECLARE_FIELD(need_top_grad)
+        .set_default(true)
+        .describe(
+            "Whether this layer needs out grad for backward. "
+            "Should be false for loss layers.");
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 class NativeOp : public Operator {
  public:
   explicit NativeOp(NativeOpParam p) {
     this->param_ = p;
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  virtual void Forward(const OpContext& ctx,
+                       const std::vector<TBlob>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& out_data,
+                       const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     ptrs.clear();
     ndims.clear();
     shapes.clear();
@@ -75,29 +77,32 @@ class NativeOp : public Operator {
     SyncVec(in_data, "in_data", s, 0);
     SyncVec(out_data, "out_data", s, 1);
     s->Wait();
-    param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
-        tags.data(), param_.pinfo->p_forward);
+    param_.pinfo->forward(ptrs.size(),
+                          ptrs.data(),
+                          ndims.data(),
+                          shapes.data(),
+                          tags.data(),
+                          param_.pinfo->p_forward);
     for (size_t i = 0; i < out_data.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
         ss << std::string("out_data") << i;
-        Copy(out_data[i].FlatTo2D<xpu, real_t>(s),
-             buffer_map[ss.str()].second, s);
+        Copy(out_data[i].FlatTo2D<xpu, real_t>(s), buffer_map[ss.str()].second, s);
       }
     }
     s->Wait();
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  virtual void Backward(const OpContext& ctx,
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     ptrs.clear();
     ndims.clear();
     shapes.clear();
@@ -109,15 +114,18 @@ class NativeOp : public Operator {
       SyncVec(out_grad, "out_grad", s, 3);
     }
     s->Wait();
-    param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
-        tags.data(), param_.pinfo->p_backward);
+    param_.pinfo->backward(ptrs.size(),
+                           ptrs.data(),
+                           ndims.data(),
+                           shapes.data(),
+                           tags.data(),
+                           param_.pinfo->p_backward);
     for (size_t i = 0; i < in_grad.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
         ss << std::string("in_grad") << i;
-        Copy(in_grad[i].FlatTo2D<xpu, real_t>(s),
-             buffer_map[ss.str()].second, s);
+        Copy(in_grad[i].FlatTo2D<xpu, real_t>(s), buffer_map[ss.str()].second, s);
       }
     }
     s->Wait();
@@ -132,35 +140,33 @@ class NativeOp : public Operator {
   std::vector<int> tags;
   std::map<std::string, std::pair<mxnet::TShape, mshadow::Tensor<cpu, 2> > > buffer_map;
 
-  virtual void SyncBuffer(const TBlob &tblob,
-                          const std::string &name,
-                          mshadow::Stream<xpu> *stream) {
+  virtual void SyncBuffer(const TBlob& tblob,
+                          const std::string& name,
+                          mshadow::Stream<xpu>* stream) {
     using namespace mshadow;
     std::map<std::string, std::pair<mxnet::TShape, mshadow::Tensor<cpu, 2> > >::iterator buffer =
-      buffer_map.find(name);
+        buffer_map.find(name);
     if (buffer == buffer_map.end() || buffer->second.first != tblob.shape_) {
       if (buffer != buffer_map.end()) {
         FreeSpace<2, real_t>(&(buffer->second.second));
         buffer_map.erase(buffer);
       }
-      buffer_map[name] =
-        std::pair<mxnet::TShape, Tensor<cpu, 2> >(tblob.shape_,
-                                         NewTensor<cpu>(tblob.shape_.FlatTo2D(),
-                                                        0.0f,
-                                                        false));
+      buffer_map[name] = std::pair<mxnet::TShape, Tensor<cpu, 2> >(
+          tblob.shape_, NewTensor<cpu>(tblob.shape_.FlatTo2D(), 0.0f, false));
       buffer = buffer_map.find(name);
     }
     Copy(buffer->second.second, tblob.FlatTo2D<xpu, real_t>(stream), stream);
   }
 
-  virtual void SyncVec(const std::vector<TBlob> &vec,
-                       const std::string &prefix,
-                       mshadow::Stream<xpu> *stream,
+  virtual void SyncVec(const std::vector<TBlob>& vec,
+                       const std::string& prefix,
+                       mshadow::Stream<xpu>* stream,
                        int tag) {
     size_t size = 0;
-    for (const auto& tblob : vec) size += tblob.shape_.ndim();
+    for (const auto& tblob : vec)
+      size += tblob.shape_.ndim();
     shapes_buffer_.resize(size);
-    uint32_t *ptr = shapes_buffer_.data();
+    uint32_t* ptr = shapes_buffer_.data();
     for (size_t i = 0; i < vec.size(); ++i) {
       std::stringstream name;
       name << prefix << i;
@@ -174,14 +180,14 @@ class NativeOp : public Operator {
   }
 };  // NativeOp
 
-template<typename xpu>
+template <typename xpu>
 Operator* CreateOp(NativeOpParam param);
 
 #if DMLC_USE_CXX11
 class NativeOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
-    char ** args = nullptr;
+    char** args = nullptr;
     param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != nullptr; ++i) {
@@ -191,7 +197,7 @@ class NativeOpProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListOutputs() const override {
-    char ** args = nullptr;
+    char** args = nullptr;
     param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != nullptr; ++i) {
@@ -211,7 +217,7 @@ class NativeOpProp : public OperatorProperty {
         sscanf(kwarg.second.c_str(), "%p", &param_.pinfo);
       }
     }
-    param_.num_inputs_ = ListArguments().size();
+    param_.num_inputs_  = ListArguments().size();
     param_.num_outputs_ = ListOutputs().size();
   }
 
@@ -219,38 +225,38 @@ class NativeOpProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     std::vector<uint32_t*> shapes;
     std::vector<int> ndims;
     size_t size = 0;
-    for (const auto& s : *in_shape) size += s.ndim();
+    for (const auto& s : *in_shape)
+      size += s.ndim();
     std::vector<uint32_t> shapes_buffer(size);
-    uint32_t *ptr = shapes_buffer.data();
+    uint32_t* ptr = shapes_buffer.data();
     for (const auto& shape : *in_shape) {
       shapes.push_back(ptr);
       ndims.push_back(shape.ndim());
       ptr = nnvm::ShapeTypeCast(shape.begin(), shape.end(), ptr);
     }
-    shapes.resize(param_.num_inputs_+param_.num_outputs_);
-    ndims.resize(param_.num_inputs_+param_.num_outputs_);
-    param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
-          param_.pinfo->p_infer_shape);
+    shapes.resize(param_.num_inputs_ + param_.num_outputs_);
+    ndims.resize(param_.num_inputs_ + param_.num_outputs_);
+    param_.pinfo->infer_shape(
+        shapes.size(), ndims.data(), shapes.data(), param_.pinfo->p_infer_shape);
     for (unsigned i = 0; i < in_shape->size(); ++i) {
-      SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
+      SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape(shapes[i], shapes[i] + ndims[i]));
     }
     out_shape->clear();
     for (unsigned i = param_.num_inputs_; i < shapes.size(); ++i) {
-      out_shape->push_back(mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
+      out_shape->push_back(mxnet::TShape(shapes[i], shapes[i] + ndims[i]));
     }
     return true;
   }
 
   OperatorProperty* Copy() const override {
-    NativeOpProp *prop_sym = new NativeOpProp();
-    prop_sym->param_ = this->param_;
+    NativeOpProp* prop_sym = new NativeOpProp();
+    prop_sym->param_       = this->param_;
     return prop_sym;
   }
 
@@ -258,10 +264,9 @@ class NativeOpProp : public OperatorProperty {
     return "_Native";
   }
 
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(const std::vector<int>& out_grad,
+                                             const std::vector<int>& in_data,
+                                             const std::vector<int>& out_data) const override {
     std::vector<int> deps;
     if (param_.need_top_grad) {
       deps.insert(deps.end(), out_grad.begin(), out_grad.end());
@@ -272,10 +277,10 @@ class NativeOpProp : public OperatorProperty {
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
+      const std::vector<int>& out_grad,
+      const std::vector<int>& in_data,
+      const std::vector<int>& out_data,
+      const std::vector<void*>& in_grad) const override {
     return {};
   }
 
@@ -283,7 +288,7 @@ class NativeOpProp : public OperatorProperty {
 
  private:
   NativeOpParam param_;
-};  // class PythonProp
+};      // class PythonProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet

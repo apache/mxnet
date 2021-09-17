@@ -22,19 +22,18 @@
  * \file sequence_last.cu
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 
 #include "./sequence_last-inl.h"
 
 namespace mxnet {
 namespace op {
-template <> Operator *CreateOp<gpu>(SequenceLastParam param, int dtype, int itype) {
-  Operator *op = nullptr;
+template <>
+Operator* CreateOp<gpu>(SequenceLastParam param, int dtype, int itype) {
+  Operator* op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceLastOp<gpu, DType, IType>(param);
-        });
-    });
+    MSHADOW_TYPE_SWITCH(itype, IType, { op = new SequenceLastOp<gpu, DType, IType>(param); });
+  });
   return op;
 }
 

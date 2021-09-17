@@ -32,7 +32,7 @@ namespace op {
 #if MXNET_USE_CUSOLVER == 1
 
 NNVM_REGISTER_OP(_npi_cholesky)
-.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potrf>);
+    .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potrf>);
 
 #endif
 

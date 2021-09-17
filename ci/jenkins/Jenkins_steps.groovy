@@ -60,6 +60,12 @@ def python3_ut_onednn(docker_container_name) {
   }
 }
 
+def python3_ut_array_api(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_array_api_standardization', false)
+  }
+}
+
 // GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
 // both CPU and GPU
 // Python 3
@@ -665,6 +671,18 @@ def test_unix_python3_cpu(lib_name) {
     }]
 }
 
+def test_unix_python3_array_api(lib_name) {
+    return ['Python3: Array-API': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-cpu') {
+          utils.unpack_and_init(lib_name, mx_lib, true)
+          python3_ut_array_api('ubuntu_cpu')
+          utils.publish_test_coverage()
+        }
+      }
+    }]
+}
+
 def test_unix_python3_mkl_cpu(lib_name) {
     return ['Python3: MKL-CPU': {
       node(NODE_LINUX_CPU) {
@@ -1070,7 +1088,7 @@ def should_pack_website() {
 // Call this function from Jenkins to generate just the Python API microsite artifacts.
 def docs_python(lib_name) {
     return ['Python Docs': {
-      node(NODE_LINUX_GPU_G4) {
+      node(NODE_LINUX_GPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cython)

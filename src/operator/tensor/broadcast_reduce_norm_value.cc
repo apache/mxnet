@@ -28,7 +28,7 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(NormParam);
 
-template<>
+template <>
 void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<NDArray>& inputs,
@@ -37,12 +37,12 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  const NormParam& param          = nnvm::get<NormParam>(attrs.parsed);
+  mshadow::Stream<cpu>* s         = ctx.get_stream<cpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
   const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape(0, -1);
   if ((istype == kRowSparseStorage || istype == kCSRStorage) && axis.ndim() == 0 &&
-       param.ord == 2) {
+      param.ord == 2) {
     // l2 norm on the entire array
     L2NormComputeSparseImpl<cpu>(s, inputs[0], req[0], outputs[0].data());
   } else if (istype == kCSRStorage && axis.ndim() == 1 && (axis[0] == 0 || axis[0] == 1) &&
@@ -59,7 +59,7 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(norm)
 MXNET_ADD_SPARSE_OP_ALIAS(norm)
-.describe(R"code(Computes the norm on an NDArray.
+    .describe(R"code(Computes the norm on an NDArray.
 
 This operator computes the norm on an NDArray with the specified axis, depending
 on the value of the ord parameter. By default, it computes the L2 norm on the entire
@@ -87,35 +87,34 @@ Examples::
   norm(csr) = [5.47722578]
 
 )code" ADD_FILELINE)
-.add_alias("_npx_norm")
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NormParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", NormShape)
-.set_attr<nnvm::FInferType>("FInferType", NormType)
-.set_attr<FInferStorageType>("FInferStorageType", LpNormStorageType)
-.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", LpNormCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
-.add_argument("data", "NDArray-or-Symbol", "The input")
-.add_arguments(NormParam::__FIELDS__());
+    .add_alias("_npx_norm")
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NormParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", NormShape)
+    .set_attr<nnvm::FInferType>("FInferType", NormType)
+    .set_attr<FInferStorageType>("FInferStorageType", LpNormStorageType)
+    .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_norm"})
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", LpNormCompute<cpu>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
+    .add_argument("data", "NDArray-or-Symbol", "The input")
+    .add_arguments(NormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_norm)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NormParam>)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", LpNormGradCompute<cpu>);
-
+    .set_num_inputs(3)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NormParam>)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", LpNormGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

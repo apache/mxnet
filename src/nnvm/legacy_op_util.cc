@@ -34,11 +34,11 @@
 namespace mxnet {
 namespace op {
 
-using nnvm::Op;
 using nnvm::Node;
-using nnvm::ObjectPtr;
 using nnvm::NodeAttrs;
 using nnvm::NodeEntry;
+using nnvm::ObjectPtr;
+using nnvm::Op;
 
 class ParsedOpProp {
  public:
@@ -50,7 +50,7 @@ class ParsedOpProp {
   // initializer
   void Init(const NodeAttrs& attrs) {
     // For performance, do a reserve first and then copy attrs.dict
-    std::vector<std::pair<std::string, std::string> > kwargs;
+    std::vector<std::pair<std::string, std::string>> kwargs;
     kwargs.reserve(attrs.dict.size());
     kwargs.insert(kwargs.end(), attrs.dict.begin(), attrs.dict.end());
     try {
@@ -66,18 +66,17 @@ class ParsedOpProp {
       os << ")";
       throw dmlc::ParamError(os.str());
     }
-    arguments = ptr->ListArguments();
+    arguments  = ptr->ListArguments();
     aux_states = ptr->ListAuxiliaryStates();
-    outputs = ptr->ListOutputs();
-    inputs = arguments;
-    inputs.insert(
-        inputs.end(), aux_states.begin(), aux_states.end());
+    outputs    = ptr->ListOutputs();
+    inputs     = arguments;
+    inputs.insert(inputs.end(), aux_states.begin(), aux_states.end());
   }
 };
 
 class OperatorState {
  public:
-  OperatorState(Operator *opr, const OperatorProperty *prop) {
+  OperatorState(Operator* opr, const OperatorProperty* prop) {
     opr_ = opr;
 
     in_data_fwd_.resize(prop->ListArguments().size());
@@ -99,13 +98,14 @@ class OperatorState {
     for (size_t i = 0; i < out_data_.size(); ++i) {
       out_data_ptr[i] = &out_data_[i];
     }
-    arg_data_ptr_ = prop->BackwardInputs(
-        out_grad_ptr, in_data_ptr, out_data_ptr);
+    arg_data_ptr_ = prop->BackwardInputs(out_grad_ptr, in_data_ptr, out_data_ptr);
   }
 
-  ~OperatorState() { delete opr_; }
+  ~OperatorState() {
+    delete opr_;
+  }
 
-  void Forward(const OpContext &ctx,
+  void Forward(const OpContext& ctx,
                const std::vector<TBlob>& inputs,
                const std::vector<OpReqType>& req,
                const std::vector<TBlob>& outputs) {
@@ -113,16 +113,19 @@ class OperatorState {
     CHECK_EQ(outputs.size(), out_data_.size());
     // in_data_bwd_ has the same tblobs as the ones in in_data_fwd_, except that the ones
     // referred by arg_data_ptr_ will be overriden
-    for (size_t i = 0; i < in_data_fwd_.size(); ++i) in_data_fwd_[i] = inputs[i];
-    for (size_t i = 0; i < in_data_fwd_.size(); ++i) in_data_bwd_[i] = inputs[i];
+    for (size_t i = 0; i < in_data_fwd_.size(); ++i)
+      in_data_fwd_[i] = inputs[i];
+    for (size_t i = 0; i < in_data_fwd_.size(); ++i)
+      in_data_bwd_[i] = inputs[i];
     for (size_t i = 0; i < aux_data_.size(); ++i) {
       aux_data_[i] = inputs[i + in_data_fwd_.size()];
     }
-    for (size_t i = 0; i < out_data_.size(); ++i) out_data_[i] = outputs[i];
+    for (size_t i = 0; i < out_data_.size(); ++i)
+      out_data_[i] = outputs[i];
     opr_->Forward(ctx, in_data_fwd_, req, out_data_, aux_data_);
   }
 
-  void Backward(const OpContext &ctx,
+  void Backward(const OpContext& ctx,
                 const std::vector<TBlob>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
@@ -136,12 +139,13 @@ class OperatorState {
       aux_data_[i] = inputs[inputs.size() - aux_data_.size() + i];
     }
     CHECK_EQ(outputs.size(), in_grad_.size());
-    for (size_t i = 0; i < outputs.size(); ++i) in_grad_[i] = outputs[i];
+    for (size_t i = 0; i < outputs.size(); ++i)
+      in_grad_[i] = outputs[i];
     opr_->Backward(ctx, out_grad_, in_data_bwd_, out_data_, req, in_grad_, aux_data_);
   }
 
  private:
-  Operator *opr_;
+  Operator* opr_;
   // input data blobs for forward and backward
   // in_data_fwd_ and in_data_bwd_ will hold different tblobs when StorageFallbackOpExecutor
   // performs storage fallback on a non-default input NDArray. The one in in_data_fwd_ is
@@ -176,17 +180,15 @@ const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs) {
   return nnvm::get<ParsedOpProp>(attrs.parsed).ptr.get();
 }
 
-template<typename AttrType, typename FInfer>
+template <typename AttrType, typename FInfer>
 bool OpPropInferAttr(const NodeAttrs& attrs,
-                     std::vector<AttrType> *iattr,
-                     std::vector<AttrType> *oattr,
+                     std::vector<AttrType>* iattr,
+                     std::vector<AttrType>* oattr,
                      FInfer finfer) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   CHECK_EQ(prop.inputs.size(), iattr->size())
-      << "op=" << attrs.op->name
-      << ", inputs.size=" << prop.inputs.size()
-      << ", iattr.size=" << iattr->size()
-      << ", arg.size=" << prop.arguments.size();
+      << "op=" << attrs.op->name << ", inputs.size=" << prop.inputs.size()
+      << ", iattr.size=" << iattr->size() << ", arg.size=" << prop.arguments.size();
   std::vector<AttrType> in_attr(prop.arguments.size());
   std::vector<AttrType> aux_attr(prop.aux_states.size());
 
@@ -196,7 +198,8 @@ bool OpPropInferAttr(const NodeAttrs& attrs,
   for (size_t i = 0; i < prop.aux_states.size(); ++i) {
     aux_attr[i] = (*iattr)[i + prop.arguments.size()];
   }
-  if (!finfer(prop.ptr.get(), &in_attr, oattr, &aux_attr)) return false;
+  if (!finfer(prop.ptr.get(), &in_attr, oattr, &aux_attr))
+    return false;
 
   for (size_t i = 0; i < prop.arguments.size(); ++i) {
     (*iattr)[i] = in_attr[i];
@@ -208,26 +211,20 @@ bool OpPropInferAttr(const NodeAttrs& attrs,
 }
 
 bool OpPropInferShape(const NodeAttrs& attrs,
-                      mxnet::ShapeVector *iattr,
-                      mxnet::ShapeVector *oattr) {
+                      mxnet::ShapeVector* iattr,
+                      mxnet::ShapeVector* oattr) {
   auto finfer = [](const OperatorProperty* op,
-                   mxnet::ShapeVector *in,
-                   mxnet::ShapeVector *out,
-                   mxnet::ShapeVector *aux) {
-    return op->InferShape(in, out, aux);
-  };
+                   mxnet::ShapeVector* in,
+                   mxnet::ShapeVector* out,
+                   mxnet::ShapeVector* aux) { return op->InferShape(in, out, aux); };
   return OpPropInferAttr(attrs, iattr, oattr, finfer);
 }
 
-bool OpPropInferType(const NodeAttrs& attrs,
-                      std::vector<int> *iattr,
-                      std::vector<int> *oattr) {
+bool OpPropInferType(const NodeAttrs& attrs, std::vector<int>* iattr, std::vector<int>* oattr) {
   auto finfer = [](const OperatorProperty* op,
-                   std::vector<int> *in,
-                   std::vector<int> *out,
-                   std::vector<int> *aux) {
-    return op->InferType(in, out, aux);
-  };
+                   std::vector<int>* in,
+                   std::vector<int>* out,
+                   std::vector<int>* aux) { return op->InferType(in, out, aux); };
   return OpPropInferAttr(attrs, iattr, oattr, finfer);
 }
 
@@ -265,7 +262,7 @@ std::vector<uint32_t> OpPropMutateInputs(const NodeAttrs& attrs) {
   return ret;
 }
 
-std::vector<std::pair<int, int> > OpPropInplaceOption(const NodeAttrs& attrs) {
+std::vector<std::pair<int, int>> OpPropInplaceOption(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   std::vector<int> in_data(prop.arguments.size());
   std::vector<int> out_data(prop.outputs.size());
@@ -277,7 +274,7 @@ std::vector<std::pair<int, int> > OpPropInplaceOption(const NodeAttrs& attrs) {
     out_data[i] = static_cast<int>(i);
     out_addr[i] = &out_data[i];
   }
-  std::vector<std::pair<int, int> > forward_inplace;
+  std::vector<std::pair<int, int>> forward_inplace;
   for (auto& kv : prop.ptr->ForwardInplaceOption(in_data, out_addr)) {
     forward_inplace.emplace_back(kv.first, *static_cast<int*>(kv.second));
   }
@@ -307,30 +304,28 @@ OpStatePtr OpPropCreateLayerOp(const NodeAttrs& attrs,
                                            prop.ptr.get());
 }
 
-inline std::vector<NodeEntry> OpPropGradient(
-    const Op* back_op,
-    const ObjectPtr& ptr,
-    const std::vector<NodeEntry>& out_grads) {
+inline std::vector<NodeEntry> OpPropGradient(const Op* back_op,
+                                             const ObjectPtr& ptr,
+                                             const std::vector<NodeEntry>& out_grads) {
   auto& prop = nnvm::get<ParsedOpProp>(ptr->attrs.parsed);
   std::vector<NodeEntry> out_data;
   out_data.reserve(prop.outputs.size());
   for (size_t i = 0; i < prop.outputs.size(); ++i)
     out_data.emplace_back(ptr, i, 0);
 
-  std::vector<NodeEntry> in_data(
-      ptr->inputs.begin(), ptr->inputs.begin() + prop.arguments.size());
-  std::vector<NodeEntry> ograd(
-      out_grads.begin(), out_grads.begin() + prop.ptr->NumVisibleOutputs());
+  std::vector<NodeEntry> in_data(ptr->inputs.begin(), ptr->inputs.begin() + prop.arguments.size());
+  std::vector<NodeEntry> ograd(out_grads.begin(),
+                               out_grads.begin() + prop.ptr->NumVisibleOutputs());
   auto inputs = prop.ptr->BackwardInputs(ograd, in_data, out_data);
   // add all the auxiliary data
   for (size_t i = 0; i < prop.aux_states.size(); ++i) {
     inputs.emplace_back(ptr->inputs[i + prop.arguments.size()]);
   }
   ObjectPtr gnode = Node::Create();
-  gnode->inputs = std::move(inputs);
+  gnode->inputs   = std::move(inputs);
   gnode->control_deps.emplace_back(ptr);
-  gnode->attrs = ptr->attrs;
-  gnode->attrs.op = back_op;
+  gnode->attrs      = ptr->attrs;
+  gnode->attrs.op   = back_op;
   gnode->attrs.name = ptr->attrs.name + "_backward";
   std::vector<NodeEntry> in_grad;
   in_grad.reserve(prop.arguments.size() + prop.aux_states.size());
@@ -358,12 +353,13 @@ std::vector<std::string> OpBackListOutputNames(const NodeAttrs& attrs) {
 
 std::vector<uint32_t> OpBackMutateInputs(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
-  if (prop.aux_states.size() == 0) return std::vector<uint32_t>{};
+  if (prop.aux_states.size() == 0)
+    return std::vector<uint32_t>{};
   std::vector<int> out_grad_index(prop.ptr->NumVisibleOutputs());
   std::vector<int> in_data_index(prop.arguments.size());
   std::vector<int> out_data_index(prop.outputs.size());
-  size_t arg_size = prop.ptr->DeclareBackwardDependency(
-      out_grad_index, in_data_index, out_data_index).size();
+  size_t arg_size =
+      prop.ptr->DeclareBackwardDependency(out_grad_index, in_data_index, out_data_index).size();
   std::vector<uint32_t> ret;
   for (uint32_t i = 0; i < prop.aux_states.size(); ++i) {
     ret.push_back(static_cast<uint32_t>(i + arg_size));
@@ -371,7 +367,7 @@ std::vector<uint32_t> OpBackMutateInputs(const NodeAttrs& attrs) {
   return ret;
 }
 
-std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
+std::vector<std::pair<int, int>> OpBackInplaceOption(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   std::vector<int> out_grad_index(prop.ptr->NumVisibleOutputs());
   std::vector<int> in_data_index(prop.arguments.size());
@@ -388,8 +384,8 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
     out_data_index[i] = counter++;
   }
 
-  auto args_index = prop.ptr->DeclareBackwardDependency(
-      out_grad_index, in_data_index, out_data_index);
+  auto args_index =
+      prop.ptr->DeclareBackwardDependency(out_grad_index, in_data_index, out_data_index);
   std::vector<int> args_array(counter, -1);
   for (size_t i = 0; i < args_index.size(); ++i) {
     args_array[args_index[i]] = static_cast<int>(i);
@@ -401,14 +397,14 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
     in_grad_ptr[i] = (void*)&in_data_index[i];  // NOLINT(*)
   }
 
-  auto remap_index = prop.ptr->BackwardInplaceOption(
-      out_grad_index, in_data_index, out_data_index, in_grad_ptr);
-  std::vector<std::pair<int, int> > remap(remap_index.size());
+  auto remap_index =
+      prop.ptr->BackwardInplaceOption(out_grad_index, in_data_index, out_data_index, in_grad_ptr);
+  std::vector<std::pair<int, int>> remap(remap_index.size());
   for (size_t i = 0; i < remap_index.size(); ++i) {
     if (args_array[remap_index[i].first] == -1) {
       LOG(FATAL) << "BackwardInplaceOption not consistent with DeclareBackwardDependency";
     }
-    remap[i].first = args_array[remap_index[i].first];
+    remap[i].first  = args_array[remap_index[i].first];
     remap[i].second = *static_cast<int*>(remap_index[i].second);
   }
   return remap;
@@ -423,8 +419,9 @@ inline ExecType OpExecType(const NodeAttrs& attrs) {
 void RegisterLegacyOpProp() {
   for (auto reg : dmlc::Registry<OperatorPropertyReg>::List()) {
     Op& op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER_OR_GET__(reg->name);
-    if (op.attr_parser != nullptr) continue;
-    auto creator = reg->body;
+    if (op.attr_parser != nullptr)
+      continue;
+    auto creator     = reg->body;
     auto attr_parser = [creator](NodeAttrs* attrs) {
       if (attrs->parsed.empty()) {
         ParsedOpProp op;
@@ -457,18 +454,17 @@ void RegisterLegacyOpProp() {
 
     // register BackwardOps
     std::string back_op_name = "_backward_" + reg->name;
-    Op& back_op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER__(back_op_name);
-    op.set_attr<nnvm::FGradient>("FGradient", std::bind(
-        OpPropGradient, &back_op,
-        std::placeholders::_1, std::placeholders::_2));
+    Op& back_op              = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER__(back_op_name);
+    op.set_attr<nnvm::FGradient>(
+        "FGradient",
+        std::bind(OpPropGradient, &back_op, std::placeholders::_1, std::placeholders::_2));
     back_op.set_attr_parser(attr_parser);
     back_op.set_num_inputs(nnvm::kVarg);
     back_op.set_num_outputs(OpBackNumOutputs);
     back_op.set_attr<nnvm::FListOutputNames>("FListOutputNames", OpBackListOutputNames);
     back_op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpBackMutateInputs);
     back_op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpBackInplaceOption);
-    back_op.set_attr<FResourceRequest>(
-        "FResourceRequest", OpBackResourceRequest);
+    back_op.set_attr<FResourceRequest>("FResourceRequest", OpBackResourceRequest);
     back_op.set_attr<bool>("TIsLayerOpBackward", true);
     back_op.set_attr<bool>("TIsBackward", true);
     back_op.set_attr<FExecType>("FExecType", OpExecType);
@@ -479,64 +475,67 @@ void RegisterLegacyOpProp() {
 
 // no gradient operator
 NNVM_REGISTER_OP(_NoGradient)
-.set_num_inputs(0)
-.set_num_outputs(1)
-.describe("Place holder for variable who cannot perform gradient");
+    .set_num_inputs(0)
+    .set_num_outputs(1)
+    .describe("Place holder for variable who cannot perform gradient");
 
 void RegisterLegacyNDFunc() {
   for (auto reg : dmlc::Registry<NDArrayFunctionReg>::List()) {
-    if (reg->type_mask & kScalarArgBeforeNDArray) continue;
+    if (reg->type_mask & kScalarArgBeforeNDArray)
+      continue;
     Op& op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER_OR_GET__(reg->name);
-    if (op.attr_parser != nullptr) continue;
+    if (op.attr_parser != nullptr)
+      continue;
 
-    CHECK_LE(reg->num_scalars + reg->num_use_vars, reg->arguments.size())
-        << reg->name;
+    CHECK_LE(reg->num_scalars + reg->num_use_vars, reg->arguments.size()) << reg->name;
     auto func = reg->body;
     op.describe(reg->description);
     op.add_arguments(reg->arguments);
     op.set_num_inputs(reg->num_use_vars);
     op.set_num_outputs(reg->num_mutate_vars);
-    op.set_attr_parser([](NodeAttrs* attrs){});
-    op.set_attr<FNDArrayFunction>("FNDArrayFunction", [reg](const nnvm::NodeAttrs& attrs,
-                                                            const std::vector<NDArray>& inputs,
-                                                            std::vector<NDArray>* outputs) {
-        CHECK_EQ(inputs.size(), reg->num_use_vars);
-        CHECK_EQ(outputs->size(), reg->num_mutate_vars);
+    op.set_attr_parser([](NodeAttrs* attrs) {});
+    op.set_attr<FNDArrayFunction>("FNDArrayFunction",
+                                  [reg](const nnvm::NodeAttrs& attrs,
+                                        const std::vector<NDArray>& inputs,
+                                        std::vector<NDArray>* outputs) {
+                                    CHECK_EQ(inputs.size(), reg->num_use_vars);
+                                    CHECK_EQ(outputs->size(), reg->num_mutate_vars);
 
-        int n_scalars = reg->num_scalars;
-        std::vector<float> scalars;
-        scalars.reserve(n_scalars);
-        auto dict = attrs.dict;
-        for (int i = 0; i < n_scalars; ++i) {
-          const std::string& name = reg->arguments[i+reg->num_use_vars].name;
-          auto s = dict.find(name);
-          CHECK(s != dict.end()) << "Missing scalar param " << name;
-          scalars.push_back(std::stof(s->second));
-          dict.erase(s);
-        }
+                                    int n_scalars = reg->num_scalars;
+                                    std::vector<float> scalars;
+                                    scalars.reserve(n_scalars);
+                                    auto dict = attrs.dict;
+                                    for (int i = 0; i < n_scalars; ++i) {
+                                      const std::string& name =
+                                          reg->arguments[i + reg->num_use_vars].name;
+                                      auto s = dict.find(name);
+                                      CHECK(s != dict.end()) << "Missing scalar param " << name;
+                                      scalars.push_back(std::stof(s->second));
+                                      dict.erase(s);
+                                    }
 
-        int n_params = dict.size();
-        std::vector<const char*> keys, vals;
-        keys.reserve(n_params);
-        vals.reserve(n_params);
-        for (auto& i : dict) {
-          keys.push_back(dmlc::BeginPtr(i.first));
-          vals.push_back(dmlc::BeginPtr(i.second));
-        }
-        std::vector<NDArray*> input_ptrs, output_ptrs;
-        for (auto& i : inputs) {
-          input_ptrs.push_back(const_cast<NDArray*>(&i));
-        }
-        for (auto& i : *outputs) {
-          output_ptrs.push_back(&i);
-        }
-        reg->body(input_ptrs.data(),
-                  scalars.data(),
-                  output_ptrs.data(),
-                  n_params,
-                  const_cast<char**>(keys.data()),
-                  const_cast<char**>(vals.data()));
-      });
+                                    int n_params = dict.size();
+                                    std::vector<const char*> keys, vals;
+                                    keys.reserve(n_params);
+                                    vals.reserve(n_params);
+                                    for (auto& i : dict) {
+                                      keys.push_back(dmlc::BeginPtr(i.first));
+                                      vals.push_back(dmlc::BeginPtr(i.second));
+                                    }
+                                    std::vector<NDArray*> input_ptrs, output_ptrs;
+                                    for (auto& i : inputs) {
+                                      input_ptrs.push_back(const_cast<NDArray*>(&i));
+                                    }
+                                    for (auto& i : *outputs) {
+                                      output_ptrs.push_back(&i);
+                                    }
+                                    reg->body(input_ptrs.data(),
+                                              scalars.data(),
+                                              output_ptrs.data(),
+                                              n_params,
+                                              const_cast<char**>(keys.data()),
+                                              const_cast<char**>(vals.data()));
+                                  });
   }
 }
 

@@ -30,26 +30,25 @@
 
 #ifdef MXNET_DEBUG_TUNING_LAUNCH
 #include <cxxabi.h>
-template<typename T> inline std::string type_name() {
-  const char *name = typeid(T).name();
-  int status = -4;  // some arbitrary value to eliminate the compiler warning
-  std::unique_ptr<char, void (*)(void *)> res {
-    abi::__cxa_demangle(name, nullptr, nullptr, &status),
-    &std::free
-  };
+template <typename T>
+inline std::string type_name() {
+  const char* name = typeid(T).name();
+  int status       = -4;  // some arbitrary value to eliminate the compiler warning
+  std::unique_ptr<char, void (*)(void*)> res{abi::__cxa_demangle(name, nullptr, nullptr, &status),
+                                             &std::free};
   if (!status) {
     return res.get();
   }
   return std::move(name);
 }
-#define MXNET_DEBUG_PRINT_UNIQUE_OP(__label$, __op$) \
-  { \
-    static std::mutex cs; \
-    static std::unordered_set<std::string> ops; \
-    const std::string name = type_name<__op$>(); \
-    if (ops.emplace(name).second) { \
+#define MXNET_DEBUG_PRINT_UNIQUE_OP(__label$, __op$)                      \
+  {                                                                       \
+    static std::mutex cs;                                                 \
+    static std::unordered_set<std::string> ops;                           \
+    const std::string name = type_name<__op$>();                          \
+    if (ops.emplace(name).second) {                                       \
       std::cout << (__label$) << ": " << name << std::endl << std::flush; \
-    } \
+    }                                                                     \
   }
 #else
 #define MXNET_DEBUG_PRINT_UNIQUE_OP(__label$, __op$) /* */
@@ -58,7 +57,7 @@ template<typename T> inline std::string type_name() {
 namespace mxnet {
 namespace op {
 
-#define WORKLOAD_COUNT_SHIFT  11
+#define WORKLOAD_COUNT_SHIFT 11
 
 /*!
  * \brief Shared data for all data types being tuned, acts as a base class for the higher-level
@@ -95,9 +94,9 @@ class OperatorTuneBase {
    * \param t2 End time tick
    * \return duration in nanoseconds between t1 and t2
    */
-  static MSHADOW_CINLINE duration_t GetDurationInNanoseconds(const Tick &t1, const Tick &t2) {
+  static MSHADOW_CINLINE duration_t GetDurationInNanoseconds(const Tick& t1, const Tick& t2) {
     return static_cast<duration_t>(
-      std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count());
+        std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count());
   }
 
   /*!
@@ -105,7 +104,7 @@ class OperatorTuneBase {
    * \param since Reference time which to calculate the duration
    * \return Duration in nanoseconds between the given 'since' value and now
    */
-  static MSHADOW_CINLINE duration_t GetDurationInNanoseconds(const Tick &since) {
+  static MSHADOW_CINLINE duration_t GetDurationInNanoseconds(const Tick& since) {
     return GetDurationInNanoseconds(since, Now());
   }
 
@@ -119,8 +118,7 @@ class OperatorTuneBase {
     /*!
      * \brief Constructor, sets start time
      */
-    MSHADOW_CINLINE Timer()
-      : start_(OperatorTuneBase::Now()) {}
+    MSHADOW_CINLINE Timer() : start_(OperatorTuneBase::Now()) {}
     /*!
      * \brief Get duration in nanoseconds since construction
      * \return Duration in nanoseconds since construction
@@ -148,7 +146,7 @@ class OperatorTuneBase {
 
       // Compute time required for OMP + # items per thread
       const uint64_t omp_compute_time_ns = (serial_workload / thread_count) >> WORKLOAD_COUNT_SHIFT;
-      const uint64_t total_omp_time_ns = omp_overhead_ns_ + omp_compute_time_ns;
+      const uint64_t total_omp_time_ns   = omp_overhead_ns_ + omp_compute_time_ns;
 
       const bool rc = total_omp_time_ns < total_serial_time_ns;
       return rc;
@@ -162,13 +160,13 @@ namespace tune {
  * \brief Tuning mode for registered kernel operators
  */
 enum TuningMode {
-  kAuto,         // Based upon tuning data, choose whether to use OMP for kernel CPU Launch() loops
-  kNeverOMP,     // Don't use OMP for parallelism (legacy behavior for GPU builds)
-  kAlwaysOMP     // Don't use OMP for parallelism (legacy behavior for CPU builds)
+  kAuto,      // Based upon tuning data, choose whether to use OMP for kernel CPU Launch() loops
+  kNeverOMP,  // Don't use OMP for parallelism (legacy behavior for GPU builds)
+  kAlwaysOMP  // Don't use OMP for parallelism (legacy behavior for CPU builds)
 };
 }  // namespace tune
 
-template<typename DType>
+template <typename DType>
 class OperatorTuneByType : public OperatorTuneBase {
  public:
   /*!
@@ -177,7 +175,7 @@ class OperatorTuneByType : public OperatorTuneBase {
    */
   static MSHADOW_CINLINE void set_tuning_mode(const tune::TuningMode tuning_mode) {
     // Use const_cast to get past "assigning non-volatile to volatile warning
-    const_cast<tune::TuningMode &>(tuning_mode_) = tuning_mode;
+    const_cast<tune::TuningMode&>(tuning_mode_) = tuning_mode;
   }
 
   /*!
@@ -185,7 +183,7 @@ class OperatorTuneByType : public OperatorTuneBase {
    * \return tune::TuningMode value for the current tuning mode
    */
   static MSHADOW_CINLINE tune::TuningMode tuning_mode() {
-    return const_cast<tune::TuningMode &>(tuning_mode_);
+    return const_cast<tune::TuningMode&>(tuning_mode_);
   }
 
   /*!
@@ -223,7 +221,7 @@ namespace mxnet_op {
 /*!
  * \brief Kernel operator wrapper used for tuning data
  */
-template<typename Operation, typename DType>
+template <typename Operation, typename DType>
 struct tuned_op : public Operation {
   /*! \brief Runtime workload calculation values. Generally, nanoseconds to perform WORKLOAD_COUNT
    *        operations (for unary and binary ops), although they can be anything if the UseOMP()
@@ -243,7 +241,7 @@ struct tuned_op : public Operation {
    * \param args Variable arguments passed
    * \return true if OMP parallelism is recommended
    */
-  template<typename ...Args>
+  template <typename... Args>
   static MSHADOW_CINLINE bool UseOMP(size_t N, size_t thread_count, Args... args) {
     return Operation::UseOMP(N, thread_count, args...);
   }
@@ -267,7 +265,7 @@ struct tuned_op : public Operation {
  * \param function Lambda to time for WORKLOAD_COUNT calls
  * \return median workload for function call (nanoseconds for WORKLOAD_COUNT calls)
  */
-template<typename Function>
+template <typename Function>
 inline int64_t get_workload(Function function) {
   std::multiset<int64_t> durations;
   typename OperatorTuneBase::Timer timer;
