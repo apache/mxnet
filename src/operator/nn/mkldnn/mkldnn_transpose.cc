@@ -127,7 +127,7 @@ NumpyTransposeParam ProcessTransposeParam<NumpyTransposeParam>(const nnvm::NodeA
   NumpyTransposeParam param_out;
   param_out.axes = common::CanonicalizeAxes(param_in.axes);
   return param_out;
-};
+}
 
 template <>
 NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const nnvm::NodeAttrs& attrs) {
@@ -139,7 +139,7 @@ NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const nnvm::NodeAttrs&
     param_out.axes = param_in.axes;
   }
   return param_out;
-};
+}
 
 }  // namespace op
 }  // namespace mxnet
