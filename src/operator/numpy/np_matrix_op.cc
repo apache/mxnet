@@ -107,30 +107,31 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_ONEDNN == 1
 
 static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
   if (req[0] == kNullOp) {
     return;
   }
-  CHECK(req[0] == kWriteTo || req[0] == kAddTo) <<
-      "Transpose only supports kNullOp, kWriteTo and kAddTo";
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+      << "Transpose only supports kNullOp, kWriteTo and kAddTo";
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNRun(MKLDNNTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(
+        MKLDNNTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(NumpyTranspose<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 inline static bool NumpyTransposeStorageType(const nnvm::NodeAttrs& attrs,
-                                        const int dev_mask,
-                                        DispatchMode* dispatch_mode,
-                                        std::vector<int>* in_attrs,
-                                        std::vector<int>* out_attrs) {
+                                             const int dev_mask,
+                                             DispatchMode* dispatch_mode,
+                                             std::vector<int>* in_attrs,
+                                             std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
