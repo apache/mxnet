@@ -54,7 +54,7 @@ from ..dlpack import ndarray_from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
-
+from ..util import wrap_data_api_statical_func
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
@@ -8072,7 +8072,8 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+@wrap_data_api_statical_func
+def std(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the standard deviation along the specified axis.
     Returns the standard deviation, a measure of the spread of a distribution,
@@ -8097,10 +8098,10 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
         Alternative output array in which to place the result. It must have
         the same shape as the expected output but the type (of the calculated
         values) will be cast if necessary.
-    ddof : int, optional
+    correction : int, optional
         Means Delta Degrees of Freedom.  The divisor used in calculations
-        is ``N - ddof``, where ``N`` represents the number of elements.
-        By default `ddof` is zero.
+        is ``N - correction``, where ``N`` represents the number of elements.
+        By default `correction` is zero.
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left
         in the result as dimensions with size one. With this option,
@@ -8135,7 +8136,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> np.std(a, dtype=np.float64)
     array(0.45, dtype=float64)
     """
-    return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=correction, keepdims=keepdims, out=out)
 # pylint: enable=redefined-outer-name
 
 
@@ -8190,7 +8191,8 @@ def delete(arr, obj, axis=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+@wrap_data_api_statical_func
+def var(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
     Returns the variance of the array elements, a measure of the spread of a
@@ -8218,10 +8220,10 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
         Alternate output array in which to place the result.  It must have
         the same shape as the expected output, but the type is cast if
         necessary.
-    ddof : int, optional
+    correction : int, optional
         "Delta Degrees of Freedom": the divisor used in the calculation is
-        ``N - ddof``, where ``N`` represents the number of elements. By
-        default `ddof` is zero.
+        ``N - correction``, where ``N`` represents the number of elements. By
+        default `correction` is zero.
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left
         in the result as dimensions with size one. With this option,
@@ -8258,7 +8260,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
     0.2025
     """
-    return _mx_nd_np.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _mx_nd_np.var(a, axis=axis, dtype=dtype, ddof=correction, keepdims=keepdims, out=out)
 
 
 # pylint: disable=redefined-outer-name
@@ -9388,6 +9390,45 @@ def ldexp(x1, x2, out=None, **kwargs):
     """
     return _mx_nd_np.ldexp(x1, x2, out)
 
+@set_module('mxnet.numpy')
+def vecdot(a, b, axis=None):
+    r"""
+        Return the dot product of two vectors.
+        Note that `vecdot` handles multidimensional arrays differently than `dot`:
+        it does *not* perform a matrix product, but flattens input arguments
+        to 1-D vectors first. Consequently, it should only be used for vectors.
+
+        Parameters
+        ----------
+        a : ndarray
+            First argument to the dot product.
+        b : ndarray
+            Second argument to the dot product.
+
+        Returns
+        -------
+        output : ndarray
+            Dot product of `a` and `b`.
+
+        See Also
+        --------
+        dot : Return the dot product without using the complex conjugate of the
+            first argument.
+
+        Examples
+        --------
+        Note that higher-dimensional arrays are flattened!
+
+        >>> a = np.array([[1, 4], [5, 6]])
+        >>> b = np.array([[4, 1], [2, 2]])
+        >>> np.vecdot(a, b)
+        array(30.)
+        >>> np.vecdot(b, a)
+        array(30.)
+        >>> 1*4 + 4*1 + 5*2 + 6*2
+        30
+        """
+    return tensordot(a.flatten(), b.flatten(), axis)
 
 @set_module('mxnet.numpy')
 def vdot(a, b):
