@@ -20,6 +20,7 @@ import os
 from mxnet.test_utils import environment
 import pytest
 
+
 def test_bulk():
     with mx.engine.bulk(10):
         x = mx.nd.ones((10,))
@@ -31,6 +32,7 @@ def test_bulk():
         for _ in range(100):
             x += 1
     assert (x.asnumpy() == 104).all()
+
 
 @pytest.mark.skip(reason="OMP platform dependent")
 def test_engine_openmp_after_fork():
@@ -68,4 +70,3 @@ def test_engine_openmp_after_fork():
             omp_max_threads = mx.base._LIB.omp_get_max_threads()
             print("Child omp max threads: {}".format(omp_max_threads))
             assert omp_max_threads == 1
-

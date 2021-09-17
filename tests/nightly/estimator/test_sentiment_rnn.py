@@ -275,4 +275,3 @@ def test_estimator_gpu():
     acc = run(net, train_dataloader, test_dataloader, num_epochs=num_epochs, ctx=ctx, lr=lr)
 
     assert acc.get()[1] > 0.70
-

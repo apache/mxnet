@@ -233,7 +233,7 @@ def test_dc_inplace_error():
         return [a, b]
 
     with pytest.raises(MXNetError):
-    # TODO(leezu): Should raise NotImplementedError https://github.com/apache/incubator-mxnet/issues/17522
+        # TODO(leezu): Should raise NotImplementedError https://github.com/apache/incubator-mxnet/issues/17522
         _all_assert_dc(_dc_simple_setup, f)
 
 
@@ -263,7 +263,7 @@ def test_dc_set_variable_called_twice_error():
     a = mx.np.arange(10)
     dc.set_variable(a, mx.sym.var('a'))
     with pytest.raises(MXNetError):
-    # TODO(leezu): Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
+        # TODO(leezu): Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
         dc.set_variable(a, mx.sym.var('b'))
 
 
@@ -424,6 +424,7 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
         with mx.util.np_shape(True), mx.util.np_array(True):
             net.export(root)
 
+
 def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
     return [nd.ones(shape=shape, ctx=mx.context.current_context())]
 
@@ -520,6 +521,7 @@ def test_dc_hybridblock_dynamic_shape():
         net.initialize()
         _assert_dc_gluon(setup, net, numpy=True)
 
+
 def test_dc_hybridblock_graph_partition():
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self):
@@ -545,7 +547,7 @@ def test_indexing_shape_change():
         def forward(self, inputs):
             return mx.np.concatenate([
                 inputs,
-                mx.np.pad(inputs[:,1:], ((0,0), (0,1))),
+                mx.np.pad(inputs[:, 1:], ((0, 0), (0, 1))),
             ])
 
     net = ConcatBlock()

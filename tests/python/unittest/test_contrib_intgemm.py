@@ -21,9 +21,10 @@ from mxnet.test_utils import same, use_np, assert_almost_equal
 import random
 import pytest
 
+
 @use_np
 @pytest.mark.parametrize('shape',
-    [(3, 2), (9,17), (2, 7, 1, 8)] + [(i,) for i in range(1,65)])
+                         [(3, 2), (9, 17), (2, 7, 1, 8)] + [(i,) for i in range(1, 65)])
 def test_contrib_intgemm_maxabsolute(shape):
     if "intgemm_maxabsolute" not in dir(mx.nd.contrib):
         return
@@ -38,8 +39,9 @@ def test_contrib_intgemm_maxabsolute(shape):
     slow = np.max(np.abs(m))
     assert same(fast, slow)
 
+
 @use_np
-@pytest.mark.parametrize('shape', [(i,) for i in range(1, 67)] + [(2,3), (130, 12)])
+@pytest.mark.parametrize('shape', [(i,) for i in range(1, 67)] + [(2, 3), (130, 12)])
 @pytest.mark.parametrize('max_quant', [2.0])
 def test_contrib_intgemm_prepare_data(shape, max_quant):
     if "intgemm_prepare_data" not in dir(mx.nd.contrib):
@@ -59,14 +61,15 @@ def test_contrib_intgemm_prepare_data(shape, max_quant):
     # Reference: cast to int8
     ref = mx.nd.cast(ref, dtype='int8')
     # Reference: ban -128
-    ref = mx.nd.broadcast_maximum(ref, mx.nd.array([-127], dtype = 'int8'))
+    ref = mx.nd.broadcast_maximum(ref, mx.nd.array([-127], dtype='int8'))
 
     test = mx.nd.contrib.intgemm_prepare_data(m, mx.nd.array([max_quant]))
     assert same(test, ref)
     test = npx.intgemm_prepare_data(m.as_np_ndarray(), np.array([max_quant]))
     assert same(test, ref.as_np_ndarray())
 
-@use_np  
+
+@use_np
 @pytest.mark.parametrize('shape', [(8, 64), (16, 64), (8, 128), (16, 128), (2, 4, 64)])
 @pytest.mark.parametrize('max_quant', [0.2, 3.0])
 @pytest.mark.parametrize('api', [(mx.nd.contrib, mx.nd), (npx, np)])
@@ -82,28 +85,29 @@ def test_contrib_intgemm_weight_consistent(shape, max_quant, api):
     else:
         m = np.random.uniform(size=shape)
     direct = contrib.intgemm_prepare_weight(m, max_array)
-    quant = contrib.intgemm_prepare_data(m, max_array) 
+    quant = contrib.intgemm_prepare_data(m, max_array)
     indirect = contrib.intgemm_prepare_weight(quant, already_quantized=True)
     # Should get the same data from direct call and already_quantized version.
     assert same(direct, indirect)
-    
+
+
 @use_np
 @pytest.mark.parametrize('indices', [
-        [0,1,2,3,4,5,6,7],
-        [1,2,1,2,1,2,1,2],
-        [7,6,5,4,3,2,1,0],
-        [3,1,4,1,5,9,2,6],
-        # Since random_uniform doesn't support int8, use python
-        [random.randint(0,15) for i in range(8)],
-        [random.randint(0,15) for i in range(16)],
-        [random.randint(0,15) for i in range(24)]
-    ])
+    [0, 1, 2, 3, 4, 5, 6, 7],
+    [1, 2, 1, 2, 1, 2, 1, 2],
+    [7, 6, 5, 4, 3, 2, 1, 0],
+    [3, 1, 4, 1, 5, 9, 2, 6],
+    # Since random_uniform doesn't support int8, use python
+    [random.randint(0, 15) for i in range(8)],
+    [random.randint(0, 15) for i in range(16)],
+    [random.randint(0, 15) for i in range(24)]
+])
 @pytest.mark.parametrize('api', [(mx.nd.contrib, mx.nd), (npx, np)])
 def test_contrib_intgemm_take_weight(indices, api):
     if "intgemm_take_weight" not in dir(mx.nd.contrib):
         return
     contrib, top = api
-    m = top.array([random.randint(-127,127) for i in range(16 * 64)], dtype='int8')
+    m = top.array([random.randint(-127, 127) for i in range(16 * 64)], dtype='int8')
     m = m.reshape((16, 64))
     indices = top.array(indices, dtype='int32')
     # Prepare weight then take.
@@ -113,6 +117,7 @@ def test_contrib_intgemm_take_weight(indices, api):
     ref = m.take(indices, axis=0)
     ref = contrib.intgemm_prepare_weight(ref, already_quantized=True)
     assert same(test, ref)
+
 
 @use_np
 @pytest.mark.parametrize('data_rows', range(1, 5))
@@ -125,8 +130,8 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
     if "intgemm_fully_connected" not in dir(mx.nd.contrib):
         return
     contrib, top, fully_connected, cast = api
-    #The multiplication routine has approximations so everything is tested
-    #deterministically to ensure bounds are met.
+    # The multiplication routine has approximations so everything is tested
+    # deterministically to ensure bounds are met.
     random.seed(1)
 
     # Don't use full range (-127, 127) to avoid saturation.
@@ -162,7 +167,7 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
     assert_almost_equal(test, ref * scale, rtol=0.01, atol=0.01)
 
     # int32 output, bias
-    bias = top.array([random.randint(-60000, 60000) for i in range(weight_cols)], dtype = 'int32')
+    bias = top.array([random.randint(-60000, 60000) for i in range(weight_cols)], dtype='int32')
     test = contrib.intgemm_fully_connected(data,
                                            weight_prepared,
                                            bias,
@@ -171,11 +176,11 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
                                            out_type='int32',
                                            num_hidden=weight_cols)
     ref = fully_connected(cast(data, dtype='float32'),
-                               cast(weight, dtype='float32'),
-                               cast(bias, dtype='float32'),
-                               no_bias=False,
-                               flatten=False,
-                               num_hidden=weight_cols)
+                          cast(weight, dtype='float32'),
+                          cast(bias, dtype='float32'),
+                          no_bias=False,
+                          flatten=False,
+                          num_hidden=weight_cols)
     assert_almost_equal(cast(test, dtype='float32'), ref, rtol=0.01, atol=0.01)
 
     # float32 output, bias

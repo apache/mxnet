@@ -76,10 +76,10 @@ def test_optimizer_with_np_ndarrays():
             h_relu = npx.relu(h)  # equivalent to npx.relu(h) but generating np.ndarray
             y_pred = h_relu.dot(self.w2.data(ctx))  # equivalent to np.dot(h_relu, w2)
             return y_pred
-        
+
         def infer_shape(self, x, *args):
             pre_shape = self.w1.shape
-            self.w1.shape = (x.shape[x.ndim-1], pre_shape[1])
+            self.w1.shape = (x.shape[x.ndim - 1], pre_shape[1])
 
     class TotalLoss(gluon.HybridBlock):
         def forward(self, pred, label):
@@ -144,10 +144,10 @@ def test_np_loss_ndarray():
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
-    assert_almost_equal(L, _np.array([2.12692809,  0.04858733]), use_broadcast=False, rtol=1e-3)
+    assert_almost_equal(L, _np.array([2.12692809, 0.04858733]), use_broadcast=False, rtol=1e-3)
 
     L = loss(output, label, weighting).asnumpy()
-    assert_almost_equal(L, _np.array([1.06346405,  0.04858733]), use_broadcast=False, rtol=1e-3)
+    assert_almost_equal(L, _np.array([1.06346405, 0.04858733]), use_broadcast=False, rtol=1e-3)
 
 
 @use_np
@@ -294,6 +294,7 @@ def test_symbolic_basic_slicing():
                 continue
             cache.add((hashable_index(index1), hashable_index(index2)))
             # Test basic slicing on a single symbol
+
             class TestSlicingSingleSymbol1(gluon.HybridBlock):
                 def forward(self, x, y):
                     return x[()][index1] + y[()][index1]
@@ -309,6 +310,7 @@ def test_symbolic_basic_slicing():
                                               numpy_func=lambda a, b:
                                               (a[()][index1] + b[()][index1])[index2])
         # Test for split/hsplit/vsplit
+
         class TestSlicingWithSplit(gluon.HybridBlock):
             def forward(self, x):
                 x = mx.np.split(x, shape[2], axis=2)
@@ -395,6 +397,7 @@ def test_net_symbol_save_load():
     check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
                                   mx.np.random.normal(0, 1, (10, 5, 8))])
 
+
 @use_np
 def test_hybridize_boolean_dtype():
     class Foo(gluon.HybridBlock):
@@ -422,11 +425,12 @@ def test_optimize_for():
         def __init__(self):
             super(TestBlock, self).__init__()
             self.d = mx.gluon.nn.Dense(1)
+
         def forward(self, a):
             res = self.d(a)
             return res
 
-    a = mx.np.random.uniform(low=-1, high=1, size=(1,1))
+    a = mx.np.random.uniform(low=-1, high=1, size=(1, 1))
 
     net = TestBlock()
     net.initialize()
@@ -488,6 +492,7 @@ def test_activations_silu():
     out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
 
+
 @use_np
 def test_concatenate():
     model = nn.HybridConcatenate(axis=1)
@@ -509,11 +514,13 @@ def test_concatenate():
     x.wait_to_read()
     x2.wait_to_read()
 
+
 @use_np
 def test_identity():
     model = nn.Identity()
     x = mx.np.random.uniform(size=(128, 33, 64))
     assert_almost_equal(model(x), x)
+
 
 @use_np
 def test_pixelshuffle1d():
@@ -531,6 +538,7 @@ def test_pixelshuffle1d():
         [[[0, 3, 1, 4, 2, 5],
           [6, 9, 7, 10, 8, 11]]]
     )
+
 
 @use_np
 def test_pixelshuffle2d():
@@ -552,9 +560,9 @@ def test_pixelshuffle2d():
     # - Increasing the channel index adds an offset of `nx * up_x * ny * up_y`
     assert_allclose(
         y,
-        [[[[ 0,  6, 12,  1,  7, 13,  2,  8, 14],
+        [[[[0, 6, 12, 1, 7, 13, 2, 8, 14],
            [18, 24, 30, 19, 25, 31, 20, 26, 32],
-           [ 3,  9, 15,  4, 10, 16,  5, 11, 17],
+           [3, 9, 15, 4, 10, 16, 5, 11, 17],
            [21, 27, 33, 22, 28, 34, 23, 29, 35]],
 
           [[36, 42, 48, 37, 43, 49, 38, 44, 50],
@@ -562,6 +570,7 @@ def test_pixelshuffle2d():
            [39, 45, 51, 40, 46, 52, 41, 47, 53],
            [57, 63, 69, 58, 64, 70, 59, 65, 71]]]]
     )
+
 
 @use_np
 def test_pixelshuffle3d():
@@ -584,9 +593,9 @@ def test_pixelshuffle3d():
     # - Increasing the block index adds an offset of 1
     assert_allclose(
         y,
-        [[[[[ 0, 24,  1, 25,  2, 26,  3, 27],
-            [ 4, 28,  5, 29,  6, 30,  7, 31],
-            [ 8, 32,  9, 33, 10, 34, 11, 35]],
+        [[[[[0, 24, 1, 25, 2, 26, 3, 27],
+            [4, 28, 5, 29, 6, 30, 7, 31],
+            [8, 32, 9, 33, 10, 34, 11, 35]],
 
            [[48, 72, 49, 73, 50, 74, 51, 75],
             [52, 76, 53, 77, 54, 78, 55, 79],
@@ -601,12 +610,13 @@ def test_pixelshuffle3d():
             [68, 92, 69, 93, 70, 94, 71, 95]]]]]
     )
 
+
 @use_np
 def test_embedding():
     def check_embedding():
         layer = gluon.nn.Embedding(10, 100)
         layer.initialize()
-        x = mx.np.array([3,4,2,0,1])
+        x = mx.np.array([3, 4, 2, 0, 1])
         with mx.autograd.record():
             y = layer(x)
             y.backward()

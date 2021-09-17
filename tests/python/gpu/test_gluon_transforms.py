@@ -27,10 +27,11 @@ from mxnet.test_utils import assert_almost_equal, set_default_context
 from mxnet.test_utils import almost_equal, same
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assertRaises
 from test_numpy_gluon_data_vision import test_to_tensor, test_normalize, test_crop_resize
+from common import assertRaises
 
 set_default_context(mx.gpu(0))
+
 
 def test_normalize_gpu():
     test_normalize()
@@ -81,11 +82,12 @@ def test_resize_gpu():
                 w1p = 1 if w1 < (inputHeight - 1) else 0
                 for b in range(batch):
                     for c in range(channel):
-                        y[b][h2][w2][c] = (1-h1lambda)*((1-w1lambda)*x[b][h1][w1][c] + \
-                            w1lambda*x[b][h1][w1+w1p][c]) + \
-                            h1lambda*((1-w1lambda)*x[b][h1+h1p][w1][c] + \
-                            w1lambda*x[b][h1+h1p][w1+w1p][c])
+                        y[b][h2][w2][c] = (1 - h1lambda) * ((1 - w1lambda) * x[b][h1][w1][c] +
+                                                            w1lambda * x[b][h1][w1 + w1p][c]) + \
+                            h1lambda * ((1 - w1lambda) * x[b][h1 + h1p][w1][c] +
+                                        w1lambda * x[b][h1 + h1p][w1 + w1p][c])
         return y
+
 
 def test_crop_resize_gpu():
     test_crop_resize()

@@ -321,7 +321,7 @@ def test_gluon_cauchy():
     for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.uniform(size=shape, low=1e-4, high=1.0-1e-4)
+        samples = np.random.uniform(size=shape, low=1e-4, high=1.0 - 1e-4)
         net = TestCauchy("icdf")
         if hybridize:
             net.hybridize()
@@ -396,7 +396,7 @@ def test_gluon_half_cauchy():
     # Test icdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
         scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.uniform(size=shape, high=1.0-1e-4)
+        samples = np.random.uniform(size=shape, high=1.0 - 1e-4)
         net = TestHalfCauchy("icdf")
         if hybridize:
             net.hybridize()
@@ -1549,11 +1549,11 @@ def test_gluon_one_hot_categorical():
 def test_relaxed_one_hot_categorical():
     class TestRelaxedOneHotCategorical(HybridBlock):
         def __init__(self, func, is_logit=False, batch_shape=None, num_events=None):
-                super(TestRelaxedOneHotCategorical, self).__init__()
-                self._is_logit = is_logit
-                self._func = func
-                self._batch_shape = batch_shape
-                self._num_events = num_events
+            super(TestRelaxedOneHotCategorical, self).__init__()
+            self._is_logit = is_logit
+            self._func = func
+            self._batch_shape = batch_shape
+            self._num_events = num_events
 
         def forward(self, params, *args):
             categorical = mgp.RelaxedOneHotCategorical(T=1.0, num_events=self._num_events, logit=params) \
@@ -1970,7 +1970,7 @@ def test_independent():
 def test_gluon_kl():
     def _test_zero_kl(p, shape):
         """Check if KL(p || p) = 0
-        
+
         Parameters
         ----------
         p : Distribution
@@ -2035,7 +2035,6 @@ def test_gluon_kl():
             _test_monte_carlo(_dist_factory(dist, rate),
                               _dist_factory(dist, rate),
                               repeated_times)
-
 
     # exponential, geometric
     for dist in [mgp.Exponential, mgp.Geometric]:

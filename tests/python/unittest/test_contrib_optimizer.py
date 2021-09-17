@@ -61,18 +61,22 @@ def test_group_adagrad():
                 dtype,
                 g_stype='row_sparse')
 
+
 def _fn_noimpl(*args, **kwargs):
     raise NotImplementedError()
+
 
 class _AdamLikeTestHelper:
     fn_update = _fn_noimpl
     fn_multi_update = _fn_noimpl
     fn_mp_update = _fn_noimpl
     fn_multi_mp_update = _fn_noimpl
+
     @staticmethod
     def ref_impl(m, v, weight, grad_rescale, beta1, beta2, lr, eta, wd, epsilon, clip_grad=-1):
         '''Returns (mean_ref, v_ref, weight_ref)'''
         raise NotImplementedError()
+
     @classmethod
     def run_test(cls, num_elem=1, aggregate=False):
         aggregate = aggregate or num_elem > 1
@@ -108,10 +112,10 @@ class _AdamLikeTestHelper:
         for rescaled_grad in tested_rescaled_grad:
             if aggregate:
                 cls.fn_multi_update(weight, grad, m, v,
-                                     rescaled_grad, out=weight, **kwargs)
+                                    rescaled_grad, out=weight, **kwargs)
             else:
                 cls.fn_update(weight[0], grad[0], m[0], v[0],
-                               rescaled_grad, out=weight[0], **kwargs)
+                              rescaled_grad, out=weight[0], **kwargs)
             # weights should remain unchanged
             for j in range(num_elem):
                 assert_almost_equal(weight_ref[j], weight[j])
@@ -192,43 +196,49 @@ class _AdamLikeTestHelper:
         # Testing Adam update, if num_elem == 0, OR
         #         aggregated Adam update, if num_elem > 0
         for num_elem in reversed(range(6)):
-            self.run_test(num_elem+1)
+            self.run_test(num_elem + 1)
+
 
 class _AdamWTestHelper(_AdamLikeTestHelper):
     fn_update = mx.nd.contrib.adamw_update
     fn_multi_update = mx.nd.contrib.multi_adamw_update
     fn_mp_update = mx.nd.contrib.mp_adamw_update
     fn_multi_mp_update = mx.nd.contrib.multi_mp_adamw_update
+
     @staticmethod
     def ref_impl(m, v, weight, grad_rescale, beta1, beta2, lr, eta, wd, epsilon, clip_grad=-1):
         if clip_grad >= 0:
             grad_rescale = mx.nd.clip(grad_rescale, -clip_grad, clip_grad)
 
-        mean_ref = beta1*m + (1.-beta1)*grad_rescale
-        v_ref = beta2*v + (1.-beta2)*(grad_rescale**2)
+        mean_ref = beta1 * m + (1. - beta1) * grad_rescale
+        v_ref = beta2 * v + (1. - beta2) * (grad_rescale**2)
         weight_ref = weight - eta * (lr * mean_ref / (v_ref.sqrt() + epsilon) + weight * wd)
         return mean_ref, v_ref, weight_ref
+
 
 class _AdaBeliefTestHelper(_AdamLikeTestHelper):
     fn_update = mx.nd.contrib.adabelief_update
     fn_multi_update = mx.nd.contrib.multi_adabelief_update
     fn_mp_update = mx.nd.contrib.mp_adabelief_update
     fn_multi_mp_update = mx.nd.contrib.multi_mp_adabelief_update
+
     @staticmethod
     def ref_impl(m, v, weight, grad_rescale, beta1, beta2, lr, eta, wd, epsilon, clip_grad=-1):
         grad_rescale += wd * weight
         if clip_grad >= 0:
             grad_rescale = mx.nd.clip(grad_rescale, -clip_grad, clip_grad)
 
-        mean_ref = beta1*m + (1.-beta1)*grad_rescale
-        v_ref = beta2*v + (1.-beta2)*((grad_rescale-mean_ref)**2) + epsilon
+        mean_ref = beta1 * m + (1. - beta1) * grad_rescale
+        v_ref = beta2 * v + (1. - beta2) * ((grad_rescale - mean_ref)**2) + epsilon
         weight_ref = weight - eta * (lr * mean_ref / (v_ref.sqrt() + epsilon))
         return mean_ref, v_ref, weight_ref
+
 
 @xfail_when_nonstandard_decimal_separator
 @pytest.mark.serial
 def test_adamw():
     _AdamWTestHelper()()
+
 
 @xfail_when_nonstandard_decimal_separator
 @pytest.mark.serial

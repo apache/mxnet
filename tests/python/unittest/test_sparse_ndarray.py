@@ -34,6 +34,7 @@ import pytest
 
 mx.npx.reset_np()
 
+
 def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)
 
@@ -46,7 +47,7 @@ def test_sparse_nd_elemwise_add():
             if stype == 'row_sparse':
                 nd, _ = rand_sparse_ndarray(shapes[i], stype)
             elif stype == 'default':
-                nd = mx.nd.array(random_arrays(shapes[i]), dtype = np.float32)
+                nd = mx.nd.array(random_arrays(shapes[i]), dtype=np.float32)
             else:
                 assert(False)
             nds.append(nd)
@@ -55,7 +56,7 @@ def test_sparse_nd_elemwise_add():
         assert_almost_equal(test.asnumpy(), g(nds[0].asnumpy(), nds[1].asnumpy()))
 
     num_repeats = 3
-    g = lambda x,y: x + y
+    def g(x, y): return x + y
     op = mx.nd.elemwise_add
     for _ in range(num_repeats):
         shape = [rand_shape_2d()] * 2
@@ -83,6 +84,7 @@ def test_sparse_nd_copy():
     check_sparse_nd_copy('row_sparse', 'row_sparse', shape_3d)
     check_sparse_nd_copy('row_sparse', 'default', shape_3d)
     check_sparse_nd_copy('default', 'row_sparse', shape_3d)
+
 
 def test_sparse_nd_basic():
     def check_sparse_nd_basic_rsp():
@@ -112,6 +114,7 @@ def test_sparse_nd_setitem():
         check_sparse_nd_setitem(stype, shape, np.ones(shape))
     # scalar assigned to row_sparse NDArray
     check_sparse_nd_setitem('row_sparse', shape, 2)
+
 
 def test_sparse_nd_slice():
     shape = (rnd.randint(2, 10), rnd.randint(2, 10))
@@ -276,6 +279,7 @@ def test_sparse_nd_lesser_equal():
 
 def test_sparse_nd_binary():
     N = 3
+
     def check_binary(fn, stype):
         for _ in range(N):
             ndim = 2
@@ -283,13 +287,13 @@ def test_sparse_nd_binary():
             bdim = 2
             lshape = list(oshape)
             # one for broadcast op, another for elemwise op
-            rshape = list(oshape[ndim-bdim:])
+            rshape = list(oshape[ndim - bdim:])
             for i in range(bdim):
                 sep = np.random.uniform(0, 1)
                 if sep < 0.33:
-                    lshape[ndim-i-1] = 1
+                    lshape[ndim - i - 1] = 1
                 elif sep < 0.66:
-                    rshape[bdim-i-1] = 1
+                    rshape[bdim - i - 1] = 1
             lhs = np.random.uniform(0, 1, size=lshape)
             rhs = np.random.uniform(0, 1, size=rshape)
             lhs_nd = mx.nd.array(lhs).tostype(stype)
@@ -314,6 +318,7 @@ def test_sparse_nd_binary():
 @xfail_when_nonstandard_decimal_separator
 def test_sparse_nd_binary_scalar_op():
     N = 3
+
     def check(fn, stype, out_stype=None):
         for _ in range(N):
             ndim = 2
@@ -344,6 +349,7 @@ def test_sparse_nd_binary_scalar_op():
 
 def test_sparse_nd_binary_iop():
     N = 3
+
     def check_binary(fn, stype):
         for _ in range(N):
             ndim = 2
@@ -361,6 +367,7 @@ def test_sparse_nd_binary_iop():
     def inplace_add(x, y):
         x += y
         return x
+
     def inplace_mul(x, y):
         x *= y
         return x
@@ -392,6 +399,7 @@ def test_sparse_nd_negate():
 def test_sparse_nd_broadcast():
     sample_num = 1000
     # TODO(haibin) test with more than 2 dimensions
+
     def test_broadcast_to(stype):
         for _ in range(sample_num):
             ndim = 2
@@ -598,10 +606,10 @@ def test_sparse_ndarray_load_csr_npz_scipy(tmp_path, save_fn):
 
 
 def test_sparse_nd_unsupported():
-    nd = mx.nd.zeros((2,2), stype='row_sparse')
-    fn_slice = lambda x: x._slice(None, None)
-    fn_at = lambda x: x._at(None)
-    fn_reshape = lambda x: x.reshape(None)
+    nd = mx.nd.zeros((2, 2), stype='row_sparse')
+    def fn_slice(x): return x._slice(None, None)
+    def fn_at(x): return x._at(None)
+    def fn_reshape(x): return x.reshape(None)
     fns = [fn_slice, fn_at, fn_reshape]
     for fn in fns:
         try:
@@ -711,7 +719,6 @@ def test_create_row_sparse():
                 assert_exception(mx.nd.sparse.row_sparse_array, ValueError, arg1, tuple(shape))
 
 
-
 def test_create_sparse_nd_infer_shape():
     def check_create_csr_infer_shape(shape, density, dtype):
         try:
@@ -769,13 +776,14 @@ def test_create_sparse_nd_from_dense():
     dtype = np.int32
     src_dtype = np.float64
     ctx = mx.cpu(1)
-    dense_arrs = [mx.nd.ones(shape, dtype=src_dtype), np.ones(shape, dtype=src_dtype), \
+    dense_arrs = [mx.nd.ones(shape, dtype=src_dtype), np.ones(shape, dtype=src_dtype),
                   np.ones(shape, dtype=src_dtype).tolist()]
     for f in [mx.nd.sparse.csr_matrix, mx.nd.sparse.row_sparse_array]:
         for dense_arr in dense_arrs:
             default_dtype = dense_arr.dtype if isinstance(dense_arr, (NDArray, np.ndarray)) \
-                            else np.float32
+                else np.float32
             check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx)
+
 
 def test_create_sparse_nd_from_sparse():
     def check_create_from_sp(shape, f, sp_arr, dtype, src_dtype, ctx):
@@ -897,7 +905,7 @@ def test_sparse_nd_fluent():
         check_fluent_regular('row_sparse', func, {})
 
     all_funcs = ['arcsin', 'arctan', 'tan', 'sinh', 'tanh',
-                'arcsinh', 'arctanh', 'log1p', 'sqrt', 'relu']
+                 'arcsinh', 'arctanh', 'log1p', 'sqrt', 'relu']
     for func in all_funcs:
         check_fluent_regular('csr', func, {}, equal_nan=True)
         check_fluent_regular('row_sparse', func, {}, equal_nan=True)
@@ -912,12 +920,13 @@ def test_sparse_nd_fluent():
 
 def test_sparse_nd_exception():
     """ test invalid sparse operator will throw a exception """
-    a = mx.nd.ones((2,2))
+    a = mx.nd.ones((2, 2))
     assertRaises(mx.base.MXNetError, mx.nd.sparse.retain, a, invalid_arg="garbage_value")
-    assertRaises(ValueError, mx.nd.sparse.csr_matrix, a, shape=(3,2))
-    assertRaises(ValueError, mx.nd.sparse.csr_matrix, (2,2), shape=(3,2))
-    assertRaises(ValueError, mx.nd.sparse.row_sparse_array, (2,2), shape=(3,2))
-    assertRaises(ValueError, mx.nd.sparse.zeros, "invalid_stype", (2,2))
+    assertRaises(ValueError, mx.nd.sparse.csr_matrix, a, shape=(3, 2))
+    assertRaises(ValueError, mx.nd.sparse.csr_matrix, (2, 2), shape=(3, 2))
+    assertRaises(ValueError, mx.nd.sparse.row_sparse_array, (2, 2), shape=(3, 2))
+    assertRaises(ValueError, mx.nd.sparse.zeros, "invalid_stype", (2, 2))
+
 
 def test_sparse_nd_check_format():
     """ test check_format for sparse ndarray """
@@ -970,6 +979,7 @@ def test_sparse_nd_check_format():
     a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
     assertRaises(mx.base.MXNetError, a.check_format)
 
+
 def test_sparse_nd_norm():
     def check_sparse_nd_norm(stype, shape, density, **kwargs):
         data, _ = rand_sparse_ndarray(shape, stype, density)
@@ -982,11 +992,12 @@ def test_sparse_nd_norm():
     densities = [0, 0.5, 1]
     for stype in stypes:
         for density in densities:
-           check_sparse_nd_norm(stype, shape, density, axis=None, keepdims=False, ord=2)
+            check_sparse_nd_norm(stype, shape, density, axis=None, keepdims=False, ord=2)
 
     # test fallback
     check_sparse_nd_norm(stype, shape, density, axis=0, keepdims=False, ord=2)
     check_sparse_nd_norm(stype, shape, density, axis=None, keepdims=True, ord=2)
+
 
 def test_sparse_fc():
     def check_sparse_fc(batch_size, dim_in, dim_out, stype):
@@ -1003,6 +1014,7 @@ def test_sparse_fc():
     check_sparse_fc(5, 10, 8, 'default')
     # test FC with row_sparse weight w/ density=1, csr data (fallback)
     check_sparse_fc(5, 10, 8, 'csr')
+
 
 def test_sparse_take():
     def check_sparse_take(density, mode):
@@ -1022,9 +1034,11 @@ def test_sparse_take():
         for m in modes:
             check_sparse_take(d, m)
 
+
 def test_sparse_getnnz():
     if default_context().device_type is 'gpu':
         return
+
     def check_sparse_getnnz(density, axis):
         shape = rand_shape_2d()
         data = rand_ndarray(shape, 'csr', density=density)
@@ -1038,4 +1052,3 @@ def test_sparse_getnnz():
     for d in densities:
         for a in axis:
             check_sparse_getnnz(d, a)
-

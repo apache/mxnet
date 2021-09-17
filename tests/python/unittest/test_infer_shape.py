@@ -22,6 +22,7 @@ import pytest
 
 mx.npx.reset_np()
 
+
 def test_mlp2_infer_shape():
     # Build MLP
     out = models.mlp2()
@@ -32,16 +33,17 @@ def test_mlp2_infer_shape():
     assert len(out_shapes) == 1
     assert out_shapes[0] == (100, 10)
     true_shapes = {'fc2_bias': (10,),
-                   'fc2_weight' : (10, 1000),
-                   'fc1_bias' : (1000,),
-                   'fc1_weight' : (1000,100) }
+                   'fc2_weight': (10, 1000),
+                   'fc1_bias': (1000,),
+                   'fc1_weight': (1000, 100)}
     for k, v in true_shapes.items():
         assert arg_shape_dict[k] == v
+
 
 def test_mlp2_infer_error():
     # Test shape inconsistent case
     out = models.mlp2()
-    weight_shape= (1, 100)
+    weight_shape = (1, 100)
     data_shape = (100, 100)
     with pytest.raises(mx.MXNetError):
         arg_shapes, out_shapes, aux_shapes = out.infer_shape(data=data_shape, fc1_weight=weight_shape)
@@ -131,6 +133,7 @@ def test_incomplete_infer_concat():
     assert arg_shapes['b'] == (2, 5)
     assert arg_shapes['d'] == (2, 15)
 
+
 def test_fc_infer_type():
     mx_real_t = mx.base.mx_real_t
     data = mx.symbol.Variable('data')
@@ -143,8 +146,8 @@ def test_fc_infer_type():
     assert len(out_types) == 1
     assert out_types[0] == mx_real_t
     true_types = {
-                   'fc1_bias' : mx_real_t,
-                   'fc1_weight' : mx_real_t }
+        'fc1_bias': mx_real_t,
+        'fc1_weight': mx_real_t}
     for k, v in true_types.items():
         assert arg_type_dict[k] == v
 
@@ -172,7 +175,7 @@ def test_dot_partial_shape():
     _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(4, 5))
     assert result_shape == [(0, 3, 5)]
     with mx.np_shape(True):
-        _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(4, 5))
+        _, result_shape, _ = z.infer_shape_partial(x=(-1, 3, 4), y=(4, 5))
         assert result_shape == [(-1, 3, 5)]
 
 
@@ -187,9 +190,9 @@ def test_batch_dot_partial_shape():
     _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(0, 0, 5))
     assert result_shape == [()]
     with mx.np_shape(True):
-        _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(-1, 4, 5))
+        _, result_shape, _ = z.infer_shape_partial(x=(-1, 3, 4), y=(-1, 4, 5))
         assert result_shape == [(-1, 3, 5)]
-        _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(-1, -1, 5))
+        _, result_shape, _ = z.infer_shape_partial(x=(-1, 3, 4), y=(-1, -1, 5))
         assert result_shape == [None]
 
 
@@ -199,7 +202,7 @@ def test_embedding_partial_shape():
     w = mx.sym.Variable("w")
     y = mx.sym.Embedding(data=x, weight=w, input_dim=100, output_dim=10)
     _, result_shape, _ = y.infer_shape_partial(x=(0, 5), w=(100, 10))
-    assert result_shape  == [(0, 5, 10)]
+    assert result_shape == [(0, 5, 10)]
     with mx.np_shape(True):
         _, result_shape, _ = y.infer_shape_partial(x=(-1, 5), w=(100, 10))
         assert result_shape == [(-1, 5, 10)]
@@ -225,10 +228,10 @@ def test_pick_partial_shape():
     index = mx.sym.Variable("index")
     y = mx.sym.pick(x, index, axis=1)
     # batch size unknown
-    _, result, _ =  y.infer_shape_partial(x=(0, 3, 3), index=(0, 3,))
+    _, result, _ = y.infer_shape_partial(x=(0, 3, 3), index=(0, 3,))
     assert result == [(0, 3)]
     with mx.np_shape(True):
-        _, result, _ =  y.infer_shape_partial(x=(-1, 3, 3), index=(-1, 3,))
+        _, result, _ = y.infer_shape_partial(x=(-1, 3, 3), index=(-1, 3,))
         assert result == [(-1, 3)]
 
 
@@ -238,13 +241,12 @@ def test_where_partial_shape():
     cond = mx.sym.Variable("cond")
     where_op = mx.sym.where(cond, x, y)
     # condition must be fully known to infer shape
-    _, result, _ = where_op.infer_shape_partial(cond=(0, 2), x=(0, 2), y =(0, 2))
+    _, result, _ = where_op.infer_shape_partial(cond=(0, 2), x=(0, 2), y=(0, 2))
     assert result == [()]
-    _, result, _ = where_op.infer_shape_partial(cond=(0,), x=(2, 2), y =(2, 2))
+    _, result, _ = where_op.infer_shape_partial(cond=(0,), x=(2, 2), y=(2, 2))
     assert result == [()]
     with mx.np_shape(True):
-        _, result, _ =  where_op.infer_shape_partial(cond=(-1, 2), x=(-1, 2), y =(-1, 2))
+        _, result, _ = where_op.infer_shape_partial(cond=(-1, 2), x=(-1, 2), y=(-1, 2))
         assert result == [None]
         _, result, _ = where_op.infer_shape_partial(cond=(-1,), x=(2, 2), y=(2, 2))
         assert result == [None]
-

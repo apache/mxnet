@@ -59,6 +59,7 @@ def grad_and_loss(func, argnum=None):
         return grads, outputs
     return wrapped
 
+
 def grad(func, argnum=None):
     """Return function that computes gradient of arguments.
 
@@ -91,13 +92,15 @@ def grad(func, argnum=None):
     >>>     grad_vals = grad_func(inputs)
     """
     grad_with_loss_func = grad_and_loss(func, argnum)
+
     @functools.wraps(grad_with_loss_func)
     def wrapped(*args):
         return grad_with_loss_func(*args)[0]
     return wrapped
 
+
 def autograd_assert(*args, **kwargs):
-    func   = kwargs["func"]
+    func = kwargs["func"]
     grad_f = kwargs["grad_func"]
     argnum = kwargs["argnum"] if 'argnum' in kwargs else None
 
@@ -110,17 +113,18 @@ def autograd_assert(*args, **kwargs):
     for a, b in zip(grad_vals, grad_res):
         assert same(a.asnumpy(), b.asnumpy())
 
+
 @xfail_when_nonstandard_decimal_separator
 def test_unary_func():
     def check_unary_func(x):
-        f_exp         = lambda x: nd.exp(x)
-        f_exp_grad    = lambda x: [nd.exp(x)]
+        def f_exp(x): return nd.exp(x)
+        def f_exp_grad(x): return [nd.exp(x)]
         autograd_assert(x, func=f_exp, grad_func=f_exp_grad)
-        f_half        = lambda x: x/2
-        f_half_grad   = lambda x: [nd.ones(x.shape) * 0.5]
+        def f_half(x): return x / 2
+        def f_half_grad(x): return [nd.ones(x.shape) * 0.5]
         autograd_assert(x, func=f_half, grad_func=f_half_grad)
-        f_square      = lambda x: x**2
-        f_square_grad = lambda x: [2*x]
+        def f_square(x): return x**2
+        def f_square_grad(x): return [2 * x]
         autograd_assert(x, func=f_square, grad_func=f_square_grad)
     uniform = nd.uniform(shape=(4, 5))
     stypes = ['default', 'row_sparse', 'csr']
@@ -128,16 +132,17 @@ def test_unary_func():
         for stype in stypes:
             check_unary_func(uniform.tostype(stype))
 
+
 def test_binary_func():
     def check_binary_func(x, y):
-        f_add      = lambda x, y: x+y
-        f_add_grad = lambda x, y: [nd.ones(x.shape), nd.ones(y.shape)]
+        def f_add(x, y): return x + y
+        def f_add_grad(x, y): return [nd.ones(x.shape), nd.ones(y.shape)]
         autograd_assert(x, y, func=f_add, grad_func=f_add_grad)
-        f_mul      = lambda x, y: x*y
-        f_mul_grad = lambda x, y: [y, x]
+        def f_mul(x, y): return x * y
+        def f_mul_grad(x, y): return [y, x]
         autograd_assert(x, y, func=f_mul, grad_func=f_mul_grad)
-        f_compose  = lambda x, y: x+x*y
-        f_compose_grad = lambda x, y: [nd.ones(x.shape) + y, x]
+        def f_compose(x, y): return x + x * y
+        def f_compose_grad(x, y): return [nd.ones(x.shape) + y, x]
         autograd_assert(x, y, func=f_compose, grad_func=f_compose_grad)
     uniform_x = nd.uniform(shape=(4, 5))
     uniform_y = nd.uniform(shape=(4, 5))
@@ -152,7 +157,7 @@ def test_binary_func():
 
 def test_operator_with_state():
     def f_fc(a, b, weight, bias):
-        x = a*b
+        x = a * b
         fc = nd.FullyConnected(
             x, weight, bias, num_hidden=32)
         return fc
@@ -166,21 +171,22 @@ def test_operator_with_state():
     grad_vals, outputs = grad_func(a, b, weight, bias)
     # (TODO) assert
 
+
 def test_argnum():
     def f_with_mode(a, b, mode):
         if mode:
-            return a+b
+            return a + b
         else:
-            return a*b
+            return a * b
 
     a = nd.uniform(shape=(3, 2))
     b = nd.uniform(shape=(3, 2))
-    f_add_grad = lambda x, y, mode: [nd.ones(x.shape), nd.ones(y.shape)]
-    f_mul_grad = lambda x, y, mode: [y, x]
+    def f_add_grad(x, y, mode): return [nd.ones(x.shape), nd.ones(y.shape)]
+    def f_mul_grad(x, y, mode): return [y, x]
     autograd_assert(a, b, True,
-        argnum=[0, 1], func=f_with_mode, grad_func=f_add_grad)
+                    argnum=[0, 1], func=f_with_mode, grad_func=f_add_grad)
     autograd_assert(a, b, False,
-        argnum=[0, 1], func=f_with_mode, grad_func=f_mul_grad)
+                    argnum=[0, 1], func=f_with_mode, grad_func=f_mul_grad)
 
 
 def test_training():
@@ -198,17 +204,17 @@ def test_out_grads():
     dx = nd.zeros_like(x)
     mark_variables([x], [dx])
     da = None
-    db = nd.array([1,2,3,4,5])
-    dc = nd.array([5,4,3,2,1])
+    db = nd.array([1, 2, 3, 4, 5])
+    dc = nd.array([5, 4, 3, 2, 1])
 
     with record():
         a, b, c = nd.split(x, axis=0, num_outputs=3, squeeze_axis=True)
         backward([a, b, c], [da, db, dc])
 
     assert (dx.asnumpy() == np.array(
-        [[1,1,1,1,1],
-         [1,2,3,4,5],
-         [5,4,3,2,1]])).all()
+        [[1, 1, 1, 1, 1],
+         [1, 2, 3, 4, 5],
+         [5, 4, 3, 2, 1]])).all()
 
 
 def test_detach_updated_grad():
@@ -222,7 +228,7 @@ def test_detach_updated_grad():
 
     with record():
         x2 = x + 2
-        y2  = x2 + y
+        y2 = x2 + y
         y2.backward()
     assert (dx.asnumpy() == 1).all()
     assert x._fresh_grad == True
@@ -236,7 +242,7 @@ def test_detach_updated_grad():
     with record():
         x2 = x + 2
         x2 = x2.detach()
-        y2  = x2 + y
+        y2 = x2 + y
         y2.backward()
     assert (dx.asnumpy() == 0).all()
     assert y._fresh_grad == True
@@ -336,6 +342,7 @@ def test_is_train():
         y = mx.nd.Dropout(x, p=0.5)
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
+
 @pytest.mark.garbage_expected
 def test_function():
     class func(Function):
@@ -347,8 +354,8 @@ def test_function():
 
         def backward(self, dm, dn):
             x, y = self.saved_tensors
-            dx = dm/y + dn*y
-            dy = dn*x - dm * x / y / y
+            dx = dm / y + dn * y
+            dy = dn * x - dm * x / y / y
             return dx, dy
 
     f = func()
@@ -364,7 +371,7 @@ def test_function():
     dy1 = y.grad.asnumpy()
 
     with record():
-        backward([x/y, x*y])
+        backward([x / y, x * y])
 
     # Non-zero atol required, as exposed by seed 630179191
     atol = 1e-6
@@ -379,14 +386,14 @@ def test_function1():
             super(Foo, self).__init__()
 
         def forward(self, X):
-            return X + 1;
+            return X + 1
 
         def backward(self, dY):
             return dY
 
     with mx.autograd.record():
         X = mx.nd.zeros((3, 4))
-        #X.attach_grad()  # uncommenting this line works
+        # X.attach_grad()  # uncommenting this line works
         for _ in range(5):
             f = Foo()
             X = f(X)
@@ -405,8 +412,8 @@ def test_np_function():
 
         def backward(self, dm, dn):
             x, y = self.saved_tensors
-            dx = dm/y + dn*y
-            dy = dn*x - dm * x / y / y
+            dx = dm / y + dn * y
+            dy = dn * x - dm * x / y / y
             return dx, dy
 
     f = func()
@@ -422,7 +429,7 @@ def test_np_function():
     dy1 = y.grad.asnumpy()
 
     with record():
-        backward([x/y, x*y])
+        backward([x / y, x * y])
 
     # Non-zero atol required, as exposed by seed 630179191
     atol = 1e-6
@@ -438,14 +445,14 @@ def test_np_function1():
             super(Foo, self).__init__()
 
         def forward(self, X):
-            return X + 1;
+            return X + 1
 
         def backward(self, dY):
             return dY
 
     with mx.autograd.record():
         X = mx.np.zeros((3, 4))
-        #X.attach_grad()  # uncommenting this line works
+        # X.attach_grad()  # uncommenting this line works
         for _ in range(5):
             f = Foo()
             X = f(X)
@@ -457,14 +464,15 @@ def test_get_symbol():
     x = mx.nd.ones((1,))
     x.attach_grad()
     with record():
-        y = x*x + 2*x - 1
+        y = x * x + 2 * x - 1
     assert len(get_symbol(y).list_arguments()) == 1
 
     z = mx.nd.ones((1,))
     z.attach_grad()
     with record():
-        y = x*x + 2*z - 1
+        y = x * x + 2 * z - 1
     assert len(get_symbol(y).list_arguments()) == 2
+
 
 @pytest.mark.garbage_expected
 def test_grad_with_stype():
@@ -484,6 +492,7 @@ def test_grad_with_stype():
         for grad_stype in stypes:
             # check the stype of the gradient when provided
             check_grad_with_stype(stype, grad_stype, grad_stype)
+
 
 @pytest.mark.garbage_expected
 def test_sparse_dot_grad():
@@ -507,6 +516,7 @@ def test_sparse_dot_grad():
     dns = mx.nd.ones(shape)
     dns.attach_grad(stype='row_sparse')
     check_sparse_dot_grad(dns)
+
 
 def test_gradient():
     x = mx.nd.ones((1,))

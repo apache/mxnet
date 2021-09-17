@@ -60,6 +60,7 @@ whitelist = ['basic/index.md',
              'amp/index.md']
 whitelist_set = set(whitelist)
 
+
 def test_tutorial_downloadable():
     """
     Make sure that every tutorial that isn't in the whitelist has the placeholder
@@ -72,14 +73,15 @@ def test_tutorial_downloadable():
 
     for tutorial in tutorials:
         with open(tutorial, 'r') as file:
-            lines= file.readlines()
+            lines = file.readlines()
         last = lines[-1]
         second_last = lines[-2]
         downloadable = download_button_string in last or download_button_string in second_last
         friendly_name = '/'.join(tutorial.split('/')[-2:])
-        if not downloadable and friendly_name  not in whitelist_set:
+        if not downloadable and friendly_name not in whitelist_set:
             print(last, second_last)
             assert False, "{} is missing <!-- INSERT SOURCE DOWNLOAD BUTTONS --> as its last line".format(friendly_name)
+
 
 def test_tutorial_tested():
     """
@@ -95,5 +97,5 @@ def test_tutorial_tested():
     tested_tutorials = set(re.findall(r"assert _test_tutorial_nb\('(.*)'\)", tutorial_test_text))
     for tutorial in tutorials:
         friendly_name = '/'.join(tutorial.split('/')[-2:]).split('.')[0]
-        if friendly_name not in tested_tutorials and friendly_name+".md" not in whitelist_set:
+        if friendly_name not in tested_tutorials and friendly_name + ".md" not in whitelist_set:
             assert False, "{} has not been added to the tests/tutorials/test_tutorials.py test_suite".format(friendly_name)

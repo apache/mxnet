@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-#pylint: disable=no-member, too-many-locals, too-many-branches, no-self-use, broad-except, lost-exception, too-many-nested-blocks, too-few-public-methods, invalid-name
+# pylint: disable=no-member, too-many-locals, too-many-branches, no-self-use, broad-except, lost-exception, too-many-nested-blocks, too-few-public-methods, invalid-name
 """
     This file tests provides functionality to test that notebooks run without
     warning or exception.
@@ -31,7 +31,7 @@ import nbformat
 
 
 IPYTHON_VERSION = 4  # Pin to ipython version 4.
-TIME_OUT = 15*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
+TIME_OUT = 15 * 60  # Maximum 10 mins/test. Reaching timeout causes test failure.
 ATTEMPTS = 8
 KERNEL_ERROR_MSG = 'Kernel died before replying to kernel_info'
 
@@ -96,7 +96,7 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
                 if str(rte) != KERNEL_ERROR_MSG:
                     raise rte
 
-                logging.info("Error starting preprocessor: {}. Attempt {}/{}".format(str(rte), i+1, ATTEMPTS))
+                logging.info("Error starting preprocessor: {}. Attempt {}/{}".format(str(rte), i + 1, ATTEMPTS))
                 time.sleep(1)
                 continue
             break

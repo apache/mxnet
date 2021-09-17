@@ -53,6 +53,7 @@ def check_leak_ndarray(request):
     gc.set_debug(gc_flags)  # reset gc flags
 
     seen = set()
+
     def has_array(element):
         try:
             if element in seen:

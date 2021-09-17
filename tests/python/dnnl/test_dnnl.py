@@ -31,6 +31,7 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 import itertools
 
+
 @use_np
 @pytest.mark.seed(1234)
 def test_dnnl_ndarray_slice():
@@ -51,8 +52,10 @@ def test_dnnl_ndarray_slice():
 class Dummy(gluon.data.Dataset):
     def __len__(self):
         return 2
+
     def __getitem__(self, key):
         return key, np.ones((3, 224, 224)), np.ones((10, ))
+
 
 @use_np
 @pytest.mark.seed(1234)
@@ -75,9 +78,10 @@ def test_dnnl_engine_threading():
         assert_almost_equal(y[0, 0, 0, 0], np.array(0.056331709))
         break
 
+
 def test_dnnl_reshape():
     def test_reshape_after_conv(dst_shape):
-        shape = (1,1,4,4)
+        shape = (1, 1, 4, 4)
         data = mx.symbol.Variable('data')
         conv = mx.symbol.Convolution(data=data, num_filter=16, kernel=(1, 1), pad=(0, 0), stride=(1, 1))
         res = mx.symbol.reshape(data=conv, shape=dst_shape)
@@ -85,7 +89,7 @@ def test_dnnl_reshape():
 
         val1 = np.random.uniform(-1, 1, shape)
         val2 = np.random.uniform(-1, 1, (16, 1, 1, 1))
-        val3 = np.random.uniform(-1 ,1, (1))
+        val3 = np.random.uniform(-1, 1, (1))
 
         exe.arg_arrays[0][:] = val1
         exe.arg_arrays[1][:] = val2
@@ -99,7 +103,6 @@ def test_dnnl_reshape():
         data_npy = conv_exe.forward(is_train=False)[0].asnumpy()
         assert_almost_equal(outputs, data_npy.reshape(dst_shape))
 
-
     # Test dnnl reshape (Using shape)
     test_cases = [(256), (16, 16), (4, 4, 16), (4, 4, 4, 4)]
     for test_case in test_cases:
@@ -112,6 +115,7 @@ def test_reshape_before_conv():
         """
         test Net
         """
+
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             self.conv0 = nn.Conv2D(10, (3, 3))
@@ -146,6 +150,7 @@ def test_slice_before_conv():
         """
         test Net
         """
+
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             self.conv0 = nn.Conv2D(4, (3, 3))
@@ -180,6 +185,7 @@ def test_slice_reshape_before_conv():
         """
         test Net
         """
+
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             self.conv0 = nn.Conv2D(4, (3, 3))
@@ -212,9 +218,9 @@ def test_flatten_slice_after_conv():
     data = mx.symbol.Variable('data')
     weight = mx.symbol.Variable('weight')
     bias = mx.symbol.Variable('bias')
-    conv1= mx.symbol.Convolution(data = data, weight=weight, bias=bias, name='conv1', num_filter=64, kernel=(3,3), stride=(1,1))
-    flatten1 = mx.symbol.flatten(data = conv1)
-    slice1 = mx.symbol.slice(data = flatten1, begin=0, end=1)
+    conv1 = mx.symbol.Convolution(data=data, weight=weight, bias=bias, name='conv1', num_filter=64, kernel=(3, 3), stride=(1, 1))
+    flatten1 = mx.symbol.flatten(data=conv1)
+    slice1 = mx.symbol.slice(data=flatten1, begin=0, end=1)
 
     shape = (2, 16, 16, 16)
     val = np.random.rand(2, 16, 16, 16).astype(np.float32)
@@ -245,9 +251,10 @@ def test_dnnl_sum_with_dnnl_layout():
         y = mx.sym.add_n(*inputs) # (only DNNL data input)
         exe = y._simple_bind(ctx=mx.cpu(), x=x_shape, w=w_shape)
         out = exe.forward(is_train=False, x=x_npy, w=np.ones(w_shape))[0]
-        #conv with kernel (3,3) on ones should give result=27
+        # conv with kernel (3,3) on ones should give result=27
         single_cov = 27.0
-        assert_almost_equal(out[0].asnumpy()[0, 0, 0], single_cov*i)
+        assert_almost_equal(out[0].asnumpy()[0, 0, 0], single_cov * i)
+
 
 def test_dnnl_sum_inplace_with_cpu_layout():
     x_shape = (32, 3, 224, 224)
@@ -287,6 +294,7 @@ def test_batchnorm():
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_batchnorm_training(stype)
+
 
 def test_batchnorm_relu_fusion():
     def check_batchnorm_relu_fusion(shape):
@@ -346,6 +354,7 @@ def test_batchnorm_relu_fusion():
     check_batchnorm_relu_fusion((8, 3, 224, 224))
     check_batchnorm_relu_fusion_gluon((1, 3, 224, 224))
     check_batchnorm_relu_fusion_gluon((8, 3, 224, 224))
+
 
 def test_softmax():
     def check_softmax_training(stype):
@@ -445,7 +454,7 @@ def test_Deconvolution():
                 test = mx.symbol.Deconvolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3))
             elif np.array(shape).shape[0] == 5:
-                test = mx.symbol.Deconvolution(data=data, kernel=(3,3,3), stride=(2,2,2), num_filter=4)
+                test = mx.symbol.Deconvolution(data=data, kernel=(3, 3, 3), stride=(2, 2, 2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3, 3))
             else:
                 return 0
@@ -491,6 +500,7 @@ def test_fullyconnected():
     for stype in stypes:
         check_fullyconnected_training(stype)
 
+
 def test_softmax_with_large_inputs():
     def softmax_forward(input_data, true_output):
         data = mx.sym.Variable('data')
@@ -501,10 +511,11 @@ def test_softmax_with_large_inputs():
         nparr = ndarr.asnumpy()
         assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
 
-    softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
-    softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
-    softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
-    softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[-1e30, -1e30]]]]), np.array([1.0, 1.0]))
+    softmax_forward(mx.nd.array([[[[1e30, 1e30]]]]), np.array([1.0, 1.0]))
+    softmax_forward(mx.nd.array([[[[-3.4e38, -3.4e38]]]]), np.array([1.0, 1.0]))
+    softmax_forward(mx.nd.array([[[[3.4e38, 3.4e38]]]]), np.array([1.0, 1.0]))
+
 
 def test_non_dnnl_fcomputeex():
     # test special case where DNNL formatted NDArray feeds into non-dnnl fcomputeex operator
@@ -534,7 +545,6 @@ def test_non_dnnl_fcomputeex():
         def create_operator(self, ctx, shapes, dtypes):
             return Custom()
 
-
     class Custom(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
             print(in_data[0])
@@ -544,13 +554,14 @@ def test_non_dnnl_fcomputeex():
             self.assign(in_grad[0], req[0], out_grad)
 
     data = mx.symbol.Variable('data')
-    conv = mx.sym.Convolution(data=data, kernel=(5, 5), pad=(1, 1), stride=(1,1), num_filter=8, name="conv", no_bias=True)
+    conv = mx.sym.Convolution(data=data, kernel=(5, 5), pad=(1, 1), stride=(1, 1), num_filter=8, name="conv", no_bias=True)
     custom = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
-    exec1 = custom._bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
+    exec1 = custom._bind(mx.cpu(), args={'data': mx.nd.ones([10, 3, 96, 96]), 'conv_weight': mx.nd.ones([8, 3, 5, 5])})
     exec1.forward()[0].wait_to_read()
 
+
 def test_conv_transpose():
-    axes = [(0,2,1,3), (0,2,3,1), (1,2,3,0), (3,2,1,0)]
+    axes = [(0, 2, 1, 3), (0, 2, 3, 1), (1, 2, 3, 0), (3, 2, 1, 0)]
     a = np.random.rand(10, 16, 50, 50)
     b = np.random.rand(32, 16, 3, 3)
     x = mx.nd.array(a)
@@ -577,13 +588,12 @@ def test_reshape_transpose_6d():
             N = 1
             C = 2
             H = W = 596
-                                                          # (N, f1*f2*C, H, W)
+            # (N, f1*f2*C, H, W)
             x = mx.np.reshape(x, (N, C, f1 * f2, H, W))  # (N, C, f1*f2, H, W)
             x = mx.np.reshape(x, (N, C, f1, f2, H, W))    # (N, C, f1, f2, H, W)
             x = mx.np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
-            x = mx.np.reshape(x, (N, C, H*f1, W*f2))              # (N, C, H*f1, W*f2)
+            x = mx.np.reshape(x, (N, C, H * f1, W * f2))              # (N, C, H*f1, W*f2)
             return x
-
 
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -603,9 +613,10 @@ def test_reshape_transpose_6d():
     output = net(data)
     a = output.asnumpy()
 
+
 def test_concat():
     def ref_concat(a, b, axis):
-      return np.concatenate((a, b), axis=axis)
+        return np.concatenate((a, b), axis=axis)
 
     a_sym = mx.sym.Variable("a")
     b_sym = mx.sym.Variable("b")
@@ -614,14 +625,14 @@ def test_concat():
     b_shape = tuple(dshape)
 
     for axis in range(0, 4):
-      z = mx.sym.concat(a_sym, b_sym, dim=axis)
-      a = np.random.uniform(-1, 1, a_shape)
-      b = np.random.uniform(-1, 1, b_shape)
-      exe = z._simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
-      out = exe.forward(is_train=False, a=a, b=b)
-      ref_out = ref_concat(a, b, axis=axis)
-      out = out[0].asnumpy()
-      assert_almost_equal(out, ref_out)
+        z = mx.sym.concat(a_sym, b_sym, dim=axis)
+        a = np.random.uniform(-1, 1, a_shape)
+        b = np.random.uniform(-1, 1, b_shape)
+        exe = z._simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
+        out = exe.forward(is_train=False, a=a, b=b)
+        ref_out = ref_concat(a, b, axis=axis)
+        out = out[0].asnumpy()
+        assert_almost_equal(out, ref_out)
 
     def check_concat_training(stype):
         data_shape = rand_shape_nd(4)
@@ -636,6 +647,7 @@ def test_concat():
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_concat_training(stype)
+
 
 def test_concat_blocked():
     ctx = mx.cpu()
@@ -666,9 +678,10 @@ def test_concat_blocked():
         out = calc_output_of_layer(conc)
         assert_almost_equal(out, ref_out)
 
+
 def test_elemwise_add():
     def ref_add(a, b):
-      return np.add(a, b)
+        return np.add(a, b)
 
     a_sym = mx.sym.Variable("a")
     b_sym = mx.sym.Variable("b")
@@ -698,15 +711,17 @@ def test_elemwise_add():
     for stype in stypes:
         check_elemwise_add_training(stype)
 
+
 def test_rnn():
     SEQ_LENGTH = [2**10, 2**5]
     STATE_SIZE = [1, 2]
     BATCH_SIZE = [4]
     INPUT_SIZE = [4]
+
     def batch_check(seq_length, state_size, batch_size, input_size):
-        modes_params = [('rnn_relu', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size),)),
-                        ('rnn_tanh', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size),)),
-                        ('gru', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size*3),))
+        modes_params = [('rnn_relu', mx.np.random.normal(0, 1, ((input_size + state_size + 2) * state_size),)),
+                        ('rnn_tanh', mx.np.random.normal(0, 1, ((input_size + state_size + 2) * state_size),)),
+                        ('gru', mx.np.random.normal(0, 1, ((input_size + state_size + 2) * state_size * 3),))
                         ]
         for m, p in modes_params:
             data = mx.np.random.normal(0, 1, (seq_length, batch_size, input_size))
@@ -715,7 +730,7 @@ def test_rnn():
             state.attach_grad()
 
             with mx.autograd.record():
-                y = mx.npx.rnn(data=data, parameters=p, mode=m, \
+                y = mx.npx.rnn(data=data, parameters=p, mode=m,
                                state=state, state_size=state_size, num_layers=1)
             assert y.shape == (seq_length, batch_size, state_size)
             assert type(y[0]).__name__ == 'ndarray'
@@ -723,5 +738,5 @@ def test_rnn():
             assert state.shape == (1, batch_size, state_size)
             assert type(state[0]).__name__ == 'ndarray'
 
-    for sl, ss, bs, in_s in itertools.product(SEQ_LENGTH, STATE_SIZE, BATCH_SIZE, INPUT_SIZE): 
+    for sl, ss, bs, in_s in itertools.product(SEQ_LENGTH, STATE_SIZE, BATCH_SIZE, INPUT_SIZE):
         batch_check(sl, ss, bs, in_s)

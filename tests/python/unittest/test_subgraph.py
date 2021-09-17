@@ -24,9 +24,11 @@ from mxnet.test_utils import *
 import pytest
 from mxnet.gluon.model_zoo.vision import get_model
 
+
 def make_subgraph(subg, *args):
     js = subg.tojson()
     return subg
+
 
 @pytest.mark.serial
 def test_make_subgraph():
@@ -43,9 +45,9 @@ def test_make_subgraph():
 
         s = (10, 10)
         a_arr = mx.nd.array(np.random.normal(-0.1, 0.1, size=s),
-                ctx=default_context()).tostype(stype)
+                            ctx=default_context()).tostype(stype)
         b_arr = mx.nd.array(np.random.normal(-0.1, 0.1, size=s),
-                ctx=default_context()).tostype(stype)
+                            ctx=default_context()).tostype(stype)
         return (d, y, {'a': a_arr, 'b': b_arr}, {})
 
     def create_weights(shapes, names):
@@ -81,7 +83,7 @@ def test_make_subgraph():
     def make_subgraph2(stype, out_mean_var):
         data = mx.symbol.Variable('data', stype=stype)
         orig = mx.symbol.BatchNorm(data, fix_gamma=False,
-                output_mean_var=out_mean_var, name="batchnorm")
+                                   output_mean_var=out_mean_var, name="batchnorm")
         s = (10, 10)
         return make_subgraph_weight(orig, s, stype)
 
@@ -107,34 +109,34 @@ def test_make_subgraph():
         return make_subgraph_weight(orig, s, stype)
 
     make_subgraphs = [make_subgraph1,
-            lambda stype: make_subgraph2(stype, False),
-            lambda stype: make_subgraph2(stype, True),
-            make_subgraph3, make_subgraph4]
+                      lambda stype: make_subgraph2(stype, False),
+                      lambda stype: make_subgraph2(stype, True),
+                      make_subgraph3, make_subgraph4]
     stypes = ['default', 'row_sparse']
     for make_subg in make_subgraphs:
         for stype in stypes:
             orig, subg, inputs, aux_states = make_subg(stype)
             all_inputs = copy.deepcopy(inputs)
             all_inputs.update(aux_states)
-            args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
+            args_grad = {key: mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
             e1 = orig._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
-                    aux_states=all_inputs)
-            args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
+                            aux_states=all_inputs)
+            args_grad = {key: mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
             e2 = subg._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
-                    aux_states=all_inputs)
+                            aux_states=all_inputs)
             e1.forward(is_train=True)
             e2.forward(is_train=True)
             for i in range(len(e1.outputs)):
                 assert_almost_equal(e1.outputs[i].asnumpy(), e2.outputs[i].asnumpy(),
-                        rtol=0.001, atol=0.0001)
+                                    rtol=0.001, atol=0.0001)
 
             out_grads = [mx.nd.random.uniform(-1, 1, shape=out.shape, ctx=default_context())
-                    for out in e1.outputs]
+                         for out in e1.outputs]
             e1.backward(out_grads)
             e2.backward(out_grads)
             for i in range(len(e1.grad_arrays)):
                 assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy(),
-                        rtol=0.001, atol=0.0001)
+                                    rtol=0.001, atol=0.0001)
 
 
 @pytest.mark.serial

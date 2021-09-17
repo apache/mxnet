@@ -23,6 +23,7 @@ import shutil
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal
 
+
 @pytest.mark.skip(reason='Gluon no long support v1.x models since https://github.com/apache/incubator-mxnet/pull/20262')
 def test_resnet50_v2(tmp_path):
     try:
@@ -39,7 +40,7 @@ def test_resnet50_v2(tmp_path):
         sym_file = "%s-symbol.json" % prefix
         params_file = "%s-0000.params" % prefix
         onnx_file = "%s.onnx" % prefix
-    
+
         dynamic_input_shapes = [('batch', 3, 224, 224)]
         input_shapes = [(1, 3, 224, 224)]
         input_types = [np.float32]
@@ -59,7 +60,7 @@ def test_resnet50_v2(tmp_path):
         mx_out = model(inp)
         onnx_inputs = [inp]
         input_dict = dict((session.get_inputs()[i].name, onnx_inputs[i].asnumpy())
-                           for i in range(len(onnx_inputs)))
+                          for i in range(len(onnx_inputs)))
         on_out = session.run(None, input_dict)
 
         assert_almost_equal(mx_out, on_out, rtol=0.001, atol=0.01)

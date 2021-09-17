@@ -26,9 +26,10 @@ kv = mx.kv.create('dist_async')
 my_rank = kv.rank
 nworker = kv.num_workers
 
+
 def test_gluon_trainer_type():
     def check_trainer_kv_update(weight_stype, update_on_kv):
-        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=weight_stype)
+        x = mx.gluon.Parameter('x', shape=(10, 1), lr_mult=1.0, stype=weight_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         try:
             trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
@@ -46,6 +47,7 @@ def test_gluon_trainer_type():
     check_trainer_kv_update('row_sparse', True)
     check_trainer_kv_update('row_sparse', None)
     print('worker ' + str(my_rank) + ' passed test_gluon_trainer_type')
+
 
 if __name__ == "__main__":
     test_gluon_trainer_type()

@@ -29,6 +29,7 @@ from mxnet.gluon.data.vision import transforms
 from mxnet import image
 import pytest
 
+
 @use_np
 def test_to_tensor():
     # 3D Input
@@ -105,7 +106,7 @@ def test_resize():
         out_batch_nd = transforms.Resize(200)(data_bath_in)
         for i in range(len(out_batch_nd)):
             assert_almost_equal(mx.image.imresize(data_bath_in[i], 200, 200, 1).asnumpy(),
-                out_batch_nd[i].asnumpy())
+                                out_batch_nd[i].asnumpy())
         # test interp = 2
         out_nd = transforms.Resize(200, interpolation=2)(data_in)
         data_expected = mx.image.imresize(data_in, 200, 200, 2)
@@ -137,23 +138,23 @@ def test_crop_resize():
         out_nd = transforms.CropResize(0, 0, 3, 2)(data_in)
         out_np = out_nd.asnumpy()
         assert(out_np.sum() == 180)
-        assert((out_np[0:2,1,1].flatten() == [4, 16]).all())
+        assert((out_np[0:2, 1, 1].flatten() == [4, 16]).all())
         # test 4D input
         data_bath_in = np.arange(180).reshape((2, 6, 5, 3)).astype(dtype)
         out_batch_nd = transforms.CropResize(1, 2, 3, 4)(data_bath_in)
         out_batch_np = out_batch_nd.asnumpy()
         assert(out_batch_np.sum() == 7524)
-        assert((out_batch_np[0:2,0:4,1,1].flatten() == [37,  52,  67,  82, 127, 142, 157, 172]).all())
+        assert((out_batch_np[0:2, 0:4, 1, 1].flatten() == [37, 52, 67, 82, 127, 142, 157, 172]).all())
         # test normal case with resize
         data_in = np.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
         out_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 1)(data_in)
-        data_expected = transforms.Resize(size=25, interpolation=1)(data_in[:50, :100, :3]) #nd.slice(data_in, (0, 0, 0), (50, 100, 3)))
+        data_expected = transforms.Resize(size=25, interpolation=1)(data_in[:50, :100, :3])  # nd.slice(data_in, (0, 0, 0), (50, 100, 3)))
         assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
         # test 4D input with resize
         data_bath_in = np.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
         out_batch_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 1)(data_bath_in)
         for i in range(len(out_batch_nd)):
-            actual = transforms.Resize(size=25, interpolation=1)(data_bath_in[i][:50, :100, :3]).asnumpy() #(nd.slice(data_bath_in[i], (0, 0, 0), (50, 100, 3))).asnumpy()
+            actual = transforms.Resize(size=25, interpolation=1)(data_bath_in[i][:50, :100, :3]).asnumpy()  # (nd.slice(data_bath_in[i], (0, 0, 0), (50, 100, 3))).asnumpy()
             expected = out_batch_nd[i].asnumpy()
             assert_almost_equal(expected, actual)
         # test with resize height and width should be greater than 0
@@ -230,17 +231,20 @@ def test_transformer():
 
     transform(mx.np.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
+
 @use_np
 def test_random_crop():
     x = mx.np.ones((245, 480, 3), dtype='uint8')
     y = mx.npx.image.random_crop(x, width=100, height=100)
     assert y.shape == (100, 100, 3)
 
+
 @use_np
 def test_random_resize_crop():
     x = mx.np.ones((245, 480, 3), dtype='uint8')
     y = mx.npx.image.random_resized_crop(x, width=100, height=100)
     assert y.shape == (100, 100, 3)
+
 
 @use_np
 def test_hybrid_transformer():
@@ -262,6 +266,7 @@ def test_hybrid_transformer():
         transforms.Normalize([0, 0, 0], [1, 1, 1])])
 
     transform(mx.np.ones((245, 480, 3), dtype='uint8')).wait_to_read()
+
 
 @xfail_when_nonstandard_decimal_separator
 @use_np
@@ -325,6 +330,7 @@ def test_random_transforms():
 
     tmp_t = transforms.Compose([transforms.Resize(300), transforms.RandomResizedCrop(224)])
     counter = 0
+
     def transform_fn(x):
         nonlocal counter
         counter += 1
@@ -337,6 +343,7 @@ def test_random_transforms():
     for _ in range(iteration):
         out = transform(img)
     assert counter == pytest.approx(5000, 1e-1)
+
 
 @xfail_when_nonstandard_decimal_separator
 @use_np
@@ -353,7 +360,7 @@ def test_random_gray():
         out = transform(img)
         if out[0][0][0].asnumpy() != pixel:
             num_apply += 1
-    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
+    assert_almost_equal(num_apply / float(iteration), 0.5, 0.1)
 
     transform = transforms.RandomGray(0.5)
     transform.hybridize()
@@ -365,7 +372,8 @@ def test_random_gray():
         out = transform(img)
         if out[0][0][0].asnumpy() != pixel:
             num_apply += 1
-    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
+    assert_almost_equal(num_apply / float(iteration), 0.5, 0.1)
+
 
 @use_np
 def test_bbox_random_flip():
@@ -381,7 +389,8 @@ def test_bbox_random_flip():
         im_out, im_bbox = transform(img, bbox)
         if im_bbox[0][0].asnumpy() != 1 and im_out[0, 0, 0].asnumpy() != 10:
             num_apply += 1
-    assert_almost_equal(np.array([num_apply])/float(iteration), 0.5, 0.5)
+    assert_almost_equal(np.array([num_apply]) / float(iteration), 0.5, 0.5)
+
 
 @use_np
 def test_bbox_crop():

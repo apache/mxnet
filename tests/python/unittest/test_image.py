@@ -28,8 +28,10 @@ import pytest
 
 mx.npx.reset_np()
 
+
 def _get_data(url, dirname):
-    import os, tarfile
+    import os
+    import tarfile
     download(url, dirname=dirname, overwrite=False)
     fname = os.path.join(dirname, url.split('/')[-1])
     tar = tarfile.open(fname)
@@ -39,6 +41,7 @@ def _get_data(url, dirname):
         tar.extractall(path=dirname)
     tar.close()
     return source_images
+
 
 def _generate_objects():
     num = np.random.randint(1, 10)
@@ -52,6 +55,7 @@ def _generate_objects():
     cid = np.random.randint(0, 20, size=num)
     label = np.hstack((cid[:, np.newaxis], boxes)).ravel().tolist()
     return [2, 5] + label
+
 
 def _test_imageiter_last_batch(imageiter_list, assert_data_shape):
     test_iter = imageiter_list[0]
@@ -219,7 +223,7 @@ class TestImage(unittest.TestCase):
             height = np.random.randint(100, 500)
             src = np.random.rand(height, width, 3) * 255.
             mx_result = mx.image.color_normalize(mx.nd.array(src),
-                mx.nd.array(mean), mx.nd.array(std))
+                                                 mx.nd.array(mean), mx.nd.array(std))
             assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)
 
     def test_imageiter(self):
@@ -227,7 +231,7 @@ class TestImage(unittest.TestCase):
         im_list = [[np.random.randint(0, 5), x] for x in self.IMAGES]
         fname = os.path.join(self.IMAGES_DIR, 'test_imageiter.lst')
         file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
-                        for k, x in enumerate(self.IMAGES)]
+                     for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
             for line in file_list:
                 f.write(line + '\n')
@@ -239,15 +243,15 @@ class TestImage(unittest.TestCase):
                 path_imglist = fname if test == 'path_imglist' else None
                 imageiter_list = [
                     mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype),
+                                       path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='discard'),
+                                       path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='discard'),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='pad'),
+                                       path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='pad'),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='roll_over'),
+                                       path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='roll_over'),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, shuffle=True,
-                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='pad')
+                                       path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='pad')
                 ]
                 _test_imageiter_last_batch(imageiter_list, (2, 3, 224, 224))
 
@@ -271,7 +275,7 @@ class TestImage(unittest.TestCase):
                 cv_border = cv2.copyMakeBorder(cv_img, top, bot, left, right, borderType=type_val, value=val)
                 mx_border = mx.image.copyMakeBorder(mx_img, top, bot, left, right, type=type_val, values=val)
                 assert_almost_equal(mx_border.asnumpy(), cv_border)
-                out_img = mx.nd.zeros((new_h , new_w, 3), dtype=mx_img.dtype)
+                out_img = mx.nd.zeros((new_h, new_w, 3), dtype=mx_img.dtype)
                 mx.image.copyMakeBorder(mx_img, top, bot, left, right, type=type_val, values=val, out=out_img)
                 assert_almost_equal(out_img.asnumpy(), cv_border)
 
@@ -291,9 +295,9 @@ class TestImage(unittest.TestCase):
         # TODO(Joshua Zhang): verify the augmenter outputs
         im_list = [[0, x] for x in self.IMAGES]
         test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=im_list,
-            resize=640, rand_crop=True, rand_resize=True, rand_mirror=True, mean=True,
-            std=np.array([1.1, 1.03, 1.05]), brightness=0.1, contrast=0.1, saturation=0.1,
-            hue=0.1, pca_noise=0.1, rand_gray=0.2, inter_method=10, path_root=self.IMAGES_DIR, shuffle=True)
+                                       resize=640, rand_crop=True, rand_resize=True, rand_mirror=True, mean=True,
+                                       std=np.array([1.1, 1.03, 1.05]), brightness=0.1, contrast=0.1, saturation=0.1,
+                                       hue=0.1, pca_noise=0.1, rand_gray=0.2, inter_method=10, path_root=self.IMAGES_DIR, shuffle=True)
         for _ in test_iter:
             pass
 
@@ -324,15 +328,15 @@ class TestImage(unittest.TestCase):
 
         imageiter_list = [
             mx.image.ImageDetIter(2, (3, 400, 400),
-                path_imglist=fname, path_root=self.IMAGES_DIR),
+                                  path_imglist=fname, path_root=self.IMAGES_DIR),
             mx.image.ImageDetIter(3, (3, 400, 400),
-                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='discard'),
+                                  path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='discard'),
             mx.image.ImageDetIter(3, (3, 400, 400),
-                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='pad'),
+                                  path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='pad'),
             mx.image.ImageDetIter(3, (3, 400, 400),
-                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='roll_over'),
+                                  path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='roll_over'),
             mx.image.ImageDetIter(3, (3, 400, 400), shuffle=True,
-                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='pad')
+                                  path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='pad')
         ]
         _test_imageiter_last_batch(imageiter_list, (2, 3, 400, 400))
 
@@ -341,11 +345,11 @@ class TestImage(unittest.TestCase):
         # TODO(Joshua Zhang): verify the augmenter outputs
         im_list = [_generate_objects() + [x] for x in self.IMAGES]
         det_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root=self.IMAGES_DIR,
-            resize=640, rand_crop=1, rand_pad=1, rand_gray=0.1, rand_mirror=True, mean=True,
-            std=np.array([1.1, 1.03, 1.05]), brightness=0.1, contrast=0.1, saturation=0.1,
-            pca_noise=0.1, hue=0.1, inter_method=10, min_object_covered=0.5,
-            aspect_ratio_range=(0.2, 5), area_range=(0.1, 4.0), min_eject_coverage=0.5,
-            max_attempts=50)
+                                         resize=640, rand_crop=1, rand_pad=1, rand_gray=0.1, rand_mirror=True, mean=True,
+                                         std=np.array([1.1, 1.03, 1.05]), brightness=0.1, contrast=0.1, saturation=0.1,
+                                         pca_noise=0.1, hue=0.1, inter_method=10, min_object_covered=0.5,
+                                         aspect_ratio_range=(0.2, 5), area_range=(0.1, 4.0), min_eject_coverage=0.5,
+                                         max_attempts=50)
         for _ in det_iter:
             pass
 
@@ -359,8 +363,8 @@ class TestImage(unittest.TestCase):
         out, (x0, y0, new_w, new_h) = mx.image.random_size_crop(mx.nd.array(src), size=(width, height), area=0.08, ratio=ratio)
         _, pts = mx.image.center_crop(mx.nd.array(src), size=(width, height))
         if (x0, y0, new_w, new_h) != pts:
-            assert ratio[0] - epsilon <= float(new_w)/new_h <= ratio[1] + epsilon, \
-            'ration of new width and height out of the bound{}/{}={}'.format(new_w, new_h, float(new_w)/new_h)
+            assert ratio[0] - epsilon <= float(new_w) / new_h <= ratio[1] + epsilon, \
+                'ration of new width and height out of the bound{}/{}={}'.format(new_w, new_h, float(new_w) / new_h)
 
     @xfail_when_nonstandard_decimal_separator
     def test_imrotate(self):
@@ -404,7 +408,7 @@ class TestImage(unittest.TestCase):
         # batch exception - zoom_in=zoom_out=True
         img_in = mx.nd.random.uniform(0, 1, (5, 3, 30, 60), dtype=np.float32)
         nd_rots = mx.nd.array([1, 2, 3, 4, 5], dtype=np.float32)
-        args={'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': True}
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': True}
         with pytest.raises(ValueError):
             mx.image.imrotate(**args)
 
@@ -444,4 +448,3 @@ class TestImage(unittest.TestCase):
         out_batch_image = mx.image.random_rotate(src_batch_image,
                                                  angle_limits)
         self.assertEqual(out_batch_image.shape, (3, 3, 30, 60))
-

@@ -28,12 +28,11 @@ import pytest
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assert_raises_cudnn_not_satisfied, run_in_spawned_process
-from test_gluon import *
-from test_loss import *
-from test_numpy_loss import *
 from test_gluon_rnn import *
-
+from test_numpy_loss import *
+from test_loss import *
+from test_gluon import *
+from common import assert_raises_cudnn_not_satisfied, run_in_spawned_process
 set_default_context(mx.gpu(0))
 
 
@@ -212,17 +211,16 @@ def check_layer_bidirectional(size, in_size, proj_size):
     mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
 
 
-
 def check_layer_bidirectional_varseqlen(size, in_size):
     weights = {}
     for d in ['l', 'r']:
-        weights['{}0_i2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, in_size))
-        weights['{}0_h2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, size))
-        weights['{}0_i2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
-        weights['{}0_h2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
+        weights['{}0_i2h_weight'.format(d)] = mx.np.random.uniform(size=(size * 4, in_size))
+        weights['{}0_h2h_weight'.format(d)] = mx.np.random.uniform(size=(size * 4, size))
+        weights['{}0_i2h_bias'.format(d)] = mx.np.random.uniform(size=(size * 4,))
+        weights['{}0_h2h_bias'.format(d)] = mx.np.random.uniform(size=(size * 4,))
 
     net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True)
-    ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False)
+    ref_net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False)
     net.initialize()
     ref_net.initialize()
     net_params = net.collect_params()
@@ -236,7 +234,7 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     data = mx.np.random.uniform(size=(num_timesteps, batch_size, in_size))
     data_np = data.asnumpy()
 
-    sequence_length = mx.np.random.randint(1, num_timesteps+1, size=(batch_size)).astype("int32")
+    sequence_length = mx.np.random.randint(1, num_timesteps + 1, size=(batch_size)).astype("int32")
     sequence_length_np = sequence_length.asnumpy().astype("int32")
 
     # Reference net is processing batch elements one at a time, so that it is "perfectly sized"
@@ -284,6 +282,7 @@ def test_layer_bidirectional():
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_layer_bidirectional_proj():
     check_layer_bidirectional(7, 5, 3)
+
 
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_layer_bidirectional_varseqlength():
@@ -341,6 +340,7 @@ def test_global_norm_clip_multi_device():
 
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
     from mxnet.gluon.utils import split_and_load
+
     def _find_bn(module):
         if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
             return module
@@ -382,7 +382,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     with mx.autograd.record():
         output1 = bn1(input1)
-        output2  = [bn2(xi) for xi in inputs2]
+        output2 = [bn2(xi) for xi in inputs2]
         loss1 = (output1 ** 2).sum()
         loss2 = [(output ** 2).sum() for output in output2]
         mx.autograd.backward(loss1)
@@ -401,6 +401,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     input2grad = mx.np.concatenate([output.grad.as_in_context(input.context) for output in inputs2], axis=0)
     assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
+
 @mx.util.use_np
 def test_sync_batchnorm():
     def get_num_devices():
@@ -417,6 +418,7 @@ def test_sync_batchnorm():
     for _ in range(10):
         _check_batchnorm_result(mx.np.random.uniform(size=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
+
 
 def test_symbol_block_fp16(tmpdir):
     # Test case to verify if initializing the SymbolBlock from a model with params
@@ -478,7 +480,7 @@ def test_large_models():
     largest_supported_total_mem_GB = 32
     if (total_mem_bytes > largest_supported_total_mem_GB * 1024 * 1024 * 1024):
         sys.stderr.write(
-        ' bypassing test due to too-large global memory of size {} ... '.format(total_mem_bytes))
+            ' bypassing test due to too-large global memory of size {} ... '.format(total_mem_bytes))
         return
 
     start_size = tensor_size(0.20 * total_mem_bytes)
@@ -538,6 +540,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
     time_per_iteration.value = (time.time() - start) / num_iterations
 
+
 def _test_bulking(test_bulking_func):
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0, 0, True), (1, 1, True), (15, 15, False),
@@ -576,6 +579,7 @@ def _test_bulking(test_bulking_func):
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
         .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
+
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking_gluon_gpu():
     _test_bulking(_test_bulking_in_process)
@@ -608,21 +612,22 @@ def test_gemms_true_fp16():
     net.weight.set_data(weights)
 
     with environment('MXNET_FC_TRUE_FP16', '0'):
-      ref_results = net(input)
+        ref_results = net(input)
 
     with environment('MXNET_FC_TRUE_FP16', '1'):
-      results_trueFP16 = net(input)
+        results_trueFP16 = net(input)
 
     atol = 1e-2
     rtol = 1e-2
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
 
+
 @mx.util.use_np
 def test_cudnn_dropout_reproducibility():
     d = nn.Dropout(0.5)
     d.initialize()
-    a = mx.np.random.uniform(size=(100,100))
+    a = mx.np.random.uniform(size=(100, 100))
     b = a.copy()
     a.attach_grad()
     b.attach_grad()
@@ -645,4 +650,3 @@ def test_cudnn_dropout_reproducibility():
         assert_almost_equal(first, second)
 
     assert_almost_equal(a.grad, b.grad)
-

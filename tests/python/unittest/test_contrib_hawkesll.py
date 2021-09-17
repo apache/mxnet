@@ -153,4 +153,3 @@ def test_hawkesll_backward_single_mark():
     A.backward()
 
     assert np.allclose(beta.grad.asnumpy().sum(), -0.05371582)
-

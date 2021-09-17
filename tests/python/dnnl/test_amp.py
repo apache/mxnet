@@ -33,15 +33,16 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
+
 def test_amp_coverage():
     conditional = [item[0] for item in amp.lists.symbol_bf16.CONDITIONAL_FP32_FUNCS]
 
     # Check for duplicates
     for a in [amp.lists.symbol_bf16.BF16_FUNCS,
-          amp.lists.symbol_bf16.BF16_FP32_FUNCS,
-          amp.lists.symbol_bf16.FP32_FUNCS,
-          amp.lists.symbol_bf16.WIDEST_TYPE_CASTS,
-          conditional]:
+              amp.lists.symbol_bf16.BF16_FP32_FUNCS,
+              amp.lists.symbol_bf16.FP32_FUNCS,
+              amp.lists.symbol_bf16.WIDEST_TYPE_CASTS,
+              conditional]:
         ret = [item for item, count in collections.Counter(a).items() if count > 1]
         assert ret == [], "Elements " + str(ret) + " are duplicated in the AMP lists."
 
@@ -56,13 +57,13 @@ def test_amp_coverage():
     assert ret == [], "Elements " + str(ret) + " exist in more than 1 AMP list."
 
     # Check the coverage
-    py_str = lambda x: x.decode('utf-8')
+    def py_str(x): return x.decode('utf-8')
 
     plist = ctypes.POINTER(ctypes.c_char_p)()
     size = ctypes.c_uint()
 
     mx.base._LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist))
+                                  ctypes.byref(plist))
     op_names = []
     for i in range(size.value):
         s = py_str(plist[i])
@@ -74,8 +75,8 @@ def test_amp_coverage():
 
     if ret1 != set():
         warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                       "python/mxnet/amp/lists/symbol_bf16.py) - please add them. "
-                       """Please follow these guidelines for choosing a proper list:
+                      "python/mxnet/amp/lists/symbol_bf16.py) - please add them. "
+                      """Please follow these guidelines for choosing a proper list:
                        - if your operator is not to be used in a computational graph
                          (e.g. image manipulation operators, optimizers) or does not have
                          inputs, put it in BF16_FP32_FUNCS list,
@@ -92,6 +93,7 @@ def test_amp_coverage():
                          put it in BF16_FUNCS (this is unlikely for new operators)
                        - If you are not sure which list to choose, FP32_FUNCS is the
                          safest option""")
+
 
 def test_bf16_casting():
     data = mx.sym.var("data")
@@ -142,7 +144,7 @@ def test_bf16_casting():
     final_res = amp.convert_symbol(out6, target_dtype_ops=[], target_dtype="bfloat16",
                                    fp32_ops=[], cast_optional_params=True)
     exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2),
-                                data3=(1, 2))
+                                 data3=(1, 2))
     assert exe.arg_arrays[2].dtype == np.float32
 
     # Input node to amp_multicast and amp_cast, if dtypes conflict

@@ -23,8 +23,10 @@ import shutil
 import tempfile
 import unittest
 
+
 def _get_data(url, dirname):
-    import os, tarfile
+    import os
+    import tarfile
     download(url, dirname=dirname, overwrite=False)
     fname = os.path.join(dirname, url.split('/')[-1])
     tar = tarfile.open(fname)
@@ -34,6 +36,7 @@ def _get_data(url, dirname):
         tar.extractall(path=dirname)
     tar.close()
     return source_images
+
 
 def _generate_objects():
     num = np.random.randint(1, 10)
@@ -68,7 +71,7 @@ class TestImage(unittest.TestCase):
         os.makedirs('./data', exist_ok=True)
         fname = './data/test_imageiter.lst'
         file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
-                        for k, x in enumerate(self.IMAGES)]
+                     for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
             for line in file_list:
                 f.write(line + '\n')
@@ -80,16 +83,16 @@ class TestImage(unittest.TestCase):
                 path_imglist = fname if test == 'path_imglist' else None
                 imageiter_list = [
                     mx.gluon.contrib.data.vision.ImageDataLoader(2, (3, 224, 224), imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype),
+                                                                 path_imglist=path_imglist, path_root='', dtype=dtype),
                     mx.gluon.contrib.data.vision.ImageDataLoader(3, (3, 224, 224), imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='discard'),
+                                                                 path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='discard'),
                     mx.gluon.contrib.data.vision.ImageDataLoader(3, (3, 224, 224), imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='keep'),
+                                                                 path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='keep'),
                     mx.gluon.contrib.data.vision.ImageDataLoader(3, (3, 224, 224), imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='rollover'),
+                                                                 path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='rollover'),
                     mx.gluon.contrib.data.vision.ImageDataLoader(3, (3, 224, 224), imglist=imglist, shuffle=True,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='keep',
-                        rand_crop=1, rand_gray=0.1, rand_mirror=True)
+                                                                 path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='keep',
+                                                                 rand_crop=1, rand_gray=0.1, rand_mirror=True)
                 ]
                 for it in imageiter_list:
                     for _ in it:
@@ -119,28 +122,27 @@ class TestImage(unittest.TestCase):
 
         imageiter_list = [
             mx.gluon.contrib.data.vision.ImageBboxDataLoader(2, (3, 400, 400),
-                path_imglist=fname, path_root=''),
+                                                             path_imglist=fname, path_root=''),
             mx.gluon.contrib.data.vision.ImageBboxDataLoader(3, (3, 400, 400),
-                path_imglist=fname, path_root='', last_batch='discard'),
+                                                             path_imglist=fname, path_root='', last_batch='discard'),
             mx.gluon.contrib.data.vision.ImageBboxDataLoader(3, (3, 400, 400),
-                path_imglist=fname, path_root='', last_batch='keep'),
+                                                             path_imglist=fname, path_root='', last_batch='keep'),
             mx.gluon.contrib.data.vision.ImageBboxDataLoader(3, (3, 400, 400),
-                path_imglist=fname, path_root='', last_batch='rollover'),
+                                                             path_imglist=fname, path_root='', last_batch='rollover'),
             mx.gluon.contrib.data.vision.ImageBboxDataLoader(3, (3, 400, 400), shuffle=True,
-                path_imglist=fname, path_root='', last_batch='keep')
+                                                             path_imglist=fname, path_root='', last_batch='keep')
         ]
-
 
     def test_bbox_augmenters(self):
         # only test if all augmenters will work
         # TODO(Joshua Zhang): verify the augmenter outputs
         im_list = [_generate_objects() + [x] for x in self.IMAGES]
         det_iter = mx.gluon.contrib.data.vision.ImageBboxDataLoader(2, (3, 300, 300), imglist=im_list, path_root='',
-            rand_crop=1, rand_pad=1, rand_gray=0.1, rand_mirror=True, mean=True,
-            std=[1.1, 1.03, 1.05], brightness=0.1, contrast=0.1, saturation=0.1,
-            pca_noise=0.1, hue=0.1, inter_method=10,
-            max_aspect_ratio=5, area_range=(0.1, 4.0),
-            max_attempts=50)
+                                                                    rand_crop=1, rand_pad=1, rand_gray=0.1, rand_mirror=True, mean=True,
+                                                                    std=[1.1, 1.03, 1.05], brightness=0.1, contrast=0.1, saturation=0.1,
+                                                                    pca_noise=0.1, hue=0.1, inter_method=10,
+                                                                    max_aspect_ratio=5, area_range=(0.1, 4.0),
+                                                                    max_attempts=50)
         for _ in det_iter:
             pass
         mx.npx.waitall()

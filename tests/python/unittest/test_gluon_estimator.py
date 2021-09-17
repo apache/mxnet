@@ -30,11 +30,13 @@ from mxnet.gluon.contrib.estimator.event_handler import *
 
 mx.npx.reset_np()
 
+
 def _get_test_network(params=None):
     net = nn.Sequential()
     net.add(nn.Dense(4, activation='relu', flatten=False))
     net.share_parameters(params)
     return net
+
 
 def _get_test_data():
     batch_size = 4
@@ -151,9 +153,9 @@ def test_initializer():
     net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
     net.features.initialize(ctx=ctx)
     net.features(mx.np.zeros((1, 3, 224, 224)))
-    net.output = gluon.nn.Dense(10) #last layer not initialized
+    net.output = gluon.nn.Dense(10)  # last layer not initialized
     est = Estimator(net, loss=loss, train_metrics=acc, context=ctx)
-    dataset =  gluon.data.ArrayDataset(mx.np.zeros((10, 3, 224, 224)), mx.np.zeros((10, 10)))
+    dataset = gluon.data.ArrayDataset(mx.np.zeros((10, 3, 224, 224)), mx.np.zeros((10, 10)))
     train_data = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     est.fit(train_data=train_data,
             epochs=num_epochs)
@@ -320,7 +322,7 @@ def test_categorize_handlers():
     est = Estimator(net, loss=loss)
     event_handlers = [CustomHandler1(), CustomHandler2(), CustomHandler3()]
     train_begin, epoch_begin, batch_begin, \
-    batch_end, epoch_end, train_end = est._categorize_handlers(event_handlers)
+        batch_end, epoch_end, train_end = est._categorize_handlers(event_handlers)
     assert len(train_begin) == 1
     assert len(epoch_begin) == 2
     assert len(batch_begin) == 2
@@ -380,6 +382,7 @@ def test_default_handlers():
     assert isinstance(handlers[1], MetricHandler)
     assert isinstance(handlers[4], LoggingHandler)
 
+
 @mx.util.use_np
 def test_val_net():
     ''' test estimator with different training and validation networks '''
@@ -427,6 +430,7 @@ def test_val_net():
             val_data=dataloader,
             epochs=num_epochs)
 
+
 @mx.util.use_np
 def test_val_handlers():
     net = _get_test_network()
@@ -453,4 +457,3 @@ def test_val_handlers():
 
     logging = LoggingHandler(log_interval=1, metrics=est.val_metrics)
     est.evaluate(val_data=val_data, event_handlers=[logging])
-

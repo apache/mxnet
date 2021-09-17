@@ -24,6 +24,7 @@ from mxnet.base import _as_list
 from collections import defaultdict
 from mxnet.attribute import AttrScope
 
+
 @mx.util.use_np
 def test_while_loop_simple_forward():
 
@@ -53,8 +54,8 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, result = model(
-            mx.np.array([1], dtype="int64"), # i
-            mx.np.array([0], dtype="int64"), # s
+            mx.np.array([1], dtype="int64"),  # i
+            mx.np.array([0], dtype="int64"),  # s
         )
         assert result[0].item() == 6
         assert result[1].item() == 15
@@ -67,9 +68,9 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, result = model(
-            mx.np.array([1], dtype="int64"), # i
-            mx.np.array([0], dtype="int64"), # s
-            mx.np.array([1], dtype="int64"), # true
+            mx.np.array([1], dtype="int64"),  # i
+            mx.np.array([0], dtype="int64"),  # s
+            mx.np.array([1], dtype="int64"),  # true
         )
         assert result[0].item() == 1001
         assert result[1].item() == 500500
@@ -83,9 +84,9 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, result = model(
-            mx.np.array([1], dtype="int64"), # i
-            mx.np.array([0], dtype="int64"), # s
-            mx.np.array([0], dtype="int64"), # false
+            mx.np.array([1], dtype="int64"),  # i
+            mx.np.array([0], dtype="int64"),  # s
+            mx.np.array([0], dtype="int64"),  # false
         )
         assert result[0].item() == 1
         assert result[1].item() == 0
@@ -99,10 +100,10 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         outputs, (result_i, result_s) = model(
-            mx.np.array([1], dtype="int64"), # i
-            mx.np.array([0], dtype="int64"), # s
+            mx.np.array([1], dtype="int64"),  # i
+            mx.np.array([0], dtype="int64"),  # s
         )
-        assert all(outputs.asnumpy()[ : 100] == np.arange(1, 101).reshape(100, 1))
+        assert all(outputs.asnumpy()[: 100] == np.arange(1, 101).reshape(100, 1))
         assert result_i.item() == 101
         assert result_s.item() == 5050
         # Case 2.2: result should be sum([1, 2, 3 ... 1000])
@@ -114,9 +115,9 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         outputs, (result_i, result_s, _) = model(
-            mx.np.array([1], dtype="int64"), # i
-            mx.np.array([0], dtype="int64"), # s
-            mx.np.array([1], dtype="int64"), # true
+            mx.np.array([1], dtype="int64"),  # i
+            mx.np.array([0], dtype="int64"),  # s
+            mx.np.array([1], dtype="int64"),  # true
         )
         assert all(outputs.asnumpy() == np.arange(1, 1001).reshape(1000, 1))
         assert result_i.item() == 1001
@@ -130,9 +131,9 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, (result_i, result_s, _) = model(
-            mx.np.array([1], dtype="int64"), # i
-            mx.np.array([0], dtype="int64"), # s
-            mx.np.array([0], dtype="int64"), # false
+            mx.np.array([1], dtype="int64"),  # i
+            mx.np.array([0], dtype="int64"),  # s
+            mx.np.array([0], dtype="int64"),  # false
         )
         assert result_i.item() == 1
         assert result_s.item() == 0
@@ -148,6 +149,7 @@ def test_cut_subgraph_foreach():
                 return data + 1, states
             out1, states1 = mx.npx.foreach(step1, inputs, states)
             out2, states2 = mx.npx.foreach(step1, out1, states)
+
             def step2(data, states):
                 return data + states[0], states
             out, states = mx.npx.foreach(step2, out2, states1)
@@ -194,6 +196,7 @@ def test_uniq_name():
             def step1(data, states):
                 return data + 1, states
             out1, states1 = mx.npx.foreach(step1, inputs, states)
+
             def step2(data, states):
                 return data, [states[0] + states[0] + mx.np.squeeze(mx.npx.slice(data, begin=0, end=1))]
             # The input variables have the same symbol names.
@@ -209,6 +212,7 @@ def test_uniq_name():
             def cond(state1, state2):
                 s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1))
                 return s == s
+
             def step(state1, state2):
                 return state1 + 1, [state1 + 1, state2 + 1]
             states = [states[0], states[0] + 1]
@@ -225,10 +229,12 @@ def test_uniq_name():
             def cond(state1, state2):
                 s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1))
                 return s == s
+
             def step1(state1, state2):
                 return state1 + 1, [state1, state2]
             states = [states[0], states[0] + 1]
             out1, states1 = mx.npx.while_loop(cond, step1, states, max_iterations=5)
+
             def step2(state1, state2):
                 return state1 + 1, [state1 + state1[0], state2 + state1[1]]
             # The input variables have the same symbol name.
@@ -236,7 +242,7 @@ def test_uniq_name():
             return out
 
     TestLayers = [ForeachLayer1, ForeachLayer2,
-            WhileLayer1, WhileLayer2]
+                  WhileLayer1, WhileLayer2]
     # TestLayers = [WhileLayer1]
 
     data = mx.np.random.normal(loc=0, scale=1, size=(2, 5))
@@ -264,6 +270,7 @@ def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
         def __init__(self):
             super(TestLayer, self).__init__()
+
         def forward(self, data):
             out1, data1 = mx.npx.while_loop(
                 cond=lambda i: i <= 5,
@@ -298,6 +305,7 @@ def test_cut_subgraph_cond():
     class TestLayer(gluon.HybridBlock):
         def __init__(self):
             super(TestLayer, self).__init__()
+
         def forward(self, data):
             data1 = mx.npx.cond(
                 pred=lambda data: data > 0.5,
@@ -333,19 +341,23 @@ def test_output_format_foreach():
         def __init__(self, step):
             super(TestLayer1, self).__init__()
             self.step = step
+
         def forward(self, ins, states):
             out, states = mx.npx.foreach(self.step, ins, states)
             return out, states
 
     def step1(data, state):
         return data, state
+
     def step2(data, state):
         return [data], state
+
     def step3(data, state):
         if isinstance(state, list):
             return [], [state[0] + data]
         else:
             return [], state + data
+
     def step4(data, state):
         if isinstance(state, list):
             return [data, state[0]], state
@@ -421,10 +433,10 @@ def test_output_format_foreach():
         for i in range(len(state1)):
             if isinstance(state1[i], list):
                 assert_almost_equal(state1[i][0].asnumpy(), state2[i][0].asnumpy(),
-                        rtol=0.001, atol=0.0001)
+                                    rtol=0.001, atol=0.0001)
             else:
                 assert_almost_equal(state1[i].asnumpy(), state2[i].asnumpy(),
-                        rtol=0.001, atol=0.0001)
+                                    rtol=0.001, atol=0.0001)
 
 
 @mx.util.use_np
@@ -435,6 +447,7 @@ def test_output_format_while():
             self.step = step
             self.use_list = use_list
             self.nested_list = nested_list
+
         def forward(self, states):
             def cond(state1):
                 scalar = mx.npx.slice(state1, begin=0, end=1)
@@ -453,11 +466,13 @@ def test_output_format_while():
 
     def step1(state):
         return state, state
+
     def step2(state):
         if isinstance(state, list):
             return state, state
         else:
             return [state], state
+
     def step3(state):
         return [], state
 
@@ -504,6 +519,7 @@ def test_output_format_while():
         states = _as_list(state)
         states.append(state2)
         return state, states
+
     def step5(state, state2):
         states = _as_list(state)
         states.append(state2)
@@ -511,6 +527,7 @@ def test_output_format_while():
             return state, states
         else:
             return [state], states
+
     def step6(state, state2):
         states = _as_list(state)
         states.append(state2)
@@ -545,18 +562,22 @@ def test_output_format_cond():
         def __init__(self, func):
             super(TestLayer1, self).__init__()
             self.func = func
+
         def forward(self, data):
             def then_func(data):
                 return self.func(data)
+
             def else_func(data):
                 return self.func(data)
             return mx.npx.cond(lambda data: mx.npx.slice(data, begin=0, end=1),
-                    then_func, else_func, data)
+                               then_func, else_func, data)
 
     def func1(data):
         return data
+
     def func2(data):
         return [data]
+
     def func3(data):
         return [data, data]
 
@@ -634,9 +655,10 @@ class RNNLayer(gluon.HybridBlock):
     def forward(self, inputs, states):
         out, states = mx.npx.foreach(self.cell, inputs, states)
         return out
-    
+
     def infer_shape(self, input, *args):
         self.cell.infer_shape(0, input, False)
+
 
 @mx.util.use_np
 def check_rnn(cell_type, num_states):
@@ -652,17 +674,17 @@ def check_rnn(cell_type, num_states):
     params1 = layer.collect_params()
     orig_params1 = copy.deepcopy(params1)
 
-    trainer = gluon.Trainer(params1, 'sgd', {'learning_rate' : 0.03})
+    trainer = gluon.Trainer(params1, 'sgd', {'learning_rate': 0.03})
     with mx.autograd.record():
         res1 = layer(rnn_data, states)
     res1.backward()
     trainer.step(batch_size)
 
     configs = [
-            {},
-            {'inline_limit': 0},
-            {'static_alloc': True},
-            {'static_alloc': True, 'static_shape': True} ]
+        {},
+        {'inline_limit': 0},
+        {'static_alloc': True},
+        {'static_alloc': True, 'static_shape': True}]
     for config in configs:
         layer = RNNLayer(cell_type, hidden_size)
         layer.infer_shape(rnn_data)
@@ -672,7 +694,7 @@ def check_rnn(cell_type, num_states):
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
             params2[key].set_data(copy.deepcopy(val.data()))
-        trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
+        trainer = gluon.Trainer(params2, 'sgd', {'learning_rate': 0.03})
         with mx.autograd.record():
             res2 = layer(rnn_data, states)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
@@ -683,12 +705,11 @@ def check_rnn(cell_type, num_states):
             weight1 = val.data()
             weight2 = params2[key].data()
             assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(),
-                    rtol=1e-3, atol=1e-3)
+                                rtol=1e-3, atol=1e-3)
 
 
 def test_rnn():
     cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
-            (gluon.rnn.GRUCell, 1)]
+                  (gluon.rnn.GRUCell, 1)]
     for cell_type, num_states in cell_types:
         check_rnn(cell_type, num_states)
-

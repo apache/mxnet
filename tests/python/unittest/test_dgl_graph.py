@@ -26,12 +26,13 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 import unittest
 
+
 def check_uniform(out, num_hops, max_num_vertices):
     sample_id = out[0]
     sub_csr = out[1]
     layer = out[2]
     # check sample_id
-    assert (len(sample_id) == max_num_vertices+1)
+    assert (len(sample_id) == max_num_vertices + 1)
     num_vertices = sample_id[-1].asnumpy()[0]
     # check sub_csr
     sub_csr.check_format(full_check=True)
@@ -40,13 +41,14 @@ def check_uniform(out, num_hops, max_num_vertices):
     for data in layer[:num_vertices]:
         assert(data <= num_hops)
 
+
 def check_non_uniform(out, num_hops, max_num_vertices):
     sample_id = out[0]
     sub_csr = out[1]
     prob = out[2]
     layer = out[3]
     # check sample_id
-    assert (len(sample_id) == max_num_vertices+1)
+    assert (len(sample_id) == max_num_vertices + 1)
     num_vertices = sample_id[-1].asnumpy()[0]
     # check sub_csr
     sub_csr.check_format(full_check=True)
@@ -56,6 +58,7 @@ def check_non_uniform(out, num_hops, max_num_vertices):
     # check layer
     for data in layer[:num_vertices]:
         assert(data <= num_hops)
+
 
 def check_compact(csr, id_arr, num_nodes):
     compact = mx.nd.contrib.dgl_graph_compact(csr, id_arr, graph_sizes=num_nodes, return_mapping=False)
@@ -69,14 +72,15 @@ def check_compact(csr, id_arr, num_nodes):
         sub_id = sub_indices[i]
         assert id_arr[sub_id] == indices[i]
 
+
 def test_uniform_sample():
     shape = (5, 5)
-    data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
-    indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
-    indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
+    data_np = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], dtype=np.int64)
+    indices_np = np.array([1, 2, 3, 4, 0, 2, 3, 4, 0, 1, 3, 4, 0, 1, 2, 4, 0, 1, 2, 3], dtype=np.int64)
+    indptr_np = np.array([0, 4, 8, 12, 16, 20], dtype=np.int64)
     a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
 
-    seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
+    seed = mx.nd.array([0, 1, 2, 3, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 3)
     check_uniform(out, num_hops=1, max_num_vertices=5)
@@ -103,7 +107,7 @@ def test_uniform_sample():
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
 
-    seed = mx.nd.array([0,2,4], dtype=np.int64)
+    seed = mx.nd.array([0, 2, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 3)
     check_uniform(out, num_hops=1, max_num_vertices=5)
@@ -112,7 +116,7 @@ def test_uniform_sample():
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
 
-    seed = mx.nd.array([0,4], dtype=np.int64)
+    seed = mx.nd.array([0, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 3)
     check_uniform(out, num_hops=1, max_num_vertices=5)
@@ -121,7 +125,7 @@ def test_uniform_sample():
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
 
-    seed = mx.nd.array([0,4], dtype=np.int64)
+    seed = mx.nd.array([0, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=2, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 3)
     check_uniform(out, num_hops=2, max_num_vertices=5)
@@ -130,7 +134,7 @@ def test_uniform_sample():
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
 
-    seed = mx.nd.array([0,4], dtype=np.int64)
+    seed = mx.nd.array([0, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 3)
     check_uniform(out, num_hops=1, max_num_vertices=5)
@@ -139,15 +143,16 @@ def test_uniform_sample():
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
 
+
 def test_non_uniform_sample():
     shape = (5, 5)
     prob = mx.nd.array([0.9, 0.8, 0.2, 0.4, 0.1], dtype=np.float32)
-    data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
-    indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
-    indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
+    data_np = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], dtype=np.int64)
+    indices_np = np.array([1, 2, 3, 4, 0, 2, 3, 4, 0, 1, 3, 4, 0, 1, 2, 4, 0, 1, 2, 3], dtype=np.int64)
+    indptr_np = np.array([0, 4, 8, 12, 16, 20], dtype=np.int64)
     a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
 
-    seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
+    seed = mx.nd.array([0, 1, 2, 3, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 4)
     check_non_uniform(out, num_hops=1, max_num_vertices=5)
@@ -162,25 +167,26 @@ def test_non_uniform_sample():
     assert (len(out) == 4)
     check_non_uniform(out, num_hops=2, max_num_vertices=4)
 
-    seed = mx.nd.array([0,2,4], dtype=np.int64)
+    seed = mx.nd.array([0, 2, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 4)
     check_non_uniform(out, num_hops=1, max_num_vertices=5)
 
-    seed = mx.nd.array([0,4], dtype=np.int64)
+    seed = mx.nd.array([0, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 4)
     check_non_uniform(out, num_hops=1, max_num_vertices=5)
 
-    seed = mx.nd.array([0,4], dtype=np.int64)
+    seed = mx.nd.array([0, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=2, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 4)
     check_non_uniform(out, num_hops=2, max_num_vertices=5)
 
-    seed = mx.nd.array([0,4], dtype=np.int64)
+    seed = mx.nd.array([0, 4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
     assert (len(out) == 4)
     check_non_uniform(out, num_hops=1, max_num_vertices=5)
+
 
 def test_edge_id():
     shape = rand_shape_2d()
@@ -191,7 +197,7 @@ def test_edge_id():
     data_np = data.data.asnumpy()
     indices_np = data.indices.asnumpy()
     for i in range(shape[0]):
-        for j in range(indptr_np[i], indptr_np[i+1]):
+        for j in range(indptr_np[i], indptr_np[i + 1]):
             idx = indices_np[j]
             ground_truth[i, idx] = data_np[j]
 
@@ -202,10 +208,12 @@ def test_edge_id():
     assert_almost_equal(mx.nd.contrib.edge_id(data, mx_u, mx_v).asnumpy(),
                         ground_truth[np_u, np_v], rtol=1e-5, atol=1e-6)
 
+
 def generate_graph(n):
     arr = sp.sparse.random(n, n, density=0.2, format='coo')
     arr.data = np.arange(0, len(arr.row), dtype=np.float32)
     return arr.tocsr(), mx.nd.sparse.csr_matrix(arr.tocsr()).astype(np.int64)
+
 
 def test_subgraph():
     sp_g, g = generate_graph(100)
@@ -231,6 +239,7 @@ def test_subgraph():
             v2 = vertices[subv2]
             assert sp_g[v1, v2] == sp_subg[subv1, subv2]
 
+
 def test_adjacency():
     sp_g, g = generate_graph(100)
     adj = mx.nd.contrib.dgl_adjacency(g)
@@ -239,4 +248,3 @@ def test_adjacency():
     assert_array_equal(adj.indptr, g.indptr)
     assert_array_equal(adj.indices, g.indices)
     assert_array_equal(adj.data, mx.nd.ones(shape=g.indices.shape))
-

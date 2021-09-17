@@ -32,6 +32,7 @@ from mxnet.test_utils import assert_almost_equal
 def cmp(x, y):  # Python 3
     return (x > y) - (x < y)
 
+
 # Set fixed random seeds.
 mx.random.seed(7)
 np.random.seed(7)
@@ -60,7 +61,7 @@ def save_inference_results(inference_results, model_name):
 
 
 def load_inference_results(model_name):
-    inf_dict = mx.npx.load(model_name+'-inference')
+    inf_dict = mx.npx.load(model_name + '-inference')
     return inf_dict['inference']
 
 
@@ -85,7 +86,7 @@ def download_model_files_from_s3(model_name, folder_name):
     model_files = list()
     bucket = s3.Bucket(model_bucket_name)
     prefix = folder_name + backslash + model_name
-    model_files_meta = list(bucket.objects.filter(Prefix = prefix))
+    model_files_meta = list(bucket.objects.filter(Prefix=prefix))
     if len(model_files_meta) == 0:
         logging.error('No trained models found under path : %s', prefix)
         return model_files
@@ -197,5 +198,5 @@ def compare_versions(version1, version2):
     https://stackoverflow.com/questions/1714027/version-number-comparison-in-python
     '''
     def normalize(v):
-        return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
+        return [int(x) for x in re.sub(r'(\.0+)*$', '', v).split(".")]
     return cmp(normalize(version1), normalize(version2))

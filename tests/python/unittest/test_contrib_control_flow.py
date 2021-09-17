@@ -23,6 +23,7 @@ from mxnet.base import _as_list
 
 mx.npx.reset_np()
 
+
 def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, max_iterations, is_for, n_steps):
 
     def _create_vars(num, prefix):
@@ -48,7 +49,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         loop_vars = [args["LoopVar" + str(i)].copy() for i, _ in enumerate(loop_var_shapes)]
         loop_var_start = int(is_for)
         if is_train:
-            for var in free_vars + loop_vars[loop_var_start: ]:
+            for var in free_vars + loop_vars[loop_var_start:]:
                 var.attach_grad()
         with mx.autograd.record(train_mode=is_train):
             outputs, final_loop_vars = mx.nd.contrib.while_loop(
@@ -61,14 +62,14 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
             final_loop_vars = _as_list(final_loop_vars)
             outputs = [x[: n_steps] for x in outputs]
             out_grads = _create_arrays(x.shape for x in outputs)  \
-                      + _create_arrays(x.shape for x in final_loop_vars)
+                + _create_arrays(x.shape for x in final_loop_vars)
             loop_result_nd = [x * 2 for x in outputs] + [x * 3 for x in final_loop_vars]
             grads = []
             if is_train:
                 cat_out = mx.nd.concat(*[x.reshape(-1) for x in loop_result_nd], dim=0)
                 cat_out.backward(out_grad=mx.nd.concat(*[x.reshape(-1) for x in out_grads], dim=0))
                 grads = [free_vars[i].grad for i, _ in enumerate(free_var_shapes)] \
-                      + [loop_vars[i].grad for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
+                    + [loop_vars[i].grad for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
             return _to_numpy_list(loop_result_nd), _to_numpy_list(grads), out_grads
 
     def _get_symbolic_result(out_grads, n_steps):
@@ -98,7 +99,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 
         loop_var_start = int(is_for)
         args_names = ["FreeVar" + str(i) for i, _ in enumerate(free_var_shapes)] \
-                   + ["LoopVar" + str(i) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
+            + ["LoopVar" + str(i) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
         args_grad = None if not is_train else _zeros_like_dict(x for x in args_names)
         executor = loop_result_sym._bind(
             ctx=default_context(),
@@ -110,7 +111,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         if is_train:
             executor.backward(out_grads=out_grads)
             grads = [executor.grad_dict.get("FreeVar" + str(i), None) for i, _ in enumerate(free_var_shapes)] \
-                  + [executor.grad_dict.get("LoopVar" + str(i), None) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
+                + [executor.grad_dict.get("LoopVar" + str(i), None) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
         return _to_numpy_list(loop_result_nd), _to_numpy_list(grads)
 
     args = _merge_dict(
@@ -193,6 +194,7 @@ def test_while_loop_for_foreach():
             lambda a, b, s: s * 0.3 + 2.5 * b * a,
             lambda a, b, s: s * 0.3 + b * a * 2.5,
         ]
+
         def make_func(step_func):
             def step(loop, free):
                 (s, ), (a, b) = loop, free
@@ -228,6 +230,7 @@ def test_while_loop_for_foreach():
             lambda in_, s, f_1: f_1 * (2 * in_) * s,
             lambda in_, s, f_1: f_1 * s * (2 * in_),
         ]
+
         def make_func(step_func):
             """This simulates:
             def compute(s, inputs, f_1, length):
@@ -274,6 +277,7 @@ def test_while_loop_for_foreach():
             lambda i_0, i_1, s_0, s_1, f_0: s_1,
             lambda i_0, i_1, s_0, s_1, f_0: f_0,
         ]
+
         def make_func(step_func):
             """This simulates:
             def compute(input_0, input_1, s_0, s_1, f_0, length):
@@ -328,6 +332,7 @@ def test_while_loop_for_foreach():
             lambda i_0, i_1, s_0, s_1, f_0: s_1,
             lambda i_0, i_1, s_0, s_1, f_0: f_0,
         ]
+
         def make_func(step_func):
             """This simulates:
             def compute(input_0, input_1, s_0, s_1, s_2, f_0, length):
@@ -388,6 +393,7 @@ def test_while_loop_for_foreach():
             lambda i_0, i_1, s_0, s_1, f_0: s_1,
             lambda i_0, i_1, s_0, s_1, f_0: f_0,
         ]
+
         def make_func(step_func):
             """This simulates:
             def compute(input_0, input_1, s_0, s_1, s_2, f_0, length):
@@ -448,6 +454,7 @@ def test_while_loop_for_foreach():
             lambda i_0, i_1, s_0, s_1, f_0: s_1,
             lambda i_0, i_1, s_0, s_1, f_0: f_0,
         ]
+
         def make_func(step_func):
             """This simulates:
             def compute(input_0, input_1, s_0, s_1, s_2, f_0, length):
@@ -729,6 +736,7 @@ def test_while_loop_nested():
         _array([2, 2, 10, 5, 3]),
         _array([2, 2, 10, 5, 3]),
     ]
+
     def _get_imp_result(is_train, args, args_grad, out_grad):
         args = {k: v.copy() for k, v in args.items()}
         args_grad = {k: v.copy() for k, v in args_grad.items()}
@@ -827,7 +835,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
                 cat_out = mx.nd.concat(*[x.reshape(-1) for x in outputs], dim=0)
                 cat_out.backward(out_grad=mx.nd.concat(*[x.reshape(-1) for x in out_grads], dim=0))
                 grads = [free_vars[i].grad for i, _ in enumerate(free_var_shapes)] \
-                      + [input_vars[i].grad for i, _ in enumerate(input_var_shapes)]
+                    + [input_vars[i].grad for i, _ in enumerate(input_var_shapes)]
             return _to_numpy_list(outputs), _to_numpy_list(grads), out_grads
 
     def _get_symbolic_result(out_grads):
@@ -852,7 +860,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
         if is_train:
             executor.backward(out_grads=out_grads)
             grads = [executor.grad_dict.get("FreeVar" + str(i), None) for i, _ in enumerate(free_var_shapes)] \
-                  + [executor.grad_dict.get("InputVar" + str(i), None) for i, _ in enumerate(input_var_shapes)]
+                + [executor.grad_dict.get("InputVar" + str(i), None) for i, _ in enumerate(input_var_shapes)]
         return _to_numpy_list(outputs), _to_numpy_list(grads)
 
     imp_outs, imp_grads, out_grads = _get_imperative_result()
@@ -947,9 +955,9 @@ def test_foreach():
     v8 = mx.sym.var("v5")
 
     def verify_foreach(step, in_syms, state_syms, free_syms,
-            in_arrs, init_states, frees, out_grads, is_train=True,
-            free_vars_func=None, num_iters=1):
-        step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
+                       in_arrs, init_states, frees, out_grads, is_train=True,
+                       free_vars_func=None, num_iters=1):
+        def step_sym(in_syms, state_syms): return step(in_syms, state_syms, free_syms)
         res, states = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
         out = _as_list(res)
         num_outputs = len(out)
@@ -968,20 +976,20 @@ def test_foreach():
         for arr in _as_list(in_arrs):
             arr_grad = mx.nd.empty(arr.shape)
             arr_grads.append(arr_grad)
-            arg_dict['v'+str(i)] = arr
-            arg_grad_dict['v'+str(i)] = arr_grad
+            arg_dict['v' + str(i)] = arr
+            arg_grad_dict['v' + str(i)] = arr_grad
             i = i + 1
         for arr in init_states:
             arr_grad = mx.nd.empty(arr.shape)
             arr_grads.append(arr_grad)
-            arg_dict['v'+str(i)] = arr
-            arg_grad_dict['v'+str(i)] = arr_grad
+            arg_dict['v' + str(i)] = arr
+            arg_grad_dict['v' + str(i)] = arr_grad
             i = i + 1
         for arr in frees:
             arr_grad = mx.nd.empty(arr.shape)
             arr_grads.append(arr_grad)
-            arg_dict['v'+str(i)] = arr
-            arg_grad_dict['v'+str(i)] = arr_grad
+            arg_dict['v' + str(i)] = arr
+            arg_grad_dict['v' + str(i)] = arr_grad
             i = i + 1
 
         if is_train:
@@ -1010,7 +1018,7 @@ def test_foreach():
             arr.attach_grad()
         with mx.autograd.record():
             frees_imp = frees if free_vars_func is None else free_vars_func(frees)
-            step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees_imp)
+            def step_imp(in_arrs, state_arrs): return step(in_arrs, state_arrs, frees_imp)
             states = [mx.nd.expand_dims(s, 0) for s in init_states]
             res, states = mx.nd.contrib.foreach(step_imp, in_arrs, init_states)
 
@@ -1038,7 +1046,7 @@ def test_foreach():
         for i in range(len(outs)):
             assert e.outputs[i].shape == outs[i].shape
             assert_almost_equal(e.outputs[i].asnumpy(), outs[i].asnumpy(),
-                    rtol=1e-3, atol=1e-3)
+                                rtol=1e-3, atol=1e-3)
         if (is_train):
             all_ins = _as_list(in_arrs)[:]
             all_ins.extend(init_states)
@@ -1046,8 +1054,8 @@ def test_foreach():
             size = min(len(all_ins), len(e.grad_arrays))
             for i in range(size):
                 assert_almost_equal(all_ins[i].grad.asnumpy(),
-                        e.grad_arrays[i].asnumpy(),
-                        rtol=1e-3, atol=1e-3)
+                                    e.grad_arrays[i].asnumpy(),
+                                    rtol=1e-3, atol=1e-3)
 
     # Test cases:
     # * graph inputs are stored in different orders.
@@ -1063,27 +1071,27 @@ def test_foreach():
     arrs = mx.nd.arange(6).reshape(shape=(3, 2))
     states = [mx.nd.arange(2)]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, True,
-            lambda frees : [frees[0] + frees[1]])
+                   lambda frees: [frees[0] + frees[1]])
     verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, False,
-            lambda frees : [frees[0] + frees[1]])
+                   lambda frees: [frees[0] + frees[1]])
     verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, True,
-            lambda frees : [frees[0] + frees[1]], 5)
+                   lambda frees: [frees[0] + frees[1]], 5)
     verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, False,
-            lambda frees : [frees[0] + frees[1]], 5)
+                   lambda frees: [frees[0] + frees[1]], 5)
 
     # Test the even number of iterations.
     frees = [mx.nd.random.uniform(shape=(2))]
     arrs = mx.nd.random.uniform(shape=(2, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
     # Test the odd number of iterations
     arrs = mx.nd.random.uniform(shape=(3, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
@@ -1094,13 +1102,13 @@ def test_foreach():
     # Test the even number of iterations.
     arrs = mx.nd.random.uniform(shape=(2, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
     # Test the odd number of iterations.
     arrs = mx.nd.random.uniform(shape=(3, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
@@ -1111,7 +1119,7 @@ def test_foreach():
     arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads)
     verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads, False)
 
@@ -1123,7 +1131,7 @@ def test_foreach():
     arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step4, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads)
     verify_foreach(step4, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads, False)
 
@@ -1141,7 +1149,7 @@ def test_foreach():
     arrs = [mx.nd.random.uniform(shape=(3, 2, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2, 2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[0].shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step5, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
 
     # Test multiple inputs and outputs.
@@ -1149,23 +1157,23 @@ def test_foreach():
     def step6(in1, states, free):
         if isinstance(in1[0], mx.nd.NDArray):
             out1 = mx.nd.broadcast_add(states[0] + mx.nd.cast(free[1], 'float32'),
-                    mx.nd.cast(in1[1], 'float32') * 2)
+                                       mx.nd.cast(in1[1], 'float32') * 2)
             out2 = mx.nd.broadcast_add(in1[0],
-                    free[0] + mx.nd.cast(states[1], 'float32') * 2)
+                                       free[0] + mx.nd.cast(states[1], 'float32') * 2)
         else:
             out1 = mx.sym.broadcast_add(states[0] + mx.sym.cast(free[1], 'float32'),
-                    mx.sym.cast(in1[1], 'float32') * 2)
+                                        mx.sym.cast(in1[1], 'float32') * 2)
             out2 = mx.sym.broadcast_add(in1[0],
-                    free[0] + mx.sym.cast(states[1], 'float32') * 2)
+                                        free[0] + mx.sym.cast(states[1], 'float32') * 2)
         return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
     frees = [mx.nd.random.uniform(shape=(2)),
-            mx.nd.cast(mx.nd.random.uniform(shape=(2, 2)), 'float64')]
+             mx.nd.cast(mx.nd.random.uniform(shape=(2, 2)), 'float64')]
     arrs = [mx.nd.random.uniform(shape=(3, 2, 2)),
             mx.nd.cast(mx.nd.random.uniform(shape=(3, 2)), dtype='float16')]
     states = [mx.nd.random.uniform(shape=(2, 2)),
-            mx.nd.cast(mx.nd.random.uniform(shape=(2)), dtype='int32')]
+              mx.nd.cast(mx.nd.random.uniform(shape=(2)), dtype='int32')]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[0].shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step6, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
 
     # Test multiple inputs and outputs.
@@ -1178,7 +1186,7 @@ def test_foreach():
     arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[0].shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step7, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
 
     # Test the case that the output is the input.
@@ -1186,11 +1194,13 @@ def test_foreach():
     states = [mx.nd.arange(2)]
     frees = [mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
-            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+                 [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+
     def step8(in1, states, free):
         return (in1, [states[0] * free[0]])
     verify_foreach(step8, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step8, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+
     def step9(in1, states, free):
         return (in1 * free[0], states)
     verify_foreach(step9, v3, [v4], [v5], arrs, states, frees, out_grads)
@@ -1201,6 +1211,7 @@ def test_foreach():
         return (in1, states)
     verify_foreach(step10, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step10, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+
     def step11(in1, states, free):
         return (in1, free)
     try:
@@ -1208,6 +1219,7 @@ def test_foreach():
         verify_foreach(step11, v3, [v4], [v5], arrs, states, frees, out_grads, False)
     except AssertionError:
         print("the states have to be used")
+
     def step12(in1, states, free):
         return (in1, [states[0] + 1, states[0] + 2])
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
@@ -1232,6 +1244,7 @@ def test_foreach():
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)], []]
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads)
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads, False)
+
     def step15(in1, states, free):
         return ([], [in1 * states[0] * free[0]])
     out_grads = [[], [mx.nd.random.uniform(-10, 10, states[0].shape)]]
@@ -1244,15 +1257,16 @@ def test_foreach():
     arrs = [mx.nd.arange(3)]
     states = [mx.nd.random.uniform(shape=(1))]
     out_grads = [[mx.nd.random.uniform(-10, 10, (3, 1))],
-            [mx.nd.random.uniform(-10, 10, (1))]]
+                 [mx.nd.random.uniform(-10, 10, (1))]]
     verify_foreach(step16, [v3], [v4], [], arrs, states, [], out_grads)
     verify_foreach(step16, [v3], [v4], [], arrs, states, [], out_grads, False)
+
     def step17(in1, states, free):
         return ([in1[1] * in1[0] * states[0]], [states[0] * 2])
     arrs = [mx.nd.random.uniform(shape=(3, 1)), mx.nd.arange(3)]
     states = [mx.nd.random.uniform(shape=(1))]
     out_grads = [[mx.nd.random.uniform(-10, 10, (3, 1))],
-            [mx.nd.random.uniform(-10, 10, (1))]]
+                 [mx.nd.random.uniform(-10, 10, (1))]]
     verify_foreach(step17, [v3, v4], [v5], [], arrs, states, [], out_grads)
     verify_foreach(step17, [v3, v4], [v5], [], arrs, states, [], out_grads, False)
 
@@ -1267,6 +1281,7 @@ def test_foreach_nested():
         out1 = mx.sym.contrib.foreach(step_in, in1, states)
         out = mx.sym.broadcast_add(out1[0], states[0])
         return (out, [mx.sym.squeeze(mx.sym.slice(out, begin=(0, 0), end=(1, 2)))])
+
     def step_nd(in1, states):
         out1 = mx.nd.contrib.foreach(step_in, in1, states)
         out = mx.nd.broadcast_add(out1[0], states[0])
@@ -1288,8 +1303,8 @@ def test_foreach_nested():
     state = mx.nd.arange(2)
     data_grad = mx.nd.empty(data.shape)
     state_grad = mx.nd.empty(state.shape)
-    e = out._bind(ctx=default_context(), args={'v1':data, 'v2':state},
-            args_grad={'v1':data_grad, 'v2':state_grad})
+    e = out._bind(ctx=default_context(), args={'v1': data, 'v2': state},
+                  args_grad={'v1': data_grad, 'v2': state_grad})
     e.forward(is_train=True)
     out_grads = []
     for out in e.outputs:
@@ -1312,7 +1327,7 @@ def test_foreach_nested():
 
 def test_foreach_with_unkown_dim():
     # MXNet supports using 0 as placeholder for unknown dimensions in shape
-    step = lambda data, states: (data + states[0], [states[0] * 2])
+    def step(data, states): return (data + states[0], [states[0] * 2])
     # input shape with NCHW format and N is unknown
     data = mx.sym.var('data', shape=(0, 3, 32, 32))
     states = [mx.sym.var('state')]

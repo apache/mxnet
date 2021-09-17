@@ -23,24 +23,28 @@ key = '99'
 shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 kv = mx.kv.create('dist_sync')
 
+
 def init_kv():
     # init kv dns keys
     kv.init(key, mx.nd.ones(shape))
     kv.set_optimizer(mx.optimizer.create('sgd'))
     return kv, kv.rank, kv.num_workers
 
+
 def test_sync_push_pull():
     kv, my_rank, nworker = init_kv()
+
     def check_default_keys(kv, my_rank):
         nrepeat = 10
         # checks pull after push in loop, because behavior during
         # consecutive pushes doesn't offer any guarantees
         for _ in range(nrepeat):
-            kv.push(key, mx.nd.ones(shape, dtype='float32') * (my_rank+1))
+            kv.push(key, mx.nd.ones(shape, dtype='float32') * (my_rank + 1))
             val = mx.nd.zeros(shape, dtype='float32')
             kv.pull(key, out=val)
             mx.nd.waitall()
     check_default_keys(kv, my_rank)
+
 
 if __name__ == "__main__":
     server_filename_suffix = 'test_profile_server.json'
@@ -53,7 +57,8 @@ if __name__ == "__main__":
     mx.profiler.set_state(state='stop', profile_process='server')
     mx.profiler.set_state(state='stop', profile_process='worker')
 
-    import glob, os
+    import glob
+    import os
 
     # will only work when launcher mode is local, as used for integration test
     if kv.rank == 0:
@@ -64,6 +69,3 @@ if __name__ == "__main__":
                 print(glob.glob('*'), os.getcwd())
                 with open(filename, 'r') as f:
                     j = json.load(f)
-
-
-

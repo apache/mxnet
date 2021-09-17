@@ -34,6 +34,7 @@ import pytest
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
+
 def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf16_use_fp32_params=False, rtol=1e-1, atol=5e-1, etol=0):
     """
     check accuracy for bfloat16 operators
@@ -114,6 +115,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
     output_bf16_2_fp32 = mx.nd.amp_cast(output_bf16, dtype="float32")
     assert_almost_equal_with_err(output_bf16_2_fp32, output_fp32, rtol=rtol, atol=atol, etol=etol)
 
+
 def test_bf16_bn():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
@@ -124,6 +126,7 @@ def test_bf16_bn():
     bn_bf16 = mx.sym.BatchNorm(data_sym_bf16, **bn_params)
     check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True, etol=1e-2)
     check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True, etol=1e-2)
+
 
 def test_bf16_conv():
     data_sym_fp32 = mx.sym.Variable(name='data')
@@ -141,6 +144,7 @@ def test_bf16_conv():
     check_operator_accuracy(sym_fp32=conv_fp32, sym_bf16=conv_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=False)
     check_operator_accuracy(sym_fp32=conv_fp32, sym_bf16=conv_bf16, data_shape=(128, 56, 14, 14), bf16_use_fp32_params=False)
 
+
 def test_bf16_fc():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
@@ -154,6 +158,7 @@ def test_bf16_fc():
     fc_fp32 = mx.sym.FullyConnected(data_sym_fp32, **fc_params)
     fc_bf16 = mx.sym.FullyConnected(data_sym_bf16, **fc_params)
     check_operator_accuracy(fc_fp32, fc_bf16, data_shape=(3, 3, 16, 16), bf16_use_fp32_params=False)
+
 
 def test_bf16_pooling():
     pool_params = {"kernel": (3, 3), "stride": (1, 1), "pad": (0, 0), "name": "pool"}
@@ -169,6 +174,7 @@ def test_bf16_pooling():
         pool_bf16 = mx.sym.Pooling(data_sym_bf16, **pool_params)
         check_operator_accuracy(pool_fp32, pool_bf16, data_shape=new_params[0], bf16_use_fp32_params=False)
 
+
 def test_bf16_activation():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
@@ -180,6 +186,7 @@ def test_bf16_activation():
         act_bf16 = mx.sym.Activation(data_sym_bf16, act_type=act_type)
 
         check_operator_accuracy(act_fp32, act_bf16, data_shape, bf16_use_fp32_params=True)
+
 
 def test_bf16_elemwiseadd():
     dshape = rand_shape_nd(4)
@@ -193,6 +200,7 @@ def test_bf16_elemwiseadd():
     sym_bf16 = mx.sym.elemwise_add(a_sym_bf16, b_sym_bf16)
 
     check_operator_accuracy(sym_fp32, sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
+
 
 @pytest.mark.skip(reason="env dependent, need check further.")
 def test_bf16_concat():
@@ -212,6 +220,7 @@ def test_bf16_concat():
 
         check_operator_accuracy(concat_sym_fp32, concat_sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
 
+
 def test_bf16_abs():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
@@ -221,6 +230,7 @@ def test_bf16_abs():
         sym_bf16 = mx.sym.abs(data_sym_bf16)
 
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
+
 
 def test_bf16_sqrt():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
@@ -232,6 +242,7 @@ def test_bf16_sqrt():
 
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
 
+
 def test_bf16_square():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
@@ -242,32 +253,33 @@ def test_bf16_square():
 
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
 
+
 def test_bf16_flatten_slice_after_conv():
     data_fp32 = mx.symbol.Variable('data')
     data_bf16 = mx.symbol.Variable('data', dtype=bfloat16)
 
-    conv_fp32= mx.symbol.Convolution(data=data_fp32, name='conv', num_filter=64, kernel=(3,3), stride=(1,1))
+    conv_fp32 = mx.symbol.Convolution(data=data_fp32, name='conv', num_filter=64, kernel=(3, 3), stride=(1, 1))
     flatten_fp32 = mx.symbol.flatten(data=conv_fp32)
     slice_fp32 = mx.symbol.slice(data=flatten_fp32, begin=0, end=1)
 
-    conv_bf16= mx.symbol.Convolution(data=data_bf16, name='conv', num_filter=64, kernel=(3,3), stride=(1,1))
+    conv_bf16 = mx.symbol.Convolution(data=data_bf16, name='conv', num_filter=64, kernel=(3, 3), stride=(1, 1))
     flatten_bf16 = mx.symbol.flatten(data=conv_bf16)
     slice_bf16 = mx.symbol.slice(data=flatten_bf16, begin=0, end=1)
 
     shape = (2, 16, 16, 16)
     check_operator_accuracy(slice_fp32, slice_bf16, shape, bf16_use_fp32_params=False)
 
+
 def test_bf16_fallback():
     data_sym_fp32 = mx.sym.Variable(name='data')
-    data_sym_bf16=mx.sym.Variable(name='data', dtype=bfloat16)
+    data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
 
     bn_params = {"eps": 2e-05, "fix_gamma": False, "use_global_stats": True, "name": "bn"}
     bn_fp32 = mx.sym.BatchNorm(data_sym_fp32, **bn_params)
-    bn_bf16=mx.sym.BatchNorm(data_sym_bf16, **bn_params)
+    bn_bf16 = mx.sym.BatchNorm(data_sym_bf16, **bn_params)
     check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28, 3), bf16_use_fp32_params=True, etol=1e-2)
 
     conv_params = {"kernel": (3, 3, 3), "num_filter": 128, "pad": (1, 1, 1), "stride": (1, 1, 1), "no_bias": True, "name": "conv"}
     conv_fp32 = mx.sym.Convolution(data_sym_fp32, **conv_params)
     conv_bf16 = mx.sym.Convolution(data_sym_bf16, **conv_params)
     check_operator_accuracy(sym_fp32=conv_fp32, sym_bf16=conv_bf16, data_shape=(3, 32, 28, 28, 4), bf16_use_fp32_params=False)
-

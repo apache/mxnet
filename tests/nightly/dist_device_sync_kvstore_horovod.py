@@ -19,11 +19,11 @@
 
 import sys
 sys.path.insert(0, "../../python/")
-import mxnet as mx
-import numpy as np
-import numpy.random as rnd
-import time
 import argparse
+import time
+import numpy.random as rnd
+import numpy as np
+import mxnet as mx
 
 # parser
 parser = argparse.ArgumentParser(description='kvstore test')
@@ -37,10 +37,10 @@ def check_diff_to_scalar(A, x, rank=None):
 
 # setup
 keys = ['3', '5', '7']
-init_test_keys = [str(i) for i in range(200,300)]
-init_test_keys_big = [str(i) for i in range(300,400)]
-init_test_keys_device = [str(i) for i in range(400,500)]
-init_test_keys_device_big = [str(i) for i in range(500,600)]
+init_test_keys = [str(i) for i in range(200, 300)]
+init_test_keys_big = [str(i) for i in range(300, 400)]
+init_test_keys_device = [str(i) for i in range(400, 500)]
+init_test_keys_device_big = [str(i) for i in range(500, 600)]
 
 shape = (2, 3)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND

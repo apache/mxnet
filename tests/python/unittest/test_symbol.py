@@ -29,6 +29,7 @@ from mxnet.test_utils import discard_stderr, rand_shape_nd, use_np, environment
 from mxnet.util import np_shape
 import pickle as pkl
 
+
 def test_symbol_basic():
     mlist = []
     mlist.append(models.mlp2())
@@ -36,9 +37,11 @@ def test_symbol_basic():
         m.list_arguments()
         m.list_outputs()
 
+
 def test_symbol_bool():
     x = mx.symbol.Variable('x')
     assertRaises(NotImplementedForSymbol, bool, x)
+
 
 def test_symbol_compose():
     data = mx.symbol.Variable('data')
@@ -72,9 +75,10 @@ def test_symbol_internal():
     net1 = mx.symbol.FullyConnected(data=oldfc, name='fc2', num_hidden=100)
     assert net1.list_arguments() == ['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias']
 
-    internal =  net1.get_internals()
+    internal = net1.get_internals()
     fc1 = internal['fc1_output']
     assert fc1.list_arguments() == oldfc.list_arguments()
+
 
 def test_symbol_children():
     data = mx.symbol.Variable('data')
@@ -96,11 +100,12 @@ def test_symbol_children():
         ['slice_output0', 'slice_output1', 'slice_output2']
     assert sliced.get_children().list_outputs() == ['data']
 
+
 def test_symbol_pickle():
     mlist = [models.mlp2()]
     data = pkl.dumps(mlist)
     mlist2 = pkl.loads(data)
-    for x, y  in zip(mlist, mlist2):
+    for x, y in zip(mlist, mlist2):
         assert x.tojson() == y.tojson()
 
 
@@ -113,20 +118,21 @@ def test_symbol_saveload():
     assert sym.tojson() == data2.tojson()
     os.remove(fname)
 
+
 def test_symbol_infer_shape():
     num_hidden = 128
-    num_dim    = 64
+    num_dim = 64
     num_sample = 10
 
     data = mx.symbol.Variable('data')
     prev = mx.symbol.Variable('prevstate')
-    x2h  = mx.symbol.FullyConnected(data=data, name='x2h', num_hidden=num_hidden)
-    h2h  = mx.symbol.FullyConnected(data=prev, name='h2h', num_hidden=num_hidden)
+    x2h = mx.symbol.FullyConnected(data=data, name='x2h', num_hidden=num_hidden)
+    h2h = mx.symbol.FullyConnected(data=prev, name='h2h', num_hidden=num_hidden)
 
-    out  = mx.symbol.Activation(data=mx.sym.elemwise_add(x2h, h2h), name='out', act_type='relu')
+    out = mx.symbol.Activation(data=mx.sym.elemwise_add(x2h, h2h), name='out', act_type='relu')
 
     # shape inference will fail because information is not available for h2h
-    ret  = out.infer_shape(data=(num_sample, num_dim))
+    ret = out.infer_shape(data=(num_sample, num_dim))
     assert ret == (None, None, None)
 
     arg, out_shapes, aux_shapes = out.infer_shape_partial(data=(num_sample, num_dim))
@@ -203,7 +209,7 @@ def test_symbol_fluent():
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.symbol.Variable('data')
-            regular = getattr(mx.symbol, func)(data, name=func+'0', **kwargs)
+            regular = getattr(mx.symbol, func)(data, name=func + '0', **kwargs)
             fluent = getattr(data, func)(**kwargs)
             check_symbol_consistency(regular, fluent, {'ctx': mx.context.current_context(),
                                                        'data': shape},
@@ -224,17 +230,17 @@ def test_symbol_fluent():
         check_fluent_regular(func, {'axis': 1})
 
     check_fluent_regular('one_hot', {'depth': 15})
-    check_fluent_regular('tile', {'reps': (1,2)})
+    check_fluent_regular('tile', {'reps': (1, 2)})
     check_fluent_regular('repeat', {'repeats': 3})
-    check_fluent_regular('transpose', {'axes': (1,0,2)})
+    check_fluent_regular('transpose', {'axes': (1, 0, 2)})
     check_fluent_regular('split', {'axis': 2, 'num_outputs': 3}, shape=(5, 17, 6))
     check_fluent_regular('slice', {'begin': (2, 5, 1), 'end': (4, 7, 6)}, shape=(5, 17, 6))
     check_fluent_regular('slice_axis', {'axis': 1, 'begin': 5, 'end': 7})
     check_fluent_regular('slice_like', {'axes': (0, -2), 'shape_like': mx.sym.zeros((3, 3))})
     check_fluent_regular('clip', {'a_min': 0.25, 'a_max': 0.75})
     check_fluent_regular('broadcast_axes', {'axis': (2,), 'size': (5,)})
-    check_fluent_regular('broadcast_like', {'rhs': mx.sym.ones((1, 5)), 'lhs_axes': (0,), 'rhs_axes': (1,)}, shape=(1,9))
-    check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
+    check_fluent_regular('broadcast_like', {'rhs': mx.sym.ones((1, 5)), 'lhs_axes': (0,), 'rhs_axes': (1,)}, shape=(1, 9))
+    check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0, 0, 0, 0, 3, 0, 0, 4)}, shape=(5, 17, 2, 3))
     check_fluent_regular('reshape_like', {'rhs': mx.sym.ones((30, 17))}, shape=(5, 17, 2, 3))
 
     for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min', 'norm']:
@@ -245,6 +251,7 @@ def test_symbol_fluent():
     check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
     check_fluent_regular('squeeze', {}, shape=(2, 1, 3, 1, 4))
 
+
 def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
     assert sym1.list_arguments() == sym2.list_arguments()
     assert sym1.list_auxiliary_states() == sym2.list_auxiliary_states()
@@ -254,10 +261,11 @@ def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
                                     grad_req='null' if skip_grad else 'write',
                                     equal_nan=equal_nan)
 
+
 def test_blockgrad():
     a = mx.sym.Variable('a')
-    b = mx.sym.BlockGrad(2*a)
-    exe = b._simple_bind(ctx=mx.cpu(), a=(10,10))
+    b = mx.sym.BlockGrad(2 * a)
+    exe = b._simple_bind(ctx=mx.cpu(), a=(10, 10))
 
 
 def test_zero_prop2():
@@ -266,7 +274,7 @@ def test_zero_prop2():
     y = mx.sym.batch_take(x, idx)
     z = mx.sym.stop_gradient(y)
     exe = z._simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
-                        type_dict={'x': np.float32, 'idx': np.int32})
+                         type_dict={'x': np.float32, 'idx': np.int32})
     exe.forward(is_train=True)
     exe.backward()
     mx.nd.waitall()
@@ -310,11 +318,13 @@ def test_simple_bind_gradient_graph_possible_with_cycle():
     res = data + data + data + data + data + data + data + data
     res._simple_bind(ctx=mx.cpu(), data=(1,))
 
+
 def test_children_same_name():
     a = mx.sym.Variable('data')
     b = a + a
     for _ in b.get_children():
         pass
+
 
 def test_transpose_nullop():
     for dim in range(1, 7):
@@ -332,7 +342,7 @@ def test_transpose_nullop():
 
 
 def test_gen_atomic_symbol_multiple_outputs():
-    data=mx.sym.Variable('data')
+    data = mx.sym.Variable('data')
     p = mx.sym.Variable('param')
     h0 = mx.sym.Variable('h0')
     h1 = mx.sym.Variable('h1')
@@ -345,25 +355,25 @@ def test_eliminate_common_expr():
     # helper function to test a single model
     def check_cse_on_symbol(sym, expected_savings, check_data, **kwargs):
         inputs = sym.list_inputs()
-        shapes = {inp : kwargs[inp].shape for inp in inputs}
-        rtol = {'float16' : 1e-2,
-                'float32' : 1.5e-6,
-                'float64' : 1.5e-6,
+        shapes = {inp: kwargs[inp].shape for inp in inputs}
+        rtol = {'float16': 1e-2,
+                'float32': 1.5e-6,
+                'float64': 1.5e-6,
                 }
-        atol = {'float16' : 1e-3,
-                'float32' : 1e-7,
-                'float64' : 1e-7,
+        atol = {'float16': 1e-3,
+                'float32': 1e-7,
+                'float64': 1e-7,
                 }
         for dtype in ['float16', 'float32', 'float64']:
-            data = {inp : kwargs[inp].astype(dtype) for inp in inputs}
+            data = {inp: kwargs[inp].astype(dtype) for inp in inputs}
             for grad_req in ['write', 'add']:
-                type_dict = {inp : dtype for inp in inputs}
+                type_dict = {inp: dtype for inp in inputs}
                 with environment({'MXNET_ELIMINATE_COMMON_EXPR': '0'}):
                     orig_exec = sym._simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
-                                                type_dict=type_dict, **shapes)
+                                                 type_dict=type_dict, **shapes)
                 with environment({'MXNET_ELIMINATE_COMMON_EXPR': '1'}):
                     cse_exec = sym._simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
-                                               type_dict=type_dict, **shapes)
+                                                type_dict=type_dict, **shapes)
                 fwd_orig = orig_exec.forward(is_train=True, **data)
                 out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
                 orig_exec.backward(out_grads=out_grads)
@@ -393,22 +403,23 @@ def test_eliminate_common_expr():
     arr2 = mx.random.uniform(shape=shape)
     arr3 = mx.random.uniform(shape=shape)
 
-    check_cse_on_symbol((a+1) + (a+2), expected_savings=0, check_data=True, a=arr1, b=arr2)
-    check_cse_on_symbol((a+b) + (a+b), expected_savings=1, check_data=True, a=arr1, b=arr2)
-    check_cse_on_symbol(((a+b)+c) +((a+b)+c), expected_savings=2, check_data=True,
-                                                                  a=arr1, b=arr2, c=arr3)
+    check_cse_on_symbol((a + 1) + (a + 2), expected_savings=0, check_data=True, a=arr1, b=arr2)
+    check_cse_on_symbol((a + b) + (a + b), expected_savings=1, check_data=True, a=arr1, b=arr2)
+    check_cse_on_symbol(((a + b) + c) + ((a + b) + c), expected_savings=2, check_data=True,
+                        a=arr1, b=arr2, c=arr3)
     d = a + 1
 
     # a*d node gets eliminated, but then a copy is inserted to isolate the outputs, so no net gain.
-    check_cse_on_symbol(mx.sym.Group([a*d, a*d]), expected_savings=0, check_data=True, a=arr1)
+    check_cse_on_symbol(mx.sym.Group([a * d, a * d]), expected_savings=0, check_data=True, a=arr1)
 
     # a*d node gets eliminated, then the duplicated add-of-b, but then a copy is added for net of 1.
-    check_cse_on_symbol(mx.sym.Group([a*d+b, a*d+b]), expected_savings=1, check_data=True,
-                                                                          a=arr1, b=arr2)
+    check_cse_on_symbol(mx.sym.Group([a * d + b, a * d + b]), expected_savings=1, check_data=True,
+                        a=arr1, b=arr2)
 
     # dropout uses a resource that precludes any optimization
     check_cse_on_symbol(mx.sym.Dropout(a) +
                         mx.sym.Dropout(a), expected_savings=0, check_data=False, a=arr1)
+
 
 def test_load_save_symbol():
     batch_size = 10
@@ -449,6 +460,7 @@ def test_load_save_symbol():
                     assert out_shapes[0] == (batch_size, num_hdidden)  # output
                     assert len(aux_shapes) == 0
 
+
 def test_infershape_happens_for_all_ops_in_graph():
     v = mx.sym.Variable('V')
     s = mx.sym.transpose(v)
@@ -459,11 +471,12 @@ def test_infershape_happens_for_all_ops_in_graph():
         try:
             # This should throw an exception as you cannot add arrays
             # with shapes [2,3] and [3,2]
-            e = s3._simple_bind(ctx=mx.cpu(), x=(2,3), grad_req='null')
+            e = s3._simple_bind(ctx=mx.cpu(), x=(2, 3), grad_req='null')
         except:
             return
 
     assert False
+
 
 def test_symbol_copy():
     a = mx.sym.Variable('a')

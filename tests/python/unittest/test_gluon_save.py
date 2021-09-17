@@ -17,15 +17,18 @@
 
 import mxnet as mx
 
+
 @mx.util.use_np
 def test_save():
     class MyBlock(mx.gluon.Block):
         def __init__(self, **kwargs):
             super(MyBlock, self).__init__(**kwargs)
             self.layers = []
+
         def add(self, block):
             self.layers.append(block)
             self.register_child(block)
+
         def forward(self, x, *args):
             out = (x,) + args
             for block in self._children.values():
@@ -46,7 +49,7 @@ def test_save():
     net1.initialize()
     # hybridize (the hybridizeable blocks, ie. the Dense layers)
     net1.hybridize()
-    x = mx.np.zeros((1,10))
+    x = mx.np.zeros((1, 10))
     out1 = net1(x)
 
     # save hybridized model

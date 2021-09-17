@@ -149,4 +149,3 @@ def test_estimator_gpu():
             epochs=num_epochs)
 
     assert acc.get()[1] > 0.80
-

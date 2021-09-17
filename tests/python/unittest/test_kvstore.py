@@ -28,6 +28,7 @@ shape = (4, 4)
 keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
 
+
 def init_kv(stype='default'):
     """init kv """
     kv = mx.kv.create()
@@ -36,6 +37,7 @@ def init_kv(stype='default'):
     # list
     kv.init(keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
+
 
 def init_kv_with_str(stype='default'):
     """init kv """
@@ -65,6 +67,7 @@ def test_single_kv_pair():
         check_single_kv_pair(init_kv(), 3, stype)
         check_single_kv_pair(init_kv_with_str(), 'a', stype)
 
+
 def test_row_sparse_pull():
     kv = init_kv_with_str('row_sparse')
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
@@ -77,7 +80,7 @@ def test_row_sparse_pull():
         for _ in range(count):
             vals.append(mx.nd.zeros(shape).tostype('row_sparse'))
             row_id = np.random.randint(num_rows, size=num_rows)
-            row_ids.append(mx.nd.array(row_id).reshape((2, num_rows//2)))
+            row_ids.append(mx.nd.array(row_id).reshape((2, num_rows // 2)))
         row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
         vals_to_pull = vals[0] if len(vals) == 1 else vals
 
@@ -93,10 +96,11 @@ def test_row_sparse_pull():
     check_row_sparse_pull(kv, 1)
     check_row_sparse_pull(kv, 4)
 
+
 def test_init():
     """test init"""
     def check_init(kv, key):
-        kv.init(key, mx.nd.ones(shape)*4)
+        kv.init(key, mx.nd.ones(shape) * 4)
         a = mx.nd.zeros(shape)
         kv.pull(key, out=a)
         check_diff_to_scalar(a, 4)
@@ -104,13 +108,14 @@ def test_init():
     check_init(mx.kv.create(), 3)
     check_init(mx.kv.create(), 'a')
 
+
 def test_pull():
     """test pull"""
     def check_pull(kv):
         a = mx.nd.ones(shape)
         b = mx.nd.zeros(shape)
         kv.init('1', mx.nd.zeros(shape))
-        kv.push('1', [a,a,a,a])
+        kv.push('1', [a, a, a, a])
         kv.pull('1', b)
         check_diff_to_scalar(b, 4)
         kv.init('2', mx.nd.zeros(shape))
@@ -120,10 +125,11 @@ def test_pull():
     check_pull(mx.kv.create('device'))
     check_pull(mx.kv.create())
 
+
 def test_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key, stype):
-        kv.push(key, [mx.nd.ones(shape).tostype(stype)*4] * len(key))
+        kv.push(key, [mx.nd.ones(shape).tostype(stype) * 4] * len(key))
         val = [mx.nd.empty(shape)] * len(key)
         kv.pull(key, out=val)
         for v in val:
@@ -155,7 +161,7 @@ def test_aggregator():
             check_diff_to_scalar(out, num_devs)
 
         # list
-        vals = [[mx.nd.ones(shape, d).tostype(stype)*2.0 for d in devs]] * len(key_list)
+        vals = [[mx.nd.ones(shape, d).tostype(stype) * 2.0 for d in devs]] * len(key_list)
         outs = [[mx.nd.empty(shape, d) for d in devs]] * len(key_list)
         kv.push(key_list, vals)
         kv.pull(key_list, out=outs)
@@ -219,10 +225,12 @@ def test_sparse_aggregator():
     check_sparse_aggregator(False)
     check_sparse_aggregator(True)
 
+
 def updater(key, recv, local):
     """use updater: += with int keys"""
     assert(isinstance(key, int))
     local += recv
+
 
 def str_updater(key, recv, local):
     """use updater: += with str keys"""
@@ -230,6 +238,7 @@ def str_updater(key, recv, local):
         key = py_str(key)
     assert(isinstance(key, str))
     local += recv
+
 
 def test_updater(dev='cpu'):
     """updater"""
@@ -273,10 +282,12 @@ def test_updater(dev='cpu'):
         str_kv._set_updater(str_updater)
         check_updater(str_kv, 'a', str_keys, stype)
 
+
 def test_get_type():
     kvtype = 'local_allreduce_cpu'
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
+
 
 def test_invalid_pull():
     def check_ignored_pull_single(kv, key):
@@ -318,7 +329,7 @@ def test_invalid_pull():
         assertRaises(MXNetError, kv.push, key, dns_val)
         assertRaises(MXNetError, kv.pull, key, dns_val)
         assertRaises(MXNetError, kv.row_sparse_pull, key, rsp_val,
-                         row_ids=[mx.nd.array([1])] * len(key))
+                     row_ids=[mx.nd.array([1])] * len(key))
 
     int_kv = init_kv()
     str_kv = init_kv_with_str()
@@ -336,4 +347,3 @@ def test_invalid_pull():
         # kvstore should be restricted to only accept either int or str keys
         check_invalid_key_types_single(kvs[i], single_keys[1 - i])
         check_invalid_key_types_list(kvs[i], list_keys[1 - i])
-

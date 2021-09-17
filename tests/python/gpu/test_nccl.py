@@ -20,17 +20,18 @@ import numpy as np
 import os
 import pytest
 
-shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
-keys = [1,2,3,4,5,6,7]
+shapes = [(10), (100), (1000), (10000), (100000), (2, 2), (2, 3, 4, 5, 6, 7, 8)]
+keys = [1, 2, 3, 4, 5, 6, 7]
 num_gpus = mx.context.num_gpus()
 
 
-if num_gpus > 8 :
+if num_gpus > 8:
     print("The machine has {} gpus. We will run the test on 8 gpus.".format(num_gpus))
     print("There is a limit for all PCI-E hardware on creating number of P2P peers. The limit is 8.")
-    num_gpus = 8;
+    num_gpus = 8
 
-gpus = range(1, 1+num_gpus)
+gpus = range(1, 1 + num_gpus)
+
 
 @pytest.mark.skip(reason="Test requires NCCL library installed and enabled during build")
 def test_nccl_pushpull():
@@ -38,16 +39,17 @@ def test_nccl_pushpull():
         for n_gpus in gpus:
             kv_nccl = mx.kv.create('nccl')
             a = mx.nd.ones(shape, mx.gpu(0))
-            cur_key = str(key*max(gpus)+n_gpus)
+            cur_key = str(key * max(gpus) + n_gpus)
             kv_nccl.init(cur_key, a)
             arr_list = [mx.nd.ones(shape, mx.gpu(x)) for x in range(n_gpus)]
             res = [mx.nd.zeros(shape, mx.gpu(x)) for x in range(n_gpus)]
             kv_nccl.push(cur_key, arr_list)
             kv_nccl.pull(cur_key, res)
             for x in range(n_gpus):
-                assert(np.sum(np.abs((res[x]-n_gpus).asnumpy()))==0)
+                assert(np.sum(np.abs((res[x] - n_gpus).asnumpy())) == 0)
 
-    print ("Passed")
+    print("Passed")
+
 
 if __name__ == '__main__':
     test_nccl_pushpull()

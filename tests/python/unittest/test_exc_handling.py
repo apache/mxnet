@@ -26,6 +26,7 @@ import pytest
 
 mx.npx.reset_np()
 
+
 @pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
                     reason="This test assumes asynchronous execution.")
 def test_exc_imperative():
@@ -38,6 +39,7 @@ def test_exc_imperative():
 
     imperative(exec_numpy=False)
     pytest.raises(MXNetError, imperative, exec_numpy=True)
+
 
 def test_exc_symbolic():
     def symbolic(exec_backward=True, waitall=True):
@@ -105,6 +107,7 @@ def test_exc_multiple_waits():
     multiple_waits(waitall=False)
     multiple_waits(waitall=True)
 
+
 @pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
                     reason="This test assumes asynchronous execution.")
 def test_exc_post_fail():
@@ -123,6 +126,7 @@ def test_exc_post_fail():
     post_fail(waitall=False)
     post_fail(waitall=True)
 
+
 def test_exc_mutable_var_fail():
     def mutable_var_check(waitall=False):
         a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
@@ -134,6 +138,7 @@ def test_exc_mutable_var_fail():
     pytest.raises(MXNetError, mutable_var_check, waitall=False)
     pytest.raises(MXNetError, mutable_var_check, waitall=True)
 
+
 def test_multiple_waitalls():
     caught = False
     try:
@@ -143,6 +148,7 @@ def test_multiple_waitalls():
         caught = True
     assert caught, "No exception thrown"
     mx.nd.waitall()
+
 
 def run_training_iteration(data):
     output = net(data)
@@ -183,4 +189,3 @@ def test_np_random_incorrect_named_arguments():
         assert op is not None
         pytest.raises(TypeError, op, shape=())
         pytest.raises(TypeError, op, shape=None)
-

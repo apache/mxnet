@@ -27,6 +27,7 @@ import math
 from mxnet.test_utils import *
 from common import retry, xfail_when_nonstandard_decimal_separator
 
+
 def test_learning_rate():
     o1 = mx.optimizer.Optimizer(learning_rate=0.01)
     o1.set_learning_rate(0.2)
@@ -89,6 +90,7 @@ def test_sgd():
 
 class PySparseSGD(mx.optimizer.Optimizer):
     """python reference implemenation of sgd"""
+
     def __init__(self, learning_rate=0.1, momentum=0.0, **kwargs):
         super(PySparseSGD, self).__init__(learning_rate=learning_rate, **kwargs)
         self.momentum = momentum
@@ -366,6 +368,7 @@ def test_ftml():
 # Sparse ADAM
 class PySparseAdam(mx.optimizer.Optimizer):
     """python reference implemenation of sparse adam"""
+
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  lazy_update=False, **kwargs):
         super(PySparseAdam, self).__init__(learning_rate=learning_rate, **kwargs)
@@ -540,7 +543,7 @@ def test_signum():
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
     wd_lh_options = [{}, {'wd_lh': 0.015}, {'wd_lh': 0.0}]
     mom_options = [{}, {'momentum': 0.9}]
-    lr_options = [{'learning_rate': 0.05},{'learning_rate': 0.01}]
+    lr_options = [{'learning_rate': 0.05}, {'learning_rate': 0.01}]
     mp_options = [{'multi_precision': False}, {'multi_precision': True}]
     agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
@@ -555,7 +558,7 @@ def test_signum():
             rtol, atol = (1e-3, 1e-4) if dtype is np.float16 else (1e-4, 1e-5)
             compare_optimizer(opt1(use_fused_step=False, **kwarg),
                               opt2(use_fused_step=True, **kwarg), shapes, dtype,
-                                   rtol=rtol, atol=atol)
+                              rtol=rtol, atol=atol)
 
 
 @xfail_when_nonstandard_decimal_separator
@@ -923,6 +926,7 @@ def test_adamW():
                               opt2(use_fused_step=True, **kwarg), shapes, dtype,
                               rtol=1e-3, atol=2e-3)
 
+
 def test_adabelief():
     opt1 = mx.optimizer.AdaBelief
     opt2 = mx.optimizer.AdaBelief
@@ -948,12 +952,13 @@ def test_adabelief():
                               opt2(use_fused_step=True, **kwarg), shapes, dtype,
                               rtol=1e-3, atol=2e-3)
 
+
 def test_factor_scheduler():
     base_lr = 1
     step = 100
     factor = 0.1
     sched = mx.lr_scheduler.FactorScheduler(step, factor, stop_factor_lr=1e-4, base_lr=base_lr,
-                                        warmup_steps=20, warmup_begin_lr=0.1, warmup_mode='constant')
+                                            warmup_steps=20, warmup_begin_lr=0.1, warmup_mode='constant')
 
     assert (sched(0) == 0.1)
     np.testing.assert_almost_equal(sched(10), 0.1)
@@ -968,10 +973,10 @@ def test_multifactor_scheduler():
     steps = [15, 25]
     factor = 0.1
     sched = mx.lr_scheduler.MultiFactorScheduler(steps, factor, base_lr=base_lr,
-                                        warmup_steps=10, warmup_begin_lr=0.05, warmup_mode='linear')
+                                                 warmup_steps=10, warmup_begin_lr=0.05, warmup_mode='linear')
 
     assert sched(0) == 0.05
-    np.testing.assert_almost_equal(sched(5), 0.05 + (base_lr - 0.05)/2)
+    np.testing.assert_almost_equal(sched(5), 0.05 + (base_lr - 0.05) / 2)
     np.testing.assert_almost_equal(sched(15), base_lr)
     np.testing.assert_almost_equal(sched(16), base_lr * factor)
     np.testing.assert_almost_equal(sched(20), base_lr * factor)
@@ -984,12 +989,12 @@ def test_poly_scheduler():
     final_lr = 0
     steps = 1000
     poly_sched = mx.lr_scheduler.PolyScheduler(steps, base_lr=base_lr, pwr=2, final_lr=final_lr,
-                                    warmup_steps=100, warmup_begin_lr=0, warmup_mode='linear')
+                                               warmup_steps=100, warmup_begin_lr=0, warmup_mode='linear')
 
     np.testing.assert_almost_equal(poly_sched(0), 0)
-    np.testing.assert_almost_equal(poly_sched(50), float(base_lr)/2)
+    np.testing.assert_almost_equal(poly_sched(50), float(base_lr) / 2)
     np.testing.assert_almost_equal(poly_sched(100), base_lr)
-    assert (poly_sched(101) <  poly_sched(100))
+    assert (poly_sched(101) < poly_sched(100))
     assert (poly_sched(500) < 1.6)
     np.testing.assert_almost_equal(poly_sched(steps), final_lr)
 

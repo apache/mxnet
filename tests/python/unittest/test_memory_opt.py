@@ -24,6 +24,7 @@ from mxnet.test_utils import environment
 
 num_hidden = 4096
 
+
 @with_environment('MXNET_MEMORY_OPT', '1')
 def test_rnn_cell():
     # x →→→ + →→→ tanh ⇒⇒⇒
@@ -56,11 +57,11 @@ def test_mlp_attn():
     num_steps = 5
     in_arg_shapes = {'x': (num_steps, num_hidden,)}
     for i in range(num_steps):
-        y = mx.sym.Variable("y_t%d"%i)
-        tmp.append(mx.sym.broadcast_add(x, y, name="broadcast_add%d"%i))
+        y = mx.sym.Variable("y_t%d" % i)
+        tmp.append(mx.sym.broadcast_add(x, y, name="broadcast_add%d" % i))
         z.append(mx.sym.Activation(tmp[-1], act_type='tanh',
-                                   name="activation%d"%i))
-        in_arg_shapes["y_t%d"%i] = (1, num_hidden,)
+                                   name="activation%d" % i))
+        in_arg_shapes["y_t%d" % i] = (1, num_hidden,)
     z = mx.sym.Group(z)
     exec = z._simple_bind(mx.cpu(), 'write', **in_arg_shapes)
 

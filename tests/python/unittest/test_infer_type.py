@@ -22,6 +22,7 @@ from common import models
 from mxnet import autograd
 from mxnet.test_utils import assert_almost_equal
 
+
 def test_infer_multiout_op():
     data = mx.nd.arange(16, dtype=np.float64).reshape((4, 4))
     data.attach_grad()
@@ -31,6 +32,7 @@ def test_infer_multiout_op():
     y[0].backward()
     assert data.grad.dtype == np.float64
     mx.nd.waitall()
+
 
 def test_infer_multiout_op2():
     def test_func(a):
@@ -49,4 +51,3 @@ def test_infer_multiout_op2():
         test64 = test_func(data64)
         test64.backward()
     assert_almost_equal(data64.grad.asnumpy(), data32.grad.asnumpy(), atol=1e-5, rtol=1e-5)
-

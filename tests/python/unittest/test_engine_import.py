@@ -34,4 +34,3 @@ def test_engine_import():
     for type in engine_types:
         with environment('MXNET_ENGINE_TYPE', type):
             reload(mxnet)
-

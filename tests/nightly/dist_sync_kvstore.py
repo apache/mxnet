@@ -20,12 +20,12 @@
 # pylint: skip-file
 import sys
 sys.path.insert(0, "../../python/")
-import argparse
-import mxnet as mx
-import numpy as np
-import numpy.random as rnd
-from mxnet.test_utils import assert_almost_equal, assert_exception
 from test_kvstore import compute_expected_quantization, compute_1bit, compute_2bit
+from mxnet.test_utils import assert_almost_equal, assert_exception
+import numpy.random as rnd
+import numpy as np
+import mxnet as mx
+import argparse
 
 def check_diff(A, x, rank=None):
     """ assert A == x
@@ -33,9 +33,10 @@ def check_diff(A, x, rank=None):
     """
     assert (np.sum(np.abs((A - x).asnumpy())) == 0), (rank, A.asnumpy(), x)
 
+
 # setup
 shape = (2, 3)
-irregular_shape = (1211,1211)
+irregular_shape = (1211, 1211)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
 keys_invalid = [999]
@@ -57,9 +58,9 @@ init_test_keys_big = [str(i) for i in range(300, 400)]
 init_test_keys_device = [str(i) for i in range(400, 500)]
 init_test_keys_device_big = [str(i) for i in range(500, 600)]
 
-compr_keys_shapes = [('1000', shape), ('1200', irregular_shape),('1300', big_shape)]
-compr_init_keys_shapes = [('1001', shape), ('1201', irregular_shape),('1301', big_shape)]
-compr_random_keys_shapes = [('1002', shape),('1202', irregular_shape),('1302', big_shape)]
+compr_keys_shapes = [('1000', shape), ('1200', irregular_shape), ('1300', big_shape)]
+compr_init_keys_shapes = [('1001', shape), ('1201', irregular_shape), ('1301', big_shape)]
+compr_random_keys_shapes = [('1002', shape), ('1202', irregular_shape), ('1302', big_shape)]
 
 rate = 2
 
@@ -67,6 +68,7 @@ kv = mx.kv.create('dist_sync')
 
 my_rank = kv.rank
 nworker = kv.num_workers
+
 
 def init_kv():
     # # init kv dns keys
@@ -83,10 +85,12 @@ def init_kv():
     kv.init(fp16_rsp_keys_big_shape, [mx.nd.ones(big_shape, dtype='float16').tostype('row_sparse')] * len(fp16_rsp_keys_big_shape))
     return kv
 
+
 def set_optimizer(use_multiprecision):
     # init updater on servers
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate, multi_precision=use_multiprecision))
     return kv
+
 
 def init_kv_compressed(kv, compression='2bit', threshold=.5):
     kv.set_gradient_compression({'type': compression, 'threshold': threshold})
@@ -98,6 +102,7 @@ def init_kv_compressed(kv, compression='2bit', threshold=.5):
         kv.init(k, mx.nd.ones(s))
     return kv, threshold
 
+
 def test_sync_push_pull(nrepeat):
     def check_default_keys(dtype, nrepeat):
         # checks pull after push in loop, because behavior during
@@ -105,7 +110,7 @@ def test_sync_push_pull(nrepeat):
         ks = keys_shapes if dtype == 'float32' else fp16_keys_shapes
         for k, s in ks:
             for i in range(nrepeat):
-                kv.push(k, mx.nd.ones(s, dtype=dtype)*(my_rank+1))
+                kv.push(k, mx.nd.ones(s, dtype=dtype) * (my_rank + 1))
                 num = (nworker + 1) * nworker * rate / 2 * (i + 1) + 1
                 val = mx.nd.zeros(s, dtype=dtype)
                 kv.pull(k, out=val)
@@ -127,7 +132,7 @@ def test_sync_push_pull(nrepeat):
             # select a random subset of rows this worker is interested in
             num_rows = s[0]
             row_ids_np = np.random.randint(num_rows, size=num_rows)
-            row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2)).astype(dtype)
+            row_ids = mx.nd.array(row_ids_np).reshape((num_rows / 2, 2)).astype(dtype)
             # perform pull
             val = mx.nd.zeros(s, stype='row_sparse', dtype=dtype)
             kv.row_sparse_pull(k, out=val, row_ids=row_ids)
@@ -135,7 +140,7 @@ def test_sync_push_pull(nrepeat):
             updated_val = mx.nd.ones(s, dtype=dtype)
             for rank in range(nworker):
                 row = rank % s[0]
-                updated_val[row] += (rank + 1) * rate * (i+1)
+                updated_val[row] += (rank + 1) * rate * (i + 1)
             # verify subset of updated values
             expected = mx.nd.zeros(s, dtype=dtype)
             for row in row_ids_np:
@@ -206,7 +211,7 @@ def test_sync_push_pull(nrepeat):
             rnd.seed(my_rank)
             num_rows = big_shape[0]
             row_ids_np = np.random.randint(num_rows, size=num_rows)
-            row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2)).astype(dtype)
+            row_ids = mx.nd.array(row_ids_np).reshape((num_rows / 2, 2)).astype(dtype)
             # perform pull
             val = mx.nd.zeros(big_shape, stype='row_sparse', dtype=dtype)
             kv.row_sparse_pull(k, out=val, row_ids=row_ids)
@@ -215,7 +220,7 @@ def test_sync_push_pull(nrepeat):
             # apply updates from each worker
             for rank in range(nworker):
                 for row in update_rows[rank]:
-                    updated_val[row] += (rank + 1) * rate * (i+1)
+                    updated_val[row] += (rank + 1) * rate * (i + 1)
 
             expected = mx.nd.zeros(big_shape, dtype=dtype)
             for row in row_ids_np:
@@ -228,6 +233,7 @@ def test_sync_push_pull(nrepeat):
         check_row_sparse_keys_with_zeros(dtype, nrepeat)
         check_big_row_sparse_keys(dtype, nrepeat)
     print('worker ' + str(my_rank) + ' is done with non compression tests')
+
 
 def test_sync_1bit_compression(threshold, nrepeat):
 
@@ -252,7 +258,7 @@ def test_sync_1bit_compression(threshold, nrepeat):
             kv.pull(k, out=out)
             newval = curr_val + rate * nworker
             check_diff(out, newval)
-    
+
     def check_compr_neg_ones():
         for k, s in compr_keys_shapes:
             val = mx.nd.zeros(s)
@@ -264,7 +270,7 @@ def test_sync_1bit_compression(threshold, nrepeat):
             # current value should be zero after call
             # check_compr_ones and check_compr_neg_ones
             check_diff(out, 0)
-    
+
     def check_compr_residual(threshold):
         curr_residual = 0
         curr_val = rate * nworker if 2 + curr_residual > threshold else -rate * nworker
@@ -288,7 +294,7 @@ def test_sync_1bit_compression(threshold, nrepeat):
             kv.push(k, -2 * mx.nd.ones(s))
             out = mx.nd.zeros(s)
             kv.pull(k, out)
-            check_diff(out, curr_val)        
+            check_diff(out, curr_val)
 
     def check_compr_random(threshold, nrepeat):
         # set a seed so all workers generate same data. knowing this helps
@@ -297,9 +303,9 @@ def test_sync_1bit_compression(threshold, nrepeat):
         rnd.seed(123)
 
         # use new keys so residual is 0 for calculation of expected
-        for k,s in compr_random_keys_shapes:
+        for k, s in compr_random_keys_shapes:
             kv.init(k, mx.nd.zeros(s))
-        for k,s in compr_random_keys_shapes:
+        for k, s in compr_random_keys_shapes:
             curr_residual = np.zeros(s)
             for _ in range(nrepeat):
                 orig_val = mx.nd.zeros(s)
@@ -319,13 +325,14 @@ def test_sync_1bit_compression(threshold, nrepeat):
                 decompr *= nworker * rate
                 assert_almost_equal(diff.asnumpy(), decompr)
 
-    print ('worker ' + str(my_rank) + ' started with 1bit compression tests')
+    print('worker ' + str(my_rank) + ' started with 1bit compression tests')
     check_compr_pull_before_push()
     check_compr_ones()
     check_compr_neg_ones()
     check_compr_residual(threshold)
     check_compr_random(threshold, nrepeat)
-    print('worker ' + str(my_rank) + ' is done with 1bit compression tests')   
+    print('worker ' + str(my_rank) + ' is done with 1bit compression tests')
+
 
 def test_sync_2bit_compression(threshold, nrepeat):
     def check_compr_residual(threshold):
@@ -333,13 +340,13 @@ def test_sync_2bit_compression(threshold, nrepeat):
             # doesn't meet threshold
             kv.push(k, mx.nd.ones(s) * 0.4)
             val = mx.nd.zeros(s)
-            kv.pull(k,val)
+            kv.pull(k, val)
             check_diff(val, 0)
 
             # just meets threshold with residual
             kv.push(k, mx.nd.ones(s) * (threshold - 0.4))
             val2 = mx.nd.zeros(s)
-            kv.pull(k,val2)
+            kv.pull(k, val2)
             curval = threshold * rate * nworker
             check_diff(val2, curval)
 
@@ -350,7 +357,7 @@ def test_sync_2bit_compression(threshold, nrepeat):
             check_diff(val3, curval)
 
             # exceeds again
-            kv.push(k, mx.nd.ones(s) * (threshold-0.2))
+            kv.push(k, mx.nd.ones(s) * (threshold - 0.2))
             val4 = mx.nd.zeros(s)
             kv.pull(k, val4)
             curval += threshold * rate * nworker
@@ -362,7 +369,7 @@ def test_sync_2bit_compression(threshold, nrepeat):
             val = mx.nd.zeros(s)
             kv.pull(k, val)
             curval = val[0][0].asnumpy()[0]
-            kv.push(k,mx.nd.ones(s) * threshold)
+            kv.push(k, mx.nd.ones(s) * threshold)
             val2 = mx.nd.zeros(s)
             kv.pull(k, val2)
             newval = curval + rate * nworker * threshold
@@ -370,7 +377,7 @@ def test_sync_2bit_compression(threshold, nrepeat):
             # residual = 0  again
 
     def check_compr_pull_before_push():
-        for k,s in compr_keys_shapes:
+        for k, s in compr_keys_shapes:
             val = mx.nd.ones(s)
             kv.pull(k, val)
             check_diff(val, 0)
@@ -381,7 +388,7 @@ def test_sync_2bit_compression(threshold, nrepeat):
             check_diff(val, 1)
 
     def check_compr_zero():
-        for k,s in compr_keys_shapes:
+        for k, s in compr_keys_shapes:
             kv.push(k, mx.nd.zeros(s))
             # to check that all are set to 0s
             val = mx.nd.ones(s)
@@ -395,9 +402,9 @@ def test_sync_2bit_compression(threshold, nrepeat):
         rnd.seed(123)
 
         # use new keys so residual is 0 for calculation of expected
-        for k,s in compr_random_keys_shapes:
+        for k, s in compr_random_keys_shapes:
             kv.init(k, mx.nd.zeros(s))
-        for k,s in compr_random_keys_shapes:
+        for k, s in compr_random_keys_shapes:
             curr_residual = np.zeros(s)
             for _ in range(nrepeat):
                 orig_val = mx.nd.zeros(s)
@@ -417,7 +424,7 @@ def test_sync_2bit_compression(threshold, nrepeat):
                 decompr *= nworker * rate
                 assert_almost_equal(diff.asnumpy(), decompr)
 
-    print ('worker ' + str(my_rank) + ' started with 2bit compression tests')
+    print('worker ' + str(my_rank) + ' started with 2bit compression tests')
     check_compr_pull_before_push()
     check_compr_zero()
     check_compr_residual(threshold)
@@ -425,9 +432,10 @@ def test_sync_2bit_compression(threshold, nrepeat):
     check_compr_random(threshold, nrepeat)
     print('worker ' + str(my_rank) + ' is done with 2bit compression tests')
 
+
 def test_sync_init(gpu_tests=False):
     def get_dtype(idx, cur_keys):
-        if idx < len(cur_keys)/2:
+        if idx < len(cur_keys) / 2:
             dtype = 'float32'
         else:
             dtype = 'float16'
@@ -448,6 +456,7 @@ def test_sync_init(gpu_tests=False):
         check_init(kv, init_test_keys_device_big, big_shape, device=True)
     print('worker ' + str(kv.rank) + ' is initialized')
 
+
 def test_invalid_operations():
     def check_invalid_gluon_trainer_reset():
         x = mx.gluon.Parameter('x', shape=(4, 2), lr_mult=1.0, stype='row_sparse')
@@ -466,17 +475,18 @@ def test_invalid_operations():
         print('worker ' + str(my_rank) + ' passed check_invalid_gluon_trainer_reset')
 
     def check_invalid_pull():
-        kv.init(keys_invalid[0], mx.nd.ones((2,2)).tostype('row_sparse'))
-        out = mx.nd.ones((2,2)).tostype('row_sparse')
+        kv.init(keys_invalid[0], mx.nd.ones((2, 2)).tostype('row_sparse'))
+        out = mx.nd.ones((2, 2)).tostype('row_sparse')
         assert_exception(kv.pull, mx.MXNetError, 'invalid_key', out=out, ignore_sparse=False)
         print('worker ' + str(my_rank) + ' passed check_invalid_pull')
 
     check_invalid_gluon_trainer_reset()
     check_invalid_pull()
 
+
 def test_gluon_trainer_type():
     def check_trainer_kv_type(stype, grad_stype, update_on_kv, expected):
-        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        x = mx.gluon.Parameter('x', shape=(10, 1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                    kvstore=kv, update_on_kvstore=update_on_kv)
@@ -496,6 +506,7 @@ def test_gluon_trainer_type():
     check_trainer_kv_type('row_sparse', 'row_sparse', False, ValueError)
     print('worker ' + str(my_rank) + ' passed test_gluon_trainer_type')
 
+
 def test_gluon_trainer_step():
     def check_trainer_step():
         ctx = mx.cpu(0)
@@ -512,6 +523,7 @@ def test_gluon_trainer_step():
         assert_almost_equal(x.data(ctx).asnumpy(), np.full(shape, expected))
     check_trainer_step()
     print('worker ' + str(my_rank) + ' passed test_gluon_trainer_step')
+
 
 def test_gluon_trainer_sparse_step():
     def check_trainer_sparse_step():
@@ -530,6 +542,7 @@ def test_gluon_trainer_sparse_step():
         assert_almost_equal(x.row_sparse_data(all_rows).asnumpy(), np.full(shape, expected))
     check_trainer_sparse_step()
     print('worker ' + str(my_rank) + ' passed test_gluon_trainer_sparse_step')
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')

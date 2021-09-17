@@ -28,6 +28,7 @@ import os
 from mxnet import autograd
 logging.basicConfig(level=logging.DEBUG)
 
+
 @mx.util.use_np
 def test_autograd(tmpdir):
     # define network
@@ -42,17 +43,17 @@ def test_autograd(tmpdir):
 
     batch_size = 100
     train_data = mx.io.MNISTIter(
-            image=os.path.join(path, 'train-images-idx3-ubyte'),
-            label=os.path.join(path, 'train-labels-idx1-ubyte'),
-            data_shape=(784,),
-            label_name='sm_label',
-            batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
+        image=os.path.join(path, 'train-images-idx3-ubyte'),
+        label=os.path.join(path, 'train-labels-idx1-ubyte'),
+        data_shape=(784,),
+        label_name='sm_label',
+        batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
     val_data = mx.io.MNISTIter(
-            image=os.path.join(path, 't10k-images-idx3-ubyte'),
-            label=os.path.join(path, 't10k-labels-idx1-ubyte'),
-            data_shape=(784,),
-            label_name='sm_label',
-            batch_size=batch_size, shuffle=True, flat=True, silent=False)
+        image=os.path.join(path, 't10k-images-idx3-ubyte'),
+        label=os.path.join(path, 't10k-labels-idx1-ubyte'),
+        data_shape=(784,),
+        label_name='sm_label',
+        batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
     def score(net, ctx_list):
         metric = gluon.metric.Accuracy()
@@ -88,8 +89,7 @@ def test_autograd(tmpdir):
                 metric.update(labels, outputs)
             name, acc = metric.get()
             metric.reset()
-            print('training acc at epoch %d: %s=%f'%(i, name, acc))
-
+            print('training acc at epoch %d: %s=%f' % (i, name, acc))
 
     net1 = get_net()
     train(net1, 5, [mx.cpu(0), mx.cpu(1)])

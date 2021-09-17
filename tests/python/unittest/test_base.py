@@ -27,6 +27,7 @@ import os.path as op
 import platform
 import pytest
 
+
 @pytest.mark.garbage_expected
 def test_environment():
     name1 = 'MXNET_TEST_ENV_VAR_1'
@@ -46,10 +47,12 @@ def test_environment():
 
     # Further testing in 'test_with_environment()'
 
+
 @with_environment({'MXNET_TEST_ENV_VAR_1': '10', 'MXNET_TEST_ENV_VAR_2': None})
 def test_with_environment():
     name1 = 'MXNET_TEST_ENV_VAR_1'
     name2 = 'MXNET_TEST_ENV_VAR_2'
+
     def check_background_values():
         assert_equal(os.environ.get(name1), '10')
         assert_equal(getenv(name1), '10')

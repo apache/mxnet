@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 # They will be detected by test framework, as long as the current file has a different filename
 from test_profiler import *
 
+
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_symbolic():
     enable_profiler('test_profiler.json')
@@ -56,20 +57,20 @@ def test_gpu_memory_profiler_symbolic():
     profiler.dump(True)
 
     expected_alloc_entries = [
-            {'Attribute Name' : 'tensordot:in_arg:A',
-             'Requested Size' : str(4 * a.size)},
-            {'Attribute Name' : 'tensordot:in_arg:B',
-             'Requested Size' : str(4 * b.size)},
-            {'Attribute Name' : 'tensordot:dot',
-             'Requested Size' : str(4 * c.size)},
-            {'Attribute Name' : 'tensordot:dot_backward',
-             'Requested Size' : str(4 * a.size)},
-            {'Attribute Name' : 'tensordot:dot_backward',
-             'Requested Size' : str(4 * b.size)},
-            {'Attribute Name' : 'init:_random_uniform',
-             'Requested Size' : str(4 * a.size)},
-            {'Attribute Name' : 'init:_random_uniform',
-             'Requested Size' : str(4 * b.size)}]
+        {'Attribute Name': 'tensordot:in_arg:A',
+         'Requested Size': str(4 * a.size)},
+        {'Attribute Name': 'tensordot:in_arg:B',
+         'Requested Size': str(4 * b.size)},
+        {'Attribute Name': 'tensordot:dot',
+         'Requested Size': str(4 * c.size)},
+        {'Attribute Name': 'tensordot:dot_backward',
+         'Requested Size': str(4 * a.size)},
+        {'Attribute Name': 'tensordot:dot_backward',
+         'Requested Size': str(4 * b.size)},
+        {'Attribute Name': 'init:_random_uniform',
+         'Requested Size': str(4 * a.size)},
+        {'Attribute Name': 'init:_random_uniform',
+         'Requested Size': str(4 * b.size)}]
 
     # Sample gpu_memory_profile.csv:
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
@@ -98,9 +99,9 @@ def test_gpu_memory_profiler_symbolic():
                     entry_found = True
                     break
             assert entry_found, \
-                    "Entry for (attr_name={}, alloc_size={}) has not been found" \
-                    .format(expected_alloc_entry['Attribute Name'],
-                            expected_alloc_entry['Requested Size'])
+                "Entry for (attr_name={}, alloc_size={}) has not been found" \
+                .format(expected_alloc_entry['Attribute Name'],
+                        expected_alloc_entry['Requested Size'])
         # Make sure that there is no unknown allocation entry.
         csv_file.seek(0)
         for row in csv_reader:
@@ -176,9 +177,9 @@ def test_gpu_memory_profiler_gluon():
                     entry_found = True
                     break
             assert entry_found, \
-                    "Entry for (attr_name={}, alloc_size={}) has not been found" \
-                        .format(expected_arg_name,
-                                expected_arg_size)
+                "Entry for (attr_name={}, alloc_size={}) has not been found" \
+                .format(expected_arg_name,
+                        expected_arg_size)
         # Make sure that there is no unknown allocation entry.
         csv_file.seek(0)
         for row in csv_reader:

@@ -32,13 +32,14 @@ from mxnet.test_utils import assert_almost_equal, use_np, set_default_context
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assertRaises
-import random
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
-from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.util import numpy_fallback
+from mxnet.numpy_op_signature import _get_builtin_op
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
+import random
+from common import assertRaises
 
 set_default_context(mx.gpu(0))
+
 
 @use_np
 @pytest.mark.serial
@@ -51,7 +52,7 @@ def test_np_fallback_decorator():
         """
         ret_lst = []
         # unsupported indexing case
-        ret_lst.append(a[:,a[1,:]>0])
+        ret_lst.append(a[:, a[1, :] > 0])
         # unsupported operator
         ret_lst.append(np.nonzero(b))
         # unsupported operator case
@@ -61,7 +62,7 @@ def test_np_fallback_decorator():
 
     def onp_func(a, b=None, split_inputs=(), ret_type=list):
         ret_lst = []
-        ret_lst.append(a[:,a[1,:]>0])
+        ret_lst.append(a[:, a[1, :] > 0])
         ret_lst.append(_np.nonzero(b))
         ret_lst.append(tuple(_np.split(split_inputs[0], split_inputs[1])))
         return ret_type(ret_lst)
@@ -75,7 +76,7 @@ def test_np_fallback_decorator():
         return indices
 
     ret_type = list if random.uniform(0.0, 1.0) > 0.5 else tuple
-    mx_a = np.array([[1,2,3],[3,4,5]])
+    mx_a = np.array([[1, 2, 3], [3, 4, 5]])
     np_b = _np.random.uniform(size=(3, 4)) > 0.5
     mx_b = np.array(np_b, dtype=np_b.dtype)
     mx_c_len = random.randint(5, 20)
@@ -107,4 +108,3 @@ def test_np_fallback_decorator():
 
     # does not support functions with no return values
     assertRaises(ValueError, empty_ret_func)
-

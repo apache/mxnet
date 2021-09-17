@@ -31,6 +31,7 @@ import pytest
 
 mx.npx.reset_np()
 
+
 def _get_test_network():
     net = nn.Sequential()
     net.add(nn.Dense(4, activation='relu', flatten=False))
@@ -46,6 +47,7 @@ def _get_test_data():
     dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
     dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
     return dataloader, dataiter
+
 
 @mx.util.use_np
 def test_batch_processor_fit():
@@ -118,4 +120,3 @@ def test_batch_processor_validation():
         est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 val_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
-

@@ -132,7 +132,7 @@ def test_arcsin():
         return nd.arcsin(x)
 
     def grad_grad_op(x):
-        return x / nd.sqrt((1-x**2)**3)
+        return x / nd.sqrt((1 - x**2)**3)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -146,7 +146,7 @@ def test_arccos():
         return nd.arccos(x)
 
     def grad_grad_op(x):
-        return -x / nd.sqrt((1-x**2)**3)
+        return -x / nd.sqrt((1 - x**2)**3)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -161,7 +161,7 @@ def test_arctan():
         return nd.arctan(x)
 
     def grad_grad_op(x):
-        return (-2 * x)/((1 + x**2)**2)
+        return (-2 * x) / ((1 + x**2)**2)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -177,7 +177,7 @@ def test_arcsinh():
         return nd.arcsinh(x)
 
     def grad_grad_op(x):
-        return x/nd.sqrt((nd.square(x)+1)**3)
+        return x / nd.sqrt((nd.square(x) + 1)**3)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -190,7 +190,7 @@ def test_arccosh():
         return nd.arccosh(x)
 
     def grad_grad_op(x):
-        return x/(nd.sqrt(x-1) * nd.sqrt(x+1) * (x+1) * (x-1))
+        return x / (nd.sqrt(x - 1) * nd.sqrt(x + 1) * (x + 1) * (x - 1))
 
     sigma = random.randint(25, 100)
     mu = random.randint(500, 1000)
@@ -210,7 +210,7 @@ def test_arctanh():
         return nd.arctanh(x)
 
     def grad_grad_op(x):
-        return (2 * x)/((1 - x**2)**2)
+        return (2 * x) / ((1 - x**2)**2)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -250,10 +250,10 @@ def test_log():
         return nd.log(x)
 
     def grad_op(x):
-        return 1/x
+        return 1 / x
 
     def grad_grad_op(x):
-        return -1/(x**2)
+        return -1 / (x**2)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -269,7 +269,7 @@ def test_log2():
         return nd.log2(x)
 
     def grad_grad_op(x):
-        return -1/((x**2) * math.log(2))
+        return -1 / ((x**2) * math.log(2))
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -283,7 +283,7 @@ def test_log10():
         return nd.log10(x)
 
     def grad_grad_op(x):
-        return -1/((x**2) * math.log(10))
+        return -1 / ((x**2) * math.log(10))
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -314,7 +314,7 @@ def test_expm1():
 
 def test_log1p():
     def grad_grad_op(x):
-        return -1/((1+x)**2)
+        return -1 / ((1 + x)**2)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -401,7 +401,7 @@ def test_sqrt():
         return nd.sqrt(x)
 
     def grad_grad_op(x):
-        return -1/(4 * sqrt(x**3))
+        return -1 / (4 * sqrt(x**3))
 
     sigma = random.randint(25, 100)
     mu = random.randint(500, 1000)
@@ -420,7 +420,7 @@ def test_cbrt():
         return nd.cbrt(x)
 
     def grad_grad_op(x):
-        return -2/(9 * cbrt(x**5))
+        return -2 / (9 * cbrt(x**5))
 
     sigma = random.randint(25, 100)
     mu = random.randint(500, 1000)
@@ -440,7 +440,7 @@ def test_rsqrt():
         return nd.rsqrt(x)
 
     def grad_grad_op(x):
-        return 3/(4 * nd.sqrt(x**5))
+        return 3 / (4 * nd.sqrt(x**5))
 
     sigma = random.randint(25, 100)
     mu = random.randint(500, 1000)
@@ -460,7 +460,7 @@ def test_rcbrt():
         return nd.rcbrt(x)
 
     def grad_grad_op(x):
-        return 4/(9 * nd.cbrt(x**7))
+        return 4 / (9 * nd.cbrt(x**7))
 
     sigma = random.randint(25, 100)
     mu = random.randint(500, 1000)
@@ -528,7 +528,7 @@ def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
     # Perform compute.
     with autograd.record():
         y = op(x)
-        for current_order in range(1, highest_order+1):
+        for current_order in range(1, highest_order + 1):
             head_grad = nd.random.normal(shape=x.shape)
             y = autograd.grad(heads=y, variables=x, head_grads=head_grad,
                               create_graph=True, retain_graph=True)[0]
@@ -595,7 +595,7 @@ def flatten2d_left(x):
 
 def test_dense_backward_flatten():
     print("2nd order gradient for Fully Connected, flatten=True")
-    for x in NDArrayGenerator(4,2):
+    for x in NDArrayGenerator(4, 2):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
         net.add(gluon.nn.Dense(hidden, flatten=True))
@@ -636,9 +636,10 @@ def test_dense_backward_flatten():
         assert x_grad_grad_check
         assert w_grad_grad_check
 
+
 def test_dense_backward_no_flatten():
     print("2nd order gradient for Fully Connected, flatten=False")
-    for x in NDArrayGenerator(5,3):
+    for x in NDArrayGenerator(5, 3):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
         net.add(gluon.nn.Dense(hidden, flatten=False))
@@ -678,4 +679,3 @@ def test_dense_backward_no_flatten():
         assert w_grad_check
         assert x_grad_grad_check
         assert w_grad_grad_check
-

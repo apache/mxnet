@@ -55,34 +55,35 @@ del test_custom_op_fork  #noqa
 
 set_default_context(mx.gpu(0))
 
-def check_countsketch(in_dim,out_dim,n):
+
+def check_countsketch(in_dim, out_dim, n):
     data = mx.sym.Variable("data")
     h = mx.sym.Variable("h")
     s = mx.sym.Variable("s")
-    sym = mx.sym.contrib.count_sketch(data=data, h=h, s=s, name='countsketch',out_dim = out_dim)
-    shape = [(n,in_dim), (1,in_dim),(1,in_dim)]     #shape of input x, hash h and hash s
+    sym = mx.sym.contrib.count_sketch(data=data, h=h, s=s, name='countsketch', out_dim=out_dim)
+    shape = [(n, in_dim), (1, in_dim), (1, in_dim)]  # shape of input x, hash h and hash s
 
     arr = [mx.nd.empty(shape[i]) for i in range(3)]
     arr_grad = [mx.nd.empty(shape[i]) for i in range(3)]
     x = np.random.uniform(-10, 10, shape[0])
-    arr[0][:] = x                                 #input x
+    arr[0][:] = x  # input x
     h = np.random.randint(0, out_dim, shape[1])
-    arr[1][:] = h                                 #hash h
-    s = np.random.randint(0, 2, shape[2])*2-np.ones(shape[2])
-    arr[2][:] = s                                 #hash s
+    arr[1][:] = h  # hash h
+    s = np.random.randint(0, 2, shape[2]) * 2 - np.ones(shape[2])
+    arr[2][:] = s  # hash s
     locations = {"data": x, "h": h, "s": s}
-    a = np.zeros((n,out_dim))
+    a = np.zeros((n, out_dim))
     temp = np.multiply(x, s)
-    for num_sample in np.arange(0,n):
-        for idx in np.arange(0,in_dim):
+    for num_sample in np.arange(0, n):
+        for idx in np.arange(0, in_dim):
             a[num_sample][h[0][idx]] += temp[num_sample][idx]
     check_symbolic_forward(sym, locations, [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
-    out_grad = mx.nd.empty((n,out_dim))
-    out_grad[:] = np.random.normal(-3, 3, (n,out_dim))
-    a = np.zeros((n,in_dim))
-    for j in np.arange(0,n):
-        for i in np.arange(0,in_dim):
-            a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
+    out_grad = mx.nd.empty((n, out_dim))
+    out_grad[:] = np.random.normal(-3, 3, (n, out_dim))
+    a = np.zeros((n, in_dim))
+    for j in np.arange(0, n):
+        for i in np.arange(0, in_dim):
+            a[j, i] = out_grad.asnumpy()[j, h[0, i]] * s[0, i]
     check_symbolic_backward(sym, locations, [out_grad], [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
 
 
@@ -100,22 +101,22 @@ def test_countsketch():
 
 
 def check_fft(shape):
-    sym = mx.sym.contrib.fft(name='fft', compute_size = 128)
+    sym = mx.sym.contrib.fft(name='fft', compute_size=128)
     if len(shape) == 2:
-        if shape[1]%2 != 0:
+        if shape[1] % 2 != 0:
             lst = list(shape)
-            lst[1] = lst[1]*2
+            lst[1] = lst[1] * 2
             shape = tuple(lst)
             shape_old = shape
     if len(shape) == 4:
-        if shape[3]%2 != 0:
+        if shape[3] % 2 != 0:
             lst = list(shape)
-            lst[3] = lst[3]*2
+            lst[3] = lst[3] * 2
             shape = tuple(lst)
             shape_old = shape
     init = [np.random.normal(size=shape, scale=1.0)]
     arr_grad = [mx.nd.empty(shape)]
-    ctx_list = [{'ctx': mx.gpu(0),'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
+    ctx_list = [{'ctx': mx.gpu(0), 'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
     exe_list = [sym._simple_bind(**ctx) for ctx in ctx_list]
 
     for exe in exe_list:
@@ -127,66 +128,69 @@ def check_fft(shape):
     out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
     out = np.fft.fft(init, n=None, axis=-1, norm=None)
     if len(shape) == 2:
-        out = np.reshape(out,(out.shape[1],out.shape[2]))
-        out2 = np.append(out.real, out.imag, axis = 1)
+        out = np.reshape(out, (out.shape[1], out.shape[2]))
+        out2 = np.append(out.real, out.imag, axis=1)
         a = np.zeros(out1[0].shape)
         p = 0
-        for i in range(out2.shape[1]//2):
-            a[:,p] = out2[:,i]
-            a[:,p+1] = out2[:,i+out2.shape[1]//2]
-            p = p+2
+        for i in range(out2.shape[1] // 2):
+            a[:, p] = out2[:, i]
+            a[:, p + 1] = out2[:, i + out2.shape[1] // 2]
+            p = p + 2
 
     if len(shape) == 4:
-        out = np.reshape(out,(out.shape[1],out.shape[2],out.shape[3],out.shape[4]))
-        out2 = np.append(out.real, out.imag, axis = 1)
+        out = np.reshape(out, (out.shape[1], out.shape[2], out.shape[3], out.shape[4]))
+        out2 = np.append(out.real, out.imag, axis=1)
         a = np.zeros(out1[0].shape)
         for i in range(out1[0].shape[0]):
             for j in range(out1[0].shape[1]):
                 p = 0
                 for k in range(out2.shape[3]):
-                    a[i,j,:,p] = out2[i,j,:,k]
-                    a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
-                    p = p+2
+                    a[i, j, :, p] = out2[i, j, :, k]
+                    a[i, j, :, p + 1] = out2[i, j + out1[0].shape[1], :, k]
+                    p = p + 2
 
     assert_almost_equal(a, out1[0], rtol=1e-3, atol=1e-5)
 
     # backward
     if len(shape) == 2:
-        out_grad = mx.nd.empty((shape[0],2*shape[1]))
-        out_grad[:] = np.random.normal(-3, 3, (shape[0],2*shape[1]))
+        out_grad = mx.nd.empty((shape[0], 2 * shape[1]))
+        out_grad[:] = np.random.normal(-3, 3, (shape[0], 2 * shape[1]))
         # out_grad_to_complex
-        out_grad_complex = np.zeros(shape,dtype = np.complex64)
-        for i in range(0,shape[1]):
-            out_grad_complex.real[:,i] = out_grad.asnumpy()[:,2*i]
-            out_grad_complex.imag[:,i] = out_grad.asnumpy()[:,2*i+1]
+        out_grad_complex = np.zeros(shape, dtype=np.complex64)
+        for i in range(0, shape[1]):
+            out_grad_complex.real[:, i] = out_grad.asnumpy()[:, 2 * i]
+            out_grad_complex.imag[:, i] = out_grad.asnumpy()[:, 2 * i + 1]
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0]/shape[1],rtol=1e-3, atol=1e-5)
+        assert_almost_equal(a.real, exe.grad_arrays[0] / shape[1], rtol=1e-3, atol=1e-5)
 
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
         out_grad[:] = np.random.normal(-3, 3, out1[0].shape)
         # out_grad_to_complex
-        out_grad_complex = np.zeros(shape,dtype = np.complex64)
-        for i in range(0,shape[3]):
-            out_grad_complex.real[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i]
-            out_grad_complex.imag[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i+1]
+        out_grad_complex = np.zeros(shape, dtype=np.complex64)
+        for i in range(0, shape[3]):
+            out_grad_complex.real[:, :, :, i] = out_grad.asnumpy()[:, :, :, 2 * i]
+            out_grad_complex.imag[:, :, :, i] = out_grad.asnumpy()[:, :, :, 2 * i + 1]
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0]/shape[3],rtol=1e-3, atol=1e-5)
+        assert_almost_equal(a.real, exe.grad_arrays[0] / shape[3], rtol=1e-3, atol=1e-5)
+
 
 def test_fft():
     nrepeat = 2
     maxdim = 10
     for _ in range(nrepeat):
-        for order in [2,4]:
+        for order in [2, 4]:
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_fft(shape)
 
+
 def _make_ndarrays(input_list, ctx=mx.gpu(0)):
     return [mx.nd.array(arr, dtype=arr.dtype, ctx=ctx) for arr in input_list]
+
 
 def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
     values_arr = [np.random.rand(*shape).astype(dtype) * 10. for shape in shapes]
@@ -200,6 +204,7 @@ def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
                              dtype='float32', ctx=ctx)
     assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
 
+
 @pytest.mark.serial
 def test_multi_sum_sq():
     min_nparam = 100
@@ -208,15 +213,16 @@ def test_multi_sum_sq():
     max_dim = 100000
     max_ndim = 1
 
-    dtypes = ['float16','float32', 'float64']
+    dtypes = ['float16', 'float32', 'float64']
     for ctx in [mx.gpu(0)]:
         for dtype in dtypes:
             nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
             shapes = [np.random.randint(min_dim, max_dim + 1, size=max_ndim) for i in range(nparam)]
-            low_tol = ctx == mx.cpu(0) and ('float16'in [dtype])
+            low_tol = ctx == mx.cpu(0) and ('float16' in [dtype])
             tol1 = 1e-3 if low_tol else 1e-5
             tol2 = 1e-6 if low_tol else 1e-7
             check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2)
+
 
 def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
     weights_arr = [np.random.rand(*shape).astype(w_dtype) * 10. for shape in shapes]
@@ -236,9 +242,9 @@ def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
     g_sum_sq = mx.nd.multi_sum_sq(*mx_g, num_arrays=len(shapes))
 
     ref_w_sum_sq = mx.nd.array([(w.astype('float32') ** 2).sum() for w in weights_arr],
-                                dtype='float32', ctx=ctx)
+                               dtype='float32', ctx=ctx)
     ref_g_sum_sq = mx.nd.array([(g.astype('float32') ** 2).sum() for g in grads_arr],
-                                dtype='float32', ctx=ctx)
+                               dtype='float32', ctx=ctx)
     assert_almost_equal(ref_w_sum_sq.asnumpy(), w_sum_sq.asnumpy(), atol=tol1, rtol=tol1)
     assert_almost_equal(ref_g_sum_sq.asnumpy(), g_sum_sq.asnumpy(), atol=tol1, rtol=tol1)
 
@@ -257,6 +263,7 @@ def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
             ref_new_lrs[i] = lrs[i]
     assert_almost_equal(ref_new_lrs.asnumpy(), mx_new_lrs.asnumpy(), atol=tol2, rtol=tol2)
 
+
 @pytest.mark.serial
 def test_fast_lars():
     min_nparam = 50
@@ -264,16 +271,17 @@ def test_fast_lars():
     maxdim = 10000
     maxndim = 1
 
-    dtypes = ['float16','float32', 'float64']
+    dtypes = ['float16', 'float32', 'float64']
     for ctx in [mx.cpu(0), mx.gpu(0)]:
         for w_dtype in dtypes:
             for g_dtype in dtypes:
                 nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
                 shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
-                lowTol = ctx == mx.cpu(0) and ('float16'in [w_dtype, g_dtype])
+                lowTol = ctx == mx.cpu(0) and ('float16' in [w_dtype, g_dtype])
                 tol1 = 1e-3 if lowTol else 1e-5
                 tol2 = 1e-6 if lowTol else 1e-7
                 check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2)
+
 
 def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
     def _flatten_list(nested_list):
@@ -296,47 +304,47 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
     if momentum is None:
         if use_master_weights:
             mx.nd.multi_mp_sgd_update(
-                                     *_flatten_list(zip(mx_w, mx_g, mx_w32)),
-                                     num_weights=len(shapes), lrs=lrs, wds=wds,
-                                     rescale_grad=rescale_grad, out=mx_w)
+                *_flatten_list(zip(mx_w, mx_g, mx_w32)),
+                num_weights=len(shapes), lrs=lrs, wds=wds,
+                rescale_grad=rescale_grad, out=mx_w)
             mx.nd.preloaded_multi_mp_sgd_update(
-                                     *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_w32)) +
-                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
-                                     rescale_grad=rescale_grad, out=mx_p_w)
+                *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_w32)) +
+                  [mx_lrs, mx_wds]), num_weights=len(shapes),
+                rescale_grad=rescale_grad, out=mx_p_w)
         else:
             out = mx.nd.multi_sgd_update(
-                                    *_flatten_list(zip(mx_w, mx_g)),
-                                    num_weights=len(shapes), lrs=lrs, wds=wds,
-                                    rescale_grad=rescale_grad, out=mx_w)
+                *_flatten_list(zip(mx_w, mx_g)),
+                num_weights=len(shapes), lrs=lrs, wds=wds,
+                rescale_grad=rescale_grad, out=mx_w)
             preloaded_out = mx.nd.preloaded_multi_sgd_update(
-                                    *(_flatten_list(zip(mx_p_w, mx_p_g)) +
-                                     [mx_lrs, mx_wds]), num_weights=len(shapes),
-                                    rescale_grad=rescale_grad, out=mx_p_w)
+                *(_flatten_list(zip(mx_p_w, mx_p_g)) +
+                  [mx_lrs, mx_wds]), num_weights=len(shapes),
+                rescale_grad=rescale_grad, out=mx_p_w)
     else:
         if use_master_weights:
             momentums_arr = [np.random.rand(*shape).astype("float32") for shape in shapes]
             mx_m = _make_ndarrays(momentums_arr)
             mx_p_m = _make_ndarrays(momentums_arr)
             out = mx.nd.multi_mp_sgd_mom_update(
-                                    *_flatten_list(zip(mx_w, mx_g, mx_m, mx_w32)),
-                                    num_weights=len(shapes), lrs=lrs, wds=wds,
-                                    rescale_grad=0.95, momentum=momentum, out=mx_w)
+                *_flatten_list(zip(mx_w, mx_g, mx_m, mx_w32)),
+                num_weights=len(shapes), lrs=lrs, wds=wds,
+                rescale_grad=0.95, momentum=momentum, out=mx_w)
             preloaded_out = mx.nd.preloaded_multi_mp_sgd_mom_update(
-                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m, mx_p_w32)) +
-                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
-                                    rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+                *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m, mx_p_w32)) +
+                  [mx_lrs, mx_wds]), num_weights=len(shapes),
+                rescale_grad=0.95, momentum=momentum, out=mx_p_w)
         else:
             momentums_arr = [np.random.rand(*shape).astype(dtype) for shape in shapes]
             mx_m = _make_ndarrays(momentums_arr)
             mx_p_m = _make_ndarrays(momentums_arr)
             mx.nd.multi_sgd_mom_update(
-                                    *_flatten_list(zip(mx_w, mx_g, mx_m)),
-                                    num_weights=len(shapes), lrs=lrs, wds=wds,
-                                    rescale_grad=0.95, momentum=momentum, out=mx_w)
+                *_flatten_list(zip(mx_w, mx_g, mx_m)),
+                num_weights=len(shapes), lrs=lrs, wds=wds,
+                rescale_grad=0.95, momentum=momentum, out=mx_w)
             mx.nd.preloaded_multi_sgd_mom_update(
-                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)) +
-                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
-                                    rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+                *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)) +
+                  [mx_lrs, mx_wds]), num_weights=len(shapes),
+                rescale_grad=0.95, momentum=momentum, out=mx_p_w)
 
     def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
         for _, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
@@ -353,6 +361,7 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
     if use_master_weights:
         _assert_all_almost_equal(mx_p_w32, mx_w32, 1e-5, 1e-6)
 
+
 def test_preloaded_multi_sgd():
     dtypes = ['float16', 'float32']
     momentums = [None, 0.9]
@@ -361,7 +370,7 @@ def test_preloaded_multi_sgd():
     maxdim = 6
     maxndim = 4
     for dtype in dtypes:
-        use_master_weights_list = [False,] if dtype == 'float32' else [True, False]
+        use_master_weights_list = [False, ] if dtype == 'float32' else [True, False]
         for use_master_weights in use_master_weights_list:
             for momentum in momentums:
                 nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
@@ -372,129 +381,129 @@ def test_preloaded_multi_sgd():
 @pytest.mark.serial
 @pytest.mark.flaky
 def test_batchnorm_with_type():
-  ctx_list_v2_2D = [
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float64}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float64}},
-  ]
+    ctx_list_v2_2D = [
+        {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
+        {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
+        {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float64}},
+        {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
+        {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
+        {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float64}},
+    ]
 
-  ctx_list_v2_1D = [
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float64}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float64}},
-  ]
+    ctx_list_v2_1D = [
+        {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float16}},
+        {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float32}},
+        {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float64}},
+        {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float16}},
+        {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float32}},
+        {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float64}},
+    ]
 
-  ctx_list_v2_3D = [
-    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}},
-    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
-  ]
+    ctx_list_v2_3D = [
+        {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
+        {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
+        {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}},
+        {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
+        {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
+        {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
+    ]
 
-  # V2, 2D
-  bools = [False, True]
-  for fix_gamma, cudnn_off in itertools.product(bools, bools):
-      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
-      check_consistency(sym, ctx_list_v2_2D)
+    # V2, 2D
+    bools = [False, True]
+    for fix_gamma, cudnn_off in itertools.product(bools, bools):
+        sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+        check_consistency(sym, ctx_list_v2_2D)
 
-  # V2, 1D
-  for fix_gamma, cudnn_off in itertools.product(bools, bools):
-      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
-      check_consistency(sym, ctx_list_v2_1D)
+    # V2, 1D
+    for fix_gamma, cudnn_off in itertools.product(bools, bools):
+        sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+        check_consistency(sym, ctx_list_v2_1D)
 
-  # V2, 3D
-  for fix_gamma, cudnn_off in itertools.product(bools, [True,]):
-      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
-      check_consistency(sym, ctx_list_v2_3D)
+    # V2, 3D
+    for fix_gamma, cudnn_off in itertools.product(bools, [True, ]):
+        sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+        check_consistency(sym, ctx_list_v2_3D)
 
 
 @pytest.mark.serial
 def test_batchnorm_versions():
-  def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
-    ctx_list = []
-    sym_list = []
+    def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
+        ctx_list = []
+        sym_list = []
 
-    # BatchNorm cpu
-    if 'batchnorm_cpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
-                                       use_global_stats=use_global_stats,
-                                       name='batchnorm'))
+        # BatchNorm cpu
+        if 'batchnorm_cpu' in batchnorm_op_list:
+            ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+            sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                             use_global_stats=use_global_stats,
+                                             name='batchnorm'))
 
-    # BatchNorm gpu (organic)
-    if 'batchnorm_gpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
-                                       use_global_stats=use_global_stats,
-                                       name='batchnorm', cudnn_off=True))
+        # BatchNorm gpu (organic)
+        if 'batchnorm_gpu' in batchnorm_op_list:
+            ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+            sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                             use_global_stats=use_global_stats,
+                                             name='batchnorm', cudnn_off=True))
 
-    # BatchNorm gpu cudnn (if cudnn is enabled)
-    if 'batchnorm_cudnn' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
-                                       use_global_stats=use_global_stats,
-                                       name='batchnorm', cudnn_off=False))
+        # BatchNorm gpu cudnn (if cudnn is enabled)
+        if 'batchnorm_cudnn' in batchnorm_op_list:
+            ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+            sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                             use_global_stats=use_global_stats,
+                                             name='batchnorm', cudnn_off=False))
 
-    check_consistency(sym_list, ctx_list)
+        check_consistency(sym_list, ctx_list)
 
-  def test_1d_batchnorm(fix_gamma, use_global_stats):
-    data = (2, 3, 20)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
-                                                      'batchnorm_gpu', 'batchnorm_cudnn'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+    def test_1d_batchnorm(fix_gamma, use_global_stats):
+        data = (2, 3, 20)
+        test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+                                                          'batchnorm_gpu', 'batchnorm_cudnn'],
+                                       data=data,
+                                       fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
-  def test_2d_batchnorm(fix_gamma, use_global_stats):
-    data = (2, 3, 10, 10)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
-                                                      'batchnorm_gpu', 'batchnorm_cudnn'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+    def test_2d_batchnorm(fix_gamma, use_global_stats):
+        data = (2, 3, 10, 10)
+        test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+                                                          'batchnorm_gpu', 'batchnorm_cudnn'],
+                                       data=data,
+                                       fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
-  def test_3d_batchnorm(fix_gamma, use_global_stats):
-    data = (2, 3, 3, 5, 5)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
-                                                      'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+    def test_3d_batchnorm(fix_gamma, use_global_stats):
+        data = (2, 3, 3, 5, 5)
+        test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+                                                          'batchnorm_gpu'],
+                                       data=data,
+                                       fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
-  test_1d_batchnorm(True,  False)
-  test_1d_batchnorm(False, False)
-  test_1d_batchnorm(False, True)
-  test_1d_batchnorm(True,  True)
+    test_1d_batchnorm(True, False)
+    test_1d_batchnorm(False, False)
+    test_1d_batchnorm(False, True)
+    test_1d_batchnorm(True, True)
 
-  test_2d_batchnorm(True,  False)
-  test_2d_batchnorm(False, False)
-  test_2d_batchnorm(False, True)
-  test_2d_batchnorm(True,  True)
+    test_2d_batchnorm(True, False)
+    test_2d_batchnorm(False, False)
+    test_2d_batchnorm(False, True)
+    test_2d_batchnorm(True, True)
 
-  test_3d_batchnorm(True,  False)
-  test_3d_batchnorm(False, False)
-  test_3d_batchnorm(False, True)
-  test_3d_batchnorm(True,  True)
+    test_3d_batchnorm(True, False)
+    test_3d_batchnorm(False, False)
+    test_3d_batchnorm(False, True)
+    test_3d_batchnorm(True, True)
 
 
 @pytest.mark.seed(1234)
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 @pytest.mark.serial
 def test_convolution_with_type():
-    sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
+    sym1 = mx.sym.Convolution(num_filter=3, kernel=(3, 3), name='conv')
 
     data = mx.sym.Variable('conv_data')
     w = mx.sym.Variable('conv_weight')
     b = mx.sym.Variable('conv_bias')
-    w = mx.sym.transpose(w, axes=(0,2,3,1))
-    sym2 = mx.sym.transpose(data, axes=(0,2,3,1))
-    sym2 = mx.sym.Convolution(sym2, w, b, layout='NHWC', num_filter=3, kernel=(3,3))
-    sym2 = mx.sym.transpose(sym2, axes=(0,3,1,2), name='conv')
+    w = mx.sym.transpose(w, axes=(0, 2, 3, 1))
+    sym2 = mx.sym.transpose(data, axes=(0, 2, 3, 1))
+    sym2 = mx.sym.Convolution(sym2, w, b, layout='NHWC', num_filter=3, kernel=(3, 3))
+    sym2 = mx.sym.transpose(sym2, axes=(0, 3, 1, 2), name='conv')
 
     sym = [sym1, sym1, sym1, sym1, sym1, sym2, sym2]
     ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
@@ -510,10 +519,10 @@ def test_convolution_with_type():
                 ]
     # wider tolerance needed for true-fp16 NCHW test above
     tol = {np.dtype(np.float16): 0.5,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
+           np.dtype(np.float32): 1e-3,
+           np.dtype(np.float64): 1e-5,
+           np.dtype(np.uint8): 0,
+           np.dtype(np.int32): 0}
     check_consistency(sym, ctx_list, rtol=tol, atol=tol)
     # test ability to turn off training on bias
     check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, rtol=tol, atol=tol)
@@ -559,20 +568,20 @@ def test_convolution_options():
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}}]
     # Pad > 0
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
-    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), cudnn_off=True, name='conv')
+    sym = mx.sym.Convolution(num_filter=3, kernel=(3, 3), pad=(1, 1), name='conv')
+    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3, 3), pad=(1, 1), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Stride > 1
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,3), stride=(2,2), name='conv')
-    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,3), stride=(2,2), cudnn_off=True, name='conv')
+    sym = mx.sym.Convolution(num_filter=3, kernel=(3, 3), stride=(2, 2), name='conv')
+    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3, 3), stride=(2, 2), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Dilate > 1
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='conv')
-    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,3), dilate=(2,2), cudnn_off=True, name='conv')
+    sym = mx.sym.Convolution(num_filter=3, kernel=(3, 3), dilate=(2, 2), name='conv')
+    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3, 3), dilate=(2, 2), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # 1x1 convolution
-    sym = mx.sym.Convolution(num_filter=3, kernel=(1,1), pad=(0,0), name='conv')
-    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1), pad=(0,0), cudnn_off=True, name='conv')
+    sym = mx.sym.Convolution(num_filter=3, kernel=(1, 1), pad=(0, 0), name='conv')
+    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1, 1), pad=(0, 0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
     # 3D convolution
@@ -581,16 +590,16 @@ def test_convolution_options():
                 {'ctx': mx.gpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
                 {'ctx': mx.gpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float32}}]
     # Pad > 0
-    sym = mx.sym.Convolution(num_filter=3, kernel=(2,3,3), pad=(1,1,1), name='conv')
-    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(2,3,3), pad=(1,1,1), cudnn_off=True, name='conv')
+    sym = mx.sym.Convolution(num_filter=3, kernel=(2, 3, 3), pad=(1, 1, 1), name='conv')
+    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(2, 3, 3), pad=(1, 1, 1), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Stride > 1
-    sym = mx.sym.Convolution(num_filter=3, kernel=(2,3,3), stride=(2,2,2), name='conv')
-    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(2,3,3), stride=(2,2,2), cudnn_off=True, name='conv')
+    sym = mx.sym.Convolution(num_filter=3, kernel=(2, 3, 3), stride=(2, 2, 2), name='conv')
+    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(2, 3, 3), stride=(2, 2, 2), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # 1x1 convolution
-    sym = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), name='conv')
-    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
+    sym = mx.sym.Convolution(num_filter=3, kernel=(1, 1, 1), pad=(0, 0, 0), name='conv')
+    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1, 1, 1), pad=(0, 0, 0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
 
@@ -603,12 +612,12 @@ def test_conv_deconv_guards():
         dataname = opname + '_data'
         ctx = {'ctx': mx.gpu(0), dataname: (32, 32, 64, 64), 'type_dict': {dataname: np.float32}}
         test_cases = [
-            {'num_filter':32, 'kernel':(6,6), 'pad':(0,0), 'stride':(2,2), 'name': opname},
-            {'num_filter':32, 'kernel':(6,6), 'pad':(1,1), 'stride':(2,2), 'name': opname},
-            {'num_filter':32, 'kernel':(6,7), 'pad':(0,1), 'stride':(2,2), 'name': opname},
-            {'num_filter':32, 'kernel':(7,6), 'pad':(1,0), 'stride':(2,2), 'name': opname},
-            {'num_filter':32, 'kernel':(7,7), 'pad':(0,0), 'stride':(2,2), 'name': opname},
-            {'num_filter':32, 'kernel':(7,7), 'pad':(1,1), 'stride':(2,2), 'name': opname}]
+            {'num_filter': 32, 'kernel': (6, 6), 'pad': (0, 0), 'stride': (2, 2), 'name': opname},
+            {'num_filter': 32, 'kernel': (6, 6), 'pad': (1, 1), 'stride': (2, 2), 'name': opname},
+            {'num_filter': 32, 'kernel': (6, 7), 'pad': (0, 1), 'stride': (2, 2), 'name': opname},
+            {'num_filter': 32, 'kernel': (7, 6), 'pad': (1, 0), 'stride': (2, 2), 'name': opname},
+            {'num_filter': 32, 'kernel': (7, 7), 'pad': (0, 0), 'stride': (2, 2), 'name': opname},
+            {'num_filter': 32, 'kernel': (7, 7), 'pad': (1, 1), 'stride': (2, 2), 'name': opname}]
         for test_case_args in test_cases:
             try:
                 sym = op(**test_case_args)
@@ -631,9 +640,9 @@ def _conv_with_num_streams(seed):
                    'type_dict': {'conv_data': np.float32}}
             # Adding 'flip' here isolates the model from the input node (which can't use inplace store)
             flipped = mx.sym.flip(axis=0, name='conv')
-            sym = mx.sym.Convolution(data=flipped, num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
+            sym = mx.sym.Convolution(data=flipped, num_filter=3, kernel=(3, 3), pad=(1, 1), name='conv')
             flipped_no_cudnn = mx.sym.flip(axis=0, name='conv')
-            sym_no_cudnn = mx.sym.Convolution(data=flipped_no_cudnn, num_filter=3, kernel=(3,3), pad=(1,1),
+            sym_no_cudnn = mx.sym.Convolution(data=flipped_no_cudnn, num_filter=3, kernel=(3, 3), pad=(1, 1),
                                               cudnn_off=True, name='conv')
             try:
                 # tol can be pretty high- we're looking for a large diff due to garbaged workspace
@@ -649,7 +658,7 @@ def test_convolution_multiple_streams():
         for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
             print('Starting engine {} with {} streams.'.format(engine, num_streams), file=sys.stderr)
             run_in_spawned_process(_conv_with_num_streams,
-                {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
+                                   {'MXNET_GPU_WORKER_NSTREAMS': num_streams, 'MXNET_ENGINE_TYPE': engine})
             print('Finished engine {} with {} streams.'.format(engine, num_streams), file=sys.stderr)
 
 
@@ -660,6 +669,7 @@ def test_convolution_large_c():
     problematic_c = 64 * 1024
     # The convolution accumulates many values, so scale the input magnitude.
     scale = 0.1
+
     def test_1D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float64}}]
@@ -669,7 +679,7 @@ def test_convolution_large_c():
     def test_2D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float64}}]
-        sym = mx.sym.Convolution(layout='NCHW', num_filter=4, kernel=(2,2), name='conv')
+        sym = mx.sym.Convolution(layout='NCHW', num_filter=4, kernel=(2, 2), name='conv')
         check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
@@ -689,6 +699,7 @@ def test_deconvolution_large_c():
     problematic_c = 64 * 1024
     # The deconvolution accumulates many values, so scale the input magnitude.
     scale = 0.1
+
     def test_1D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float64}}]
@@ -698,7 +709,7 @@ def test_deconvolution_large_c():
     def test_2D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float64}}]
-        sym = mx.sym.Deconvolution(layout='NCHW', num_filter=problematic_c, kernel=(2,2), name='deconv')
+        sym = mx.sym.Deconvolution(layout='NCHW', num_filter=problematic_c, kernel=(2, 2), name='deconv')
         check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
@@ -717,9 +728,9 @@ def test_convolution_versions():
     ctx_list = [{'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}}]
-    conv_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
-    conv_cpu = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
-    conv_gpu = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), cudnn_off=True, name='conv')
+    conv_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3, 3), pad=(1, 1), name='conv')
+    conv_cpu = mx.sym.Convolution(num_filter=3, kernel=(3, 3), pad=(1, 1), name='conv')
+    conv_gpu = mx.sym.Convolution(num_filter=3, kernel=(3, 3), pad=(1, 1), cudnn_off=True, name='conv')
     syms = [conv_cudnn, conv_cpu, conv_gpu]
     check_consistency(syms, ctx_list)
 
@@ -727,9 +738,9 @@ def test_convolution_versions():
     ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.gpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float32}}]
-    conv_cudnn = mx.sym.Convolution(num_filter=3, kernel=(2,3,3), pad=(1,1,1), name='conv')
-    conv_cpu = mx.sym.Convolution(num_filter=3, kernel=(2,3,3), pad=(1,1,1), name='conv')
-    conv_gpu = mx.sym.Convolution(num_filter=3, kernel=(2,3,3), pad=(1,1,1), cudnn_off=True, name='conv')
+    conv_cudnn = mx.sym.Convolution(num_filter=3, kernel=(2, 3, 3), pad=(1, 1, 1), name='conv')
+    conv_cpu = mx.sym.Convolution(num_filter=3, kernel=(2, 3, 3), pad=(1, 1, 1), name='conv')
+    conv_gpu = mx.sym.Convolution(num_filter=3, kernel=(2, 3, 3), pad=(1, 1, 1), cudnn_off=True, name='conv')
     syms = [conv_cudnn, conv_cpu, conv_gpu]
     check_consistency(syms, ctx_list)
 
@@ -742,16 +753,16 @@ def test_pooling_nhwc_with_convention():
         sym = mx.sym.Pooling(**kwargs)
         # NHWC pooling
         data = mx.sym.Variable('pool_data')
-        sym_nhwc = mx.sym.transpose(data, axes=(0,2,3,1))
+        sym_nhwc = mx.sym.transpose(data, axes=(0, 2, 3, 1))
         sym_nhwc = mx.sym.Pooling(sym_nhwc, layout='NHWC', **kwargs)
-        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0,3,1,2), name='pool')
+        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0, 3, 1, 2), name='pool')
         return [sym, sym_nhwc]
 
     # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
     # We compare nhwc and nchw results only within a given precision.
     for in_shape in [(3, 4, 8, 8), (2, 2, 20, 20)]:
-        for kernel in [(2,2), (3,3), (4,4)]:
-            for stride in [(1,1), (1,2), (2,1), (2,2)]:
+        for kernel in [(2, 2), (3, 3), (4, 4)]:
+            for stride in [(1, 1), (1, 2), (2, 1), (2, 2)]:
                 for data_type in [np.float64, np.float32, np.float16]:
                     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': in_shape,
                                  'type_dict': {'pool_data': data_type}}]
@@ -763,7 +774,7 @@ def test_pooling_nhwc_with_convention():
                                                 pooling_convention='full', name='pool')
                     check_consistency_NxM(symlist, ctx_list)
 
-                    symlist = make_pooling_syms(kernel=(300,300), pool_type='max',
+                    symlist = make_pooling_syms(kernel=(300, 300), pool_type='max',
                                                 global_pool=True, name='pool')
                     check_consistency_NxM(symlist, ctx_list)
 
@@ -775,13 +786,13 @@ def test_pooling_with_type():
                 {'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
-    sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='valid', name='pool')
+    sym = mx.sym.Pooling(kernel=(3, 3), pool_type='max', pooling_convention='valid', name='pool')
     check_consistency(sym, ctx_list, rand_type=np.float16)
 
-    sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='full', name='pool')
+    sym = mx.sym.Pooling(kernel=(3, 3), pool_type='max', pooling_convention='full', name='pool')
     check_consistency(sym, ctx_list, rand_type=np.float16)
 
-    sym = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True, name='pool')
+    sym = mx.sym.Pooling(kernel=(300, 300), pool_type='max', global_pool=True, name='pool')
     check_consistency(sym, ctx_list, rand_type=np.float16)
 
 
@@ -797,15 +808,15 @@ def test_deconvolution_with_type():
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}}]
     # wider tolerance needed for true-fp16 test above
     tol = {np.dtype(np.float16): 0.3,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
+           np.dtype(np.float32): 1e-3,
+           np.dtype(np.float64): 1e-5,
+           np.dtype(np.uint8): 0,
+           np.dtype(np.int32): 0}
     check_consistency(sym, ctx_list, rtol=tol, atol=tol)
     check_consistency(sym, ctx_list, rtol=tol, atol=tol, grad_req="add")
 
     # 2D deconvolution
-    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='deconv')
+    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3, 3), name='deconv')
     ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
                 {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}},
                 {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float16}},
@@ -813,10 +824,10 @@ def test_deconvolution_with_type():
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
     # wider tolerance needed for true-fp16 test above
     tol = {np.dtype(np.float16): 0.3,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
+           np.dtype(np.float32): 1e-3,
+           np.dtype(np.float64): 1e-5,
+           np.dtype(np.uint8): 0,
+           np.dtype(np.int32): 0}
     check_consistency(sym, ctx_list, rtol=tol, atol=tol)
     check_consistency(sym, ctx_list, rtol=tol, atol=tol, grad_req="add")
 
@@ -850,16 +861,16 @@ def test_deconvolution_options():
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 8, 10, 10), 'type_dict': {'deconv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 8, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
     # Pad > 0
-    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), pad=(1,1), name='deconv')
-    sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), pad=(1,1), cudnn_off=True, name='deconv')
+    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3, 3), pad=(1, 1), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3, 3), pad=(1, 1), cudnn_off=True, name='deconv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Stride > 1
-    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), stride=(2,2), name='deconv')
-    sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), stride=(2,2), cudnn_off=True, name='deconv')
+    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3, 3), stride=(2, 2), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3, 3), stride=(2, 2), cudnn_off=True, name='deconv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Dilate > 1
-    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), dilate=(2,2), name='deconv')
-    sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), dilate=(2,2), cudnn_off=True, name='deconv')
+    sym = mx.sym.Deconvolution(num_filter=2, kernel=(3, 3), dilate=(2, 2), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3, 3), dilate=(2, 2), cudnn_off=True, name='deconv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
 #    # 3D deconvolution (not yet enabled)
@@ -928,6 +939,7 @@ def test_spatial_transformer_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
+
 def test_pooling_with_type2():
     # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
     # We compare cpu and gpu results only within a given precision.
@@ -935,17 +947,18 @@ def test_pooling_with_type2():
         ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}},
                     {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}}]
 
-        sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
+        sym = mx.sym.Pooling(name='pool', kernel=(3, 3), stride=(2, 2), pool_type='max')
         check_consistency(sym, ctx_list)
 
-        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
+        sym = mx.sym.Pooling(name='pool', kernel=(3, 3), pad=(1, 1), pool_type='avg')
         check_consistency(sym, ctx_list)
 
-        sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+        sym = mx.sym.Pooling(name='pool', kernel=(5, 5), pad=(2, 2), pool_type='max')
         check_consistency(sym, ctx_list)
 
-        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
+        sym = mx.sym.Pooling(name='pool', kernel=(3, 3), pad=(1, 1), pool_type='sum')
         check_consistency(sym, ctx_list)
+
 
 def test_pooling_nhwc_with_type():
     def make_pooling_syms(**kwargs):
@@ -953,9 +966,9 @@ def test_pooling_nhwc_with_type():
         sym = mx.sym.Pooling(**kwargs)
         # NHWC pooling
         data = mx.sym.Variable('pool_data')
-        sym_nhwc = mx.sym.transpose(data, axes=(0,2,3,1))
+        sym_nhwc = mx.sym.transpose(data, axes=(0, 2, 3, 1))
         sym_nhwc = mx.sym.Pooling(sym_nhwc, layout='NHWC', **kwargs)
-        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0,3,1,2), name='pool')
+        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0, 3, 1, 2), name='pool')
         return [sym, sym_nhwc]
 
     # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
@@ -963,13 +976,13 @@ def test_pooling_nhwc_with_type():
     for data_type in [np.float64, np.float32, np.float16]:
         # NHWC pooling only enabled on GPU with CUDNN
         ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}}]
-        symlist = make_pooling_syms(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
+        symlist = make_pooling_syms(name='pool', kernel=(3, 3), stride=(2, 2), pool_type='max')
         check_consistency_NxM(symlist, ctx_list)
 
-        symlist = make_pooling_syms(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
+        symlist = make_pooling_syms(name='pool', kernel=(3, 3), pad=(1, 1), pool_type='avg')
         check_consistency_NxM(symlist, ctx_list)
 
-        symlist = make_pooling_syms(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+        symlist = make_pooling_syms(name='pool', kernel=(5, 5), pad=(2, 2), pool_type='max')
         check_consistency_NxM(symlist, ctx_list)
 
 
@@ -980,7 +993,7 @@ def test_pooling_versions():
     def transposed_layout(ndim):
         if ndim < 3 or ndim > 5:
             raise RuntimeError("Invalid data dim, expecting 3, 4 or 5")
-        return ('NWC', 'NHWC', 'NDHWC')[ndim-3]
+        return ('NWC', 'NHWC', 'NDHWC')[ndim - 3]
 
     # default padding is all zeros
     def is_default_pad(pad):
@@ -1008,19 +1021,19 @@ def test_pooling_versions():
             ctx_list.append({'ctx': ctx, 'pool_data': data, 'type_dict': {'pool_data': dtype}})
             # start with pool args present in all cases
             pool_op_args = {'kernel': kernel, 'pool_type': pool_type,
-                            'pooling_convention' : pooling_convention, 'name' : 'pool'}
+                            'pooling_convention': pooling_convention, 'name': 'pool'}
             # add other args as needed
             if global_pool:
                 pool_op_args['global_pool'] = True
             else:
                 # Add pad and stride param if needed, plus randomly when it matches the default
                 if not is_default_pad(pad) or random_choice():
-                    pool_op_args.update({'pad' : pad})
+                    pool_op_args.update({'pad': pad})
                 if not is_default_stride(stride) or random_choice():
-                    pool_op_args.update({'stride' : stride})
+                    pool_op_args.update({'stride': stride})
 
             expected_pool_ops = ['pool', 'pool_transposed']
-            pool_op_args.update({'p_value' : p_value, 'count_include_pad' : count_include_pad})
+            pool_op_args.update({'p_value': p_value, 'count_include_pad': count_include_pad})
             if ctx_type != 'cpu':
                 pool_op_args['cudnn_off'] = ctx_type == 'gpu'
             if pool_op == 'pool':
@@ -1030,12 +1043,12 @@ def test_pooling_versions():
             elif pool_op == 'pool_transposed':
                 ndim = len(data)
                 # NCW->NWC axes=(0,2,1) NCHW->NHWC axes=(0,2,3,1) NCDHW->NDHWC axes=(0,2,3,4,1);
-                axes = (0,) + tuple(range(2,ndim)) + (1,)
+                axes = (0,) + tuple(range(2, ndim)) + (1,)
                 transposed = mx.sym.transpose(axes=axes, name='pool')
                 pooled = mx.sym.Pooling(data=transposed, layout=transposed_layout(ndim),
                                         **pool_op_args)
                 # NWC->NCW axes=(0,2,1) NHWC->NCHW axes=(0,3,1,2) NDHWC->NCDHW axes=(0,4,1,2,3);
-                axes = (0, ndim-1) + tuple(range(1,ndim-1))
+                axes = (0, ndim - 1) + tuple(range(1, ndim - 1))
                 sym = mx.sym.transpose(data=pooled, axes=axes, name='pool')
             else:
                 raise RuntimeError('Expected one of {}, saw {}.'.format(expected_pool_ops,
@@ -1073,10 +1086,10 @@ def test_pooling_versions():
             for pooling_convention in ['valid', 'full']:
                 try:
                     test_pooling_versions_helper(pool_op_list=pool_op_list,
-                                     data=data, kernel=kernel, pad=pad, stride=stride,
-                                     pool_type=pool_type, pooling_convention=pooling_convention,
-                                     global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad, tol=tol, dtype=dtype)
+                                                 data=data, kernel=kernel, pad=pad, stride=stride,
+                                                 pool_type=pool_type, pooling_convention=pooling_convention,
+                                                 global_pool=False, p_value=p_value,
+                                                 count_include_pad=count_include_pad, tol=tol, dtype=dtype)
                 except:
                     print('pool_op_list = {}'.format(pool_op_list))
                     print('kernel={}, pad={}, stride={}'.format(kernel, pad, stride))
@@ -1148,7 +1161,7 @@ def test_flatten_slice_after_conv():
     ctx_list = []
 
     data = mx.sym.Variable('conv_data')
-    conv = mx.symbol.Convolution(data=data, name='conv', num_filter=16, kernel=(3,3), stride=(1,1))
+    conv = mx.symbol.Convolution(data=data, name='conv', num_filter=16, kernel=(3, 3), stride=(1, 1))
     flatten = mx.symbol.flatten(data=conv)
     slice_sym = mx.symbol.slice(data=flatten, begin=0, end=1)
 
@@ -1179,6 +1192,7 @@ def test_bilinear_resize_op():
 
     sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up', align_corners=False)
     check_consistency(sym, ctx_list)
+
 
 @pytest.mark.serial
 def test_global_pooling():
@@ -1278,7 +1292,6 @@ def test_global_pooling():
         sym_list.append(mx.sym.Pooling(pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, p_value=p_value, cudnn_off=True, name='pool'))
 
-
         check_consistency(sym_list, ctx_list)
 
     test_1d_pooling('max')
@@ -1333,18 +1346,18 @@ def test_concat_with_type():
 
 def test_elementwisesum_with_type():
     dev_types = [[mx.gpu(0), [np.float64, np.float32, np.float16]],
-                 [mx.cpu(0), [np.float64, np.float32]] ]
+                 [mx.cpu(0), [np.float64, np.float32]]]
     for num_args in range(1, 6):
         ews_arg_shape = {}
         for i in range(num_args):
-            ews_arg_shape['ews_arg'+str(i)] = (2, 10)
+            ews_arg_shape['ews_arg' + str(i)] = (2, 10)
         sym = mx.sym.ElementWiseSum(name='ews', num_args=num_args)
         ctx_list = []
         for dev, types in dev_types:
             for dtype in types:
-                ews_arg_dtype = {'type_dict':{}}
+                ews_arg_dtype = {'type_dict': {}}
                 for i in range(num_args):
-                    ews_arg_dtype['type_dict']['ews_arg'+str(i)] = dtype
+                    ews_arg_dtype['type_dict']['ews_arg' + str(i)] = dtype
                 ctx_elem = {'ctx': dev}
                 ctx_elem.update(ews_arg_shape)
                 ctx_elem.update(ews_arg_dtype)
@@ -1353,7 +1366,7 @@ def test_elementwisesum_with_type():
 
 
 def test_reshape_with_type():
-    sym = mx.sym.Reshape(name='reshape', shape=(-1,1,1,0))
+    sym = mx.sym.Reshape(name='reshape', shape=(-1, 1, 1, 0))
     ctx_list = [{'ctx': mx.gpu(0), 'reshape_data': (2, 2, 2, 10), 'type_dict': {'reshape_data': np.float64}},
                 {'ctx': mx.gpu(0), 'reshape_data': (2, 2, 2, 10), 'type_dict': {'reshape_data': np.float32}},
                 {'ctx': mx.gpu(0), 'reshape_data': (2, 2, 2, 10), 'type_dict': {'reshape_data': np.float16}},
@@ -1433,11 +1446,11 @@ def test_embedding_with_type():
                     for data_type in data_types:
                         for weight_type in weight_types:
                             ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
-                                'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                                             'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
                             ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
-                                'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
-                    arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
-                    check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
+                                             'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                    arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V + high_pad, size=(N,))}
+                    check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null', 'embedding_weight': 'write'},
                                       arg_params=arg_params, scale=0.1)
 
     data_types = [np.float16, np.float32, np.float64, np.int32]
@@ -1507,16 +1520,16 @@ def test_take_with_type():
         for data_type in data_types:
             for index_type in indices_types:
                 ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
-                    'take_a': (data_size, out_dim),
-                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                                 'take_a': (data_size, out_dim),
+                                 'type_dict': {'take_indices': index_type, 'take_a': data_type}})
                 ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
-                    'take_a': (data_size, out_dim),
-                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                                 'take_a': (data_size, out_dim),
+                                 'type_dict': {'take_indices': index_type, 'take_a': data_type}})
                 arg_params = {'take_indices': np.random.randint(0, data_size,
                               size=(indices_size,)),
                               'take_a': np.random.normal(size=(data_size, out_dim))}
                 check_consistency(sym, ctx_list,
-                                  grad_req={'take_indices': 'null','take_a': 'write'},
+                                  grad_req={'take_indices': 'null', 'take_a': 'write'},
                                   arg_params=arg_params)
         # axis 1
         sym = mx.sym.take(name='take', axis=1)
@@ -1524,17 +1537,18 @@ def test_take_with_type():
         for data_type in data_types:
             for index_type in indices_types:
                 ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
-                    'take_a': (data_size, out_dim),
-                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                                 'take_a': (data_size, out_dim),
+                                 'type_dict': {'take_indices': index_type, 'take_a': data_type}})
                 ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
-                    'take_a': (data_size, out_dim),
-                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                                 'take_a': (data_size, out_dim),
+                                 'type_dict': {'take_indices': index_type, 'take_a': data_type}})
                 arg_params = {'take_indices': np.random.randint(0, data_size,
                               size=(indices_size,)),
                               'take_a': np.random.normal(size=(data_size, out_dim))}
                 check_consistency(sym, ctx_list,
-                                  grad_req={'take_indices': 'null','take_a': 'write'},
+                                  grad_req={'take_indices': 'null', 'take_a': 'write'},
                                   arg_params=arg_params)
+
 
 @pytest.mark.serial
 def test_psroipooling_with_type():
@@ -1623,7 +1637,7 @@ def test_deformable_convolution_with_type():
     tol = {np.dtype(np.float32): 1e-1,
            np.dtype(np.float64): 1e-3}
 
-    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3, 3), name='deformable_conv')
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 10, 10),
@@ -1676,7 +1690,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 18, 7, 7),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3, 3), pad=(1, 1), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Stride > 1
@@ -1697,7 +1711,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3, 3), stride=(2, 2), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Dilate > 1
@@ -1718,7 +1732,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3, 3), dilate=(2, 2), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Deformable group > 1
@@ -1739,7 +1753,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 36, 5, 5),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.npx.deformable_convolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=4, kernel=(3, 3), num_deformable_group=2, name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
 
@@ -1760,6 +1774,7 @@ def check_rnn_layer(layer):
     for g, c in zip(gs, cs):
         assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
+
 def check_rnn_layer_w_rand_inputs(layer):
     layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     x = mx.nd.uniform(shape=(10, 16, 30))
@@ -1776,6 +1791,7 @@ def check_rnn_layer_w_rand_inputs(layer):
     assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
         assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
+
 
 @pytest.mark.serial
 def test_sequence_reverse():
@@ -1854,6 +1870,7 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad)
 
+
 @pytest.mark.serial
 def test_multi_proposal_op():
     # paramters
@@ -1877,17 +1894,17 @@ def test_multi_proposal_op():
         '''
 
         dtype = np.float32
-        cls_prob = mx.nd.empty((batch_size, 2 * num_anchors, H, W), dtype = dtype, ctx = ctx)
-        bbox_pred = mx.nd.empty((batch_size, 4 * num_anchors, H, W), dtype = dtype, ctx = ctx)
-        im_info = mx.nd.empty((batch_size, 3), dtype = dtype, ctx = ctx)
+        cls_prob = mx.nd.empty((batch_size, 2 * num_anchors, H, W), dtype=dtype, ctx=ctx)
+        bbox_pred = mx.nd.empty((batch_size, 4 * num_anchors, H, W), dtype=dtype, ctx=ctx)
+        im_info = mx.nd.empty((batch_size, 3), dtype=dtype, ctx=ctx)
 
         cls = [1.0 * (i + 1) / cls_prob.size for i in range(cls_prob.size)]
         np.random.shuffle(cls)
-        cls_prob = mx.nd.reshape(mx.nd.array(cls, dtype = dtype, ctx = ctx), shape = cls_prob.shape)
-        bbox_pred = mx.nd.array(np.random.randint(-2, 3, size = bbox_pred.shape), dtype = dtype, ctx = ctx)
+        cls_prob = mx.nd.reshape(mx.nd.array(cls, dtype=dtype, ctx=ctx), shape=cls_prob.shape)
+        bbox_pred = mx.nd.array(np.random.randint(-2, 3, size=bbox_pred.shape), dtype=dtype, ctx=ctx)
 
         for i in range(batch_size):
-            im_size = np.random.randint(600, feat_len * feature_stride, size = (2,))
+            im_size = np.random.randint(600, feat_len * feature_stride, size=(2,))
             im_scale = np.random.randint(80, 100) / 100.0
             im_info[i, :] = [im_size[0], im_size[1], im_scale]
         return cls_prob, bbox_pred, im_info
@@ -1898,16 +1915,16 @@ def test_multi_proposal_op():
         '''
         cls_prob, bbox_pred, im_info = get_new_data(batch_size, mx.cpu(0))
         rois_cpu, score_cpu = op(
-                cls_prob = cls_prob,
-                bbox_pred = bbox_pred,
-                im_info = im_info,
-                feature_stride = feature_stride,
-                scales = scales,
-                ratios = ratios,
-                rpn_pre_nms_top_n = rpn_pre_nms_top_n,
-                rpn_post_nms_top_n = rpn_post_nms_top_n,
-                threshold = 0.7 if with_nms else 1.0,
-                rpn_min_size = rpn_min_size, output_score = True)
+            cls_prob=cls_prob,
+            bbox_pred=bbox_pred,
+            im_info=im_info,
+            feature_stride=feature_stride,
+            scales=scales,
+            ratios=ratios,
+            rpn_pre_nms_top_n=rpn_pre_nms_top_n,
+            rpn_post_nms_top_n=rpn_post_nms_top_n,
+            threshold=0.7 if with_nms else 1.0,
+            rpn_min_size=rpn_min_size, output_score=True)
 
         gpu_ctx = mx.gpu(0)
 
@@ -1917,16 +1934,16 @@ def test_multi_proposal_op():
         im_info_gpu = im_info.as_in_context(gpu_ctx)
 
         rois_gpu, score_gpu = op(
-                cls_prob = cls_prob_gpu,
-                bbox_pred = bbox_pred_gpu,
-                im_info = im_info_gpu,
-                feature_stride = feature_stride,
-                scales = scales,
-                ratios = ratios,
-                rpn_pre_nms_top_n = rpn_pre_nms_top_n,
-                rpn_post_nms_top_n = rpn_post_nms_top_n,
-                threshold = 0.7 if with_nms else 1.0,
-                rpn_min_size = rpn_min_size, output_score = True)
+            cls_prob=cls_prob_gpu,
+            bbox_pred=bbox_pred_gpu,
+            im_info=im_info_gpu,
+            feature_stride=feature_stride,
+            scales=scales,
+            ratios=ratios,
+            rpn_pre_nms_top_n=rpn_pre_nms_top_n,
+            rpn_post_nms_top_n=rpn_post_nms_top_n,
+            threshold=0.7 if with_nms else 1.0,
+            rpn_min_size=rpn_min_size, output_score=True)
 
         rois_cpu_np = rois_cpu.asnumpy()
         rois_gpu_np = rois_gpu.asnumpy()
@@ -1935,8 +1952,8 @@ def test_multi_proposal_op():
         score_gpu_np = score_gpu.asnumpy()
 
         if not with_nms:
-            assert_almost_equal(score_cpu_np, score_gpu_np, atol = 1e-3, rtol = 1e-3)
-            assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
+            assert_almost_equal(score_cpu_np, score_gpu_np, atol=1e-3, rtol=1e-3)
+            assert_almost_equal(rois_cpu_np, rois_gpu_np, atol=1e-3, rtol=1e-3)
         else:
             # no 100% gurantee with nms
             assert(np.sum(np.abs(score_cpu_np - score_gpu_np) < 1e-3) >= 10)
@@ -1952,9 +1969,10 @@ def test_multi_proposal_op():
 def kernel_error_check_imperative():
     with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
         with mx.np_shape(active=True):
-            a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
-            b = mx.nd.array([],ctx=mx.gpu(0))
+            a = mx.nd.array([1, 2, 3], ctx=mx.gpu(0))
+            b = mx.nd.array([], ctx=mx.gpu(0))
             c = (a / b).asnumpy()
+
 
 def kernel_error_check_symbolic():
     with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
@@ -1962,10 +1980,11 @@ def kernel_error_check_symbolic():
             a = mx.sym.Variable('a')
             b = mx.sym.Variable('b')
             c = a / b
-            f = c.bind(mx.gpu(0), {'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
-                                   'b':mx.nd.array([],ctx=mx.gpu(0))})
+            f = c.bind(mx.gpu(0), {'a': mx.nd.array([1, 2, 3], ctx=mx.gpu(0)),
+                                   'b': mx.nd.array([], ctx=mx.gpu(0))})
             f.forward()
             g = f.outputs[0].asnumpy()
+
 
 @pytest.mark.serial
 def test_kernel_error_checking():
@@ -1985,15 +2004,17 @@ def test_kernel_error_checking():
                 assert p.exitcode != 0,\
                     "Expected a synchronous kernel error from %s(), none seen." % f.__name__
 
+
 def test_incorrect_gpu():
     # Try setting dev_id to a really big number
-    pytest.raises(MXNetError, mx.nd.ones, (2,2), ctx=mx.gpu(100001))
+    pytest.raises(MXNetError, mx.nd.ones, (2, 2), ctx=mx.gpu(100001))
+
 
 def test_batchnorm_backwards_notrain():
     for ctx in [mx.cpu(0), mx.gpu(0)]:
         for cudnn_o in [False, True]:
-            B,C,H,W = 4,3,2,2
-            x = mx.nd.random.poisson(1,shape=(B,C,H,W)).as_in_context(ctx)
+            B, C, H, W = 4, 3, 2, 2
+            x = mx.nd.random.poisson(1, shape=(B, C, H, W)).as_in_context(ctx)
             gamma = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
             beta = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
             mean = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
@@ -2003,8 +2024,9 @@ def test_batchnorm_backwards_notrain():
             with autograd.record(False):
                 y = mx.ndarray.BatchNorm(x, gamma, beta, mean, std.square(),
                                          fix_gamma=False, cudnn_off=cudnn_o)
-                loss=y.square().sum()
+                loss = y.square().sum()
             loss.backward(train_mode=False)
+
 
 def test_create_sparse_ndarray_gpu_to_cpu():
     dim0 = 10
@@ -2025,20 +2047,20 @@ def test_create_sparse_ndarray_gpu_to_cpu():
 
 def test_softmax_activation():
     gpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
-        [2., -.4, 7.,   3., 0.2]], ctx=mx.gpu(0))
+                         [2., -.4, 7., 3., 0.2]], ctx=mx.gpu(0))
     cpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
-        [2., -.4, 7.,   3., 0.2]], ctx=mx.cpu())
+                         [2., -.4, 7., 3., 0.2]], ctx=mx.cpu())
 
     cpu_a.attach_grad()
     gpu_a.attach_grad()
     with mx.autograd.record():
-        gpu_y = mx.nd.SoftmaxActivation(data = gpu_a)
-        cpu_y = mx.nd.SoftmaxActivation(data = cpu_a)
-        assert_almost_equal(cpu_y, gpu_y, atol = 1e-3, rtol = 1e-3)
+        gpu_y = mx.nd.SoftmaxActivation(data=gpu_a)
+        cpu_y = mx.nd.SoftmaxActivation(data=cpu_a)
+        assert_almost_equal(cpu_y, gpu_y, atol=1e-3, rtol=1e-3)
 
         gpu_y.backward()
         cpu_y.backward()
-        assert_almost_equal(cpu_a.grad, gpu_a.grad, atol = 1e-3, rtol = 1e-3)
+        assert_almost_equal(cpu_a.grad, gpu_a.grad, atol=1e-3, rtol=1e-3)
 
 
 @pytest.mark.serial
@@ -2050,10 +2072,10 @@ def test_bilinear_sampler_versions():
     sym2 = mx.sym.BilinearSampler(data=data, grid=grid, cudnn_off=True)
     sym3 = mx.sym.BilinearSampler(data=data, grid=grid)
 
-    test_cases = [[(1,3,15,16),(1,2,10,10)],
-                 [(1,6,7,16),(1,2,10,4)],
-                 [(1,7,3,16),(1,2,8,11)],
-                 [(1,9,50,50),(1,2,50,50)]]
+    test_cases = [[(1, 3, 15, 16), (1, 2, 10, 10)],
+                  [(1, 6, 7, 16), (1, 2, 10, 4)],
+                  [(1, 7, 3, 16), (1, 2, 8, 11)],
+                  [(1, 9, 50, 50), (1, 2, 50, 50)]]
 
     for item in test_cases:
         data_shape, grid_shape = item
@@ -2063,7 +2085,7 @@ def test_bilinear_sampler_versions():
         exe_cudnn = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
         exe_list = [exe_cpu, exe_gpu, exe_cudnn]
         ref_idx = 0
-        test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
+        test_data = np.random.uniform(low=-0.1, high=0.1, size=data_shape).astype(np.float32)
         test_grid = np.random.uniform(low=-2, high=2, size=grid_shape).astype(np.float32)
         for exe in exe_list:
             exe.arg_dict['data'][:] = test_data
@@ -2071,7 +2093,7 @@ def test_bilinear_sampler_versions():
             exe.forward(is_train=True)
             mx.test_utils.assert_almost_equal(exe_list[ref_idx].outputs[0], exe.outputs[0], rtol=1e-3, atol=1e-5)
 
-        out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
+        out_grad = np.random.uniform(low=-0.01, high=0.01, size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
         for exe in exe_list:
             exe.backward(mx.nd.array(out_grad))
             assert_almost_equal(exe.grad_dict['data'], exe_list[ref_idx].grad_dict['data'], rtol=1e-3, atol=1e-5)
@@ -2099,7 +2121,7 @@ def test_bilinear_sampler_versions():
         assert_almost_equal(exe_list[ref_idx].grad_dict['data'], data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
         assert_almost_equal(exe_list[ref_idx].grad_dict['grid'], grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
 
-        for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
+        for req_dict in [{'data': 'null', 'grid': 'write'}, {'data': 'write', 'grid': 'null'}]:
             # Mixture of kWriteTo and kNullOp
             exe_cpu_mix = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
             exe_gpu_mix = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
@@ -2126,16 +2148,16 @@ def _test_bulking_in_process(seed, time_per_iteration):
     # build symbol
     X = mx.sym.Variable('X')
     sym = mx.sym.flip(X, axis=0)
-    for _ in range(num_ops-1):
+    for _ in range(num_ops - 1):
         sym = mx.sym.flip(sym, axis=0)
     x = mx.ndarray.zeros(data_shape)
     dx = mx.ndarray.zeros(data_shape)
     dy = mx.ndarray.ones(data_shape)
-    exe = sym._bind(ctx=ctx, args=[x], args_grad = {'X':dx})
+    exe = sym._bind(ctx=ctx, args=[x], args_grad={'X': dx})
 
     # time a number of forward() and backward() executions after some warm-up iterations
     warmups = 1
-    for i in range(num_iterations+warmups):
+    for i in range(num_iterations + warmups):
         if i == warmups:
             start = time.time()
         exe.forward(is_train=True)
@@ -2152,48 +2174,50 @@ def test_bulking_operator_gpu():
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
-    test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
+    test_cases = [(0, 0, True), (1, 1, True), (15, 15, False), (15, 0, True), (0, 15, True), (15, 15, True)]
     times = {}
     times_str = ''
     for seg_sizes in test_cases:
         # Create shared variable to return measured time from test process
         time_per_iteration = mp.Manager().Value('d', 0.0)
         if not run_in_spawned_process(_test_bulking_in_process,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : str(seg_sizes[0]),
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : str(seg_sizes[1]),
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : str(seg_sizes[2])},
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': str(seg_sizes[0]),
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': str(seg_sizes[1]),
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN': str(seg_sizes[2])},
                                       time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return
         times[seg_sizes] = time_per_iteration.value
         times_str += \
             '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
-            seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
+                seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
 
-    fastest_non_bulked_time = min(times[(0,0,True)], times[(1,1,True)], times[(15,15,False)])
-    slowest_half_bulked_time = max(times[(0,15,True)], times[(15,0,True)])
-    fastest_half_bulked_time = min(times[(0,15,True)], times[(15,0,True)])
-    fully_bulked_time = times[(15,15,True)]
+    fastest_non_bulked_time = min(times[(0, 0, True)], times[(1, 1, True)], times[(15, 15, False)])
+    slowest_half_bulked_time = max(times[(0, 15, True)], times[(15, 0, True)])
+    fastest_half_bulked_time = min(times[(0, 15, True)], times[(15, 0, True)])
+    fully_bulked_time = times[(15, 15, True)]
 
     print(times_str)
     # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
     # slower than both half-bulked times[0,15,True] and times[15,0,True]
     assert slowest_half_bulked_time < fastest_non_bulked_time, \
         'A half-bulked exec time is slower than the non-bulked time by {} secs! {}' \
-            .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
+        .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
     # The fully bulked times[15,15,True] should be faster than both half-bulked runs
     assert fully_bulked_time < fastest_half_bulked_time, \
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
-            .format(fully_bulked_time - fastest_half_bulked_time, times_str)
+        .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
 
 @pytest.mark.serial
 def test_allclose_function_gpu():
     allclose_function([mx.cpu(), mx.gpu(0)])
 
+
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
+
 
 def math_log(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))
@@ -2204,6 +2228,7 @@ def math_log(shape, dtype, check_value):
         y_ = mx.nd.log(data=x_)
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
 
+
 def math_erf(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
@@ -2213,6 +2238,7 @@ def math_erf(shape, dtype, check_value):
         y_ = mx.nd.erf(data=x_)
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
 
+
 def math_square(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
@@ -2221,6 +2247,7 @@ def math_square(shape, dtype, check_value):
         x_ = x.as_in_context(mx.cpu())
         y_ = mx.nd.square(data=x_)
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
 
 def run_math(op, shape, dtype="float32", check_value=True):
     run_num = 10
@@ -2232,16 +2259,18 @@ def run_math(op, shape, dtype="float32", check_value=True):
         elif op == 'square':
             math_square(shape=shape, dtype=dtype, check_value=check_value)
 
+
 @pytest.mark.serial
 def test_math():
     ops = ['log', 'erf', 'square']
-    check_value= True
-    shape_lst = [[1000], [100,1000], [10,100,100], [10,100,100,100]]
+    check_value = True
+    shape_lst = [[1000], [100, 1000], [10, 100, 100], [10, 100, 100, 100]]
     dtypes = ["float32", "float64"]
     for shape in shape_lst:
         for dtype in dtypes:
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
+
 
 @pytest.mark.serial
 def test_arange_like_dtype():
@@ -2268,12 +2297,13 @@ def test_fp16_spmm():
     out_np = mx.nd.dot(inp, weight)
     assert_almost_equal(out.asnumpy(), out_np, rtol=1e-3, atol=1e-5)
 
+
 @pytest.mark.serial
 @pytest.mark.parametrize('dtype', ["float16", "float32", "float64"])
 def test_split_v2_fwd(dtype):
     dim = random.randint(2, 9)
     shape = rand_shape_nd(dim)
-    axis = random.randint(-dim, dim-1)
+    axis = random.randint(-dim, dim - 1)
     axis_size = shape[axis]
     samples = random.randint(0, axis_size - 1)
     indices = sorted(random.sample([i for i in range(1, axis_size)], samples))

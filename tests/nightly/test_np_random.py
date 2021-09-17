@@ -24,18 +24,17 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../python/common/'))
 sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
-import unittest
-import numpy as _np
-import mxnet as mx
-from mxnet import np, npx, autograd
-from mxnet.gluon import HybridBlock
-from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
-from common import retry
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
-from mxnet.ndarray.ndarray import py_slice
-from mxnet.base import integer_types
 import scipy.stats as ss
-
+from mxnet.base import integer_types
+from mxnet.ndarray.ndarray import py_slice
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
+from common import retry
+from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
+from mxnet.gluon import HybridBlock
+from mxnet import np, npx, autograd
+import mxnet as mx
+import numpy as _np
+import unittest
 
 @retry(5)
 @use_np
@@ -47,8 +46,8 @@ def test_np_exponential():
     for scale in [1.0, 5.0]:
         buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.expon.ppf(x, scale=scale), num_buckets)
         buckets = np.array(buckets, dtype="float32").tolist()
-        probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-        generator_mx_np = lambda x: mx.np.random.exponential(size=x).asnumpy()
+        probs = [(buckets[i][1] - buckets[i][0]) / scale for i in range(num_buckets)]
+        def generator_mx_np(x): return mx.np.random.exponential(size=x).asnumpy()
         verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
@@ -66,8 +65,8 @@ def test_np_uniform():
             scale = high - low
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), num_buckets)
             buckets = np.array(buckets, dtype=dtype).tolist()
-            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: mx.np.random.uniform(low, high, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            probs = [(buckets[i][1] - buckets[i][0]) / scale for i in range(num_buckets)]
+            def generator_mx_np(x): return mx.np.random.uniform(low, high, size=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
@@ -83,7 +82,8 @@ def test_np_logistic():
         buckets = np.array(buckets).tolist()
         probs = [(ss.logistic.cdf(buckets[i][1], loc, scale) -
                   ss.logistic.cdf(buckets[i][0], loc, scale)) for i in range(num_buckets)]
-        generator_mx_np = lambda x: mx.np.random.logistic(loc, scale, size=x).asnumpy()
+
+        def generator_mx_np(x): return mx.np.random.logistic(loc, scale, size=x).asnumpy()
         verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
@@ -97,8 +97,8 @@ def test_np_gumbel():
     for loc, scale in [(0.0, 1.0), (1.0, 5.0)]:
         buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.gumbel_r.ppf(x, loc=loc, scale=scale), num_buckets)
         buckets = np.array(buckets).tolist()
-        probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-        generator_mx_np = lambda x: mx.np.random.gumbel(loc, scale, size=x).asnumpy()
+        probs = [(buckets[i][1] - buckets[i][0]) / scale for i in range(num_buckets)]
+        def generator_mx_np(x): return mx.np.random.gumbel(loc, scale, size=x).asnumpy()
         verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
@@ -117,7 +117,8 @@ def test_np_normal():
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(ss.norm.cdf(buckets[i][1], loc, scale) -
                       ss.norm.cdf(buckets[i][0], loc, scale)) for i in range(num_buckets)]
-            generator_mx_np = lambda x: mx.np.random.normal(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
+
+            def generator_mx_np(x): return mx.np.random.normal(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
@@ -160,7 +161,6 @@ def test_np_laplace():
         for loc, scale in [(0.0, 1.0), (1.0, 5.0)]:
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.laplace.ppf(x, loc=loc, scale=scale), num_buckets)
             buckets = np.array(buckets, dtype=dtype).tolist()
-            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: np.random.laplace(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            probs = [(buckets[i][1] - buckets[i][0]) / scale for i in range(num_buckets)]
+            def generator_mx_np(x): return np.random.laplace(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
-

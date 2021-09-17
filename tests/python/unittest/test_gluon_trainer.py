@@ -28,10 +28,12 @@ import pytest
 
 mx.npx.reset_np()
 
+
 def dict_equ(a, b):
     assert set(a) == set(b)
     for k in a:
         assert (a[k].asnumpy() == b[k].asnumpy()).all()
+
 
 def test_multi_trainer():
     x = gluon.Parameter('x', shape=(10,), stype='row_sparse')
@@ -47,6 +49,7 @@ def test_multi_trainer():
         # multiple trainers for a sparse Parameter is not allowed
         trainer1 = gluon.Trainer([x], 'sgd')
 
+
 def test_trainer_with_sparse_grad_on_single_context():
     x = gluon.Parameter('x', shape=(10,), grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
@@ -60,6 +63,7 @@ def test_trainer_with_sparse_grad_on_single_context():
     assert trainer._update_on_kvstore is None
     assert trainer._kvstore is None  # No kvstore created for single-device training
     assert (x.data(mx.cpu(0)).asnumpy() == -1).all()
+
 
 def test_trainer_with_teststore():
     x = gluon.Parameter('x', shape=(10,))
@@ -78,6 +82,7 @@ def test_trainer_with_teststore():
     # because TestStore does not support that
     invalid_trainer = gluon.Trainer([x], 'sgd', kvstore=kv, update_on_kvstore=True)
     pytest.raises(ValueError, invalid_trainer._init_kvstore)
+
 
 def test_trainer():
     x = gluon.Parameter('x', shape=(10,))
@@ -102,7 +107,7 @@ def test_trainer():
 
     trainer.save_states('test_trainer.states')
     states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
-             else deepcopy(trainer._updaters[0].states)
+        else deepcopy(trainer._updaters[0].states)
     trainer.load_states('test_trainer.states')
     if trainer._update_on_kvstore:
         dict_equ(trainer._kvstore._updater.states, states)
@@ -121,7 +126,7 @@ def test_trainer():
                              update_on_kvstore=False)
     with mx.autograd.record():
         for i, w in enumerate(x.list_data()):
-            y = i*w
+            y = i * w
             y.backward()
     assert (x.grad(mx.cpu(0)).asnumpy() != x.grad(mx.cpu(1)).asnumpy()).all()
     trainer2.allreduce_grads()
@@ -129,6 +134,7 @@ def test_trainer():
     trainer2.update(1)
 
     assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
+
 
 def test_trainer_save_load():
     previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
@@ -149,6 +155,7 @@ def test_trainer_save_load():
     # check if parameter dict is correctly associated with optimizer after load_state
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
     os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
+
 
 @mx.util.use_np
 @pytest.mark.skip(reason='Currently, sparse feature is not supported in Gluon2.0')
@@ -205,10 +212,11 @@ def test_trainer_reset_kv():
     for kv in kvs:
         check_trainer_reset_kv(kv)
 
+
 @xfail_when_nonstandard_decimal_separator
 def test_trainer_sparse_kv():
     def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):
-        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        x = mx.gluon.Parameter('x', shape=(10, 1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                 kvstore=kv, update_on_kvstore=update_on_kv)
@@ -241,6 +249,7 @@ def test_trainer_sparse_kv():
         check_trainer_sparse_kv(kv, 'default', 'row_sparse', False, False)
         check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', None, True)
         check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', False, ValueError)
+
 
 def test_trainer_lr_sched():
     x = gluon.Parameter('x', shape=(10,))
@@ -280,6 +289,7 @@ def test_trainer_lr_sched():
             assert trainer.learning_rate == lr, (lr, trainer.learning_rate, i)
             lr *= factor
     mx.nd.waitall()
+
 
 def test_gluon_trainer_param_order():
     net = mx.gluon.nn.Sequential()
@@ -350,4 +360,3 @@ def test_trainer_share_parameters():
             shared_params.append(p)
 
     assert((shared_params[0] == shared_params[1]).all())
-

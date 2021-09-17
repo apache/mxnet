@@ -32,14 +32,16 @@ import operator
 
 npx.reset_np()
 
+
 def collect_block_args_aux(block, sym):
-  arg_params, aux_params = dict(), dict()
-  for k, v in block.collect_params().items():
-    if k in sym.list_arguments():
-      arg_params[k]= v._reduce()
-    elif k in sym.list_auxiliary_states():
-      aux_params[k]= v._reduce()
-  return arg_params, aux_params
+    arg_params, aux_params = dict(), dict()
+    for k, v in block.collect_params().items():
+        if k in sym.list_arguments():
+            arg_params[k] = v._reduce()
+        elif k in sym.list_auxiliary_states():
+            aux_params[k] = v._reduce()
+    return arg_params, aux_params
+
 
 def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
@@ -73,7 +75,7 @@ def test_quantize_float32_to_int8():
     assert same(min_val.asscalar(), -real_range)
     assert same(max_val.asscalar(), real_range)
     qdata_np = (onp.sign(data_np) * onp.minimum(onp.abs(data_np) * scale + 0.5, quantized_range)).astype(onp.int8)
-    assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
+    assert_almost_equal(qdata.asnumpy(), qdata_np, atol=1)
 
 
 def test_dequantize_int8_to_float32():
@@ -93,7 +95,7 @@ def test_dequantize_int8_to_float32():
     def test_nd_array_dequantization(qdata, min_range, max_range, expected_result):
         data = mx.nd.contrib.dequantize(qdata, min_range, max_range, out_type='float32')
         assert data.dtype == onp.float32
-        assert_almost_equal(data.asnumpy(), expected_result, atol = 1)
+        assert_almost_equal(data.asnumpy(), expected_result, atol=1)
 
     def test_symbolic_api_dequantization(qdata, min_range, max_range, expected_result):
         sym_data = mx.sym.Variable('data')
@@ -102,10 +104,10 @@ def test_dequantize_int8_to_float32():
         dequant = mx.sym.contrib.dequantize(sym_data, sym_min_range,
                                             sym_max_range, out_type='float32')
         out = dequant._bind(ctx=mx.current_context(),
-                           args={'data':qdata, 'min_range':min_range, 'max_range':max_range})
+                            args={'data': qdata, 'min_range': min_range, 'max_range': max_range})
         data = out.forward()[0]
         assert data.dtype == onp.float32
-        assert_almost_equal(data.asnumpy(), expected_result, atol = 1)
+        assert_almost_equal(data.asnumpy(), expected_result, atol=1)
 
     real_range = 128
     shape = rand_shape_nd(4)
@@ -162,7 +164,7 @@ def test_requantize_int32_to_int8():
                                                                           max_range.asscalar(),
                                                                           min_calib_range=min_calib_range,
                                                                           max_calib_range=max_calib_range)
-        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
+        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol=1)
         assert_almost_equal(min_output.asnumpy(), onp.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), onp.array([max_output_np]))
 
@@ -194,7 +196,7 @@ def test_requantize_int32_to_int8():
                                                                           max_range.item(),
                                                                           min_calib_range=min_calib_range,
                                                                           max_calib_range=max_calib_range)
-        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
+        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol=1)
         assert_almost_equal(min_output.asnumpy(), onp.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), onp.array([max_output_np]))
 
@@ -249,8 +251,8 @@ def test_quantized_conv():
         input_data = mx.np.random.uniform(low=data_low,
                                           high=data_high,
                                           size=data_shape
-                                         ).astype('int32').astype('float32')
-        convfp32(input_data) # initialize params
+                                          ).astype('int32').astype('float32')
+        convfp32(input_data)  # initialize params
         npx.waitall()
         fp32_params = convfp32.collect_params()
         weight_shape = fp32_params['weight'].shape
@@ -258,12 +260,12 @@ def test_quantized_conv():
         new_args['weight'] = mx.np.random.uniform(low=-127.0,
                                                   high=127.0,
                                                   size=weight_shape
-                                                 ).astype('int32').astype('float32')
-        if use_bias:
-           new_args['bias'] = mx.np.random.uniform(low=-127.0,
-                                                   high=127.0,
-                                                   size=fp32_params['bias'].shape
                                                   ).astype('int32').astype('float32')
+        if use_bias:
+            new_args['bias'] = mx.np.random.uniform(low=-127.0,
+                                                    high=127.0,
+                                                    size=fp32_params['bias'].shape
+                                                    ).astype('int32').astype('float32')
         convfp32.load_dict(new_args, cast_dtype=True, dtype_source='saved')
 
         output = convfp32(input_data)
@@ -300,7 +302,7 @@ def test_quantized_conv():
                 max_weight = self.max_weight.data().as_in_ctx(ctx)
                 min_bias = self.min_bias.data().as_in_ctx(ctx) if self.use_bias else None
                 max_bias = self.max_bias.data().as_in_ctx(ctx) if self.use_bias else None
-                out = npx.quantized_conv(data=x, weight=weight, bias=bias, 
+                out = npx.quantized_conv(data=x, weight=weight, bias=bias,
                                          min_data=min_data, max_data=max_data,
                                          min_weight=min_weight, max_weight=max_weight,
                                          min_bias=min_bias, max_bias=max_bias,
@@ -335,7 +337,7 @@ def test_quantized_conv():
             cond = mx.np.less(2, diff).sum().item()
             assert cond == 0
         else:
-            assert_almost_equal(output.asnumpy(), qoutput.asnumpy(), atol = 1)
+            assert_almost_equal(output.asnumpy(), qoutput.asnumpy(), atol=1)
 
     for qdtype in ['int8', 'uint8']:
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), (1, 1), True, qdtype)
@@ -387,7 +389,7 @@ def test_quantized_elemwise_add():
 
         output = elemwise_add_fp32(dataA_val, dataB_val)
 
-        #run quantized
+        # run quantized
         quantized_elemwise_add = QuantElemwiseSumBlock()
         dataA_val_int8 = dataA_val.astype(qtype)
         dataB_val_int8 = dataB_val.astype(qtype)
@@ -465,7 +467,7 @@ def test_quantized_elemwise_mul():
 
         fp32_rslt = output.asnumpy()
         int8_rslt = qoutput.astype(output.dtype)
-        assert_almost_equal(fp32_rslt, int8_rslt, atol = 1e-4)
+        assert_almost_equal(fp32_rslt, int8_rslt, atol=1e-4)
 
     for qtype in ['int8', 'uint8']:
         check_quantized_elemwise_mul((4, 6), qtype)
@@ -507,7 +509,7 @@ def test_quantized_pooling():
 
                 self._kwargs = {'kernel': kernel, 'pad': pad, 'stride': stride,
                                 'pool_type': pool_type, 'global_pool': global_pool, 'cudnn_off': False,
-                                'pooling_convention':convention}
+                                'pooling_convention': convention}
 
             def forward(self, data, min_data, max_data):
                 return npx.quantized_pooling(data, min_data, max_data, **self._kwargs)
@@ -523,7 +525,7 @@ def test_quantized_pooling():
         input_data = mx.np.random.uniform(low=data_low,
                                           high=data_high,
                                           size=data_shape
-                                         ).astype('int32').astype('float32')
+                                          ).astype('int32').astype('float32')
         output = pooling_fp32(input_data)
 
         quantized_pooling = QuantPoolingBlock(kernel=kernel, pad=pad, stride=stride,
@@ -597,7 +599,7 @@ def test_quantized_fc():
         data = mx.np.random.uniform(low=data_low,
                                     high=data_high,
                                     size=data_shape
-                                   ).astype('int32').astype('float32')
+                                    ).astype('int32').astype('float32')
         fc_fp32 = mx.gluon.nn.Dense(units=num_hidden, use_bias=use_bias, flatten=flatten)
         fc_fp32.initialize()
         fc_fp32(data)
@@ -609,7 +611,7 @@ def test_quantized_fc():
         new_args['weight'] = mx.np.random.uniform(low=data_low,
                                                   high=data_high,
                                                   size=fp32_params['weight'].shape
-                                                 ).astype('int32').astype('float32')
+                                                  ).astype('int32').astype('float32')
         data_min = mx.np.min(data).astype('float32')
         data_max = mx.np.max(data).astype('float32')
         weight_min = mx.np.min(new_args['weight']).astype('float32')
@@ -621,7 +623,7 @@ def test_quantized_fc():
             bias = mx.np.random.uniform(low=data_low,
                                         high=data_high,
                                         size=fp32_params['bias'].shape
-                                       ).astype('int32').astype('float32')
+                                        ).astype('int32').astype('float32')
             bias_min = mx.np.min(bias).astype('float32')
             bias_max = mx.np.max(bias).astype('float32')
             bias_range = maxabs(bias_min, bias_max)
@@ -664,7 +666,7 @@ def test_quantized_fc():
                 max_weight = self.max_weight.data().as_in_ctx(ctx)
                 min_bias = self.min_bias.data().as_in_ctx(ctx) if self.use_bias else None
                 max_bias = self.max_bias.data().as_in_ctx(ctx) if self.use_bias else None
-                out = npx.quantized_fully_connected(data=x, weight=weight, bias=bias, 
+                out = npx.quantized_fully_connected(data=x, weight=weight, bias=bias,
                                                     min_data=min_data, max_data=max_data,
                                                     min_weight=min_weight, max_weight=max_weight,
                                                     min_bias=min_bias, max_bias=max_bias,
@@ -727,7 +729,7 @@ def test_quantized_embedding():
         data = mx.np.random.uniform(low=0,
                                     high=input_dim,
                                     size=data_shape
-                                   ).astype('int32').astype('float32')
+                                    ).astype('int32').astype('float32')
         embedding_fp32 = mx.gluon.nn.Embedding(input_dim=input_dim, output_dim=output_dim)
         embedding_fp32.initialize()
         embedding_fp32(data)
@@ -739,7 +741,7 @@ def test_quantized_embedding():
         weight = mx.np.random.uniform(low=-int8_range,
                                       high=int8_range,
                                       size=weight_shape
-                                     ).astype('int32').astype('float32')
+                                      ).astype('int32').astype('float32')
         new_params['weight'] = weight
         embedding_fp32.load_dict(new_params, cast_dtype=True, dtype_source='saved')
 
@@ -779,7 +781,6 @@ def test_quantized_embedding():
         embedding_int8.load_dict(qargs, cast_dtype=True, dtype_source='saved')
 
         qoutput, min_range, max_range = embedding_int8(data)
-
 
         assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
 
@@ -841,7 +842,7 @@ def test_quantized_act():
         data = mx.np.random.uniform(low=data_low,
                                     high=data_high,
                                     size=data_shape
-                                   ).astype(qdtype).astype('float32')
+                                    ).astype(qdtype).astype('float32')
         output = act_fp32(data)
 
         class QuantActivation(mx.gluon.nn.HybridBlock):
@@ -910,14 +911,14 @@ def test_quantized_bn():
         bn_fp32.hybridize()
         bn_fp32(data)
         fp32_params = bn_fp32.collect_params()
-        
+
         data = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape)
         gamma = mx.np.random.uniform(low=data_low, high=data_high, size=fp32_params['gamma'].shape)
         beta = mx.np.random.uniform(low=data_low, high=data_high, size=fp32_params['beta'].shape)
         running_mean, running_var = get_mean_var(data)
         new_params = {
-            'gamma':gamma,
-            'beta':beta,
+            'gamma': gamma,
+            'beta': beta,
             'running_mean': running_mean,
             'running_var': running_var
         }
@@ -940,9 +941,9 @@ def test_quantized_bn():
         assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=8)
 
     for qdtype in ['int8', 'uint8']:
-      check_quantized_bn((32, 512, 4, 4), qdtype)
-      check_quantized_bn((32, 1024, 8, 8), qdtype)
-      check_quantized_bn((32, 3, 224, 224), qdtype)
+        check_quantized_bn((32, 512, 4, 4), qdtype)
+        check_quantized_bn((32, 1024, 8, 8), qdtype)
+        check_quantized_bn((32, 3, 224, 224), qdtype)
 
 
 def test_quantize_params():
@@ -960,7 +961,7 @@ def test_quantize_params():
         params[name] = mx.nd.uniform(shape=(2, 2))
     qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
                                                 offline_params=offline_params, quantize_mode='full')
-    qparams = mx.contrib.quant._quantize_params(qsym, params, min_max_dict = {})
+    qparams = mx.contrib.quant._quantize_params(qsym, params, min_max_dict={})
     param_names = params.keys()
     qparam_names = qparams.keys()
     for name in qparam_names:
@@ -974,10 +975,10 @@ def test_quantize_params():
 class FP32Net(mx.gluon.nn.HybridBlock):
     def __init__(self, **kwargs):
         super(FP32Net, self).__init__(**kwargs)
-        self.conv = mx.gluon.nn.Conv2D(channels=16, kernel_size=(1,1))
+        self.conv = mx.gluon.nn.Conv2D(channels=16, kernel_size=(1, 1))
         self.bn = mx.gluon.nn.BatchNorm(epsilon=2e-05, scale=True, momentum=0.9, use_global_stats=False)
         self.act = mx.gluon.nn.Activation(activation='relu')
-        self.pool = mx.gluon.nn.AvgPool2D(pool_size=(4,4))
+        self.pool = mx.gluon.nn.AvgPool2D(pool_size=(4, 4))
         self.fc = mx.gluon.nn.Dense(units=10, flatten=True)
 
     def forward(self, x):
@@ -993,7 +994,7 @@ class FP32MultipleOutputs(mx.gluon.nn.HybridBlock):
     def __init__(self, length, **kwargs):
         super(FP32MultipleOutputs, self).__init__(**kwargs)
         self.length = length
-        self.convs = mx.gluon.nn.Conv2D(channels=16, kernel_size=(1,1))
+        self.convs = mx.gluon.nn.Conv2D(channels=16, kernel_size=(1, 1))
         self.fc = mx.gluon.nn.Dense(units=10, flatten=True)
 
     def forward(self, x):
@@ -1008,12 +1009,13 @@ class FP32MultipleOutputs(mx.gluon.nn.HybridBlock):
         out = self.fc(out)
         return npx.softmax(out)
 
+
 class FP32MultipleInputs(mx.gluon.nn.HybridBlock):
     def __init__(self, **kwargs):
         super(FP32MultipleInputs, self).__init__(**kwargs)
-        self.conv1 = mx.gluon.nn.Conv2D(channels=64, kernel_size=(1,1), use_bias=False)
+        self.conv1 = mx.gluon.nn.Conv2D(channels=64, kernel_size=(1, 1), use_bias=False)
         self.bn1 = mx.gluon.nn.BatchNorm()
-        self.conv2 = mx.gluon.nn.Conv2D(channels=64, kernel_size=(1,1), use_bias=False)
+        self.conv2 = mx.gluon.nn.Conv2D(channels=64, kernel_size=(1, 1), use_bias=False)
         self.bn2 = mx.gluon.nn.BatchNorm()
 
     def forward(self, data0, data1):
@@ -1022,6 +1024,7 @@ class FP32MultipleInputs(mx.gluon.nn.HybridBlock):
         out1 = self.conv2(data1)
         out1 = self.bn2(out1)
         return out1 + out0
+
 
 @use_np
 @xfail_when_nonstandard_decimal_separator
@@ -1033,7 +1036,7 @@ def test_quantize_model():
                 assert k in qparams
                 assert same(v.asnumpy(), qparams[k].asnumpy())
         else:
-            qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, min_max_dict = {})
+            qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, min_max_dict={})
             assert len(qparams) == len(qparams_ground_truth)
             for k, v in qparams_ground_truth.items():
                 assert k in qparams
@@ -1153,14 +1156,13 @@ def test_quantize_model():
                                                                          quantized_dtype=qdtype,
                                                                          calib_mode='naive',
                                                                          calib_data=calib_data,
-                                                                         data_names=["data0","data1"],
+                                                                         data_names=["data0", "data1"],
                                                                          num_calib_batches=1,
                                                                          quantize_mode='full')
         check_params(arg_params, qarg_params, qsym)
         check_params(aux_params, qaux_params)
         check_qsym_calibrated(qsym)
         check_qsym_qdtype(qsym, qdtype)
-
 
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)
@@ -1202,13 +1204,13 @@ def test_quantize_gluon_with_forward():
             for quantize_granularity in ['tensor-wise', 'channel-wise']:
                 qdtype = qdtype if mode is 'naive' else 'auto'
                 quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
-                                                                    exclude_layers=None,
-                                                                    exclude_layers_match=excluded_names_match,
-                                                                    calib_data=calib_data,
-                                                                    calib_mode=mode,
-                                                                    quantize_granularity=quantize_granularity,
-                                                                    num_calib_batches=num_calib_batches,
-                                                                    ctx=mx.current_context())
+                                                                      exclude_layers=None,
+                                                                      exclude_layers_match=excluded_names_match,
+                                                                      calib_data=calib_data,
+                                                                      calib_mode=mode,
+                                                                      quantize_granularity=quantize_granularity,
+                                                                      num_calib_batches=num_calib_batches,
+                                                                      ctx=mx.current_context())
 
                 quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
                 quantized_resnet18_v1(random_data)
@@ -1237,7 +1239,7 @@ def test_quantize_sym_with_calib():
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
     qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
-                                             offline_params=offline_params, quantize_mode='full')
+                                                offline_params=offline_params, quantize_mode='full')
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     min_max_dict = {'conv_output': (onp.random.uniform(low=100.0, high=200.0), onp.random.uniform(low=100.0, high=200.0)),
                     'fc_output': (onp.random.uniform(low=100.0, high=200.0), onp.random.uniform(low=100.0, high=200.0))}
@@ -1278,7 +1280,6 @@ def test_quantization_net_with_different_data_inputs_options():
     out = quantized_net(random_data)
     out.wait_to_read()
 
-
     # pass data_shapes as list of DataDescs
     net2 = FP32Net()
     net2.initialize()
@@ -1290,7 +1291,6 @@ def test_quantization_net_with_different_data_inputs_options():
     out2 = quantized_net2(random_data)
     out2.wait_to_read()
 
-
     # pass data as DataLoader
     net3 = FP32Net()
     net3.initialize()
@@ -1301,7 +1301,6 @@ def test_quantization_net_with_different_data_inputs_options():
                                                    ctx=mx.current_context())
     out3 = quantized_net3(random_data)
     out3.wait_to_read()
-
 
 
 def test_optimal_threshold_adversarial_case():
@@ -1322,7 +1321,7 @@ def test_optimal_threshold_adversarial_case():
     for dtype in ['uint8', 'int8', 'auto']:
         res = mx.contrib.quant._LayerHistogramCollector.get_optimal_threshold(hist_data, dtype, num_quantized_bins=5)
         # The threshold should be 2.
-        print (res)
+        print(res)
         assert abs(res[2] - 2) < 1e-5
 
 
@@ -1342,8 +1341,7 @@ def test_get_optimal_thresholds():
         max_range = onp.max(arr)
         th = max(abs(min_range), abs(max_range))
         hist, hist_edges = onp.histogram(arr, bins=8001, range=(-th, th))
-        hist_dict = {'layer1' : (hist, hist_edges, min_range, max_range, th)}
+        hist_dict = {'layer1': (hist, hist_edges, min_range, max_range, th)}
         min_max_dict = mx.contrib.quant._LayerHistogramCollector.get_optimal_thresholds(hist_dict, dtype)
         assert 'layer1' in min_max_dict
         assert_almost_equal(onp.array([min_max_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
-

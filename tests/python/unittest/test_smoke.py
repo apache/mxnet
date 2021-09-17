@@ -19,21 +19,23 @@ from mxnet import np, npx, use_np, autograd, initializer, gluon
 from common import with_environment
 import pytest
 
+
 @use_np
 @with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
 def test_18927():
     """test for no error when dealing with zero-size array in bipartite matching"""
-    arr = np.random.rand(0,2)
+    arr = np.random.rand(0, 2)
     arr_grad = np.empty_like(arr)
     autograd.mark_variables([arr], [arr_grad])
     with autograd.record():
         a = npx.bipartite_matching(arr, threshold=0.1)
     a[0].backward()
 
+
 @use_np
 @with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
 def test_18933_batch_0():
-    arr = np.random.rand(0,1,1) # batch = 0
+    arr = np.random.rand(0, 1, 1)  # batch = 0
     arr_grad = np.empty_like(arr)
     gamma = np.random.rand(1)
     gamma_grad = np.empty_like(gamma)
@@ -43,11 +45,12 @@ def test_18933_batch_0():
     with autograd.record():
         a = npx.instance_norm(arr, gamma, beta)
     a.backward()
+
 
 @use_np
 @with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
 def test_18933_channel_0():
-    arr = np.random.rand(1,0,1) # channel = 0
+    arr = np.random.rand(1, 0, 1)  # channel = 0
     arr_grad = np.empty_like(arr)
     gamma = np.random.rand(1)
     gamma_grad = np.empty_like(gamma)
@@ -58,10 +61,11 @@ def test_18933_channel_0():
         a = npx.instance_norm(arr, gamma, beta)
     a.backward()
 
+
 @use_np
 @with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
 def test_18934_empty_leaky_relu():
-    arr = np.random.rand(0,2)
+    arr = np.random.rand(0, 2)
     arr_grad = np.empty_like(arr)
 
     autograd.mark_variables([arr], [arr_grad])
@@ -69,8 +73,9 @@ def test_18934_empty_leaky_relu():
         res = npx.leaky_relu(arr)
     res.backward()
 
+
 @use_np
-@pytest.mark.parametrize('initializer',[
+@pytest.mark.parametrize('initializer', [
     'zeros', 'ones', initializer.Constant(3),
     initializer.Uniform(),
     initializer.Normal(),

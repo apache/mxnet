@@ -98,7 +98,7 @@ def _add_dtype_workload_logspace():
 
 
 def _add_dtype_workload_mean():
-    DtypeOpArgMngr.add_workload('mean', np.random.randint(0, 3,size=2))
+    DtypeOpArgMngr.add_workload('mean', np.random.randint(0, 3, size=2))
 
 
 def _add_dtype_workload_hanning():
@@ -130,9 +130,9 @@ def _add_dtype_workload_random_chisquare():
 
 
 def _add_dtype_workload_true_divide():
-    DtypeOpArgMngr.add_workload('true_divide', np.array([1,2], dtype=int), 4)
-    DtypeOpArgMngr.add_workload('true_divide', np.array([1,2], dtype=int), 2.0)
-    DtypeOpArgMngr.add_workload('true_divide', 4.0, np.array([1,2], dtype=int))
+    DtypeOpArgMngr.add_workload('true_divide', np.array([1, 2], dtype=int), 4)
+    DtypeOpArgMngr.add_workload('true_divide', np.array([1, 2], dtype=int), 2.0)
+    DtypeOpArgMngr.add_workload('true_divide', 4.0, np.array([1, 2], dtype=int))
 
 
 def _prepare_workloads():
@@ -153,6 +153,7 @@ def _prepare_workloads():
     _add_dtype_workload_random_normal()
     _add_dtype_workload_true_divide()
     _add_dtype_workload_random_chisquare()
+
 
 _prepare_workloads()
 
@@ -203,7 +204,7 @@ def test_np_indices_default_dtype():
 
         def check_deepnp_indices_default_dtype():
             assert np.indices((3,)).dtype == 'int64'
-        
+
         check_deepnp_indices_default_dtype()
         check_np_indices_default_dtype()
 
@@ -218,6 +219,6 @@ def test_np_arange_default_dtype():
 
         def check_deepnp_indices_default_dtype():
             assert np.arange(3, 7, 2).dtype == 'float32'
-        
+
         check_deepnp_indices_default_dtype()
         check_np_indices_default_dtype()

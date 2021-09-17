@@ -22,6 +22,7 @@ import sys
 
 from subprocess import Popen, PIPE
 
+
 @pytest.mark.skipif(not mx.context.num_gpus(), reason='Test only applicable to machines with GPUs')
 def test_nvtx_ranges_present_in_profile():
 
@@ -42,4 +43,3 @@ def test_nvtx_ranges_present_in_profile():
 
     # Verify that we have some expected output from the engine.
     assert "Range \"WaitForVar\"" in profiler_output
-

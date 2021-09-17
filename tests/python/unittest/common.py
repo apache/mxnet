@@ -15,7 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import sys, os, logging, functools
+import sys
+import os
+import logging
+import functools
 import multiprocessing as mp
 import mxnet as mx
 import numpy as np
@@ -26,12 +29,11 @@ from mxnet.test_utils import environment
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
-
-import models
-from contextlib import contextmanager
-import pytest
-from tempfile import TemporaryDirectory
 import locale
+from tempfile import TemporaryDirectory
+import pytest
+from contextlib import contextmanager
+import models
 
 xfail_when_nonstandard_decimal_separator = pytest.mark.xfail(
     locale.localeconv()["decimal_point"] != ".",
@@ -39,6 +41,7 @@ xfail_when_nonstandard_decimal_separator = pytest.mark.xfail(
     "These operators should be rewritten to utilize the new FFI. Please see #18097 for more "
     "information."
 )
+
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
@@ -205,10 +208,10 @@ def run_in_spawned_process(func, env, *args):
               sys.version_info[0:2], file=sys.stderr, end='')
         return False
     else:
-        seed = np.random.randint(0,1024*1024*1024)
+        seed = np.random.randint(0, 1024 * 1024 * 1024)
         with environment(env):
             # Prepend seed as first arg
-            p = mpctx.Process(target=func, args=(seed,)+args)
+            p = mpctx.Process(target=func, args=(seed,) + args)
             p.start()
             p.join()
             assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
@@ -220,6 +223,7 @@ def retry(n):
     # TODO(szha): replace with flaky
     # https://github.com/apache/incubator-mxnet/issues/17803
     assert n > 0
+
     def test_helper(orig_test):
         @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
@@ -229,7 +233,7 @@ def retry(n):
                     orig_test(*args, **kwargs)
                     return
                 except AssertionError as e:
-                    if i == n-1:
+                    if i == n - 1:
                         raise e
                     mx.nd.waitall()
         return test_new

@@ -20,6 +20,7 @@ import logging
 import mxnet
 import numpy
 
+
 def import_into(globs, module, names=None, error_on_overwrite=True):
     """Import names from module into the globs dict.
 
@@ -30,7 +31,7 @@ def import_into(globs, module, names=None, error_on_overwrite=True):
     if names is not None:
         for name in names:
             assert name in mod_names, '%s not found in %s' % (
-                    name, module)
+                name, module)
         mod_names = names
 
     for name in mod_names:
@@ -50,6 +51,7 @@ def test_symbols():
     # make sure all the operators are available
     import_into(globs, mxnet.symbol)
     doctest.testmod(mxnet.symbol_doc, globs=globs, verbose=True)
+
 
 def test_ndarray():
     globs = {'np': numpy, 'mx': mxnet}

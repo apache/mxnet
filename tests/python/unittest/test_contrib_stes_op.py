@@ -83,20 +83,21 @@ def check_ste(net_type_str, w_init, hybridize, in_data, ctx=None):
     with mx.autograd.record():
         out = net(in_data)
     assert all(out == net.expected_output(in_data, w_init)), net_type_str + " output is " + str(out) + ", but" + \
-                                                             " expected " + str(net.expected_output(in_data, w_init))
+        " expected " + str(net.expected_output(in_data, w_init))
 
     out.backward()
     assert all(net.w.grad() == net.expected_grads(in_data, w_init)), net_type_str + " w grads are " + \
-                                                                     str(net.w.grad()) + " but expected " + \
-                                                                     str(net.expected_grads(in_data, w_init))
+        str(net.w.grad()) + " but expected " + \
+        str(net.expected_grads(in_data, w_init))
     with mx.autograd.record():
         out = net(in_data)
     assert all(out == net.expected_output(in_data, w_init)), net_type_str + " output is " + str(out) + ", but" + \
-                                                             " expected " + str(net.expected_output(in_data, w_init))
+        " expected " + str(net.expected_output(in_data, w_init))
     out.backward()
     assert all(net.w.grad() == net.expected_grads(in_data, w_init)), net_type_str + " w grads are " + \
-                                                                     str(net.w.grad()) + " but expected " + \
-                                                                     str(net.expected_grads(in_data, w_init))
+        str(net.w.grad()) + " but expected " + \
+        str(net.expected_grads(in_data, w_init))
+
 
 @xfail_when_nonstandard_decimal_separator
 def test_contrib_round_ste():
@@ -107,13 +108,13 @@ def test_contrib_round_ste():
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
     # Test 1.5 (verifies that .5 rounds the same as in round)
-    in_data = mx.np.array([1.5]*30)  # 10 and 30 are arbitrary numbers
+    in_data = mx.np.array([1.5] * 30)  # 10 and 30 are arbitrary numbers
     w_init = 1.
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
     # Test 0
-    in_data = mx.np.array([0]*30)  # 10 and 30 are arbitrary numbers
+    in_data = mx.np.array([0] * 30)  # 10 and 30 are arbitrary numbers
     w_init = 0.
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
@@ -127,8 +128,7 @@ def test_contrib_sign_ste():
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
     # Test 0
-    in_data = mx.np.array([0]*30)  # 10 and 30 are arbitrary numbers
+    in_data = mx.np.array([0] * 30)  # 10 and 30 are arbitrary numbers
     w_init = 0.
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=False, in_data=in_data)
-

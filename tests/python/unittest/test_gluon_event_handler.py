@@ -36,6 +36,7 @@ except ImportError:
 
 mx.npx.reset_np()
 
+
 class AxisArrayDataset(Dataset):
     def __init__(self, * args):
         self._length = len(args[1])
@@ -52,12 +53,14 @@ class AxisArrayDataset(Dataset):
     def __len__(self):
         return self._length
 
+
 class Handler(EpochEnd):
     def __init__(self):
         pass
 
     def epoch_end(self, estimator, *args, **kwargs):
         estimator.run_test_handler = True
+
 
 def _get_test_network(net=nn.Sequential()):
     net.add(nn.Dense(128, activation='relu', flatten=False),
@@ -72,11 +75,13 @@ def _get_test_data(in_size=32):
     data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
     return mx.gluon.data.DataLoader(data_arr, batch_size=8)
 
+
 def _get_batch_axis_test_data(in_size=32):
     data = np.ones((100, in_size))
     label = np.zeros((1, in_size))
     data_arr = AxisArrayDataset(data, label)
     return mx.gluon.data.DataLoader(data_arr, batch_size=8)
+
 
 @mx.util.use_np
 def test_checkpoint_handler():
@@ -124,6 +129,7 @@ def test_checkpoint_handler():
         assert os.path.isfile(file_path + '-epoch1batch7.states')
         assert os.path.isfile(file_path + '-epoch2batch9.params')
         assert os.path.isfile(file_path + '-epoch2batch9.states')
+
 
 @mx.util.use_np
 def test_resume_checkpoint():
@@ -244,6 +250,7 @@ def test_custom_handler():
     assert custom_handler.num_batch == 5 * 4
     assert custom_handler.num_epoch == 5
 
+
 @mx.util.use_np
 def test_logging_interval():
     ''' test different options for logging handler '''
@@ -277,7 +284,7 @@ def test_logging_interval():
         if match:
             info_len += 1
 
-    assert(info_len == int(data_size/batch_size/log_interval) + 1)
+    assert(info_len == int(data_size / batch_size / log_interval) + 1)
     ''' test case #2: log interval is 5 '''
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
@@ -300,7 +307,8 @@ def test_logging_interval():
         if match:
             info_len += 1
 
-    assert(info_len == int(data_size/batch_size/log_interval) + 1)
+    assert(info_len == int(data_size / batch_size / log_interval) + 1)
+
 
 @mx.util.use_np
 def test_validation_handler_batch_axis():
@@ -312,12 +320,13 @@ def test_validation_handler_batch_axis():
     est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     est.fit(test_data, epochs=3)
 
-    #test case #2: test batch_axis=1
+    # test case #2: test batch_axis=1
     test_data = _get_batch_axis_test_data()
     val_data = _get_batch_axis_test_data(in_size=30)
     est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     est.fit(test_data, val_data=val_data,
             epochs=3, batch_axis=1)
+
 
 @mx.util.use_np
 def test_validation_handler():

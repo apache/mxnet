@@ -34,6 +34,7 @@ from common import assertRaises
 import pytest
 from itertools import zip_longest
 
+
 @pytest.fixture(scope="session")
 def cifar10(tmpdir_factory):
     path = str(tmpdir_factory.mktemp('cifar'))
@@ -72,6 +73,7 @@ def test_MNISTIter(tmpdir):
     assert(sum(label_0 - label_1) == 0)
     mx.nd.waitall()
 
+
 def test_Cifar10Rec(cifar10):
     dataiter = mx.io.ImageRecordIter(
         path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
@@ -95,7 +97,8 @@ def test_Cifar10Rec(cifar10):
     for i in range(10):
         assert(labelcount[i] == 5000)
 
-@pytest.mark.parametrize('inter_method', [0,1,2,3,4,9,10])
+
+@pytest.mark.parametrize('inter_method', [0, 1, 2, 3, 4, 9, 10])
 def test_inter_methods_in_augmenter(inter_method, cifar10):
     dataiter = mx.io.ImageRecordIter(
         path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
@@ -106,6 +109,7 @@ def test_inter_methods_in_augmenter(inter_method, cifar10):
         inter_method=inter_method)
     for _ in dataiter:
         pass
+
 
 def test_image_iter_exception(cifar10):
     with pytest.raises(MXNetError):
@@ -123,6 +127,7 @@ def test_image_iter_exception(cifar10):
         batchcount = 0
         for _ in dataiter:
             pass
+
 
 def _init_NDArrayIter_data(data_type, is_image=False):
     if is_image:
@@ -166,14 +171,14 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
                     # check data if it matches corresponding labels
                     assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
                     for i in range(label.shape[0]):
-                       labelcount[int(label[i])] += 1
+                        labelcount[int(label[i])] += 1
             else:
                 assert not batch.label, 'label is not empty list'
             # keep the last batch of 'pad' to be used later
             # to test first batch of roll_over in second iteration
             batch_count += 1
             if last_batch_handle_list[idx] == 'pad' and \
-                batch_count == batch_count_list[0]:
+                    batch_count == batch_count_list[0]:
                 cache = batch.data[0].asnumpy()
         # check if batchifying functionality work properly
         if labels is not None and len(labels) != 0 and not is_image:
@@ -291,9 +296,9 @@ def test_NDArrayIter_csr():
     csr_iter = iter(mx.io.NDArrayIter({'data': train_data}, dns, batch_size,
                                       shuffle=True, last_batch_handle='discard'))
     csr_iter_empty_list = iter(mx.io.NDArrayIter({'data': train_data}, [], batch_size,
-                                      shuffle=True, last_batch_handle='discard'))
+                                                 shuffle=True, last_batch_handle='discard'))
     csr_iter_None = iter(mx.io.NDArrayIter({'data': train_data}, None, batch_size,
-                                      shuffle=True, last_batch_handle='discard'))
+                                           shuffle=True, last_batch_handle='discard'))
     _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list,
                           csr_iter_None, num_rows, batch_size)
 
@@ -301,9 +306,9 @@ def test_NDArrayIter_csr():
     csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
                                       shuffle=True, last_batch_handle='discard'))
     csr_iter_empty_list = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, [], batch_size,
-                                      shuffle=True, last_batch_handle='discard'))
+                                                 shuffle=True, last_batch_handle='discard'))
     csr_iter_None = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, None, batch_size,
-                                      shuffle=True, last_batch_handle='discard'))
+                                           shuffle=True, last_batch_handle='discard'))
     _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list,
                           csr_iter_None, num_rows, batch_size)
 
@@ -433,7 +438,7 @@ def test_CSVIter(tmpdir):
             entry_str = '2147483648'
         with open(data_path, 'w') as fout:
             for _ in range(1000):
-                fout.write(','.join([entry_str for _ in range(8*8)]) + '\n')
+                fout.write(','.join([entry_str for _ in range(8 * 8)]) + '\n')
         with open(label_path, 'w') as fout:
             for _ in range(1000):
                 fout.write('0\n')
@@ -448,6 +453,7 @@ def test_CSVIter(tmpdir):
 
     for dtype in ['int32', 'int64', 'float32']:
         check_CSVIter_synthetic(dtype=dtype)
+
 
 def test_ImageRecordIter_seed_augmentation(cifar10):
     seed_aug = 3
@@ -550,7 +556,7 @@ def test_ImageRecordIter_seed_augmentation(cifar10):
         random_s=40,
         random_h=10,
         max_shear_ratio=2,
-        seed_aug=seed_aug+1)
+        seed_aug=seed_aug + 1)
 
     assert_dataiter_items_not_equals(dataiter1, dataiter2)
 

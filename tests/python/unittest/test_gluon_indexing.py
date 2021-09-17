@@ -20,6 +20,7 @@ import numpy as np
 import mxnet as mx
 from mxnet.gluon import HybridBlock
 
+
 @mx.util.use_np
 def test_getitem_hybridized():
     class picking_np(HybridBlock):
@@ -38,7 +39,7 @@ def test_getitem_hybridized():
 
     sequence = mx.np.array(np.random.normal(0, 1, (8, 32, 768)), dtype=np.float32)
     # pick_ids: [batch_size, picked_index]
-    pick_ids = mx.np.random.randint(0, 32, (8,2), dtype=np.int32)
+    pick_ids = mx.np.random.randint(0, 32, (8, 2), dtype=np.int32)
 
     picker_np = picking_np()
     seq_np = sequence
@@ -60,10 +61,12 @@ def test_getitem_hybridized():
     mx.test_utils.assert_almost_equal(nd_output_hybridized.asnumpy(), np_output.asnumpy())
     mx.test_utils.assert_almost_equal(seq_np.grad.asnumpy(), seq_np_hybridized.grad.asnumpy())
 
+
 def test_getitem_hybridized_no_F_argument():
     class picking_np(HybridBlock):
         def __init__(self, **kwargs):
             super(picking_np, self).__init__(**kwargs)
+
         def forward(self, sequence, pick_ids):
             """
             new implementation in deep numpy
@@ -77,7 +80,7 @@ def test_getitem_hybridized_no_F_argument():
 
     sequence = mx.nd.array(np.random.normal(0, 1, (8, 32, 768)), dtype=np.float32)
     # pick_ids: [batch_size, picked_index]
-    pick_ids = mx.nd.random.randint(0, 32, (8,2), dtype=np.int32)
+    pick_ids = mx.nd.random.randint(0, 32, (8, 2), dtype=np.int32)
 
     mx.npx.set_np()
     picker_np = picking_np()

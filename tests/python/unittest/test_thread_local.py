@@ -28,6 +28,7 @@ from mxnet.util import _NumpyArrayScope, set_np_shape
 def test_context():
     ctx_list = []
     ctx_list.append(context.current_context())
+
     def f():
         set_default_context(mx.gpu(11))
         ctx_list.append(context.current_context())
@@ -42,6 +43,7 @@ def test_context():
     e1 = threading.Event()
     e2 = threading.Event()
     status = [False]
+
     def g():
         with mx.cpu(10):
             e2.set()
@@ -57,6 +59,7 @@ def test_context():
     e1.clear()
     e2.clear()
     assert status[0], "Spawned thread didn't set the correct context"
+
 
 def test_attrscope():
     attrscope_list = []
@@ -76,6 +79,7 @@ def test_attrscope():
     e1 = threading.Event()
     e2 = threading.Event()
     status = [False]
+
     def g():
         with mx.AttrScope(x="hello"):
             e2.set()
@@ -92,11 +96,13 @@ def test_attrscope():
     e2.clear()
     assert status[0], "Spawned thread didn't set the correct attr key values"
 
+
 def test_name():
     name_list = []
     name_manager = mx.name.current()
     name_manager.get(None, "main_thread")
     name_list.append(name_manager)
+
     def f():
         with mx.name.NameManager():
             name_manager = mx.name.current()
@@ -111,6 +117,7 @@ def test_name():
     e1 = threading.Event()
     e2 = threading.Event()
     status = [False]
+
     def g():
         with mx.name.NameManager():
             e2.set()
@@ -128,12 +135,14 @@ def test_name():
     e2.clear()
     assert status[0], "Spawned thread isn't using thread local NameManager"
 
+
 def test_blockscope():
     class dummy_block:
         pass
     blockscope_list = []
     status = [False]
     event = threading.Event()
+
     def f():
         net = dummy_block()  # BlockScope only keeps a weakref to the Block
         with mx.gluon.block._block_scope(net):
@@ -148,8 +157,10 @@ def test_blockscope():
     event.clear()
     assert status[0], "Spawned thread isn't using the correct blockscope namemanager"
 
+
 def test_createblock():
     status = [False]
+
     def f():
         net = mx.gluon.nn.Dense(2)
         net.initialize()
@@ -162,8 +173,10 @@ def test_createblock():
     thread.join()
     assert status[0], "Failed to create a layer within a thread"
 
+
 def test_symbol():
     status = [False]
+
     def f():
         a = mx.sym.var("a")
         b = mx.sym.var("b")

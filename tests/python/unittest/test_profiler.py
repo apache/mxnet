@@ -244,7 +244,7 @@ def test_aggregate_stats_valid_json_return():
     file_name = 'test_aggregate_stats_json_return.json'
     enable_profiler(file_name, True, True, True)
     test_profile_event(False)
-    debug_str = profiler.dumps(format = 'json')
+    debug_str = profiler.dumps(format='json')
     assert(len(debug_str) > 0)
     target_dict = json.loads(debug_str)
     assert 'Memory' in target_dict and 'Time' in target_dict and 'Unit' in target_dict
@@ -252,12 +252,12 @@ def test_aggregate_stats_valid_json_return():
 
 
 def test_aggregate_stats_sorting():
-    sort_by_options = {'total': 'Total', 'avg': 'Avg', 'min': 'Min',\
-        'max': 'Max', 'count': 'Count'}
+    sort_by_options = {'total': 'Total', 'avg': 'Avg', 'min': 'Min',
+                       'max': 'Max', 'count': 'Count'}
     ascending_options = [False, True]
 
     def check_ascending(lst, asc):
-        assert(lst == sorted(lst, reverse = not asc))
+        assert(lst == sorted(lst, reverse=not asc))
 
     def check_sorting(debug_str, sort_by, ascending):
         target_dict = json.loads(debug_str, object_pairs_hook=OrderedDict)
@@ -284,7 +284,7 @@ def test_aggregate_stats_sorting():
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
-    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True, \
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,
                     aggregate_stats=True)
     # clear aggregate stats
     profiler.dumps(reset=True)
@@ -320,7 +320,7 @@ def test_custom_operator_profiling(seed=None, file_name=None):
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             y = out_data[0].asnumpy()
             dy = out_grad[0].asnumpy()
-            dx = dy*(1.0 - y)*y
+            dx = dy * (1.0 - y) * y
             self.assign(in_grad[0], req[0], mx.nd.array(dx))
 
     @mx.operator.register('MySigmoid')
@@ -344,7 +344,7 @@ def test_custom_operator_profiling(seed=None, file_name=None):
 
     if file_name is None:
         file_name = 'test_custom_operator_profiling.json'
-    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,\
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,
                     aggregate_stats=True)
     # clear aggregate stats
     profiler.dumps(reset=True)
@@ -417,7 +417,7 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
         def create_operator(self, ctx, shapes, dtypes):
             return MyAdd()
 
-    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,\
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,
                     aggregate_stats=True)
     # clear aggregate stats
     profiler.dumps(reset=True)
@@ -442,25 +442,25 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
 
 @pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_symbolic():
-    custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
-            'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
+    custom_operator_profiling_multiple_custom_ops(None, 'symbolic',
+                                                  'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 
 @pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_imperative():
-    custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
-            'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
+    custom_operator_profiling_multiple_custom_ops(None, 'imperative',
+                                                  'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
 
 @pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
-    run_in_spawned_process(test_custom_operator_profiling, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
-            'test_custom_operator_profiling_naive.json')
-    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'imperative', \
-            'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
-    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'symbolic', \
-            'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
+    run_in_spawned_process(test_custom_operator_profiling,
+                           {'MXNET_ENGINE_TYPE': "NaiveEngine"},
+                           'test_custom_operator_profiling_naive.json')
+    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops,
+                           {'MXNET_ENGINE_TYPE': "NaiveEngine"}, 'imperative',
+                           'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
+    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops,
+                           {'MXNET_ENGINE_TYPE': "NaiveEngine"}, 'symbolic',
+                           'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')

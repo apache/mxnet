@@ -21,6 +21,7 @@ import mxnet as mx
 import numpy as np
 import unittest
 
+
 def test_tvm_bridge():
     # only enable test if TVM is available
     try:
@@ -60,4 +61,3 @@ def test_tvm_bridge():
         for dtype in ["int8", "uint8", "int64",
                       "float32", "float64"]:
             check(tgt, dtype)
-

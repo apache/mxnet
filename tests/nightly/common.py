@@ -78,11 +78,11 @@ def with_seed(seed=None):
                 mx.random.seed(this_test_seed)
                 random.seed(this_test_seed)
                 # 'pytest --logging-level=DEBUG' shows this msg even with an ensuing core dump.
-                test_count_msg = '{} of {}: '.format(i+1,test_count) if test_count > 1 else ''
+                test_count_msg = '{} of {}: '.format(i + 1, test_count) if test_count > 1 else ''
                 pre_test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
                                 ' to reproduce.').format(test_count_msg, this_test_seed)
                 on_err_test_msg = ('{}Error seen with seeded test, use MXNET_TEST_SEED={}'
-                                ' to reproduce.').format(test_count_msg, this_test_seed)
+                                   ' to reproduce.').format(test_count_msg, this_test_seed)
                 logging.log(log_level, pre_test_msg)
                 try:
                     orig_test(*args, **kwargs)
@@ -97,4 +97,3 @@ def with_seed(seed=None):
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
-

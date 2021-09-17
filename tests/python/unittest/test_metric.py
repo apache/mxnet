@@ -25,12 +25,14 @@ import math
 from common import xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 
+
 def check_metric(metric, *args, **kwargs):
     metric = mx.gluon.metric.create(metric, *args, **kwargs)
     str_metric = json.dumps(metric.get_config())
     metric2 = mx.gluon.metric.create(str_metric)
 
     assert metric.get_config() == metric2.get_config()
+
 
 def test_metrics():
     check_metric('acc', axis=0)
@@ -43,6 +45,7 @@ def test_metrics():
     check_metric('loss')
     composite = mx.gluon.metric.create(['acc', 'f1'])
     check_metric(composite)
+
 
 def test_ce():
     metric = mx.gluon.metric.create('ce')
@@ -68,6 +71,7 @@ def test_acc():
     expected_acc = (np.argmax(pred, axis=1) == label).sum().item() / label.size
     np.testing.assert_almost_equal(acc, expected_acc)
 
+
 def test_acc_2d_label():
     # label maybe provided in 2d arrays in custom data iterator
     pred = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6], [0.8, 0.2], [0.3, 0.5], [0.6, 0.4]])
@@ -76,8 +80,9 @@ def test_acc_2d_label():
     metric.update([label], [pred])
     _, acc = metric.get()
     expected_acc = (np.argmax(pred, axis=1).asnumpy() == label.asnumpy().ravel()).sum() / \
-                   float(label.asnumpy().ravel().size)
+        float(label.asnumpy().ravel().size)
     np.testing.assert_almost_equal(acc, expected_acc)
+
 
 def test_loss_update():
     pred = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
@@ -88,6 +93,7 @@ def test_loss_update():
     _, acc1 = metric1.get()
     _, acc2 = metric2.get()
     assert acc1 == acc2
+
 
 @xfail_when_nonstandard_decimal_separator
 def test_binary_f1():
@@ -137,6 +143,7 @@ def test_binary_f1():
     np.testing.assert_almost_equal(microF1.get()[1], fscore_total)
     np.testing.assert_almost_equal(macroF1.get()[1], fscore_total)
 
+
 def test_multiclass_f1():
     microF1 = mx.gluon.metric.create("f1", class_type="multiclass", average="micro")
     macroF1 = mx.gluon.metric.F1(class_type="multiclass", average="macro")
@@ -150,8 +157,8 @@ def test_multiclass_f1():
     label = mx.np.array([0, 0])
     macroF1.update([label], [pred])
     microF1.update([label], [pred])
-    assert macroF1.get()[1] == 0.5 # one class is 1.0, the other is 0. (divided by 0)
-    assert microF1.get()[1] == 1.0 # globally f1 is 1.0
+    assert macroF1.get()[1] == 0.5  # one class is 1.0, the other is 0. (divided by 0)
+    assert microF1.get()[1] == 1.0  # globally f1 is 1.0
     macroF1.reset()
     microF1.reset()
 
@@ -169,10 +176,11 @@ def test_multiclass_f1():
     # from sklearn.metrics import f1_score
     # overall_pred = [0, 1, 2, 0, 1, 2]
     # overall_label = [0, 2, 1, 0, 0, 1]
-    fmacro = 0.26666666666666666 #f1_score(overall_label, overall_pred, average="macro")
-    fmicro = 0.3333333333333333 #f1_score(overall_label, overall_pred, average="micro")
+    fmacro = 0.26666666666666666  # f1_score(overall_label, overall_pred, average="macro")
+    fmicro = 0.3333333333333333  # f1_score(overall_label, overall_pred, average="micro")
     np.testing.assert_almost_equal(microF1.get()[1], fmicro)
     np.testing.assert_almost_equal(macroF1.get()[1], fmacro)
+
 
 @xfail_when_nonstandard_decimal_separator
 def test_multilabel_f1():
@@ -188,7 +196,7 @@ def test_multilabel_f1():
     label = mx.np.array([[1, 1], [1, 1]])
     macroF1.update([label], [pred])
     microF1.update([label], [pred])
-    assert macroF1.get()[1] == 0.5 # one class is 1.0, the other is 0. (divided by 0)
+    assert macroF1.get()[1] == 0.5  # one class is 1.0, the other is 0. (divided by 0)
     np.testing.assert_almost_equal(microF1.get()[1], 2.0 / 3)
     macroF1.reset()
     microF1.reset()
@@ -205,10 +213,11 @@ def test_multilabel_f1():
     #from sklearn.metrics import f1_score
     #overall_pred = [[1, 0, 0], [0, 1, 1], [1, 1, 1]]
     #overall_label = [[1, 0, 1], [0, 0, 1], [0, 1, 1]]
-    fmacro = 0.7111111111111111  #f1_score(overall_label, overall_pred, average="macro")
-    fmicro = 0.7272727272727272  #f1_score(overall_label, overall_pred, average="micro")
+    fmacro = 0.7111111111111111  # f1_score(overall_label, overall_pred, average="macro")
+    fmicro = 0.7272727272727272  # f1_score(overall_label, overall_pred, average="micro")
     np.testing.assert_almost_equal(microF1.get()[1], fmicro)
     np.testing.assert_almost_equal(macroF1.get()[1], fmacro)
+
 
 @xfail_when_nonstandard_decimal_separator
 def test_mcc():
@@ -225,10 +234,10 @@ def test_mcc():
     microMCC.reset()
 
     pred11 = mx.np.array([[0.1, 0.9],
-                        [0.5, 0.5]])
+                          [0.5, 0.5]])
     label11 = mx.np.array([1, 0])
     pred12 = mx.np.array([[0.85, 0.15],
-                        [1.0, 0.0]])
+                          [1.0, 0.0]])
     label12 = mx.np.array([1, 0])
     pred21 = mx.np.array([[0.6, 0.4]])
     label21 = mx.np.array([0])
@@ -236,27 +245,38 @@ def test_mcc():
     label22 = mx.np.array([1])
     microMCC.update([label11, label12], [pred11, pred12])
     assert microMCC.num_inst == 4
-    tp1 = 1; fp1 = 0; fn1 = 1; tn1=2
-    mcc1 = (tp1*tn1 - fp1*fn1) / np.sqrt((tp1+fp1)*(tp1+fn1)*(tn1+fp1)*(tn1+fn1))
+    tp1 = 1
+    fp1 = 0
+    fn1 = 1
+    tn1 = 2
+    mcc1 = (tp1 * tn1 - fp1 * fn1) / np.sqrt((tp1 + fp1) * (tp1 + fn1) * (tn1 + fp1) * (tn1 + fn1))
     np.testing.assert_almost_equal(microMCC.get()[1], mcc1)
 
     microMCC.update([label21, label22], [pred21, pred22])
     assert microMCC.num_inst == 6
-    tp2 = 1; fp2 = 0; fn2 = 0; tn2=1
-    mcc2 = (tp2*tn2 - fp2*fn2) / np.sqrt((tp2+fp2)*(tp2+fn2)*(tn2+fp2)*(tn2+fn2))
-    tpT = tp1+tp2; fpT = fp1+fp2; fnT = fn1+fn2; tnT = tn1+tn2;
-    mccT = (tpT*tnT - fpT*fnT) / np.sqrt((tpT+fpT)*(tpT+fnT)*(tnT+fpT)*(tnT+fnT))
+    tp2 = 1
+    fp2 = 0
+    fn2 = 0
+    tn2 = 1
+    mcc2 = (tp2 * tn2 - fp2 * fn2) / np.sqrt((tp2 + fp2) * (tp2 + fn2) * (tn2 + fp2) * (tn2 + fn2))
+    tpT = tp1 + tp2
+    fpT = fp1 + fp2
+    fnT = fn1 + fn2
+    tnT = tn1 + tn2
+    mccT = (tpT * tnT - fpT * fnT) / np.sqrt((tpT + fpT) * (tpT + fnT) * (tnT + fpT) * (tnT + fnT))
     np.testing.assert_almost_equal(microMCC.get()[1], mccT)
+
 
 def test_perplexity():
     pred = mx.np.array([[0.8, 0.2], [0.2, 0.8], [0, 1.]])
     label = mx.np.array([0, 1, 1])
     p = pred.asnumpy()[np.arange(label.size), label.asnumpy().astype('int32')]
-    perplexity_expected = np.exp(-np.log(p).sum()/label.size)
+    perplexity_expected = np.exp(-np.log(p).sum() / label.size)
     metric = mx.gluon.metric.create('perplexity', axis=-1)
     metric.update([label], [pred])
     _, perplexity = metric.get()
     np.testing.assert_almost_equal(perplexity, perplexity_expected)
+
 
 def test_pearsonr():
     pred1 = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
@@ -275,7 +295,7 @@ def test_pearsonr():
     pred2 = mx.np.array([[1, 2], [3, 2], [4, 6]])
     label2 = mx.np.array([[1, 0], [0, 1], [0, 1]])
     # Note that pred12 = pred1 + pred2; label12 = label1 + label2
-    pred12 = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6],[1, 2], [3, 2], [4, 6]])
+    pred12 = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6], [1, 2], [3, 2], [4, 6]])
     label12 = mx.np.array([[1, 0], [0, 1], [0, 1], [1, 0], [0, 1], [0, 1]])
 
     pearsonr_expected_np = np.corrcoef(pred12.asnumpy().ravel(), label12.asnumpy().ravel())[0, 1]
@@ -285,6 +305,7 @@ def test_pearsonr():
     np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_np)
     np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_scipy)
 
+
 def cm_batch(cm):
     # generate a batch yielding a given confusion matrix
     n = len(cm)
@@ -293,14 +314,15 @@ def cm_batch(cm):
     preds = []
     for i in range(n):
         for j in range(n):
-            labels += [ i ] * cm[i][j]
-            preds += [ ident[j] ] * cm[i][j]
-    return ([ mx.np.array(labels, dtype='int32') ], [ mx.np.array(preds) ])
+            labels += [i] * cm[i][j]
+            preds += [ident[j]] * cm[i][j]
+    return ([mx.np.array(labels, dtype='int32')], [mx.np.array(preds)])
+
 
 def test_pcc():
     labels, preds = cm_batch([
-        [ 7, 3 ],
-        [ 2, 5 ],
+        [7, 3],
+        [2, 5],
     ])
     met_pcc = mx.gluon.metric.create('pcc')
     met_pcc.update(labels, preds)
@@ -327,9 +349,9 @@ def test_pcc():
 
     # check multiclass case against reference implementation
     CM = [
-        [ 23, 13,  3 ],
-        [  7, 19, 11 ],
-        [  2,  5, 17 ],
+        [23, 13, 3],
+        [7, 19, 11],
+        [2, 5, 17],
     ]
     K = 3
     ref = sum(
@@ -362,9 +384,9 @@ def test_pcc():
     # * order
     # * batch size
     # * update frequency
-    labels = [ [ i.reshape(-1) ] for i in labels[0] ]
+    labels = [[i.reshape(-1)] for i in labels[0]]
     labels.reverse()
-    preds = [ [ i.reshape((1, -1)) ] for i in preds[0] ]
+    preds = [[i.reshape((1, -1))] for i in preds[0]]
     preds.reverse()
 
     met_pcc.reset()
@@ -372,9 +394,10 @@ def test_pcc():
         met_pcc.update(l, p)
     assert pcc == met_pcc.get()[1]
 
+
 @xfail_when_nonstandard_decimal_separator
 def test_single_array_input():
-    pred = mx.np.array([[1,2,3,4]])
+    pred = mx.np.array([[1, 2, 3, 4]])
     label = pred + 0.1
 
     mse = mx.gluon.metric.create('mse')
@@ -393,4 +416,3 @@ def test_single_array_input():
     rmse.get()
     _, rmse_res = rmse.get()
     np.testing.assert_almost_equal(rmse_res, 0.1)
-

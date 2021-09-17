@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-#pylint: disable=no-member, too-many-instance-attributes
+# pylint: disable=no-member, too-many-instance-attributes
 """This script uses pyenchant to check spelling for MXNet
     documentation website.
     An exclude list is provided to avoid checking specific word,
@@ -50,7 +50,6 @@ GRAMMAR_CHECK_IGNORE = ['WHITESPACE_RULE', 'DOUBLE_PUNCTUATION', 'EN_QUOTES[1]',
                         'GENERAL_XX[1]', 'EN_A_VS_AN']
 
 
-
 def get_grammar_res(matches):
     """Filter the grammar check result with ignored check types.
 
@@ -76,7 +75,6 @@ def get_grammar_res(matches):
         if not is_ignored:
             ret.append(match)
     return ret
-
 
 
 def check_doc(file_content, spell_checker, spell_check_ret):
@@ -106,6 +104,7 @@ class DocParser(HTMLParser):
     """A document parser parsed html file and conduct spelling check
         and grammar check.
     """
+
     def __init__(self):
         HTMLParser.__init__(self)
         self.__spell_check_res = {}
@@ -125,23 +124,20 @@ class DocParser(HTMLParser):
         pass
 
     def handle_data(self, data):
-        #Ignore url content
+        # Ignore url content
         if not self.__ignore_tag and not data.startswith('http'):
             check_doc(data, self.__spell_checker, self.__spell_check_res)
-
 
     def get_res(self):
         """return the checking result
         """
         return [self.__spell_check_res, self.__grammar_check_res]
 
-
     def clear_res(self):
         """Clean the checking result
         """
         self.__spell_check_res = {}
         self.__grammar_check_res = None
-
 
     def check_grammar(self, file_name):
         """Check the grammar of the specified file

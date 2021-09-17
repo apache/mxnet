@@ -35,6 +35,7 @@ from common import assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
 set_default_context(mx.gpu(0))
 
+
 @pytest.fixture()
 def amp_tests(request):
     def teardown():
@@ -42,15 +43,16 @@ def amp_tests(request):
 
     request.addfinalizer(teardown)
 
+
 def test_amp_coverage(amp_tests):
     conditional = [item[0] for item in amp.lists.symbol_fp16.CONDITIONAL_FP32_FUNCS]
 
     # Check for duplicates
     for a in [amp.lists.symbol_fp16.FP16_FUNCS,
-          amp.lists.symbol_fp16.FP16_FP32_FUNCS,
-          amp.lists.symbol_fp16.FP32_FUNCS,
-          amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
-          conditional]:
+              amp.lists.symbol_fp16.FP16_FP32_FUNCS,
+              amp.lists.symbol_fp16.FP32_FUNCS,
+              amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
+              conditional]:
         ret = [item for item, count in collections.Counter(a).items() if count > 1]
         assert ret == [], "Elements " + str(ret) + " are duplicated in the AMP lists."
 
@@ -95,6 +97,7 @@ def test_amp_coverage(amp_tests):
     assert not diff, f"{len(diff)} operators {sorted(diff)} do not exist in AMP lists (in " \
         f"python/mxnet/amp/lists/symbol_fp16.py) - please add them. " \
         f"\n{guidelines}"
+
 
 @pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -160,7 +163,7 @@ def test_fp16_casting(amp_tests):
     final_res = amp.convert_symbol(out6, target_dtype_ops=[],
                                    fp32_ops=[], cast_optional_params=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2),
-                                data3=(1, 2))
+                                 data3=(1, 2))
     assert exe.arg_arrays[2].dtype == np.float32
 
     # Input node to amp_multicast and amp_cast, if dtypes conflict
@@ -191,4 +194,3 @@ def test_fp16_casting(amp_tests):
     concat_res = mx.sym.concat(data, data2)
     out = mx.sym.split(concat_res, axis=1, num_outputs=2)
     final_res = amp.convert_symbol(out)
-

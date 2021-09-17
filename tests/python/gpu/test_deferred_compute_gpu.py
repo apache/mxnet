@@ -26,4 +26,3 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 # We import all tests from ../unittest/test_deferred_compute.py
 # They will be detected by test framework, as long as the current file has a different filename
 from test_deferred_compute import *
-

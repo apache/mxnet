@@ -29,6 +29,7 @@ from common import assertRaises
 
 set_default_context(mx.gpu(0))
 
+
 @use_np
 def test_np_einsum():
     class TestEinsum(HybridBlock):
@@ -66,13 +67,13 @@ def test_np_einsum():
         ('i, j', [(2,), (5, )], lambda *args: (onp.sum(args[1], axis=None) * onp.ones(2),
                                                onp.sum(args[0], axis=None) * onp.ones(5))),
         ('ijk, jil->kl', [(3, 4, 5), (4, 3, 2)], lambda *args: (onp.tile(onp.transpose(onp.sum(args[1],
-                                                                  axis=-1))[:, :, None], [1, 1, 5]),
+                                                                                               axis=-1))[:, :, None], [1, 1, 5]),
                                                                 onp.tile(onp.transpose(onp.sum(args[0],
-                                                                  axis=-1))[:, :, None], [1, 1, 2]))),
+                                                                                               axis=-1))[:, :, None], [1, 1, 2]))),
         ('ijk, jil->kl', [(33, 44, 55), (44, 33, 22)], lambda *args: (onp.tile(onp.transpose(onp.sum(args[1],
-                                                                  axis=-1))[:, :, None], [1, 1, 55]),
-                                                                onp.tile(onp.transpose(onp.sum(args[0],
-                                                                  axis=-1))[:, :, None], [1, 1, 22]))),
+                                                                                                     axis=-1))[:, :, None], [1, 1, 55]),
+                                                                      onp.tile(onp.transpose(onp.sum(args[0],
+                                                                                                     axis=-1))[:, :, None], [1, 1, 22]))),
         ('ki, jk->ij', [(3, 2), (4, 3)], lambda *args: (onp.tile(args[1].sum(axis=0)[:, None], [1, 2]),
                                                         onp.tile(args[0].sum(axis=1)[None, :], [4, 1]))),
         ('ki, ...k->i...', [(3, 2), (4, 3)], lambda *args: (onp.tile(args[1].sum(axis=0)[:, None], [1, 2]),
@@ -81,52 +82,52 @@ def test_np_einsum():
                                                       onp.tile(args[0].sum(axis=1)[None, :], [4, 1]))),
         (('ij,jk'), [(2, 5), (5, 2)],
             lambda *args: (onp.dot(onp.ones((2, 2)), args[1].T),
-            onp.dot(args[0].T, onp.ones((2, 2))))),
+                           onp.dot(args[0].T, onp.ones((2, 2))))),
         (('ij,jk,kl'), [(2, 2), (2, 5), (5, 2)],
             lambda *args: (onp.dot(onp.ones((2, 2)), onp.dot(args[1], args[2]).T),
-            onp.dot(args[0].T, onp.dot(onp.ones((2, 2)), args[2].T)),
-            onp.dot(onp.dot(args[0], args[1]).T, onp.ones((2, 2))))),
+                           onp.dot(args[0].T, onp.dot(onp.ones((2, 2)), args[2].T)),
+                           onp.dot(onp.dot(args[0], args[1]).T, onp.ones((2, 2))))),
         (('ij,jk,kl->il'), [(2, 2), (2, 5), (5, 2)],
             lambda *args: (onp.dot(onp.ones((2, 2)), onp.dot(args[1], args[2]).T),
-            onp.dot(args[0].T, onp.dot(onp.ones((2, 2)), args[2].T)),
-            onp.dot(onp.dot(args[0], args[1]).T, onp.ones((2, 2))))),
+                           onp.dot(args[0].T, onp.dot(onp.ones((2, 2)), args[2].T)),
+                           onp.dot(onp.dot(args[0], args[1]).T, onp.ones((2, 2))))),
         (('ij,jk,kl->il'), [(67, 89), (89, 55), (55, 99)],
             lambda *args: (onp.dot(onp.ones((67, 99)), onp.dot(args[1], args[2]).T),
-            onp.dot(args[0].T, onp.dot(onp.ones((67, 99)), args[2].T)),
-            onp.dot(onp.dot(args[0], args[1]).T, onp.ones((67, 99))))),
+                           onp.dot(args[0].T, onp.dot(onp.ones((67, 99)), args[2].T)),
+                           onp.dot(onp.dot(args[0], args[1]).T, onp.ones((67, 99))))),
         (('ij,jk,kl, lm->im'), [(12, 54), (54, 32), (32, 45), (45, 67)],
             lambda *args: (onp.dot(onp.ones((12, 67)), onp.dot(args[1], onp.dot(args[2], args[3])).T),
-            onp.dot(args[0].T, onp.dot(onp.ones((12, 67)), onp.dot(args[2], args[3]).T)),
-            onp.dot(onp.dot(args[0], args[1]).T, onp.dot(onp.ones((12, 67)), args[3].T)),
-            onp.dot(onp.dot(args[0], onp.dot(args[1], args[2])).T, onp.ones((12, 67))))),
+                           onp.dot(args[0].T, onp.dot(onp.ones((12, 67)), onp.dot(args[2], args[3]).T)),
+                           onp.dot(onp.dot(args[0], args[1]).T, onp.dot(onp.ones((12, 67)), args[3].T)),
+                           onp.dot(onp.dot(args[0], onp.dot(args[1], args[2])).T, onp.ones((12, 67))))),
 
         # broadcast axis
         ('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (onp.sum(args[1], axis=0)[None, :],
                                                          onp.tile(args[0], [2, 1]))),
         ('...ij, ...jk -> ...ik', [(1, 4), (4, 2)], lambda *args: (args[1].sum(axis=1)[None, :],
-                                                                   onp.tile(args[0].sum(axis=0)[: ,None], [1, 2]))),
+                                                                   onp.tile(args[0].sum(axis=0)[:, None], [1, 2]))),
         ('...ij, ...jk -> ...ik', [(2, 4), (4, 2)], lambda *args: (onp.tile(args[1].sum(axis=1)[None, :], [2, 1]),
-                                                                   onp.tile(args[0].sum(axis=0)[: ,None], [1, 2]))),
+                                                                   onp.tile(args[0].sum(axis=0)[:, None], [1, 2]))),
         ('...ij, ...jk -> ...ik', [(3, 2, 1, 4), (3, 2, 4, 2)], lambda *args: (
-                                                            args[1].sum(axis=3)[:, :, None, :],
-                                                            onp.tile(args[0].sum(axis=2)[:, :, :, None], [1, 1, 1, 2]))),
+            args[1].sum(axis=3)[:, :, None, :],
+            onp.tile(args[0].sum(axis=2)[:, :, :, None], [1, 1, 1, 2]))),
         ('...ij, ...ik -> ...jk', [(1, 1, 1, 4), (1, 1, 1, 3)], lambda *args: (
-                                                            onp.tile(args[1].sum(axis=3)[:, :, :, None], [1, 1, 1, 4]),
-                                                            onp.tile(args[0].sum(axis=3)[:, :, : ,None], [1, 1, 1, 3]))),
+            onp.tile(args[1].sum(axis=3)[:, :, :, None], [1, 1, 1, 4]),
+            onp.tile(args[0].sum(axis=3)[:, :, :, None], [1, 1, 1, 3]))),
         ('...ij, ...jc -> ...ic', [(1, 1, 5, 3), (1, 1, 3, 2)], lambda *args: (
-                                                            onp.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
-                                                            onp.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
+            onp.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+            onp.tile(args[0].sum(axis=2)[:, :, :, None], [1, 1, 1, 2]))),
         ('...ij, ...jc -> ...ic', [(1, 2, 5, 4), (1, 2, 4, 2)], lambda *args: (
-                                                            onp.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
-                                                            onp.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
+            onp.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+            onp.tile(args[0].sum(axis=2)[:, :, :, None], [1, 1, 1, 2]))),
         ('...ij, ...jc -> ...ic', [(2, 1, 5, 4), (2, 1, 4, 2)], lambda *args: (
-                                                            onp.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
-                                                             onp.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
+            onp.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+            onp.tile(args[0].sum(axis=2)[:, :, :, None], [1, 1, 1, 2]))),
         # test with cuTensor using workspace
         (('ij,jk,kl->il'), [(64, 200), (200, 64), (64, 64)],
             lambda *args: (onp.dot(onp.ones((64, 64)), onp.dot(args[1], args[2]).T),
-            onp.dot(args[0].T, onp.dot(onp.ones((64, 64)), args[2].T)),
-            onp.dot(onp.dot(args[0], args[1]).T, onp.ones((64, 64)))))
+                           onp.dot(args[0].T, onp.dot(onp.ones((64, 64)), args[2].T)),
+                           onp.dot(onp.dot(args[0], args[1]).T, onp.ones((64, 64)))))
     ]
 
     dtypes = ['float16', 'float32', 'float64', 'int32']

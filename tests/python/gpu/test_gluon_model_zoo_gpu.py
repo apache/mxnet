@@ -29,13 +29,18 @@ import pytest
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-VAL_DATA='data/val-5k-256.rec'
+
+VAL_DATA = 'data/val-5k-256.rec'
+
+
 def download_data():
     return mx.test_utils.download(
         'https://repo.mxnet.io/gluon/dataset/test/val-5k-256-9e70d85e0.rec', VAL_DATA)
+
 
 @mx.util.use_np
 @pytest.mark.serial
@@ -43,18 +48,18 @@ def download_data():
 def test_inference(model_name):
     batch_size = 10
     download_data()
-    eprint('testing inference on %s'%model_name)
+    eprint('testing inference on %s' % model_name)
 
     data_shape = (3, 224, 224) if 'inception' not in model_name else (3, 299, 299)
     dataIter = mx.io.ImageRecordIter(
-        path_imgrec        = VAL_DATA,
-        label_width        = 1,
-        preprocess_threads = 1,
-        batch_size         = batch_size,
-        data_shape         = data_shape,
-        label_name         = 'softmax_label',
-        rand_crop          = False,
-        rand_mirror        = False)
+        path_imgrec=VAL_DATA,
+        label_width=1,
+        preprocess_threads=1,
+        batch_size=batch_size,
+        data_shape=data_shape,
+        label_name='softmax_label',
+        rand_crop=False,
+        rand_mirror=False)
     data_batch = dataIter.next()
     data = data_batch.data[0]
     label = data_batch.label[0]
@@ -90,6 +95,7 @@ def test_inference(model_name):
         eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
         assert_almost_equal(cpu_out / max_val, gpu_out / gpu_max_val)
 
+
 def get_nn_model(name):
     if "densenet" in name:
         return get_model(name, dropout=0)
@@ -99,6 +105,8 @@ def get_nn_model(name):
 # Seed 1521019752 produced a failure on the Py2 DNNL-GPU CI runner
 # on 2/16/2018 that was not reproducible.  Problem could be timing related or
 # based on non-deterministic algo selection.
+
+
 @mx.util.use_np
 @pytest.mark.serial
 def test_training():
@@ -111,14 +119,14 @@ def test_training():
 
     download_data()
     dataIter = mx.io.ImageRecordIter(
-        path_imgrec        = VAL_DATA,
-        label_width        = 1,
-        preprocess_threads = 1,
-        batch_size         = batch_size,
-        data_shape         = (3, 224, 224),
-        label_name         = 'softmax_label',
-        rand_crop          = False,
-        rand_mirror        = False)
+        path_imgrec=VAL_DATA,
+        label_width=1,
+        preprocess_threads=1,
+        batch_size=batch_size,
+        data_shape=(3, 224, 224),
+        label_name='softmax_label',
+        rand_crop=False,
+        rand_mirror=False)
     data_batch = dataIter.next()
     data = data_batch.data[0]
     label = data_batch.label[0]
@@ -127,7 +135,7 @@ def test_training():
     softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 
     for model_name in all_models:
-        eprint('testing %s'%model_name)
+        eprint('testing %s' % model_name)
         #data = mx.nd.random.uniform(shape=(100, 3, 224, 224))
 
         # This is to create a model and run the model once to initialize
@@ -176,4 +184,3 @@ def test_training():
                 cpu_param = cpu_params.get(k)
                 gpu_param = gpu_params.get(k)
                 assert_almost_equal(cpu_param.data(), gpu_param.data(), rtol=1e-3, atol=1e-3)
-

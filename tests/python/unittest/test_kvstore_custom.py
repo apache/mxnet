@@ -27,12 +27,15 @@ shape = (4, 4)
 keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
 
+
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0), (A, x)
 
+
 def init_kv(name='device'):
     return mx.kv.create(name)
+
 
 def test_broadcast_single_kv_pair():
     """single key-value pair push & pull"""
@@ -53,6 +56,7 @@ def test_broadcast_single_kv_pair():
         check_single_kv_pair(init_kv(name), 3)
         check_single_kv_pair(init_kv(name), 'a')
 
+
 def test_broadcast_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key):
@@ -70,6 +74,7 @@ def test_broadcast_list_kv_pair():
 
     check_list_kv_pair(init_kv(), keys)
     check_list_kv_pair(init_kv(), str_keys)
+
 
 def test_pushpull_single_kv_pair():
     """aggregate value on muliple devices"""
@@ -98,7 +103,7 @@ def test_pushpull_single_kv_pair():
         num_keys = len(key_list)
         kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
                      out=[mx.nd.empty(shape)] * num_keys)
-        vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * num_keys
+        vals = [[mx.nd.ones(shape, d) * 2.0 for d in devs]] * num_keys
         outs = [[mx.nd.empty(shape, d) for d in devs]] * num_keys
         kv.pushpull(key_list, vals, out=outs)
         for out in outs:
@@ -115,6 +120,7 @@ def test_pushpull_single_kv_pair():
     check_aggregator(init_kv('device'), 'a', str_keys)
     check_aggregator(init_kv('teststore'), 3)
     check_aggregator(init_kv('teststore'), 'a')
+
 
 def test_pushpull_list_kv_pair():
     """aggregate value on muliple devices"""
@@ -138,7 +144,7 @@ def test_pushpull_list_kv_pair():
         num_keys = len(key_list)
         kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
                      out=[mx.nd.empty(shape)] * num_keys)
-        vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * num_keys
+        vals = [[mx.nd.ones(shape, d) * 2.0 for d in devs]] * num_keys
         outs = [[mx.nd.empty(shape, d) for d in devs]] * num_keys
         kv.pushpull(key_list, vals, out=outs)
         for out in outs:
@@ -167,10 +173,12 @@ def test_custom_store():
     for arr in arr_list:
         check_diff_to_scalar(arr, 4)
 
+
 def test_get_type_device():
     kvtype = 'teststore'
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
+
 
 def test_set_optimizer():
     def check_unsupported_methods(kv):
@@ -182,4 +190,3 @@ def test_set_optimizer():
 
     kv = mx.kv.create('teststore')
     check_unsupported_methods(kv)
-

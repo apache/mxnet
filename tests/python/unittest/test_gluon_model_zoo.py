@@ -24,6 +24,7 @@ import pytest
 
 mx.npx.reset_np()
 
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
@@ -51,9 +52,11 @@ def test_models(model_name):
         model.initialize()
     model(mx.np.random.uniform(size=data_shape)).wait_to_read()
 
+
 def parallel_download(model_name):
     model = get_model(model_name, pretrained=True, root='./parallel_download')
     print(type(model))
+
 
 @pytest.mark.skip(reason='MXNet is not yet safe for forking. Tracked in #17782.')
 def test_parallel_download():
@@ -66,4 +69,3 @@ def test_parallel_download():
         p.start()
     for p in processes:
         p.join()
-

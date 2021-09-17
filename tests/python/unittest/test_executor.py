@@ -22,7 +22,7 @@ from mxnet.test_utils import assert_almost_equal, environment
 
 def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     """check function consistency with uniform random numbers"""
-    shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
+    shape = tuple(np.random.randint(1, int(1000**(1.0 / dim)), size=dim))
     lhs = mx.symbol.Variable('lhs')
     rhs = mx.symbol.Variable('rhs')
     if sf is not None:
@@ -39,16 +39,15 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     lhs_grad = mx.nd.empty(lshape)
     rhs_grad = mx.nd.empty(rshape)
     executor = ret._bind(mx.Context('cpu'),
-                        args=[lhs_arr, rhs_arr],
-                        args_grad=[lhs_grad, rhs_grad])
+                         args=[lhs_arr, rhs_arr],
+                         args_grad=[lhs_grad, rhs_grad])
 
     exec3 = ret._bind(mx.Context('cpu'),
-                     args=[lhs_arr, rhs_arr])
-
+                      args=[lhs_arr, rhs_arr])
 
     exec4 = ret._bind(mx.Context('cpu'),
-                     args={'rhs': rhs_arr, 'lhs': lhs_arr},
-                     args_grad={'lhs': lhs_grad, 'rhs': rhs_grad})
+                      args={'rhs': rhs_arr, 'lhs': lhs_arr},
+                      args_grad={'lhs': lhs_grad, 'rhs': rhs_grad})
 
     executor.forward()
     exec3.forward()
@@ -89,15 +88,15 @@ def test_bind():
                                             lambda g, x, y: (y * g, x * g),
                                             dim)
                     check_bind_with_uniform(lambda x, y: x / y,
-                                            lambda g, x, y: (g / y, -x * g/ (y**2)),
+                                            lambda g, x, y: (g / y, -x * g / (y**2)),
                                             dim)
 
                     check_bind_with_uniform(lambda x, y: np.maximum(x, y),
-                                            lambda g, x, y: (g * (x>=y), g * (y>x)),
+                                            lambda g, x, y: (g * (x >= y), g * (y > x)),
                                             dim,
                                             sf=mx.symbol.maximum)
                     check_bind_with_uniform(lambda x, y: np.minimum(x, y),
-                                            lambda g, x, y: (g * (x<=y), g * (y<x)),
+                                            lambda g, x, y: (g * (x <= y), g * (y < x)),
                                             dim,
                                             sf=mx.symbol.minimum)
 
@@ -108,30 +107,30 @@ def test_dot():
     nrepeat = 10
     maxdim = 4
     for _ in range(nrepeat):
-        s =tuple(np.random.randint(1, 200, size=3))
+        s = tuple(np.random.randint(1, 200, size=3))
         check_bind_with_uniform(lambda x, y: np.dot(x, y),
                                 lambda g, x, y: (np.dot(g, y.T), np.dot(x.T, g)),
                                 2,
                                 lshape=(s[0], s[1]),
                                 rshape=(s[1], s[2]),
-                                sf = mx.symbol.dot)
+                                sf=mx.symbol.dot)
     for _ in range(nrepeat):
-        s =tuple(np.random.randint(1, 200, size=1))
+        s = tuple(np.random.randint(1, 200, size=1))
         check_bind_with_uniform(lambda x, y: np.dot(x, y),
                                 lambda g, x, y: (g * y, g * x),
                                 2,
                                 lshape=(s[0],),
                                 rshape=(s[0],),
-                                sf = mx.symbol.dot)
+                                sf=mx.symbol.dot)
 
 
 def test_reshape():
     x = mx.sym.Variable('x')
     y = mx.sym.FullyConnected(x, num_hidden=4)
 
-    exe = y._simple_bind(mx.cpu(), x=(5,4), grad_req='null')
+    exe = y._simple_bind(mx.cpu(), x=(5, 4), grad_req='null')
     exe.arg_arrays[0][:] = 1
-    exe.arg_arrays[1][:] = mx.nd.ones((4,4))
+    exe.arg_arrays[1][:] = mx.nd.ones((4, 4))
     exe.arg_arrays[2][:] = 0
 
     exe.forward(is_train=False)
@@ -148,9 +147,10 @@ def test_reshape():
     # weight ndarray is shared between exe and new_exe
     assert np.all(exe.arg_arrays[1].asnumpy() == 1)
 
+
 def test_cached_op_init():
     def check_init(static_alloc, static_shape):
-        out = mx.sym.zeros((3,3))
+        out = mx.sym.zeros((3, 3))
         flags = [('static_alloc', static_alloc), ('static_shape', static_shape)]
         exe = mx.ndarray.CachedOp(out, flags)
         z = exe(None, default_ctx=mx.cpu())
