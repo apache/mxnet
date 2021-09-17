@@ -258,6 +258,51 @@ def test_np_dot_error(shape_a, shape_b):
     with pytest.raises(mx.base.MXNetError):
         mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
 
+@use_np
+@pytest.mark.parametrize('shape', [(), (5,), (3, 3)])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('dtype', [onp.float32, onp.float64])
+def test_np_vecdot(shape, dtype, hybridize):
+    class TestVecdot(HybridBlock):
+        def __init__(self):
+            super(TestVecdot, self).__init__()
+
+        def forward(self, a, b):
+            return np.vecdot(a, b)
+
+    def vecdot_backward(a, b):
+        return [b, a]
+
+    test_vecdot = TestVecdot()
+    if hybridize:
+        test_vecdot.hybridize()
+    a = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+    b = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+    a.attach_grad()
+    b.attach_grad()
+
+    np_out = onp.vdot(a.asnumpy(), b.asnumpy())
+    with mx.autograd.record():
+        mx_out = test_vecdot(a, b)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+    mx_out.backward()
+    np_backward = vecdot_backward(a.asnumpy(), b.asnumpy())
+    assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = 1e-2, atol=1e-2)
+    assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = 1e-2, atol=1e-2)
+
+    # Test imperative once again
+    mx_out = np.vecdot(a, b)
+    np_out = onp.vdot(a.asnumpy(), b.asnumpy())
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+    # test numeric gradient
+    if len(shape) > 0 and onp.prod(shape) > 0:
+        a_sym = mx.sym.Variable("a").as_np_ndarray()
+        b_sym = mx.sym.Variable("b").as_np_ndarray()
+        mx_sym = mx.sym.np.vecdot(a_sym, b_sym).as_nd_ndarray()
+        check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+          rtol=1e-1, atol=1e-1, dtype=dtype)
 
 @use_np
 @pytest.mark.parametrize('shape', [(), (5,), (3, 3)])

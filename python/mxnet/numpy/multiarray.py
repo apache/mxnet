@@ -74,7 +74,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'triu_indices_from', 'triu_indices', 'tri',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'gcd', 'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'unique', 'lcm', 'gcd', 'tril', 'triu', 'identity', 'take', 'ldexp', 'vecdot', 'vdot', 'inner', 'outer',
            'cross', 'kron', 'equal', 'not_equal', 'interp',
            'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
@@ -9404,6 +9404,13 @@ def vecdot(a, b, axis=None):
             First argument to the dot product.
         b : ndarray
             Second argument to the dot product.
+        axis : axis over which to compute the dot product. Must be an integer on
+            the interval [-N, N) , where N is the rank (number of dimensions) of
+            the shape determined according to Broadcasting . If specified as a
+            negative integer, the function must determine the axis along which
+            to compute the dot product by counting backward from the last dimension
+            (where -1 refers to the last dimension). If None , the function must
+            compute the dot product over the last axis. Default: None .
 
         Returns
         -------
