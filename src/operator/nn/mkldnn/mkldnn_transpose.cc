@@ -143,4 +143,4 @@ NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const nnvm::NodeAttrs&
 
 }  // namespace op
 }  // namespace mxnet
-#endif
+#endif  // MXNET_USE_ONEDNN == 1

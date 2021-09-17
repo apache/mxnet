@@ -35,7 +35,9 @@
 
 namespace mxnet {
 namespace op {
+
 bool SupportMKLDNNTranspose(const NDArray& data);
+
 class MKLDNNTransposeFwd {
  public:
   std::shared_ptr<mkldnn::memory> data_;
@@ -73,5 +75,6 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif
-#endif
+
+#endif  // MXNET_USE_ONEDNN == 1
+#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_TRANSPOSE_INL_H_
