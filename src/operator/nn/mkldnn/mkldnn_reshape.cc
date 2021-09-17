@@ -33,6 +33,13 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNReshape(const NDArray& input, const NDArray& output) {
+  const int input_ndims  = input.shape().ndim();
+  const int output_ndims = output.shape().ndim();
+  return input.shape().Size() > 0 && input_ndims >= 1 && input_ndims <= 6 && output_ndims >= 1 &&
+         output_ndims <= 6 && IsMKLDNNType(input.dtype());
+}
+
 MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req,
                                    const NDArray& input,
                                    const NDArray& output) {
@@ -121,15 +128,6 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray& input,
                           const OpReqType& req,
                           const NDArray& output) {
-  // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's simply fallback to
-  // naive implement.
-  const int input_ndims = input.shape().ndim();
-  if ((input_ndims < 1 || input_ndims > 4) || !SupportMKLDNNQuantize(input.dtype())) {
-    if (req != kWriteInplace) {
-      FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, {input}, {req}, {output});
-    }
-    return;
-  }
   if (req == kNullOp)
     return;
   CHECK_NE(req, kAddTo) << "kAddTo is not supported yet";
