@@ -15,23 +15,38 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Provides python interface to cuda-related functions of the mxnet library."""
-from .base import _LIB, mx_uint, c_str, check_call
+from ..base import _LIB, mx_uint, c_str, check_call
 
-def nvtx_range_push(name, color=13323030):
+# Palette of colors
+RED = 0xFF0000
+GREEN = 0x00FF00
+BLUE = 0x0000FF
+YELLOW = 0xB58900
+ORANGE = 0xCB4B16
+RED = 0xDC322F
+MAGENTA = 0xD33682
+VIOLET = 0x6C71C4
+BLUE1 = 0x268BD2
+CYAN = 0x2AA198
+GREEN = 0x859900
+
+def range_push(name, color=ORANGE):
     """Starts a new named NVTX range."""
     check_call(_LIB.MXNVTXRangePush(
         c_str(name),
         mx_uint(color)))
 
-def nvtx_range_pop():
+def range_pop():
     """Ends a NVTX range."""
     check_call(_LIB.MXNVTXRangePop())
 
-def cuda_profiler_start():
-    """Starts the CUDA profiler"""
-    check_call(_LIB.MXCUDAProfilerStart())
+class range:
+    def __init__(self, name, color=ORANGE):
+        self.name = name
+        self.color = color
 
-def cuda_profiler_stop():
-    """Stops the CUDA profiler"""
-    check_call(_LIB.MXCUDAProfilerStop())
+    def __enter__(self):
+        range_push(self.name, self.color)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        range_pop()

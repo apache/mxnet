@@ -87,8 +87,8 @@ class nvtx {
   }
 
   // Utility to map a range name to a random color based on its hash
-  static uint32_t nameToColor(const char *range_name) {
-    return nameToColor(range_name, strlen(range_name));
+  static uint32_t nameToColor(const std::string& range_name) {
+    return nameToColor(range_name, range_name.size());
   }
 
   static void gpuRangeStop() {
