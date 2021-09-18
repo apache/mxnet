@@ -1530,6 +1530,30 @@ def _add_workload_bitwise_xor():
         OpArgMngr.add_workload('bitwise_xor', ones, ones)
 
 
+def _add_workload_bitwise_left_shift():
+    for dtype in [np.int8, np.int32, np.int64]:
+        twenty = np.array([20], dtype=dtype)
+        three = np.array([3], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+    OpArgMngr.add_workload('bitwise_left_shift', np.array([9223372036854775807], np.int64), np.array([1], np.int64))
+    OpArgMngr.add_workload('bitwise_left_shift', np.array([-9223372036854775808], np.int64), np.array([1], np.int64))
+
+
+def _add_workload_bitwise_right_shift():
+    for dtype in [np.int8, np.int32, np.int64]:
+        twenty = np.array([20], dtype=dtype)
+        three = np.array([3], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+    OpArgMngr.add_workload('bitwise_right_shift', np.array([9223372036854775807], np.int64), np.array([1], np.int64))
+    OpArgMngr.add_workload('bitwise_right_shift', np.array([-9223372036854775808], np.int64), np.array([1], np.int64))
+
+
 def _add_workload_ldexp():
     OpArgMngr.add_workload('ldexp', np.array(2., np.float32), np.array(3, np.int8))
     OpArgMngr.add_workload('ldexp', np.array(2., np.float64), np.array(3, np.int8))
@@ -3081,6 +3105,8 @@ def _prepare_workloads():
     _add_workload_bitwise_and()
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
+    _add_workload_bitwise_left_shift()
+    _add_workload_bitwise_right_shift()
     _add_workload_ldexp()
     _add_workload_subtract(array_pool)
     _add_workload_multiply(array_pool)

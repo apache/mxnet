@@ -57,7 +57,8 @@ NNVM_REGISTER_OP(_npi_bitwise_left_shift)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
                                     })
-    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_left_shift>)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_left_shift>)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_left_shift"})
     .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
     .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
@@ -72,8 +73,10 @@ NNVM_REGISTER_OP(_npi_bitwise_left_shift_scalar)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}};
                                     })
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_left_shift>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_left_shift_scalar"})
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_left_shift>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               ElemwiseGradUseIn{"_backward_npi_bitwise_left_shift_scalar"})
     .add_argument("data", "NDArray-or-Symbol", "source input")
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__());
 
@@ -87,8 +90,10 @@ NNVM_REGISTER_OP(_npi_rbitwise_left_shift_scalar)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}};
                                     })
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::rbitwise_left_shift>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rbitwise_left_shift_scalar"})
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::ComputeInt<cpu, mshadow_op::rbitwise_left_shift>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               ElemwiseGradUseIn{"_backward_npi_rbitwise_left_shift_scalar"})
     .add_argument("data", "NDArray-or-Symbol", "source input")
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__());
 
@@ -111,12 +116,14 @@ NNVM_REGISTER_OP(_backward_npi_bitwise_left_shift)
 NNVM_REGISTER_OP(_backward_npi_bitwise_left_shift_scalar)
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
     .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::bitwise_left_shift_grad>);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::Backward<cpu, mshadow_op::bitwise_left_shift_grad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rbitwise_left_shift_scalar)
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
     .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rbitwise_left_shift_grad>);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::Backward<cpu, mshadow_op::rbitwise_left_shift_grad>);
 
 
 NNVM_REGISTER_OP(_npi_bitwise_right_shift)
@@ -132,7 +139,8 @@ NNVM_REGISTER_OP(_npi_bitwise_right_shift)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
                                     })
-    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_right_shift>)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_right_shift>)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_right_shift"})
     .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
     .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
@@ -147,8 +155,10 @@ NNVM_REGISTER_OP(_npi_bitwise_right_shift_scalar)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}};
                                     })
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_right_shift>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_right_shift_scalar"})
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_right_shift>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               ElemwiseGradUseIn{"_backward_npi_bitwise_right_shift_scalar"})
     .add_argument("data", "NDArray-or-Symbol", "source input")
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__());
 
@@ -162,8 +172,10 @@ NNVM_REGISTER_OP(_npi_rbitwise_right_shift_scalar)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}};
                                     })
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::rbitwise_right_shift>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rbitwise_right_shift_scalar"})
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::ComputeInt<cpu, mshadow_op::rbitwise_right_shift>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               ElemwiseGradUseIn{"_backward_npi_rbitwise_right_shift_scalar"})
     .add_argument("data", "NDArray-or-Symbol", "source input")
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__());
 
@@ -186,12 +198,14 @@ NNVM_REGISTER_OP(_backward_npi_bitwise_right_shift)
 NNVM_REGISTER_OP(_backward_npi_bitwise_right_shift_scalar)
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
     .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::bitwise_right_shift_grad>);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::Backward<cpu, mshadow_op::bitwise_right_shift_grad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rbitwise_right_shift_scalar)
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
     .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rbitwise_right_shift_grad>);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::Backward<cpu, mshadow_op::rbitwise_right_shift_grad>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -38,8 +38,9 @@ NNVM_REGISTER_OP(_npi_rbitwise_left_shift_scalar)
     .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rbitwise_left_shift"});
 
 NNVM_REGISTER_OP(_backward_npi_bitwise_left_shift)
-    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"bitwise_left_shift_grad",
-                                                                         "bitwise_left_shift_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        BinaryBroadcastRTCBackwardUseIn{"bitwise_left_shift_grad",
+                                                        "bitwise_left_shift_rgrad"});
 
 NNVM_REGISTER_OP(_backward_npi_bitwise_left_shift_scalar)
     .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"bitwise_left_shift_grad"});
@@ -57,8 +58,9 @@ NNVM_REGISTER_OP(_npi_rbitwise_right_shift_scalar)
     .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rbitwise_right_shift"});
 
 NNVM_REGISTER_OP(_backward_npi_bitwise_right_shift)
-    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"bitwise_right_shift_grad",
-                                                                         "bitwise_right_shift_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        BinaryBroadcastRTCBackwardUseIn{"bitwise_right_shift_grad",
+                                                        "bitwise_right_shift_rgrad"});
 
 NNVM_REGISTER_OP(_backward_npi_bitwise_right_shift_scalar)
     .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"bitwise_right_shift_grad"});
