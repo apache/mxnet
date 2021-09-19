@@ -22,7 +22,7 @@
 set -ex
 OPENCV_VERSION=3.4.2
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-if [[ $PLATFORM == 'linux' ]]; then
+if [[ $PLATFORM == 'linux' ]] && [[ ! $BLAS == 'mkl' ]]; then
     OPENCV_LAPACK_OPTIONS=" \
           -D OpenBLAS_HOME=$DEPS_PATH \
           -D OpenBLAS_INCLUDE_DIR=$DEPS_PATH/include \

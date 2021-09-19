@@ -175,7 +175,7 @@ void LibraryInitializer::lib_close(void* handle) {
  * \param func function pointer that gets output address
  * \param name function name to be fetched
  */
-void LibraryInitializer::get_sym(void* handle, void** func, char* name) {
+void LibraryInitializer::get_sym(void* handle, void** func, const char* name) {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   *func = GetProcAddress((HMODULE)handle, name);
   if (!(*func)) {
