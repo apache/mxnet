@@ -51,7 +51,7 @@ decorator==4.4.0
 # Used in examples
 boto3==1.9.229
 h5py==2.10.0
-Pillow<6
+# Pillow<6  # Upgrade to use python3.8
 
 # Array API Standardization requirements
 hypothesis==6.14.0
