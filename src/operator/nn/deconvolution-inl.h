@@ -333,12 +333,15 @@ class DeconvolutionOp {
       InitConv(in_data[deconv::kData]);
 
     // data gradient
-    conv_op.Forward(ctx,
-                    {out_grad[deconv::kOut], in_data[deconv::kWeight]},
-                    {req[deconv::kData]},
-                    {in_grad[deconv::kData]});
+    auto workspace = conv_op._Forward(ctx,
+                                      out_grad[deconv::kOut],
+                                      in_data[deconv::kWeight],
+                                      nullptr,
+                                      req[deconv::kData],
+                                      in_grad[deconv::kData]);
     // weights gradient
-    conv_op._BackwardWeightsBias(ctx,
+    conv_op._BackwardWeightsBias(workspace,
+                                 ctx,
                                  in_data[deconv::kData],
                                  out_grad[deconv::kOut],
                                  req[deconv::kWeight],
