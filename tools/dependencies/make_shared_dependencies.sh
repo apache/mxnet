@@ -50,7 +50,7 @@ download () {
 }
 
 if [[ ! $PLATFORM == 'darwin' ]] && [[ ! $BLAS == 'mkl' ]]; then
-        source ${DIR}/openblas.sh
+    source ${DIR}/openblas.sh
 fi
 source $DIR/libz.sh
 source $DIR/libturbojpeg.sh

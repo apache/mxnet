@@ -21,7 +21,7 @@ set -eo pipefail
 
 # This script builds the libraries of mxnet.
 if [[ ! $BLAS ]] || [[ $BLAS == 'open' ]]; then
-cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}.cmake
+    cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}.cmake
 else
     cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}_${BLAS}.cmake
 fi
@@ -40,8 +40,10 @@ cmake -GNinja -C $cmake_config \
       -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
       ..
 ninja
-if [[ $BLAS == 'mkl' ]]; then
-    patchelf --set-rpath "/opt/intel/oneapi/mkl/${INTEL_MKL}/lib/intel64/" --force-rpath libmxnet.so
+if [[ ! $PLATFORM == 'darwin' ]] && [[ $BLAS == 'mkl' ]]; then
+    patchelf --set-rpath "/opt/intel/oneapi/mkl/${INTEL_MKL}/lib/intel64/:\$ORIGIN" --force-rpath libmxnet.so
+elif [[ $PLATFORM == 'darwin' ]] && [[ $BLAS == 'mkl' ]]; then
+    patchelf --set-rpath "/opt/intel/oneapi/mkl/${INTEL_MKL}/lib/intel64/:\$ORIGIN" --force-rpath libmxnet.dylib
 fi
 cd -
 
