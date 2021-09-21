@@ -14,6 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""Utilities for NVTX usage in MXNet"""
 
 from ..base import _LIB, mx_uint, c_str, check_call
 

@@ -16,6 +16,7 @@
 # under the License.
 """Provides python interface to CUDA-related functions of the MXNet library"""
 
+from ..base import _LIB, check_call
 from . import nvtx
 
 def cuda_profiler_start():
