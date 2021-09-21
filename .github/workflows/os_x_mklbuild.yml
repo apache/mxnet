@@ -1,4 +1,4 @@
-name: continuous build
+name: mkl continuous build
 
 on: [push, pull_request]
 

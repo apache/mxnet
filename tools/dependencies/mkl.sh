@@ -30,7 +30,7 @@ if [[  (! -e /opt/intel/oneapi/mkl/)]]; then
             ${DEPS_PATH}/m_onemkl_p_${INTEL_MKL}.517_offline.dmg
         hdiutil attach ${DEPS_PATH}/m_onemkl_p_${INTEL_MKL}.517_offline.dmg
         pushd /Volumes/m_onemkl_p_${INTEL_MKL}.517_offline/bootstrapper.app/Contents/MacOS/
-        ./install.sh --silent --eula accept
+        sudo ./install.sh --silent --eula accept
         popd
     elif [[ $PLATFORM == 'linux' ]]; then
         # use wget to fetch the Intel repository public key

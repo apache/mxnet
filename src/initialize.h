@@ -23,8 +23,9 @@
  */
 
 #include <cstdlib>
-#include <string>
 #include <map>
+#include <string>
+
 #include "dmlc/io.h"
 
 #ifndef MXNET_INITIALIZE_H_
@@ -92,9 +93,9 @@ class LibraryInitializer {
   void install_pthread_atfork_handlers();
 
   /**
-  * Sets the interface and threading layer for Intel® oneAPI MKL at run time.
-  * Use with the Single Dynamic Library.
-  */
+   * Sets the interface and threading layer for Intel® oneAPI MKL at run time.
+   * Use with the Single Dynamic Library.
+   */
   void init_mkl_dynamic_library();
   /**
    * Install signal handlers (UNIX). Has no effect on Windows.
