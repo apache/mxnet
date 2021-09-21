@@ -193,6 +193,9 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
       auto& sub_name = node->op()->name;
       if (sub_name == "FullyConnected") {
         node_name << "fully_connected_";
+        if (HasAttr("quantize") && GetAttr<bool>("quantize")) {
+          n->attrs.dict["for_quantization"] = "True";
+        }
       } else if (SupportMKLDNNFCEltwiseFusion(sub_name)) {
         node_name << "eltwise_";
         n->attrs.dict["with_eltwise"] = "True";

@@ -19,10 +19,10 @@
 
 /*
   \file
-  \brief For fusing FullyConnected operator with elementwise add.
+  \brief For fusing FullyConnected operator with element-wise add.
 
-  Element wise add operator is replaced by DNNL FC "sum" post operator.
-  It adds FC results to existing values in output. For quantized ineger version
+  Element-wise add operator is replaced by MKLDNN FC "sum" post operator.
+  It adds FC results to existing values in output. For quantized integer version
   this output is scaled to the proper range.
 */
 
@@ -71,8 +71,9 @@ class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
   bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() == Op::Get("_sg_mkldnn_fully_connected") && SupportMKLDNNAttr(node_attr)) {
       auto const& fc_param = nnvm::get<MKLDNNFCFullParam>(n.attrs.parsed);
-      if (!quantized_ || fc_param.mkldnn_param.quantized) {
-        // Start subgraph when fusing for floats (quantized_ is false MKLDNN) or
+      if ((!quantized_ && !fc_param.mkldnn_param.for_quantization) ||
+          fc_param.mkldnn_param.quantized) {
+        // Start subgraph when fusing for floats (quantized_ is false for MKLDNN backend) or
         // when FC is already quantized (second pass for MKLDNN_QUANTIZE).
         status_ = kStart;
         matched_list_.clear();
@@ -113,7 +114,7 @@ class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
               // For quantized graph, when FC floating point output is not enabled
               // elementwise add must also be quantized (min and max value have to be already stored
               // in elementwise add).
-              CHECK_EQ(new_node.attrs.dict.count("min_calib_range"), 1); //  TODO(anko) return and warning only for debug
+              CHECK_EQ(new_node.attrs.dict.count("min_calib_range"), 1);
             }
           }
           matched_list_.push_back(&new_node);
