@@ -234,6 +234,9 @@
     src/operator/special_functions-inl.h Cephes Library Functions (Copy of the License available at top of current file)
     3rdparty/mkldnn/doc/assets/mathjax (Copy of the License available at top of current file)
     3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc (Copy of the License available at top of current file)
+    src/operator/contrib/deformable_convolution-inl.h
+    src/operator/contrib/deformable_convolution.cc
+    src/operator/contrib/deformable_convolution.cu
 
     =======================================================================================
     MIT license
@@ -322,9 +325,6 @@
     3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py (Copy of the referenced AL2 License available at top of current file)
     src/operator/nn/layer_norm.cc (function LayerNormCPUKernel is adapated from MIT-licensed code)
     (Source repository for below deformable conv operators - https://github.com/msracver/Deformable-ConvNets/tree/master/DCNv2_op)
-    src/operator/contrib/deformable_convolution-inl.h
-    src/operator/contrib/deformable_convolution.cc
-    src/operator/contrib/deformable_convolution.cu
 
     =======================================================================================
     Apache-2.0 license + Boost Software License, Version 1.0
