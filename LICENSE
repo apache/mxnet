@@ -220,8 +220,11 @@
 
     3rdparty/ctc_include
     3rdparty/dlpack
+    include/dlpack (header symlinks to 3rdparty/dlpack/include/dlpack)
     3rdparty/dmlc-core
+    include/dmlc (header symlinks to 3rdparty/dmlc-core/include/dmlc)
     3rdparty/mshadow
+    include/mshadow (header symlinks to 3rdparty/mshadow/mshadow)
     3rdparty/tvm
     3rdparty/tvm/3rdparty/dmlc-core
     3rdparty/tvm/3rdparty/dlpack
@@ -252,6 +255,8 @@
     src/operator/subgraph/tensorrt/onnx_to_tensorrt.h
     src/operator/subgraph/tensorrt/tensorrt-inl.h
     src/operator/subgraph/tensorrt/tensorrt_int8_calibrator.h
+    julia/src/runtime.jl
+    contrib/clojure-package/test/good-test-ndarray-api.clj
 
     =======================================================================================
     MIT license
