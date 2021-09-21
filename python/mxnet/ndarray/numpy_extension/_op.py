@@ -599,8 +599,8 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
     """
     assert data is not None and weight is not None and kernel is not None, \
            "Missing input data, weight or kernel"
-    assert num_filter >= 1, "Number of output filters should be greater than 1"
-    assert workspace >= 0, "Maximum temporary workspace should be greater than 0"
+    assert num_filter >= 1, "Number of output filters should be greater equal to 1."
+    assert workspace >= 0, "Maximum temporary workspace should be greater equal to 0."
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.convolution(data, weight, kernel, stride, dilate, pad,
@@ -682,8 +682,8 @@ def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, d
     """
     assert data is not None and weight is not None and kernel is not None, \
            "Missing input data, weight or kernel"
-    assert num_filter >= 1, "Number of output filters should be greater than 1"
-    assert workspace >= 0, "Maximum temporary workspace should be greater than 0"
+    assert num_filter >= 1, "Number of output filters should be greater equal to 1."
+    assert workspace >= 0, "Maximum temporary workspace should be greater equal to 0."
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.deconvolution(data, weight, kernel, stride, dilate, pad,
