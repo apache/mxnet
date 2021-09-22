@@ -29,15 +29,13 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
-
 #include <algorithm>
 #include <map>
+#include <vector>
 #include <string>
 #include <utility>
-#include <vector>
-
-#include "../linalg.h"
 #include "../operator_common.h"
+#include "../linalg.h"
 #include "convolution-inl.h"
 
 namespace mxnet {
@@ -282,7 +280,7 @@ template <typename xpu, typename DType>
 class DeconvolutionOp {
  public:
   void Init(DeconvolutionParam dp) {
-    param_ = dp;
+    param_           = dp;
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
   }
 
