@@ -894,7 +894,7 @@ def eigvalsh(a, upper=False):
     >>> LA.eigvalsh(a, upper=False)
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
-    if(upper==False):
+    if not upper:
         UPLO='L'
     else:
         UPLO='U'
@@ -1031,7 +1031,7 @@ def eigh(a, upper=False):
            [ 0.8242942 ,  0.56326365, -0.05721384],
            [-0.53661287,  0.80949366,  0.23825769]])
     """
-    if(upper == False):
+    if not upper:
         UPLO = 'L'
     else:
         UPLO = 'U'
