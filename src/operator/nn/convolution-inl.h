@@ -349,7 +349,7 @@ class ConvolutionOp {
     }
 
     if (bias_term_) {
-      CHECK_NE(in_bias, nullptr);
+      CHECK(in_bias != nullptr);
       Tensor<xpu, 1, DType> bias      = in_bias->get<xpu, 1, DType>(s);
       Tensor<xpu, 3, DType> output_3d = out_data.get_with_shape<xpu, 3, DType>(
           Shape3(num_, conv_out_channels_, conv_out_spatial_dim_), s);
@@ -498,7 +498,7 @@ class ConvolutionOp {
 
     // bias gradient
     if (bias_term_) {
-      CHECK_NE(bias_grad_dst, nullptr);
+      CHECK(bias_grad_dst != nullptr);
       Tensor<xpu, 1, DType> dbias = bias_grad_dst->get<xpu, 1, DType>(s);
       Tensor<xpu, 3, DType> dout  = out_grad.get_with_shape<xpu, 3, DType>(
           Shape3(num_, conv_out_channels_, conv_out_spatial_dim_), s);
