@@ -43,7 +43,7 @@ ninja
 if [[ ! $PLATFORM == 'darwin' ]] && [[ $BLAS == 'mkl' ]]; then
     patchelf --set-rpath "/opt/intel/oneapi/mkl/${INTEL_MKL}/lib/intel64/:\$ORIGIN" --force-rpath libmxnet.so
 elif [[ $PLATFORM == 'darwin' ]] && [[ $BLAS == 'mkl' ]]; then
-    patchelf --set-rpath "/opt/intel/oneapi/mkl/${INTEL_MKL}/lib/intel64/:\$ORIGIN" --force-rpath libmxnet.dylib
+    install_name_tool -add_rpath "/opt/intel/oneapi/mkl/${INTEL_MKL}/lib/:\$ORIGIN" libmxnet.dylib
 fi
 cd -
 
