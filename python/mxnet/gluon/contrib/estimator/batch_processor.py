@@ -21,6 +21,7 @@
 
 from ...utils import split_and_load
 from .... import autograd
+from .... import npx
 
 __all__ = ['BatchProcessor']
 
@@ -99,7 +100,9 @@ class BatchProcessor(object):
             pred = [estimator.net(x) for x in data]
             loss = [estimator.loss(y_hat, y) for y_hat, y in zip(pred, label)]
 
-        for l in loss:
-            l.backward()
+            for l in loss:
+                l.backward()
+        
+        npx.waitall()
 
         return data, label, pred, loss
