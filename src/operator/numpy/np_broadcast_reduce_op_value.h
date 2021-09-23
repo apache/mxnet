@@ -26,6 +26,9 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_BROADCAST_REDUCE_OP_VALUE_H_
 #define MXNET_OPERATOR_NUMPY_NP_BROADCAST_REDUCE_OP_VALUE_H_
 
+#include <string>
+#include <vector>
+
 #if MXNET_USE_TVM_OP
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP

@@ -27,12 +27,6 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_average)
-    .set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageForward<gpu>);
-
-NNVM_REGISTER_OP(_backward_np_average)
-    .set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageBackward<gpu>);
-
 NNVM_REGISTER_OP(_npi_mean).set_attr<FCompute>(
     "FCompute<gpu>",
     ReduceAxesRTCCompute<NumpyReduceAxesParam, 0>{"identity", "red::sum{}", true});
