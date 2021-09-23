@@ -77,9 +77,13 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
       return false;
     }
     if (new_node.op()->name == "amp_cast") {
-      matched_list.push_back(&new_node);
-      status = kSuccess;
-      return true;
+      // quantized operators cannot convert their output to bf16
+      if (n.attrs.name.find("quantized_") == std::string::npos) {
+        matched_list.push_back(&new_node);
+        status = kSuccess;
+        return true;
+      }
+      status = kFail;
     }
     return false;
   }

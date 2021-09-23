@@ -22,7 +22,11 @@
 BF16_FUNCS = [
     'Convolution',
     'FullyConnected',
-    ]
+    '_sg_mkldnn_conv',
+    '_sg_mkldnn_fully_connected',
+    '_sg_mkldnn_selfatt_qk',
+    '_sg_mkldnn_selfatt_valatt'
+]
 
 # Functions that should not be casted, either because
 # they are irrelevant (not used in the network itself
@@ -36,6 +40,7 @@ BF16_FP32_FUNCS = [
     'clip',
     'Concat',
     'concat',
+    'Flatten',
     'LRN',
     'Pooling',
     'relu',
@@ -44,7 +49,7 @@ BF16_FP32_FUNCS = [
     'sqrt',
     'square',
     'tanh',
-    ]
+]
 
 # Functions that when running with Bfloat16, the params that still need float32.
 BF16_USE_FP32_PARAMS = {
@@ -57,6 +62,7 @@ BF16_USE_FP32_PARAMS = {
 FP32_FUNCS = [
     'Deconvolution',
     'RNN',
+    'BatchNorm_v1',
     'BilinearSampler',
     'BlockGrad',
     'Cast',
@@ -67,7 +73,6 @@ FP32_FUNCS = [
     'Embedding',
     '_sparse_Embedding',
     '_sparse_FullyConnected',
-    'Flatten',
     'GridGenerator',
     'Pad',
     'Pooling_v1',
@@ -106,6 +111,8 @@ FP32_FUNCS = [
     '_arange',
     '_broadcast_backward',
     '_cond',
+    '_contrib_interleaved_matmul_selfatt_qk',
+    '_contrib_interleaved_matmul_selfatt_valatt',
     '_contrib_AdaptiveAvgPooling2D',
     '_contrib_BilinearResize2D',
     '_contrib_bipartite_matching',
@@ -360,9 +367,6 @@ FP32_FUNCS = [
     'uniform',
     'unravel_index',
     'zeros_like',
-    '_sg_onednn_conv',
-    '_sg_onednn_fully_connected',
-    '_sg_onednn_batch_dot',
     'broadcast_mul',
     'Convolution_v1',
     'IdentityAttachKLSparseReg',
@@ -499,14 +503,14 @@ FP32_FUNCS = [
     'ctc_loss',
     '_npx_deformable_convolution',
     '_contrib_DeformablePSROIPooling',
-    ]
+]
 
 # Functions that have to be cast to FP32 only for
 # some values of their parameters
 CONDITIONAL_FP32_FUNCS = [
     ('Activation', 'act_type', ['softrelu']),
     ('LeakyReLU', 'act_type', ['elu', 'selu']),
-    ]
+]
 
 # Functions with multiple inputs, that need the same
 # type of all their inputs
@@ -621,7 +625,7 @@ WIDEST_TYPE_CASTS = [
     '_random_pdf_dirichlet',
     '_random_pdf_normal',
     '_random_pdf_poisson',
-    ]
+]
 
 LOSS_OUTPUT_FUNCTIONS = [
-    ]
+]
