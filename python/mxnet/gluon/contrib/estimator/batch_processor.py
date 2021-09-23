@@ -102,7 +102,7 @@ class BatchProcessor(object):
 
             for l in loss:
                 l.backward()
-        
+
         npx.waitall()
 
         return data, label, pred, loss
