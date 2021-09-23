@@ -18,18 +18,23 @@
  */
 
 /*!
- * \file np_dot.cu
- * \brief GPU Implementation of numpy-compatible dot
+ * Copyright (c) 2017 by Contributors
+ * \file np_where_backward_op.cu
+ * \brief GPU Implementation of numpy operator where
  */
 
-#include "./np_dot-inl.h"
+#include "np_where_backward_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_dot).set_attr<FCompute>("FCompute<gpu>", NumpyDotForward<gpu>);
+NNVM_REGISTER_OP(_backward_np_where).set_attr<FCompute>("FCompute<gpu>", NumpyWhereOpBackward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_dot).set_attr<FCompute>("FCompute<gpu>", NumpyDotBackward<gpu>);
+NNVM_REGISTER_OP(_backward_np_where_lscalar)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyWhereScalarOpBackward<gpu, true>);
+
+NNVM_REGISTER_OP(_backward_np_where_rscalar)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyWhereScalarOpBackward<gpu, false>);
 
 }  // namespace op
 }  // namespace mxnet

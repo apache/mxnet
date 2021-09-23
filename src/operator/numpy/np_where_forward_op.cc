@@ -23,7 +23,7 @@
  * \brief CPU Implementation of numpy operator where
  */
 
-#include "np_where_op-inl.h"
+#include "np_where_forward_op-inl.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
@@ -137,15 +137,6 @@ NNVM_REGISTER_OP(_npi_where)
     .add_argument("x", "NDArray-or-Symbol", "input x")
     .add_argument("y", "NDArray-or-Symbol", "input y");
 
-NNVM_REGISTER_OP(_backward_np_where)
-    .set_num_inputs(2)
-    .set_num_outputs(2)
-    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereOpBackward<cpu>)
-    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-    });
-
 NNVM_REGISTER_OP(_npi_where_lscalar)
     .set_num_inputs(2)
     .set_num_outputs(1)
@@ -237,24 +228,6 @@ NNVM_REGISTER_OP(_npi_where_rscalar)
     .add_argument("condition", "NDArray-or-Symbol", "condition array")
     .add_argument("y", "NDArray-or-Symbol", "input y")
     .add_arguments(NumpyWhereScalarParam::__FIELDS__());
-
-NNVM_REGISTER_OP(_backward_np_where_lscalar)
-    .set_num_inputs(2)
-    .set_num_outputs(1)
-    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpBackward<cpu, true>)
-    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-    });
-
-NNVM_REGISTER_OP(_backward_np_where_rscalar)
-    .set_num_inputs(2)
-    .set_num_outputs(1)
-    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpBackward<cpu, false>)
-    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-    });
 
 NNVM_REGISTER_OP(_npi_where_scalar2)
     .set_num_inputs(1)
