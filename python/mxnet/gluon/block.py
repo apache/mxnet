@@ -1808,8 +1808,7 @@ class SymbolBlock(HybridBlock):
 
         for hook in self._forward_hooks.values():
             hook(self, [x] + args, out)
-        if _mx_npx.is_np_array():
-            _check_all_np_ndarrays(out)
+
         return out
 
     def forward(self, x, *args):
