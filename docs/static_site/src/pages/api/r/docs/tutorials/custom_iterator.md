@@ -43,7 +43,7 @@ You'll get two files, `mnist_train.csv` that contains 60.000 examples of hand wr
 
 Custom CSV Iterator
 ----------
-Next we are going to create a custom CSV Iterator based on the [C++ CSVIterator class](https://github.com/apache/mxnet/blob/v1.x/src/io/iter_csv.cc).
+Next we are going to create a custom CSV Iterator based on the [C++ CSVIterator class](https://github.com/apache/mxnet/blob/master/src/io/iter_csv.cc).
 
 For that we are going to use the R function `mx.io.CSVIter` as a base class. This class has as parameters `data.csv, data.shape, batch.size` and two main functions, `iter.next()` that calls the iterator in the next batch of data and `value()` that returns the train data and the label.
 

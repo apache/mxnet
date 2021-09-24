@@ -144,12 +144,12 @@ To use the custom operator, create a mx.sym.Custom symbol with op_type as the re
 mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')
 ```
 
-Please see the full code for this example [here](https://github.com/apache/mxnet/blob/v1.x/example/numpy-ops/custom_softmax.py).
+Please see the full code for this example [here](https://github.com/apache/mxnet/blob/master/example/numpy-ops/custom_softmax.py).
 
 ## C++
 With MXNet v0.9 (the NNVM refactor) or later, creating new operators has become easier.
 Operators are now registered with NNVM.
-The following code is an example on how to register an operator (checkout [src/operator/tensor](https://github.com/apache/mxnet/tree/v1.x/src/operator/tensor) for more examples):
+The following code is an example on how to register an operator (checkout [src/operator/tensor](https://github.com/apache/mxnet/tree/master/src/operator/tensor) for more examples):
 
 ```c++
 NNVM_REGISTER_OP(abs)
@@ -189,7 +189,7 @@ In this section, we will go through the basic attributes MXNet expect for all op
 You can find the definition for them in the following two files:
 
 - [nnvm/op_attr_types.h](https://github.com/dmlc/nnvm/blob/master/include/nnvm/op_attr_types.h)
-- [mxnet/op_attr_types.h](https://github.com/apache/mxnet/blob/v1.x/include/mxnet/op_attr_types.h)
+- [mxnet/op_attr_types.h](https://github.com/apache/mxnet/blob/master/include/mxnet/op_attr_types.h)
 
 #### Descriptions (Optional)
 
