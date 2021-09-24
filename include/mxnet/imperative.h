@@ -272,12 +272,16 @@ class Imperative {
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<uint32_t>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
+  /*! \brief unmark nonleaf variables to free the memory. */
+  void DropGrads(const std::vector<NDArray*>& variables);
   /*! \brief compute the gradient of outputs w.r.t variables. */
   std::vector<NDArray*> Backward(const std::vector<NDArray*>& outputs,
                                  const std::vector<NDArray*>& ograds,
                                  const std::vector<NDArray*>& variables,
                                  bool is_train, bool retain_graph,
                                  bool create_graph);
+  /*! \brief Return the marked nonleaf nodes. */
+  std::vector<nnvm::ObjectPtr> ListNonleafVariables(const nnvm::Symbol& sym) const;
   /*! \return AutogradRuntime singleton */
   static Imperative* Get();
   /*! \brief Should op execution bulking be employed during inference. */

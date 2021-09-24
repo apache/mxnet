@@ -17,4 +17,25 @@
  * under the License.
  */
 
-#include "nvtx.h"
+/*!
+ *  Copyright (c) 2019 by Contributors
+ * \file np_moments_op.cu
+ * \brief GPU Implementation of reduce functions based on value.
+ */
+#include "np_broadcast_reduce_op.h"
+
+namespace mxnet {
+namespace op {
+
+NNVM_REGISTER_OP(_npi_average)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_average)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageBackward<gpu>);
+
+NNVM_REGISTER_OP(_npi_std).set_attr<FCompute>("FCompute<gpu>", NumpyMomentsForward<gpu, true>);
+
+NNVM_REGISTER_OP(_npi_var).set_attr<FCompute>("FCompute<gpu>", NumpyMomentsForward<gpu, false>);
+
+}  // namespace op
+}  // namespace mxnet
