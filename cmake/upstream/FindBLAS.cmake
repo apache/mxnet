@@ -320,7 +320,10 @@ if(BLA_VENDOR MATCHES "Intel" OR BLA_VENDOR STREQUAL "All")
           set(BLAS_mkl_DLL_SUFFIX "_dll")
         endif()
       else()
-        if(BLA_STATIC)
+        # MXNET NOTE: The second 2 lines differs from CMake source by ${CMAKE_CURRENT_LIST_DIR}
+        # replaced with ${CMAKE_ROOT}/Modules
+        # https://gitlab.kitware.com/cmake/cmake/-/issues/20548
+        if(BLA_STATIC AND NOT APPLE)
           set(BLAS_mkl_START_GROUP "-Wl,--start-group")
           set(BLAS_mkl_END_GROUP "-Wl,--end-group")
         else()
