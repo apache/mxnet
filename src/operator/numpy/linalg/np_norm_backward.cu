@@ -20,6 +20,7 @@
  * \file np_norm_backward.cu
  * \brief GPU implementation of Operators for advanced linear algebra.
  */
+#include "./np_norm-inl.h"
 
 namespace mxnet {
 namespace op {
