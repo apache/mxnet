@@ -41,7 +41,7 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   const NDArray& data         = in_data[quantized_batchnorm::kData];
-  auto data_mem               = data.GetMKLDNNData();
+  auto data_mem          = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
 
   // reorder if data type = uint8
   if (in_data[quantized_batchnorm::kData].dtype() == mshadow::kUint8) {
@@ -98,8 +98,10 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   float* moving_var_ptr      = moving_var.data().dptr<float>();
 
   // rescale gamma and beta, to make mean=0 and var=1
-  auto rescaled_mean_mem   = TmpMemMgr::Get()->Alloc(moving_mean.GetMKLDNNData()->get_desc());
-  auto rescaled_var_mem    = TmpMemMgr::Get()->Alloc(moving_var.GetMKLDNNData()->get_desc());
+  auto rescaled_mean_mem = TmpMemMgr::Get()->Alloc(
+      static_cast<const mkldnn::memory*>(moving_mean.GetMKLDNNData())->get_desc());
+  auto rescaled_var_mem = TmpMemMgr::Get()->Alloc(
+      static_cast<const mkldnn::memory*>(moving_var.GetMKLDNNData())->get_desc());
   float* rescaled_mean_ptr = reinterpret_cast<float*>(rescaled_mean_mem->get_data_handle());
   float* rescaled_var_ptr  = reinterpret_cast<float*>(rescaled_var_mem->get_data_handle());
 
@@ -115,7 +117,9 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   }
 
   const NDArray& out = outputs[batchnorm::kOut];
-  auto out_mem       = const_cast<NDArray&>(out).CreateMKLDNNData(fwd.GetPd().dst_desc());
+  auto fwd_dst_desc = fwd.GetPd().dst_desc();
+  auto out_mem =
+      static_cast<mkldnn::memory*>(const_cast<NDArray&>(out).CreateMKLDNNData(&fwd_dst_desc));
   mkldnn_args_map_t net_args;
   net_args[MKLDNN_ARG_SRC]         = *data_mem;
   net_args[MKLDNN_ARG_SCALE_SHIFT] = weight_mem;

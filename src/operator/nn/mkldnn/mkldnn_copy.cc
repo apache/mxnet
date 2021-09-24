@@ -38,18 +38,21 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs,
   if (req == kNullOp || req == kWriteInplace)
     return;
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  auto in_mem = in_data.GetMKLDNNData();
+  auto in_mem = static_cast<const mkldnn::memory*>(in_data.GetMKLDNNData());
   if (req == kAddTo) {
     TmpMemMgr::Get()->Init(ctx.requested[0]);
     // We should try and force the input memory has the same format
     // as the input output. If not, we'll have to reorder memory.
-    auto out_mem = out_data.GetMKLDNNData();
-    in_mem       = in_data.GetMKLDNNData(out_mem->get_desc());
-    if (in_mem == nullptr)
-      in_mem = in_data.GetMKLDNNDataReorder(out_mem->get_desc());
+    auto out_mem      = static_cast<const mkldnn::memory*>(out_data.GetMKLDNNData());
+    auto out_mem_desc = out_mem->get_desc();
+    in_mem            = static_cast<const mkldnn::memory*>(in_data.GetMKLDNNData(&out_mem_desc));
+    if (in_mem == nullptr) {
+      auto out_mem_desc = out_mem->get_desc();
+      in_mem = static_cast<const mkldnn::memory*>(in_data.GetMKLDNNDataReorder(&out_mem_desc));
+    }
     MKLDNNSum(*out_mem, *in_mem, *out_mem);
   } else {
-    const_cast<NDArray&>(out_data).CopyFrom(*in_mem);
+    const_cast<NDArray&>(out_data).CopyFrom(in_mem);
   }
   MKLDNNStream::Get()->Submit();
 }

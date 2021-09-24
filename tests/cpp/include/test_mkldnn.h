@@ -86,7 +86,7 @@ inline static void InitMKLDNNArray(NDArray* arr,
                                    bool is_rand = false,
                                    int max      = 50) {
   InitDefaultArray(arr, is_rand, max);
-  arr->MKLDNNDataReorderAsync(desc);
+  arr->MKLDNNDataReorderAsync(&desc);
   arr->WaitToRead();
 }
 
@@ -352,8 +352,8 @@ inline void PrintVerifyMsg(const NDArrayAttrs& arr1, const NDArrayAttrs& arr2) {
  * think we should pass them to all operators. In the inference mode, the MKLDNN
  * memory in the weight array will be reordered to 5 dimensions.
  *
- *  num_inputs / dim arguments used to scale shape (used for concat backwards to
- * enlarge input shapes)
+ *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input
+ * shapes)
  */
 inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = ArrayTypes::All,
                                                     bool rand                = false,

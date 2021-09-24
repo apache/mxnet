@@ -112,9 +112,10 @@ void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
     if (weights.IsDefaultData()) {
       // We also need to modify the layout on the original weights array.
       // The data conversion happens after the weights array is used.
-      weights.MKLDNNDataReorderAsync(IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group));
+      auto logical_swap_desc = IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group);
+      weights.MKLDNNDataReorderAsync(&logical_swap_desc);
     } else {
-      CHECK(weights.GetMKLDNNData()->get_desc() ==
+      CHECK(static_cast<const mkldnn::memory*>(weights.GetMKLDNNData())->get_desc() ==
             IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group));
     }
   }
@@ -123,10 +124,9 @@ void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
 void MKLDNNDeconvFwd::Execute(const uint32_t num_group,
                               const OpReqType req,
                               const Tensors& tensors) const {
-  // MXNet (correctly) assumes that deconvolution is implemented using
-  // convolution primitives. For that, we would pass input tensor in place of
-  // output and output tensor in place of input (for appropriate convolution
-  // primitives: deconvolution forward = convolution backward data,
+  // MXNet (correctly) assumes that deconvolution is implemented using convolution primitives.
+  // For that, we would pass input tensor in place of output and output tensor in place of input
+  // (for appropriate convolution primitives: deconvolution forward = convolution backward data,
   // deconvolution backward data = convolution forward).
   // The convolution primitive expects weights tensor with the shape of
   // (primitive_out_channels, primitive_in_channels, h, w), but with swapped

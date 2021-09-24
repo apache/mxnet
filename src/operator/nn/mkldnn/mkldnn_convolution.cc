@@ -116,16 +116,14 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
           // MKL-DNN introduced padded formats since 0.15 which require more memory
           // compared to the actual size of the tensor. Currently, MKL-DNN operators
           // still reuse memory from memory planning, so here we need to select a
-          // suboptimal kernel for computation that has the expected memory size
-          // requirements
+          // suboptimal kernel for computation that has the expected memory size requirements
           auto conv_pd =
               std::make_shared<mkldnn::convolution_forward::primitive_desc>(desc, attr, engine);
           while (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
                  conv_pd->src_desc().get_size() != GetArraySize(data) ||
                  (!param.mkldnn_param.quantized &&
                   conv_pd->weights_desc().get_size() != GetArraySize(weights))) {
-            // next_impl() will visit desc and engine, please make sure they are
-            // still alive here.
+            // next_impl() will visit desc and engine, please make sure they are still alive here.
             CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
           }
           return conv_pd;
@@ -488,7 +486,8 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam& param,
   auto& weight = in_data[conv::kWeight];
   bool no_bias = param.conv_param.no_bias && !param.mkldnn_param.with_bn;
 
-  auto data_mem = data.GetMKLDNNDataReorder(fwd->GetPd().src_desc());
+  auto fwd_src_desc = fwd->GetPd().src_desc();
+  auto data_mem     = static_cast<const mkldnn::memory*>(data.GetMKLDNNDataReorder(&fwd_src_desc));
   const mkldnn::memory* weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
@@ -502,25 +501,30 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam& param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      // We also need to modify the layout on the original weight array. The
-      // data conversion happens after the weight array is used.
-      weight.MKLDNNDataReorderAsync(fwd->GetPd().weights_desc());
+      // We also need to modify the layout on the original weight array. The data conversion happens
+      // after the weight array is used.
+      auto fwd_weight_desc = fwd->GetPd().weights_desc();
+      weight.MKLDNNDataReorderAsync(&fwd_weight_desc);
       weight_mem = GetWeights(weight, fwd->GetPd().weights_desc(), param.conv_param.num_group);
     } else {
-      weight_mem = weight.GetMKLDNNDataReorder(fwd->GetPd().weights_desc());
+      auto fwd_weight_desc = fwd->GetPd().weights_desc();
+      weight_mem =
+          static_cast<const mkldnn::memory*>(weight.GetMKLDNNDataReorder(&fwd_weight_desc));
     }
   }
   mkldnn_output_t out_mem;
   if (param.mkldnn_param.with_sum) {
     out_mem = mkldnn_output_t(OutDataOp::Noop,
-                              const_cast<mkldnn::memory*>(out_data[conv::kOut].GetMKLDNNData()));
+                              const_cast<mkldnn::memory*>(static_cast<const mkldnn::memory*>(
+                                  out_data[conv::kOut].GetMKLDNNData())));
   } else {
     out_mem = CreateMKLDNNMem(out_data[conv::kOut], fwd->GetPd().dst_desc(), req[conv::kOut]);
   }
 
   mkldnn_args_map_t net_args;
   if (!no_bias) {
-    const mkldnn::memory* bias_mem = in_data[conv::kBias].GetMKLDNNData();
+    const mkldnn::memory* bias_mem =
+        static_cast<const mkldnn::memory*>(in_data[conv::kBias].GetMKLDNNData());
     net_args.insert({MKLDNN_ARG_BIAS, *bias_mem});
   }
 
@@ -612,7 +616,9 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs,
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
   MKLDNNConvBackward& convBwd = GetConvBwd(full_param, data, weight, bias, out_grad);
-  auto out_grad_mem           = out_grad.GetMKLDNNDataReorder(convBwd.GetDataPd().diff_dst_desc());
+  auto convBwd_data_diff_desc = convBwd.GetDataPd().diff_dst_desc();
+  auto out_grad_mem =
+      static_cast<const mkldnn::memory*>(out_grad.GetMKLDNNDataReorder(&convBwd_data_diff_desc));
   if (req[conv::kData]) {
     auto weight_mem  = GetWeights(weight, convBwd.GetDataPd().weights_desc(), param.num_group);
     auto in_grad_mem = CreateMKLDNNMem(
@@ -624,9 +630,14 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs,
     CommitOutput(in_grad[conv::kData], in_grad_mem);
   }
   if (req[conv::kWeight] || req[conv::kBias]) {
-    if (convBwd.GetDataPd().diff_dst_desc() != convBwd.GetWeightsPd().diff_dst_desc())
-      out_grad_mem = out_grad.GetMKLDNNDataReorder(convBwd.GetWeightsPd().diff_dst_desc());
-    auto data_mem       = data.GetMKLDNNDataReorder(convBwd.GetWeightsPd().src_desc());
+    if (convBwd.GetDataPd().diff_dst_desc() != convBwd.GetWeightsPd().diff_dst_desc()) {
+      auto convBwd_weight_diff_desc = convBwd.GetWeightsPd().diff_dst_desc();
+      out_grad_mem                  = static_cast<const mkldnn::memory*>(
+          out_grad.GetMKLDNNDataReorder(&convBwd_weight_diff_desc));
+    }
+    auto convBwd_weight_src_desc = convBwd.GetWeightsPd().src_desc();
+    auto data_mem =
+        static_cast<const mkldnn::memory*>(data.GetMKLDNNDataReorder(&convBwd_weight_src_desc));
     auto in_grad_weight = CreateMKLDNNWeightGrad(
         in_grad[conv::kWeight], convBwd.GetWeightsPd().diff_weights_desc(), req[conv::kWeight]);
 

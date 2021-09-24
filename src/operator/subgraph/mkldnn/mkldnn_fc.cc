@@ -113,8 +113,7 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
   const int out_index     = index++;
   const int out_min_index = out_quantized ? index++ : 0;
   const int out_max_index = out_quantized ? index++ : 0;
-  CHECK_EQ(out_data.size(),
-           index);  // index is equal to total number of outpits
+  CHECK_EQ(out_data.size(), index);  // index is equal to total number of outpits
 
   float min_data   = 0.0f;
   float max_data   = 0.0f;
@@ -132,10 +131,10 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
 
   if (mkldnn_param.with_sum) {
     if (!initialized_) {
-      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace
-      // option, which make check (req[out_index] == kWriteInplace) useless.
-      auto in_mkl_mem  = in_data[idx.sum].GetMKLDNNData();
-      auto out_mkl_mem = out_data[out_index].GetMKLDNNData();
+      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
+      // which make check (req[out_index] == kWriteInplace) useless.
+      auto in_mkl_mem  = static_cast<const mkldnn::memory*>(in_data[idx.sum].GetMKLDNNData());
+      auto out_mkl_mem = static_cast<const mkldnn::memory*>(out_data[out_index].GetMKLDNNData());
       if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
         inplace_ = true;
       }
@@ -144,8 +143,8 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
       output = in_data[idx.sum];
     } else {
       // Not in place: copy in_data[idx.sum] into outputs[out_index].
-      auto in_mkl_mem  = in_data[idx.sum].GetMKLDNNData();
-      auto out_mkl_mem = out_data[out_index].GetMKLDNNData();
+      auto in_mkl_mem  = static_cast<const mkldnn::memory*>(in_data[idx.sum].GetMKLDNNData());
+      auto out_mkl_mem = static_cast<const mkldnn::memory*>(out_data[out_index].GetMKLDNNData());
       if (out_data[out_index].dtype() == mshadow::kInt32) {
         auto mem_desc           = in_mkl_mem->get_desc();
         auto this_dtype         = get_mkldnn_type(mshadow::kInt32);
@@ -263,8 +262,7 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
       data_scale_ = GetQuantizeScale(data.dtype(), cached_min_data_, cached_max_data_);
 
       bool fuse_requantize = false;
-      // Channelwise scaling is only supported when fusion is enabled
-      // (requantize or dequantize).
+      // Channelwise scaling is only supported when fusion is enabled (requantize or dequantize).
       if (mkldnn_param.min_calib_range.has_value() && mkldnn_param.max_calib_range.has_value()) {
         cached_min_output_        = mkldnn_param.min_calib_range.value();
         cached_max_output_        = mkldnn_param.max_calib_range.value();
@@ -279,16 +277,13 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
       // True          False                      Error
       // False         True/False                 False
       if (channel_wise && !support_channelwise_scale) {
-        LOG(FATAL) << "Currently, channel-wise quantization requires fuse requantize "
-                      "or dequantize."
-                   << " Please make sure the `min_calib_range` and `max_calib_range` "
-                      "are set when only"
-                   << " fuse requantize (outputs of FullyConnected are collected "
-                      "during calibration "
-                      "phase),"
-                   << " or the env var of `MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT` and "
-                   << " `MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL` are not set to true "
-                      "(default is false)";
+        LOG(FATAL)
+            << "Currently, channel-wise quantization requires fuse requantize or dequantize."
+            << " Please make sure the `min_calib_range` and `max_calib_range` are set when only"
+            << " fuse requantize (outputs of FullyConnected are collected during calibration "
+               "phase),"
+            << " or the env var of `MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT` and "
+            << " `MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL` are not set to true (default is false)";
       }
       support_channelwise_scale = support_channelwise_scale && channel_wise;
 
@@ -423,10 +418,11 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
                                weight_scales_,
                                false);
     } else {
-      const auto def_weight_mem = weight.GetMKLDNNData();
+      const auto def_weight_mem = static_cast<const mkldnn::memory*>(weight.GetMKLDNNData());
       if (def_weight_mem->get_desc() != fwd_->fwd_pd.weights_desc()) {
-        cached_weight_         = NDArray(fwd_->fwd_pd.weights_desc());
-        auto cached_weight_mem = cached_weight_.GetMKLDNNData();
+        auto weight_desc       = fwd_->fwd_pd.weights_desc();
+        cached_weight_         = NDArray(&weight_desc);
+        auto cached_weight_mem = static_cast<const mkldnn::memory*>(cached_weight_.GetMKLDNNData());
         std::unordered_map<int, mkldnn::memory> args(
             {{MKLDNN_ARG_FROM, *def_weight_mem}, {MKLDNN_ARG_TO, *cached_weight_mem}});
         MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*def_weight_mem, *cached_weight_mem),
@@ -434,23 +430,24 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
       }
     }
 
-    const auto data_mem = data.GetMKLDNNData();
+    const auto data_mem = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
     cached_data_mem_    = std::make_shared<mkldnn::memory>(data_mem->get_desc(), engine);
 
     args_[MKLDNN_ARG_SRC]     = *cached_data_mem_;
-    args_[MKLDNN_ARG_WEIGHTS] = *cached_weight_.GetMKLDNNData();
+    args_[MKLDNN_ARG_WEIGHTS] = *static_cast<const mkldnn::memory*>(cached_weight_.GetMKLDNNData());
     if (has_bias)
-      args_[MKLDNN_ARG_BIAS] = *cached_bias_.GetMKLDNNData();
+      args_[MKLDNN_ARG_BIAS] = *static_cast<const mkldnn::memory*>(cached_bias_.GetMKLDNNData());
     args_[MKLDNN_ARG_DST] = *cached_out_mem_;
     initialized_          = true;
   }
 
   if (mkldnn_param.with_sum) {
-    const auto& output_mem   = output.GetMKLDNNData();
+    const auto& output_mem   = static_cast<const mkldnn::memory*>(output.GetMKLDNNData());
     const auto& out_mem_desc = output_mem->get_desc();
     auto dst_mem_desc        = fwd_->fwd_pd.dst_desc();
     if (out_mem_desc != dst_mem_desc) {
-      auto tmp_out_mem            = output.GetMKLDNNDataReorder(dst_mem_desc);
+      auto tmp_out_mem =
+          static_cast<const mkldnn::memory*>(output.GetMKLDNNDataReorder(&dst_mem_desc));
       dst_mem_desc.data.data_type = out_mem_desc.data.data_type;
       mkldnn_mem_ptr new_out_mem(new mkldnn::memory(
           dst_mem_desc, CpuEngine::Get()->get_engine(), output_mem->get_data_handle()));

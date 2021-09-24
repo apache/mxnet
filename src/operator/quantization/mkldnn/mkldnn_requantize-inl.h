@@ -80,7 +80,7 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
   if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
     in_buffer = inputs[0].Reorder2Default();
 
-  auto i_mem            = in_buffer.GetMKLDNNData();
+  auto i_mem            = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNData());
   auto i_desc           = i_mem->get_desc();
   auto o_desc           = i_desc;
   o_desc.data.data_type = get_mkldnn_type_t<DstType>();

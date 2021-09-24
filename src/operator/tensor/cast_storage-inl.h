@@ -410,8 +410,8 @@ void CastStorageComputeImpl(const OpContext& ctx, const NDArray& input, const ND
       // data first.
       if (input.IsMKLDNNData() && input.IsView())
         tmp_input = input.Reorder2Default();
-      const mkldnn::memory* in_mem = tmp_input.GetMKLDNNData();
-      const_cast<NDArray&>(output).CopyFrom(*in_mem);
+      const mkldnn::memory* in_mem = static_cast<const mkldnn::memory*>(tmp_input.GetMKLDNNData());
+      const_cast<NDArray&>(output).CopyFrom(in_mem);
       MKLDNNStream::Get()->Submit();
     } else {
       mxnet_op::copy(ctx.get_stream<xpu>(), output.data(), input.data());

@@ -46,13 +46,15 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
   MKLDNNConvFullParam full_param;
   full_param.conv_param = param;
   full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
-  auto& fwd     = GetConvFwd(full_param,
+  auto& fwd         = GetConvFwd(full_param,
                          ctx.is_train,
                          in_data[conv::kData],
                          in_data[conv::kWeight],
                          param.no_bias ? nullptr : &in_data[conv::kBias],
                          out_data[conv::kOut]);
-  auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd.GetPd().src_desc());
+  auto fwd_src_desc = fwd.GetPd().src_desc();
+  auto data_mem =
+      static_cast<const mkldnn::memory*>(in_data[conv::kData].GetMKLDNNDataReorder(&fwd_src_desc));
   const mkldnn::memory* weight_mem;
   // For inference, we want to reorder the weight array so we don't need to
   // reorder data every time.
@@ -60,16 +62,18 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
     // We also need to modify the layout on the original weight array.
     // Don't switch below sequence because naive engine will executes
     // pushAsync synchronously.
-    weight.MKLDNNDataReorderAsync(fwd.GetPd().weights_desc());
+    auto fwd_weight_desc = fwd.GetPd().weights_desc();
+    weight.MKLDNNDataReorderAsync(&fwd_weight_desc);
     weight_mem = GetWeights(weight, fwd.GetPd().weights_desc(), param.num_group);
   } else {
-    weight_mem = weight.GetMKLDNNData();
+    weight_mem = static_cast<const mkldnn::memory*>(weight.GetMKLDNNData());
   }
   auto out_mem = CreateMKLDNNMem(out_data[conv::kOut], fwd.GetPd().dst_desc(), req[conv::kOut]);
   mkldnn_args_map_t net_args;
   if (!param.no_bias) {
-    const mkldnn::memory* bias_mem =
-        in_data[conv::kBias].GetMKLDNNDataReorder(fwd.GetPd().bias_desc());
+    auto fwd_bias_desc             = fwd.GetPd().bias_desc();
+    const mkldnn::memory* bias_mem = static_cast<const mkldnn::memory*>(
+        in_data[conv::kBias].GetMKLDNNDataReorder(&fwd_bias_desc));
     net_args.insert({MKLDNN_ARG_BIAS, *bias_mem});
   }
   net_args.insert({MKLDNN_ARG_SRC, *data_mem});

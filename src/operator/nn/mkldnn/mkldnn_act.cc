@@ -152,7 +152,7 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs,
   param_.alg               = GetMKLDNNActAlgo(param);
   const NDArray& in_buffer = in_data;
   MKLDNNStream* stream     = MKLDNNStream::Get();
-  auto input_mem           = in_buffer.GetMKLDNNData();
+  auto input_mem           = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNData());
   MKLDNNActForward& fwd    = GetActForward(param_, ctx, in_buffer, *input_mem);
   auto out_mem_t           = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_desc(), req, &in_buffer);
   stream->RegisterPrimArgs(fwd.GetFwd(),
@@ -177,7 +177,7 @@ void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs,
   if (in_data.IsView() && in_data.IsMKLDNNData())
     in_buffer = in_data.Reorder2Default();
 
-  auto input_mem        = in_buffer.GetMKLDNNData();
+  auto input_mem        = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNData());
   MKLDNNActForward& fwd = GetActForward(param_, ctx, in_buffer, *input_mem);
   auto out_mem_t        = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_desc(), req, &in_buffer);
   stream->RegisterPrimArgs(fwd.GetFwd(),
@@ -222,14 +222,15 @@ static inline MKLDNNActBackward& GetActBackward(const MKLDNNActParam& param,
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
-    MKLDNNActBackward bwd(param, in_data, in_mem, *out_grad.GetMKLDNNData());
+    MKLDNNActBackward bwd(
+        param, in_data, in_mem, *static_cast<const mkldnn::memory*>(out_grad.GetMKLDNNData()));
     it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
 }
 
-// For backward relu activation, it's okay to pass "out_data" as "in_data" to
-// this function, since the computation only involes non-zeros.
+// For backward relu activation, it's okay to pass "out_data" as "in_data" to this
+// function, since the computation only involes non-zeros.
 void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
@@ -247,12 +248,13 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs,
   MKLDNNActParam param_;
   param_.alg = GetMKLDNNActAlgo(param);
   TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
-  auto diff_dst_memory = out_buffer.GetMKLDNNData();
-  auto input_mem       = in_buffer.GetMKLDNNData();
+  auto diff_dst_memory = static_cast<const mkldnn::memory*>(out_buffer.GetMKLDNNData());
+  auto input_mem       = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNData());
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
+  auto diff_dst_desc = diff_dst_memory->get_desc();
   if (input_mem->get_desc() != diff_dst_memory->get_desc())
-    input_mem = in_buffer.GetMKLDNNDataReorder(diff_dst_memory->get_desc());
+    input_mem = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNDataReorder(&diff_dst_desc));
   MKLDNNActBackward& bwd          = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   MKLDNNStream* stream            = MKLDNNStream::Get();
   mkldnn_output_t diff_src_memory = CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_desc(), req[0]);
@@ -286,12 +288,13 @@ void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs,
   param_.slope = param.slope;
 
   TmpMemMgr::Get()->Init(ctx.requested[leakyrelu::kRandom]);
-  auto diff_dst_memory = out_buffer.GetMKLDNNData();
-  auto input_mem       = in_buffer.GetMKLDNNData();
+  auto diff_dst_memory = static_cast<const mkldnn::memory*>(out_buffer.GetMKLDNNData());
+  auto input_mem       = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNData());
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
+  auto diff_dst_desc = diff_dst_memory->get_desc();
   if (input_mem->get_desc() != diff_dst_memory->get_desc())
-    input_mem = in_buffer.GetMKLDNNDataReorder(diff_dst_memory->get_desc());
+    input_mem = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNDataReorder(&diff_dst_desc));
   MKLDNNActBackward& bwd          = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   MKLDNNStream* stream            = MKLDNNStream::Get();
   mkldnn_output_t diff_src_memory = CreateMKLDNNMem(output, bwd.bwd_pd.diff_src_desc(), req[0]);

@@ -46,7 +46,7 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
     mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
     if (data.IsView() && data.IsMKLDNNData())
       data = data.Reorder2Default();
-    const auto i_mem            = data.GetMKLDNNData();
+    const auto i_mem            = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
     const size_t i_ndim         = data.shape().ndim();
     mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
     for (size_t i = 0; i < i_ndim; i++) {
@@ -94,7 +94,7 @@ static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs,
     auto data = inputs[i];
     if (data.IsView() && data.IsMKLDNNData())
       data = data.Reorder2Default();
-    const auto i_mem            = data.GetMKLDNNData();
+    const auto i_mem            = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
     const size_t i_ndim         = data.shape().ndim();
     mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
     for (size_t j = 0; j < i_ndim; j++) {
@@ -170,8 +170,7 @@ NNVM_REGISTER_OP(_backward_amp_cast)
     .set_attr<FCompute>("FCompute<cpu>", AMPCastCompute<cpu>);
 
 NNVM_REGISTER_OP(amp_multicast)
-    .describe(
-        R"code(Cast function used by AMP, that casts its inputs to the common widest type.
+    .describe(R"code(Cast function used by AMP, that casts its inputs to the common widest type.
 
 It casts only between low precision float/FP32 and does not do anything for other types.
 

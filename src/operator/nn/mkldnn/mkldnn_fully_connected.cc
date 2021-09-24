@@ -80,8 +80,7 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullPar
       return mkldnn::inner_product_forward::primitive_desc(desc, attr, engine);
     } catch (mkldnn::error& e) {
       if (e.status == mkldnn_unimplemented && full_param.mkldnn_param.quantized) {
-        LOG(ERROR) << "AVX512-BW support or MKLDNN v0.18 is required for INT8 "
-                      "fully_connected.";
+        LOG(ERROR) << "AVX512-BW support or MKLDNN v0.18 is required for INT8 fully_connected.";
       } else {
         LOG(ERROR) << e.message;
       }
@@ -202,7 +201,8 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam& full_param,
   NDArray weight = in_data[fullc::kWeight];
   NDArray data   = in_data[fullc::kData];
 
-  auto data_mem = data.GetMKLDNNDataReorder(fwd->fwd_pd.src_desc());
+  auto fwd_src_desc = fwd->fwd_pd.src_desc();
+  auto data_mem     = static_cast<const mkldnn::memory*>(data.GetMKLDNNDataReorder(&fwd_src_desc));
   const mkldnn::memory* weight_mem;
   if (ctx.is_train) {
     if (weight.IsMKLDNNData()) {
@@ -210,9 +210,10 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam& full_param,
     }
     weight_mem = GetWeights(weight, fwd->fwd_pd.weights_desc(), 1);
   } else {
-    weight_mem = weight.GetMKLDNNData();
+    weight_mem = static_cast<const mkldnn::memory*>(weight.GetMKLDNNData());
     if (weight_mem->get_desc() != fwd->fwd_pd.weights_desc()) {
-      weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_desc());
+      auto fwd_weight_desc = fwd->fwd_pd.weights_desc();
+      weight.MKLDNNDataReorderAsync(&fwd_weight_desc);
       weight_mem = GetWeights(weight, fwd->fwd_pd.weights_desc(), 1);
     }
   }
@@ -225,7 +226,9 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam& full_param,
       {MKLDNN_ARG_DST, *out_mem.second},
   };
   if (!full_param.default_param.no_bias) {
-    auto bias_mem         = in_data[fullc::kBias].GetMKLDNNDataReorder(fwd->fwd_pd.bias_desc());
+    auto fwd_bias_desc = fwd->fwd_pd.bias_desc();
+    auto bias_mem      = static_cast<const mkldnn::memory*>(
+        in_data[fullc::kBias].GetMKLDNNDataReorder(&fwd_bias_desc));
     args[MKLDNN_ARG_BIAS] = *bias_mem;
   }
   MKLDNNStream::Get()->RegisterPrimArgs(fwd->GetFwd(), args);
@@ -299,8 +302,14 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs,
   if (req[fullc::kWeight]) {
     mkldnn::inner_product_backward_weights::primitive_desc ipBwdWeights_pd = GetFCBwdWeights(
         data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias], out_grad, fwd_pd);
-    auto out_grad_mem   = out_grad.GetMKLDNNDataReorder(ipBwdWeights_pd.diff_dst_desc());
-    auto data_mem       = data.GetMKLDNNDataReorder(ipBwdWeights_pd.src_desc());
+
+    auto ipBwdWeights_diff_dst_desc = ipBwdWeights_pd.diff_dst_desc();
+    auto out_grad_mem               = static_cast<const mkldnn::memory*>(
+        out_grad.GetMKLDNNDataReorder(&ipBwdWeights_diff_dst_desc));
+
+    auto ipBwdWeights_src_desc = ipBwdWeights_pd.src_desc();
+    auto data_mem =
+        static_cast<const mkldnn::memory*>(data.GetMKLDNNDataReorder(&ipBwdWeights_src_desc));
     auto in_grad_weight = CreateMKLDNNWeightGrad(
         in_grad[fullc::kWeight], ipBwdWeights_pd.diff_weights_desc(), req[fullc::kWeight]);
     mkldnn_args_map_t args = {
@@ -323,8 +332,13 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs,
   if (req[fullc::kData]) {
     mkldnn::inner_product_backward_data::primitive_desc ipBwdData_pd =
         GetFCBwdData(data, weight, out_grad, fwd_pd);
-    auto out_grad_mem = out_grad.GetMKLDNNDataReorder(ipBwdData_pd.diff_dst_desc());
-    auto weight_mem   = weight.GetMKLDNNDataReorder(ipBwdData_pd.weights_desc());
+    auto ipBwdData_diff_dst_desc = ipBwdData_pd.diff_dst_desc();
+    auto out_grad_mem =
+        static_cast<const mkldnn::memory*>(out_grad.GetMKLDNNDataReorder(&ipBwdData_diff_dst_desc));
+
+    auto ipBwdData_weight_desc = ipBwdData_pd.weights_desc();
+    auto weight_mem =
+        static_cast<const mkldnn::memory*>(weight.GetMKLDNNDataReorder(&ipBwdData_weight_desc));
     auto in_grad_mem =
         CreateMKLDNNMem(in_grad[fullc::kData], ipBwdData_pd.diff_src_desc(), req[fullc::kData]);
     mkldnn_args_map_t args = {{MKLDNN_ARG_DIFF_DST, *out_grad_mem},

@@ -71,7 +71,7 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs,
   data_md.reserve(num_in_data);
   data_mem.reserve(num_in_data);
   for (int i = 0; i < num_in_data; i++) {
-    const mkldnn::memory* tmp_mem = in_data[i].GetMKLDNNData();
+    const mkldnn::memory* tmp_mem = static_cast<const mkldnn::memory*>(in_data[i].GetMKLDNNData());
     mkldnn::memory::desc tmp_md   = tmp_mem->get_desc();
     data_md.push_back(tmp_md);
     data_mem.push_back(tmp_mem);
@@ -98,7 +98,7 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs,
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   const int num_in_data    = param.num_args;
   const int axis           = param.dim;
-  const auto gradz_mem     = inputs[0].GetMKLDNNData();
+  const auto gradz_mem     = static_cast<const mkldnn::memory*>(inputs[0].GetMKLDNNData());
   /* init the offset */
   mkldnn::memory::dims offsets(outputs[0].shape().ndim());
   for (auto& v : offsets) {
@@ -107,7 +107,7 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs,
 
   for (int i = 0; i < num_in_data; i++) {
     mkldnn::memory::dims diff_src_tz(outputs[i].shape().begin(), outputs[i].shape().end());
-    auto diff_src_md = outputs[i].GetMKLDNNData()->get_desc();
+    auto diff_src_md = static_cast<const mkldnn::memory*>(outputs[i].GetMKLDNNData())->get_desc();
     auto gradi_mem   = CreateMKLDNNMem(outputs[i], diff_src_md, req[i]);
 
     auto from_md = gradz_mem->get_desc().submemory_desc(diff_src_tz, offsets);

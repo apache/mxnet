@@ -72,11 +72,11 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
     auto i_scale = GetScale(in_data[i], data_min[i], data_max[i]);
     if (i_scale == out_scale) {
       CHECK(in_data[i].dtype() == out_dtype);
-      auto mem = in_data[i].GetMKLDNNData();
+      auto mem = static_cast<const mkldnn::memory*>(in_data[i].GetMKLDNNData());
       data_mem.push_back(mem);
       data_md.push_back(mem->get_desc());
     } else {
-      auto mem      = in_data[i].GetMKLDNNData();
+      auto mem      = static_cast<const mkldnn::memory*>(in_data[i].GetMKLDNNData());
       auto mem_desc = mem->get_desc();
       if (in_data[i].dtype() != out_dtype) {
         mem_desc.data.data_type = static_cast<mkldnn_data_type_t>(get_mkldnn_type(out_dtype));

@@ -159,17 +159,17 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
   // Copy inputs[in_sum] into outputs[kOut] in case inplace optimization failed.
   if (mkldnn_param.with_sum) {
     if (!initialized_) {
-      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace
-      // option, which make check (req[kOut] == kWriteInplace) useless.
-      auto in_mkl_mem  = inputs[in_sum].GetMKLDNNData();
-      auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
+      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
+      // which make check (req[kOut] == kWriteInplace) useless.
+      auto in_mkl_mem  = static_cast<const mkldnn::memory*>(inputs[in_sum].GetMKLDNNData());
+      auto out_mkl_mem = static_cast<const mkldnn::memory*>(outputs[kOut].GetMKLDNNData());
       if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
         inplace_ = true;
       }
     }
     if (!inplace_) {
-      auto in_mkl_mem  = inputs[in_sum].GetMKLDNNData();
-      auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
+      auto in_mkl_mem  = static_cast<const mkldnn::memory*>(inputs[in_sum].GetMKLDNNData());
+      auto out_mkl_mem = static_cast<const mkldnn::memory*>(outputs[kOut].GetMKLDNNData());
       if (outputs[kOut].dtype() == mshadow::kInt32) {
         const auto& mem_desc  = in_mkl_mem->get_desc();
         const auto this_dtype = get_mkldnn_type(mshadow::kInt32);
@@ -337,20 +337,22 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
                              full_conv_param.conv_param.num_group,
                              data_scale_,
                              weight_scales_);
-    args_[MKLDNN_ARG_SRC]     = *data.GetMKLDNNData();
-    args_[MKLDNN_ARG_WEIGHTS] = *cached_weight_.GetMKLDNNData();
+    args_[MKLDNN_ARG_SRC]     = *static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
+    args_[MKLDNN_ARG_WEIGHTS] = *static_cast<const mkldnn::memory*>(cached_weight_.GetMKLDNNData());
     if (has_bias)
-      args_[MKLDNN_ARG_BIAS] = *cached_bias_.GetMKLDNNData();
-    args_[MKLDNN_ARG_DST] = *output.GetMKLDNNData();
+      args_[MKLDNN_ARG_BIAS] = *static_cast<const mkldnn::memory*>(cached_bias_.GetMKLDNNData());
+    args_[MKLDNN_ARG_DST] = *static_cast<const mkldnn::memory*>(output.GetMKLDNNData());
     initialized_          = true;
   }
 
   if (mkldnn_param.with_sum) {
-    const auto& output_mem   = output.GetMKLDNNData();
+    const auto& output_mem   = static_cast<const mkldnn::memory*>(output.GetMKLDNNData());
     const auto& out_mem_desc = output_mem->get_desc();
     const auto& dst_mem_desc = fwd_->GetPd().dst_desc();
     if (out_mem_desc != dst_mem_desc) {
-      auto tmp_out_mem       = output.GetMKLDNNDataReorder(fwd_->GetPd().dst_desc());
+      auto fwd_dst_desc = fwd_->GetPd().dst_desc();
+      auto tmp_out_mem =
+          static_cast<const mkldnn::memory*>(output.GetMKLDNNDataReorder(&fwd_dst_desc));
       auto data_md           = dst_mem_desc;
       data_md.data.data_type = static_cast<mkldnn_data_type_t>(out_mem_desc.data.data_type);
       mkldnn_mem_ptr new_out_mem(new mkldnn::memory(
@@ -362,8 +364,10 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
   }
 
   if (mkldnn_param.quantized) {
-    auto data_mem         = data.GetMKLDNNDataReorder(fwd_->GetPd().src_desc());
-    mkldnn::memory* mem   = output.CreateMKLDNNData(fwd_->GetPd().dst_desc());
+    auto fwd_src_desc = fwd_->GetPd().src_desc();
+    auto data_mem = static_cast<const mkldnn::memory*>(data.GetMKLDNNDataReorder(&fwd_src_desc));
+    auto fwd_pd_dst_desc  = fwd_->GetPd().dst_desc();
+    mkldnn::memory* mem   = static_cast<mkldnn::memory*>(output.CreateMKLDNNData(&fwd_pd_dst_desc));
     args_[MKLDNN_ARG_SRC] = *data_mem;
     args_[MKLDNN_ARG_DST] = *mem;
     MKLDNNStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
@@ -384,8 +388,9 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
     *outputs[kMax].data().dptr<float>() = cached_output_max_;
   }
   if (mkldnn_param.with_sum) {
-    auto out = const_cast<NDArray&>(outputs[kOut]);
-    out.UpdateMKLDNNMemDesc(fwd_->GetPd().dst_desc());
+    auto out          = const_cast<NDArray&>(outputs[kOut]);
+    auto fwd_dst_desc = fwd_->GetPd().dst_desc();
+    out.UpdateMKLDNNMemDesc(&fwd_dst_desc);
   }
 }
 
