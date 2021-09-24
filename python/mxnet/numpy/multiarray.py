@@ -3649,7 +3649,8 @@ def power(x1, x2, out=None, **kwargs):
 
 pow = power
 pow.__doc__="""
-    ... 
+    First array elements raised to powers from second array, element-wise.
+    
     Notes 
     ----- 
     `pow` is an alias for `power`. It is a standard API in 
@@ -3658,7 +3659,48 @@ pow.__doc__="""
     
     >>> np.pow is np.power 
     True 
-    ...
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        The bases.
+
+    x2 : ndarray or scalar
+        The exponent.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The bases in x1 raised to the exponents in x2.
+        This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    --------
+    >>> x1 = np.arange(6)
+    >>> np.pow(x1, 3)
+    array([  0.,   1.,   8.,  27.,  64., 125.])
+
+    Raise the bases to different exponents.
+
+    >>> x2 = np.array([1.0, 2.0, 3.0, 3.0, 2.0, 1.0])
+    >>> np.pow(x1, x2)
+    array([ 0.,  1.,  8., 27., 16.,  5.])
+
+    The effect of broadcasting.
+
+    >>> x2 = np.array([[1, 2, 3, 3, 2, 1], [1, 2, 3, 3, 2, 1]])
+    >>> x2
+    array([[1., 2., 3., 3., 2., 1.],
+           [1., 2., 3., 3., 2., 1.]])
+
+    >>> np.pow(x1, x2)
+    array([[ 0.,  1.,  8., 27., 16.,  5.],
+           [ 0.,  1.,  8., 27., 16.,  5.]])
     """
 
 @set_module('mxnet.numpy')
