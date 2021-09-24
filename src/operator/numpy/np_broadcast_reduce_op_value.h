@@ -38,9 +38,6 @@
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(NumpyReduceAxesParam);
-DMLC_REGISTER_PARAMETER(NumpyReduceAxesNoDTypeParam);
-
 inline bool NumpySumType(const nnvm::NodeAttrs& attrs,
                          std::vector<int>* in_attrs,
                          std::vector<int>* out_attrs) {
