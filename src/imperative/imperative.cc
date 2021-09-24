@@ -142,29 +142,54 @@ void Imperative::MarkVariables(const std::vector<NDArray*>& variables,
                                const std::vector<uint32_t>& grad_reqs,
                                const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
-    std::string str_c(std::to_string(variable_count_++));
+    // Unmarked leaf nodes have null autograd_entry_, while marked nonleaf nodes don't.
+    if (!variables[i]->autograd_entry_.node || variables[i]->autograd_entry_.node->is_variable()) {
+      std::string str_c(std::to_string(variable_count_++));
+      variables[i]->autograd_entry_ =
+          nnvm::NodeEntry{nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
+      AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
+      info.outputs.emplace_back(variables[i]->Detach());
+      info.out_grads.emplace_back(gradients[i]->Detach());
+      info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+      info.ctx      = variables[i]->ctx();
 
-    variables[i]->autograd_entry_ =
-        nnvm::NodeEntry{nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
-    AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
-    info.outputs.emplace_back(variables[i]->Detach());
-    info.out_grads.emplace_back(gradients[i]->Detach());
-    info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
-    info.ctx      = variables[i]->ctx();
+      gradients[i]->autograd_entry_ =
+          nnvm::NodeEntry{nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
+      AGInfo& grad_info = AGInfo::Create(gradients[i]->autograd_entry_.node);
+      grad_info.outputs.emplace_back(gradients[i]->Detach());
+      grad_info.ctx = gradients[i]->ctx();
+    } else {
+      AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
+      CHECK_EQ(info.out_grads.size(), 0)
+        <<"The node has already been marked. Cannot mark it again.";
+      info.out_grads.emplace_back(gradients[i]->Detach());
+      info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+      info.ctx      = variables[i]->ctx();
+    }
+  }
+}
 
-    gradients[i]->autograd_entry_ =
-        nnvm::NodeEntry{nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
-    AGInfo& grad_info = AGInfo::Create(gradients[i]->autograd_entry_.node);
-    grad_info.outputs.emplace_back(gradients[i]->Detach());
-    grad_info.ctx = gradients[i]->ctx();
+// Unmark the variables to free the memory.
+void Imperative::DropGrads(const std::vector<NDArray*>& variables) {
+  for (auto variable : variables) {
+    if (variable->autograd_entry_.node) {
+      AGInfo& info = AGInfo::Get(variable->autograd_entry_.node);
+      CHECK_NE(info.out_grads.size(), 0)
+        <<"The node has empty out_grads already. Cannot DropGrads again.";
+      for (auto grad : info.out_grads) {
+        grad.ReInit();
+      }
+      info.out_grads.clear();
+      info.grad_req = kNullOp;
+    }
   }
 }
 
 void Imperative::GetBackwardDependency(const nnvm::ObjectPtr& node,
                                        uint32_t num_inputs,
                                        uint32_t num_outputs,
-                                       std::vector<bool>* p_save_inputs,
-                                       std::vector<bool>* p_save_outputs) {
+                                       std::vector<bool> *p_save_inputs,
+                                       std::vector<bool> *p_save_outputs) {
   static auto& fgradient          = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
   std::vector<bool>& save_inputs  = *p_save_inputs;
   std::vector<bool>& save_outputs = *p_save_outputs;
@@ -488,6 +513,12 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
     }
     CHECK_GT(xs.size(), 0) << "There are no inputs in computation graph that require gradients.";
   }
+  std::vector<ObjectPtr> nleaf_vars = ListNonleafVariables(sym);
+  std::vector<NodeEntry> us;
+  us.reserve(nleaf_vars.size());
+  for (const auto& i : nleaf_vars) {
+    us.emplace_back(NodeEntry{i, 0, 0});
+  }
 
   Graph g_graph = pass::MXGradient(graph,
                                    graph.outputs,
@@ -496,7 +527,10 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
                                    mxnet::AggregateGradient,
                                    nullptr,
                                    zero_ops,
-                                   "_copy");
+                                   "_copy",
+                                   ShapeVector(),
+                                   DTypeVector(),
+                                   us);
   CHECK_EQ(g_graph.outputs.size(), xs.size());
   for (const auto& e : g_graph.outputs) {
     if (e.node->op() == nullptr) {
@@ -575,6 +609,20 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
     arrays[eid]    = x_grads[i - num_forward_outputs];
     ref_count[eid] = 1;
   }
+  const std::vector<NodeEntry>& us_grads =
+    g_graph.GetAttr<std::vector<NodeEntry>>("nleaf_grads");
+  CHECK_EQ(us_grads.size(), us.size())
+    << "Size of queried nleaf_vars and size of their gradients don't match.";
+  for (size_t i = 0; i < us_grads.size(); i++) {
+    size_t eid = idx.entry_id(us_grads[i]);
+    AGInfo& info = AGInfo::Get(us[i].node);
+    if (arrays[eid]->dtype_ == -1) {
+      arrays[eid] = &info.out_grads[0];
+    } else {
+      info.out_grads[0] = *arrays[eid];
+    }
+    ref_count[eid] = 1;
+  }
 
   // Assign context
   auto vctx = PlaceDevice(idx);
@@ -626,6 +674,11 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
   for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
     size_t eid      = idx.entry_id(idx.outputs()[i]);
     array_reqs[eid] = x_reqs[i - num_forward_outputs];
+  }
+  for (size_t i = 0; i < us_grads.size(); i++) {
+    size_t eid = idx.entry_id(us_grads[i]);
+    AGInfo& info = AGInfo::Get(us[i].node);
+    array_reqs[eid] = info.grad_req;
   }
 
   const auto& shapes         = graph.GetAttr<mxnet::ShapeVector>("shape");
@@ -764,6 +817,18 @@ void Imperative::DCInfo::Compute(const NDArray& arr) {
   // Deallocate copies
   info.inputs_.clear();
   info.outputs_.clear();
+}
+
+std::vector<nnvm::ObjectPtr> Imperative::ListNonleafVariables(const nnvm::Symbol& sym) const {
+  using namespace nnvm;
+  std::vector<ObjectPtr> ret;
+  DFSVisit(sym.outputs, [&ret](const ObjectPtr& node) {
+    AGInfo& info = AGInfo::Get(node);
+    if (info.out_grads.size() > 0 && !node->is_variable()) {
+      ret.push_back(node);
+    }
+  });
+  return ret;
 }
 
 }  // namespace mxnet
