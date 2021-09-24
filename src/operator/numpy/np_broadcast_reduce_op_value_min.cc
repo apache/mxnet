@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_broadcast_reduce_op_value.cc
+ * \file np_broadcast_reduce_op_value_min.cc
  * \brief CPU Implementation of broadcast and reduce functions based on value.
  */
 
@@ -27,7 +27,7 @@
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 
-#include "np_broadcast_reduce_op_value_min.h"
+#include "np_broadcast_reduce_op_value.h"
 
 namespace mxnet {
 namespace op {
