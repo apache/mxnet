@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file np_dot.cu
+ * \file np_dot_forward.cu
  * \brief GPU Implementation of numpy-compatible dot
  */
 
@@ -28,8 +28,6 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_dot).set_attr<FCompute>("FCompute<gpu>", NumpyDotForward<gpu>);
-
-NNVM_REGISTER_OP(_backward_npi_dot).set_attr<FCompute>("FCompute<gpu>", NumpyDotBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

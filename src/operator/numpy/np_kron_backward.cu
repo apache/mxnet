@@ -17,4 +17,17 @@
  * under the License.
  */
 
-#include "nvtx.h"
+/*!
+ * \file np_kron_backward.cu
+ * \brief GPU Implementation of numpy-compatible Kronecker product
+ */
+
+#include "./np_kron-inl.h"
+
+namespace mxnet {
+namespace op {
+
+NNVM_REGISTER_OP(_backward_npi_kron).set_attr<FCompute>("FCompute<gpu>", KronOpBackward<gpu>);
+
+}  // namespace op
+}  // namespace mxnet

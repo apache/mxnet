@@ -286,12 +286,14 @@ inline Graph MXGradient(
     std::vector<const Op*> zero_ops  = std::vector<const Op*>(),
     std::string copy_op_str          = std::string(),
     mxnet::ShapeVector in_arg_shapes = mxnet::ShapeVector(),
-    DTypeVector in_arg_dtypes        = DTypeVector()) {
+    DTypeVector in_arg_dtypes        = DTypeVector(),
+    std::vector<NodeEntry> us        = std::vector<NodeEntry>() ) {
   graph.attrs["grad_ys"]          = std::make_shared<any>(std::move(ys));
   graph.attrs["grad_xs"]          = std::make_shared<any>(std::move(xs));
   graph.attrs["grad_ys_out_grad"] = std::make_shared<any>(std::move(ys_out_grad));
   graph.attrs["in_arg_shapes"]    = std::make_shared<any>(std::move(in_arg_shapes));
   graph.attrs["in_arg_dtypes"]    = std::make_shared<any>(std::move(in_arg_dtypes));
+  graph.attrs["grad_us"]          = std::make_shared<any>(std::move(us));
 
   if (aggregate_fun != nullptr) {
     graph.attrs["grad_aggregate_fun"] = std::make_shared<any>(aggregate_fun);
