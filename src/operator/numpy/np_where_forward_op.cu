@@ -23,7 +23,7 @@
  * \brief GPU Implementation of numpy operator where
  */
 
-#include "np_where_forward_op-inl.h"
+#include "np_where_op-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -19,12 +19,11 @@
 
 /*!
  * Copyright (c) 2017 by Contributors
- * \file np_where_op.cc
+ * \file np_where_forward_op.cc
  * \brief CPU Implementation of numpy operator where
  */
 
-#include "np_where_forward_op-inl.h"
-#include "../tensor/elemwise_binary_broadcast_op.h"
+#include "np_where_op-inl.h"
 
 namespace mxnet {
 namespace op {
