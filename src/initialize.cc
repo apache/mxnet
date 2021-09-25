@@ -348,8 +348,6 @@ static inline void printStackTrace(FILE *out = stderr,
 #endif
 }
 
-#define SKIP_SIGNAL_HANDLER_REGISTRATION 1
-
 #define SIGNAL_HANDLER(SIGNAL, HANDLER_NAME, IS_FATAL)               \
 std::shared_ptr<void(int)> HANDLER_NAME(                             \
   signal(SIGNAL, [](int signum) {                                    \
@@ -378,7 +376,7 @@ std::shared_ptr<void(int)> HANDLER_NAME(                             \
   [](auto f) { signal(SIGNAL, f); });
 
 // TODO(cspchen): avoid jvm exit with code 139. By now, we just skip it
-#if SKIP_SIGNAL_HANDLER_REGISTRATION
+#if !SKIP_SIGNAL_HANDLER_REGISTRATION
 SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
 SIGNAL_HANDLER(SIGFPE, SIGFPEHandler, false);
 SIGNAL_HANDLER(SIGBUS, SIGBUSHandler, false);

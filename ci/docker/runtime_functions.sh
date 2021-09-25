@@ -310,13 +310,8 @@ build_ubuntu_cpu() {
     build_ubuntu_cpu_openblas
 }
 
-build_ubuntu_cpu_and_test() {
-    build_ubuntu_cpu
-    java_package_integration_test
-}
-
-build_ubuntu_gpu_and_test() {
-    build_ubuntu_gpu
+build_ubuntu_cpu_and_test_java() {
+    build_ubuntu_cpu_openblas_java
     java_package_integration_test
 }
 
@@ -345,6 +340,24 @@ build_ubuntu_cpu_openblas() {
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
+}
+
+build_ubuntu_cpu_openblas_java() {
+    set -ex
+    cd /work/build
+    CXXFLAGS="-Wno-error=strict-overflow" CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_TVM_OP=ON \
+        -DUSE_BLAS=Open \
+        -DUSE_ONEDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -DBUILD_JAVA_NATIVE=ON \
         -G Ninja /work/mxnet
     ninja
 }
