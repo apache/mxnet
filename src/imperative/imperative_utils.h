@@ -16,20 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <mxnet/operator.h>
 #include <mxnet/imperative.h>
+#include <mxnet/operator.h>
 #include <nnvm/pass_functions.h>
-#include <utility>
+
 #include <algorithm>
-#include <vector>
 #include <map>
 #include <string>
-#include "./exec_pass.h"
+#include <utility>
+#include <vector>
+
 #include "../c_api/c_api_common.h"
-#include "../common/utils.h"
 #include "../common/exec_utils.h"
-#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../common/utils.h"
+#include "../operator/nn/dnnl/dnnl_base-inl.h"
 #include "../operator/operator_common.h"
+#include "./exec_pass.h"
 
 #ifndef MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 #define MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
@@ -51,7 +53,7 @@ void InvalidateOutputs(const std::vector<T>* pArrs, const std::vector<OpReqType>
   auto arrs = *pArrs;
   for (size_t i = 0; i < arrs.size(); i++) {
     if (reqs[i] == kWriteTo || reqs[i] == kNullOp)
-      pntr(arrs[i])->InvalidateMKLDNNData();
+      pntr(arrs[i])->InvalidateDNNLData();
   }
 }
 
@@ -60,7 +62,7 @@ static inline void CreateDefaultInputs(const std::vector<NDArray>& arrs,
                                        std::vector<NDArray>* out_arrs) {
   out_arrs->clear();
   for (size_t i = 0; i < arrs.size(); ++i) {
-    if (arrs[i].IsMKLDNNData())
+    if (arrs[i].IsDNNLData())
       out_arrs->push_back(arrs[i].Reorder2Default());
     else
       out_arrs->push_back(arrs[i]);
@@ -77,7 +79,7 @@ static inline void CreateDefaultInputs(std::vector<NDArray>* pArrs) {
 #define INVALIDATE_OUTPUTS(outputs, req) InvalidateOutputs(&outputs, req)
 // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
 // its FCcomputeEx, but AsyncPush the copy operation to engine.
-// So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
+// So for the case that A is holding dnnl memory, and then copy A to B, and then copy B
 // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
 // copying A to B may not happen, and will corrupt A's memory.
 #define INVALIDATE_OUTPUTS_COND(cond, outputs, req) \
@@ -85,12 +87,12 @@ static inline void CreateDefaultInputs(std::vector<NDArray>* pArrs) {
     INVALIDATE_OUTPUTS(outputs, req);               \
   }
 
-// add for mkldnn OP + no mkldnn OP
-#define CREATE_DEFAULT_INPUTS(cond, attrs, func_call)      \
-  if (cond) {                                              \
-    const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN"); \
-    if (!is_mkldnn.get(attrs.op, false))                   \
-      func_call;                                           \
+// add for dnnl OP + no dnnl OP
+#define CREATE_DEFAULT_INPUTS(cond, attrs, func_call)  \
+  if (cond) {                                          \
+    const auto is_dnnl = Op::GetAttr<bool>("TIsDNNL"); \
+    if (!is_dnnl.get(attrs.op, false))                 \
+      func_call;                                       \
   }
 
 #else
@@ -573,7 +575,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray*>& src,
     const auto& nd = *src[i];
 
 #if MXNET_USE_ONEDNN == 1
-    if (req->at(i) == kWriteInplace && nd.IsMKLDNNData())
+    if (req->at(i) == kWriteInplace && nd.IsDNNLData())
       // If it's write inplace and the output array doesn't use the default
       // layout, we'll generate a temporary output array below, which means
       // the input array and the output array are no longer the same array.
@@ -586,7 +588,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray*>& src,
       if (bufs != nullptr) {
         temp = bufs->at(i);
       } else if (kAddTo == req->at(i)) {
-        temp = nd.IsMKLDNNData() ? nd.Reorder2Default() : nd;
+        temp = nd.IsDNNLData() ? nd.Reorder2Default() : nd;
       } else {
         temp = NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
       }
