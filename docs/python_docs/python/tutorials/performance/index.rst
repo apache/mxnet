@@ -76,10 +76,10 @@ Accelerated Backend
    ..
       TBD Content
       .. card::
-         :title: MKL-DNN
+         :title: DNNL
          :link: backend/mkldnn/mkldnn_readme
 
-         How to get the most from your CPU by using Intel's MKL-DNN.
+         How to get the most from your CPU by using Intel's DNNL.
 
       .. card::
          :title: TVM

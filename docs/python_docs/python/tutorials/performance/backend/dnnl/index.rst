@@ -15,22 +15,22 @@
    specific language governing permissions and limitations
    under the License.
 
-Intel MKL-DNN
+Intel DNNL
 =============
 
 .. container:: cards
 
    .. card::
-      :title: MKL-DNN Installation and Verification
-      :link: mkldnn_readme
+      :title: DNNL Installation and Verification
+      :link: dnnl_readme
 
-      A guide on using MKL-DNN with MXNet.
+      A guide on using DNNL with MXNet.
 
    .. card::
-      :title: MKL-DNN Quantization
-      :link: mkldnn_quantization
+      :title: DNNL Quantization
+      :link: dnnl_quantization
 
-      How to perform quantization with MKLDNN
+      How to perform quantization with DNNL
 
 .. toctree::
    :hidden:

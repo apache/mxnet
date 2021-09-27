@@ -208,9 +208,9 @@ o = exe.outputs[0]
 t = o.asnumpy()
 ```
 
-More detailed debugging and profiling information can be logged by setting the environment variable 'MKLDNN_VERBOSE':
+More detailed debugging and profiling information can be logged by setting the environment variable 'DNNL_VERBOSE':
 ```
-export MKLDNN_VERBOSE=1
+export DNNL_VERBOSE=1
 ```
 For example, by running above code snippet, the following debugging logs providing more insights on ONEDNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
 ```
@@ -281,7 +281,7 @@ MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1
 Graph optimization with subgraph is available and enabled by default in master branch. For MXNet release v1.5, you can manually enable it by:
 
 ```
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
+export MXNET_SUBGRAPH_BACKEND=DNNL
 ```
 
 This limitations of this experimental feature are:

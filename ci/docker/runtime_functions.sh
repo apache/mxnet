@@ -801,7 +801,7 @@ cd_unittest_ubuntu() {
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
-        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/mkl
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/dnnl
     fi
 }
 
@@ -841,7 +841,7 @@ unittest_ubuntu_python3_cpu_onednn() {
     MXNET_ENGINE_TYPE=NaiveEngine \
                      OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
+    pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/dnnl
 }
 
 unittest_array_api_standardization() {

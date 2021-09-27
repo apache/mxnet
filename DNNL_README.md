@@ -18,4 +18,4 @@
   ~
 -->
 
-File is moved to [docs/tutorials/mkldnn/MKLDNN_README.md](docs/python_docs/python/tutorials/performance/backend/mkldnn/mkldnn_readme.md).
+File is moved to [docs/python_docs/python/tutorials/performance/backend/dnnl/dnnl_readme.md](docs/python_docs/python/tutorials/performance/backend/dnnl/dnnl_readme.md).
