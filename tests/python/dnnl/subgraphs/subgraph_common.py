@@ -29,16 +29,16 @@ from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 
 OP_NAME='op_name'
 QUANTIZED_OP_NAME='quantized_op_name'
-SG_PASS_NAME='MKLDNN'
-QUANTIZE_SG_PASS_NAME='MKLDNN_QUANTIZE'
+SG_PASS_NAME='DNNL'
+QUANTIZE_SG_PASS_NAME='DNNL_QUANTIZE'
 config =  {
   'conv': {
-    OP_NAME: 'sg_mkldnn_conv',
-    QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_conv'
+    OP_NAME: 'sg_dnnl_conv',
+    QUANTIZED_OP_NAME: 'quantized_sg_dnnl_conv'
   },
   'fc': {
-    OP_NAME: 'sg_mkldnn_fully_connected',
-    QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_fully_connected'
+    OP_NAME: 'sg_dnnl_fully_connected',
+    QUANTIZED_OP_NAME: 'quantized_sg_dnnl_fully_connected'
   }
 }
 
@@ -90,16 +90,16 @@ def check_qsym_calibrated(qsym, out_type, name='conv'):
     if k.find('_quantize') != -1:
       assert v['out_type'] == out_type
     if k.find(quantized_op_name) != -1:
-      if quantized_op_name.startswith("quantized_sg_mkldnn_fully_connected") and 'enable_float_output' in v:
+      if quantized_op_name.startswith("quantized_sg_dnnl_fully_connected") and 'enable_float_output' in v:
         continue
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
 
 def check_qsym_scale_align(qsym):
-  assert ''.join(qsym.attr_dict().keys()).find('quantized_sg_mkldnn_conv') != -1
+  assert ''.join(qsym.attr_dict().keys()).find('quantized_sg_dnnl_conv') != -1
   init = False
   for k, v in qsym.attr_dict().items():
-    if k.find('quantized_sg_mkldnn_conv') != -1:
+    if k.find('quantized_sg_dnnl_conv') != -1:
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
       if not init:

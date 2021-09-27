@@ -49,10 +49,10 @@ TEST(Storage, Basic_CPU) {
 
 TEST(Storage, CPU_MemAlign) {
   #if MXNET_USE_ONEDNN == 1
-  // MKLDNN requires special alignment. 64 is used by the MKLDNN library in
+  // DNNL requires special alignment. 64 is used by the DNNL library in
   // memory allocation.
-    static constexpr size_t alignment_ = mxnet::kMKLDNNAlign;
-  #else
+  static constexpr size_t alignment_ = mxnet::kDNNLAlign;
+#else
     static constexpr size_t alignment_ = 16;
   #endif
 

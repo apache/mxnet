@@ -16,7 +16,7 @@
 # under the License.
 
 """
-MKL-DNN related test cases
+DNNL related test cases
 """
 import sys
 import os
@@ -33,7 +33,7 @@ import itertools
 
 @use_np
 @pytest.mark.seed(1234)
-def test_mkldnn_ndarray_slice():
+def test_dnnl_ndarray_slice():
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
     net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
@@ -46,7 +46,7 @@ def test_mkldnn_ndarray_slice():
 
 @use_np
 @pytest.mark.seed(1234)
-def test_mkldnn_engine_threading():
+def test_dnnl_engine_threading():
     net = gluon.nn.HybridSequential()
     net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
     net.initialize(ctx=mx.cpu())
@@ -59,18 +59,18 @@ def test_mkldnn_engine_threading():
     loader = gluon.data.DataLoader(Dummy(), batch_size=2, num_workers=1)
 
     X = (32, 3, 32, 32)
-    # trigger mkldnn execution thread
+    # trigger dnnl execution thread
     y = net(mx.np.array(np.ones(X))).asnumpy()
 
     # Use Gluon dataloader to trigger different thread.
     # below line triggers different execution thread
     for _ in loader:
         y = net(mx.np.array(np.ones(X))).asnumpy()
-        # output should be 056331709 (non-mkldnn mode output)
+        # output should be 056331709 (non-dnnl mode output)
         assert_almost_equal(y[0, 0, 0, 0], np.array(0.056331709))
         break
 
-def test_mkldnn_reshape():
+def test_dnnl_reshape():
     def test_reshape_after_conv(dst_shape):
         shape = (1,1,4,4)
         data = mx.symbol.Variable('data')
@@ -95,7 +95,7 @@ def test_mkldnn_reshape():
         assert_almost_equal(outputs, data_npy.reshape(dst_shape))
 
 
-    # Test mkldnn reshape (Using shape)
+    # Test dnnl reshape (Using shape)
     test_cases = [(256), (16, 16), (4, 4, 16), (4, 4, 4, 4)]
     for test_case in test_cases:
         test_reshape_after_conv(test_case)
@@ -222,7 +222,7 @@ def test_flatten_slice_after_conv():
     print(p[0])
 
 
-def test_mkldnn_sum_with_mkldnn_layout():
+def test_dnnl_sum_with_dnnl_layout():
 
     x_shape = (32, 3, 224, 224)
     x_npy = np.ones(x_shape, dtype='float32')
@@ -237,14 +237,14 @@ def test_mkldnn_sum_with_mkldnn_layout():
         inputs = []
         for _ in range(i):
             inputs.append(z)
-        y = mx.sym.add_n(*inputs) # (only MKLDNN data input)
+        y = mx.sym.add_n(*inputs) # (only DNNL data input)
         exe = y._simple_bind(ctx=mx.cpu(), x=x_shape, w=w_shape)
         out = exe.forward(is_train=False, x=x_npy, w=np.ones(w_shape))[0]
         #conv with kernel (3,3) on ones should give result=27
         single_cov = 27.0
         assert_almost_equal(out[0].asnumpy()[0, 0, 0], single_cov*i)
 
-def test_mkldnn_sum_inplace_with_cpu_layout():
+def test_dnnl_sum_inplace_with_cpu_layout():
     x_shape = (32, 3, 224, 224)
     x_npy = np.ones(x_shape, dtype='float32')
     y_shape = (32, 32, 222, 222)
@@ -252,7 +252,7 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
     x = mx.sym.Variable("x")
     y = mx.sym.Variable("y")
     z = mx.symbol.Convolution(data=x, num_filter=32, kernel=(3, 3))
-    z = mx.sym.add_n(z, y) # (MKLDNN data, cpu data)
+    z = mx.sym.add_n(z, y) # (DNNL data, cpu data)
     exe = z._simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
     out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
     assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
@@ -501,10 +501,10 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
-def test_non_mkldnn_fcomputeex():
-    # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
-    # conv is example where MKLDNN NDArray is created from regular NDArrays
-    # CustomOps is example of non-mkldnn fcomputeex operator
+def test_non_dnnl_fcomputeex():
+    # test special case where DNNL formatted NDArray feeds into non-dnnl fcomputeex operator
+    # conv is example where DNNL NDArray is created from regular NDArrays
+    # CustomOps is example of non-dnnl fcomputeex operator
 
     @mx.operator.register("custom")
     class CustomProp(mx.operator.CustomOpProp):

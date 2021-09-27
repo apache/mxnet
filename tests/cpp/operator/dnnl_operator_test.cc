@@ -18,14 +18,14 @@
  */
 
 /*!
- *  \file mkldnn_test.cc
- *  \brief test functions for mkldnn operators.
+ *  \file dnnl_test.cc
+ *  \brief test functions for dnnl operators.
  *  \author Alex Zai
  */
 
 #if MXNET_USE_ONEDNN == 1
 
-#include <mkldnn_types.h>
+#include <dnnl_types.h>
 
 #include <climits>
 #include <cmath>
@@ -33,13 +33,12 @@
 
 #include "../../src/operator/nn/convolution-inl.h"
 #include "../../src/operator/nn/deconvolution-inl.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
+#include "../../src/operator/nn/dnnl/dnnl_base-inl.h"
+#include "../../src/operator/nn/dnnl/dnnl_ops-inl.h"
+#include "../../src/operator/nn/dnnl/dnnl_pooling-inl.h"
 #include "../../src/operator/nn/pooling-inl.h"
-#include "../include/test_mkldnn.h"
+#include "../include/test_dnnl.h"
 #include "../include/test_util.h"
-
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 
@@ -197,10 +196,10 @@ OpAttrs GetLRNOp() {
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
-  attrs.input_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                      ArrayTypes::MKLDNNReshaped;
-  attrs.output_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                       ArrayTypes::MKLDNNReshaped;
+  attrs.input_types =
+      ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped | ArrayTypes::DNNLReshaped;
+  attrs.output_types =
+      ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped | ArrayTypes::DNNLReshaped;
   return attrs;
 }
 
@@ -225,10 +224,10 @@ OpAttrs GetSoftmaxOp() {
   attrs.accept_dims.insert({1, 2, 3, 4, 5});
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
-  attrs.input_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                      ArrayTypes::MKLDNNReshaped;
-  attrs.output_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                       ArrayTypes::MKLDNNReshaped;
+  attrs.input_types =
+      ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped | ArrayTypes::DNNLReshaped;
+  attrs.output_types =
+      ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped | ArrayTypes::DNNLReshaped;
   return attrs;
 }
 
@@ -240,10 +239,10 @@ OpAttrs GetFullyConnectedOp() {
   attrs.num_outputs = 1;
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.requests.insert(OpReqType::kWriteTo);
-  attrs.input_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                      ArrayTypes::MKLDNNReshaped;
-  attrs.output_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                       ArrayTypes::MKLDNNReshaped;
+  attrs.input_types =
+      ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped | ArrayTypes::DNNLReshaped;
+  attrs.output_types =
+      ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped | ArrayTypes::DNNLReshaped;
   return attrs;
 }
 
@@ -268,12 +267,12 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"stride", CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad", CreateShapeString(pad, dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.input_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                      ArrayTypes::MKLDNNReshaped | ArrayTypes::NormalReused |
-                      ArrayTypes::MKLDNNReused | ArrayTypes::NormalReshapedReused;
-  attrs.output_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                       ArrayTypes::MKLDNNReshaped | ArrayTypes::NormalReused |
-                       ArrayTypes::MKLDNNReused | ArrayTypes::NormalReshapedReused |
+  attrs.input_types = ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped |
+                      ArrayTypes::DNNLReshaped | ArrayTypes::NormalReused | ArrayTypes::DNNLReused |
+                      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped |
+                       ArrayTypes::DNNLReshaped | ArrayTypes::NormalReused |
+                       ArrayTypes::DNNLReused | ArrayTypes::NormalReshapedReused |
                        ArrayTypes::NormalReusedDiffDtype;
   return attrs;
 }
@@ -301,12 +300,12 @@ OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"stride", CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad", CreateShapeString(pad, dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.input_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                      ArrayTypes::MKLDNNReshaped | ArrayTypes::NormalReused |
-                      ArrayTypes::MKLDNNReused | ArrayTypes::NormalReshapedReused;
-  attrs.output_types = ArrayTypes::Normal | ArrayTypes::MKLDNN | ArrayTypes::NormalReshaped |
-                       ArrayTypes::MKLDNNReshaped | ArrayTypes::NormalReused |
-                       ArrayTypes::MKLDNNReused | ArrayTypes::NormalReshapedReused |
+  attrs.input_types = ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped |
+                      ArrayTypes::DNNLReshaped | ArrayTypes::NormalReused | ArrayTypes::DNNLReused |
+                      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal | ArrayTypes::DNNL | ArrayTypes::NormalReshaped |
+                       ArrayTypes::DNNLReshaped | ArrayTypes::NormalReused |
+                       ArrayTypes::DNNLReused | ArrayTypes::NormalReshapedReused |
                        ArrayTypes::NormalReusedDiffDtype;
   return attrs;
 }
@@ -332,8 +331,8 @@ OpAttrs GetBNOp() {
   attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.input_types  = ArrayTypes::Normal | ArrayTypes::MKLDNN;
-  attrs.output_types = ArrayTypes::Normal | ArrayTypes::MKLDNN;
+  attrs.input_types  = ArrayTypes::Normal | ArrayTypes::DNNL;
+  attrs.output_types = ArrayTypes::Normal | ArrayTypes::DNNL;
   return attrs;
 }
 
@@ -449,7 +448,7 @@ void TestOp(const OpAttrs& attrs, VerifyFunc verify_fn) {
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<mkldnn::memory::desc> mds = tas.mds;
+  std::vector<dnnl::memory::desc> mds   = tas.mds;
 
   if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
     std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
@@ -537,7 +536,7 @@ void TestConcatOp(const OpAttrs& attrs, VerifyFunc verify_fn, bool backwards = f
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<mkldnn::memory::desc> mds = tas.mds;
+  std::vector<dnnl::memory::desc> mds   = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
 
@@ -644,7 +643,7 @@ void TestOpEx(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
   std::vector<OpReqType> req(forward_attrs.num_outputs);
 
   TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<mkldnn::memory::desc> mds = tas.mds;
+  std::vector<dnnl::memory::desc> mds   = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -822,7 +821,7 @@ void TestOpExBN(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
   std::vector<OpReqType> req(forward_attrs.num_outputs);
 
   TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<mkldnn::memory::desc> mds = tas.mds;
+  std::vector<dnnl::memory::desc> mds   = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -914,7 +913,7 @@ void TestFullyConnectedOp(const OpAttrs& forward_attrs, const OpAttrs& backwards
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
 
   TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<mkldnn::memory::desc> mds = tas.mds;
+  std::vector<dnnl::memory::desc> mds   = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs =
       GetTestInputArrays(forward_attrs.input_types, true, {1}, false, 1);
@@ -1045,7 +1044,7 @@ void TestConvOp(const OpAttrs& forward_attrs,
   std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
   TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<mkldnn::memory::desc> mds = tas.mds;
+  std::vector<dnnl::memory::desc> mds   = tas.mds;
 
   P param;
   param.Init(forward_attrs.attrs.dict);
@@ -1188,7 +1187,7 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
   std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
   TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<mkldnn::memory::desc> mds = tas.mds;
+  std::vector<dnnl::memory::desc> mds   = tas.mds;
 
   mxnet::op::PoolingParam param;
   param.Init(forward_attrs.attrs.dict);
@@ -1207,9 +1206,9 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
     mxnet::TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
-    // cannot pool if ndarray and mkldnn memory have different ndim
+    // cannot pool if ndarray and dnnl memory have different ndim
     if (in_arr.arr.IsView() ||
-        in_arr.arr.GetMKLDNNData()->get_desc().data.ndims != in_arr.arr.shape().ndim())
+        in_arr.arr.GetDNNLData()->get_desc().data.ndims != in_arr.arr.shape().ndim())
       continue;
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
@@ -1268,7 +1267,7 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
       }
 
       // needs copies of inputs since they be reused in next iteration
-      // cannot use Copy method since we need to maintain MKLDNN format
+      // cannot use Copy method since we need to maintain DNNL format
       auto tmp_output         = GetTestInputArrays()[i1];
       auto tmp_output2        = GetTestInputArrays()[i1];
       backwards_outputs[0]    = &tmp_output.arr;
@@ -1379,7 +1378,7 @@ TEST(IMPERATIVE, PoolingOp) {
 }
 
 TEST(IMPERATIVE, ConvOp) {
-  int dim = 2;  // MKLDNN conv only supports 2d kernels
+  int dim = 2;  // DNNL conv only supports 2d kernels
   for (size_t num_filters = 2; num_filters < 3; ++num_filters) {
     for (size_t kernel = 1; kernel < 4; ++kernel) {
       for (size_t stride = 1; stride < 3; ++stride) {
@@ -1396,7 +1395,7 @@ TEST(IMPERATIVE, ConvOp) {
 }
 
 TEST(IMPERATIVE, DeconvOp) {
-  int dim = 2;  // MKLDNN deconv only supports 2d kernels
+  int dim = 2;  // DNNL deconv only supports 2d kernels
   for (size_t num_filters = 2; num_filters < 3; ++num_filters) {
     for (size_t kernel = 1; kernel < 3; ++kernel) {
       for (size_t stride = 1; stride < 3; ++stride) {

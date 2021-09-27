@@ -151,8 +151,8 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
         out = self.act(self.conv0(x)) + self.conv1(x)
         return out
 
-  attrs = {'sg_mkldnn_conv_act_0': {'with_act': 'true'},
-           'sg_mkldnn_conv_add_1': {'with_sum': 'true'}}
+  attrs = {'sg_dnnl_conv_act_0': {'with_act': 'true'},
+           'sg_dnnl_conv_add_1': {'with_sum': 'true'}}
 
   net = ConvActAdd(use_bias, alg)
   check_fusion(net, data_shape, attrs, check_quantization=quantize)
@@ -397,7 +397,7 @@ class ConvBNSum(nn.HybridBlock):
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
 def test_conv_bn_sum(data_shape, reverse_sum_order, dedup_subgraph):
-  attr = {'sg_mkldnn_conv_bn_add_0' : {'with_bn': 'true'}}
+  attr = {'sg_dnnl_conv_bn_add_0' : {'with_bn': 'true'}}
   # channels after conv+bn should be same as input channels
   net = ConvBNSum(channels=data_shape[1] ,reverse_sum_order=reverse_sum_order)
   check_fusion(net, data_shape, attr, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
@@ -426,7 +426,7 @@ class MobileNetV2Struct(nn.HybridBlock):
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
 def test_mobilenetv2_struct(data_shape, reverse_sum_order, dedup_subgraph):
-  attr = {'sg_mkldnn_conv_bn_0' : {'with_bn': 'true'}}
+  attr = {'sg_dnnl_conv_bn_0' : {'with_bn': 'true'}}
   net = MobileNetV2Struct(reverse_sum_order=reverse_sum_order)
   check_fusion(net, data_shape, attr, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 
@@ -446,10 +446,10 @@ def test_deduplication(data_shape, reverse_sum_order, model_name):
   model_dedup.initialize()
   model_no_dedup = copy.copy(model_dedup)
 
-  model_dedup.optimize_for(data_nd, backend='MKLDNN', dedup_subgraph = True, skip_infer = True)
+  model_dedup.optimize_for(data_nd, backend='DNNL', dedup_subgraph = True, skip_infer = True)
   out = model_dedup(data_nd)
 
-  model_dedup.optimize_for(data_nd, backend='MKLDNN', dedup_subgraph = False, skip_infer = True)
+  model_dedup.optimize_for(data_nd, backend='DNNL', dedup_subgraph = False, skip_infer = True)
   out_dedup = model_no_dedup(data_nd)
 
   assert_almost_equal(out.asnumpy(), out_dedup.asnumpy(), rtol=1e-3, atol=1e-1)
@@ -776,7 +776,7 @@ def test_bn_relu_fusion(axis):
 
     out1 = net(dummy_data)
     out1.wait_to_read()
-    net.optimize_for(dummy_data, backend='MKLDNN')
+    net.optimize_for(dummy_data, backend='DNNL')
     out2 = net(dummy_data)
 
     assert_almost_equal(out1, out2)

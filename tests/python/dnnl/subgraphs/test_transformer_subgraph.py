@@ -67,7 +67,7 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
   net.hybridize()
   ref_out = net(in_data, mask)
 
-  fused_net.optimize_for(in_data, mask, backend="MKLDNN")
+  fused_net.optimize_for(in_data, mask, backend="DNNL")
   out = fused_net(in_data, mask)
   mx.nd.waitall()
 
