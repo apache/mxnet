@@ -16,36 +16,36 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 /*!
- * \file mkldnn_quantized_pooling.cc
- * \brief
- * \author Tao Lv, Xinyu Chen
+ * \file dnnl_quantized_act.cc
+ * \brief DNNL(Quantized) Activation operator based on subgraph
+ * /author Zhiyuan Huang
  */
-
 #if MXNET_USE_ONEDNN == 1
 
-#include "../../nn/mkldnn/mkldnn_pooling-inl.h"
+#include "../../nn/dnnl/dnnl_ops-inl.h"
+#include "../quantization_utils.h"
 
 namespace mxnet {
 namespace op {
 
-static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<NDArray>& in_data,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<NDArray>& out_data) {
+static void DNNLQuantizedActForward(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<NDArray>& in_data,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& out_data) {
   CHECK(in_data[0].dtype() == mshadow::kUint8 || in_data[0].dtype() == mshadow::kInt8)
-      << "mkldnn_quantized_pooling op only supports uint8 and int8 as input type";
-  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  MKLDNNPoolingCompute(ctx, param, in_data[0], req[0], out_data[0], nullptr);
+      << "_contrib_quantized_act op only supports uint8 and int8 as input "
+         "type";
+
+  DNNLRun(DNNLActivationForward, attrs, ctx, in_data[0], req[0], out_data[0]);
   out_data[1].data().dptr<float>()[0] = in_data[1].data().dptr<float>()[0];
   out_data[2].data().dptr<float>()[0] = in_data[2].data().dptr<float>()[0];
 }
 
-NNVM_REGISTER_OP(_contrib_quantized_pooling)
-    .set_attr<bool>("TIsMKLDNN", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedPoolingForward);
+NNVM_REGISTER_OP(_contrib_quantized_act)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedActForward);
 
 }  // namespace op
 }  // namespace mxnet

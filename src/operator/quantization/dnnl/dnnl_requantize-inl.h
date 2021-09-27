@@ -17,31 +17,31 @@
  * under the License.
  */
 
-/* \file mkldnn_requantize-inl.h
+/* \file dnnl_requantize-inl.h
  * \brief
  * \author Jin Huang, Xinyu Chen
  */
 
-#ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_REQUANTIZE_INL_H_
-#define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_REQUANTIZE_INL_H_
+#ifndef MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_REQUANTIZE_INL_H_
+#define MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_REQUANTIZE_INL_H_
 #if MXNET_USE_ONEDNN == 1
 #include <algorithm>
 #include <string>
 #include <vector>
 
-#include "../../nn/mkldnn/mkldnn_base-inl.h"
+#include "../../nn/dnnl/dnnl_base-inl.h"
 #include "../requantize-inl.h"
 
 namespace mxnet {
 namespace op {
 
 template <typename DstType>
-static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
-                                       const OpContext& ctx,
-                                       const std::vector<NDArray>& inputs,
-                                       const std::vector<OpReqType>& req,
-                                       const std::vector<NDArray>& outputs,
-                                       const float real_range) {
+static void DNNLRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<NDArray>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<NDArray>& outputs,
+                                     const float real_range) {
   using namespace mshadow;
   using namespace mxnet_op;
   using red::limits::MaxValue;
@@ -70,33 +70,33 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
   float second_scale = second_quantized_range / second_real_range;
   float scale        = first_scale * second_scale;
 
-  mkldnn::primitive_attr attr;
+  dnnl::primitive_attr attr;
   const int mask            = 0;
   std::vector<float> scales = {scale};
   attr.set_output_scales(mask, scales);
-  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+  dnnl::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
 
   NDArray in_buffer = inputs[0];
-  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
+  if (inputs[0].IsView() && inputs[0].IsDNNLData())
     in_buffer = inputs[0].Reorder2Default();
 
-  auto i_mem            = in_buffer.GetMKLDNNData();
+  auto i_mem            = in_buffer.GetDNNLData();
   auto i_desc           = i_mem->get_desc();
   auto o_desc           = i_desc;
-  o_desc.data.data_type = get_mkldnn_type_t<DstType>();
-  auto reorder_pd = mkldnn::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc, attr);
-  auto o_mem      = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
-  MKLDNNStream::Get()->RegisterPrimArgs(
-      mkldnn::reorder(reorder_pd), {{MKLDNN_ARG_FROM, *i_mem}, {MKLDNN_ARG_TO, *o_mem.second}});
+  o_desc.data.data_type = get_dnnl_type_t<DstType>();
+  auto reorder_pd = dnnl::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc, attr);
+  auto o_mem      = CreateDNNLMem(outputs[0], o_desc, req[0]);
+  DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd),
+                                      {{DNNL_ARG_FROM, *i_mem}, {DNNL_ARG_TO, *o_mem.second}});
   CommitOutput(outputs[0], o_mem);
-  MKLDNNStream::Get()->Submit();
+  DNNLStream::Get()->Submit();
 }
 
-static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
-                                    const OpContext& ctx,
-                                    const std::vector<NDArray>& inputs,
-                                    const std::vector<OpReqType>& req,
-                                    const std::vector<NDArray>& outputs) {
+static void DNNLRequantizeForward(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   using red::limits::MaxValue;
@@ -138,11 +138,11 @@ static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
   }
   auto out_type = GetQuantizeOutputType(param);
   if (out_type == mshadow::kUint8) {
-    MKLDNNRequantizeForwardKer<uint8_t>(attrs, ctx, inputs, req, outputs, real_range);
+    DNNLRequantizeForwardKer<uint8_t>(attrs, ctx, inputs, req, outputs, real_range);
   } else if (out_type == mshadow::kInt8) {
-    MKLDNNRequantizeForwardKer<int8_t>(attrs, ctx, inputs, req, outputs, real_range);
+    DNNLRequantizeForwardKer<int8_t>(attrs, ctx, inputs, req, outputs, real_range);
   } else {
-    LOG(FATAL) << "mkldnn requantize op only supports int8 and uint8 as output type";
+    LOG(FATAL) << "dnnl requantize op only supports int8 and uint8 as output type";
   }
 }
 
@@ -150,4 +150,4 @@ static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_REQUANTIZE_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_REQUANTIZE_INL_H_

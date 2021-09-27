@@ -18,23 +18,23 @@
  */
 
 /*!
- * \file mkldnn_quantized_fully_connected.cc
- * \brief MKLDNN Quantized FullyConnected operator
+ * \file dnnl_quantized_fully_connected.cc
+ * \brief DNNL Quantized FullyConnected operator
  * \author Ciyong Chen
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#include "../../nn/dnnl/dnnl_fully_connected-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
 namespace op {
 
-void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<NDArray>& in_data,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<NDArray>& out_data) {
+void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
+                                        const OpContext& ctx,
+                                        const std::vector<NDArray>& in_data,
+                                        const std::vector<OpReqType>& req,
+                                        const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   FullyConnectedParam param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs   = param.no_bias ? 2 : 3;
@@ -85,41 +85,41 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   }
 
   bool is_train               = false;
-  mkldnn::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);
-  MKLDNNFCFlattenData(param, out_data[fullc::kOut], &data, &out_md);
+  dnnl::memory::desc out_md   = GetMemDesc(out_data[fullc::kOut]);
+  DNNLFCFlattenData(param, out_data[fullc::kOut], &data, &out_md);
   auto& fwd =
       GetFCFwd(param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);
 
-  auto data_mem = in_data[fullc::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_desc());
-  const mkldnn::memory* weight_mem = nullptr;
+  auto data_mem                  = in_data[fullc::kData].GetDNNLDataReorder(fwd.fwd_pd.src_desc());
+  const dnnl::memory* weight_mem = nullptr;
 
   if (weight.IsDefaultData()) {
     // We also need to modify the layout on the original weight array.
     // Don't switch below sequence because naive engine will executes
     // pushAsync synchronously.
-    weight.MKLDNNDataReorderAsync(fwd.fwd_pd.weights_desc());
+    weight.DNNLDataReorderAsync(fwd.fwd_pd.weights_desc());
     weight_mem = GetWeights(weight, fwd.fwd_pd.weights_desc(), 1);
   } else {
-    weight_mem = weight.GetMKLDNNData();
+    weight_mem = weight.GetDNNLData();
     CHECK(weight_mem->get_desc() == fwd.fwd_pd.weights_desc());
   }
-  auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut], fwd.fwd_pd.dst_desc(), req[fullc::kOut]);
+  auto out_mem = CreateDNNLMem(out_data[fullc::kOut], fwd.fwd_pd.dst_desc(), req[fullc::kOut]);
 
-  mkldnn_args_map_t args = {
-      {MKLDNN_ARG_SRC, *data_mem},
-      {MKLDNN_ARG_WEIGHTS, *weight_mem},
-      {MKLDNN_ARG_DST, *out_mem.second},
+  dnnl_args_map_t args = {
+      {DNNL_ARG_SRC, *data_mem},
+      {DNNL_ARG_WEIGHTS, *weight_mem},
+      {DNNL_ARG_DST, *out_mem.second},
   };
 
-  const mkldnn::memory* bias_mem = nullptr;
+  const dnnl::memory* bias_mem = nullptr;
   if (!param.no_bias) {
-    bias_mem              = quantized_bias.GetMKLDNNDataReorder(fwd.fwd_pd.bias_desc());
-    args[MKLDNN_ARG_BIAS] = *bias_mem;
+    bias_mem            = quantized_bias.GetDNNLDataReorder(fwd.fwd_pd.bias_desc());
+    args[DNNL_ARG_BIAS] = *bias_mem;
   }
 
-  MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), args);
+  DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), args);
   CommitOutput(out_data[fullc::kOut], out_mem);
-  MKLDNNStream::Get()->Submit();
+  DNNLStream::Get()->Submit();
 }
 
 }  // namespace op

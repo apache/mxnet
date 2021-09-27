@@ -23,7 +23,7 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../nn/dnnl/dnnl_ops-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
@@ -36,16 +36,16 @@ inline static bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-static void MKLDNNQuantizedFlattenForward(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<NDArray>& inputs,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNReshape(inputs[0], outputs[0])) {
-    MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+static void DNNLQuantizedFlattenForward(const nnvm::NodeAttrs& attrs,
+                                        const OpContext& ctx,
+                                        const std::vector<NDArray>& inputs,
+                                        const std::vector<OpReqType>& req,
+                                        const std::vector<NDArray>& outputs) {
+  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+    DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
   }
@@ -55,12 +55,12 @@ static void MKLDNNQuantizedFlattenForward(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_contrib_quantized_flatten)
     .set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedFlattenForward)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedFlattenForward)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<bool>("TIsMKLDNN", true);
+    .set_attr<bool>("TIsDNNL", true);
 
 }  // namespace op
 }  // namespace mxnet

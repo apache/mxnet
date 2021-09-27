@@ -18,13 +18,13 @@
  */
 
 /*!
- * \file mkldnn_quantized_ops-inl.h
- * \brief Common functions used by MKLDNN Quantized FullyConnected operator
+ * \file dnnl_quantized_ops-inl.h
+ * \brief Common functions used by DNNL Quantized FullyConnected operator
  * \author Ciyong Chen
  */
 
-#ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_OPS_INL_H_
-#define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_OPS_INL_H_
+#ifndef MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZED_OPS_INL_H_
+#define MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZED_OPS_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
@@ -35,14 +35,14 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<NDArray>& in_data,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<NDArray>& out_data);
+void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
+                                        const OpContext& ctx,
+                                        const std::vector<NDArray>& in_data,
+                                        const std::vector<OpReqType>& req,
+                                        const std::vector<NDArray>& out_data);
 
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_OPS_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZED_OPS_INL_H_

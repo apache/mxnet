@@ -18,49 +18,49 @@
  */
 
 /*!
- * \file mkldnn_quantized_batch_norm.cc
+ * \file dnnl_quantized_batch_norm.cc
  * \brief
  * \author Yixin Bao
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/mkldnn/mkldnn_batch_norm-inl.h"
+#include "../../nn/dnnl/dnnl_batch_norm-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
 namespace op {
 
-static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
-                                            const OpContext& ctx,
-                                            const std::vector<NDArray>& in_data,
-                                            const std::vector<OpReqType>& req,
-                                            const std::vector<NDArray>& outputs) {
+static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
+                                          const OpContext& ctx,
+                                          const std::vector<NDArray>& in_data,
+                                          const std::vector<OpReqType>& req,
+                                          const std::vector<NDArray>& outputs) {
   CHECK_EQ(in_data.size(), 7U);
   CHECK_EQ(outputs.size(), 3U);
 
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   const NDArray& data         = in_data[quantized_batchnorm::kData];
-  auto data_mem               = data.GetMKLDNNData();
+  auto data_mem               = data.GetDNNLData();
 
   // reorder if data type = uint8
   if (in_data[quantized_batchnorm::kData].dtype() == mshadow::kUint8) {
     auto u8_md            = data_mem->get_desc();
     auto s8_md            = u8_md;
-    s8_md.data.data_type  = static_cast<mkldnn_data_type_t>(mkldnn::memory::data_type::s8);
+    s8_md.data.data_type  = static_cast<dnnl_data_type_t>(dnnl::memory::data_type::s8);
     auto data_reorder_mem = TmpMemMgr::Get()->Alloc(s8_md);
 
     std::vector<float> reorder_scale;
     reorder_scale = {static_cast<float>(kInt8Range) / kUint8Range};
-    mkldnn::primitive_attr reorder_attr;
+    dnnl::primitive_attr reorder_attr;
     reorder_attr.set_output_scales(0, reorder_scale);
-    mkldnn::engine cpu_engine = CpuEngine::Get()->get_engine();
+    dnnl::engine cpu_engine = CpuEngine::Get()->get_engine();
     const auto reorder_pd =
-        mkldnn::reorder::primitive_desc(cpu_engine, u8_md, cpu_engine, s8_md, reorder_attr);
-    mkldnn_args_map_t reorder_args;
-    reorder_args[MKLDNN_ARG_SRC] = *data_mem;
-    reorder_args[MKLDNN_ARG_DST] = *data_reorder_mem;
-    MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(reorder_pd), reorder_args);
+        dnnl::reorder::primitive_desc(cpu_engine, u8_md, cpu_engine, s8_md, reorder_attr);
+    dnnl_args_map_t reorder_args;
+    reorder_args[DNNL_ARG_SRC] = *data_mem;
+    reorder_args[DNNL_ARG_DST] = *data_reorder_mem;
+    DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd), reorder_args);
     data_mem = data_reorder_mem;
   }
   const size_t channelAxis = static_cast<size_t>(
@@ -81,10 +81,10 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   }
   const float max_abs_output = std::max(std::abs(*min_output_ptr), std::abs(*max_output_ptr));
 
-  mkldnn::normalization_flags flags =
-      mkldnn::normalization_flags::use_global_stats | mkldnn::normalization_flags::use_scale_shift;
+  dnnl::normalization_flags flags =
+      dnnl::normalization_flags::use_global_stats | dnnl::normalization_flags::use_scale_shift;
   auto& fwd                        = GetBNForward<float>(param, ctx, data_mem, flags);
-  const mkldnn::memory& weight_mem = fwd.GetWeight();
+  const dnnl::memory& weight_mem   = fwd.GetWeight();
   CHECK_EQ(weight_mem.get_desc().get_size(), channel_count * sizeof(float) * 2);
   float* weight_buf = reinterpret_cast<float*>(weight_mem.get_data_handle());
 
@@ -97,8 +97,8 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   float* moving_var_ptr      = moving_var.data().dptr<float>();
 
   // rescale gamma and beta, to make mean=0 and var=1
-  auto rescaled_mean_mem   = TmpMemMgr::Get()->Alloc(moving_mean.GetMKLDNNData()->get_desc());
-  auto rescaled_var_mem    = TmpMemMgr::Get()->Alloc(moving_var.GetMKLDNNData()->get_desc());
+  auto rescaled_mean_mem   = TmpMemMgr::Get()->Alloc(moving_mean.GetDNNLData()->get_desc());
+  auto rescaled_var_mem    = TmpMemMgr::Get()->Alloc(moving_var.GetDNNLData()->get_desc());
   float* rescaled_mean_ptr = reinterpret_cast<float*>(rescaled_mean_mem->get_data_handle());
   float* rescaled_var_ptr  = reinterpret_cast<float*>(rescaled_var_mem->get_data_handle());
 
@@ -114,16 +114,16 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   }
 
   const NDArray& out = outputs[batchnorm::kOut];
-  auto out_mem       = const_cast<NDArray&>(out).CreateMKLDNNData(fwd.GetPd().dst_desc());
-  mkldnn_args_map_t net_args;
-  net_args[MKLDNN_ARG_SRC]         = *data_mem;
-  net_args[MKLDNN_ARG_SCALE_SHIFT] = weight_mem;
-  net_args[MKLDNN_ARG_DST]         = *out_mem;
-  net_args[MKLDNN_ARG_MEAN]        = *rescaled_mean_mem;
-  net_args[MKLDNN_ARG_VARIANCE]    = *rescaled_var_mem;
+  auto out_mem       = const_cast<NDArray&>(out).CreateDNNLData(fwd.GetPd().dst_desc());
+  dnnl_args_map_t net_args;
+  net_args[DNNL_ARG_SRC]         = *data_mem;
+  net_args[DNNL_ARG_SCALE_SHIFT] = weight_mem;
+  net_args[DNNL_ARG_DST]         = *out_mem;
+  net_args[DNNL_ARG_MEAN]        = *rescaled_mean_mem;
+  net_args[DNNL_ARG_VARIANCE]    = *rescaled_var_mem;
 
-  MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
-  MKLDNNStream::Get()->Submit();
+  DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
+  DNNLStream::Get()->Submit();
 }
 
 inline static bool QuantizedBatchNormStorageType(const nnvm::NodeAttrs& attrs,
@@ -133,19 +133,19 @@ inline static bool QuantizedBatchNormStorageType(const nnvm::NodeAttrs& attrs,
                                                  std::vector<int>* out_attrs) {
   bool dispatched = false;
   if (!dispatched) {
-    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+    dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
   }
   return dispatched;
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_batch_norm)
     .set_attr<FInferStorageType>("FInferStorageType", QuantizedBatchNormStorageType)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedBatchNormForward)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedBatchNormForward)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<bool>("TIsMKLDNN", true);
+    .set_attr<bool>("TIsDNNL", true);
 
 }  // namespace op
 }  // namespace mxnet

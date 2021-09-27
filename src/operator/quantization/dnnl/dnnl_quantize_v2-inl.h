@@ -18,26 +18,26 @@
  */
 
 /*!
- * \file mkldnn_quantize_v2-inl.h
+ * \file dnnl_quantize_v2-inl.h
  * \brief
  */
 
-#ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_V2_INL_H_
-#define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_V2_INL_H_
+#ifndef MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZE_V2_INL_H_
+#define MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZE_V2_INL_H_
 #if MXNET_USE_ONEDNN == 1
 #include <algorithm>
 #include <string>
 #include <vector>
 
-#include "../../nn/mkldnn/mkldnn_base-inl.h"
+#include "../../nn/dnnl/dnnl_base-inl.h"
 #include "../quantize_v2-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNQuantizeOperator {
+class SgDNNLQuantizeOperator {
  public:
-  explicit SgMKLDNNQuantizeOperator(const nnvm::NodeAttrs& attrs)
+  explicit SgDNNLQuantizeOperator(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<QuantizeV2Param>(attrs.parsed)) {}
 
   void Forward(const OpContext& ctx,
@@ -50,15 +50,15 @@ class SgMKLDNNQuantizeOperator {
   QuantizeV2Param param_;
   float cached_data_min_{0.f};
   float cached_data_max_{0.f};
-  mkldnn::memory::desc o_desc_;
-  mkldnn_args_map_t args_;
-  std::shared_ptr<mkldnn::reorder> fwd_pd_;
+  dnnl::memory::desc o_desc_;
+  dnnl_args_map_t args_;
+  std::shared_ptr<dnnl::reorder> fwd_pd_;
 };
 
-void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
-                                       const std::vector<NDArray>& inputs,
-                                       const std::vector<OpReqType>& req,
-                                       const std::vector<NDArray>& outputs) {
+void SgDNNLQuantizeOperator::Forward(const OpContext& ctx,
+                                     const std::vector<NDArray>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<NDArray>& outputs) {
   float quantized_range = 0.0;
   NDArray in_buffer     = inputs[0];
   float data_min        = mshadow::red::limits::MaxValue<float>();
@@ -79,13 +79,13 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
       }
     }
     if (req[0] != kWriteInplace) {
-      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetMKLDNNData());
-      MKLDNNStream::Get()->Submit();
+      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetDNNLData());
+      DNNLStream::Get()->Submit();
     }
   } else {
-    if (in_buffer.IsView() && in_buffer.IsMKLDNNData())
+    if (in_buffer.IsView() && in_buffer.IsDNNLData())
       in_buffer = inputs[0].Reorder2Default();
-    auto i_mem = in_buffer.GetMKLDNNData();
+    auto i_mem = in_buffer.GetDNNLData();
 
     if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
       data_min = param_.min_calib_range.value();
@@ -128,7 +128,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
       *outputs[1].data().dptr<float>() = -real_range;
       *outputs[2].data().dptr<float>() = real_range;
     } else {
-      LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
+      LOG(FATAL) << "dnnl quantize op only supports int8 and uint8 as output type";
     }
 
     if (!initalized_) {
@@ -136,41 +136,41 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
       cached_data_max_ = data_max;
       float real_range = MaxAbs(data_min, data_max);
       float scale      = quantized_range / real_range;
-      mkldnn::primitive_attr attr;
+      dnnl::primitive_attr attr;
       const int mask            = 0;
       std::vector<float> scales = {scale};
       attr.set_output_scales(mask, scales);
-      mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+      dnnl::engine cpu_engine   = mxnet::CpuEngine::Get()->get_engine();
       auto i_desc               = i_mem->get_desc();
       size_t i_ndim             = in_buffer.shape().ndim();
       if (i_ndim == 4) {
-        mkldnn::memory::format_tag o_fmt = mkldnn::memory::format_tag::nhwc;
-        mkldnn::memory::dims o_dims(i_desc.data.dims, i_desc.data.dims + i_desc.data.ndims);
-        o_desc_ = mkldnn::memory::desc(o_dims, get_mkldnn_type(out_type), o_fmt);
+        dnnl::memory::format_tag o_fmt = dnnl::memory::format_tag::nhwc;
+        dnnl::memory::dims o_dims(i_desc.data.dims, i_desc.data.dims + i_desc.data.ndims);
+        o_desc_ = dnnl::memory::desc(o_dims, get_dnnl_type(out_type), o_fmt);
       } else {
         o_desc_                = i_desc;
-        o_desc_.data.data_type = get_mkldnn_type_t(out_type);
+        o_desc_.data.data_type = get_dnnl_type_t(out_type);
       }
       auto reorder_pd =
-          mkldnn::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc_, attr);
-      fwd_pd_     = std::make_shared<mkldnn::reorder>(reorder_pd);
+          dnnl::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc_, attr);
+      fwd_pd_     = std::make_shared<dnnl::reorder>(reorder_pd);
       initalized_ = true;
     }
-    auto o_mem             = CreateMKLDNNMem(outputs[0], o_desc_, req[0]);
-    args_[MKLDNN_ARG_FROM] = *i_mem;
-    args_[MKLDNN_ARG_TO]   = *o_mem.second;
-    MKLDNNStream::Get()->RegisterPrimArgs(*fwd_pd_, args_);
+    auto o_mem           = CreateDNNLMem(outputs[0], o_desc_, req[0]);
+    args_[DNNL_ARG_FROM] = *i_mem;
+    args_[DNNL_ARG_TO]   = *o_mem.second;
+    DNNLStream::Get()->RegisterPrimArgs(*fwd_pd_, args_);
     CommitOutput(outputs[0], o_mem);
-    MKLDNNStream::Get()->Submit();
+    DNNLStream::Get()->Submit();
   }
 }
 
-static void SgMKLDNNQuantizeForward(const OpStatePtr& state_ptr,
-                                    const OpContext& ctx,
-                                    const std::vector<NDArray>& inputs,
-                                    const std::vector<OpReqType>& req,
-                                    const std::vector<NDArray>& outputs) {
-  SgMKLDNNQuantizeOperator& op = state_ptr.get_state<SgMKLDNNQuantizeOperator>();
+static void SgDNNLQuantizeForward(const OpStatePtr& state_ptr,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+  SgDNNLQuantizeOperator& op = state_ptr.get_state<SgDNNLQuantizeOperator>();
   op.Forward(ctx, inputs, req, outputs);
 }
 
@@ -178,4 +178,4 @@ static void SgMKLDNNQuantizeForward(const OpStatePtr& state_ptr,
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_V2_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZE_V2_INL_H_

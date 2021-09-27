@@ -23,7 +23,7 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/mkldnn/mkldnn_concat-inl.h"
+#include "../../nn/dnnl/dnnl_concat-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
@@ -38,11 +38,11 @@ static float GetScale(const NDArray& data, float min, float max) {
   return data_range / MaxAbs(min, max);
 }
 
-static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
-                                         const OpContext& ctx,
-                                         const std::vector<NDArray>& in_data,
-                                         const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& out_data) {
+static void DNNLQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& in_data,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& out_data) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_data.size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_data.size(), 3U);
@@ -62,50 +62,50 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
   out_data[quantized_concat_enum::kMin].data().dptr<float>()[0] = output_neg_min;
   out_data[quantized_concat_enum::kMax].data().dptr<float>()[0] = output_pos_max;
   auto out_scale = GetScale(out_data[quantized_concat_enum::kOut], output_neg_min, output_pos_max);
-  std::vector<mkldnn::memory::desc> data_md;
-  std::vector<const mkldnn::memory*> data_mem;
-  // new_data_mem is for auto-free new created mkldnn memory
-  std::vector<std::shared_ptr<mkldnn::memory>> new_data_mem;
+  std::vector<dnnl::memory::desc> data_md;
+  std::vector<const dnnl::memory*> data_mem;
+  // new_data_mem is for auto-free new created dnnl memory
+  std::vector<std::shared_ptr<dnnl::memory>> new_data_mem;
   const auto out_dtype = out_data[quantized_concat_enum::kOut].dtype();
   for (int i = 0; i < param_.num_args; ++i) {
     auto i_scale = GetScale(in_data[i], data_min[i], data_max[i]);
     if (i_scale == out_scale) {
       CHECK(in_data[i].dtype() == out_dtype);
-      auto mem = in_data[i].GetMKLDNNData();
+      auto mem = in_data[i].GetDNNLData();
       data_mem.push_back(mem);
       data_md.push_back(mem->get_desc());
     } else {
-      auto mem      = in_data[i].GetMKLDNNData();
+      auto mem      = in_data[i].GetDNNLData();
       auto mem_desc = mem->get_desc();
       if (in_data[i].dtype() != out_dtype) {
-        mem_desc.data.data_type = static_cast<mkldnn_data_type_t>(get_mkldnn_type(out_dtype));
+        mem_desc.data.data_type = static_cast<dnnl_data_type_t>(get_dnnl_type(out_dtype));
       }
       const auto rescaled_mem =
-          std::make_shared<mkldnn::memory>(mem_desc, CpuEngine::Get()->get_engine());
+          std::make_shared<dnnl::memory>(mem_desc, CpuEngine::Get()->get_engine());
       new_data_mem.push_back(rescaled_mem);
       std::vector<float> reorder_scale = {out_scale / i_scale};
-      mkldnn::primitive_attr reorder_attr;
+      dnnl::primitive_attr reorder_attr;
       reorder_attr.set_output_scales(0, reorder_scale);
-      const auto reorder_pd = mkldnn::reorder::primitive_desc(*mem, *rescaled_mem, reorder_attr);
-      mkldnn_args_map_t reorder_args;
-      reorder_args[MKLDNN_ARG_SRC] = *mem;
-      reorder_args[MKLDNN_ARG_DST] = *rescaled_mem;
-      MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(reorder_pd), reorder_args);
+      const auto reorder_pd = dnnl::reorder::primitive_desc(*mem, *rescaled_mem, reorder_attr);
+      dnnl_args_map_t reorder_args;
+      reorder_args[DNNL_ARG_SRC] = *mem;
+      reorder_args[DNNL_ARG_DST] = *rescaled_mem;
+      DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd), reorder_args);
       data_mem.push_back(rescaled_mem.get());
       data_md.push_back(mem_desc);
     }
   }
-  MKLDNNConcatFwd& fwd           = GetConcatForward(param_.dim, in_data, data_md);
-  mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(
+  DNNLConcatFwd& fwd           = GetConcatForward(param_.dim, in_data, data_md);
+  mxnet::dnnl_output_t out_mem = CreateDNNLMem(
       out_data[quantized_concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
-  mkldnn_args_map_t net_args;
-  net_args[MKLDNN_ARG_DST] = *out_mem.second;
+  dnnl_args_map_t net_args;
+  net_args[DNNL_ARG_DST] = *out_mem.second;
   for (int i = 0; i < param_.num_args; i++) {
-    net_args[MKLDNN_ARG_MULTIPLE_SRC + i] = *data_mem[i];
+    net_args[DNNL_ARG_MULTIPLE_SRC + i] = *data_mem[i];
   }
-  MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
+  DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
   CommitOutput(out_data[concat_enum::kOut], out_mem);
-  MKLDNNStream::Get()->Submit();
+  DNNLStream::Get()->Submit();
 }
 
 inline static bool ConcatStorageType(const nnvm::NodeAttrs& attrs,
@@ -117,17 +117,17 @@ inline static bool ConcatStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_attrs->size(), 3U);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_concat)
     .set_attr<FInferStorageType>("FInferStorageType", ConcatStorageType)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedConcatForward)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedConcatForward)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<bool>("TIsMKLDNN", true);
+    .set_attr<bool>("TIsDNNL", true);
 
 }  // namespace op
 }  // namespace mxnet
