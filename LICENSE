@@ -344,7 +344,6 @@
 
     3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py (Copy of the referenced AL2 License available at top of current file)
     src/operator/nn/layer_norm.cc (function LayerNormCPUKernel is adapated from MIT-licensed code)
-    (Source repository for below deformable conv operators - https://github.com/msracver/Deformable-ConvNets/tree/master/DCNv2_op)
 
     =======================================================================================
     Apache-2.0 license + Boost Software License, Version 1.0
