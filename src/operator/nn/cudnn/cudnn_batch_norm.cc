@@ -136,8 +136,7 @@ void CudnnBatchNormForward(const BatchNormParam& param, const OpContext& ctx,
           param.eps, outputs[batchnorm::kMean].dptr_, outputs[batchnorm::kVar].dptr_,
           nullptr,  // activation desc
           workspace, workspace_size,
-          nullptr, 0  // reserveSpace, reserveSpaceSizeInBytes
-          ));
+          nullptr, 0));  // reserveSpace, reserveSpaceSizeInBytes
     } else {
       CUDNN_CALL(cudnnBatchNormalizationForwardInference(
           s->dnn_handle_, CUDNN_BATCHNORM_SPATIAL, &a, &b,
@@ -199,8 +198,7 @@ void CudnnBatchNormBackward(const BatchNormParam& param, const OpContext& ctx,
         global_stats ? nullptr : inputs[batchnorm::kVar].dptr_,
         nullptr,  // activationDesc
         workspace, workspace_size,
-        nullptr, 0  // reserveSpace, reserveSpaceSizeInBytes
-        ));
+        nullptr, 0));  // reserveSpace, reserveSpaceSizeInBytes
     if (param.fix_gamma) outputs[batchnorm::kGamma].FlatTo1D<gpu, DType>(s) = 0.0f;
   })
   Globals::Get().internal_aux_states_lock = false;

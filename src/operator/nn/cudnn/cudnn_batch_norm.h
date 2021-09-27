@@ -27,8 +27,8 @@
 #ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_H_
 #define MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_H_
 
-#include <vector>
 #include <mxnet/base.h>
+#include <vector>
 #include "../batch_norm-inl.h"
 
 namespace mxnet {
