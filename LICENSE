@@ -249,6 +249,11 @@
     docs/python_docs/themes/mx-theme
     3rdparty/intgemm
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
+    src/operator/contrib/nn/modulated_deformable_im2col.cuh
+    src/operator/contrib/nn/modulated_deformable_im2col.h
+    src/operator/modulated_deformable_convolution-inl.h
+    src/operator/modulated_deformable_convolution.cc
+    src/operator/modulated_deformable_convolution.cu
 
     =======================================================================================
     3-clause BSD license
@@ -322,6 +327,10 @@
     src/serialization/cnpy.cc (Copy of the AL2 License available at the top of this file, MIT License available at licenses/MIT)
     3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py (Copy of the referenced AL2 License available at top of current file)
     src/operator/nn/layer_norm.cc (function LayerNormCPUKernel is adapated from MIT-licensed code)
+    (Source repository for below deformable conv operators - https://github.com/msracver/Deformable-ConvNets/tree/master/DCNv2_op)
+    src/operator/deformable_convolution-inl.h
+    src/operator/deformable_convolution.cc
+    src/operator/deformable_convolution.cu
 
     =======================================================================================
     Apache-2.0 license + Boost Software License, Version 1.0
