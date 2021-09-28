@@ -18,7 +18,8 @@
  */
 
 /*!
- * \file cudnn_batch_norm.cc
+ * Copyright (c) 2015 by Contributors
+ * \file cudnn_batch_norm.cu
  * \brief
  * \author Junyuan Xie, Da Zheng
  */
