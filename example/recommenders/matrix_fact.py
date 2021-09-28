@@ -40,7 +40,7 @@ def evaluate_network(network, data_iterator, ctx):
 def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer='sgd', ctx=mx.gpu(0), num_epoch_lr=5, factor=0.2):
 
     np.random.seed(123)  # Fix random seed for consistent demos
-    mx.random.seed(123)  # Fix random seed for consistent demos
+    mx.np.random.seed(123)  # Fix random seed for consistent demos
     random.seed(123)  # Fix random seed for consistent demos
 
     schedule = mx.lr_scheduler.FactorScheduler(step=len(train_data)*len(ctx)*num_epoch_lr, factor=factor)
