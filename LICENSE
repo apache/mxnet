@@ -228,6 +228,7 @@
     3rdparty/tvm
     3rdparty/tvm/3rdparty/dmlc-core
     3rdparty/tvm/3rdparty/dlpack
+    include/nnvm (header symlinks to 3rdparty/tvm/nnvm/include/nnvm)
     3rdparty/ps-lite
     3rdparty/mkldnn
     include/mkldnn (header symlinks to 3rdparty/mkldnn)
