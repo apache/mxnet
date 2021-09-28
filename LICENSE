@@ -234,6 +234,7 @@
     include/mkldnn (header symlinks to 3rdparty/mkldnn)
     3rdparty/googletest/googlemock/scripts/generator
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark
+    3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py
     3rdparty/mkldnn/tests/benchdnn (Copy of the License available at top of current file)
     src/operator/special_functions-inl.h Cephes Library Functions (Copy of the License available at top of current file)
     3rdparty/mkldnn/doc/assets/mathjax (Copy of the License available at top of current file)
@@ -335,14 +336,7 @@
     Apache-2.0 license + MIT License
     =======================================================================================
 
-    3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py (Copy of the referenced AL2 License available at top of current file)
     src/operator/nn/layer_norm.cc (function LayerNormCPUKernel is adapated from MIT-licensed code)
-
-    =======================================================================================
-    Apache-2.0 license + Boost Software License, Version 1.0
-    =======================================================================================
-
-    cmake/Modules/FindJeMalloc.cmake
 
     =======================================================================================
     Boost Software License, Version 1.0
@@ -350,6 +344,7 @@
 
     3rdparty/intgemm/test/3rd_party/catch.hpp  (Copy of the License available at licenses/BOOST1_0)
     3rdparty/mkldnn/src/common/primitive_hashing.hpp
+    cmake/Modules/FindJeMalloc.cmake
 
     =======================================================================================
     LLVM Release License
