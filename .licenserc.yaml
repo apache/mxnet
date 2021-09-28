@@ -1,0 +1,90 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: Apache Software Foundation
+
+  paths-ignore:
+    - 'dist'
+    - 'licenses'
+    - '**/*.md'
+    - '**/*.ipynb'
+    - 'LICENSE'
+    - 'NOTICE'
+    - '3rdparty'
+    - '.gitignore'
+    - '.codecov.yml'
+    - '.gitattributes'
+    - '.github'
+    - '.gitmodules'
+    - '.licenserc.yaml'
+    - 'CODEOWNERS'
+    - 'DISCLAIMER'
+    - 'KEYS'
+    - 'python/mxnet/_cy3/README'
+    - 'tools/dependencies/LICENSE.binary.dependencies'
+    # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
+    - 'docs'
+    - 'example/image-classification/predict-cpp/image-classification-predict.cc'
+    - 'R-package'
+    # files licensed under apache-2.0 license but do not include full license headers recognized by skywalking-eyes
+    - 'contrib/clojure-package/test'
+    - 'julia/src/runtime.jl'
+    - 'perl-package'
+    - 'python/mxnet/cython/ndarray.pyx'
+    - 'python/mxnet/cython/symbol.pyx'
+    - 'src/operator/contrib/deformable_convolution-inl.h'
+    - 'src/operator/contrib/deformable_convolution.cc'
+    - 'src/operator/contrib/deformable_convolution.cu'
+    - 'src/operator/contrib/deformable_psroi_pooling-inl.h'
+    - 'src/operator/contrib/deformable_psroi_pooling.cc'
+    - 'src/operator/contrib/deformable_psroi_pooling.cu'
+    - 'src/operator/contrib/multi_proposal-inl.h'
+    - 'src/operator/contrib/multi_proposal.cc'
+    - 'src/operator/contrib/multi_proposal.cu'
+    - 'src/operator/contrib/psroi_pooling.cc'
+    - 'src/operator/contrib/psroi_pooling.cu'
+    - 'src/operator/nn/mkldnn/mkldnn_base-inl.h'
+    - 'tests/python/unittest/test_contrib_text.py'
+    # files licensed under boost license
+    - 'cmake/Modules/FindJeMalloc.cmake'
+    # files licensed under bsd 2-clause
+    - 'example/ssd/dataset/pycocotools/coco.py'
+    # files licensed under bsd 3-clause
+    - 'cmake/upstream/FindCUDAToolkit.cmake'
+    - 'cmake/upstream/select_compute_arch.cmake'
+    - 'src/operator/contrib/erfinv-inl.h'
+    - 'src/operator/numpy/np_einsum_op-inl.h'
+    - 'src/operator/numpy/np_einsum_op.cc'
+    - 'src/operator/numpy/np_einsum_path_op-inl.h'
+    # files licensed under caffe/mit license
+    - 'caffe'
+    - 'src/operator/contrib/modulated_deformable_convolution-inl.h'
+    - 'src/operator/contrib/modulated_deformable_convolution.cc'
+    - 'src/operator/contrib/modulated_deformable_convolution.cu'
+    - 'src/operator/contrib/nn/deformable_im2col.cuh'
+    - 'src/operator/contrib/nn/deformable_im2col.h'
+    - 'src/operator/contrib/nn/modulated_deformable_im2col.cuh'
+    - 'src/operator/contrib/nn/modulated_deformable_im2col.h'
+    - 'src/operator/nn/im2col.cuh'
+    - 'src/operator/nn/im2col.h'
+    - 'src/operator/nn/pool.cuh'
+    - 'src/operator/nn/pool.h'
+    # symlinks
+    - 'include/dlpack' # symlink to 3rdparty/dlpack/include/dlpack
+    - 'include/dmlc' # symlink to 3rdparty/dmlc-core/include/dmlc
+    - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
+    - 'include/mkldnn' # symlinks to 3rdparty/mkldnn
+    # test/build data
+    - 'contrib/clojure-package/examples/imclassification/test/test-symbol.json.ref'
+    - 'example/speech_recognition/resources/unicodemap_en_baidu.csv'
+    - 'example/ssd/dataset/names'
+    - 'julia/docs/src/tutorial/images/char-lstm-vis.svg' # tutorial include
+    - 'scala-package/.mvn/wrapper/maven-wrapper.properties'
+    - 'scala-package/init-native/src/main/native/org_apache_mxnet_init_native_c_api.h' # auto-generated file
+    - 'scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h' # auto-generated file
+    - 'tests/python/mkl/data/test_mkldnn_test_mkldnn_model_model1.json'
+    - 'tests/python/unittest/save_000800.json'
+    - 'tools/accnn/config.json'
+    - 'tools/caffe_translator/build.gradle'
+
+  comment: on-failure
