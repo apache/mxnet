@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file optimizer_op.cc
  * \brief Optimizer operators
  * \author Leonard Lausen

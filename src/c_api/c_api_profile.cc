@@ -22,7 +22,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file c_api_profile.cc
  * \brief C API of mxnet profiler and support functions
  */

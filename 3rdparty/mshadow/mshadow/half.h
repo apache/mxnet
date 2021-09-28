@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file half.h
  * \brief definition of half (float16) type.
  *

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  *  \file krprod.h
  *  \brief Core function for Khatri-Rao product
  *  \author Jencir Lee, Chris Swierczewski

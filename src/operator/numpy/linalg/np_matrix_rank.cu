@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_matrix_rank.cu
  * \brief GPU implementation of the matrix_rank Operator
  */

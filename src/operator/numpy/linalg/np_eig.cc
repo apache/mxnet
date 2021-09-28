@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_eig.cc
  * \brief CPU implementation placeholder of Eig Operator
  */

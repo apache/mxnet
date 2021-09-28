@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file threaded_engine.h
  * \brief Implements base class of threaded engine
  *    that tracks the dependency and pushes actions to execute.

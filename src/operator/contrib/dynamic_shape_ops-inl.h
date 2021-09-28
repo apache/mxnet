@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file dynamic_shape_ops-inl.h
  */
 

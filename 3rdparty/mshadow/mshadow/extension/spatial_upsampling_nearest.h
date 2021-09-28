@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file spatial_upsampling.h
  * \brief
  * \author Bing Xu

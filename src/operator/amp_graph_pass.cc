@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file amp_graph_pass.cc
  * \brief graph pass regarding AMP
  * \author Clement Fuji Tsang

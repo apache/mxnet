@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file simple_partition_pass.cc
  * \brief Utilities used in simple partition pass
  * \author Przemyslaw Tredak

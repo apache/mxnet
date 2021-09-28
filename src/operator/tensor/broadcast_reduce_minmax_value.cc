@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_minmax_value.cc
  * \brief CPU Implementation of broadcast and reduce min and max functions based on value.
  */

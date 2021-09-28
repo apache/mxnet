@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file kvstore.cc
  * \brief implement kv_store
  */

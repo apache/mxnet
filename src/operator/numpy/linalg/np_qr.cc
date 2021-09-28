@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_qr.cc
  * \brief CPU implementation of the QR Operator
  */

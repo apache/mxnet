@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file roi_align-inl.h
  * \brief roi align operator and symbol
  * \author Hang Zhang, Shesung

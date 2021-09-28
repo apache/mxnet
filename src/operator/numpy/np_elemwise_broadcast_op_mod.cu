@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_op_mod.cu
  * \brief GPU Implementation of basic functions for elementwise binary broadcast mod operator.
  */

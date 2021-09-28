@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file cuda_rtc.h
  * \brief Common CUDA utilities for
  *        runtime compilation.

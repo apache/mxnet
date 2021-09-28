@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file swapaxis.h
  * \brief support for swapaxis
  * \author Tianqi Chen

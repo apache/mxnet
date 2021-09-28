@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file legacy_json_util.cc
  * \brief Utility upgrade symbol from previous versions
  */

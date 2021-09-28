@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file bilinear_Sampler-inl.h
  * \brief
  * \author Xu Dong

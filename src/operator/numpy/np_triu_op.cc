@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_triu_op.cc
  * \brief CPU implementation of numpy triu operator
  */

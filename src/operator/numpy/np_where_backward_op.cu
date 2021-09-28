@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file np_where_backward_op.cu
  * \brief GPU Implementation of numpy operator where
  */

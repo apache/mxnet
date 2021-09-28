@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file bilinear_resize.cc
  * \brief bilinear resize operator
  * \author Hang Zhang

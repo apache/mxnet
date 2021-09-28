@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_pooling.cu
  */
 #include <mxnet/operator_util.h>

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_indexing_op.cc
  */
 #include <mxnet/op_attr_types.h>
