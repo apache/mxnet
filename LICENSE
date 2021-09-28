@@ -309,6 +309,7 @@
     Caffe Licensing Model
     =======================================================================================
 
+    caffe
     src/operator/nn/pool.h
     src/operator/nn/pool.cuh
     src/operator/nn/im2col.h
