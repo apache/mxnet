@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_rnn-inl.h
  * \brief Common functions used by MKLDNN RNN operator
  * \author Zixuan Wei

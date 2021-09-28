@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file np_dot.cc
+ * \file np_dot_forward.cc
  * \brief CPU Implementation of numpy-compatible dot
  */
 
@@ -137,17 +137,6 @@ NNVM_REGISTER_OP(_npi_dot)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_dot"})
     .add_argument("a", "NDArray-or-Symbol", "First input")
     .add_argument("b", "NDArray-or-Symbol", "Second input");
-
-NNVM_REGISTER_OP(_backward_npi_dot)
-    .set_num_inputs(3)
-    .set_num_outputs(2)
-    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-    .set_attr<FResourceRequest>("FResourceRequest",
-                                [](const NodeAttrs& attrs) {
-                                  return std::vector<ResourceRequest>(1,
-                                                                      ResourceRequest::kTempSpace);
-                                })
-    .set_attr<FCompute>("FCompute<cpu>", NumpyDotBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

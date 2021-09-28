@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file cudnn_bilinear_sampler-inl.h
  * \brief
  * \author Xu Dong

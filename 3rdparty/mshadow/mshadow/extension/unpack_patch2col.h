@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file unpack_patch2col.h
  * \brief support for unpack
  * \author Tianqi Chen

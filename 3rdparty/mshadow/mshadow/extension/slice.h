@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file slice.h
  * \brief support for slice a certain dimension.
  */

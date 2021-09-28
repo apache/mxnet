@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file tensorrt.cu
  * \brief TensorRT GPU operation registration
  * \author Marek Kolodziej, Clement Fuji Tsang

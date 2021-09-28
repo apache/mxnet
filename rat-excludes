@@ -121,6 +121,7 @@ deformable_im2col.cuh
 deformable_im2col.h
 FindCUDAToolkit.cmake
 FindBLAS.cmake
+FindJeMalloc.cmake
 select_compute_arch.cmake
 
 # Incorporated third-party source files from Microsoft that carry Apache 2.0 license, captured in licenses/

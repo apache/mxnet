@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file channel_op_common.h
  * \brief common function used for concat and split channel
  * \author Bing Xu

@@ -17,39 +17,21 @@
  * under the License.
  */
 
-#ifndef MXNET_PROFILER_NVTX_H_
-#define MXNET_PROFILER_NVTX_H_
-
-#if MXNET_USE_NVTX
-
-#include <string>
-#include <unordered_map>
-#include "nvToolsExt.h"
+/*!
+ * \file np_broadcast_reduce_op_value_min.cu
+ * \brief GPU Implementation of reduce functions based on value.
+ */
+#include "np_broadcast_reduce_op.h"
 
 namespace mxnet {
-namespace profiler {
-namespace nvtx {
+namespace op {
 
-class NVTXDuration {
- public:
-  explicit NVTXDuration(const char* name) noexcept : range_id_(0), name_(name) {}
+NNVM_REGISTER_OP(_npi_min).set_attr<FCompute>(
+    "FCompute<gpu>",
+    ReduceAxesRTCCompute<NumpyReduceAxesNoDTypeParam, 0>{"identity", "red::minimum{}", false});
 
-  inline void start() {
-    range_id_ = nvtxRangeStartA(name_);
-  }
+NNVM_REGISTER_OP(_backward_npi_min)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeBackward<gpu, mshadow_op::eq>);
 
-  inline void stop() {
-    nvtxRangeEnd(range_id_);
-  }
-
- private:
-  nvtxRangeId_t range_id_;
-  const char* name_;
-};
-
-}  // namespace nvtx
-}  // namespace profiler
+}  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_USE_NVTX
-#endif  // MXNET_PROFILER_NVTX_H_

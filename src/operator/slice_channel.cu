@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file slice_channel.cc
  * \brief
  * \author Bing Xu

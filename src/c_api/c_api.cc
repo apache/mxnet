@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file c_api.cc
  * \brief C API of mxnet
  */
@@ -77,6 +76,11 @@
 #if SUPPORT_FTZ_DMZ && !defined(_MSC_VER)
 #include <x86intrin.h>
 #endif
+
+#if MXNET_USE_CUDA
+#include <cuda_profiler_api.h>
+#endif
+#include "../common/cuda/nvtx.h"
 
 using namespace mxnet;
 
@@ -3938,4 +3942,44 @@ int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
   ret                = new NDArray(*src_array);
   *out               = ret;
   API_END_HANDLE_ERROR(delete ret);
+}
+
+int MXNVTXRangePush(const char * name, mx_uint color) {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  mxnet::common::cuda::nvtx::gpuRangeStart(color, name);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have NVTX support.";
+#endif
+  API_END();
+}
+
+int MXNVTXRangePop() {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  mxnet::common::cuda::nvtx::gpuRangeStop();
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have NVTX support.";
+#endif
+  API_END();
+}
+
+int MXCUDAProfilerStart() {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  cudaProfilerStart();
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have CUDA profiler support.";
+#endif
+  API_END();
+}
+
+int MXCUDAProfilerStop() {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  cudaProfilerStop();
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have CUDA Profiler support.";
+#endif
+  API_END();
 }

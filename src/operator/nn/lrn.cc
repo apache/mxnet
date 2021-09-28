@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file lrn.cc
  * \brief
  * \author Bing Xu, Patric Zhao (patric.zhao@intel.com)

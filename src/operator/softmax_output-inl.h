@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_output-inl.h
  * \brief
  * \author Bing Xu

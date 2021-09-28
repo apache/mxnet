@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_pinv.cc
  * \brief CPU implementation of the PINV Operator
  */

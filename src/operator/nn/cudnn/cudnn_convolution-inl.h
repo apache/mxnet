@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cudnn_convolution-inl.h
  * \brief
  * \author Bing Xu

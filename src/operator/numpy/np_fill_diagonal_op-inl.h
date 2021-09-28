@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_tril_op-inl.h
  * \brief Function definition of the tril (lower triangle of an array) op
  */

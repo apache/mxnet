@@ -18,18 +18,20 @@
  */
 
 /*!
- * \file np_kron.cu
- * \brief GPU Implementation of numpy-compatible Kronecker product
+ * \file np_broadcast_reduce_op_value_prod.cu
+ * \brief GPU Implementation of reduce functions based on value.
  */
-
-#include "./np_kron-inl.h"
+#include "np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_kron).set_attr<FCompute>("FCompute<gpu>", KronOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_prod).set_attr<FCompute>(
+    "FCompute<gpu>",
+    ReduceAxesRTCCompute<NumpyReduceAxesParam, 1>{"identity", "red::product{}", false});
 
-NNVM_REGISTER_OP(_backward_npi_kron).set_attr<FCompute>("FCompute<gpu>", KronOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_prod)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -107,7 +107,6 @@ _WHITE_LIST = [
                'cmake/upstream/FindBLAS.cmake',
                'cmake/upstream/select_compute_arch.cmake',
 
-
                # Licensed under the Boost Software License, Version 1.0
                'cmake/Modules/FindJeMalloc.cmake',
 
@@ -130,7 +129,6 @@ _WHITE_LIST = [
                'src/operator/contrib/psroi_pooling.cu',
                'src/operator/contrib/multi_proposal.cc',
                'src/operator/contrib/multi_proposal-inl.h',
-
 
                # Licensed under Apache 2.0 license
                'src/operator/nn/mkldnn/mkldnn_base-inl.h',

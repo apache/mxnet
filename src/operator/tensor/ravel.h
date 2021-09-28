@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file ravel.h
  * \brief Operators for ravel/unravel of indices.
  */

@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file mxnet/tuple.h
  * \brief Data structure Tuple and TShape to store dynamic sized shapes.
  */

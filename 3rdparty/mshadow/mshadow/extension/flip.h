@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file flip.h
  * \brief support for flip a certain dimension.
  * \author Junyuan Xie

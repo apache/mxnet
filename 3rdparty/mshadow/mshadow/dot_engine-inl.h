@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file dot_engine-inl.h
  * \brief definitions of how Matrix Multiplications can be evaluated
  * \author Tianqi Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_logic_op_less_equal.cu
  * \brief GPU Implementation of basic functions for less_equal operation.
  */

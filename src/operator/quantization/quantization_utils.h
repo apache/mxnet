@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantization_utils-inl.h
  */
 #ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZATION_UTILS_H_

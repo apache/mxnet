@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file graph_algorithm.h
  * \brief This header contains graph algorithms on StaticGraph.
  *  It is used  compute informations such as whether two
