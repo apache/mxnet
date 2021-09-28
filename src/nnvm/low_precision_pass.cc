@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file low_precision_pass.cc
  * \brief Return new graph with amp_cast and amp_multicast operators added wherever required
  */

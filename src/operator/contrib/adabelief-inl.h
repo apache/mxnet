@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2021 by Contributors
  * \file adabelief-inl.h
  * \brief Optimizer operators
  * \author khaotik

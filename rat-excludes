@@ -122,6 +122,7 @@ deformable_im2col.cuh
 deformable_im2col.h
 FindCUDAToolkit.cmake
 FindBLAS.cmake
+FindJeMalloc.cmake
 select_compute_arch.cmake
 np_einsum_op-inl.h
 np_einsum_op.cc

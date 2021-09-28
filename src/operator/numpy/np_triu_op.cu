@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_triu_op.cu
  * \brief GPU implementation of numpy triu operator
  */

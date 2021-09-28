@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file test_util.h
  * \brief unit test performance analysis functions
  * \author Chris Olivier

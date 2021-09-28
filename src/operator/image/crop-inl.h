@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file crop-inl.h
  * \brief the image crop operator implementation
  */

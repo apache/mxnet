@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file np_broadcast_reduce_op.cc
  * \brief Function definitions of NumPy-compatible
  *        broadcast and reduce operators

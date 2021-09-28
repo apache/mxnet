@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file fully_connected.cc
  * \brief fully connect operator
  */

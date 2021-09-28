@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_potrf-inl.h
  * \brief Placeholder for Cholesky implementation in la_op
  */

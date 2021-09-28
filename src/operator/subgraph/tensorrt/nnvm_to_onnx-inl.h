@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file nnvm_to_onnx-inl.h
  * \brief Conversion from NNVM to ONNX for TensorRT
  * \author Marek Kolodziej, Clement Fuji Tsang

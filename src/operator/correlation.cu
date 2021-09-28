@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright [2016] <Contributors>
  * \file Correation.cu
  * \brief  Correlation operator
  * \author Xu Dong

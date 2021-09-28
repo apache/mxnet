@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_logic_op_greater_equal.cc
  * \brief CPU Implementation of basic logic functions for greater_equal operation.
  */

@@ -18,12 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file diag_op-inl.h
  * \brief Function definition of the diag op
  * \author Istvan Fehervari, Zhijingcheng Yu
  */
-
 #ifndef MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
 

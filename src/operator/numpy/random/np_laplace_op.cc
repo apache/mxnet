@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_laplace_op.cc
  * \brief Operator for numpy sampling from Laplace distributions
  */

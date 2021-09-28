@@ -642,6 +642,7 @@ def test_shares_memory():
     assert out == False and out2 == True
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_where():
     inp1 = np.zeros((2, INT_OVERFLOW))
     inp1[-1, -1] = 1

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file pack_col2patch.h
  * \brief support for pack
  * \author Tianqi Chen

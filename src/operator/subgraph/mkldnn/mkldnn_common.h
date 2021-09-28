@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_common.h
  * \brief Common header file for MKLDNN backend subgraph
  * \author Ciyong Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file dot.cc
  * \brief
  * \author Haozheng Fan

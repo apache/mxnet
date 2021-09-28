@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file image_det_aug_default.cc
  * \brief Default augmenter.
  */

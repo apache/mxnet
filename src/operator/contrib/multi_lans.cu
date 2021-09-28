@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file multi_lans.cu
  * \brief multi-tensor LANS optimizer
  * \author Shuai Zheng

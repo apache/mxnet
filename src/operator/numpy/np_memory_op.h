@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_memory_op.h
  * \brief Function definition of numpy memory op
  */

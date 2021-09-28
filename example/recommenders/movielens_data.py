@@ -37,9 +37,9 @@ def load_mldataset(filename):
             user.append(int(tks[0]))
             item.append(int(tks[1]))
             score.append(float(tks[2]))
-    user = mx.nd.array(user)
-    item = mx.nd.array(item)
-    score = mx.nd.array(score)
+    user = mx.np.array(user)
+    item = mx.np.array(item)
+    score = mx.np.array(score)
     return gluon.data.ArrayDataset(user, item, score)
 
 def ensure_local_data(prefix):

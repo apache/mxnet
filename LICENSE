@@ -242,7 +242,6 @@
 
     3rdparty/miniz/miniz.c
     3rdparty/miniz/miniz.h
-    example/gluon/tree_lstm
     3rdparty/tvm/3rdparty/cma
     3rdparty/onnx-tensorrt
     3rdparty/onnx-tensorrt/third_party/onnx

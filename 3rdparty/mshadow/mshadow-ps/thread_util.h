@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright by Contributors
  * \file thread_util.h
  * \brief data structures for multi-threading communication
  * \author Tianqi Chen

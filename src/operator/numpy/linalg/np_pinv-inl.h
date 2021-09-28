@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_pinv-inl.h
  * \brief Placeholder for pinv
  */

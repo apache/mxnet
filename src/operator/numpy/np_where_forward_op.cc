@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file np_where_forward_op.cc
  * \brief CPU Implementation of numpy operator where
  */

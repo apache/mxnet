@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_op.h
  * \brief Function definition of elemwise and broadcast operators
  */
