@@ -54,6 +54,7 @@ coco.py
 # Licenses
 licenses/*
 LICENSE.binary.dependencies
+.licenserc.yaml
 
 # Generated files during build
 .buildinfo
