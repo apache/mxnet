@@ -53,6 +53,7 @@ clipboard.js
 # Licenses
 licenses/*
 LICENSE.binary.dependencies
+.licenserc.yaml
 
 # Generated files during build
 .buildinfo
@@ -122,6 +123,9 @@ deformable_im2col.h
 FindCUDAToolkit.cmake
 FindBLAS.cmake
 select_compute_arch.cmake
+np_einsum_op-inl.h
+np_einsum_op.cc
+np_einsum_path_op-inl.h
 
 # AL2 License header not at the beginning of the file
 doap.rdf

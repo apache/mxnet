@@ -17,6 +17,7 @@ header:
     - '.github'
     - '.gitmodules'
     - '.licenserc.yaml'
+    - '.asf.yaml'
     - 'CODEOWNERS'
     - 'DISCLAIMER'
     - 'KEYS'
@@ -42,6 +43,7 @@ header:
     # files licensed under boost license
     - 'cmake/Modules/FindJeMalloc.cmake'
     # files licensed under bsd 3-clause
+    - 'cmake/upstream/FindBLAS.cmake'
     - 'cmake/upstream/FindCUDAToolkit.cmake'
     - 'cmake/upstream/select_compute_arch.cmake'
     - 'src/operator/contrib/erfinv-inl.h'
@@ -64,7 +66,9 @@ header:
     - 'include/dlpack' # symlink to 3rdparty/dlpack/include/dlpack
     - 'include/dmlc' # symlink to 3rdparty/dmlc-core/include/dmlc
     - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
-    - 'include/mkldnn' # symlinks to 3rdparty/mkldnn
+    - 'include/onednn' # symlinks to 3rdparty/onednn
+    # test/build data
+    - 'tests/python/mkl/data/test_mkldnn_test_mkldnn_model_model1.json'
 
 
   comment: on-failure

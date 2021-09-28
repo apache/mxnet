@@ -266,6 +266,7 @@
     3rdparty/googletest/googlemock
     3rdparty/googletest/googletest
     cmake/upstream/FindCUDAToolkit.cmake
+    cmake/upstream/FindBLAS.cmake
     cmake/upstream/select_compute_arch.cmake
     src/operator/contrib/erfinv-inl.h
 
