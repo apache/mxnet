@@ -124,6 +124,24 @@ FindBLAS.cmake
 FindJeMalloc.cmake
 select_compute_arch.cmake
 
+# Incorporated third-party source files from Microsoft that carry Apache 2.0 license, captured in licenses/
+deformable_psroi_pooling.cu
+deformable_convolution.cu
+deformable_convolution-inl.h
+psroi_pooling.cc
+multi_proposal.cu
+deformable_psroi_pooling-inl.h
+deformable_psroi_pooling.cc
+deformable_convolution.cc
+psroi_pooling.cu
+multi_proposal.cc
+multi_proposal-inl.h
+
+# Incorporated third-party source files from Microsoft that carry MIT license, captured in licenses/
+modulated_deformable_convolution-inl.h
+modulated_deformable_convolution.cc
+modulated_deformable_convolution.cu
+
 # AL2 License header not at the beginning of the file
 doap.rdf
 
