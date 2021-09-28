@@ -244,20 +244,12 @@
     src/operator/contrib/deformable_psroi_pooling-inl.h
     src/operator/contrib/deformable_psroi_pooling.cc
     src/operator/contrib/deformable_psroi_pooling.cu
-    src/operator/contrib/krprod.cc
     src/operator/contrib/multi_proposal-inl.h
     src/operator/contrib/multi_proposal.cc
     src/operator/contrib/multi_proposal.cu
     src/operator/contrib/psroi_pooling.cc
     src/operator/contrib/psroi_pooling.cu
-    tests/python/unittest/test_contrib_text.py
     src/operator/nn/mkldnn/mkldnn_base-inl.h
-    src/operator/subgraph/tensorrt/nnvm_to_onnx-inl.h
-    src/operator/subgraph/tensorrt/onnx_to_tensorrt.h
-    src/operator/subgraph/tensorrt/tensorrt-inl.h
-    src/operator/subgraph/tensorrt/tensorrt_int8_calibrator.h
-    julia/src/runtime.jl
-    contrib/clojure-package/test/good-test-ndarray-api.clj
 
     =======================================================================================
     MIT license
