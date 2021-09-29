@@ -175,33 +175,33 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
     if (!initialized_) {
       // TODO(zhennan): Currently, dnnl fallback mechanism will break inplace option,
       // which make check (req[kOut] == kWriteInplace) useless.
-      auto in_mkl_mem  = inputs[in_sum].GetDNNLData();
-      auto out_mkl_mem = outputs[kOut].GetDNNLData();
-      if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
+      auto in_dnnl_mem  = inputs[in_sum].GetDNNLData();
+      auto out_dnnl_mem = outputs[kOut].GetDNNLData();
+      if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle()) {
         inplace_ = true;
       }
     }
     if (!inplace_) {
-      auto in_mkl_mem  = inputs[in_sum].GetDNNLData();
-      auto out_mkl_mem = outputs[kOut].GetDNNLData();
+      auto in_dnnl_mem  = inputs[in_sum].GetDNNLData();
+      auto out_dnnl_mem = outputs[kOut].GetDNNLData();
       if (outputs[kOut].dtype() == mshadow::kInt32) {
-        const auto& mem_desc  = in_mkl_mem->get_desc();
+        const auto& mem_desc  = in_dnnl_mem->get_desc();
         const auto this_dtype = get_dnnl_type(mshadow::kInt32);
         auto omd              = mem_desc;
         omd.data.data_type    = static_cast<dnnl_data_type_t>(this_dtype);
         dnnl_mem_ptr tmp_mem(
-            new dnnl::memory(omd, CpuEngine::Get()->get_engine(), out_mkl_mem->get_data_handle()));
+            new dnnl::memory(omd, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
         DNNLStream::Get()->RegisterMem(tmp_mem);
         DNNLStream::Get()->RegisterPrimArgs(
-            dnnl::reorder(*in_mkl_mem, *tmp_mem),
-            {{DNNL_ARG_FROM, *in_mkl_mem}, {DNNL_ARG_TO, *tmp_mem}});
+            dnnl::reorder(*in_dnnl_mem, *tmp_mem),
+            {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
         output = NDArray(tmp_mem);
       } else {
-        dnnl_mem_ptr tmp_mem(new dnnl::memory(in_mkl_mem->get_desc(),
+        dnnl_mem_ptr tmp_mem(new dnnl::memory(in_dnnl_mem->get_desc(),
                                               CpuEngine::Get()->get_engine(),
-                                              out_mkl_mem->get_data_handle()));
+                                              out_dnnl_mem->get_data_handle()));
         DNNLStream::Get()->RegisterMem(tmp_mem);
-        DNNLMemoryCopy(*in_mkl_mem, tmp_mem.get());
+        DNNLMemoryCopy(*in_dnnl_mem, tmp_mem.get());
         output = NDArray(tmp_mem);
       }
     }

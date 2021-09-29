@@ -714,12 +714,12 @@ void NDArray::SelfReorder2Default() {
 
   CHECK(storage_type() == kDefaultStorage);
 
-  const auto mkl_mem = ptr_->dnnl_mem_;
-  if (mkl_mem == nullptr || !mkl_mem->IsDNNL())
+  const auto dnnl_mem = ptr_->dnnl_mem_;
+  if (dnnl_mem == nullptr || !dnnl_mem->IsDNNL())
     return;
 
   // create new ndarray from  dnnl layout
-  dnnl::memory::desc from_desc = mkl_mem->GetDesc();
+  dnnl::memory::desc from_desc = dnnl_mem->GetDesc();
   mxnet::TShape tshape(from_desc.data.ndims, -1);
   for (int i = 0; i < from_desc.data.ndims; i++)
     tshape[i] = from_desc.data.dims[i];
@@ -728,11 +728,11 @@ void NDArray::SelfReorder2Default() {
   const auto saved_byte_offset = byte_offset_;
   this->ReInit(kDefaultStorage, tshape, ctx(), dtype(), false);
 
-  dnnl_format_tag_t format    = mkl_mem->GetDefaultFormat();
-  dnnl::memory::desc def_desc = mkl_mem->GetDesc(format);
+  dnnl_format_tag_t format    = dnnl_mem->GetDefaultFormat();
+  dnnl::memory::desc def_desc = dnnl_mem->GetDesc(format);
   CHECK(ptr_->shandle.size >= def_desc.get_size());
   dnnl::memory def_mem(def_desc, CpuEngine::Get()->get_engine(), ptr_->shandle.dptr);
-  mkl_mem->ReorderTo(&def_mem);
+  dnnl_mem->ReorderTo(&def_mem);
   // reshape as needed
   shape_       = saved_shape;
   byte_offset_ = saved_byte_offset;
