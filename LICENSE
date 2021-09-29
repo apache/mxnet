@@ -262,8 +262,6 @@
     3rdparty/onnx-tensorrt/third_party/onnx
     3rdparty/intgemm
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
-    src/operator/contrib/nn/modulated_deformable_im2col.cuh
-    src/operator/contrib/nn/modulated_deformable_im2col.h
     src/operator/contrib/modulated_deformable_convolution-inl.h
     src/operator/contrib/modulated_deformable_convolution.cc
     src/operator/contrib/modulated_deformable_convolution.cu
