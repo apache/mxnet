@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_triu_op-inl.h
  * \brief Function definition of triu (upper triangle of an array) op
  */

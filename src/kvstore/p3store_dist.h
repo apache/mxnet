@@ -18,7 +18,6 @@
  */
 
 /**
- * Copyright (c) 2015 by Contributors
  * @file   p3store_dist.h
  * @brief  priority-based kvstore implementation
  */

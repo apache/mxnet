@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file c_api_ndarray.cc
  * \brief C API of mxnet
  */
@@ -332,6 +331,18 @@ int MXAutogradMarkVariables(uint32_t num_var,
     grad_reqs.emplace_back(reqs_array[i]);
   }
   Imperative::Get()->MarkVariables(variables, grad_reqs, gradients);
+  API_END();
+}
+
+int MXAutogradDropGrads(uint32_t num_var,
+                       NDArrayHandle *var_handles) {
+  API_BEGIN();
+  std::vector<NDArray*> variables;
+  variables.reserve(num_var);
+  for (uint32_t i = 0; i < num_var; ++i) {
+    variables.emplace_back(static_cast<NDArray*>(var_handles[i]));
+  }
+  Imperative::Get()->DropGrads(variables);
   API_END();
 }
 

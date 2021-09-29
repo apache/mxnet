@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file sample_op.h
  * \brief Elementary sampling operators
  */

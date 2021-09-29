@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_sum_value.cc
  * \brief CPU Implementation of broadcast and reduce sum (and related) functions based on value.
  */

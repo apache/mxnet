@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file range.h
  * \brief support generating a range vector
  * \author Xingjian Shi

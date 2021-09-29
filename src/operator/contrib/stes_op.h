@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file stes_op.h
  * \Straight-through-estimators round and sign operators.
  * \author Itay Golan

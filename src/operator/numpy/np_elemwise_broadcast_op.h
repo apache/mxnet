@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_op.h
  * \brief Function definition of elemwise and broadcast operators
  */
@@ -26,6 +25,7 @@
 #define MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 #include <string>
 
@@ -532,6 +532,59 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
     PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
   }
 }
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                        \
+  NNVM_REGISTER_OP(name)                                                      \
+      .set_num_inputs(1)                                                      \
+      .set_num_outputs(1)                                                     \
+      .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                   \
+      .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)       \
+      .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)        \
+      .set_attr<FResourceRequest>(                                            \
+          "FResourceRequest",                                                 \
+          [](const NodeAttrs& attrs) {                                        \
+            return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; \
+          })                                                                  \
+      .add_argument("data", "NDArray-or-Symbol", "source input")              \
+      .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+
+inline bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int ltype = in_attrs->at(0);
+  const int rtype = in_attrs->at(1);
+  if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
+    // Only when both input types are known and not the same, we enter the mixed-precision mode
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, common::np_binary_out_infer_type(ltype, rtype));
+  } else {
+    return ElemwiseType<2, 1>(attrs, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(name)                                   \
+  NNVM_REGISTER_OP(name)                                                                          \
+      .set_num_inputs(2)                                                                          \
+      .set_num_outputs(1)                                                                         \
+      .set_attr<nnvm::FListInputNames>("FListInputNames",                                         \
+                                       [](const NodeAttrs& attrs) {                               \
+                                         return std::vector<std::string>{"lhs", "rhs"};           \
+                                       })                                                         \
+      .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)                          \
+      .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedPrecisionType)                    \
+      .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                           \
+                                      [](const NodeAttrs& attrs) {                                \
+                                        return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}}; \
+                                      })                                                          \
+      .set_attr<FResourceRequest>(                                                                \
+          "FResourceRequest",                                                                     \
+          [](const NodeAttrs& attrs) {                                                            \
+            return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};                     \
+          })                                                                                      \
+      .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")                    \
+      .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
 
 }  // namespace op
 }  // namespace mxnet

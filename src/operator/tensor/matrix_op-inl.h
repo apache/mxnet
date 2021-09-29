@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file matrix_op-inl.h
  * \brief Function definition of matrix related operators
  */
@@ -79,6 +78,19 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
            this->shape == other.shape && this->reverse == other.reverse;
   }
 };
+
+#if MXNET_USE_ONEDNN == 1
+bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
+                        const int dev_mask,
+                        DispatchMode* dispatch_mode,
+                        std::vector<int>* in_attrs,
+                        std::vector<int>* out_attrs);
+void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs);
+#endif  // MXNET_USE_ONEDNN == 1
 
 template <typename IType>
 inline mxnet::TShape InferReshapeShape(const mxnet::Tuple<IType>& shape,

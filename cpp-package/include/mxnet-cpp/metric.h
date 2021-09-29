@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file base.h
 * \brief metrics defined
 * \author Zhang Chen

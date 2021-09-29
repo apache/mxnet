@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file sse-inl.h
  * \brief support of sse2 packet optimization of some operations
  * \author Tianqi Chen

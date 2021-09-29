@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file batchify.cc
  * \brief Mini-batch data combination functions.
  */

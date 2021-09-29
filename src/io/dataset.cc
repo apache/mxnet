@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file dataset.cc
  * \brief High performance datasets implementation
  */

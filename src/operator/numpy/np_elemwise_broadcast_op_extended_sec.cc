@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_op_extended_sec.cc
  * \brief CPU Implementation of extended functions for elementwise numpy binary broadcast operator.
  * (Second extended file)

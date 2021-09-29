@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file ndarray.h
 * \brief definition of ndarray
 * \author Chuntao Hong, Zhang Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file onnx_to_tensorrt.cc
  * \brief TensorRT integration with the MXNet executor
  * \author Marek Kolodziej, Clement Fuji Tsang

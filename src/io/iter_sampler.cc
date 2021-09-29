@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file iter_sampler.cc
  * \brief The sampler iterator for access dataset elements.
  */

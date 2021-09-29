@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file fill.h
  * \brief support for implicit array filling operation
  * \author Xingjian Shi

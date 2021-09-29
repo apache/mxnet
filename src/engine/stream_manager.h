@@ -17,9 +17,6 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2015 by Contributors
- */
 #ifndef MXNET_ENGINE_STREAM_MANAGER_H_
 #define MXNET_ENGINE_STREAM_MANAGER_H_
 

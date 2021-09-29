@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file mirror.h
  * \brief support for mirror
  * \author Tianqi Chen

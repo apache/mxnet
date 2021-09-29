@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file dataloader.cc
  * \brief Pure c++ backed dataloader implementation
  */
