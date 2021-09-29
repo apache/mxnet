@@ -97,12 +97,6 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector* in_shape,
                                mxnet::ShapeVector* out_shape) {
   const DeconvolutionParam& param_ = nnvm::get<DeconvolutionParam>(attrs.parsed);
-#if MXNET_USE_CUDNN == 0
-  if (param_.kernel.ndim() > 2) {
-    LOG(FATAL) << "If not using CUDNN, only 1D or 2D Deconvolution is supported";
-    return false;
-  }
-#endif  // CUDNN
 
   using namespace mshadow;
   if (!param_.no_bias) {
@@ -412,9 +406,9 @@ DMLC_REGISTER_PARAMETER(DeconvolutionParam);
 NNVM_REGISTER_OP(Deconvolution)
     .add_alias("_npx_deconvolution")
     .describe(
-        "Computes 1D or 2D transposed convolution (aka fractionally strided convolution) of the "
-        "input tensor. This operation can be seen as the gradient of Convolution operation with "
-        "respect to its input. Convolution usually reduces the size of the input. Transposed "
+        "Computes 1D, 2D or 3D transposed convolution (aka fractionally strided convolution) of "
+        "the input tensor. This operation can be seen as the gradient of Convolution operation "
+        "with respect to its input. Convolution usually reduces the size of the input. Transposed "
         "convolution works the other way, going from a smaller input to a larger output while "
         "preserving the connectivity pattern.")
     .set_num_inputs([](const NodeAttrs& attrs) {
