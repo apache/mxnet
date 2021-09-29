@@ -16,8 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <mxnet/imperative.h>
+// The first two includes below need to be in unalphabetical for the miscellaneous CI to pass.
 #include <mxnet/operator.h>
+#include <mxnet/imperative.h>
 #include <nnvm/pass_functions.h>
 
 #include <algorithm>
