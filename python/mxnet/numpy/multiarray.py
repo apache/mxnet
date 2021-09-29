@@ -80,7 +80,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal']
+           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
+           'floor_divide']
 
 __all__ += fallback.__all__
 
@@ -1092,6 +1093,23 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
         return multiply(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __floordiv__(self, other):
+        """x.__floordiv__(y) <=> x // y"""
+        return floor_divide(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __ifloordiv__(self, other):
+        """x.__ifloordiv__(y) <=> x //= y"""
+        if not self.writable:
+            raise ValueError('trying to divide from a readonly ndarray')
+        return floor_divide(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rfloordiv__(self, other):
+        """x.__rfloordiv__(y) <=> y // x"""
+        return floor_divide(other, self)
 
     def __neg__(self):
         return negative(self)
@@ -3397,6 +3415,48 @@ def true_divide(x1, x2, out=None):
     array([0.  , 0.25, 0.5 , 0.75, 1.  ])
     """
     return _mx_nd_np.true_divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def floor_divide(x1, x2, out=None):
+    """Return the largest integer smaller or equal to the division of the inputs.
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+
+    .. note::
+
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
+
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+       precise type
+
+    Examples
+    --------
+    >>> np.floor_divide(7,3)
+    2
+    >>> np.floor_divide([1., 2., 3., 4.], 2.5)
+    array([ 0.,  0.,  1.,  1.])
+    """
+    return _mx_nd_np.floor_divide(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
