@@ -1,5 +1,3 @@
-#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INT8_CALIBRATOR_H_
-#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INT8_CALIBRATOR_H_
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -25,6 +23,8 @@
  * \author Serge Panev
 */
 
+#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INT8_CALIBRATOR_H_
+#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INT8_CALIBRATOR_H_
 #if MXNET_USE_TENSORRT
 
 #include <cuda_runtime_api.h>
