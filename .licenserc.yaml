@@ -57,7 +57,6 @@ header:
     - 'src/operator/numpy/np_einsum_op.cc'
     - 'src/operator/numpy/np_einsum_path_op-inl.h'
     # files licensed under caffe/mit license
-    - 'caffe'
     - 'src/operator/contrib/modulated_deformable_convolution-inl.h'
     - 'src/operator/contrib/modulated_deformable_convolution.cc'
     - 'src/operator/contrib/modulated_deformable_convolution.cu'
