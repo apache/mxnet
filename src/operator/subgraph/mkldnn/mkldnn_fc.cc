@@ -77,18 +77,18 @@ class SgMKLDNNFCOp {
   std::shared_ptr<mkldnn::memory> cached_out_mem_;
   NDArray cached_weight_;
   NDArray cached_bias_;
-  float cached_min_data_;
-  float cached_max_data_;
-  float cached_min_weight_;
-  float cached_max_weight_;
+  float cached_data_min_;
+  float cached_data_max_;
+  float cached_weight_min_;
+  float cached_weight_max_;
   float cached_sum_min_;
   float cached_sum_max_;
-  float cached_min_bias_;
-  float cached_max_bias_;
+  float cached_bias_min_;
+  float cached_bias_max_;
   size_t weight_ver_;
   size_t bias_ver_;
-  float cached_min_output_;
-  float cached_max_output_;
+  float cached_output_min_;
+  float cached_output_max_;
   float data_scale_{0.0f};
   std::vector<float> weight_scales_;
 };
@@ -115,12 +115,12 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
   const int out_max_index = out_quantized ? index++ : 0;
   CHECK_EQ(out_data.size(), index);  // index is equal to total number of outpits
 
-  float min_data   = 0.0f;
-  float max_data   = 0.0f;
-  float min_weight = 0.0f;
-  float max_weight = 0.0f;
-  float min_bias   = 0.0f;
-  float max_bias   = 0.0f;
+  float data_min   = 0.0f;
+  float data_max   = 0.0f;
+  float weight_min = 0.0f;
+  float weight_max = 0.0f;
+  float bias_min   = 0.0f;
+  float bias_max   = 0.0f;
 
   const float sum_min = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
   const float sum_max = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
@@ -171,31 +171,31 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
 
   if (mkldnn_param.quantized) {
     if (!channel_wise) {
-      min_weight = in_data[idx.weight_min].data().dptr<float>()[0];
-      max_weight = in_data[idx.weight_max].data().dptr<float>()[0];
+      weight_min = in_data[idx.weight_min].data().dptr<float>()[0];
+      weight_max = in_data[idx.weight_max].data().dptr<float>()[0];
       if (has_bias) {
-        min_bias = in_data[idx.bias_min].data().dptr<float>()[0];
-        max_bias = in_data[idx.bias_max].data().dptr<float>()[0];
+        bias_min = in_data[idx.bias_min].data().dptr<float>()[0];
+        bias_max = in_data[idx.bias_max].data().dptr<float>()[0];
       }
     }
-    min_data = in_data[idx.data_min].data().dptr<float>()[0];
-    max_data = in_data[idx.data_max].data().dptr<float>()[0];
+    data_min = in_data[idx.data_min].data().dptr<float>()[0];
+    data_max = in_data[idx.data_max].data().dptr<float>()[0];
   }
 
   if (initialized_ && mkldnn_param.quantized &&
       dmlc::GetEnv("MXNET_MKLDNN_QFC_DYNAMIC_PARAMS", 0)) {
     if (channel_wise) {
-      if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
+      if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
           cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
           weight_ver_ != weight.version() ||
           (has_bias && (bias_ver_ != in_data[idx.bias].version()))) {
         initialized_ = false;
       }
     } else {
-      if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
+      if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
           cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
-          cached_min_weight_ != min_weight || cached_max_weight_ != max_weight ||
-          (has_bias && (cached_min_bias_ != min_bias || cached_max_bias_ != max_bias))) {
+          cached_weight_min_ != weight_min || cached_weight_max_ != weight_max ||
+          (has_bias && (cached_bias_min_ != bias_min || cached_bias_max_ != bias_max))) {
         initialized_ = false;
       }
     }
@@ -204,17 +204,17 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
   if (!initialized_) {
     const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     const auto engine   = CpuEngine::Get()->get_engine();
-    cached_min_data_    = min_data;
-    cached_max_data_    = max_data;
-    cached_min_weight_  = min_weight;
-    cached_max_weight_  = max_weight;
+    cached_data_min_    = data_min;
+    cached_data_max_    = data_max;
+    cached_weight_min_  = weight_min;
+    cached_weight_max_  = weight_max;
     weight_ver_         = weight.version();
     cached_weight_      = weight;
     cached_sum_min_     = sum_min;
     cached_sum_max_     = sum_max;
     if (has_bias) {
-      cached_min_bias_ = min_bias;
-      cached_max_bias_ = max_bias;
+      cached_bias_min_ = bias_min;
+      cached_bias_max_ = bias_max;
       bias_ver_        = in_data[idx.bias].version();
       cached_bias_     = in_data[idx.bias];
     } else {
@@ -259,13 +259,13 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
     bool support_channelwise_scale = false;
     if (mkldnn_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
-      data_scale_ = GetQuantizeScale(data.dtype(), cached_min_data_, cached_max_data_);
+      data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
 
       bool fuse_requantize = false;
       // Channelwise scaling is only supported when fusion is enabled (requantize or dequantize).
       if (mkldnn_param.min_calib_range.has_value() && mkldnn_param.max_calib_range.has_value()) {
-        cached_min_output_        = mkldnn_param.min_calib_range.value();
-        cached_max_output_        = mkldnn_param.max_calib_range.value();
+        cached_output_min_        = mkldnn_param.min_calib_range.value();
+        cached_output_max_        = mkldnn_param.max_calib_range.value();
         support_channelwise_scale = true;
         fuse_requantize           = true;
       }
@@ -297,16 +297,16 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
       } else {
         weight_scales_.resize(1);
         weight_scales_[0] =
-            GetQuantizeScale(cached_weight_.dtype(), cached_min_weight_, cached_max_weight_);
+            GetQuantizeScale(cached_weight_.dtype(), cached_weight_min_, cached_weight_max_);
         if (has_bias) {
           if (cached_bias_.dtype() == mshadow::kInt8) {
-            float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
+            float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_bias_min_, cached_bias_max_);
 
             float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
             // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set
             // the maximum value of bias to INT_MAX / 2.
             float bias_max_rescale =
-                MaxValue<int32_t>() / 2 / MaxAbs(cached_min_bias_, cached_max_bias_) / bias_scale;
+                MaxValue<int32_t>() / 2 / MaxAbs(cached_bias_min_, cached_bias_max_) / bias_scale;
             if (bias_int32_rescale > bias_max_rescale) {
               // avoid overflow on bias
               bias_int32_rescale = bias_max_rescale;
@@ -343,9 +343,9 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
           if (mkldnn_param.with_eltwise) {
             tmp_scale_ = 1.0 / data_scale_;
             full_param_.eltwise_param.scale =
-                GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
+                GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_);
           } else {
-            out_scale  = GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
+            out_scale  = GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_);
             tmp_scale_ = out_scale / data_scale_;
           }
         } else {
@@ -368,22 +368,22 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
           mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
               s,
               1,
-              &cached_min_output_,
-              &cached_max_output_,
-              &min_data,
-              &max_data,
-              &min_weight,
-              &max_weight);
+              &cached_output_min_,
+              &cached_output_max_,
+              &data_min,
+              &data_max,
+              &weight_min,
+              &weight_max);
         } else {
           mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
               s,
               1,
-              &cached_min_output_,
-              &cached_max_output_,
-              &min_data,
-              &max_data,
-              &min_weight,
-              &max_weight);
+              &cached_output_min_,
+              &cached_output_max_,
+              &data_min,
+              &data_max,
+              &weight_min,
+              &weight_max);
         }
         full_param_.output_scales.resize(0);
         out_scale = data_scale_ * weight_scales_[0];
@@ -470,15 +470,15 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
   MKLDNNStream::Get()->Submit();
 
   if (mkldnn_param.quantized && !mkldnn_param.enable_float_output) {
-    float *min_output_ptr = out_data[out_min_index].data().dptr<float>();
-    float *max_output_ptr = out_data[out_max_index].data().dptr<float>();
+    float* output_min_ptr = out_data[out_min_index].data().dptr<float>();
+    float* output_max_ptr = out_data[out_max_index].data().dptr<float>();
 
     if (mkldnn_param.shifted_output.has_value() && mkldnn_param.shifted_output.value()) {
-      *min_output_ptr = 0;
-      *max_output_ptr = cached_max_output_ - cached_min_output_;
+      *output_min_ptr = 0;
+      *output_max_ptr = cached_output_max_ - cached_output_min_;
     } else {
-      *min_output_ptr = cached_min_output_;
-      *max_output_ptr = cached_max_output_;
+      *output_min_ptr = cached_output_min_;
+      *output_max_ptr = cached_output_max_;
     }
   }
 }
@@ -534,26 +534,24 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs* attrs) {
 
 static std::vector<std::string> SgMKLDNNFCListInputNames(const NodeAttrs& attrs) {
   auto const& full_param               = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
+  auto const& mkldnn_param             = full_param.mkldnn_param;
   std::vector<std::string> input_names = DefaultSubgraphOpListInputs(attrs);
-  if (full_param.mkldnn_param.quantized) {
-    bool channel_wise = false;
-    if (full_param.mkldnn_param.with_sum) {
-      input_names.emplace_back("sum");
-    }
-
-    if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
-        full_param.mkldnn_param.channel_wise_quantize) {
-      channel_wise = true;
-    }
-    input_names.emplace_back("min_data");
-    input_names.emplace_back("max_data");
+  if (mkldnn_param.quantized) {
+    const bool channel_wise =
+        mkldnn_param.channel_wise_quantize.has_value() && mkldnn_param.channel_wise_quantize;
+    input_names.emplace_back("data_min");
+    input_names.emplace_back("data_max");
     if (!channel_wise) {
-      input_names.emplace_back("min_weight");
-      input_names.emplace_back("max_weight");
+      input_names.emplace_back("weight_min");
+      input_names.emplace_back("weight_max");
       if (!full_param.default_param.no_bias) {
-        input_names.emplace_back("min_bias");
-        input_names.emplace_back("max_bias");
+        input_names.emplace_back("bias_min");
+        input_names.emplace_back("bias_max");
       }
+    }
+    if (mkldnn_param.with_sum && !mkldnn_param.enable_float_output) {
+      input_names.emplace_back("sum_min");
+      input_names.emplace_back("sum_max");
     }
   }
   return input_names;
@@ -565,7 +563,7 @@ static std::vector<std::string> SgMKLDNNFCListOutputNames(const NodeAttrs& attrs
     if (full_param.mkldnn_param.enable_float_output)
       return std::vector<std::string>{"output"};
     else
-      return std::vector<std::string>{"output", "min_output", "max_output"};
+      return std::vector<std::string>{"output", "output_min", "output_max"};
   } else {
     return std::vector<std::string>{"output"};
   }
@@ -618,34 +616,42 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int>* out_types) {
   auto const& full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   if (full_param.mkldnn_param.quantized) {
-    bool channel_wise = false;
-    if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
-        full_param.mkldnn_param.channel_wise_quantize) {
-      channel_wise = true;
-    }
-    size_t num_integer_inputs = FCInputIndex(full_param).GetQuantized();
-    CHECK(in_types->at(0) == mshadow::kInt8 || in_types->at(0) == mshadow::kUint8)
-        << "QuantizedFullyConnected only supports int8/uint8 input, while " << in_types->at(0)
-        << " is given.";
+    const bool channel_wise = full_param.mkldnn_param.channel_wise_quantize.has_value() &&
+                              full_param.mkldnn_param.channel_wise_quantize;
+    const FCInputIndex idx(full_param);
+
+    CHECK(in_types->at(idx.data) == mshadow::kInt8 || in_types->at(idx.data) == mshadow::kUint8)
+        << "QuantizedFullyConnected  data input only supports int8/uint8, while "
+        << in_types->at(idx.data) << " is given.";
     if (channel_wise) {
-      for (size_t i = 1; i < in_types->size(); ++i) {
-        TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*in_types, idx.weight, mshadow::kFloat32);
+      if (idx.IsBiasExist()) {
+        TYPE_ASSIGN_CHECK(*in_types, idx.bias, mshadow::kFloat32);
       }
     } else {
-      TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kInt8);
-      if (!full_param.default_param.no_bias) {
-        if (in_types->at(2) == -1) {
-          TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kInt32);
+      TYPE_ASSIGN_CHECK(*in_types, idx.weight, mshadow::kInt8);
+      if (idx.IsBiasExist()) {
+        if (in_types->at(idx.bias) == -1) {
+          TYPE_ASSIGN_CHECK(*in_types, idx.bias, mshadow::kInt32);
         } else {
-          CHECK(in_types->at(2) == mshadow::kInt8 || in_types->at(2) == mshadow::kInt32)
-              << "QuantizedFullyConnected only supports int8/int32 bias, "
-                 "while "
-              << in_types->at(2) << " is given.";
+          CHECK(in_types->at(idx.bias) == mshadow::kInt8 ||
+                in_types->at(idx.bias) == mshadow::kInt32)
+              << "QuantizedFullyConnected bias input only supports int8/int32, while "
+              << in_types->at(idx.bias) << " is given.";
         }
       }
-      for (size_t i = num_integer_inputs; i < in_types->size(); ++i) {
-        TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
+    }
+    if (idx.IsSumExist()) {
+      if (full_param.mkldnn_param.enable_float_output) {
+        TYPE_ASSIGN_CHECK(*in_types, idx.sum, mshadow::kFloat32);
+      } else {
+        CHECK(in_types->at(idx.sum) == mshadow::kInt8 || in_types->at(idx.sum) == mshadow::kUint8)
+            << "QuantizedFullyConnected sum input only supports int8/uint8, while "
+            << in_types->at(idx.sum) << " is given.";
       }
+    }
+    for (size_t i = idx.data_min; i < in_types->size(); ++i) {
+      TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
     }
 
     if (full_param.mkldnn_param.enable_float_output) {

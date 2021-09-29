@@ -399,9 +399,14 @@ def conv_add2(no_bias, data_shape):
   return sum, attr
 
 
-# fc + sum
-def fc_sum(no_bias, data_shape):
-  attr = {'fc': {'with_sum': 'true', 'quantized' : 'true', 'enable_float_output': 'true'}}
+# FullyConnected + element wise add
+def fc_sum(no_bias, data_shape, quantize_mode=None):
+  attr = {'fc': {'with_sum': 'true'}}
+  if quantize_mode is not None:
+    attr['fc']['quantized'] = 'true'
+    if quantize_mode == 'smart':
+      attr['fc']['enable_float_output'] = 'true'
+
   data, weight = head_symbol(data_shape)
   sym1 = mx.symbol.FullyConnected(data=data, weight=weight, no_bias=no_bias, num_hidden=10)
   data2 = mx.symbol.var('data_2', shape= (data_shape[0], 10), dtype="float32", init = mx.init.Normal(0.3))
@@ -898,9 +903,13 @@ def test_pos_fc_sum():
       check_qsym_dummy_forward_fc_sum(qsym, batch, data_shapes)
 
   for data_shape in DATA_SHAPE:
-    for out_type in ('auto',):
-      net, attrs, inputs = fc_sum(False, data_shape)
-      check_quantize_fc_sum(net, inputs, out_type, attrs)
+    net, attrs, inputs = fc_sum(False, data_shape)
+    check_fusion(net,data_shape, attrs, check_quantization = False)
+  for quantize_mode in ('smart', 'full'):
+    for data_shape in DATA_SHAPE:
+      for out_type in ('auto', 'int8'):
+        net, attrs, inputs = fc_sum(False, data_shape, quantize_mode)
+        check_quantize_fc_sum(net, inputs, out_type, attrs, quantize_mode = quantize_mode)
 
 
 @with_seed()

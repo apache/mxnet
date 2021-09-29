@@ -18,8 +18,12 @@
  */
 
 /*
-  \brief It fuses FC + SUM for floating point output in second post quantization
-  pass
+  \file
+  \brief For fusing FullyConnected operator with element-wise add.
+
+  Element-wise add operator is replaced by MKLDNN FC "sum" post operator.
+  It adds FC results to existing values in output. For quantized integer version
+  this output is scaled to the proper range.
 */
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_SUM_FUSE_H_
@@ -40,6 +44,14 @@
 namespace mxnet {
 namespace op {
 
+inline bool EndsWith(std::string const& value, std::string const& ending) {
+  if (ending.size() > value.size()) {
+    return false;
+  } else {
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+  }
+}
+
 class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
  private:
   /*! \brief pattern match status */
@@ -49,7 +61,6 @@ class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
     kSuccess,
   };
 
- private:
   bool quantized_;
   SelectStatus status_;
   std::vector<const nnvm::Node*> matched_list_;
@@ -60,9 +71,10 @@ class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
   bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() == Op::Get("_sg_mkldnn_fully_connected") && SupportMKLDNNAttr(node_attr)) {
       auto const& fc_param = nnvm::get<MKLDNNFCFullParam>(n.attrs.parsed);
-      // TODO(anko) remove fc_param.mkldnn_param.quantized from if below
-      //            to fuse even for not quantized?
-      if (fc_param.mkldnn_param.enable_float_output && fc_param.mkldnn_param.quantized) {
+      if ((!quantized_ && !fc_param.mkldnn_param.for_quantization) ||
+          fc_param.mkldnn_param.quantized) {
+        // Start subgraph when fusing for floats (quantized_ is false for MKLDNN backend) or
+        // when FC is already quantized (second pass for MKLDNN_QUANTIZE).
         status_ = kStart;
         matched_list_.clear();
         matched_list_.push_back(&n);
@@ -94,7 +106,17 @@ class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
 
     switch (status_) {
       case kStart:
-        if (new_node.op()->name == "elemwise_add") {
+        // Find _contrib_quantized_elemwise_add or elemwise_add
+        if (EndsWith(new_node.op()->name, "elemwise_add")) {
+          if (quantized_) {
+            auto const& fc_param = nnvm::get<MKLDNNFCFullParam>(n.attrs.parsed);
+            if (!fc_param.mkldnn_param.enable_float_output) {
+              // For quantized graph, when FC floating point output is not enabled
+              // elementwise add must also be quantized (min and max value have to be already stored
+              // in elementwise add).
+              CHECK_EQ(new_node.attrs.dict.count("min_calib_range"), 1);
+            }
+          }
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
@@ -133,7 +155,7 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
   SgMKLDNNFCSumFuseProperty() {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN FullyConnected post quantization second pass";
+    static const std::string& name = "MKLDNN fuse FullyConnected with sum";
     auto property                  = std::make_shared<SgMKLDNNFCSumFuseProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
@@ -149,12 +171,13 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
     nnvm::ObjectPtr ew_add_node = nullptr;
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable())
+      if (node->is_variable()) {
         return;
+      }
       auto& sub_name = node->op()->name;
       if (sub_name == "_sg_mkldnn_fully_connected") {
         fc_node = node;
-      } else if (sub_name == "elemwise_add") {
+      } else if (EndsWith(sub_name, "elemwise_add")) {
         ew_add_node = node;
       }
     });
@@ -163,13 +186,23 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
     if (ew_add_node != nullptr) {
       CHECK_NOTNULL(fc_node->attrs.subgraphs[0]);
       auto fc_orginal = fc_node->attrs.subgraphs[0]->outputs[0].node;
+
       if (fc_orginal->op() == Op::Get("FullyConnected")) {
         nnvm::Symbol new_sym;
-        nnvm::NodeEntry& ew_input_with_fc = (ew_add_node->inputs[1].node == fc_node)
-                                                ? ew_add_node->inputs[1]
-                                                : ew_add_node->inputs[0];
-        ew_input_with_fc.node             = fc_orginal;
-        new_sym.outputs.emplace_back(ew_add_node);
+        // Create a new elemwise_add node to not alter the original one.
+        // It is needed in subgraph to properly calculate InferShape.
+        nnvm::ObjectPtr n = nnvm::Node::Create();
+        n->attrs.op       = Op::Get("elemwise_add");
+        n->attrs.name     = ew_add_node->attrs.name;
+
+        if (ew_add_node->inputs[0].node == fc_node) {
+          n->inputs.emplace_back(fc_orginal);
+          n->inputs.emplace_back(ew_add_node->inputs[1]);
+        } else {
+          n->inputs.emplace_back(ew_add_node->inputs[0]);
+          n->inputs.emplace_back(fc_orginal);
+        }
+        new_sym.outputs.emplace_back(n);
         fc_node->attrs.subgraphs.clear();
         fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
         fc_node->attrs.dict["with_sum"] = "True";
@@ -201,10 +234,11 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
     auto const& fc_param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
     std::unordered_set<const nnvm::Node*> node_sets;
     DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable())
+      if (node->is_variable()) {
         return;
+      }
       node_sets.insert(node.get());
-      if (node->op()->name == "elemwise_add") {
+      if (EndsWith(node->op()->name, "elemwise_add")) {
         const size_t base_inputs = fc_param.default_param.no_bias ? 3 : 4;
 
         // Make sure n is the left operand of sum, if not,
@@ -219,12 +253,16 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
                       orig_input_entries->begin() + 1,
                       orig_input_entries->begin() + base_inputs);
         } else {
+          const int not_rotated_end =
+              (fc_param.mkldnn_param.quantized && !fc_param.mkldnn_param.enable_float_output) ? 2
+                                                                                              : 0;
+
           std::rotate(input_entries->begin() + base_inputs - 1,
-                      input_entries->end() - 1,
-                      input_entries->end());
+                      input_entries->end() - 1 - not_rotated_end,
+                      input_entries->end() - not_rotated_end);
           std::rotate(orig_input_entries->begin() + base_inputs - 1,
-                      orig_input_entries->end() - 1,
-                      orig_input_entries->end());
+                      orig_input_entries->end() - 1 - not_rotated_end,
+                      orig_input_entries->end() - not_rotated_end);
         }
       }
     });
