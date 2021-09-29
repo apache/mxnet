@@ -375,7 +375,7 @@ std::shared_ptr<void(int)> HANDLER_NAME(                             \
   }),                                                                \
   [](auto f) { signal(SIGNAL, f); });
 
-// TODO(cspchen): avoid jvm exit with code 139. By now, we just skip it
+// TODO(cspchen): avoid jvm exit with code 139. https://github.com/apache/incubator-mxnet/pull/20461
 #if !SKIP_SIGNAL_HANDLER_REGISTRATION
 SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
 SIGNAL_HANDLER(SIGFPE, SIGFPEHandler, false);
