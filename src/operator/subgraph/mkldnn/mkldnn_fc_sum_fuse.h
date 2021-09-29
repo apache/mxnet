@@ -189,6 +189,8 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
 
       if (fc_orginal->op() == Op::Get("FullyConnected")) {
         nnvm::Symbol new_sym;
+        // Create a new elemwise_add node to not alter the original one.
+        // It is needed in subgraph to properly calculate InferShape.
         nnvm::ObjectPtr n = nnvm::Node::Create();
         n->attrs.op       = Op::Get("elemwise_add");
         n->attrs.name     = ew_add_node->attrs.name;
