@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file multibox_prior.cc
  * \brief generate multibox prior boxes cpu implementation
  * \author Joshua Zhang

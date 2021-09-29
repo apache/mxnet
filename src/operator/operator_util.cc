@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file operator_util.cc
  *  Implementation of operator util.
  */

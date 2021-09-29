@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file mshadow_op.h
  * \brief
  * \author Bing Xu

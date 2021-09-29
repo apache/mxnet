@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * Copyright (c) 2017 Microsoft
  * \file psroi_pooling-inl.h
  * \brief psroi pooling operator and symbol

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor_container.h
  * \brief tensor container that does memory allocation and resize like STL
  * \author Tianqi Chen

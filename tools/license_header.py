@@ -107,6 +107,32 @@ _WHITE_LIST = [
                'cmake/upstream/FindBLAS.cmake',
                'cmake/upstream/select_compute_arch.cmake',
 
+               # Licensed under the Boost Software License, Version 1.0
+               'cmake/Modules/FindJeMalloc.cmake',
+
+               # Licensed under MIT license and contributed by Microsoft
+               'src/operator/contrib/nn/modulated_deformable_im2col.cuh',
+               'src/operator/contrib/nn/modulated_deformable_im2col.h',
+               'src/operator/modulated_deformable_convolution-inl.h',
+               'src/operator/modulated_deformable_convolution.cc',
+               'src/operator/modulated_deformable_convolution.cu',
+
+               # Licensed under Apache 2.0 license and contributed by Microsoft
+               'src/operator/contrib/deformable_psroi_pooling.cu',
+               'src/operator/deformable_convolution.cu',
+               'src/operator/deformable_convolution-inl.h',
+               'src/operator/contrib/psroi_pooling.cc',
+               'src/operator/contrib/multi_proposal.cu',
+               'src/operator/contrib/deformable_psroi_pooling-inl.h',
+               'src/operator/contrib/deformable_psroi_pooling.cc',
+               'src/operator/deformable_convolution.cc',
+               'src/operator/contrib/psroi_pooling.cu',
+               'src/operator/contrib/multi_proposal.cc',
+               'src/operator/contrib/multi_proposal-inl.h',
+
+               # Licensed under Apache 2.0 license
+               'src/operator/nn/mkldnn/mkldnn_base-inl.h',
+
                # This file
                'tools/license_header.py',
 

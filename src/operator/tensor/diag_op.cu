@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file diag_op.cu
  * \brief GPU Implementation of the diag operator
  * \author Istvan Fehervari

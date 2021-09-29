@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file indexing_op-inl.cuh
  * \brief CUDA implementations for indexing_op.h
  * \author Antti-Pekka Hynninen

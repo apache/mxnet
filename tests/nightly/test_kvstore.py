@@ -100,7 +100,7 @@ def compute_expected_quantization(arr, curr_residual, threshold, quantize_func):
 def test_kvstore(kv_type, stype):
     print(kv_type)
     kv = mx.kv.create(kv_type)
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
+    kv.set_optimizer(mx.optimizer.create('test', learning_rate=-lr))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
 
@@ -130,7 +130,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
         raise RuntimeError("Unknown gradient compression type!")
     kv = mx.kv.create(kv_type)
     kv.set_gradient_compression({'type':compression, 'threshold':threshold})
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
+    kv.set_optimizer(mx.optimizer.create('test', learning_rate=-rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
     # init one key with 1s so we can check if it was compressed during init
@@ -297,7 +297,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
 def test_group_kvstore(kv_type, stype):
     print(kv_type)
     kv = mx.kv.create(kv_type)
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
+    kv.set_optimizer(mx.optimizer.create('test', learning_rate=-lr))
     kv.init(keys, [mx.nd.zeros(s) for s in shapes])
     res = [np.zeros(s) for s in shapes]
     out = [[mx.nd.zeros(s, mx.gpu(g)) for g in range(nworker)] for s in shapes]

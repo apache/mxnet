@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_matrix_rank.cc
  * \brief CPU implementation of the matrix_rank Operator
  */

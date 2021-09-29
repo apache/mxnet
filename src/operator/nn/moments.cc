@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file moments.cc
  * \brief Moments operator
  * \author Hao Jin

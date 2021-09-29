@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file tensor_inspector.h
  * \brief utility to inspect tensor objects
  * \author Zhaoqi Zhu

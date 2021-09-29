@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_lstsq.cc
  * \brief CPU implementation of the lstsq Operator
  */

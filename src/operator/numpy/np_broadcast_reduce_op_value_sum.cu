@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_broadcast_reduce_op_value_sum.cu
  * \brief GPU Implementation of reduce functions based on value.
  */

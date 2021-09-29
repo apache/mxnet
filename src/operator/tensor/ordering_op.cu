@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file ordering_op.cu
  * \brief GPU Implementation of ordering operations
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file count_sketch.cc
  * \brief count_sketch op
  * \author Chen Zhu

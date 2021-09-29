@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_true_divide.cc
  * \brief CPU Implementation of true_divide operator.
  */
