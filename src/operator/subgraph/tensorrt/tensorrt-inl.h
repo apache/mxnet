@@ -1,5 +1,3 @@
-#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
-#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,6 +24,8 @@
  * \author Marek Kolodziej, Clement Fuji Tsang, Serge Panev
 */
 
+#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
 #if MXNET_USE_TENSORRT
 
 #include <onnx-tensorrt/NvOnnxParser.h>
