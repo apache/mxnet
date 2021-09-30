@@ -66,6 +66,11 @@ source $DIR/zmq.sh
 source $DIR/lz4.sh
 if [[ $BLAS == 'mkl' ]]; then
     source ${DIR}/mkl.sh
+    source ${DIR}/numpy_mkl.sh
+    if [[ $PLATFORM == 'darwin' ]]; then
+        # export this path to find iomp5 needed by MKL according to Intel Link Line Advisor
+        export DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/oneapi/compiler/${INTEL_MKL}/mac/compiler
+    fi
 fi
 
 

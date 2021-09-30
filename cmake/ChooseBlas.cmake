@@ -126,20 +126,13 @@ elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
   # ---[ MKL Options
   file(STRINGS ${MKL_INCLUDE_DIR}/mkl_version.h MKL_VERSION_DEF REGEX "INTEL_MKL_VERSION")
   string(REGEX MATCH "([0-9]+)" MKL_VERSION ${MKL_VERSION_DEF})
-  if(UNIX AND NOT APPLE)
+  if(UNIX)
     # Single dynamic library interface leads to conflicts between intel omp and llvm omp
     # https://github.com/apache/incubator-mxnet/issues/17641
     # Fixed in oneMKL 2021.3: [MKLD-11109] MKL is opening libgomp.so instead of
     # libgomp.so.1 while SDL=1 & MKL_THREADING_LAYER=GNU
     cmake_dependent_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON
       "NOT BLA_STATIC;MKL_VERSION GREATER_EQUAL 20210003" OFF)
-  elseif(APPLE)
-    # TODO: Do more research on MKL on MacOs as there seems to be some library issues.
-    # As a consequence link static MKL libraries.
-    # TODO: Single dynamic library (SDL) interface for MacOS seems to have:
-    # 'INTEL MKL ERROR: dlopen(/opt/intel/oneapi/mkl/2021.3.0/lib/libmkl_cdft_core.1.dylib,
-    # 9):Symbol not found: _mkl_dft_dfticomputebackward' issue.
-    option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" OFF)
   else()
     option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
   endif()

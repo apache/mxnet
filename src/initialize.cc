@@ -238,7 +238,7 @@ void LibraryInitializer::init_mkl_dynamic_library() {
 #else
   int interface = MKL_INTERFACE_LP64;
 #endif
-#if defined(__INTEL_LLVM_COMPILER)
+#if defined(__INTEL_LLVM_COMPILER) || defined(__APPLE__)
   mkl_set_threading_layer(MKL_THREADING_INTEL);
 #else
   mkl_set_threading_layer(MKL_THREADING_GNU);

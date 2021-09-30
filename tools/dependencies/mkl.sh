@@ -20,8 +20,8 @@
 # This script downloads OneMKL
 # TODO @akarbown: Get more general link to download the OneMKL (instead of the generated one)
 set -ex
-INTEL_MKL="2021.3.0"
-if [[  (! -e /opt/intel/oneapi/mkl/)]]; then
+export INTEL_MKL="2021.3.0"
+if [[  (! -e /opt/intel/oneapi/mkl/) ]]; then
     >&2 echo "Downloading mkl..."
 
     if [[ $PLATFORM == 'darwin' ]]; then
@@ -43,7 +43,7 @@ if [[  (! -e /opt/intel/oneapi/mkl/)]]; then
         rm ${DEPS_PATH}/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
         add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
         apt-get update && \
-        apt install -y intel-oneapi-mkl-${INTEL_MKL} intel-oneapi-mkl-common-${INTEL_MKL}  intel-oneapi-mkl-devel
+        apt install -y intel-oneapi-mkl-${INTEL_MKL} intel-oneapi-mkl-common-${INTEL_MKL} intel-oneapi-mkl-devel-${INTEL_MKL}
     else
         >&2 echo "Not available"
     fi
