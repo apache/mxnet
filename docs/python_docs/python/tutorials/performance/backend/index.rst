@@ -23,7 +23,7 @@ The following tutorials will help you learn how to use backend tools to boost pe
 
   .. card::
      :title: DNNL
-     :link: mkldnn/index.html
+     :link: dnnl/index.html
 
      How to get the most from your CPU by using Intel's DNNL.
 
@@ -50,7 +50,7 @@ The following tutorials will help you learn how to use backend tools to boost pe
    :hidden:
    :maxdepth: 1
 
-   mkldnn/index
+   dnnl/index
    tvm
    profiler
    amp
