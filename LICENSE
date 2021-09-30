@@ -252,7 +252,7 @@
     src/operator/contrib/multi_proposal.cu
     src/operator/contrib/psroi_pooling.cc
     src/operator/contrib/psroi_pooling.cu
-    src/operator/nn/mkldnn/mkldnn_base-inl.h
+    src/operator/nn/dnnl/dnnl_base-inl.h
 
     =======================================================================================
     MIT license
