@@ -36,10 +36,10 @@ bool SupportDNNLDeconv(const DeconvolutionParam& params, const NDArray& input) {
 }
 
 void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const auto& param  = nnvm::get<DeconvolutionParam>(attrs.parsed);
   const auto tensors = DNNLDeconvFwd::Tensors(param.no_bias, inputs, outputs);
@@ -49,8 +49,7 @@ void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
   fwd.Execute(param.num_group, req[deconv::kOut], tensors);
 }
 
-DNNLDeconvFwd& DNNLDeconvFwd::GetCached(const DeconvolutionParam& param,
-                                            const Tensors& tensors) {
+DNNLDeconvFwd& DNNLDeconvFwd::GetCached(const DeconvolutionParam& param, const Tensors& tensors) {
   using deconv_fwd_map = std::unordered_map<DeconvSignature, DNNLDeconvFwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local deconv_fwd_map fwds;
@@ -73,9 +72,8 @@ DNNLDeconvFwd& DNNLDeconvFwd::GetCached(const DeconvolutionParam& param,
   return it->second;
 }
 
-std::shared_ptr<deconv_fwd_pd_t> DNNLDeconvFwd::CreatePrimitiveDesc(
-    const DeconvolutionParam& param,
-    const Tensors& tensors) {
+std::shared_ptr<deconv_fwd_pd_t> DNNLDeconvFwd::CreatePrimitiveDesc(const DeconvolutionParam& param,
+                                                                    const Tensors& tensors) {
   DeconvDescCreator ddc(param, tensors.data, tensors.weights, tensors.bias, tensors.out);
   const auto& engine          = CpuEngine::Get()->get_engine();
   const auto pd               = std::make_shared<deconv_fwd_pd_t>(ddc.CreateFwdDesc(), engine);
@@ -94,8 +92,8 @@ std::shared_ptr<deconv_fwd_pd_t> DNNLDeconvFwd::CreatePrimitiveDesc(
 }
 
 void DNNLDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
-                                           const bool is_train,
-                                           const NDArray& weights) const {
+                                         const bool is_train,
+                                         const NDArray& weights) const {
   if (is_train) {
     // TODO(zhengda) kvstore doesn't handle DNNL correctly. Let's reorder it
     // to the default format for now.
@@ -118,8 +116,8 @@ void DNNLDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
 }
 
 void DNNLDeconvFwd::Execute(const uint32_t num_group,
-                              const OpReqType req,
-                              const Tensors& tensors) const {
+                            const OpReqType req,
+                            const Tensors& tensors) const {
   // MXNet (correctly) assumes that deconvolution is implemented using convolution primitives.
   // For that, we would pass input tensor in place of output and output tensor in place of input
   // (for appropriate convolution primitives: deconvolution forward = convolution backward data,
@@ -161,23 +159,23 @@ void DNNLDeconvFwd::Execute(const uint32_t num_group,
 }
 
 void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
-                                 const OpContext& ctx,
-                                 const std::vector<NDArray>& inputs,
-                                 const std::vector<OpReqType>& req,
-                                 const std::vector<NDArray>& outputs) {
+                               const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs) {
   CHECK_NE(req[deconv::kWeight], kWriteInplace) << "Cannot write weights inplace";
 
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const auto& param        = nnvm::get<DeconvolutionParam>(attrs.parsed);
   const auto read_tensors  = DNNLDeconvBwd::ReadTensors(param.no_bias, inputs);
   const auto write_tensors = DNNLDeconvBwd::WriteTensors(param.no_bias, outputs);
-  DNNLDeconvBwd& bwd     = DNNLDeconvBwd::GetCached(param, read_tensors);
+  DNNLDeconvBwd& bwd       = DNNLDeconvBwd::GetCached(param, read_tensors);
 
   bwd.Execute(param.num_group, req, read_tensors, write_tensors);
 }
 
 DNNLDeconvBwd& DNNLDeconvBwd::GetCached(const DeconvolutionParam& param,
-                                            const ReadTensors& read_tensors) {
+                                        const ReadTensors& read_tensors) {
   using deconv_bwd_map = std::unordered_map<DeconvSignature, DNNLDeconvBwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local deconv_bwd_map bwds;
@@ -246,9 +244,9 @@ std::shared_ptr<deconv_bwd_weights_pd_t> DNNLDeconvBwd::CreateWeightsPrimitiveDe
 }
 
 void DNNLDeconvBwd::Execute(const uint32_t num_group,
-                              const std::vector<OpReqType>& req,
-                              const ReadTensors& read_tensors,
-                              const WriteTensors& write_tensors) const {
+                            const std::vector<OpReqType>& req,
+                            const ReadTensors& read_tensors,
+                            const WriteTensors& write_tensors) const {
   // swaps are explained in DNNLDeconvFwd::Execute
   IOSwapWeightsTensors(num_group, req, read_tensors.weights, write_tensors.weights_grad);
   {
@@ -261,9 +259,9 @@ void DNNLDeconvBwd::Execute(const uint32_t num_group,
 }
 
 const dnnl::memory* DNNLDeconvBwd::ScheduleBwdData(const uint32_t num_group,
-                                                       const OpReqType req,
-                                                       const ReadTensors& read_tensors,
-                                                       const WriteTensors& write_tensors) const {
+                                                   const OpReqType req,
+                                                   const ReadTensors& read_tensors,
+                                                   const WriteTensors& write_tensors) const {
   if (req) {
     dnnl_args_map_t net_args;
     auto* const out_grad_mem  = OutGradMem(read_tensors.out_grad);
@@ -282,10 +280,10 @@ const dnnl::memory* DNNLDeconvBwd::ScheduleBwdData(const uint32_t num_group,
 }
 
 void DNNLDeconvBwd::ScheduleBwdWeights(const uint32_t num_group,
-                                         const std::vector<OpReqType>& req,
-                                         const ReadTensors& read_tensors,
-                                         const WriteTensors& write_tensors,
-                                         const dnnl::memory* const out_grad_mem) const {
+                                       const std::vector<OpReqType>& req,
+                                       const ReadTensors& read_tensors,
+                                       const WriteTensors& write_tensors,
+                                       const dnnl::memory* const out_grad_mem) const {
   OpReqType weight_req = req[deconv::kWeight];
   OpReqType bias_req   = req.size() > deconv::kBias ? req[deconv::kBias] : OpReqType::kNullOp;
   if (weight_req || bias_req) {

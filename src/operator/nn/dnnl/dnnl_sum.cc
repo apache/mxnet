@@ -38,9 +38,9 @@ void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::mem
   input_pds[0] = arr1.get_desc();
   input_pds[1] = arr2.get_desc();
   CHECK(input_pds[0] == input_pds[0]);
-  const dnnl::memory* in_mem1   = &arr1;
-  const dnnl::memory* in_mem2   = &arr2;
-  auto output_pd                = out.get_desc();
+  const dnnl::memory* in_mem1 = &arr1;
+  const dnnl::memory* in_mem2 = &arr2;
+  auto output_pd              = out.get_desc();
   if (input_pds[0] != output_pd) {
     auto tmp_memory1 = TmpMemMgr::Get()->Alloc(output_pd);
     auto tmp_memory2 = TmpMemMgr::Get()->Alloc(output_pd);

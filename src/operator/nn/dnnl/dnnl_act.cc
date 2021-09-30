@@ -112,9 +112,9 @@ dnnl::algorithm GetDNNLActAlgo(const LeakyReLUParam& param) {
 dnnl::eltwise_forward::primitive_desc GetActFwdDescImpl(const DNNLActParam& param,
                                                         bool is_train,
                                                         const dnnl::memory& input_mem) {
-  dnnl::memory::desc data_md   = input_mem.get_desc();
-  auto cpu_engine              = CpuEngine::Get()->get_engine();
-  auto alg                     = param.alg;
+  dnnl::memory::desc data_md = input_mem.get_desc();
+  auto cpu_engine            = CpuEngine::Get()->get_engine();
+  auto alg                   = param.alg;
 
   auto prop = is_train ? dnnl::prop_kind::forward_training : dnnl::prop_kind::forward_scoring;
   auto desc = dnnl::eltwise_forward::desc(prop, alg, data_md, param.slope);
@@ -176,8 +176,8 @@ void DNNLLeakyReluForward(const nnvm::NodeAttrs& attrs,
   param_.alg   = GetDNNLActAlgo(param);
   param_.slope = param.slope;
 
-  NDArray in_buffer    = in_data;
-  DNNLStream* stream   = DNNLStream::Get();
+  NDArray in_buffer  = in_data;
+  DNNLStream* stream = DNNLStream::Get();
 
   if (in_data.IsView() && in_data.IsDNNLData())
     in_buffer = in_data.Reorder2Default();
@@ -194,10 +194,10 @@ void DNNLLeakyReluForward(const nnvm::NodeAttrs& attrs,
 dnnl::eltwise_backward::primitive_desc GetActBwdDescImpl(const DNNLActParam& param,
                                                          const dnnl::memory& input_mem,
                                                          const dnnl::memory& diff_dst_memory) {
-  dnnl::memory::desc data_md   = input_mem.get_desc();
-  dnnl::memory::desc diff_md   = diff_dst_memory.get_desc();
-  auto cpu_engine              = CpuEngine::Get()->get_engine();
-  auto alg                     = param.alg;
+  dnnl::memory::desc data_md = input_mem.get_desc();
+  dnnl::memory::desc diff_md = diff_dst_memory.get_desc();
+  auto cpu_engine            = CpuEngine::Get()->get_engine();
+  auto alg                   = param.alg;
 
   dnnl::eltwise_forward::desc fw_desc(dnnl::prop_kind::forward_training, alg, data_md, param.slope);
   dnnl::eltwise_forward::primitive_desc fw_pdesc(fw_desc, cpu_engine);

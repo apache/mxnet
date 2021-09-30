@@ -33,8 +33,8 @@ namespace op {
 static dnnl::logsoftmax_forward::primitive_desc GetLogSoftmaxFwdPd(bool is_train,
                                                                    const int axis,
                                                                    const dnnl::memory& input_mem) {
-  dnnl::memory::desc data_md   = input_mem.get_desc();
-  auto cpu_engine              = CpuEngine::Get()->get_engine();
+  dnnl::memory::desc data_md = input_mem.get_desc();
+  auto cpu_engine            = CpuEngine::Get()->get_engine();
   auto prop = is_train ? dnnl::prop_kind::forward_training : dnnl::prop_kind::forward_scoring;
   auto desc = dnnl::logsoftmax_forward::desc(prop, data_md, axis);
   return dnnl::logsoftmax_forward::primitive_desc(desc, cpu_engine);
@@ -45,10 +45,10 @@ static dnnl::logsoftmax_backward::primitive_desc GetLogSoftmaxBwdPd(
     const dnnl::memory& data_mem,
     const int axis,
     const dnnl::logsoftmax_forward::primitive_desc& hint_fwd_pd) {
-  dnnl::memory::desc diff_md   = diff_mem.get_desc();
-  dnnl::memory::desc data_md   = data_mem.get_desc();
-  auto cpu_engine              = CpuEngine::Get()->get_engine();
-  auto desc                    = dnnl::logsoftmax_backward::desc(diff_md, data_md, axis);
+  dnnl::memory::desc diff_md = diff_mem.get_desc();
+  dnnl::memory::desc data_md = data_mem.get_desc();
+  auto cpu_engine            = CpuEngine::Get()->get_engine();
+  auto desc                  = dnnl::logsoftmax_backward::desc(diff_md, data_md, axis);
   return dnnl::logsoftmax_backward::primitive_desc(desc, cpu_engine, hint_fwd_pd);
 }
 

@@ -225,8 +225,8 @@ void DNNLFCForward(const nnvm::NodeAttrs& attrs,
   full_param.default_param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   full_param.dnnl_param.Init(std::unordered_map<std::string, std::string>());
 
-  NDArray data                = in_data[fullc::kData];
-  dnnl::memory::desc out_md   = GetMemDesc(out_data[fullc::kOut]);
+  NDArray data              = in_data[fullc::kData];
+  dnnl::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);
   DNNLFCFlattenData(full_param.default_param, out_data[fullc::kOut], &data, &out_md);
   auto& fwd = GetFCFwd(full_param.default_param,
                        ctx.is_train,

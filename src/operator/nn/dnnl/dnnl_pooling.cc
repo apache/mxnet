@@ -42,9 +42,9 @@ void DNNLPoolingFwd::Init(const mxnet::NDArray& input,
                           const dnnl::memory::dims& pad_r,
                           const bool is_train,
                           const dnnl::algorithm alg_kind) {
-  const auto src_md           = input.GetDNNLData()->get_desc();
-  const auto dst_md           = GetMemDesc(output);
-  const dnnl::engine engine   = CpuEngine::Get()->get_engine();
+  const auto src_md         = input.GetDNNLData()->get_desc();
+  const auto dst_md         = GetMemDesc(output);
+  const dnnl::engine engine = CpuEngine::Get()->get_engine();
   if (alg_kind != dnnl::algorithm::pooling_max && alg_kind != dnnl::algorithm::pooling_avg &&
       alg_kind != dnnl::algorithm::pooling_avg_include_padding &&
       alg_kind != dnnl::algorithm::pooling_avg_exclude_padding) {
@@ -127,11 +127,11 @@ void InitPoolingPrimitiveParams(const PoolingParam& param,
                                 const dnnl::memory::dims& new_strides,
                                 const dnnl::memory::dims& new_pad_l,
                                 const dnnl::memory::dims& new_pad_r) {
-  const int kernel_ndims        = param.kernel.ndim();
-  dnnl::memory::dims& kernel    = const_cast<dnnl::memory::dims&>(new_kernel);
-  dnnl::memory::dims& strides   = const_cast<dnnl::memory::dims&>(new_strides);
-  dnnl::memory::dims& pad_l     = const_cast<dnnl::memory::dims&>(new_pad_l);
-  dnnl::memory::dims& pad_r     = const_cast<dnnl::memory::dims&>(new_pad_r);
+  const int kernel_ndims      = param.kernel.ndim();
+  dnnl::memory::dims& kernel  = const_cast<dnnl::memory::dims&>(new_kernel);
+  dnnl::memory::dims& strides = const_cast<dnnl::memory::dims&>(new_strides);
+  dnnl::memory::dims& pad_l   = const_cast<dnnl::memory::dims&>(new_pad_l);
+  dnnl::memory::dims& pad_r   = const_cast<dnnl::memory::dims&>(new_pad_r);
   if (kernel_ndims == 1) {
     CHECK_GE(param.pad.ndim(), 1);
     CHECK_GE(param.stride.ndim(), 1);
@@ -380,10 +380,10 @@ void DNNLPoolingGradCompute(const OpContext& ctx,
 
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
-  auto& bwd              = GetPoolingBwd(param, in_data, in_grad, out_grad);
-  auto diff_dst_mem      = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
-  auto diff_src_mem      = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req);
-  dnnl_args_map_t args   = {
+  auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad);
+  auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
+  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req);
+  dnnl_args_map_t args = {
       {DNNL_ARG_DIFF_DST, *diff_dst_mem},
       {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
   };

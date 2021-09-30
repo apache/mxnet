@@ -40,8 +40,8 @@ void DNNLBatchDotForward(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
-  const DotParam& param  = nnvm::get<DotParam>(attrs.parsed);
-  DNNLBatchDotFwd& fwd   = DNNLBatchDotFwd::GetCached(param, inputs, outputs);
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
+  DNNLBatchDotFwd& fwd  = DNNLBatchDotFwd::GetCached(param, inputs, outputs);
   fwd.Execute(inputs, req, outputs);
 }
 

@@ -53,8 +53,8 @@ TEST(Storage, CPU_MemAlign) {
   // memory allocation.
   static constexpr size_t alignment_ = mxnet::kDNNLAlign;
 #else
-    static constexpr size_t alignment_ = 16;
-  #endif
+  static constexpr size_t alignment_ = 16;
+#endif
 
   auto&& storage = mxnet::Storage::Get();
   mxnet::Context context_cpu = mxnet::Context::CPU(0);

@@ -60,7 +60,7 @@ using deconv_bwd_weights_pd_t = dnnl::deconvolution_backward_weights::primitive_
 // Swaps the logical order of dimensions that in plain format would correspond to input and output
 // channels (for example: oihw => iohw, iohw => oihw, goihw => giohw).
 inline dnnl::memory::desc IOLogicalSwapDesc(const dnnl::memory::desc& desc,
-                                              const uint32_t num_group) {
+                                            const uint32_t num_group) {
   std::vector<int> order(desc.data.ndims);
   std::iota(std::begin(order), std::end(order), 0);
   const int offset = static_cast<int>(num_group > 1);
@@ -130,17 +130,17 @@ class DNNLDeconvFwd {
 };
 
 DNNLDeconvFwd::Tensors::Tensors(const bool no_bias,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<NDArray>& outputs)
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<NDArray>& outputs)
     : data(inputs[deconv::kData]),
       weights(inputs[deconv::kWeight]),
       bias(no_bias ? nullptr : &inputs[deconv::kBias]),
       out(outputs[deconv::kOut]) {}
 
 DNNLDeconvFwd::Tensors::Tensors(const NDArray& data,
-                                  const NDArray& weights,
-                                  const NDArray* const bias,
-                                  const NDArray& out)
+                                const NDArray& weights,
+                                const NDArray* const bias,
+                                const NDArray& out)
     : data(data), weights(weights), bias(bias), out(out) {}
 
 DNNLDeconvFwd::DNNLDeconvFwd(const DeconvolutionParam& param, const Tensors& tensors)
@@ -153,7 +153,7 @@ inline const dnnl::memory* DNNLDeconvFwd::DataMem(const NDArray& data) const {
 }
 
 inline const dnnl::memory* DNNLDeconvFwd::WeightsMem(const uint32_t num_group,
-                                                         const NDArray& weights) const {
+                                                     const NDArray& weights) const {
   return GetWeights(weights, fwd_pd->weights_desc(), num_group);
 }
 
@@ -181,8 +181,7 @@ class DNNLDeconvBwd {
     const NDArray* const bias_grad;
   };
 
-  static DNNLDeconvBwd& GetCached(const DeconvolutionParam& param,
-                                    const ReadTensors& read_tensors);
+  static DNNLDeconvBwd& GetCached(const DeconvolutionParam& param, const ReadTensors& read_tensors);
 
   static std::shared_ptr<deconv_bwd_data_pd_t> CreateDataPrimitiveDesc(
       const DeconvolutionParam& param,
@@ -210,9 +209,9 @@ class DNNLDeconvBwd {
   // returns the output gradient memory used to calculate the data (input) gradient,
   // which might be reused when calculating the gradient of weights
   const dnnl::memory* ScheduleBwdData(const uint32_t num_group,
-                                        const OpReqType req,
-                                        const ReadTensors& read_tensors,
-                                        const WriteTensors& write_tensors) const;
+                                      const OpReqType req,
+                                      const ReadTensors& read_tensors,
+                                      const WriteTensors& write_tensors) const;
 
   void ScheduleBwdWeights(const uint32_t num_group,
                           const std::vector<OpReqType>& req,
@@ -227,12 +226,12 @@ class DNNLDeconvBwd {
   const dnnl::memory* OutGradMem(const NDArray& out_grad) const;
   // for calculating the gradient of weights
   const dnnl::memory* OutGradMem(const NDArray& out_grad,
-                                   const dnnl::memory* const out_grad_mem) const;
+                                 const dnnl::memory* const out_grad_mem) const;
 
   dnnl_output_t DataGradMem(const OpReqType req, const NDArray& data_grad) const;
   dnnl_output_t WeightsGradMem(const uint32_t num_group,
-                                 const OpReqType req,
-                                 const NDArray& weights_grad) const;
+                               const OpReqType req,
+                               const NDArray& weights_grad) const;
   dnnl_output_t BiasGradMem(const OpReqType req, const NDArray* const bias) const;
 
   std::shared_ptr<deconv_bwd_data_pd_t> bwd_data_pd;
@@ -264,9 +263,9 @@ DNNLDeconvBwd::DNNLDeconvBwd(const DeconvolutionParam& param, const ReadTensors&
 }
 
 inline void DNNLDeconvBwd::IOSwapWeightsTensors(const uint32_t num_group,
-                                                  const std::vector<OpReqType>& req,
-                                                  const NDArray& weights,
-                                                  const NDArray& weights_grad) const {
+                                                const std::vector<OpReqType>& req,
+                                                const NDArray& weights,
+                                                const NDArray& weights_grad) const {
   if (req[deconv::kData]) {
     IOLogicalSwapDNNLMem(weights, num_group);
   }
@@ -280,7 +279,7 @@ inline const dnnl::memory* DNNLDeconvBwd::DataMem(const NDArray& data) const {
 }
 
 inline const dnnl::memory* DNNLDeconvBwd::WeightsMem(const uint32_t num_group,
-                                                         const NDArray& weights) const {
+                                                     const NDArray& weights) const {
   return GetWeights(weights, bwd_data_pd->weights_desc(), num_group);
 }
 
@@ -288,22 +287,21 @@ inline const dnnl::memory* DNNLDeconvBwd::OutGradMem(const NDArray& out_grad) co
   return out_grad.GetDNNLDataReorder(bwd_data_pd->diff_dst_desc());
 }
 
-inline const dnnl::memory* DNNLDeconvBwd::OutGradMem(
-    const NDArray& out_grad,
-    const dnnl::memory* const out_grad_mem) const {
+inline const dnnl::memory* DNNLDeconvBwd::OutGradMem(const NDArray& out_grad,
+                                                     const dnnl::memory* const out_grad_mem) const {
   return (out_grad_mem && out_grad_mem->get_desc() == bwd_weights_pd->diff_dst_desc())
              ? out_grad_mem
              : out_grad.GetDNNLDataReorder(bwd_weights_pd->diff_dst_desc());
 }
 
 inline dnnl_output_t DNNLDeconvBwd::DataGradMem(const OpReqType req,
-                                                    const NDArray& data_grad) const {
+                                                const NDArray& data_grad) const {
   return CreateDNNLMem(data_grad, bwd_data_pd->diff_src_desc(), req);
 }
 
 inline dnnl_output_t DNNLDeconvBwd::WeightsGradMem(const uint32_t num_group,
-                                                       const OpReqType req,
-                                                       const NDArray& weights_grad) const {
+                                                   const OpReqType req,
+                                                   const NDArray& weights_grad) const {
   // CreateDNNLWeightGrad always creates a new tensor as IsDefaultFormat always fails (because
   // of the logical swap - explained in DNNLDeconvFwd::Execute). We try to reuse weights_grad
   // memory (which, when not swapped, is always in default format), so here we check if after a
@@ -316,7 +314,7 @@ inline dnnl_output_t DNNLDeconvBwd::WeightsGradMem(const uint32_t num_group,
 }
 
 inline dnnl_output_t DNNLDeconvBwd::BiasGradMem(const OpReqType req,
-                                                    const NDArray* const bias) const {
+                                                const NDArray* const bias) const {
   return bias ? CreateDNNLMem(*bias, bwd_weights_pd->diff_bias_desc(), req)
               : dnnl_output_t(OutDataOp::Noop, nullptr);
 }
