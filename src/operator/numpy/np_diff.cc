@@ -27,9 +27,7 @@
 namespace mxnet {
 namespace op {
 
-inline TShape NumpyDiffShapeImpl(const TShape& ishape,
-                                 const int n,
-                                 const int axis) {
+inline TShape NumpyDiffShapeImpl(const TShape& ishape, const int n, const int axis) {
   CHECK_GE(n, 0);
   int axis_checked = CheckAxis(axis, ishape.ndim());
 
@@ -51,8 +49,7 @@ inline bool DiffShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
   const DiffParam& param = nnvm::get<DiffParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                     NumpyDiffShapeImpl((*in_attrs)[0], param.n, param.axis));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, NumpyDiffShapeImpl((*in_attrs)[0], param.n, param.axis));
   return shape_is_known(out_attrs->at(0));
 }
 
@@ -71,39 +68,38 @@ inline bool DiffType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(DiffParam);
 
 NNVM_REGISTER_OP(_npi_diff)
-.set_attr_parser(ParamParser<DiffParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", DiffShape)
-.set_attr<nnvm::FInferType>("FInferType", DiffType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", DiffForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-                            ElemwiseGradUseNone{"_backward_npi_diff"})
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.add_argument("a", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(DiffParam::__FIELDS__());
+    .set_attr_parser(ParamParser<DiffParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", DiffShape)
+    .set_attr<nnvm::FInferType>("FInferType", DiffType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", DiffForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_diff"})
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}};
+                                    })
+    .add_argument("a", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(DiffParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npi_diff)
-.set_attr_parser(ParamParser<DiffParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", DiffBackward<cpu>);
+    .set_attr_parser(ParamParser<DiffParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", DiffBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

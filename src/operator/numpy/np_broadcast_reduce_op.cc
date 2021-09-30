@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file np_broadcast_reduce_op.cc
  * \brief Function definitions of NumPy-compatible
  *        broadcast and reduce operators
@@ -31,33 +30,35 @@ namespace op {
 #if MXNET_USE_CUDA
 
 void NumpyArgMinMaxRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
-                const OpContext& ctx,
-                const std::vector<TBlob>& inputs,
-                const std::vector<OpReqType>& req,
-                const std::vector<TBlob>& outputs) {
+                                          const OpContext& ctx,
+                                          const std::vector<TBlob>& inputs,
+                                          const std::vector<OpReqType>& req,
+                                          const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   // parse param
-  const auto& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-  TBlob out = outputs[0];
-  TBlob in = inputs[0];
+  const auto& param       = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  TBlob out               = outputs[0];
+  TBlob in                = inputs[0];
   // do some shape checks
   if (in.shape_.ndim() != 0) {
     if (param.axis.has_value()) {
       // cannot do argmax in an empty dimension
       int axis = param.axis.value();
-      axis = CheckAxis(axis, in.shape_.ndim());
+      axis     = CheckAxis(axis, in.shape_.ndim());
       CHECK_NE(in.shape_[axis], 0)
-          << "searching input tensor of shape " << inputs[0].shape_
-          << " along axis = " << axis << " of zero dim-size is not allowed";
+          << "searching input tensor of shape " << inputs[0].shape_ << " along axis = " << axis
+          << " of zero dim-size is not allowed";
     } else {
       // cannot do argmax on an empty array
       CHECK_NE(in.shape_.Size(), 0U) << "attempt to search an empty sequence";
     }
   }
-  if (in.shape_.Size() == 0U) return;  // zero-size tensor
+  if (in.shape_.Size() == 0U)
+    return;  // zero-size tensor
   // prepare shape
   dmlc::optional<mxnet::Tuple<int>> axes;
   if (param.axis.has_value()) {
@@ -72,10 +73,17 @@ void NumpyArgMinMaxRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
   // request a work space
   size_t workspace_size = broadcast::ReduceWorkspaceSize(s, dst_shape, req[0], src_shape);
   Tensor<gpu, 1, char> workspace =
-            ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
+      ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
   BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-      broadcast::RTCReduce(ctx, outputs[0].reshape(dst_shape), req[0], workspace, in_data,
-                           reducer, NDim, "identity", true);
+    broadcast::RTCReduce(ctx,
+                         outputs[0].reshape(dst_shape),
+                         req[0],
+                         workspace,
+                         in_data,
+                         reducer,
+                         NDim,
+                         "identity",
+                         true);
   });
 }
 

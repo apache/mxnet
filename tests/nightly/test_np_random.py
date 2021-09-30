@@ -130,7 +130,7 @@ def test_np_gamma():
     # Generation test
     trials = 8
     num_buckets = 5
-    for dtype in types:
+    for _ in types:
         for alpha, beta in [(2.0, 3.0), (0.5, 1.0)]:
             buckets, probs = gen_buckets_probs_with_ppf(
                 lambda x: ss.gamma.ppf(x, a=alpha, loc=0, scale=beta), num_buckets)

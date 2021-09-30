@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -27,21 +27,19 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.svd")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.svd").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npi_svd");
-  attrs.op = op;
+  attrs.op           = op;
   // inputs
   NDArray* inputs[] = {args[0].operator NDArray*()};
-  int num_inputs = 1;
+  int num_inputs    = 1;
   // outputs
   int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
-                 NDArrayHandle(ndoutputs[1]),
-                 NDArrayHandle(ndoutputs[2])});
+  auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret            = ADT(
+      0, {NDArrayHandle(ndoutputs[0]), NDArrayHandle(ndoutputs[1]), NDArrayHandle(ndoutputs[2])});
 });
 
 }  // namespace mxnet

@@ -20,13 +20,12 @@ from __future__ import print_function
 import argparse
 import gym
 from itertools import count
-import numpy as np
+import numpy as onp
 
 import mxnet as mx
-import mxnet.ndarray as F
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet import autograd
+from mxnet import autograd, npx
 
 
 parser = argparse.ArgumentParser(description='MXNet actor-critic example')
@@ -48,16 +47,15 @@ env.seed(args.seed)
 class Policy(gluon.Block):
     def __init__(self, **kwargs):
         super(Policy, self).__init__(**kwargs)
-        with self.name_scope():
-            self.dense = nn.Dense(16, in_units=4, activation='relu')
-            self.action_pred = nn.Dense(2, in_units=16)
-            self.value_pred = nn.Dense(1, in_units=16)
+        self.dense = nn.Dense(16, in_units=4, activation='relu')
+        self.action_pred = nn.Dense(2, in_units=16)
+        self.value_pred = nn.Dense(1, in_units=16)
 
     def forward(self, x):
         x = self.dense(x)
         probs = self.action_pred(x)
         values = self.value_pred(x)
-        return F.softmax(probs), values
+        return npx.softmax(probs), values
 
 net = Policy()
 net.initialize(mx.init.Uniform(0.02))
@@ -74,14 +72,14 @@ for epoch in count(1):
     with autograd.record():
         # Sample a sequence of actions
         for t in range(10000):
-            state = mx.nd.array(np.expand_dims(state, 0))
-            prob, value = net(state)
-            action, logp = mx.nd.sample_multinomial(prob, get_prob=True)
+            state = mx.nd.array(onp.expand_dims(state, 0))
+            prob, value = net(state.as_np_ndarray())
+            action, logp = mx.nd.sample_multinomial(prob.as_nd_ndarray(), get_prob=True)
             state, reward, done, _ = env.step(action.asnumpy()[0])
             if args.render:
                 env.render()
             rewards.append(reward)
-            values.append(value)
+            values.append(value.as_np_ndarray())
             actions.append(action.asnumpy()[0])
             heads.append(logp)
             if done:
@@ -93,12 +91,12 @@ for epoch in count(1):
         for i in range(len(rewards)-1, -1, -1):
             R = rewards[i] + args.gamma * R
             rewards[i] = R
-        rewards = np.array(rewards)
+        rewards = onp.array(rewards)
         rewards -= rewards.mean()
-        rewards /= rewards.std() + np.finfo(rewards.dtype).eps
+        rewards /= rewards.std() + onp.finfo(rewards.dtype).eps
 
         # compute loss and gradient
-        L = sum([loss(value, mx.nd.array([r])) for r, value in zip(rewards, values)])
+        L = sum([loss(value, mx.np.array([r])) for r, value in zip(rewards, values)])
         final_nodes = [L]
         for logp, r, v in zip(heads, rewards, values):
             reward = r - v.asnumpy()[0,0]

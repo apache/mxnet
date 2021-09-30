@@ -27,7 +27,7 @@ import scipy.sparse as sps
 import mxnet.ndarray.sparse as mxsps
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment
+from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -180,7 +180,7 @@ def check_fft(shape):
 def test_fft():
     nrepeat = 2
     maxdim = 10
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         for order in [2,4]:
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_fft(shape)
@@ -339,7 +339,7 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                     rescale_grad=0.95, momentum=momentum, out=mx_p_w)
 
     def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
-        for i, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
+        for _, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
             assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
     if dtype == 'float16':
         rtol = 1e-3
@@ -1788,7 +1788,7 @@ def test_autograd_save_memory():
     x.attach_grad()
 
     with mx.autograd.record():
-        for i in range(200):
+        for _ in range(200):
             x = x + 1
             x.wait_to_read()
     x.backward()
@@ -1796,6 +1796,7 @@ def test_autograd_save_memory():
 
 @pytest.mark.serial
 def test_cuda_rtc():
+    ctx = mx.gpu(0)
     source = r'''
     extern "C" __global__ void axpy(const float *x, float *y, float alpha) {
         int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -1809,18 +1810,20 @@ def test_cuda_rtc():
         y[i] += alpha * smem[threadIdx.x];
     }
     '''
-    module = mx.rtc.CudaModule(source)
+
+    compile_opts = get_rtc_compile_opts(ctx)
+    module = mx.rtc.CudaModule(source, options=compile_opts)
     axpy = module.get_kernel("axpy", "const float *x, float *y, float alpha")
-    x = mx.nd.ones((10,), ctx=mx.gpu(0))
-    y = mx.nd.zeros((10,), ctx=mx.gpu(0))
-    axpy.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+    x = mx.nd.ones((10,), ctx=ctx)
+    y = mx.nd.zeros((10,), ctx=ctx)
+    axpy.launch([x, y, 3.0], ctx, (1, 1, 1), (10, 1, 1))
     assert (y.asnumpy() == 3).all()
 
     saxpy = module.get_kernel("saxpy", "const float *x, float *y, float alpha")
-    saxpy.launch([x, y, 4.0], mx.gpu(0), (1, 1, 1), (10, 1, 1), 10)
+    saxpy.launch([x, y, 4.0], ctx, (1, 1, 1), (10, 1, 1), 10)
     assert (y.asnumpy() == 7).all()
 
-    saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
+    saxpy.launch([x, y, 5.0], ctx, (2, 1, 1), (5, 1, 1), 5)
     assert (y.asnumpy() == 12).all()
 
 
@@ -1845,7 +1848,7 @@ def test_cross_device_autograd():
 
     with mx.autograd.record():
         y = x
-        for i in range(3):
+        for _ in range(3):
             y = mx.nd.tanh(y)
         y.backward()
 
@@ -2221,7 +2224,7 @@ def math_square(shape, dtype, check_value):
 
 def run_math(op, shape, dtype="float32", check_value=True):
     run_num = 10
-    for i in range(run_num):
+    for _ in range(run_num):
         if op == 'log':
             math_log(shape=shape, dtype=dtype, check_value=check_value)
         elif op == 'erf':

@@ -35,80 +35,72 @@
 namespace mxnet {
 
 MXNET_REGISTER_GLOBAL("_Integer")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-    using namespace runtime;
-    if (args[0].type_code() == kDLInt) {
-      *ret = Integer(args[0].operator int64_t());
-    } else {
-      LOG(FATAL) << "only accept int";
-    }
-});
-
-MXNET_REGISTER_GLOBAL("_Float")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-    using namespace runtime;
-    if (args[0].type_code() == kDLFloat) {
-      *ret = Float(args[0].operator double());
-    } else {
-      LOG(FATAL) << "only accept float";
-    }
-});
-
-MXNET_REGISTER_GLOBAL("_ADT")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-    using namespace runtime;
-    std::vector<ObjectRef> data;
-    for (int i = 0; i < args.size(); ++i) {
-      if (args[i].type_code() == kNDArrayHandle) {
-        mxnet::NDArray *array = args[i].operator mxnet::NDArray*();
-        ObjectRef input = NDArrayHandle(array);
-        data.push_back(input);
-      } else if (args[i].type_code() != kNull) {
-        ObjectRef input = String::CanConvertFrom(args[i]) ? args[i].operator String()
-                                                          : args[i].operator ObjectRef();
-        data.push_back(input);
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      if (args[0].type_code() == kDLInt) {
+        *ret = Integer(args[0].operator int64_t());
       } else {
-        data.emplace_back(nullptr);
+        LOG(FATAL) << "only accept int";
       }
-    }
-    *ret = ADT(0, data.begin(), data.end());
+    });
+
+MXNET_REGISTER_GLOBAL("_Float").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  if (args[0].type_code() == kDLFloat) {
+    *ret = Float(args[0].operator double());
+  } else {
+    LOG(FATAL) << "only accept float";
+  }
 });
 
-MXNET_REGISTER_GLOBAL("_Map")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-    using namespace runtime;
-    CHECK_EQ(args.size() % 2, 0);
-    std::unordered_map<ObjectRef, ObjectRef, ObjectHash, ObjectEqual> data;
-    for (int i = 0; i < args.num_args; i += 2) {
-      ObjectRef k =
-          String::CanConvertFrom(args[i]) ? args[i].operator String()
-                                          : args[i].operator ObjectRef();
-      ObjectRef v;
-      if (args[i + 1].type_code() == kNDArrayHandle) {
-        mxnet::NDArray *array = args[i + 1].operator mxnet::NDArray*();
-        v = NDArrayHandle(array);
-      } else {
-        v = args[i + 1];
-      }
-      data.emplace(std::move(k), std::move(v));
+MXNET_REGISTER_GLOBAL("_ADT").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  std::vector<ObjectRef> data;
+  for (int i = 0; i < args.size(); ++i) {
+    if (args[i].type_code() == kNDArrayHandle) {
+      mxnet::NDArray* array = args[i].operator mxnet::NDArray*();
+      ObjectRef input       = NDArrayHandle(array);
+      data.push_back(input);
+    } else if (args[i].type_code() != kNull) {
+      ObjectRef input = String::CanConvertFrom(args[i]) ? args[i].operator String()
+                                                        : args[i].operator ObjectRef();
+      data.push_back(input);
+    } else {
+      data.emplace_back(nullptr);
     }
-    *ret = Map<ObjectRef, ObjectRef>(data);
+  }
+  *ret = ADT(0, data.begin(), data.end());
 });
 
-MXNET_REGISTER_GLOBAL("_String")
-.set_body([] (runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_GLOBAL("_Map").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  CHECK_EQ(args.size() % 2, 0);
+  std::unordered_map<ObjectRef, ObjectRef, ObjectHash, ObjectEqual> data;
+  for (int i = 0; i < args.num_args; i += 2) {
+    ObjectRef k =
+        String::CanConvertFrom(args[i]) ? args[i].operator String() : args[i].operator ObjectRef();
+    ObjectRef v;
+    if (args[i + 1].type_code() == kNDArrayHandle) {
+      mxnet::NDArray* array = args[i + 1].operator mxnet::NDArray*();
+      v                     = NDArrayHandle(array);
+    } else {
+      v = args[i + 1];
+    }
+    data.emplace(std::move(k), std::move(v));
+  }
+  *ret = Map<ObjectRef, ObjectRef>(data);
+});
+
+MXNET_REGISTER_GLOBAL("_String").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   std::string str = args[0].operator std::string();
-  *ret = String(std::move(str));
+  *ret            = String(std::move(str));
 });
 
-MXNET_REGISTER_GLOBAL("_echo")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_GLOBAL("_echo").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   *ret = args[0];
 });
 
-MXNET_REGISTER_API("_nop")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-});
+MXNET_REGISTER_API("_nop").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {});
 
 }  // namespace mxnet

@@ -27,13 +27,13 @@ namespace mxnet {
 namespace op {
 
 struct index_copy_fwd_cpu {
-  template<typename DType, typename IType>
+  template <typename DType, typename IType>
   static void Map(index_t i,
                   const DType* new_tensor,
                   const IType* idx,
                   DType* out_tensor,
                   int dim_size) {
-    DType* out_ptr = out_tensor + static_cast<index_t>(idx[i]) * dim_size;
+    DType* out_ptr       = out_tensor + static_cast<index_t>(idx[i]) * dim_size;
     const DType* new_ptr = new_tensor + i * dim_size;
 #pragma GCC diagnostic push
 #if __GNUC__ >= 8
@@ -44,7 +44,7 @@ struct index_copy_fwd_cpu {
   }
 };
 
-template<>
+template <>
 void IndexCopyForward<cpu>(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
@@ -56,27 +56,31 @@ void IndexCopyForward<cpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   CHECK(req[0] != kAddTo);
-  if (req[0] == kNullOp) return;
-  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-  const TBlob& out = outputs[0];
+  if (req[0] == kNullOp)
+    return;
+  mshadow::Stream<cpu>* s      = ctx.get_stream<cpu>();
+  const TBlob& out             = outputs[0];
   const TBlob& original_tensor = inputs[0];
-  const TBlob& idx_vector = inputs[1];
-  const TBlob& copied_tensor = inputs[2];
-  int dim_size = inputs[2].Size() / inputs[1].Size();
+  const TBlob& idx_vector      = inputs[1];
+  const TBlob& copied_tensor   = inputs[2];
+  int dim_size                 = inputs[2].Size() / inputs[1].Size();
   // copy original tensor to output
   copy(s, out, original_tensor);
   // index copy
   MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(idx_vector.type_flag_, IType, {
-      Kernel<index_copy_fwd_cpu, cpu>::Launch(
-        s, idx_vector.Size(), copied_tensor.dptr<DType>(),
-        idx_vector.dptr<IType>(), out.dptr<DType>(), dim_size);
+      Kernel<index_copy_fwd_cpu, cpu>::Launch(s,
+                                              idx_vector.Size(),
+                                              copied_tensor.dptr<DType>(),
+                                              idx_vector.dptr<IType>(),
+                                              out.dptr<DType>(),
+                                              dim_size);
     });
   });
 }
 
 struct index_copy_bwd_cpu {
-  template<typename DType, typename IType>
+  template <typename DType, typename IType>
   static void Map(int i,
                   const DType* out_tensor_grad,
                   DType* orig_tensor_grad,
@@ -86,9 +90,9 @@ struct index_copy_bwd_cpu {
                   int idx_size,
                   OpReqType orig_req,
                   OpReqType new_req) {
-    const int index = idx[i];
-    DType* new_ptr = new_tensor_grad + i * dim_size;
-    DType* orig_ptr = orig_tensor_grad + index * dim_size;
+    const int index      = idx[i];
+    DType* new_ptr       = new_tensor_grad + i * dim_size;
+    DType* orig_ptr      = orig_tensor_grad + index * dim_size;
     const DType* src_ptr = out_tensor_grad + index * dim_size;
     for (int iter = 0; iter < dim_size; ++iter) {
       KERNEL_ASSIGN(new_ptr[iter], new_req, src_ptr[iter]);
@@ -110,7 +114,7 @@ struct index_copy_bwd_cpu {
   }
 };
 
-template<>
+template <>
 void IndexCopyBackward<cpu>(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const std::vector<TBlob>& inputs,
@@ -120,15 +124,15 @@ void IndexCopyBackward<cpu>(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   CHECK_EQ(inputs.size(), 4U);
   CHECK_EQ(outputs.size(), 3U);
-  Stream<cpu> *s = ctx.get_stream<cpu>();
-  const TBlob& out_grad = inputs[0];
-  const TBlob& index = inputs[2];
+  Stream<cpu>* s         = ctx.get_stream<cpu>();
+  const TBlob& out_grad  = inputs[0];
+  const TBlob& index     = inputs[2];
   const TBlob& in_grad_1 = outputs[0];
   const TBlob& in_grad_2 = outputs[2];
-  int dim_size = inputs[3].Size() / inputs[2].Size();
-  int index_size = inputs[2].Size();
-  OpReqType orig_req = req[0];
-  OpReqType new_req = req[2];
+  int dim_size           = inputs[3].Size() / inputs[2].Size();
+  int index_size         = inputs[2].Size();
+  OpReqType orig_req     = req[0];
+  OpReqType new_req      = req[2];
   // index_copy_backward
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(index.type_flag_, IType, {
@@ -141,20 +145,29 @@ void IndexCopyBackward<cpu>(const nnvm::NodeAttrs& attrs,
           break;
         case kAddTo:
           Kernel<op_with_req<op::mshadow_op::plus, kWriteInplace>, cpu>::Launch(
-            s, out_grad.Size(), in_grad_1.dptr<DType>(),
-            out_grad.dptr<DType>(), in_grad_1.dptr<DType>());
+              s,
+              out_grad.Size(),
+              in_grad_1.dptr<DType>(),
+              out_grad.dptr<DType>(),
+              in_grad_1.dptr<DType>());
       }
-      Kernel<index_copy_bwd_cpu, cpu>::Launch(
-        s, index_size, out_grad.dptr<DType>(),
-        in_grad_1.dptr<DType>(), in_grad_2.dptr<DType>(),
-        index.dptr<IType>(), dim_size, index_size, orig_req, new_req);
+      Kernel<index_copy_bwd_cpu, cpu>::Launch(s,
+                                              index_size,
+                                              out_grad.dptr<DType>(),
+                                              in_grad_1.dptr<DType>(),
+                                              in_grad_2.dptr<DType>(),
+                                              index.dptr<IType>(),
+                                              dim_size,
+                                              index_size,
+                                              orig_req,
+                                              new_req);
     });
   });
 }
 
 static bool IndexCopyType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_attrs,
-                          std::vector<int> *out_attrs) {
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
@@ -163,7 +176,7 @@ static bool IndexCopyType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_index_copy)
-.describe(R"code(Copies the elements of a `new_tensor` into the `old_tensor`.
+    .describe(R"code(Copies the elements of a `new_tensor` into the `old_tensor`.
 
 This operator copies the elements by selecting the indices in the order given in `index`.
 The output will be a new tensor containing the rest elements of old tensor and
@@ -191,25 +204,26 @@ Examples::
     <NDArray 5x3 @cpu(0)>
 
 )code" ADD_FILELINE)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", IndexCopyShape)
-.set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_index_copy"})
-.set_attr<FCompute>("FCompute<cpu>", IndexCopyForward<cpu>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"old_tensor", "index_vector", "new_tensor"};
-  })
-.add_argument("old_tensor", "NDArray-or-Symbol", "Old tensor")
-.add_argument("index_vector", "NDArray-or-Symbol", "Index vector")
-.add_argument("new_tensor", "NDArray-or-Symbol", "New tensor to be copied");
+    .set_num_inputs(3)
+    .set_num_outputs(1)
+    .set_attr<mxnet::FInferShape>("FInferShape", IndexCopyShape)
+    .set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_index_copy"})
+    .set_attr<FCompute>("FCompute<cpu>", IndexCopyForward<cpu>)
+    .set_attr<nnvm::FListInputNames>(
+        "FListInputNames",
+        [](const NodeAttrs& attrs) {
+          return std::vector<std::string>{"old_tensor", "index_vector", "new_tensor"};
+        })
+    .add_argument("old_tensor", "NDArray-or-Symbol", "Old tensor")
+    .add_argument("index_vector", "NDArray-or-Symbol", "Index vector")
+    .add_argument("new_tensor", "NDArray-or-Symbol", "New tensor to be copied");
 
 NNVM_REGISTER_OP(_contrib_backward_index_copy)
-.set_num_inputs(4)
-.set_num_outputs(3)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", IndexCopyBackward<cpu>);
+    .set_num_inputs(4)
+    .set_num_outputs(3)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", IndexCopyBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -27,8 +27,8 @@
 namespace mxnet {
 namespace op {
 
-template<>
-void GetReduceOutput<cpu>(mshadow::Stream<cpu> *s, const TBlob &output_blob, bool *red_output) {
+template <>
+void GetReduceOutput<cpu>(mshadow::Stream<cpu>* s, const TBlob& output_blob, bool* red_output) {
   *red_output = static_cast<bool>(*output_blob.dptr<bool>());
 }
 
@@ -57,7 +57,7 @@ inline bool ConstraintCheckType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(ConstraintCheckParam);
 
 NNVM_REGISTER_OP(_npx_constraint_check)
-.describe(R"code(This operator will check if all the elements in a boolean tensor is true.
+    .describe(R"code(This operator will check if all the elements in a boolean tensor is true.
 If not, ValueError exception will be raised in the backend with given error message.
 In order to evaluate this operator, one should multiply the origin tensor by the return value
 of this operator to force this operator become part of the computation graph, otherwise the check
@@ -77,23 +77,23 @@ the boolean tensor `constraint`, a `ValueError` exception with given message
 'Scale should be larger than zero' would be raised.
 
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<ConstraintCheckParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"input"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", ConstraintCheckShape)
-.set_attr<nnvm::FInferType>("FInferType", ConstraintCheckType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", ConstraintCheckForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("input", "NDArray-or-Symbol", "Input boolean array")
-.add_arguments(ConstraintCheckParam::__FIELDS__());
+    .set_attr_parser(ParamParser<ConstraintCheckParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"input"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", ConstraintCheckShape)
+    .set_attr<nnvm::FInferType>("FInferType", ConstraintCheckType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", ConstraintCheckForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("input", "NDArray-or-Symbol", "Input boolean array")
+    .add_arguments(ConstraintCheckParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

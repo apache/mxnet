@@ -54,7 +54,7 @@ def test_pushpull():
         # init kv dns keys
         kv.broadcast('3', mx.nd.ones(shape, ctx=mx.gpu()), mx.nd.ones(shape, ctx=mx.gpu()))
         kv.broadcast('99', mx.nd.ones(big_shape, ctx=mx.gpu()), mx.nd.ones(big_shape, ctx=mx.gpu()))
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             scale = my_rank + 1
             num = (my_num_workers + 1) * my_num_workers * num_gpus / 2
 

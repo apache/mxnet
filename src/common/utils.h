@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file utils.h
  * \brief Basic utilility functions.
  */
@@ -59,25 +58,30 @@
 #include <unistd.h>
 #endif
 
-
 namespace mxnet {
 namespace common {
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-inline size_t current_process_id() { return ::GetCurrentProcessId(); }
+inline size_t current_process_id() {
+  return ::GetCurrentProcessId();
+}
 #else
-inline size_t current_process_id() { return getpid(); }
+inline size_t current_process_id() {
+  return getpid();
+}
 #endif
 /*!
  * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
  *           and end with value equal with size of indices.
  */
 struct csr_indptr_check {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indptr,
-                                  const nnvm::dim_t end, const nnvm::dim_t idx_size) {
-    if (indptr[i+1] < 0 || indptr[i+1] < indptr[i] ||
-        (i == 0 && indptr[i] != 0) ||
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* out,
+                                  const IType* indptr,
+                                  const nnvm::dim_t end,
+                                  const nnvm::dim_t idx_size) {
+    if (indptr[i + 1] < 0 || indptr[i + 1] < indptr[i] || (i == 0 && indptr[i] != 0) ||
         (i == end - 1 && indptr[end] != idx_size))
       *out = kCSRIndPtrErr;
   }
@@ -88,12 +92,14 @@ struct csr_indptr_check {
  *           and in ascending order per row.
  */
 struct csr_idx_check {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* idx,
-                                  const RType* indptr, const nnvm::dim_t ncols) {
-    for (RType j = indptr[i]; j < indptr[i+1]; j++) {
-      if (idx[j] >= ncols || idx[j] < 0 ||
-          (j < indptr[i+1] - 1 && idx[j] >= idx[j+1])) {
+  template <typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* out,
+                                  const IType* idx,
+                                  const RType* indptr,
+                                  const nnvm::dim_t ncols) {
+    for (RType j = indptr[i]; j < indptr[i + 1]; j++) {
+      if (idx[j] >= ncols || idx[j] < 0 || (j < indptr[i + 1] - 1 && idx[j] >= idx[j + 1])) {
         *out = kCSRIdxErr;
         break;
       }
@@ -106,18 +112,22 @@ struct csr_idx_check {
  *           less than the size of first dimension and in ascending order
  */
 struct rsp_idx_check {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* idx,
-                                  const nnvm::dim_t end, const nnvm::dim_t nrows) {
-    if ((i < end && idx[i+1] <= idx[i])
-        || idx[i] < 0 || idx[i] >= nrows)
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* out,
+                                  const IType* idx,
+                                  const nnvm::dim_t end,
+                                  const nnvm::dim_t nrows) {
+    if ((i < end && idx[i + 1] <= idx[i]) || idx[i] < 0 || idx[i] >= nrows)
       *out = kRSPIdxErr;
   }
 };
 
-template<typename xpu>
-void CheckFormatWrapper(const RunContext &rctx, const NDArray &input,
-                        const TBlob &err_cpu, const bool full_check);
+template <typename xpu>
+void CheckFormatWrapper(const RunContext& rctx,
+                        const NDArray& input,
+                        const TBlob& err_cpu,
+                        const bool full_check);
 
 /*!
  * \brief Check the validity of CSRNDArray.
@@ -127,46 +137,50 @@ void CheckFormatWrapper(const RunContext &rctx, const NDArray &input,
  * \param full_check If true, rigorous check, O(N) operations,
  *          otherwise basic check, O(1) operations.
  */
-template<typename xpu>
-void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
-                        const TBlob &err_cpu, const bool full_check) {
+template <typename xpu>
+void CheckFormatCSRImpl(const RunContext& rctx,
+                        const NDArray& input,
+                        const TBlob& err_cpu,
+                        const bool full_check) {
   using namespace op::mxnet_op;
-  CHECK_EQ(input.storage_type(), kCSRStorage)
-          << "CheckFormatCSRImpl is for CSRNDArray";
-  const mxnet::TShape shape = input.shape();
-  const mxnet::TShape idx_shape = input.aux_shape(csr::kIdx);
-  const mxnet::TShape indptr_shape = input.aux_shape(csr::kIndPtr);
+  CHECK_EQ(input.storage_type(), kCSRStorage) << "CheckFormatCSRImpl is for CSRNDArray";
+  const mxnet::TShape shape         = input.shape();
+  const mxnet::TShape idx_shape     = input.aux_shape(csr::kIdx);
+  const mxnet::TShape indptr_shape  = input.aux_shape(csr::kIndPtr);
   const mxnet::TShape storage_shape = input.storage_shape();
   if ((shape.ndim() != 2) ||
       (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
-      (indptr_shape[0] != shape[0] + 1) ||
-      (idx_shape[0] != storage_shape[0])) {
-     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
-       DType* err = err_cpu.dptr<DType>();
-       *err = kCSRShapeErr;
-     });
-     return;
+      (indptr_shape[0] != shape[0] + 1) || (idx_shape[0] != storage_shape[0])) {
+    MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+      DType* err = err_cpu.dptr<DType>();
+      *err       = kCSRShapeErr;
+    });
+    return;
   }
   if (full_check) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(input.aux_type(csr::kIndPtr), RType, {
         MSHADOW_IDX_TYPE_SWITCH(input.aux_type(csr::kIdx), IType, {
-          mshadow::Stream<xpu> *s = rctx.get_stream<xpu>();
-          NDArray ret_xpu = NDArray(mshadow::Shape1(1),
-                                    rctx.get_ctx(), false, err_cpu.type_flag_);
-          TBlob val_xpu = ret_xpu.data();
+          mshadow::Stream<xpu>* s = rctx.get_stream<xpu>();
+          NDArray ret_xpu = NDArray(mshadow::Shape1(1), rctx.get_ctx(), false, err_cpu.type_flag_);
+          TBlob val_xpu   = ret_xpu.data();
           Kernel<set_to_int<kNormalErr>, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
-          Kernel<csr_indptr_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
-            input.aux_data(csr::kIndPtr).dptr<RType>(),
-            indptr_shape[0] - 1, idx_shape[0]);
+          Kernel<csr_indptr_check, xpu>::Launch(s,
+                                                indptr_shape[0] - 1,
+                                                val_xpu.dptr<DType>(),
+                                                input.aux_data(csr::kIndPtr).dptr<RType>(),
+                                                indptr_shape[0] - 1,
+                                                idx_shape[0]);
           // no need to check indices if indices are empty
           if (idx_shape[0] != 0) {
-            Kernel<csr_idx_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
-              input.aux_data(csr::kIdx).dptr<IType>(),
-              input.aux_data(csr::kIndPtr).dptr<RType>(), shape[1]);
+            Kernel<csr_idx_check, xpu>::Launch(s,
+                                               indptr_shape[0] - 1,
+                                               val_xpu.dptr<DType>(),
+                                               input.aux_data(csr::kIdx).dptr<IType>(),
+                                               input.aux_data(csr::kIndPtr).dptr<RType>(),
+                                               shape[1]);
           }
-          mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
-                        val_xpu.get<xpu, 1, DType>(s), s);
+          mshadow::Copy(err_cpu.get<cpu, 1, DType>(), val_xpu.get<xpu, 1, DType>(s), s);
         });
       });
     });
@@ -181,17 +195,18 @@ void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
  * \param full_check If true, rigorous check, O(N) operations,
  *          otherwise basic check, O(1) operations.
  */
-template<typename xpu>
-void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
-                        const TBlob &err_cpu, const bool full_check) {
+template <typename xpu>
+void CheckFormatRSPImpl(const RunContext& rctx,
+                        const NDArray& input,
+                        const TBlob& err_cpu,
+                        const bool full_check) {
   using namespace op::mxnet_op;
-  CHECK_EQ(input.storage_type(), kRowSparseStorage)
-          << "CheckFormatRSPImpl is for RSPNDArray";
+  CHECK_EQ(input.storage_type(), kRowSparseStorage) << "CheckFormatRSPImpl is for RSPNDArray";
   const mxnet::TShape idx_shape = input.aux_shape(rowsparse::kIdx);
   if (idx_shape[0] != input.storage_shape()[0]) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
       DType* err = err_cpu.dptr<DType>();
-      *err = kRSPShapeErr;
+      *err       = kRSPShapeErr;
     });
     return;
   }
@@ -201,25 +216,28 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
   if (full_check) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(input.aux_type(rowsparse::kIdx), IType, {
-        mshadow::Stream<xpu> *s = rctx.get_stream<xpu>();
-        NDArray ret_xpu = NDArray(mshadow::Shape1(1),
-                                  rctx.get_ctx(), false, err_cpu.type_flag_);
-        TBlob val_xpu = ret_xpu.data();
+        mshadow::Stream<xpu>* s = rctx.get_stream<xpu>();
+        NDArray ret_xpu = NDArray(mshadow::Shape1(1), rctx.get_ctx(), false, err_cpu.type_flag_);
+        TBlob val_xpu   = ret_xpu.data();
         Kernel<set_to_int<kNormalErr>, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
 
-        Kernel<rsp_idx_check, xpu>::Launch(s, idx_shape[0],
-          val_xpu.dptr<DType>(), input.aux_data(rowsparse::kIdx).dptr<IType>(),
-          idx_shape[0] - 1, input.shape()[0]);
-        mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
-                      val_xpu.get<xpu, 1, DType>(s), s);
+        Kernel<rsp_idx_check, xpu>::Launch(s,
+                                           idx_shape[0],
+                                           val_xpu.dptr<DType>(),
+                                           input.aux_data(rowsparse::kIdx).dptr<IType>(),
+                                           idx_shape[0] - 1,
+                                           input.shape()[0]);
+        mshadow::Copy(err_cpu.get<cpu, 1, DType>(), val_xpu.get<xpu, 1, DType>(s), s);
       });
     });
   }
 }
 
-template<typename xpu>
-void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
-                     const TBlob &err_cpu, const bool full_check) {
+template <typename xpu>
+void CheckFormatImpl(const RunContext& rctx,
+                     const NDArray& input,
+                     const TBlob& err_cpu,
+                     const bool full_check) {
   int stype = input.storage_type();
   if (stype == kCSRStorage) {
     CheckFormatCSRImpl<xpu>(rctx, input, err_cpu, full_check);
@@ -235,8 +253,8 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
 /*! \brief Pick rows specified by user input index array from a row sparse ndarray
  *         and save them in the output sparse ndarray.
  */
-template<typename xpu>
-void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu> *s,
+template <typename xpu>
+void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu>* s,
                                      const NDArray& input_nd,
                                      const TBlob& idx_data,
                                      const OpReqType req,
@@ -244,17 +262,17 @@ void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu> *s,
 
 /* \brief Casts tensor storage type to the new type.
  */
-template<typename xpu>
+template <typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
 /*! \brief returns true if all storage types in `vstorage` are the same as target `stype`.
  *         false is returned for empty inputs.
  */
-inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
-                                const NDArrayStorageType stype) {
+inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage, const NDArrayStorageType stype) {
   if (!vstorage.empty()) {
     for (const auto& i : vstorage) {
-      if (i != stype) return false;
+      if (i != stype)
+        return false;
     }
     return true;
   }
@@ -268,7 +286,7 @@ inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
 inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
                                 const NDArrayStorageType stype1,
                                 const NDArrayStorageType stype2,
-                                bool *has_both) {
+                                bool* has_both) {
   if (has_both) {
     *has_both = false;
   }
@@ -313,7 +331,7 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
 inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
                                 const NDArrayStorageType stype1,
                                 const NDArrayStorageType stype2,
-                                bool *has_both) {
+                                bool* has_both) {
   if (has_both) {
     *has_both = false;
   }
@@ -355,8 +373,7 @@ inline bool ContainsStorageType(const std::vector<NDArray>& ndarrays,
 /*! \brief returns true if any storage type `ndstype` in `ndstypes`
  *         is the same as the target `stype`. false is returned for empty inputs.
  */
-inline bool ContainsStorageType(const std::vector<int>& ndstypes,
-                                const NDArrayStorageType stype) {
+inline bool ContainsStorageType(const std::vector<int>& ndstypes, const NDArrayStorageType stype) {
   if (!ndstypes.empty()) {
     for (const auto& ndstype : ndstypes) {
       if (ndstype == stype) {
@@ -383,7 +400,6 @@ inline std::string dispatch_mode_string(const DispatchMode x) {
   }
   return "unknown";
 }
-
 
 /*! \brief get string representation of storage_type */
 inline std::string stype_string(const int x) {
@@ -428,8 +444,7 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const std::vector<int>& in_attrs,
                                          const std::vector<int>& out_attrs) {
   std::ostringstream os;
-  os << "operator = " << attrs.op->name
-     << "\ninput storage types = [";
+  os << "operator = " << attrs.op->name << "\ninput storage types = [";
   for (const int attr : in_attrs) {
     os << stype_string(attr) << ", ";
   }
@@ -483,25 +498,31 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* in_attrs,
                                const std::vector<int>* out_attrs) {
   static bool log = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
-  if (!log) return;
+  if (!log)
+    return;
   const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   std::ostringstream os;
-  const char* warning = "\nThe operator with default storage type will be dispatched "
-    "for execution. You're seeing this warning message because the operator above is unable "
-    "to process the given ndarrays with specified storage types, context and parameter. "
-    "Temporary dense ndarrays are generated in order to execute the operator. "
-    "This does not affect the correctness of the programme. "
-    "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
-    "0 to suppress this warning.";
+  const char* warning =
+      "\nThe operator with default storage type will be dispatched "
+      "for execution. You're seeing this warning message because the operator above is unable "
+      "to process the given ndarrays with specified storage types, context and parameter. "
+      "Temporary dense ndarrays are generated in order to execute the operator. "
+      "This does not affect the correctness of the programme. "
+      "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
+      "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
 #if MXNET_USE_ONEDNN == 1
-  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_ONEDNN_ENABLED flag is off. "
-                                       "You can re-enable by setting MXNET_ONEDNN_ENABLED=1");
-  if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_ONEDNN_CACHE_NUM is set."
-                                       "Should only be set if "
-                                       "your model has variable input shapes, "
-                                       "as cache size may grow unbounded");
+  if (!MKLDNNEnvSet())
+    common::LogOnce(
+        "MXNET_ONEDNN_ENABLED flag is off. "
+        "You can re-enable by setting MXNET_ONEDNN_ENABLED=1");
+  if (GetMKLDNNCacheSize() != -1)
+    common::LogOnce(
+        "MXNET_ONEDNN_CACHE_NUM is set."
+        "Should only be set if "
+        "your model has variable input shapes, "
+        "as cache size may grow unbounded");
 #endif
 }
 
@@ -519,10 +540,10 @@ inline int GetExecNumMatchColor() {
   return std::min(num_match_color, GetNumThreadsPerGPU());
 }
 
-template<typename T, typename V>
+template <typename T, typename V>
 V ParallelAccumulate(const T* a, const int n, V start) {
   V sum = start;
-#pragma omp parallel for reduction(+:sum)
+#pragma omp parallel for reduction(+ : sum)
   for (int i = 0; i < n; ++i) {
     sum += a[i];
   }
@@ -536,16 +557,15 @@ V ParallelAccumulate(const T* a, const int n, V start) {
  * Use the interface ParallelSort instead.
  * Ref: https://github.com/dmlc/difacto/blob/master/src/common/parallel_sort.h
  */
-template<typename RandomIt, typename Compare>
-void ParallelSortHelper(RandomIt first, size_t len,
-                        size_t grainsize, const Compare& comp) {
+template <typename RandomIt, typename Compare>
+void ParallelSortHelper(RandomIt first, size_t len, size_t grainsize, const Compare& comp) {
   if (len < grainsize) {
-    std::sort(first, first+len, comp);
+    std::sort(first, first + len, comp);
   } else {
-    std::thread thr(ParallelSortHelper<RandomIt, Compare>, first, len/2, grainsize, comp);
-    ParallelSortHelper(first+len/2, len - len/2, grainsize, comp);
+    std::thread thr(ParallelSortHelper<RandomIt, Compare>, first, len / 2, grainsize, comp);
+    ParallelSortHelper(first + len / 2, len - len / 2, grainsize, comp);
     thr.join();
-    std::inplace_merge(first, first+len/2, first+len, comp);
+    std::inplace_merge(first, first + len / 2, first + len, comp);
   }
 }
 
@@ -558,10 +578,10 @@ void ParallelSortHelper(RandomIt first, size_t len,
  * to sort each half range.
  * Ref: https://github.com/dmlc/difacto/blob/master/src/common/parallel_sort.h
  */
-template<typename RandomIt, typename Compare>
+template <typename RandomIt, typename Compare>
 void ParallelSort(RandomIt first, RandomIt last, size_t num_threads, Compare comp) {
-  const auto num = std::distance(first, last);
-  size_t grainsize = std::max(num / num_threads + 5, static_cast<size_t>(1024*16));
+  const auto num   = std::distance(first, last);
+  size_t grainsize = std::max(num / num_threads + 5, static_cast<size_t>(1024 * 16));
   ParallelSortHelper(first, num, grainsize, comp);
 }
 
@@ -574,10 +594,10 @@ void ParallelSort(RandomIt first, RandomIt last, size_t num_threads, Compare com
  * to sort each half range.
  * Ref: https://github.com/dmlc/difacto/blob/master/src/common/parallel_sort.h
  */
-template<typename RandomIt>
+template <typename RandomIt>
 void ParallelSort(RandomIt first, RandomIt last, size_t num_threads) {
-  ParallelSort(first, last, num_threads,
-               std::less<typename std::iterator_traits<RandomIt>::value_type>());
+  ParallelSort(
+      first, last, num_threads, std::less<typename std::iterator_traits<RandomIt>::value_type>());
 }
 
 /*!
@@ -667,9 +687,8 @@ typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
 template <class T, class... Args>
 typename helper::UniqueIf<T>::KnownBound MakeUnique(Args&&... args) = delete;
 
-template<typename FCompType>
-FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
-                      const Context& ctx) {
+template <typename FCompType>
+FCompType GetFCompute(const nnvm::Op* op, const std::string& name, const Context& ctx) {
   static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompType>(name + "<cpu>");
   static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompType>(name + "<gpu>");
 
@@ -688,9 +707,8 @@ FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
  */
 template <typename T>
 constexpr size_t MaxIntegerValue() {
-  return std::is_integral<T>::value ?
-    std::numeric_limits<T>::max():
-    size_t(2) << (std::numeric_limits<T>::digits - 1);
+  return std::is_integral<T>::value ? std::numeric_limits<T>::max()
+                                    : size_t(2) << (std::numeric_limits<T>::digits - 1);
 }
 
 template <>
@@ -705,21 +723,25 @@ constexpr size_t MaxIntegerValue<mshadow::bfloat::bf16_t>() {
 
 MSHADOW_XINLINE int ilog2ul(size_t a) {
   int k = 1;
-  while (a >>= 1) ++k;
+  while (a >>= 1)
+    ++k;
   return k;
 }
 
 MSHADOW_XINLINE int ilog2ui(unsigned int a) {
   int k = 1;
-  while (a >>= 1) ++k;
+  while (a >>= 1)
+    ++k;
   return k;
 }
 
 /*!
  * \brief Return an NDArray of all zeros.
  */
-inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
-                         const Context &ctx, const int dtype) {
+inline NDArray InitZeros(const NDArrayStorageType stype,
+                         const mxnet::TShape& shape,
+                         const Context& ctx,
+                         const int dtype) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
     NDArray ret(shape, ctx, false, dtype);
@@ -734,10 +756,10 @@ inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &sh
  * \brief Helper to add a NDArray of zeros to a std::vector.
  */
 inline void EmplaceBackZeros(const NDArrayStorageType stype,
-                             const mxnet::TShape &shape,
-                             const Context &ctx,
+                             const mxnet::TShape& shape,
+                             const Context& ctx,
                              const int dtype,
-                             std::vector<NDArray> *vec) {
+                             std::vector<NDArray>* vec) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
     vec->emplace_back(shape, ctx, false, dtype);
@@ -748,15 +770,14 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype,
   }
 }
 
-
 /*!
  * \brief parallelize copy by OpenMP.
  */
-template<typename DType>
+template <typename DType>
 inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
   static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
   if (size >= copy_block_size) {
-    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (index_t i = 0; i < size; ++i) {
       dst[i] = src[i];
     }
@@ -773,11 +794,11 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
 /*!
  * \breif parallelize add by OpenMP
  */
-template<typename DType>
+template <typename DType>
 inline void ParallelAdd(DType* dst, const DType* src, index_t size) {
   static index_t add_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
   if (size >= add_block_size) {
-    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (index_t i = 0; i < size; ++i) {
       dst[i] += src[i];
     }
@@ -807,12 +828,12 @@ inline void ParallelAdd(DType* dst, const DType* src, index_t size) {
  * compatible shapes.
  */
 inline void ConvertToNumpyShape(mxnet::TShape* shape) {
-  if (shape->ndim() == 0) {  // legacy shape ndim = 0 means unknown
+  if (shape->ndim() == 0) {    // legacy shape ndim = 0 means unknown
     *shape = mxnet::TShape();  // unknown shape ndim = -1
   } else {
     for (int j = 0; j < shape->ndim(); ++j) {
       if ((*shape)[j] == 0) {  // legacy shape dim_size = 0 means unknown
-        (*shape)[j] = -1;  // unknown dim size = -1
+        (*shape)[j] = -1;      // unknown dim size = -1
       }
     }
   }
@@ -846,26 +867,27 @@ inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
   }
 }
 void ExecuteMonInputCallback(
-    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
-    size_t nid, const std::function<void(const char *, const char *, void *)>
-                    &monitor_callback);
+    const nnvm::IndexedGraph& idx,
+    const std::vector<NDArray*>& state_arrays,
+    size_t nid,
+    const std::function<void(const char*, const char*, void*)>& monitor_callback);
 
 void ExecuteMonOutputCallback(
-    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
-    size_t nid, const std::function<void(const char *, const char *, void *)>
-                    &monitor_callback);
+    const nnvm::IndexedGraph& idx,
+    const std::vector<NDArray*>& state_arrays,
+    size_t nid,
+    const std::function<void(const char*, const char*, void*)>& monitor_callback);
 
 inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
   // convert negative axes to positive values
-  const int ndim = src.ndim();
+  const int ndim     = src.ndim();
   mxnet::TShape axes = src;
   for (int i = 0; i < ndim; ++i) {
     if (axes[i] < 0) {
       axes[i] += ndim;
     }
-    CHECK(axes[i] >= 0 && axes[i] < ndim) << "axes[" << i << "]="
-                                          << axes[i] << " exceeds the range ["
-                                          << 0 << ", " << ndim << ")";
+    CHECK(axes[i] >= 0 && axes[i] < ndim)
+        << "axes[" << i << "]=" << axes[i] << " exceeds the range [" << 0 << ", " << ndim << ")";
   }
   return axes;
 }
@@ -875,12 +897,13 @@ inline bool is_float(const int dtype) {
 }
 
 inline bool is_int(const int dtype) {
-  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 ||
-         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
+  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 || dtype == mshadow::kInt32 ||
+         dtype == mshadow::kInt64;
 }
 
 inline int get_more_precise_type(const int type1, const int type2) {
-  if (type1 == type2) return type1;
+  if (type1 == type2)
+    return type1;
   if (is_float(type1) && is_float(type2)) {
     if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
       return mshadow::kFloat64;
@@ -900,7 +923,7 @@ inline int get_more_precise_type(const int type1, const int type2) {
   }
   CHECK(!((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
           (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)))
-    << "1 is UInt8 and 1 is Int8 should not get here";
+      << "1 is UInt8 and 1 is Int8 should not get here";
   if (type1 == mshadow::kUint8 || type2 == mshadow::kUint8) {
     return mshadow::kUint8;
   }
@@ -915,13 +938,12 @@ inline int np_binary_out_infer_type(const int type1, const int type2) {
   return get_more_precise_type(type1, type2);
 }
 
-inline const std::string
-NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
+inline const std::string NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
   // obtain the profiler scope name, if assigned previously
   std::string profiler_scope = MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR;
   const std::unordered_map<std::string, std::string>& node_attrs_dict = attrs.dict;
-  const std::unordered_map<std::string, std::string>::const_iterator
-      profiler_scope_iter  = node_attrs_dict.find("__profiler_scope__");
+  const std::unordered_map<std::string, std::string>::const_iterator profiler_scope_iter =
+      node_attrs_dict.find("__profiler_scope__");
   if (profiler_scope_iter != node_attrs_dict.end()) {
     profiler_scope = profiler_scope_iter->second;
   }
@@ -929,16 +951,13 @@ NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
 }
 
 inline int GetDefaultDtype() {
-  return Imperative::Get()->is_np_default_dtype() ?
-         mshadow::kFloat64 :
-         mshadow::kFloat32;
+  return Imperative::Get()->is_np_default_dtype() ? mshadow::kFloat64 : mshadow::kFloat32;
 }
 
 inline int GetDefaultDtype(int dtype) {
-  if (dtype != -1) return dtype;
-  return Imperative::Get()->is_np_default_dtype() ?
-         mshadow::kFloat64 :
-         mshadow::kFloat32;
+  if (dtype != -1)
+    return dtype;
+  return Imperative::Get()->is_np_default_dtype() ? mshadow::kFloat64 : mshadow::kFloat32;
 }
 
 struct MShadowTypeInfo {
@@ -946,11 +965,10 @@ struct MShadowTypeInfo {
   int size;
   int acc_size;
 
-  MShadowTypeInfo(const std::string name, const int size, const int acc_size) :
-    name(std::move(name)), size(size), acc_size(acc_size) {}
+  MShadowTypeInfo(const std::string name, const int size, const int acc_size)
+      : name(std::move(name)), size(size), acc_size(acc_size) {}
 
-  MShadowTypeInfo(const std::string name, const int size) :
-    MShadowTypeInfo(name, size, size) {}
+  MShadowTypeInfo(const std::string name, const int size) : MShadowTypeInfo(name, size, size) {}
 };
 
 MShadowTypeInfo mshadow_type_info(const int type_flag);
@@ -976,7 +994,6 @@ inline void AlignedMemFree(void* ptr) {
 #endif
 }
 
-
 inline index_t div_round(const index_t a, const index_t b) {
   return (a + b - 1) / b;
 }
@@ -986,7 +1003,7 @@ inline bool IsPower2(size_t N) {
 }
 
 inline size_t RoundToPower2(size_t N) {
-  size_t ret = 1;
+  size_t ret   = 1;
   size_t copyN = N;
   while (N >= 2) {
     ret *= 2;

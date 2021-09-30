@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -65,13 +65,12 @@ Registry& Registry::Register(const std::string& name, bool override) {  // NOLIN
   std::lock_guard<std::mutex> lock(m->mutex);
   auto it = m->fmap.find(name);
   if (it == m->fmap.end()) {
-    Registry* r = new Registry();
-    r->name_ = name;
+    Registry* r   = new Registry();
+    r->name_      = name;
     m->fmap[name] = r;
     return *r;
   } else {
-    CHECK(override)
-      << "Global PackedFunc " << name << " is already registered";
+    CHECK(override) << "Global PackedFunc " << name << " is already registered";
     return *it->second;
   }
 }
@@ -80,7 +79,8 @@ bool Registry::Remove(const std::string& name) {
   Manager* m = Manager::Global();
   std::lock_guard<std::mutex> lock(m->mutex);
   auto it = m->fmap.find(name);
-  if (it == m->fmap.end()) return false;
+  if (it == m->fmap.end())
+    return false;
   m->fmap.erase(it);
   return true;
 }
@@ -89,7 +89,8 @@ const PackedFunc* Registry::Get(const std::string& name) {
   Manager* m = Manager::Global();
   std::lock_guard<std::mutex> lock(m->mutex);
   auto it = m->fmap.find(name);
-  if (it == m->fmap.end()) return nullptr;
+  if (it == m->fmap.end())
+    return nullptr;
   return &(it->second->func_);
 }
 
@@ -98,7 +99,7 @@ std::vector<std::string> Registry::ListNames() {
   std::lock_guard<std::mutex> lock(m->mutex);
   std::vector<std::string> keys;
   keys.reserve(m->fmap.size());
-  for (const auto &kv : m->fmap) {
+  for (const auto& kv : m->fmap) {
     keys.push_back(kv.first);
   }
   return keys;
@@ -112,7 +113,7 @@ struct MXNetFuncThreadLocalEntry {
   /*! \brief result holder for returning strings */
   std::vector<std::string> ret_vec_str;
   /*! \brief result holder for returning string pointers */
-  std::vector<const char *> ret_vec_charp;
+  std::vector<const char*> ret_vec_charp;
 };
 
 /*! \brief Thread local store that can be used to hold return values. */
@@ -120,8 +121,7 @@ typedef dmlc::ThreadLocalStore<MXNetFuncThreadLocalEntry> MXNetFuncThreadLocalSt
 
 int MXNetFuncGetGlobal(const char* name, MXNetFunctionHandle* out) {
   API_BEGIN();
-  const mxnet::runtime::PackedFunc* fp =
-      mxnet::runtime::Registry::Get(name);
+  const mxnet::runtime::PackedFunc* fp = mxnet::runtime::Registry::Get(name);
   if (fp != nullptr) {
     *out = new mxnet::runtime::PackedFunc(*fp);  // NOLINT(*)
   } else {
@@ -130,16 +130,15 @@ int MXNetFuncGetGlobal(const char* name, MXNetFunctionHandle* out) {
   API_END();
 }
 
-int MXNetFuncListGlobalNames(int *out_size,
-                             const char*** out_array) {
+int MXNetFuncListGlobalNames(int* out_size, const char*** out_array) {
   API_BEGIN();
-  MXNetFuncThreadLocalEntry *ret = MXNetFuncThreadLocalStore::Get();
-  ret->ret_vec_str = mxnet::runtime::Registry::ListNames();
+  MXNetFuncThreadLocalEntry* ret = MXNetFuncThreadLocalStore::Get();
+  ret->ret_vec_str               = mxnet::runtime::Registry::ListNames();
   ret->ret_vec_charp.clear();
   for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
     ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
   }
   *out_array = dmlc::BeginPtr(ret->ret_vec_charp);
-  *out_size = static_cast<int>(ret->ret_vec_str.size());
+  *out_size  = static_cast<int>(ret->ret_vec_str.size());
   API_END();
 }

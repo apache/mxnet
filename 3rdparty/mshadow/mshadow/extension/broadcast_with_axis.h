@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file broadcast_with_axis.h
  * \brief
  * \author Junyuan Xie, Xingjian Shi

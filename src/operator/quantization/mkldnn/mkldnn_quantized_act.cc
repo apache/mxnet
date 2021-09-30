@@ -17,11 +17,10 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_quantized_act.cc
  * \brief MKLDNN(Quantized) Activation operator based on subgraph
  * /author Zhiyuan Huang
-*/
+ */
 #if MXNET_USE_ONEDNN == 1
 
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
@@ -35,8 +34,7 @@ static void MKLDNNQuantizedActForward(const nnvm::NodeAttrs& attrs,
                                       const std::vector<NDArray>& in_data,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& out_data) {
-  CHECK(in_data[0].dtype() == mshadow::kUint8 ||
-        in_data[0].dtype() == mshadow::kInt8)
+  CHECK(in_data[0].dtype() == mshadow::kUint8 || in_data[0].dtype() == mshadow::kInt8)
       << "_contrib_quantized_act op only supports uint8 and int8 as input "
          "type";
 
@@ -46,8 +44,8 @@ static void MKLDNNQuantizedActForward(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_act)
-.set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedActForward);
+    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedActForward);
 
 }  // namespace op
 }  // namespace mxnet

@@ -186,9 +186,9 @@ if __name__ == '__main__':
         rgb_std = '0.229,0.224,0.225'
         epoch = 0
         net.hybridize()
-        net(mx.np.zeros(data_shape[0]))  # dummy forward pass to build graph
-        net.export(prefix)  # save model
-        net.hybridize(active=False)  # disable hybridization - it will be handled in quantization API
+        net(mx.np.zeros(data_shape[0])) # dummy forward pass to build graph
+        net.export(prefix) # save model
+        net.hybridize(active=False) # disable hybridization - it will be handled in quantization API
     else:
         prefix = os.path.join(dir_path, args.model)
         epoch = args.epoch

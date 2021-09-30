@@ -77,7 +77,7 @@ def test_bind():
                           'MXNET_EXEC_BULK_EXEC_TRAIN': enable_bulking}):
             nrepeat = 10
             maxdim = 4
-            for repeat in range(nrepeat):
+            for _ in range(nrepeat):
                 for dim in range(1, maxdim):
                     check_bind_with_uniform(lambda x, y: x + y,
                                             lambda g, x, y: (g, g),
@@ -107,7 +107,7 @@ def test_bind():
 def test_dot():
     nrepeat = 10
     maxdim = 4
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         s =tuple(np.random.randint(1, 200, size=3))
         check_bind_with_uniform(lambda x, y: np.dot(x, y),
                                 lambda g, x, y: (np.dot(g, y.T), np.dot(x.T, g)),
@@ -115,7 +115,7 @@ def test_dot():
                                 lshape=(s[0], s[1]),
                                 rshape=(s[1], s[2]),
                                 sf = mx.symbol.dot)
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         s =tuple(np.random.randint(1, 200, size=1))
         check_bind_with_uniform(lambda x, y: np.dot(x, y),
                                 lambda g, x, y: (g * y, g * x),

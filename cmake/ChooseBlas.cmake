@@ -132,6 +132,12 @@ elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
   cmake_dependent_option(BLA_STATIC "Use static libraries" ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
   cmake_dependent_option(MKL_MULTI_THREADED  "Use multi-threading"  ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
 
+  if(BLA_VENDOR)
+      message(FATAL_ERROR "Do not set BLA_VENDOR manually. MKL version (BLA_VENDOR) is selected based on MKL_USE_SINGLE_DYNAMIC_LIBRARY, "
+                          "MKL_MULTI_THREADED and USE_INT64_TENSOR_SIZE flags. If you want to select specific MKL library version "
+                          "please set the above-mentioned flags instead.")
+  endif()
+
   if(MKL_USE_SINGLE_DYNAMIC_LIBRARY)
     set(BLA_VENDOR Intel10_64_dyn)
     add_definitions(-DMKL_USE_SINGLE_DYNAMIC_LIBRARY=1)

@@ -59,4 +59,4 @@ class ObjectInternal {
 
 }  // namespace runtime
 }  // namespace mxnet
-#endif   // MXNET_RUNTIME_OBJECT_INTERNAL_H_
+#endif  // MXNET_RUNTIME_OBJECT_INTERNAL_H_

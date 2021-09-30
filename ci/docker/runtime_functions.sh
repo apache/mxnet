@@ -767,6 +767,16 @@ cd_unittest_ubuntu() {
     fi
 }
 
+unittest_ubuntu_python3_cpu_onnx() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+
+    pytest --cov-report xml:onnx_unittest.xml --verbose tests/python/onnx/test_operators.py
+    pytest --cov-report xml:onnx_unittest.xml --cov-append --verbose tests/python/onnx/test_models.py
+}
+
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -794,6 +804,22 @@ unittest_ubuntu_python3_cpu_onednn() {
                      OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
+}
+
+unittest_array_api_standardization() {
+    set -ex
+    python3 -m pip install -e /work/mxnet/python --user
+    cd ..
+    git clone https://github.com/data-apis/array-api-tests.git
+    pushd /work/array-api-tests
+    export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
+    # OverflowError: Python int too large to convert to C long
+    # when cython is enabled
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+    popd
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -1133,8 +1159,9 @@ build_python_docs() {
     export PATH=/home/jenkins_slave/.local/bin:$PATH
 
     pushd python
+    cp tutorials/getting-started/crash-course/prepare_dataset.py .
     make clean
-    make html EVAL=0
+    make html EVAL=1
 
     GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
     popd
@@ -1177,7 +1204,12 @@ build_docs() {
     mkdir -p $python_doc_folder && tar -xzf python-artifacts.tgz --directory $python_doc_folder
     mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api
 
-     # check if .htaccess file exists
+    # check if .asf.yaml file exists
+    if [ ! -f "html/.asf.yaml" ]; then
+        echo "html/.asf.yaml file does not exist. Exiting 1"
+        exit 1
+    fi
+    # check if .htaccess file exists
     if [ ! -f "html/.htaccess" ]; then
         echo "html/.htaccess file does not exist. Exiting 1"
         exit 1

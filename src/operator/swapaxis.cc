@@ -18,38 +18,35 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file swapaxis.cc
  * \brief
  * \author Ming Zhang
-*/
+ */
 
 #include "./swapaxis-inl.h"
 
 namespace mxnet {
 namespace op {
 
-template<>
+template <>
 Operator* CreateOp<cpu>(SwapAxisParam param, int dtype) {
-  Operator *op = nullptr;
-  MSHADOW_TYPE_SWITCH(dtype, DType, {
-    op = new SwapAxisOp<cpu, DType>(param);
-  });
+  Operator* op = nullptr;
+  MSHADOW_TYPE_SWITCH(dtype, DType, { op = new SwapAxisOp<cpu, DType>(param); });
   return op;
 }
 
-Operator* SwapAxisProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                                         std::vector<int> *in_type) const {
+Operator* SwapAxisProp::CreateOperatorEx(Context ctx,
+                                         mxnet::ShapeVector* in_shape,
+                                         std::vector<int>* in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }
-
 
 DMLC_REGISTER_PARAMETER(SwapAxisParam);
 
 MXNET_REGISTER_OP_PROPERTY(SwapAxis, SwapAxisProp)
-.add_argument("data", "NDArray-or-Symbol", "Input array.")
-.add_arguments(SwapAxisParam::__FIELDS__())
-.describe(R"code(Interchanges two axes of an array.
+    .add_argument("data", "NDArray-or-Symbol", "Input array.")
+    .add_arguments(SwapAxisParam::__FIELDS__())
+    .describe(R"code(Interchanges two axes of an array.
 
 Examples::
 

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file ndarray.h
  * \brief NDArray interface that handles array arithematics.
  */
@@ -26,23 +25,23 @@
 #define MXNET_NDARRAY_H_
 
 #include <dmlc/base.h>
-#include <dmlc/logging.h>
 #include <dmlc/io.h>
-#include <dmlc/type_traits.h>
+#include <dmlc/logging.h>
 #include <dmlc/registry.h>
+#include <dmlc/type_traits.h>
 #include <nnvm/node.h>
-#include <vector>
+
+#include <algorithm>
 #include <map>
-#include <string>
-#include <algorithm>
 #include <memory>
-#include <algorithm>
+#include <string>
+#include <vector>
 #if MXNET_USE_ONEDNN == 1
 #include <mkldnn.hpp>
 #endif
 #include "./base.h"
-#include "./storage.h"
 #include "./engine.h"
+#include "./storage.h"
 // check c++11
 #if DMLC_USE_CXX11 == 0
 #error "cxx11 was required for ndarray module"
@@ -51,11 +50,11 @@
 namespace mxnet {
 // enum for storage types
 namespace csr {
-enum CSRAuxType {kIndPtr, kIdx};
+enum CSRAuxType { kIndPtr, kIdx };
 }
 
 namespace rowsparse {
-enum RowSparseAuxType {kIdx};
+enum RowSparseAuxType { kIdx };
 }
 
 enum NDArrayStorageType {
@@ -82,9 +81,7 @@ class MKLDNNMemory;
 class NDArray {
  public:
   /*! \brief default constructor */
-  NDArray()
-    : autograd_entry_(nullptr) {
-  }
+  NDArray() : autograd_entry_(nullptr) {}
   /*!
    * \brief constructs a new dynamic NDArray
    * \param shape the shape of array
@@ -92,20 +89,25 @@ class NDArray {
    * \param delay_alloc whether delay the allocation
    * \param dtype data type of this ndarray
    */
-  NDArray(const mxnet::TShape &shape, Context ctx,
-          bool delay_alloc = false, int dtype = mshadow::default_type_flag)
+  NDArray(const mxnet::TShape& shape,
+          Context ctx,
+          bool delay_alloc = false,
+          int dtype        = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        autograd_entry_(nullptr) {
-  }
+        autograd_entry_(nullptr) {}
   /*! \brief constructor for NDArray with storage type
    */
-  NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
-          bool delay_alloc = true, int dtype = mshadow::default_type_flag,
-          const std::vector<int> &aux_types = {}, const mxnet::ShapeVector &aux_shapes = {},
-          const mxnet::TShape &storage_shape = mxnet::TShape(mshadow::Shape1(0))) {
+  NDArray(const NDArrayStorageType stype,
+          const mxnet::TShape& shape,
+          Context ctx,
+          bool delay_alloc                     = true,
+          int dtype                            = mshadow::default_type_flag,
+          const std::vector<int>& aux_types    = {},
+          const mxnet::ShapeVector& aux_shapes = {},
+          const mxnet::TShape& storage_shape   = mxnet::TShape(mshadow::Shape1(0))) {
     ReInit(stype, shape, ctx, dtype, delay_alloc, &aux_types, &aux_shapes, &storage_shape);
   }
   /*!
@@ -119,8 +121,7 @@ class NDArray {
         shape_(),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        autograd_entry_(nullptr) {
-  }
+        autograd_entry_(nullptr) {}
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
    *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
@@ -128,13 +129,12 @@ class NDArray {
    * \param data the memory content of static data
    * \param dev_id the device id this tensor sits at
    */
-  NDArray(const TBlob &data, int dev_id)
+  NDArray(const TBlob& data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)),
         shape_(data.shape_),
         dtype_(data.type_flag_),
         storage_type_(kDefaultStorage),
-        autograd_entry_(nullptr) {
-  }
+        autograd_entry_(nullptr) {}
 
   /*!
    * \brief constructing a static NDArray that shares data with TBlob which is with deleter
@@ -144,15 +144,16 @@ class NDArray {
    * \param dev_id the device id this tensor sits at
    * \param deleter the function pointer of custom deleter
    */
-  NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
-      : ptr_(new Chunk(data, dev_id), [deleter](Chunk *p) {
-            deleter();    // call custom deleter
-            delete p;     // delete Chunk object
-        }),
+  NDArray(const TBlob& data, int dev_id, const std::function<void()>& deleter)
+      : ptr_(new Chunk(data, dev_id),
+             [deleter](Chunk* p) {
+               deleter();  // call custom deleter
+               delete p;   // delete Chunk object
+             }),
         shape_(data.shape_),
-        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        autograd_entry_(nullptr) {
-  }
+        dtype_(data.type_flag_),
+        storage_type_(kDefaultStorage),
+        autograd_entry_(nullptr) {}
 
   /*! \brief create ndarray from shared memory */
   NDArray(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype)
@@ -160,8 +161,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        autograd_entry_(nullptr) {
-  }
+        autograd_entry_(nullptr) {}
 
   /*!
    * \brief constructing a static NDArray of non-default storage that shares data with TBlob
@@ -173,35 +173,41 @@ class NDArray {
    * \param aux_data the memory content of static aux data
    * \param dev_id the device id this tensor sits at
    */
-  NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape,
-          const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
+  NDArray(const NDArrayStorageType stype,
+          const mxnet::TShape& shape,
+          const TBlob& data,
+          const std::vector<TBlob>& aux_data,
+          int dev_id)
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)),
         shape_(shape),
         dtype_(data.type_flag_),
         storage_type_(stype),
-        autograd_entry_(nullptr) {
-  }
+        autograd_entry_(nullptr) {}
   /*!
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
    * \param shape the shape of the NDArray
    */
-  void Init(const mxnet::TShape &shape) {
+  void Init(const mxnet::TShape& shape) {
     ptr_->Init(shape, this->dtype_);
     this->shape_ = shape;
   }
 
-  void InitDetached(const NDArray *src) {
-    *this = *src;
+  void InitDetached(const NDArray* src) {
+    *this           = *src;
     autograd_entry_ = nnvm::NodeEntry(nullptr);
   }
   inline void ReInit() {
     ptr_ = nullptr;
     Init(kUndefinedStorage, TShape(), -1);
   }
-  void ReInit(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx, int dtype,
-              bool delay_alloc = true, const std::vector<int> *aux_types = nullptr,
-              const mxnet::ShapeVector *aux_shapes = nullptr,
-              const mxnet::TShape *storage_shape = nullptr);
+  void ReInit(const NDArrayStorageType stype,
+              const mxnet::TShape& shape,
+              Context ctx,
+              int dtype,
+              bool delay_alloc                     = true,
+              const std::vector<int>* aux_types    = nullptr,
+              const mxnet::ShapeVector* aux_shapes = nullptr,
+              const mxnet::TShape* storage_shape   = nullptr);
 
   void SelfReorder2Default();
   /*!
@@ -227,10 +233,8 @@ class NDArray {
 
   /* \brief Check whether the two arrays are the same array */
   inline bool IsSame(const NDArray& other) const {
-    return ptr_ == other.ptr_ &&
-        shape_ == other.shape_ &&
-        byte_offset_ == other.byte_offset_ &&
-        dtype_ == other.dtype_;
+    return ptr_ == other.ptr_ && shape_ == other.shape_ && byte_offset_ == other.byte_offset_ &&
+           dtype_ == other.dtype_;
   }
 
   /*!
@@ -244,10 +248,10 @@ class NDArray {
    *  It is only intended for non-default storage. For row-sparse storage, it is the shape of
    *  the tensor which stores the non-zero values.
    */
-  inline const mxnet::TShape &storage_shape() const {
+  inline const mxnet::TShape& storage_shape() const {
     CHECK(ptr_ != nullptr);
     CHECK_NE(storage_type(), kDefaultStorage)
-             << "storage_shape() is not intended for kDefaultStorage.";
+        << "storage_shape() is not intended for kDefaultStorage.";
     return ptr_->storage_shape;
   }
 
@@ -257,22 +261,20 @@ class NDArray {
    * \return the shape of aux data at given index
    */
   inline const mxnet::TShape& aux_shape(size_t index) const {
-    CHECK_NE(storage_type(), kDefaultStorage)
-             << "aux_shape() is not intended for kDefaultStorage.";
+    CHECK_NE(storage_type(), kDefaultStorage) << "aux_shape() is not intended for kDefaultStorage.";
     return ptr_->aux_shapes[index];
   }
 
   /* \return the shapes of all aux data */
   const mxnet::ShapeVector& aux_shapes() const {
     CHECK_NE(storage_type(), kDefaultStorage)
-             << "aux_shapes() is not intended for kDefaultStorage.";
+        << "aux_shapes() is not intended for kDefaultStorage.";
     return ptr_->aux_shapes;
   }
 
   /*! returns the dtypes of all aux data */
   const std::vector<int>& aux_types() const {
-    CHECK_NE(storage_type(), kDefaultStorage)
-      << "aux_types() is not intended for kDefaultStorage.";
+    CHECK_NE(storage_type(), kDefaultStorage) << "aux_types() is not intended for kDefaultStorage.";
     return ptr_->aux_types;
   }
 
@@ -285,7 +287,7 @@ class NDArray {
    */
   inline void set_aux_shape(size_t index, const mxnet::TShape& shape) const {
     CHECK_NE(storage_type(), kDefaultStorage)
-      << "set_aux_shape() is not intended for kDefaultStorage.";
+        << "set_aux_shape() is not intended for kDefaultStorage.";
     ptr_->set_aux_shape(index, shape);
   }
 
@@ -293,7 +295,8 @@ class NDArray {
    * \return the data TBlob
    */
   inline const TBlob& data() const {
-    if (storage_type() == kDefaultStorage) CheckAndAlloc();
+    if (storage_type() == kDefaultStorage)
+      CheckAndAlloc();
     SetTBlob();
     return tblob_;
   }
@@ -309,11 +312,11 @@ class NDArray {
     auto stype = storage_type();
     TBlob res;
     auto shape = aux_shape(i);
-    auto type = aux_type(i);
+    auto type  = aux_type(i);
     MSHADOW_TYPE_SWITCH(type, DType, {
       auto dptr = static_cast<DType*>(ptr_->aux_handles[i].dptr);
       CHECK(stype == kRowSparseStorage || stype == kCSRStorage)
-            << "Unexpected storage type: " << stype;
+          << "Unexpected storage type: " << stype;
       res = TBlob(dptr, shape, ptr_->aux_handles[i].ctx.dev_mask(), type);
     });
     return res;
@@ -352,19 +355,20 @@ class NDArray {
    * Returns false if the indices array is empty(nnz = 0) for csr/row_sparse
    */
   inline bool storage_initialized() const {
-    if (is_none()) return false;
+    if (is_none())
+      return false;
     auto stype = storage_type();
     CHECK_NE(stype, kDefaultStorage)
-             << "storage_initialized() is not intended for kDefaultStorage.";
+        << "storage_initialized() is not intended for kDefaultStorage.";
     if (stype == kRowSparseStorage) {
       CHECK_EQ(aux_shape(rowsparse::kIdx)[0], storage_shape()[0])
-               << "inconsistent storage shape " << storage_shape()
-               << " vs. aux shape " << aux_shape(rowsparse::kIdx);
+          << "inconsistent storage shape " << storage_shape() << " vs. aux shape "
+          << aux_shape(rowsparse::kIdx);
       return aux_shape(rowsparse::kIdx).Size() != 0;
     } else if (stype == kCSRStorage) {
       CHECK_EQ(aux_shape(csr::kIdx)[0], storage_shape()[0])
-               << "inconsistent storage shape " << storage_shape()
-               << " vs. aux shape " << aux_shape(csr::kIdx);
+          << "inconsistent storage shape " << storage_shape() << " vs. aux shape "
+          << aux_shape(csr::kIdx);
       return aux_shape(csr::kIdx).Size() != 0;
     } else {
       LOG(FATAL) << "Unknown storage type";
@@ -379,8 +383,7 @@ class NDArray {
     return ptr_->shandle;
   }
   /*! \brief assign profiler scope and name to the storage handles */
-  void AssignStorageInfo(const std::string& profiler_scope,
-                         const std::string& name);
+  void AssignStorageInfo(const std::string& profiler_scope, const std::string& name);
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
@@ -413,81 +416,81 @@ class NDArray {
    * \brief save the content into binary stream
    * \param strm the output stream
    */
-  void Save(dmlc::Stream *strm) const;
+  void Save(dmlc::Stream* strm) const;
   /*!
    * \brief load ndarrays before supporting sparse ndarrays
    * \param strm the output stream
    * \param magic the magic number used for version control
    */
-  bool LegacyLoad(dmlc::Stream *strm, const uint32_t magic);
+  bool LegacyLoad(dmlc::Stream* strm, const uint32_t magic);
   /*!
    * \brief load the content from binary stream
    * \param strm the output stream
    * \return whether the load is successful
    */
-  bool Load(dmlc::Stream *strm);
+  bool Load(dmlc::Stream* strm);
   /*!
    * \brief set all the elements in ndarray to be scalar
    * \param scalar the scalar to set
    * \return reference of self
    */
-  NDArray &operator=(real_t scalar);
+  NDArray& operator=(real_t scalar);
   /*!
    * \brief elementwise add to current space
    *  this mutate the current NDArray
    * \param src the data to add
    * \return reference of self
    */
-  NDArray &operator+=(const NDArray &src);
+  NDArray& operator+=(const NDArray& src);
   /*!
    * \brief elementwise add to current space
    *  this mutate the current NDArray
    * \param src the data to add
    * \return reference of self
    */
-  NDArray &operator+=(const real_t &src);
+  NDArray& operator+=(const real_t& src);
   /*!
    * \brief elementwise subtract from current ndarray
    * this mutate the current NDArray
    * \param src the data to subtract
    * \return reference of self
    */
-  NDArray &operator-=(const NDArray &src);
+  NDArray& operator-=(const NDArray& src);
   /*!
    * \brief elementwise subtract from current ndarray
    * this mutate the current NDArray
    * \param src the data to subtract
    * \return reference of self
    */
-  NDArray &operator-=(const real_t &src);
+  NDArray& operator-=(const real_t& src);
   /*!
    * \brief elementwise multiplication to current ndarray
    *  this mutate the current NDArray
    * \param src the data to subtract
    * \return reference of self
    */
-  NDArray &operator*=(const NDArray &src);
+  NDArray& operator*=(const NDArray& src);
   /*!
    * \brief elementwise multiplication to current ndarray
    *  this mutate the current NDArray
    * \param src the data to subtract
    * \return reference of self
    */
-  NDArray &operator*=(const real_t &src);
+  NDArray& operator*=(const real_t& src);
   /*!
    * \brief elementwise division from current ndarray
    *  this mutate the current NDArray
    * \param src the data to subtract
    * \return reference of self
    */
-  NDArray &operator/=(const NDArray &src);
+  NDArray& operator/=(const NDArray& src);
   /*!
    * \brief elementwise division from current ndarray
    *  this mutate the current NDArray
    * \param src the data to subtract
    * \return reference of self
    */
-  NDArray &operator/=(const real_t &src);
+  NDArray& operator/=(const real_t& src);
   /*!
    * \brief return a new copy this NDArray
    * \param ctx the new context of this NDArray
@@ -504,12 +507,12 @@ class NDArray {
    * \param data the data source to copy from.
    * \param size the size of the source array, in sizeof(DType) not raw btyes.
    */
-  void SyncCopyFromCPU(const void *data, size_t size) const;
+  void SyncCopyFromCPU(const void* data, size_t size) const;
 
   /*!
    * \brief Copy from src.data()/aux_data(i) to this->data()/aux_data(j)
    */
-  void SyncCopyFromNDArray(const NDArray &src, int i = -1, int j = -1);
+  void SyncCopyFromNDArray(const NDArray& src, int i = -1, int j = -1);
 
   /*!
    * \brief Do a synchronize copy to a contiguous CPU memory region.
@@ -521,12 +524,12 @@ class NDArray {
    * \param data the data source to copyinto.
    * \param size the memory size we want to copy into, in sizeof(DType) not raw btyes.
    */
-  void SyncCopyToCPU(void *data, size_t size) const;
+  void SyncCopyToCPU(void* data, size_t size) const;
   /*!
-  * \brief check whether the NDArray format is valid
-  * \param full_check if `True`, rigorous check, O(N) operations
-  *    Otherwise basic check, O(1) operations
-  */
+   * \brief check whether the NDArray format is valid
+   * \param full_check if `True`, rigorous check, O(N) operations
+   *    Otherwise basic check, O(1) operations
+   */
   void SyncCheckFormat(const bool full_check) const;
   /*!
    * \brief Slice a NDArray
@@ -573,30 +576,27 @@ class NDArray {
    * \param dtype The data type.
    * \return NDArray in new shape and type.
    */
-  inline NDArray AsArray(const mxnet::TShape &shape, int dtype) const {
-    CHECK_EQ(storage_type(), kDefaultStorage)
-             << "AsArray is intended only for kDefaultStorage.";
-    CHECK_GE(ptr_->shandle.size,
-             shape.Size() * mshadow::mshadow_sizeof(dtype))
+  inline NDArray AsArray(const mxnet::TShape& shape, int dtype) const {
+    CHECK_EQ(storage_type(), kDefaultStorage) << "AsArray is intended only for kDefaultStorage.";
+    CHECK_GE(ptr_->shandle.size, shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
     // We can't reuse memory in a view.
     CHECK(!IsView());
     NDArray ret = *this;
-    ret.shape_ = shape;
-    ret.dtype_ = dtype;
-    ret.reuse_ = true;
+    ret.shape_  = shape;
+    ret.dtype_  = dtype;
+    ret.reuse_  = true;
     return ret;
   }
 
-  inline void InitAsArray(const NDArray &src, const mxnet::TShape &shape, int dtype) {
+  inline void InitAsArray(const NDArray& src, const mxnet::TShape& shape, int dtype) {
     CHECK_EQ(src.storage_type(), kDefaultStorage)
-      << "AsArray is intended only for kDefaultStorage.";
-    CHECK_GE(src.ptr_->shandle.size,
-             shape.Size() * mshadow::mshadow_sizeof(dtype))
-      << "NDArray.AsArray: target memory size is bigger than what was allocated.";
+        << "AsArray is intended only for kDefaultStorage.";
+    CHECK_GE(src.ptr_->shandle.size, shape.Size() * mshadow::mshadow_sizeof(dtype))
+        << "NDArray.AsArray: target memory size is bigger than what was allocated.";
     // We can't reuse memory in a view.
     CHECK(!src.IsView());
-    *this = src;
+    *this  = src;
     shape_ = shape;
     dtype_ = dtype;
     reuse_ = true;
@@ -629,7 +629,7 @@ class NDArray {
    * the temporary ndarray which stores intermediate custom op results.
    * Should be used with caution elsewhere. Supports only CSR and RSP formats.
    */
-  inline void SparseUpdateChunk(const NDArray &arr) const {
+  inline void SparseUpdateChunk(const NDArray& arr) const {
     CHECK(shape_ == arr.shape_) << "ndarray shape is different from the target";
     CHECK(dtype_ == arr.dtype_) << "ndarray dtype is different from the target";
     auto stype = arr.storage_type();
@@ -637,24 +637,24 @@ class NDArray {
         << "Only to be used with CSR and RSP storage types";
     // swap shandles between src and dst
     Storage::Handle shandle_dst = arr.ptr_->shandle;
-    arr.ptr_->shandle = ptr_->shandle;
-    ptr_->shandle = shandle_dst;
+    arr.ptr_->shandle           = ptr_->shandle;
+    ptr_->shandle               = shandle_dst;
 
     ptr_->storage_shape = arr.ptr_->storage_shape;
-    ptr_->storage_type = arr.ptr_->storage_type;
-    ptr_->ctx = arr.ptr_->ctx;
+    ptr_->storage_type  = arr.ptr_->storage_type;
+    ptr_->ctx           = arr.ptr_->ctx;
 
     // swap aux_handles between src and dst
     size_t aux_idx = 0;
     CHECK(ptr_->aux_handles.size() == arr.ptr_->aux_handles.size())
         << "ndarray number of aux_handles is different from target";
-    for (auto &aux_handle : arr.ptr_->aux_handles) {
-      Storage::Handle aux_dst = ptr_->aux_handles[aux_idx];
+    for (auto& aux_handle : arr.ptr_->aux_handles) {
+      Storage::Handle aux_dst    = ptr_->aux_handles[aux_idx];
       ptr_->aux_handles[aux_idx] = aux_handle;
-      aux_handle = aux_dst;
+      aux_handle                 = aux_dst;
       aux_idx++;
     }
-    ptr_->aux_types = arr.ptr_->aux_types;
+    ptr_->aux_types  = arr.ptr_->aux_types;
     ptr_->aux_shapes = arr.ptr_->aux_shapes;
   }
 
@@ -663,20 +663,20 @@ class NDArray {
    * \param shape new shape
    * \return NDArray in new shape
    */
-  NDArray Reshape(const mxnet::TShape &shape) const;
+  NDArray Reshape(const mxnet::TShape& shape) const;
   /*!
    * \brief Get an reshaped NDArray. Supports autograd recording
    * \param shape new shape
    * \return NDArray in new shape
    */
-  NDArray ReshapeWithRecord(const mxnet::TShape &shape);
+  NDArray ReshapeWithRecord(const mxnet::TShape& shape);
   /*!
    * \brief Return a copy of this NDArray without autograd and deferred compute
    * history
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.autograd_entry_ = nnvm::NodeEntry(nullptr);
+    ret.autograd_entry_        = nnvm::NodeEntry(nullptr);
     ret.deferredcompute_entry_ = nnvm::NodeEntry(nullptr);
     return ret;
   }
@@ -711,19 +711,19 @@ class NDArray {
    * \brief Alloc memory for non-default storage
    * aux_shape is only known at run time
    */
-  inline void CheckAndAlloc(const mxnet::ShapeVector &aux_shapes) const {
+  inline void CheckAndAlloc(const mxnet::ShapeVector& aux_shapes) const {
     CHECK_NE(storage_type(), kDefaultStorage)
-             << "CheckAndAlloc(aux_shapes) is not intended for kDefaultStorage";
+        << "CheckAndAlloc(aux_shapes) is not intended for kDefaultStorage";
     ptr_->CheckAndAlloc(shape_, aux_shapes, dtype_);
   }
-  inline void CheckAndAllocData(const mxnet::TShape &storage_shape) const {
+  inline void CheckAndAllocData(const mxnet::TShape& storage_shape) const {
     CHECK_NE(storage_type(), kDefaultStorage)
-             << "CheckAndAllocData is not intended for kDefaultStorage";
+        << "CheckAndAllocData is not intended for kDefaultStorage";
     ptr_->CheckAndAllocData(storage_shape, dtype_);
   }
-  inline void CheckAndAllocAuxData(size_t i, const mxnet::TShape &aux_shape) const {
+  inline void CheckAndAllocAuxData(size_t i, const mxnet::TShape& aux_shape) const {
     CHECK_NE(storage_type(), kDefaultStorage)
-             << "CheckAndAllocAuxData is not intended for kDefaultStorage";
+        << "CheckAndAllocAuxData is not intended for kDefaultStorage";
     ptr_->CheckAndAllocAuxData(i, aux_shape);
   }
 
@@ -732,12 +732,12 @@ class NDArray {
    * Create NDArray from mkldnn memory.
    * mkldnn_mem The mkldnn memory to be managed.
    */
-  explicit NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem);
+  explicit NDArray(const std::shared_ptr<mkldnn::memory>& mkldnn_mem);
   /*
    * Create NDArray from mkldnn memory descriptor.
    * mem_pd The mkldnn memory descriptor to be created.
    */
-  explicit NDArray(const mkldnn::memory::desc &md);
+  explicit NDArray(const mkldnn::memory::desc& md);
   /*
    * Test if the data is stored in one of special MKLDNN format.
    */
@@ -760,29 +760,28 @@ class NDArray {
   /*
    * This function returns mkldnn::memory with the default primitive_desc.
    */
-  const mkldnn::memory *GetMKLDNNData() const;
+  const mkldnn::memory* GetMKLDNNData() const;
   /*
    * This function returns mkldnn::memory with the given primitive_desc
    * as long as the array size meets the required size in the given primitive_desc.
    */
-  const mkldnn::memory *GetMKLDNNData(const mkldnn::memory::desc &md) const;
+  const mkldnn::memory* GetMKLDNNData(const mkldnn::memory::desc& md) const;
   /*
    * This function returns mkldnn::memory with the given primitive_desc.
    * The returned mkldnn::memory will have the same physical layout as
    * the given primitive_desc.
    */
-  const mkldnn::memory *GetMKLDNNDataReorder(
-      const mkldnn::memory::desc &md) const;
+  const mkldnn::memory* GetMKLDNNDataReorder(const mkldnn::memory::desc& md) const;
 
   /*
    * This function copies data from mkldnn memory.
    */
-  void CopyFrom(const mkldnn::memory &mem);
+  void CopyFrom(const mkldnn::memory& mem);
   /*
    * This function allocates memory for array and creates mkldnn memory
    * with the specified format.
    */
-  mkldnn::memory *CreateMKLDNNData(const mkldnn::memory::desc &md);
+  mkldnn::memory* CreateMKLDNNData(const mkldnn::memory::desc& md);
 
   /*
    * These are the async version of the methods above.
@@ -790,7 +789,7 @@ class NDArray {
    * the array are complete.
    */
   void Reorder2DefaultAsync() const;
-  void MKLDNNDataReorderAsync(const mkldnn::memory::desc &md) const;
+  void MKLDNNDataReorderAsync(const mkldnn::memory::desc& md) const;
 
   /*
    * This creates a new NDArray with the reordered data.
@@ -798,7 +797,7 @@ class NDArray {
    */
   NDArray Reorder2Default() const;
 
-    /*
+  /*
    * This creates a new NDArray using f32 with the reordered data.
    * It doesn't affect the data of the original NDArray.
    */
@@ -816,12 +815,12 @@ class NDArray {
    * which can be expensive.
    * It's used by FullyConnected right now.
    */
-  NDArray MKLDNNDataReshape(const mxnet::TShape &shape) const;
+  NDArray MKLDNNDataReshape(const mxnet::TShape& shape) const;
 
-   /*!
+  /*!
    * \ Fix mkldnn memory descriptor mismatch from NDArray.
    */
-  void UpdateMKLDNNMemDesc(const mkldnn::memory::desc &desc);
+  void UpdateMKLDNNMemDesc(const mkldnn::memory::desc& desc);
 #endif
 
   /*!
@@ -839,9 +838,7 @@ class NDArray {
    * \param data the NDArrays to be loaded
    * \param keys the name of the NDArray, if saved in the file.
    */
-  static void Load(dmlc::Stream* fi,
-                   std::vector<NDArray>* data,
-                   std::vector<std::string>* keys);
+  static void Load(dmlc::Stream* fi, std::vector<NDArray>* data, std::vector<std::string>* keys);
 
  private:
   friend class Imperative;
@@ -894,30 +891,34 @@ class NDArray {
     /*! \brief Reference to the engine to ensure we cleanup without calling a destructed engine */
     std::weak_ptr<Engine> engine_ref_;
 
-
     /*! \brief default constructor */
-    Chunk() : static_data(true), delay_alloc(false),
-              storage_ref_(Storage::_GetSharedRef()),
-              engine_ref_(Engine::_GetSharedRef()) {}
+    Chunk()
+        : static_data(true),
+          delay_alloc(false),
+          storage_ref_(Storage::_GetSharedRef()),
+          engine_ref_(Engine::_GetSharedRef()) {}
 
     /*! \brief construct a new chunk */
     Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_, int dtype)
-        : static_data(false), delay_alloc(true), ctx(ctx_),
+        : static_data(false),
+          delay_alloc(true),
+          ctx(ctx_),
           storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
       storage_shape = shape;
       if (shape_is_known(storage_shape)) {
         shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
       }
-      var = Engine::Get()->NewVariable();
+      var         = Engine::Get()->NewVariable();
       shandle.ctx = ctx_;
       if (!delay_alloc_) {
         this->CheckAndAlloc();
       }
     }
 
-    Chunk(const TBlob &data, int dev_id)
-        : static_data(true), delay_alloc(false),
+    Chunk(const TBlob& data, int dev_id)
+        : static_data(true),
+          delay_alloc(false),
           storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
       CHECK(storage_type == kDefaultStorage);
@@ -929,35 +930,45 @@ class NDArray {
         ctx = Context::GPU(dev_id);
       }
       // init shandle
-      shandle.ctx = ctx;
-      shandle.dptr = data.dptr_;
-      shandle.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
+      shandle.ctx   = ctx;
+      shandle.dptr  = data.dptr_;
+      shandle.size  = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
       storage_shape = data.shape_;
     }
 
     Chunk(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype)
-        : static_data(false), delay_alloc(false),
+        : static_data(false),
+          delay_alloc(false),
           storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
-      var = Engine::Get()->NewVariable();
-      ctx = Context::CPUShared(0);
-      shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
-      shandle.ctx = ctx;
+      var                = Engine::Get()->NewVariable();
+      ctx                = Context::CPUShared(0);
+      shandle.size       = shape.Size() * mshadow::mshadow_sizeof(dtype);
+      shandle.ctx        = ctx;
       shandle.shared_pid = shared_pid;
-      shandle.shared_id = shared_id;
+      shandle.shared_id  = shared_id;
       Storage::Get()->Alloc(&shandle);
       storage_shape = shape;
     }
     // Constructor for a non-default storage chunk
-    Chunk(NDArrayStorageType storage_type_, const mxnet::TShape &storage_shape_, Context ctx_,
-          bool delay_alloc_, int dtype, const std::vector<int> &aux_types_,
-          const mxnet::ShapeVector &aux_shapes_)
-        : static_data(false), delay_alloc(delay_alloc_), storage_type(storage_type_),
-          aux_types(aux_types_), ctx(ctx_), storage_shape(storage_shape_),
-          aux_shapes(aux_shapes_), storage_ref_(Storage::_GetSharedRef()),
+    Chunk(NDArrayStorageType storage_type_,
+          const mxnet::TShape& storage_shape_,
+          Context ctx_,
+          bool delay_alloc_,
+          int dtype,
+          const std::vector<int>& aux_types_,
+          const mxnet::ShapeVector& aux_shapes_)
+        : static_data(false),
+          delay_alloc(delay_alloc_),
+          storage_type(storage_type_),
+          aux_types(aux_types_),
+          ctx(ctx_),
+          storage_shape(storage_shape_),
+          aux_shapes(aux_shapes_),
+          storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
       shandle.ctx = ctx;
-      var = Engine::Get()->NewVariable();
+      var         = Engine::Get()->NewVariable();
       // aux_handles always reflect the correct number of aux data
       for (size_t i = 0; i < aux_shapes.size(); i++) {
         CheckAndAllocAuxData(i, aux_shapes[i]);
@@ -970,10 +981,15 @@ class NDArray {
       }
     }
 
-    Chunk(const NDArrayStorageType storage_type_, const TBlob &data,
-          const std::vector<TBlob> &aux_data, int dev_id)
-        : static_data(true), delay_alloc(false), storage_type(storage_type_),
-          storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine::_GetSharedRef()) {
+    Chunk(const NDArrayStorageType storage_type_,
+          const TBlob& data,
+          const std::vector<TBlob>& aux_data,
+          int dev_id)
+        : static_data(true),
+          delay_alloc(false),
+          storage_type(storage_type_),
+          storage_ref_(Storage::_GetSharedRef()),
+          engine_ref_(Engine::_GetSharedRef()) {
       using namespace mshadow;
       CHECK_NE(storage_type, kDefaultStorage);
       // init var
@@ -986,14 +1002,14 @@ class NDArray {
         ctx = Context::GPU(dev_id);
       }
       // init shandle
-      shandle.ctx = ctx;
-      shandle.dptr = data.dptr_;
-      shandle.size = data.shape_.Size() * mshadow_sizeof(data.type_flag_);
+      shandle.ctx   = ctx;
+      shandle.dptr  = data.dptr_;
+      shandle.size  = data.shape_.Size() * mshadow_sizeof(data.type_flag_);
       storage_shape = data.shape_;
       // init aux handles
-      for (const auto &aux : aux_data) {
+      for (const auto& aux : aux_data) {
         Storage::Handle aux_handle;
-        aux_handle.ctx = ctx;
+        aux_handle.ctx  = ctx;
         aux_handle.dptr = aux.dptr_;
         aux_handle.size = aux.shape_.Size() * mshadow_sizeof(aux.type_flag_);
         aux_handles.push_back(aux_handle);
@@ -1050,13 +1066,14 @@ class NDArray {
       }
     }
     /*! \brief initialize the shape and dtype, assuming it is not initialized before. */
-    void Init(const mxnet::TShape &shape, int dtype) {
-      auto size = shape.Size();
+    void Init(const mxnet::TShape& shape, int dtype) {
+      auto size     = shape.Size();
       storage_shape = shape;
-      shandle.size = size * mshadow::mshadow_sizeof(dtype);
+      shandle.size  = size * mshadow::mshadow_sizeof(dtype);
       this->CheckAndAlloc();
     }
-    inline void CheckAndAlloc(const mxnet::TShape &shape, const mxnet::ShapeVector &aux_shapes,
+    inline void CheckAndAlloc(const mxnet::TShape& shape,
+                              const mxnet::ShapeVector& aux_shapes,
                               int dtype) {
       // calculate size, perform allocation
       if (kRowSparseStorage == storage_type) {
@@ -1078,17 +1095,17 @@ class NDArray {
     // storage shape is also updated
     // if data is already allocated, try reuse the storage. Otherwise, free the current one
     // and allocate new storage
-    void CheckAndAllocData(const mxnet::TShape &shape, int dtype);
+    void CheckAndAllocData(const mxnet::TShape& shape, int dtype);
 
 #if MXNET_USE_ONEDNN == 1
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
-    void SetMKLMem(const mxnet::TShape &shape, int dtype);
+    void SetMKLMem(const mxnet::TShape& shape, int dtype);
     // If the data is stored in MKLDNN layout, we reorder data in mkl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
     // Reroder data to a specified layout.
-    void MKLDNNDataReorder(const mkldnn::memory::desc &md);
+    void MKLDNNDataReorder(const mkldnn::memory::desc& md);
     bool IsMKLDNN() const;
     bool IsDefault() const;
 #endif
@@ -1098,12 +1115,12 @@ class NDArray {
     // aux shape is also updated
     // if aux data is already allocated, try reuse the storage. Otherwise, free the current one
     // and allocate new storage
-    inline void CheckAndAllocAuxData(size_t i, const mxnet::TShape &shape) {
+    inline void CheckAndAllocAuxData(size_t i, const mxnet::TShape& shape) {
       CHECK_EQ(shape.ndim(), 1) << "shape must be 1D in CheckAndAllocAuxData";
       CHECK_NE(storage_type, kUndefinedStorage)
-        << "storage type cannot be kUndefinedStorage in CheckAndAllocAuxData";
+          << "storage type cannot be kUndefinedStorage in CheckAndAllocAuxData";
       CHECK_NE(storage_type, kDefaultStorage)
-        << "storage type cannot be kDefaultStorage in CheckAndAllocAuxData";
+          << "storage type cannot be kDefaultStorage in CheckAndAllocAuxData";
       if (aux_handles.size() <= i) {
         aux_handles.resize(i + 1);
       }
@@ -1123,13 +1140,13 @@ class NDArray {
 
   /*!
    * \brief initialize the NDArray
-  */
-  inline void Init(const NDArrayStorageType stype, const mxnet::TShape &shape, int dtype) {
-    shape_ = shape;
-    dtype_ = dtype;
-    storage_type_ = stype;
-    reuse_ = false;
-    byte_offset_ = 0;
+   */
+  inline void Init(const NDArrayStorageType stype, const mxnet::TShape& shape, int dtype) {
+    shape_          = shape;
+    dtype_          = dtype;
+    storage_type_   = stype;
+    reuse_          = false;
+    byte_offset_    = 0;
     autograd_entry_ = nnvm::NodeEntry(nullptr);
   }
 
@@ -1180,7 +1197,7 @@ size_t num_aux_data(NDArrayStorageType stype);
  * \note The function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function.
  */
-void CopyFromTo(const NDArray &from, const NDArray *to, int priority = 0);
+void CopyFromTo(const NDArray& from, const NDArray* to, int priority = 0);
 
 /*!
  * \brief issue an copy operation from one NDArray to another
@@ -1195,7 +1212,7 @@ void CopyFromTo(const NDArray &from, const NDArray *to, int priority = 0);
  * \note The function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function.
  */
-void CopyFromTo(const NDArray &from, const NDArray& to, int priority = 0, bool is_opr = false);
+void CopyFromTo(const NDArray& from, const NDArray& to, int priority = 0, bool is_opr = false);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
@@ -1203,7 +1220,7 @@ void CopyFromTo(const NDArray &from, const NDArray& to, int priority = 0, bool i
  * \param out the target ndarray
  * \param priority Priority of the action.
  */
-void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority = 0);
+void ElementwiseSum(const std::vector<NDArray>& source, NDArray* out, int priority = 0);
 
 /*!
  * \brief elementwise add
@@ -1211,56 +1228,56 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator+(const NDArray &lhs, const NDArray &rhs);
+NDArray operator+(const NDArray& lhs, const NDArray& rhs);
 /*!
  * \brief elementwise add
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator+(const NDArray &lhs, const real_t &rhs);
+NDArray operator+(const NDArray& lhs, const real_t& rhs);
 /*!
  * \brief elementwise subtraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator-(const NDArray &lhs, const NDArray &rhs);
+NDArray operator-(const NDArray& lhs, const NDArray& rhs);
 /*!
  * \brief elementwise subtraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator-(const NDArray &lhs, const real_t &rhs);
+NDArray operator-(const NDArray& lhs, const real_t& rhs);
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator*(const NDArray &lhs, const NDArray &rhs); \
+NDArray operator*(const NDArray& lhs, const NDArray& rhs);
 /*!
  * \brief elementwise multiplication
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator*(const NDArray &lhs, const real_t &rhs);
+NDArray operator*(const NDArray& lhs, const real_t& rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator/(const NDArray &lhs, const NDArray &rhs);
+NDArray operator/(const NDArray& lhs, const NDArray& rhs);
 /*!
  * \brief elementwise division
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator/(const NDArray &lhs, const real_t &rhs);
+NDArray operator/(const NDArray& lhs, const real_t& rhs);
 
 /*!
  * \brief Seed all random number generator in mxnet.
@@ -1278,60 +1295,60 @@ void RandomSeed(Context ctx, uint32_t seed);
  * \param end upper bound of distribution.
  * \param out output NDArray.
  */
-void SampleUniform(real_t begin, real_t end, NDArray *out);
+void SampleUniform(real_t begin, real_t end, NDArray* out);
 /*!
  * \brief Sample gaussian distribution for each elements of out.
  * \param mu mean of gaussian distribution.
  * \param sigma standard deviation of gaussian distribution.
  * \param out output NDArray.
  */
-void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
+void SampleGaussian(real_t mu, real_t sigma, NDArray* out);
 /*!
  * \brief Sample gamma distribution for each elements of out.
  * \param alpha parameter (shape) of the gamma distribution
  * \param beta parameter (scale) of the gamma distribution
  * \param out output NDArray.
  */
-void SampleGamma(real_t alpha, real_t beta, NDArray *out);
+void SampleGamma(real_t alpha, real_t beta, NDArray* out);
 /*!
  * \brief Sample exponential distribution for each elements of out.
  * \param lambda parameter (rate) of the exponential distribution
  * \param out output NDArray.
  */
-void SampleExponential(real_t lambda, NDArray *out);
+void SampleExponential(real_t lambda, NDArray* out);
 /*!
  * \brief Sample Poisson distribution for each elements of out.
  * \param lambda parameter (rate) of the Poisson distribution
  * \param out output NDArray.
  */
-void SamplePoisson(real_t lambda, NDArray *out);
+void SamplePoisson(real_t lambda, NDArray* out);
 /*!
  * \brief Sample negative binomial distribution for each elements of out.
  * \param k failure limit
  * \param p success probability
  * \param out output NDArray.
  */
-void SampleNegBinomial(int32_t k, real_t p, NDArray *out);
+void SampleNegBinomial(int32_t k, real_t p, NDArray* out);
 /*!
  * \brief Sample generalized negative binomial distribution for each elements of out.
  * \param mu parameter (mean) of the distribution
  * \param alpha parameter (over dispersion) of the distribution
  * \param out output NDArray.
  */
-void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray *out);
-
+void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray* out);
 
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------
 
 /*! \brief definition of NDArray function */
-typedef std::function<void (NDArray **used_vars,
-                            real_t *scalars,
-                            NDArray **mutate_vars,
-                            int num_params,
-                            char **param_keys,
-                            char **param_vals)> NDArrayAPIFunction;
+typedef std::function<void(NDArray** used_vars,
+                           real_t* scalars,
+                           NDArray** mutate_vars,
+                           int num_params,
+                           char** param_keys,
+                           char** param_vals)>
+    NDArrayAPIFunction;
 /*! \brief mask information on how functions can be exposed */
 enum NDArrayFunctionTypeMask {
   /*! \brief all the use_vars should go before scalar */
@@ -1350,8 +1367,7 @@ enum NDArrayFunctionTypeMask {
 };
 /*! \brief Registry entry for NDArrayFunction */
 struct NDArrayFunctionReg
-    : public dmlc::FunctionRegEntryBase<NDArrayFunctionReg,
-                                        NDArrayAPIFunction> {
+    : public dmlc::FunctionRegEntryBase<NDArrayFunctionReg, NDArrayAPIFunction> {
   /*! \brief number of variable used by this function */
   unsigned num_use_vars;
   /*! \brief number of variable mutated by this function */
@@ -1363,44 +1379,44 @@ struct NDArrayFunctionReg
   /*!
    * \brief constructor
    */
-  NDArrayFunctionReg()
-      : num_use_vars(0),
-        num_mutate_vars(0),
-        num_scalars(0),
-        type_mask(0) {}
+  NDArrayFunctionReg() : num_use_vars(0), num_mutate_vars(0), num_scalars(0), type_mask(0) {}
   /*!
    * \brief set the function body to a NDArray setvalue function
    *  this will also auto set the parameters correctly
    * \param fsetvalue function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void (*fsetvalue)(const real_t &rhs,
-                                                            NDArray *out)) {
-    body = [fsetvalue] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
-                        int num_params, char **param_keys, char **param_vals) {
-      (*fsetvalue)(s[0], mutate_vars[0]);
-    };
-    num_mutate_vars = 1; num_scalars = 1;
+  inline NDArrayFunctionReg& set_function(void (*fsetvalue)(const real_t& rhs, NDArray* out)) {
+    body            = [fsetvalue](NDArray** used_vars,
+                       real_t* s,
+                       NDArray** mutate_vars,
+                       int num_params,
+                       char** param_keys,
+                       char** param_vals) { (*fsetvalue)(s[0], mutate_vars[0]); };
+    num_mutate_vars = 1;
+    num_scalars     = 1;
     this->add_argument("src", "real_t", "Source input to the function.");
     return *this;
   }
   /*!
-  * \brief set the function body to a ternary NDArray function
-  *  this will also auto set the parameters correctly
-  * \param fternary function body to set
-  * \return ref to the registered entry, used to set properties
-  */
-  inline NDArrayFunctionReg &set_function(void(*fternary)(const NDArray &lhs,
-                                                          const NDArray &mhs,
-                                                          const NDArray &rhs,
-                                                                NDArray *out)) {
-    body = [fternary](NDArray **used_vars,
-      real_t *s, NDArray **mutate_vars,
-      int num_params, char **param_keys, char **param_vals) {
+   * \brief set the function body to a ternary NDArray function
+   *  this will also auto set the parameters correctly
+   * \param fternary function body to set
+   * \return ref to the registered entry, used to set properties
+   */
+  inline NDArrayFunctionReg& set_function(
+      void (*fternary)(const NDArray& lhs, const NDArray& mhs, const NDArray& rhs, NDArray* out)) {
+    body = [fternary](NDArray** used_vars,
+                      real_t* s,
+                      NDArray** mutate_vars,
+                      int num_params,
+                      char** param_keys,
+                      char** param_vals) {
       (*fternary)(*used_vars[0], *used_vars[1], *used_vars[2], mutate_vars[0]);
     };
-    num_use_vars = 3; num_mutate_vars = 1;
-    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+    num_use_vars    = 3;
+    num_mutate_vars = 1;
+    type_mask       = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
     this->add_argument("lhs", "NDArray", "Left operand to the function.");
     this->add_argument("mhs", "NDArray", "Middle operand to the function.");
     this->add_argument("rhs", "NDArray", "Right operand to the function.");
@@ -1412,15 +1428,20 @@ struct NDArrayFunctionReg
    * \param fbinary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void (*fbinary)(const NDArray &lhs,
-                                                          const NDArray &rhs,
-                                                          NDArray *out)) {
-    body = [fbinary] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
-                      int num_params, char **param_keys, char **param_vals) {
+  inline NDArrayFunctionReg& set_function(void (*fbinary)(const NDArray& lhs,
+                                                          const NDArray& rhs,
+                                                          NDArray* out)) {
+    body = [fbinary](NDArray** used_vars,
+                     real_t* s,
+                     NDArray** mutate_vars,
+                     int num_params,
+                     char** param_keys,
+                     char** param_vals) {
       (*fbinary)(*used_vars[0], *used_vars[1], mutate_vars[0]);
     };
-    num_use_vars = 2; num_mutate_vars = 1;
-    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+    num_use_vars    = 2;
+    num_mutate_vars = 1;
+    type_mask       = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
     this->add_argument("lhs", "NDArray", "Left operand to the function.");
     this->add_argument("rhs", "NDArray", "Right operand to the function.");
     return *this;
@@ -1431,15 +1452,19 @@ struct NDArrayFunctionReg
    * \param fscalar function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void (*fscalar)(const NDArray &lhs,
-                                                          const real_t &rhs,
-                                                          NDArray *out)) {
-    body = [fscalar] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
-                      int num_params, char **param_keys, char **param_vals) {
-      (*fscalar)(*used_vars[0], s[0], mutate_vars[0]);
-    };
-    num_use_vars = 1; num_mutate_vars = 1; num_scalars = 1;
-    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+  inline NDArrayFunctionReg& set_function(void (*fscalar)(const NDArray& lhs,
+                                                          const real_t& rhs,
+                                                          NDArray* out)) {
+    body            = [fscalar](NDArray** used_vars,
+                     real_t* s,
+                     NDArray** mutate_vars,
+                     int num_params,
+                     char** param_keys,
+                     char** param_vals) { (*fscalar)(*used_vars[0], s[0], mutate_vars[0]); };
+    num_use_vars    = 1;
+    num_mutate_vars = 1;
+    num_scalars     = 1;
+    type_mask       = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
     this->add_argument("lhs", "NDArray", "Left operand to the function.");
     this->add_argument("rhs", "real_t", "Right operand to the function.");
     return *this;
@@ -1450,14 +1475,16 @@ struct NDArrayFunctionReg
    * \param funary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(void (*funary)(const NDArray &src,
-                                                         NDArray *out)) {
-    body = [funary] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
-                     int num_params, char **param_keys, char **param_vals) {
-      (*funary)(*used_vars[0], mutate_vars[0]);
-    };
-    num_use_vars = 1; num_mutate_vars = 1;
-    type_mask = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
+  inline NDArrayFunctionReg& set_function(void (*funary)(const NDArray& src, NDArray* out)) {
+    body            = [funary](NDArray** used_vars,
+                    real_t* s,
+                    NDArray** mutate_vars,
+                    int num_params,
+                    char** param_keys,
+                    char** param_vals) { (*funary)(*used_vars[0], mutate_vars[0]); };
+    num_use_vars    = 1;
+    num_mutate_vars = 1;
+    type_mask       = kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget;
     this->add_argument("src", "NDArray", "Source input to the function.");
     return *this;
   }
@@ -1467,13 +1494,17 @@ struct NDArrayFunctionReg
    * \param fgeneric function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_function(
-    void (*fgeneric)(NDArray **used_vars,
-                     real_t *s,
-                     NDArray **mutate_vars,
-                     const std::map<std::string, std::string>& param)) {
-    body = [fgeneric] (NDArray **used_vars, real_t *s, NDArray **mutate_vars,
-                       int num_params, char **param_keys, char **param_vals) {
+  inline NDArrayFunctionReg& set_function(
+      void (*fgeneric)(NDArray** used_vars,
+                       real_t* s,
+                       NDArray** mutate_vars,
+                       const std::map<std::string, std::string>& param)) {
+    body = [fgeneric](NDArray** used_vars,
+                      real_t* s,
+                      NDArray** mutate_vars,
+                      int num_params,
+                      char** param_keys,
+                      char** param_vals) {
       std::map<std::string, std::string> param;
       for (int i = 0; i < num_params; ++i) {
         param[param_keys[i]] = param_vals[i];
@@ -1487,32 +1518,36 @@ struct NDArrayFunctionReg
    * \param n number of mutate variablesx
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_num_use_vars(unsigned n) {
-    num_use_vars = n; return *this;
+  inline NDArrayFunctionReg& set_num_use_vars(unsigned n) {
+    num_use_vars = n;
+    return *this;
   }
   /*!
    * \brief set the number of mutate variables
    * \param n number of mutate variablesx
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_num_mutate_vars(unsigned n) {
-    num_mutate_vars = n; return *this;
+  inline NDArrayFunctionReg& set_num_mutate_vars(unsigned n) {
+    num_mutate_vars = n;
+    return *this;
   }
   /*!
    * \brief set the number of scalar arguments
    * \param n number of scalar arguments
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_num_scalars(unsigned n) {
-    num_scalars = n; return *this;
+  inline NDArrayFunctionReg& set_num_scalars(unsigned n) {
+    num_scalars = n;
+    return *this;
   }
   /*!
    * \brief set type mask
    * \param tmask typemask
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg &set_type_mask(int tmask) {
-    type_mask = tmask; return *this;
+  inline NDArrayFunctionReg& set_type_mask(int tmask) {
+    type_mask = tmask;
+    return *this;
   }
 };  // NDArrayFunctionReg
 
@@ -1527,7 +1562,7 @@ struct NDArrayFunctionReg
  *
  * \endcode
  */
-#define MXNET_REGISTER_NDARRAY_FUN(name)                                 \
+#define MXNET_REGISTER_NDARRAY_FUN(name) \
   DMLC_REGISTRY_REGISTER(::mxnet::NDArrayFunctionReg, NDArrayFunctionReg, name)
 
 }  // namespace mxnet

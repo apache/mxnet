@@ -17,9 +17,6 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2015 by Contributors
- */
 #ifndef MXNET_ENGINE_THREAD_POOL_H_
 #define MXNET_ENGINE_THREAD_POOL_H_
 
@@ -43,14 +40,13 @@ class ThreadPool {
   /*! \brief Signal event upon destruction, even for exceptions (RAII) */
   struct SetReadyOnDestroy {
     explicit inline SetReadyOnDestroy(const std::shared_ptr<dmlc::ManualEvent>& event)
-      : event_(event) {
-    }
+        : event_(event) {}
     inline ~SetReadyOnDestroy() {
       if (event_) {
         event_->signal();
       }
     }
-    std::shared_ptr<dmlc::ManualEvent>  event_;
+    std::shared_ptr<dmlc::ManualEvent> event_;
   };
 
   /*!
@@ -58,8 +54,7 @@ class ThreadPool {
    * \param size size of the thread pool.
    * \param func the function to run on the thread pool.
    */
-  explicit ThreadPool(size_t size, std::function<void()> func)
-      : worker_threads_(size) {
+  explicit ThreadPool(size_t size, std::function<void()> func) : worker_threads_(size) {
     CHECK_GT(size, 0);
     for (auto& i : worker_threads_) {
       i = std::thread(func);

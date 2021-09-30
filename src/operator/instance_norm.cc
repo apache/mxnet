@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file instance_norm.cc
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 
 #include "./instance_norm-inl.h"
 
@@ -32,7 +31,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(InstanceNormParam);
 
 struct InstanceNormGrad {
-  const char *op_name;
+  const char* op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> out_data;
@@ -51,10 +50,9 @@ struct InstanceNormGrad {
   }
 };
 
-
 NNVM_REGISTER_OP(InstanceNorm)
-.add_alias("_npx_instance_norm")
-.describe(R"code(Applies instance normalization to the n-dimensional input array.
+    .add_alias("_npx_instance_norm")
+    .describe(R"code(Applies instance normalization to the n-dimensional input array.
 
 This operator takes an n-dimensional input array where (n>2) and normalizes
 the input using the following formula:
@@ -94,43 +92,47 @@ Examples::
                                 [[-0.99752653,  1.99752724]]]
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol",
-              "An n-dimensional input array (n > 2) of the form [batch, "
-              "channel, spatial_dim1, spatial_dim2, ...].")
-.add_argument("gamma", "NDArray-or-Symbol",
-              "A vector of length \'channel\', which multiplies the "
-              "normalized input.")
-.add_argument("beta", "NDArray-or-Symbol",
-              "A vector of length \'channel\', which is added to the "
-              "product of the normalized input and the weight.")
-.add_arguments(InstanceNormParam::__FIELDS__())
-.set_num_inputs(3)
-.set_num_outputs(3)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"data", "gamma", "beta"};
-})
-.set_attr<nnvm::FListOutputNames>("FListOutputNames",
-    [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"output"};
-})
-.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
-  [](const NodeAttrs& attrs) { return 1; })
-.set_attr_parser(ParamParser<InstanceNormParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", InstanceNormShape)
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", InstanceNormGrad{"_backward_instance_norm"})
-.set_attr<FCompute>("FCompute<cpu>", InstanceNormForward<cpu>);
+    .add_argument("data",
+                  "NDArray-or-Symbol",
+                  "An n-dimensional input array (n > 2) of the form [batch, "
+                  "channel, spatial_dim1, spatial_dim2, ...].")
+    .add_argument("gamma",
+                  "NDArray-or-Symbol",
+                  "A vector of length \'channel\', which multiplies the "
+                  "normalized input.")
+    .add_argument("beta",
+                  "NDArray-or-Symbol",
+                  "A vector of length \'channel\', which is added to the "
+                  "product of the normalized input and the weight.")
+    .add_arguments(InstanceNormParam::__FIELDS__())
+    .set_num_inputs(3)
+    .set_num_outputs(3)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data", "gamma", "beta"};
+                                     })
+    .set_attr<nnvm::FListOutputNames>("FListOutputNames",
+                                      [](const NodeAttrs& attrs) {
+                                        return std::vector<std::string>{"output"};
+                                      })
+    .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+                                        [](const NodeAttrs& attrs) { return 1; })
+    .set_attr_parser(ParamParser<InstanceNormParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", InstanceNormShape)
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<nnvm::FGradient>("FGradient", InstanceNormGrad{"_backward_instance_norm"})
+    .set_attr<FCompute>("FCompute<cpu>", InstanceNormForward<cpu>);
 
 NNVM_REGISTER_OP(_backward_instance_norm)
-.set_num_inputs(5)
-.set_num_outputs(3)
-.set_attr_parser(ParamParser<InstanceNormParam>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", InstanceNormBackward<cpu>);
+    .set_num_inputs(5)
+    .set_num_outputs(3)
+    .set_attr_parser(ParamParser<InstanceNormParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", InstanceNormBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_power_op.cc
  * \brief Operator for numpy sampling from power distributions
  */
@@ -32,41 +31,45 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyPowerParam);
 
 NNVM_REGISTER_OP(_npi_powerd)
-.set_num_inputs(
-  [](const nnvm::NodeAttrs& attrs) {
-    const NumpyPowerParam& param = nnvm::get<NumpyPowerParam>(attrs.parsed);
-    int num_inputs = 1;
-    if (param.a.has_value()) {
-      num_inputs -= 1;
-    }
-    return num_inputs;
-  })
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    const NumpyPowerParam& param = nnvm::get<NumpyPowerParam>(attrs.parsed);
-    int num_inputs = 1;
-    if (param.a.has_value()) {
-      num_inputs -= 1;
-    }
-    return (num_inputs == 0) ? std::vector<std::string>() : std::vector<std::string>{"input1"};
-  })
-.set_attr_parser(ParamParser<NumpyPowerParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", UnaryDistOpShape<NumpyPowerParam>)
-.set_attr<nnvm::FInferType>("FInferType",
-  [](const nnvm::NodeAttrs &attrs, std::vector<int> *in_attrs,  std::vector<int> *out_attrs) {
-    (*out_attrs)[0] = mshadow::kFloat32;
-    return true;
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const nnvm::NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{
-        ResourceRequest::kRandom, ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyPowerForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("input1", "NDArray-or-Symbol", "Source input")
-.add_arguments(NumpyPowerParam::__FIELDS__());
+    .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+      const NumpyPowerParam& param = nnvm::get<NumpyPowerParam>(attrs.parsed);
+      int num_inputs               = 1;
+      if (param.a.has_value()) {
+        num_inputs -= 1;
+      }
+      return num_inputs;
+    })
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       const NumpyPowerParam& param =
+                                           nnvm::get<NumpyPowerParam>(attrs.parsed);
+                                       int num_inputs = 1;
+                                       if (param.a.has_value()) {
+                                         num_inputs -= 1;
+                                       }
+                                       return (num_inputs == 0)
+                                                  ? std::vector<std::string>()
+                                                  : std::vector<std::string>{"input1"};
+                                     })
+    .set_attr_parser(ParamParser<NumpyPowerParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", UnaryDistOpShape<NumpyPowerParam>)
+    .set_attr<nnvm::FInferType>("FInferType",
+                                [](const nnvm::NodeAttrs& attrs,
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
+                                  (*out_attrs)[0] = mshadow::kFloat32;
+                                  return true;
+                                })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const nnvm::NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kRandom,
+                                                                      ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyPowerForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("input1", "NDArray-or-Symbol", "Source input")
+    .add_arguments(NumpyPowerParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

@@ -18,12 +18,11 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file spatial_transformer-inl.h
  * \brief
  *  Reproducing paper: aderberg M, Simonyan K, Zisserman A. "Spatial transformer networks"
  * \author Wei Wu
-*/
+ */
 #ifndef MXNET_OPERATOR_SPATIAL_TRANSFORMER_INL_H_
 #define MXNET_OPERATOR_SPATIAL_TRANSFORMER_INL_H_
 
@@ -38,17 +37,16 @@
 #include "./operator_common.h"
 #include "./linalg.h"
 
-
 namespace mxnet {
 namespace op {
 
 namespace st {
-enum SpatialTransformerOpInputs {kData, kLoc};
-enum SpatialTransformerOpOutputs {kOut, kGridDst, kGridSrc};
-enum SpatialTransformerOpResource {kTempSpace};
-enum SpatialTransformerTransformType {kAffine};
-enum SpatialTransformerSamplerType {kBilinear};
-}
+enum SpatialTransformerOpInputs { kData, kLoc };
+enum SpatialTransformerOpOutputs { kOut, kGridDst, kGridSrc };
+enum SpatialTransformerOpResource { kTempSpace };
+enum SpatialTransformerTransformType { kAffine };
+enum SpatialTransformerSamplerType { kBilinear };
+}  // namespace st
 
 struct SpatialTransformerParam : public dmlc::Parameter<SpatialTransformerParam> {
   mxnet::TShape target_shape;
@@ -57,50 +55,51 @@ struct SpatialTransformerParam : public dmlc::Parameter<SpatialTransformerParam>
   dmlc::optional<bool> cudnn_off;
   DMLC_DECLARE_PARAMETER(SpatialTransformerParam) {
     int shape[] = {0, 0};
-    DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape(shape, shape + 2))
+    DMLC_DECLARE_FIELD(target_shape)
+        .set_default(mxnet::TShape(shape, shape + 2))
         .describe("output shape(h, w) of spatial transformer: (y, x)");
-    DMLC_DECLARE_FIELD(transform_type).add_enum("affine", st::kAffine)
+    DMLC_DECLARE_FIELD(transform_type)
+        .add_enum("affine", st::kAffine)
         .describe("transformation type");
-    DMLC_DECLARE_FIELD(sampler_type).add_enum("bilinear", st::kBilinear)
-        .describe("sampling type");
-    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>())
+    DMLC_DECLARE_FIELD(sampler_type).add_enum("bilinear", st::kBilinear).describe("sampling type");
+    DMLC_DECLARE_FIELD(cudnn_off)
+        .set_default(dmlc::optional<bool>())
         .describe("whether to turn cudnn off");
   }
 };
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 class SpatialTransformerOp : public Operator {
  public:
   explicit SpatialTransformerOp(SpatialTransformerParam p) {
     this->param_ = p;
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  virtual void Forward(const OpContext& ctx,
+                       const std::vector<TBlob>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& out_data,
+                       const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 2U);
     CHECK_EQ(out_data.size(), 3U);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4, DType> data = in_data[st::kData].get<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> out = out_data[st::kOut].get<xpu, 4, DType>(s);
+    Stream<xpu>* s                 = ctx.get_stream<xpu>();
+    Tensor<xpu, 4, DType> data     = in_data[st::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> out      = out_data[st::kOut].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> grid_dst = out_data[st::kGridDst].get<xpu, 2, DType>(s);
     Tensor<xpu, 3, DType> grid_src = out_data[st::kGridSrc].get<xpu, 3, DType>(s);
-    Shape<3> loc_shape = Shape3(data.size(0), 2, 3);
-    Tensor<xpu, 3, DType> loc = in_data[st::kLoc].get_with_shape<xpu, 3, DType>(loc_shape, s);
+    Shape<3> loc_shape             = Shape3(data.size(0), 2, 3);
+    Tensor<xpu, 3, DType> loc      = in_data[st::kLoc].get_with_shape<xpu, 3, DType>(loc_shape, s);
     Tensor<cpu, 2, DType> workspace =
-          ctx.requested[st::kTempSpace].get_host_space_typed<2, DType>(
-          grid_dst.shape_);
+        ctx.requested[st::kTempSpace].get_host_space_typed<2, DType>(grid_dst.shape_);
     for (index_t i = 1; i <= workspace.size(1); i++) {
       // grid dst coordinate is (x, y, 1)
-      workspace[0][i-1] = -1.0 + (i-1) % param_.target_shape[1] * 2.0 /
-                          (param_.target_shape[1] - 1);
-      workspace[1][i-1] = -1.0 + (i-1) / param_.target_shape[1] * 2.0 /
-                          (param_.target_shape[0] - 1);
-      workspace[2][i-1] = 1.0;
+      workspace[0][i - 1] =
+          -1.0 + (i - 1) % param_.target_shape[1] * 2.0 / (param_.target_shape[1] - 1);
+      workspace[1][i - 1] =
+          -1.0 + (i - 1) / param_.target_shape[1] * 2.0 / (param_.target_shape[0] - 1);
+      workspace[2][i - 1] = 1.0;
     }
     Copy(grid_dst, workspace, grid_dst.stream_);
     for (index_t batch = 0; batch < data.size(0); batch++) {
@@ -115,26 +114,26 @@ class SpatialTransformerOp : public Operator {
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  virtual void Backward(const OpContext& ctx,
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 2U);
     CHECK_EQ(out_data.size(), 3U);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4, DType> data = in_data[st::kData].get<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> grad = out_grad[st::kOut].get<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> gdata = in_grad[st::kData].get<xpu, 4, DType>(s);
+    Stream<xpu>* s                 = ctx.get_stream<xpu>();
+    Tensor<xpu, 4, DType> data     = in_data[st::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> grad     = out_grad[st::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> gdata    = in_grad[st::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> grid_dst = out_data[st::kGridDst].get<xpu, 2, DType>(s);
     Tensor<xpu, 3, DType> grid_src = out_data[st::kGridSrc].get<xpu, 3, DType>(s);
-    Shape<3> loc_shape = Shape3(data.size(0), 2, 3);
-    Tensor<xpu, 3, DType> gloc = in_grad[st::kLoc].get_with_shape<xpu, 3, DType>(loc_shape, s);
-    gdata = 0.0;
+    Shape<3> loc_shape             = Shape3(data.size(0), 2, 3);
+    Tensor<xpu, 3, DType> gloc     = in_grad[st::kLoc].get_with_shape<xpu, 3, DType>(loc_shape, s);
+    gdata                          = 0.0;
     if (param_.sampler_type == st::kBilinear) {
       BilinearSamplingBackward(gdata, grid_src, grad, data);
     }
@@ -151,7 +150,7 @@ class SpatialTransformerOp : public Operator {
   SpatialTransformerParam param_;
 };  // class SpatialTransformerOp
 
-template<typename xpu>
+template <typename xpu>
 Operator* CreateOp(SpatialTransformerParam param, int dtype);
 
 #if DMLC_USE_CXX11
@@ -166,7 +165,7 @@ class SpatialTransformerProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListArguments() const override {
-      return {"data", "loc"};
+    return {"data", "loc"};
   }
 
   std::vector<std::string> ListOutputs() const override {
@@ -181,68 +180,67 @@ class SpatialTransformerProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, loc]";
     CHECK_EQ(param_.transform_type, st::kAffine) << "only supports affine transform currently";
     CHECK_EQ(param_.sampler_type, st::kBilinear) << "only supports bilinear sampling currently";
-    const mxnet::TShape &dshape = (*in_shape)[st::kData];
-    const mxnet::TShape &lshape = (*in_shape)[st::kLoc];
-    if (!shape_is_known(dshape)) return false;
-    CHECK_EQ(dshape.ndim(), 4U) \
-        << "input data should be 4D in batch-num_filter-y-x";
-    if (!shape_is_known(lshape)) return false;
-    CHECK_EQ(lshape.ndim(), 2U) \
-        << "locolisation paramter should be 4D in batch-num_hidden";
+    const mxnet::TShape& dshape = (*in_shape)[st::kData];
+    const mxnet::TShape& lshape = (*in_shape)[st::kLoc];
+    if (!shape_is_known(dshape))
+      return false;
+    CHECK_EQ(dshape.ndim(), 4U) << "input data should be 4D in batch-num_filter-y-x";
+    if (!shape_is_known(lshape))
+      return false;
+    CHECK_EQ(lshape.ndim(), 2U) << "locolisation paramter should be 4D in batch-num_hidden";
     if (param_.transform_type == st::kAffine) {
       CHECK_EQ(lshape[1], 6U) << "incorrect locolisation network shape[1], should be 6";
     }
     out_shape->clear();
     out_shape->push_back(dshape);
-    CHECK_GT(param_.target_shape[0], 0U) \
-        << "incorrect target_shape: " << param_.target_shape[0];
-    CHECK_GT(param_.target_shape[1], 0U) \
-        << "incorrect target_shape: " << param_.target_shape[1];
+    CHECK_GT(param_.target_shape[0], 0U) << "incorrect target_shape: " << param_.target_shape[0];
+    CHECK_GT(param_.target_shape[1], 0U) << "incorrect target_shape: " << param_.target_shape[1];
     (*out_shape)[st::kOut][2] = param_.target_shape[0];
     (*out_shape)[st::kOut][3] = param_.target_shape[1];
-    out_shape->push_back(Shape2(3, param_.target_shape[0]*param_.target_shape[1]));
-    out_shape->push_back(Shape3(dshape[0], 2, param_.target_shape[0]*param_.target_shape[1]));
+    out_shape->push_back(Shape2(3, param_.target_shape[0] * param_.target_shape[1]));
+    out_shape->push_back(Shape3(dshape[0], 2, param_.target_shape[0] * param_.target_shape[1]));
     return true;
   }
 
-  bool InferType(std::vector<int> *in_type,
-                   std::vector<int> *out_type,
-                   std::vector<int> *aux_type) const override {
-      int dtype = -1;
-      for (int i_type : *in_type) {
-        if (dtype == -1) {
-          dtype = i_type;
-        } else {
-          CHECK(i_type == dtype ||
-              i_type == -1) <<
-                "Non-uniform data type in SpatialTransformer";
-        }
-      }
+  bool InferType(std::vector<int>* in_type,
+                 std::vector<int>* out_type,
+                 std::vector<int>* aux_type) const override {
+    int dtype = -1;
+    for (int i_type : *in_type) {
       if (dtype == -1) {
-        LOG(FATAL) << "Not enough information to infer type in SpatialTransformer.";
-        return false;
+        dtype = i_type;
+      } else {
+        CHECK(i_type == dtype || i_type == -1) << "Non-uniform data type in SpatialTransformer";
       }
-      size_t nin = this->ListArguments().size();
-      in_type->clear();
-      for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
-      size_t naux = this->ListAuxiliaryStates().size();
-      aux_type->clear();
-      for (size_t i = 0; i < naux; ++i) aux_type->push_back(dtype);
-      size_t nout = this->ListOutputs().size();
-      out_type->clear();
-      for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
-      return true;
     }
+    if (dtype == -1) {
+      LOG(FATAL) << "Not enough information to infer type in SpatialTransformer.";
+      return false;
+    }
+    size_t nin = this->ListArguments().size();
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i)
+      in_type->push_back(dtype);
+    size_t naux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (size_t i = 0; i < naux; ++i)
+      aux_type->push_back(dtype);
+    size_t nout = this->ListOutputs().size();
+    out_type->clear();
+    for (size_t i = 0; i < nout; ++i)
+      out_type->push_back(dtype);
+    return true;
+  }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new SpatialTransformerProp();
+    auto ptr    = new SpatialTransformerProp();
     ptr->param_ = param_;
     return ptr;
   }
@@ -251,40 +249,34 @@ class SpatialTransformerProp : public OperatorProperty {
     return "SpatialTransformer";
   }
 
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
-    return {out_grad[st::kOut],
-            out_data[st::kGridDst],
-            out_data[st::kGridSrc],
-            in_data[st::kData]
-           };
+  std::vector<int> DeclareBackwardDependency(const std::vector<int>& out_grad,
+                                             const std::vector<int>& in_data,
+                                             const std::vector<int>& out_data) const override {
+    return {out_grad[st::kOut], out_data[st::kGridDst], out_data[st::kGridSrc], in_data[st::kData]};
   }
 
-  std::vector<ResourceRequest> ForwardResource(
-      const mxnet::ShapeVector &in_shape) const override {
+  std::vector<ResourceRequest> ForwardResource(const mxnet::ShapeVector& in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
-  #if MXNET_USE_CUDNN == 1
-  std::vector<ResourceRequest> BackwardResource(
-      const mxnet::ShapeVector &in_shape) const override {
+#if MXNET_USE_CUDNN == 1
+  std::vector<ResourceRequest> BackwardResource(const mxnet::ShapeVector& in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
-  #endif
+#endif
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
     return nullptr;
   }
 
-  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                             std::vector<int> *in_type) const override;
+  Operator* CreateOperatorEx(Context ctx,
+                             mxnet::ShapeVector* in_shape,
+                             std::vector<int>* in_type) const override;
 
  private:
   SpatialTransformerParam param_;
-};  // class SpatialTransformerProp
+};      // class SpatialTransformerProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet

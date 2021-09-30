@@ -37,7 +37,7 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu>
+template <typename xpu>
 void DGLAdjacencyForwardEx(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<NDArray>& inputs,
@@ -49,14 +49,14 @@ void DGLAdjacencyForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs[0].storage_type(), kCSRStorage);
   CHECK_EQ(outputs[0].storage_type(), kCSRStorage);
   CHECK_EQ(req[0], kWriteTo);
-  const TBlob &in_idx = inputs[0].aux_data(csr::kIdx);
-  const TBlob &in_indptr = inputs[0].aux_data(csr::kIndPtr);
+  const TBlob& in_idx    = inputs[0].aux_data(csr::kIdx);
+  const TBlob& in_indptr = inputs[0].aux_data(csr::kIndPtr);
 
   outputs[0].CheckAndAllocData(in_idx.shape_);
   outputs[0].CheckAndAllocAuxData(csr::kIdx, in_idx.shape_);
   outputs[0].CheckAndAllocAuxData(csr::kIndPtr, in_indptr.shape_);
 
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   Fill<false>(s, outputs[0].data(), req[0], 1.0);
   mxnet_op::copy(s, outputs[0].aux_data(csr::kIdx), in_idx);
   mxnet_op::copy(s, outputs[0].aux_data(csr::kIndPtr), in_indptr);

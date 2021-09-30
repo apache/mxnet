@@ -23,7 +23,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_dgl_adjacency)
-.set_attr<FComputeEx>("FComputeEx<gpu>", DGLAdjacencyForwardEx<gpu>);
+    .set_attr<FComputeEx>("FComputeEx<gpu>", DGLAdjacencyForwardEx<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

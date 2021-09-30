@@ -254,7 +254,7 @@ def test_pos_single_concat(data_shape, input_num, dim, out_type):
     def __init__(self, input_num, dim, **kwargs):
         super(SingleConcat, self).__init__(**kwargs)
         self.concat = nn.HybridConcatenate(axis=dim)
-        for i in range(input_num):
+        for _ in range(input_num):
             self.concat.add(nn.Identity())
 
     def forward(self, x):
@@ -289,7 +289,6 @@ def test_pos_single_concat_pos_neg(data_shape, out_type):
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('out_type', ['int8', 'auto'])
-@pytest.mark.skip("Scale doesn't align in numpy for numpy operators")
 def test_pos_concat_scale_align(data_shape, out_type):
   # concat scale alignment case
   class ConcatScaleAlign(nn.HybridBlock):

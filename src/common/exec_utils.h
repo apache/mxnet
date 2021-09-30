@@ -37,10 +37,10 @@ namespace mxnet {
 namespace common {
 
 #if MXNET_USE_ONEDNN == 1
-     // We have to make sure it's default storage and default layout.
-#define DEFAULT_DATA(x)    x.IsDefaultData()
+// We have to make sure it's default storage and default layout.
+#define DEFAULT_DATA(x) x.IsDefaultData()
 #else
-#define DEFAULT_DATA(x)    (x.storage_type() == kDefaultStorage)
+#define DEFAULT_DATA(x) (x.storage_type() == kDefaultStorage)
 #endif
 
 /*
@@ -57,18 +57,18 @@ namespace common {
  * \return true if any source NDArray need to cast storage
  */
 inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
-                                const std::vector<NDArray> *bufs,
-                                std::vector<TBlob> *blobs,
-                                std::vector<NDArray> *temp_src,
-                                std::vector<NDArray> *temp_dst,
-                                std::unordered_map<uint32_t, uint32_t> *idx_map) {
+                                const std::vector<NDArray>* bufs,
+                                std::vector<TBlob>* blobs,
+                                std::vector<NDArray>* temp_src,
+                                std::vector<NDArray>* temp_dst,
+                                std::unordered_map<uint32_t, uint32_t>* idx_map) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
     const auto& nd = src[i];
     if (!DEFAULT_DATA(nd)) {
       (*idx_map)[i] = temp_dst->size();
-      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
-                                                             true, nd.dtype());
+      NDArray temp =
+          bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
 #if MXNET_USE_ONEDNN == 1
       CHECK(temp.IsDefaultData());
 #endif
@@ -84,11 +84,11 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
 }
 
 inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
-                                 const std::vector<NDArray> *bufs,
-                                 std::vector<OpReqType> *req,
-                                 std::vector<TBlob> *blobs,
-                                 std::vector<NDArray> *temp_src,
-                                 std::vector<NDArray> *temp_dst) {
+                                 const std::vector<NDArray>* bufs,
+                                 std::vector<OpReqType>* req,
+                                 std::vector<TBlob>* blobs,
+                                 std::vector<NDArray>* temp_src,
+                                 std::vector<NDArray>* temp_dst) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
     const auto& nd = src[i];
@@ -100,7 +100,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
       // the input array and the output array are no longer the same array.
       // we should change the request type.
       req->at(i) = kWriteTo;
-    // We have to make sure it's default storage and default layout.
+      // We have to make sure it's default storage and default layout.
 #endif
     if (!DEFAULT_DATA(nd)) {
 #if MXNET_USE_ONEDNN == 1
@@ -108,14 +108,14 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
       if (bufs != nullptr) {
         temp = bufs->at(i);
       } else if (kAddTo == req->at(i)) {
-        temp = nd.IsMKLDNNData()? nd.Reorder2Default() : nd;
+        temp = nd.IsMKLDNNData() ? nd.Reorder2Default() : nd;
       } else {
         temp = NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
       }
       CHECK(temp.IsDefaultData());
 #else
-      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
-          true, nd.dtype());
+      NDArray temp =
+          bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
 #endif
       temp_src->emplace_back(nd);
       temp_dst->emplace_back(temp);
@@ -135,25 +135,23 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
  *        function also records the indices of non-default source NDArrays and the indices of
  *        their corresponding temporary NDArrays in the temp array.
  */
-inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
-                                   const std::vector<NDArray> &ndoutputs,
-                                   const std::vector<NDArray> *in_bufs,
-                                   const std::vector<NDArray> *out_bufs,
-                                   std::vector<OpReqType> *req,
-                                   std::vector<TBlob> *input_blobs,
-                                   std::vector<TBlob> *output_blobs,
-                                   std::vector<NDArray> *pre_temp_src,
-                                   std::vector<NDArray> *pre_temp_dst,
-                                   std::vector<NDArray> *post_temp_src,
-                                   std::vector<NDArray> *post_temp_dst,
-                                   std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
-                                   const std::vector<uint32_t> &mutate_idx) {
+inline void SetupDefaultBlobsInOut(const std::vector<NDArray>& ndinputs,
+                                   const std::vector<NDArray>& ndoutputs,
+                                   const std::vector<NDArray>* in_bufs,
+                                   const std::vector<NDArray>* out_bufs,
+                                   std::vector<OpReqType>* req,
+                                   std::vector<TBlob>* input_blobs,
+                                   std::vector<TBlob>* output_blobs,
+                                   std::vector<NDArray>* pre_temp_src,
+                                   std::vector<NDArray>* pre_temp_dst,
+                                   std::vector<NDArray>* post_temp_src,
+                                   std::vector<NDArray>* post_temp_dst,
+                                   std::unordered_map<uint32_t, uint32_t>* in_temp_idx_map,
+                                   const std::vector<uint32_t>& mutate_idx) {
   // populate input blobs
-  SetupDefaultBlobsIn(ndinputs, in_bufs, input_blobs, pre_temp_src, pre_temp_dst,
-                      in_temp_idx_map);
+  SetupDefaultBlobsIn(ndinputs, in_bufs, input_blobs, pre_temp_src, pre_temp_dst, in_temp_idx_map);
   // populate output blobs
-  SetupDefaultBlobsOut(ndoutputs, out_bufs, req, output_blobs, post_temp_dst,
-                       post_temp_src);
+  SetupDefaultBlobsOut(ndoutputs, out_bufs, req, output_blobs, post_temp_dst, post_temp_src);
   // add mutable inputs to post temp list
   for (const auto idx : mutate_idx) {
     auto map_iter = in_temp_idx_map->find(idx);
@@ -193,22 +191,25 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
  *         types to the same type of one of the inputs or outputs.
  */
 inline bool SameType(const nnvm::NodeAttrs& attrs,
-                     std::vector<int> *iattr,
-                     std::vector<int> *oattr) {
+                     std::vector<int>* iattr,
+                     std::vector<int>* oattr) {
   int def_v = -1;
   for (int v : *oattr) {
     if (v != -1) {
-      def_v = v; break;
+      def_v = v;
+      break;
     }
   }
   if (def_v == -1) {
     for (int v : *iattr) {
       if (v != -1) {
-        def_v = v; break;
+        def_v = v;
+        break;
       }
     }
   }
-  if (def_v == -1) return false;
+  if (def_v == -1)
+    return false;
   for (int& v : *oattr) {
     v = def_v;
   }
@@ -218,7 +219,6 @@ inline bool SameType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-
 /*! \brief The default storage type inference function, which assigns all undefined
  *         storage types to kDefaultStorage. If all of input and output storage types
  *         are kDefaultStorage, DispatchMode::kFCompute is assigned to dispatch_mode. Otherwise,
@@ -227,16 +227,20 @@ inline bool SameType(const nnvm::NodeAttrs& attrs,
 inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                                const int dev_mask,
                                DispatchMode* dispatch_mode,
-                               std::vector<int> *iattr,
-                               std::vector<int> *oattr) {
+                               std::vector<int>* iattr,
+                               std::vector<int>* oattr) {
   bool fallback = false;
   for (int& v : *oattr) {
-    if (v == -1) v = kDefaultStorage;
-    if (v != kDefaultStorage) fallback = true;
+    if (v == -1)
+      v = kDefaultStorage;
+    if (v != kDefaultStorage)
+      fallback = true;
   }
   for (int& v : *iattr) {
-    if (v == -1) v = kDefaultStorage;
-    if (v != kDefaultStorage) fallback = true;
+    if (v == -1)
+      v = kDefaultStorage;
+    if (v != kDefaultStorage)
+      fallback = true;
   }
   if (*dispatch_mode == DispatchMode::kUndefined) {
     if (fallback) {
@@ -282,15 +286,15 @@ inline std::string storage_str(int storage_id) {
    ...
  */
 inline void LogMemoryPlan(const nnvm::Graph& g) {
-  const auto &idx = g.indexed_graph();
+  const auto& idx    = g.indexed_graph();
   const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
-  const auto& vtype = g.GetAttr<nnvm::DTypeVector>("dtype");
+  const auto& vtype  = g.GetAttr<nnvm::DTypeVector>("dtype");
   // find node range
   uint32_t node_start = 0, node_end = idx.num_nodes();
   if (g.attrs.count("node_range")) {
     const auto& range = g.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
-    node_start = range.first;
-    node_end = range.second;
+    node_start        = range.first;
+    node_end          = range.second;
   }
   for (uint32_t nid = node_start; nid < node_end; ++nid) {
     const auto& inode = idx[nid];
@@ -299,16 +303,14 @@ inline void LogMemoryPlan(const nnvm::Graph& g) {
     } else {
       LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
       for (const auto& e : inode.inputs) {
-        auto eid = idx.entry_id(e);
+        auto eid          = idx.entry_id(e);
         size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
-        LOG(INFO) << "\t\tinput " << eid << ": " << vshape[eid] << " ("
-                  << kilo_bytes << " KB)";
+        LOG(INFO) << "\t\tinput " << eid << ": " << vshape[eid] << " (" << kilo_bytes << " KB)";
       }
       for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-        uint32_t eid = idx.entry_id(nid, index);
+        uint32_t eid      = idx.entry_id(nid, index);
         size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
-        LOG(INFO) << "\t\toutput " << eid << ": " << vshape[eid] << " ("
-                  << kilo_bytes << " KB)";
+        LOG(INFO) << "\t\toutput " << eid << ": " << vshape[eid] << " (" << kilo_bytes << " KB)";
       }
     }
   }
@@ -340,22 +342,22 @@ inline void LogMemoryPlan(const nnvm::Graph& g) {
     ...
  */
 inline void LogInferStorage(const nnvm::Graph& g) {
-  const auto &idx = g.indexed_graph();
-  const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
+  const auto& idx            = g.indexed_graph();
+  const auto& vstorage_type  = g.GetAttr<StorageTypeVector>("storage_type");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   uint32_t node_start = 0, node_end = idx.num_nodes();
   if (g.attrs.count("node_range")) {
     const auto& range = g.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
-    node_start = range.first;
-    node_end = range.second;
+    node_start        = range.first;
+    node_end          = range.second;
   }
   for (uint32_t nid = node_start; nid < node_end; ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) {
       LOG(INFO) << "node " << nid << " var";
     } else {
-      LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
-                << ": " << dispatch_mode_string(dispatch_modes[nid]);
+      LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name << ": "
+                << dispatch_mode_string(dispatch_modes[nid]);
       for (const auto& e : inode.inputs) {
         auto eid = idx.entry_id(e);
         LOG(INFO) << "\t\tinput " << eid << ": " << stype_string(vstorage_type[eid]);
@@ -432,39 +434,39 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
                                  const std::vector<OpReqType>& grad_req_types,
                                  size_t num_forward_inputs,
                                  size_t num_forward_outputs) {
-  const auto& idx = g.indexed_graph();
+  const auto& idx           = g.indexed_graph();
   const auto& mutable_nodes = idx.mutable_input_nodes();
   // default use default context.
   if (ctx_map.size() == 0) {
-    g.attrs["context"] = std::make_shared<nnvm::any>(
-        exec::ContextVector(idx.num_nodes(), default_ctx));
+    g.attrs["context"] =
+        std::make_shared<nnvm::any>(exec::ContextVector(idx.num_nodes(), default_ctx));
     for (const auto& x : in_arg_ctxes) {
-      CHECK(x == default_ctx)
-          << "Input array is in " << x << " while binding with ctx=" << default_ctx
-          << ". All arguments must be in global context (" << default_ctx
-          << ") unless group2ctx is specified for cross-device graph.";
+      CHECK(x == default_ctx) << "Input array is in " << x
+                              << " while binding with ctx=" << default_ctx
+                              << ". All arguments must be in global context (" << default_ctx
+                              << ") unless group2ctx is specified for cross-device graph.";
     }
     for (const auto& x : arg_grad_ctxes) {
-      CHECK(x == default_ctx)
-          << "Gradient array is in " << x << " while binding with ctx="
-          << default_ctx << ". All gradients must be in global context (" << default_ctx
-          << ") unless group2ctx is specified for cross-device graph.";
+      CHECK(x == default_ctx) << "Gradient array is in " << x
+                              << " while binding with ctx=" << default_ctx
+                              << ". All gradients must be in global context (" << default_ctx
+                              << ") unless group2ctx is specified for cross-device graph.";
     }
     return g;
   }
 
   // otherwise, use context assignment.
-  std::map<Context, int> ctx2id;  // map ctx to device id
-  std::vector<Context> ctx_list;  // index is device id
+  std::map<Context, int> ctx2id;                   // map ctx to device id
+  std::vector<Context> ctx_list;                   // index is device id
   nnvm::DeviceVector device(idx.num_nodes(), -1);  // index is node id
-  nnvm::DeviceAssignMap device_map;  // map arg name to device id
+  nnvm::DeviceAssignMap device_map;                // map arg name to device id
 
   // loop through the user input ctx_map and
   // populate maps and lists
-  for (auto &kv : ctx_map) {
+  for (auto& kv : ctx_map) {
     if (ctx2id.count(kv.second) == 0) {  // if context has no device id, create one
       ctx2id[kv.second] = static_cast<int>(ctx_list.size());  // assign device id to ctx
-      ctx_list.push_back(kv.second);  // save ctx to the list
+      ctx_list.push_back(kv.second);                          // save ctx to the list
     }
     // assign device id to to the arg name with the corresponding ctx
     device_map[kv.first] = ctx2id.at(kv.second);
@@ -487,7 +489,7 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
     }
     if (ctx2id.count(ctx) == 0) {  // if the current ctx is not in the map of ctx and device id
       ctx2id[ctx] = static_cast<int>(ctx_list.size());  // assign the current ctx with device id
-      ctx_list.push_back(ctx);  // save the current ctx in the list
+      ctx_list.push_back(ctx);                          // save the current ctx in the list
     }
     device[nid] = ctx2id.at(ctx);  // assign device id to the current node
   }
@@ -500,9 +502,10 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
   CHECK_GE(grad_req_types.size(), g.outputs.size() - num_forward_outputs)
       << "insufficient number of grad_reqs";
   for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i, ++arg_grad_offset) {
-    while (grad_req_types[arg_grad_offset] == kNullOp) ++arg_grad_offset;
+    while (grad_req_types[arg_grad_offset] == kNullOp)
+      ++arg_grad_offset;
     const uint32_t nid = idx.outputs()[i].node_id;
-    Context ctx = arg_grad_ctxes[arg_grad_offset];
+    Context ctx        = arg_grad_ctxes[arg_grad_offset];
     if (ctx2id.count(ctx) == 0) {
       ctx2id[ctx] = static_cast<int>(ctx_list.size());
       ctx_list.push_back(ctx);
@@ -516,7 +519,7 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
   }
 
   g.attrs["device"] = std::make_shared<dmlc::any>(std::move(device));
-  g = nnvm::pass::PlaceDevice(g, "__ctx_group__", device_map, "_CrossDeviceCopy");
+  g                 = nnvm::pass::PlaceDevice(g, "__ctx_group__", device_map, "_CrossDeviceCopy");
   const auto& assigned_devices = g.GetAttr<nnvm::DeviceVector>("device");
 
   exec::ContextVector vcontext;
@@ -531,17 +534,17 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
   // after device planning, we should check again
   // if the assigned device of gradient node
   // corresponds to storage of grads
-  auto &new_idx = g.indexed_graph();
+  auto& new_idx   = g.indexed_graph();
   arg_grad_offset = 0;
   for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i, ++arg_grad_offset) {
-    while (grad_req_types[arg_grad_offset] == kNullOp) ++arg_grad_offset;
+    while (grad_req_types[arg_grad_offset] == kNullOp)
+      ++arg_grad_offset;
     const uint32_t nid = new_idx.outputs()[i].node_id;
-    Context ctx = arg_grad_ctxes[arg_grad_offset];
-    CHECK(ctx == vcontext[nid])
-        << "Trying to save gradient to " << ctx
-        << " while its source node \"" << new_idx[nid].source->attrs.name
-        << "\" computes it on " << vcontext[nid]
-        << ". Check your ctx in NDArray allocation.";
+    Context ctx        = arg_grad_ctxes[arg_grad_offset];
+    CHECK(ctx == vcontext[nid]) << "Trying to save gradient to " << ctx
+                                << " while its source node \"" << new_idx[nid].source->attrs.name
+                                << "\" computes it on " << vcontext[nid]
+                                << ". Check your ctx in NDArray allocation.";
   }
 
   g.attrs["context"] = std::make_shared<nnvm::any>(std::move(vcontext));
@@ -556,7 +559,7 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
  * \param copy_variable whether to copy or reuse Variable nodes from the
  *                      source graph
  */
-void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables);
+void CopyGraph(nnvm::Graph* dst, const nnvm::Graph& src, bool copy_variables);
 
 /*!
  * \brief Check whether graph contains any duplicated names in its inputs.
@@ -565,9 +568,8 @@ void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables);
  *
  * \return true if there are no duplicates, false otherwise
  */
-bool CheckForInputNameDuplicates(const nnvm::IndexedGraph &idx);
+bool CheckForInputNameDuplicates(const nnvm::IndexedGraph& idx);
 
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_
-

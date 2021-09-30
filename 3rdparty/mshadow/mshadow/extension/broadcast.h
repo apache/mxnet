@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file broadcast.h
  * \brief support for broadcast and repmat
  * \author Tianqi Chen

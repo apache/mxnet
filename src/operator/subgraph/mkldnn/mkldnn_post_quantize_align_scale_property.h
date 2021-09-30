@@ -23,7 +23,9 @@
 
 #include <string>
 #include <vector>
+
 #include "../common.h"
+
 #include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
@@ -31,8 +33,8 @@ namespace op {
 
 class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
  public:
-  bool Select(const BiDirectedNode &sn) override {
-    const auto &n = *sn.node;
+  bool Select(const BiDirectedNode& sn) override {
+    const auto& n = *sn.node;
     if (n.op() == Op::Get("_contrib_quantized_concat")) {
       head_ = sn;
       matched_list_.clear();
@@ -44,11 +46,13 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  bool SelectInput(const BiDirectedNode &sn, const BiDirectedNode &snew_node) override {
-    const auto &n = *sn.node;
-    const auto &new_node = *snew_node.node;
-    if (new_node.is_variable()) return false;
-    if (visit_list_.count(&n) == 0) return false;
+  bool SelectInput(const BiDirectedNode& sn, const BiDirectedNode& snew_node) override {
+    const auto& n        = *sn.node;
+    const auto& new_node = *snew_node.node;
+    if (new_node.is_variable())
+      return false;
+    if (visit_list_.count(&n) == 0)
+      return false;
     bool multiple_outputs = false;
     for (auto i : snew_node.outputs) {
       if (visit_list_.count(i.first) == 0) {
@@ -56,7 +60,8 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
         break;
       }
     }
-    if (multiple_outputs) return false;
+    if (multiple_outputs)
+      return false;
     if (new_node.attrs.dict.count("min_calib_range") != 0 &&
         new_node.attrs.dict.count("max_calib_range") != 0) {
       matched_list_.push_back(&snew_node);
@@ -69,11 +74,13 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  bool SelectOutput(const BiDirectedNode &sn, const BiDirectedNode &snew_node) override {
-    if (!select_output_) return false;
-    const auto &n = *sn.node;
-    const auto &new_node = *snew_node.node;
-    if (new_node.is_variable()) return false;
+  bool SelectOutput(const BiDirectedNode& sn, const BiDirectedNode& snew_node) override {
+    if (!select_output_)
+      return false;
+    const auto& n        = *sn.node;
+    const auto& new_node = *snew_node.node;
+    if (new_node.is_variable())
+      return false;
     if (visit_list_.count(&n) == 0) {
       return false;
     }
@@ -85,13 +92,13 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  std::vector<BiDirectedNode *> Filter(const std::vector<BiDirectedNode *> &candidates) override {
+  std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
     if (matched_list_.size() < 2) {
-      return std::vector<BiDirectedNode *>(0);
+      return std::vector<BiDirectedNode*>(0);
     } else {
-      std::vector<BiDirectedNode *> ret;
+      std::vector<BiDirectedNode*> ret;
       for (auto i : matched_list_) {
-        ret.push_back(const_cast<BiDirectedNode *>(i));
+        ret.push_back(const_cast<BiDirectedNode*>(i));
       }
       return ret;
     }
@@ -106,7 +113,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
  private:
   BiDirectedNode head_;
   bool select_output_;
-  std::vector<const BiDirectedNode *> matched_list_;
+  std::vector<const BiDirectedNode*> matched_list_;
   std::unordered_set<const nnvm::Node*> visit_list_;
 };
 
@@ -115,46 +122,49 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
   SgMKLDNNPostQuantizeAlignScaleProperty() : SubgraphProperty(kAdjust) {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN post-quantization scale alignment optimization pass";
-    auto property = std::make_shared<SgMKLDNNPostQuantizeAlignScaleProperty>();
+    static const std::string& name = "MKLDNN post-quantization scale alignment optimization pass";
+    auto property                  = std::make_shared<SgMKLDNNPostQuantizeAlignScaleProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
 
-/*!
- * \brief Adjust selected nodes calibration range with maximum calib range.
- * For example,
- * conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
- *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
- * conv2 = mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2', num_filter=64,
- *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
- * conv3 = mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3', num_filter=64,
- *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
- * conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
- *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
- * concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
- *
- * This pass will collect the maximum calib range from conv1 to conv4, and apply it to all
- * conv1 to conv4. Then concat don't need extra scale alignment operation. Performance and
- * accuracy are both improved.
- */
-  void AdjustSubgraphNode(const std::vector<nnvm::Node *> &subgraph_nodes,
-                          const SubgraphSelectorV2Ptr &subgraph_selector,
+  /*!
+   * \brief Adjust selected nodes calibration range with maximum calib range.
+   * For example,
+   * conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
+   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+   * conv2 = mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2', num_filter=64,
+   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+   * conv3 = mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3', num_filter=64,
+   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+   * conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
+   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+   * concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
+   *
+   * This pass will collect the maximum calib range from conv1 to conv4, and apply it to all
+   * conv1 to conv4. Then concat don't need extra scale alignment operation. Performance and
+   * accuracy are both improved.
+   */
+  void AdjustSubgraphNode(const std::vector<nnvm::Node*>& subgraph_nodes,
+                          const SubgraphSelectorV2Ptr& subgraph_selector,
                           const int subgraph_id = 0) const override {
     float min_calib = 0.0f;
     float max_calib = 0.0f;
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
       auto this_min_calib = std::stof(subgraph_nodes[i]->attrs.dict["min_calib_range"]);
       auto this_max_calib = std::stof(subgraph_nodes[i]->attrs.dict["max_calib_range"]);
-      if (min_calib > this_min_calib) min_calib = this_min_calib;
-      if (max_calib < this_max_calib) max_calib = this_max_calib;
+      if (min_calib > this_min_calib)
+        min_calib = this_min_calib;
+      if (max_calib < this_max_calib)
+        max_calib = this_max_calib;
     }
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
-      auto &n = *subgraph_nodes[i];
+      auto& n                         = *subgraph_nodes[i];
       n.attrs.dict["min_calib_range"] = std::to_string(min_calib);
       n.attrs.dict["max_calib_range"] = std::to_string(max_calib);
-      if (n.op()->attr_parser) n.op()->attr_parser(&(n.attrs));
+      if (n.op()->attr_parser)
+        n.op()->attr_parser(&(n.attrs));
     }
   }
 

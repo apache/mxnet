@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file mkldnn_reshape-inl.h
  * \brief Function definition of mkldnn reshape operator
  */
@@ -28,8 +27,10 @@
 
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
-#include "mkldnn_base-inl.h"
+
 #include "../../tensor/matrix_op-inl.h"
+
+#include "mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -41,19 +42,18 @@ class MKLDNNReshapeFwd {
   std::vector<mkldnn::primitive> prims_;
 
  public:
-  MKLDNNReshapeFwd(const OpReqType &req,
-                   const NDArray &input,
-                   const NDArray &output);
+  MKLDNNReshapeFwd(const OpReqType& req, const NDArray& input, const NDArray& output);
   int GetWorkspaceSize();
-  void Execute(const NDArray &input,
-               const NDArray &output,
-               const OpReqType &req,
+  void Execute(const NDArray& input,
+               const NDArray& output,
+               const OpReqType& req,
                void* workspace = nullptr);
 };
 
 typedef OpSignature MKLDNNReshapeSignature;
-MKLDNNReshapeFwd &GetReshapeForward(const OpReqType &req, const NDArray &input,
-                                    const NDArray &output);
+MKLDNNReshapeFwd& GetReshapeForward(const OpReqType& req,
+                                    const NDArray& input,
+                                    const NDArray& output);
 }  // namespace op
 }  // namespace mxnet
 

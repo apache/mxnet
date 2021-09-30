@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file resource.h
  * \brief Global resource allocation handling.
  */

@@ -1129,7 +1129,7 @@ def test_np_multinomial():
             if pvals_mx_np_array:
                 pvals = mx.np.array(pvals)
             x = np.random.multinomial(small_exp, pvals)
-            for i in range(total_exp // small_exp):
+            for _ in range(total_exp // small_exp):
                 x = x + np.random.multinomial(20, pvals)
         freq = (x.asnumpy() / _np.float32(total_exp)).reshape((-1, len(pvals)))
         for i in range(freq.shape[0]):
@@ -1421,3 +1421,8 @@ def test_mixed_array_types_share_memory():
     mx_pinned_array = mx_array.as_in_ctx(mx.cpu_pinned(0))
     assert not _np.may_share_memory(np_array, mx_pinned_array)
     assert not _np.shares_memory(np_array, mx_pinned_array)
+
+@use_np
+def test_save_load_empty(tmp_path):
+    mx.npx.savez(str(tmp_path / 'params.npz'))
+    mx.npx.load(str(tmp_path / 'params.npz'))

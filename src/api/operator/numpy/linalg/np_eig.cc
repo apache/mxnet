@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -29,36 +29,32 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.eig")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.eig").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_eig");
   nnvm::NodeAttrs attrs;
-  attrs.op = op;
-  int num_inputs = 1;
+  attrs.op          = op;
+  int num_inputs    = 1;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
-                 NDArrayHandle(ndoutputs[1])});
+  int num_outputs   = 0;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret              = ADT(0, {NDArrayHandle(ndoutputs[0]), NDArrayHandle(ndoutputs[1])});
 });
 
-MXNET_REGISTER_API("_npi.eigh")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.eigh").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_eigh");
   nnvm::NodeAttrs attrs;
   op::EighParam param;
-  param.UPLO = *((args[1].operator std::string()).c_str());
+  param.UPLO   = *((args[1].operator std::string()).c_str());
   attrs.parsed = param;
-  attrs.op = op;
+  attrs.op     = op;
   SetAttrDict<op::EighParam>(&attrs);
-  int num_inputs = 1;
-  int num_outputs = 0;
+  int num_inputs    = 1;
+  int num_outputs   = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
-                 NDArrayHandle(ndoutputs[1])});
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret              = ADT(0, {NDArrayHandle(ndoutputs[0]), NDArrayHandle(ndoutputs[1])});
 });
 
 }  // namespace mxnet

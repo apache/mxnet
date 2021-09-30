@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cudnn_batch_norm-inl.h
  * \brief
  * \author Junyuan Xie
-*/
+ */
 
 #ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_INL_H_
 #define MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_INL_H_
@@ -36,13 +35,13 @@ namespace mxnet {
 namespace op {
 #if MXNET_USE_CUDNN == 1
 namespace cudnnbatchnorm {
-enum CuDNNBatchNormOpInputs {kData, kGamma, kBeta};
-enum CuDNNBatchNormOpOutputs {kOut, kMean, kInvVar};
-enum CuDNNBatchNormOpAuxiliary {kMovingMean, kMovingInvVar};
+enum CuDNNBatchNormOpInputs { kData, kGamma, kBeta };
+enum CuDNNBatchNormOpOutputs { kOut, kMean, kInvVar };
+enum CuDNNBatchNormOpAuxiliary { kMovingMean, kMovingInvVar };
 }  // namespace cudnnbatchnorm
 
 #if defined(__CUDACC__)
-template<typename DType>
+template <typename DType>
 class CuDNNBatchNormOp {
   STATIC_ASSERT_CUDNN_VERSION_GE(5000);
 
@@ -58,9 +57,9 @@ class CuDNNBatchNormOp {
     internal_aux_states_lock_ = false;
   }
 
-  void Init(const BatchNormParam &param) {
+  void Init(const BatchNormParam& param) {
     CHECK_GE(param.eps, CUDNN_BN_MIN_EPSILON)
-     << "CuDNN requires eps to be no less than " << CUDNN_BN_MIN_EPSILON;
+        << "CuDNN requires eps to be no less than " << CUDNN_BN_MIN_EPSILON;
     this->param_ = param;
   }
 
@@ -69,11 +68,11 @@ class CuDNNBatchNormOp {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(mean_desc_));
   }
 
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_states) {
+  void Forward(const OpContext& ctx,
+               const std::vector<TBlob>& in_data,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& out_data,
+               const std::vector<TBlob>& aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 3U);
@@ -89,12 +88,12 @@ class CuDNNBatchNormOp {
     CHECK_GE(in_data[cudnnbatchnorm::kData].ndim(), 2);
 
     Init(in_data[cudnnbatchnorm::kData]);
-    Stream<gpu> *s = ctx.get_stream<gpu>();
+    Stream<gpu>* s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> x =
-      in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
+        in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
 
     Tensor<gpu, 4, DType> y =
-      out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
+        out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 #if CUDNN_VERSION >= 7002
     auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
 #else
@@ -103,35 +102,38 @@ class CuDNNBatchNormOp {
 
     MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
       Tensor<gpu, 1, DTypeParam> gamma =
-        in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
       Tensor<gpu, 1, DTypeParam> beta =
-        in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
       Tensor<gpu, 1, DTypeParam> moving_mean =
-        aux_states[cudnnbatchnorm::kMovingMean]
-        .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          aux_states[cudnnbatchnorm::kMovingMean].get_with_shape<gpu, 1, DTypeParam>(
+              Shape1(shape_[1]), s);
       Tensor<gpu, 1, DTypeParam> moving_inv_var =
-        aux_states[cudnnbatchnorm::kMovingInvVar]
-        .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          aux_states[cudnnbatchnorm::kMovingInvVar].get_with_shape<gpu, 1, DTypeParam>(
+              Shape1(shape_[1]), s);
       typename DataType<DType>::ScaleType a = 1.0f;
       typename DataType<DType>::ScaleType b = 0.0f;
 
-      if (param_.fix_gamma) gamma = 1.f;
+      if (param_.fix_gamma)
+        gamma = 1.f;
 
       if (ctx.is_train) {
         Tensor<gpu, 1, DTypeParam> save_mean =
-          out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+            out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]),
+                                                                               s);
         Tensor<gpu, 1, DTypeParam> save_inv_var =
-          out_data[cudnnbatchnorm::kInvVar]
-          .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+            out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]),
+                                                                                 s);
         // If the lock on the auxiliary states is set, then this implies that
         // the preceding call is also a `Forward()` call, which further
         // indicates that we are in the backward mirroring mode, and therefore
         // update to the auxiliary states is disabled. This is done by setting
         // the `momentum` to `1` (or `factor` to `0`).
-        float factor = ((dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) ||
-                         dmlc::GetEnv("MXNET_MEMORY_OPT", 0))
-                        && internal_aux_states_lock_) ?
-                       0 : (1 - param_.momentum);
+        float factor =
+            ((dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) || dmlc::GetEnv("MXNET_MEMORY_OPT", 0)) &&
+             internal_aux_states_lock_)
+                ? 0
+                : (1 - param_.momentum);
         CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                           mode,
                                                           &a,
@@ -172,28 +174,28 @@ class CuDNNBatchNormOp {
     internal_aux_states_lock_ = true;
   }
 
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &inputs,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &outputs) {
+  void Backward(const OpContext& ctx,
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 8U);
     CHECK_EQ(outputs.size(), 3U);
 
     // Rename the inputs and outputs.
-    const TBlob &out_grad = inputs[0];
-    const TBlob &out_mean = inputs[1];
-    const TBlob &out_var = inputs[2];
-    const TBlob &in_data = inputs[3];
-    const TBlob &in_gamma = inputs[4];
-    const std::vector<TBlob> &in_grad = outputs;
+    const TBlob& out_grad             = inputs[0];
+    const TBlob& out_mean             = inputs[1];
+    const TBlob& out_var              = inputs[2];
+    const TBlob& in_data              = inputs[3];
+    const TBlob& in_gamma             = inputs[4];
+    const std::vector<TBlob>& in_grad = outputs;
 
     Init(in_data);
-    Stream<gpu> *s = ctx.get_stream<gpu>();
+    Stream<gpu>* s          = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> x = in_data.get_with_shape<gpu, 4, DType>(shape_, s);
     Tensor<gpu, 4, DType> dx =
-      in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
+        in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
     Tensor<gpu, 4, DType> dy = out_grad.get_with_shape<gpu, 4, DType>(shape_, s);
 
     const bool global_stats = !ctx.is_train || param_.use_global_stats;
@@ -205,25 +207,26 @@ class CuDNNBatchNormOp {
 #endif
     MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
       Tensor<gpu, 1, DTypeParam> gamma =
-        in_gamma.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          in_gamma.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
       Tensor<gpu, 1, DTypeParam> dbeta =
-        in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
       Tensor<gpu, 1, DTypeParam> dgamma =
-        in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
       Tensor<gpu, 1, DTypeParam> save_mean =
-        out_mean.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          out_mean.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
       Tensor<gpu, 1, DTypeParam> save_inv_var =
-        out_var.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+          out_var.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
 
-      typename DataType<DType>::ScaleType a = 1.0f;
-      typename DataType<DType>::ScaleType b = 0.0f;
+      typename DataType<DType>::ScaleType a     = 1.0f;
+      typename DataType<DType>::ScaleType b     = 0.0f;
       typename DataType<DType>::ScaleType b_add = 1.0f;
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
 
-      if (param_.fix_gamma) gamma = 1.f;
+      if (param_.fix_gamma)
+        gamma = 1.f;
 
-      bool grad_add_gamma_beta = (req[cudnnbatchnorm::kGamma] == kAddTo) ||
-                                 (req[cudnnbatchnorm::kBeta] == kAddTo);
+      bool grad_add_gamma_beta =
+          (req[cudnnbatchnorm::kGamma] == kAddTo) || (req[cudnnbatchnorm::kBeta] == kAddTo);
       if (grad_add_gamma_beta) {
         if (IsBNWriting(req[cudnnbatchnorm::kGamma])) {
           dgamma = 0.f;
@@ -233,27 +236,28 @@ class CuDNNBatchNormOp {
         }
       }
 
-      CUDNN_CALL(cudnnBatchNormalizationBackward(
-        s->dnn_handle_,
-        mode,
-        &a,
-        req[cudnnbatchnorm::kData] == kAddTo ? &b_add : &b,
-        &a,
-        grad_add_gamma_beta ? &b_add : &b,  // gamma and beta
-        io_desc_,
-        x.dptr_,
-        io_desc_,
-        dy.dptr_,
-        io_desc_,
-        dx.dptr_,
-        mean_desc_,
-        gamma.dptr_,
-        dgamma.dptr_,
-        dbeta.dptr_,
-        param_.eps,
-        global_stats ? nullptr : save_mean.dptr_,
-        global_stats ? nullptr : save_inv_var.dptr_));
-      if (param_.fix_gamma) dgamma = 0.f;
+      CUDNN_CALL(
+          cudnnBatchNormalizationBackward(s->dnn_handle_,
+                                          mode,
+                                          &a,
+                                          req[cudnnbatchnorm::kData] == kAddTo ? &b_add : &b,
+                                          &a,
+                                          grad_add_gamma_beta ? &b_add : &b,  // gamma and beta
+                                          io_desc_,
+                                          x.dptr_,
+                                          io_desc_,
+                                          dy.dptr_,
+                                          io_desc_,
+                                          dx.dptr_,
+                                          mean_desc_,
+                                          gamma.dptr_,
+                                          dgamma.dptr_,
+                                          dbeta.dptr_,
+                                          param_.eps,
+                                          global_stats ? nullptr : save_mean.dptr_,
+                                          global_stats ? nullptr : save_inv_var.dptr_));
+      if (param_.fix_gamma)
+        dgamma = 0.f;
     })
     // Release the lock on the auxiliary states, so that the next forward pass
     // will be able to update the auxiliary states normally.
@@ -261,7 +265,7 @@ class CuDNNBatchNormOp {
   }
 
  private:
-  void Init(const TBlob &in_data) {
+  void Init(const TBlob& in_data) {
     CHECK_GE(param_.axis, 0);
     CHECK_LT(param_.axis, in_data.ndim());
     if (param_.axis == 1) {
@@ -273,28 +277,19 @@ class CuDNNBatchNormOp {
         shape_[0] = in_data.shape_[0];
         shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
         shape_[2] = 1;
-        shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(2,
-              in_data.ndim()));
+        shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(2, in_data.ndim()));
       }
     } else {
       // reshape to (N, C, 1, D), C is the `param_.axis` dimension
       shape_[0] = static_cast<dim_t>(in_data.shape_.ProdShape(0, param_.axis));
       shape_[1] = in_data.shape_[param_.axis];
       shape_[2] = 1;
-      shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(param_.axis + 1,
-            in_data.ndim()));
+      shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(param_.axis + 1, in_data.ndim()));
     }
 
-    CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          shape_[0],
-                                          shape_[1],
-                                          shape_[2],
-                                          shape_[3]));
-    CUDNN_CALL(cudnnDeriveBNTensorDescriptor(mean_desc_,
-                                             io_desc_,
-                                             CUDNN_BATCHNORM_SPATIAL));
+    CUDNN_CALL(cudnnSetTensor4dDescriptor(
+        io_desc_, CUDNN_TENSOR_NCHW, dtype_, shape_[0], shape_[1], shape_[2], shape_[3]));
+    CUDNN_CALL(cudnnDeriveBNTensorDescriptor(mean_desc_, io_desc_, CUDNN_BATCHNORM_SPATIAL));
   }
 
   cudnnDataType_t dtype_;

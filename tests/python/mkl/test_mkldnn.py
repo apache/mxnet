@@ -235,7 +235,7 @@ def test_mkldnn_sum_with_mkldnn_layout():
     num_inputs = [2, 3, 4, 5]
     for i in num_inputs:
         inputs = []
-        for n in range(i):
+        for _ in range(i):
             inputs.append(z)
         y = mx.sym.add_n(*inputs) # (only MKLDNN data input)
         exe = y._simple_bind(ctx=mx.cpu(), x=x_shape, w=w_shape)
@@ -427,11 +427,10 @@ def test_convolution():
         check_convolution_training(stype)
 
 
-@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
-        for shape in [(3, 3, 10), (3, 3, 10, 10)]:
-            data_tmp = np.random.randint(256, size=shape)
+        for shape in [(3, 3, 10), (3, 3, 10, 10), (3, 3, 3, 10, 10)]:
+            data_tmp = np.random.normal(-0.1, 1, size=shape)
             data = mx.symbol.Variable('data', stype=stype)
 
             if np.array(shape).shape[0] == 3:
@@ -440,6 +439,9 @@ def test_Deconvolution():
             elif np.array(shape).shape[0] == 4:
                 test = mx.symbol.Deconvolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3))
+            elif np.array(shape).shape[0] == 5:
+                test = mx.symbol.Deconvolution(data=data, kernel=(3,3,3), stride=(2,2,2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3, 3))
             else:
                 return 0
             bias_tmp = np.random.normal(0.1, 0.1, size=(4,))

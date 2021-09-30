@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor_cpu-inl.h
  * \brief implementation of CPU host code
  * \author Bing Xu, Tianqi Chen

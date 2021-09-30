@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file kvstore.cc
  * \brief implement kv_store
  */
@@ -39,12 +38,12 @@ std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id_{0};
 
 namespace mxnet {
 
-KVStore* KVStore::Create(const char *type_name) {
+KVStore* KVStore::Create(const char* type_name) {
   std::string tname = type_name;
   std::transform(tname.begin(), tname.end(), tname.begin(), ::tolower);
-  KVStore* kv = nullptr;
+  KVStore* kv          = nullptr;
   bool use_device_comm = false;
-  auto has = [tname](const std::string& pattern) {
+  auto has             = [tname](const std::string& pattern) {
     return tname.find(pattern) != std::string::npos;
   };
   if (has("device")) {
@@ -77,7 +76,7 @@ KVStore* KVStore::Create(const char *type_name) {
       return nullptr;
 #endif
     } else {
-      kv =  new kvstore::KVStoreLocal(use_device_comm);
+      kv = new kvstore::KVStoreLocal(use_device_comm);
     }
   }
   kv->type_ = tname;

@@ -65,7 +65,7 @@ def test_rsp_push_pull():
                 total_row_ids = mx.nd.array(np.random.randint(num_rows, size=count*num_rows))
                 row_ids = [total_row_ids[i*num_rows : (i+1)*num_rows] for i in range(count)]
             else:
-                for i in range(count):
+                for _ in range(count):
                     row_id = np.random.randint(num_rows, size=num_rows)
                     row_ids.append(mx.nd.array(row_id))
             row_ids_to_pull = row_ids[0] if (len(row_ids) == 1 or is_same_rowid) else row_ids

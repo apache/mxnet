@@ -27,14 +27,11 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(amp_cast)
-.set_attr<FCompute>("FCompute<gpu>", AMPCastCompute<gpu>);
-NNVM_REGISTER_OP(_backward_amp_cast)
-.set_attr<FCompute>("FCompute<gpu>", AMPCastCompute<gpu>);
+NNVM_REGISTER_OP(amp_cast).set_attr<FCompute>("FCompute<gpu>", AMPCastCompute<gpu>);
+NNVM_REGISTER_OP(_backward_amp_cast).set_attr<FCompute>("FCompute<gpu>", AMPCastCompute<gpu>);
 
-NNVM_REGISTER_OP(amp_multicast)
-.set_attr<FCompute>("FCompute<gpu>", AMPMultiCastCompute<gpu>);
+NNVM_REGISTER_OP(amp_multicast).set_attr<FCompute>("FCompute<gpu>", AMPMultiCastCompute<gpu>);
 NNVM_REGISTER_OP(_backward_amp_multicast)
-.set_attr<FCompute>("FCompute<gpu>", AMPMultiCastCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", AMPMultiCastCompute<gpu>);
 }  // namespace op
 }  // namespace mxnet
