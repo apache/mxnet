@@ -645,11 +645,12 @@ static_assert(CUDNN_PATCHLEVEL < 100 && CUDNN_MINOR < 10,
       "Compiled-against cuDNN version " CUDNN_VERSION_AS_STRING \
       " is too old, please upgrade system to version " QUOTEVALUE(min_version) " or later.")
 
-#define CUDNN_CALL(func)                                                      \
-  {                                                                           \
-    cudnnStatus_t e = (func);                                                 \
-    CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
-  }
+#define CUDNN_CALL_S(f, s)                                                      \
+  if (cudnnStatus_t unclash_cxx_e = (f); unclash_cxx_e != CUDNN_STATUS_SUCCESS) \
+    LOG(s) << "cuDNN: " << cudnnGetErrorString(unclash_cxx_e);
+
+#define CUDNN_CALL(f) CUDNN_CALL_S(f, FATAL)
+#define CUDNN_CALL_NONFATAL(f) CUDNN_CALL_S(f, WARNING)
 
 #define CUTENSOR_CALL(func)                                                            \
   {                                                                                    \
