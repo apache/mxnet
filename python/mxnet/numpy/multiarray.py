@@ -60,12 +60,12 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'pow', 'power', 'bitwise_not',
            'delete', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
            'arctan2', 'atan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'bitwise_invert', 'invert',
-           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin','asin', 'arccos','acos', 'arctan', 'atan', 'sign', 'log',
+           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'asin', 'arccos', 'acos', 'arctan', 'atan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh','asinh','arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'asinh', 'arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort',
            'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero', 'tril_indices',
-           'concatenate', 'concat','stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'concatenate', 'concat', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'amax', 'amin', 'max', 'min',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
@@ -1016,6 +1016,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             raise ValueError('trying to add to a readonly ndarray')
         return add(self, other, out=self)
 
+    @wrap_mxnp_np_ufunc
+    def __radd__(self, other):
+        """x.__radd__(y) <=> y + x"""
+        return add(other, self)
+
     def __invert__(self):
         """x.__invert__() <=> ~x"""
         return invert(self)
@@ -1026,14 +1031,29 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return bitwise_and(self, other)
 
     @wrap_mxnp_np_ufunc
+    def __rand__(self, other):
+        """x.__rand__(y) <=> y & x"""
+        return bitwise_and(other, self)
+
+    @wrap_mxnp_np_ufunc
     def __or__(self, other):
         """x.__or__(y) <=> x | y"""
         return bitwise_or(self, other)
 
     @wrap_mxnp_np_ufunc
+    def __ror__(self, other):
+        """x.__ror__(y) <=> y | x"""
+        return bitwise_or(other, self)
+
+    @wrap_mxnp_np_ufunc
     def __xor__(self, other):
         """x.__xor__(y) <=> x ^ y"""
         return bitwise_xor(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __rxor__(self, other):
+        """x.__rxor__(y) <=> y ^ x"""
+        return bitwise_xor(other, self)
 
     @wrap_mxnp_np_ufunc
     def __iand__(self, other):
@@ -3648,7 +3668,7 @@ def power(x1, x2, out=None, **kwargs):
     return _mx_nd_np.power(x1, x2, out=out)
 
 pow = power
-pow.__doc__="""
+pow.__doc_ = """
     First array elements raised to powers from second array, element-wise.
     
     Notes 
@@ -4284,8 +4304,8 @@ def arcsin(x, out=None, **kwargs):
     """
     return _mx_nd_np.arcsin(x, out=out, **kwargs)
 
-asin=arcsin
-asin.__doc__="""
+asin = arcsin
+asin.__doc__ = """
     Inverse sine, element-wise.
     
     Notes
@@ -4385,8 +4405,8 @@ def arccos(x, out=None, **kwargs):
     """
     return _mx_nd_np.arccos(x, out=out, **kwargs)
 
-acos=arccos
-acos.__doc__="""
+acos = arccos
+acos.__doc__ = """
     Trigonometric inverse cosine, element-wise.
     The inverse of cos so that, if y = cos(x), then x = acos(y).
     
@@ -4473,8 +4493,8 @@ def arctan(x, out=None, **kwargs):
     """
     return _mx_nd_np.arctan(x, out=out, **kwargs)
 
-atan=arctan
-atan.__doc__="""
+atan = arctan
+atan.__doc__ = """
     Trigonometric inverse tangent, element-wise.
     The inverse of tan, so that if ``y = tan(x)`` then ``x = atan(y)``.
 
@@ -5449,8 +5469,8 @@ def arcsinh(x, out=None, **kwargs):
     """
     return _mx_nd_np.arcsinh(x, out=out, **kwargs)
 
-asinh=arcsinh
-asinh.__doc__="""
+asinh = arcsinh
+asinh.__doc__ = """
     Inverse hyperbolic cosine, element-wise.
     
     Notes
@@ -5549,7 +5569,7 @@ def arccosh(x, out=None, **kwargs):
     return _mx_nd_np.arccosh(x, out=out, **kwargs)
 
 acosh = arccosh
-acosh.__doc__="""
+acosh.__doc__ = """
     Inverse hyperbolic cosine, element-wise.
     
     Notes
@@ -5645,8 +5665,8 @@ def arctanh(x, out=None, **kwargs):
     """
     return _mx_nd_np.arctanh(x, out=out, **kwargs)
 
-atanh=arctanh
-atanh.__doc__="""
+atanh = arctanh
+atanh.__doc__ = """
     Inverse hyperbolic tangent, element-wise.
 
     Notes
@@ -9144,8 +9164,8 @@ def arctan2(x1, x2, out=None, **kwargs):
     """
     return _mx_nd_np.arctan2(x1, x2, out=out)
 
-atan2=arctan2
-atan2.__doc__="""
+atan2 = arctan2
+atan2.__doc__ = """
     Element-wise arc tangent of ``x1/x2`` choosing the quadrant correctly.
 
     The quadrant (i.e., branch) is chosen so that ``atan2(x1, x2)`` is

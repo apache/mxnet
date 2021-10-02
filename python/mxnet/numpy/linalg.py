@@ -895,9 +895,9 @@ def eigvalsh(a, upper=False):
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
     if not upper:
-        UPLO='L'
+        UPLO = 'L'
     else:
-        UPLO='U'
+        UPLO = 'U'
     return _mx_nd_np.linalg.eigvalsh(a, UPLO)
 
 
