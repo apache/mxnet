@@ -60,14 +60,14 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'pow', 'power', 'bitwise_not',
            'delete', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
            'arctan2', 'atan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'bitwise_invert', 'invert',
-           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'asin', 'arccos', 'acos', 'arctan', 'atan', 'sign', 'log',
-           'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'asinh', 'arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort',
-           'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
-           'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero', 'tril_indices',
-           'concatenate', 'concat', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'amax', 'amin', 'max', 'min',
-           'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
+           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'asin', 'arccos', 'acos', 'arctan',
+           'atan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square',
+           'negative', 'histogram', 'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'asinh',
+           'arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
+           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit',
+           'dsplit', 'flatnonzero', 'tril_indices', 'concatenate', 'concat', 'stack', 'vstack', 'row_stack',
+           'column_stack', 'hstack', 'dstack', 'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin',
+           'amax', 'amin', 'max', 'min', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
            'logical_and', 'logical_or', 'logical_xor',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
@@ -2040,13 +2040,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     # pylint: disable=too-many-arguments, arguments-differ
-    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+    def std(self, axis=None, dtype=None, out=None, correction=0, keepdims=False):
         """Returns the standard deviation of the array elements along given axis."""
-        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+        return std(self, axis=axis, dtype=dtype, correction=correction, keepdims=keepdims, out=out)
 
-    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+    def var(self, axis=None, dtype=None, out=None, correction=0, keepdims=False):
         """Returns the variance of the array elements, along given axis."""
-        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
+        return var(self, axis=axis, dtype=dtype, out=out, correction=correction, keepdims=keepdims)
     # pylint: enable=too-many-arguments, arguments-differ
 
     def cumsum(self, axis=None, dtype=None, out=None):
@@ -6305,7 +6305,7 @@ def trace(a, offset=0, axis1=0, axis2=1, out=None):
 
 
 @set_module('mxnet.numpy')
-def transpose(a, axes=None):
+def transpose(a: array, axes=None):
     """
     Permute the dimensions of an array.
 
@@ -9461,7 +9461,7 @@ def ldexp(x1, x2, out=None, **kwargs):
     return _mx_nd_np.ldexp(x1, x2, out)
 
 @set_module('mxnet.numpy')
-def vecdot(a, b, axis=None):
+def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = None) -> ndarray:
     r"""
         Return the dot product of two vectors.
         Note that `vecdot` handles multidimensional arrays differently than `dot`:
