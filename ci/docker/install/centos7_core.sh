@@ -23,6 +23,7 @@
 set -ex
 
 # Multipackage installation does not fail in yum
+yum -y install ca-certificates
 yum -y install epel-release
 yum -y install git
 yum -y install wget
