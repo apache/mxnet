@@ -9461,7 +9461,7 @@ def ldexp(x1, x2, out=None, **kwargs):
     return _mx_nd_np.ldexp(x1, x2, out)
 
 @set_module('mxnet.numpy')
-def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = None) -> ndarray:
+def vecdot(a, b, axis=None):
     r"""
         Return the dot product of two vectors.
         Note that `vecdot` handles multidimensional arrays differently than `dot`:
