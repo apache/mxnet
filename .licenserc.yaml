@@ -4,13 +4,16 @@ header:
     copyright-owner: Apache Software Foundation
 
   paths-ignore:
-    - 'dist'
     - 'licenses'
-    - '**/*.md'
-    - '**/*.ipynb'
     - 'LICENSE'
     - 'NOTICE'
     - '3rdparty'
+    - 'DISCLAIMER'
+    - 'KEYS'
+    - 'tools/dependencies/LICENSE.binary.dependencies'
+    # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
+    - 'docs'
+    - 'CODEOWNERS'
     - '.gitignore'
     - '.codecov.yml'
     - '.gitattributes'
@@ -18,16 +21,7 @@ header:
     - '.gitmodules'
     - '.licenserc.yaml'
     - '.asf.yaml'
-    - 'CODEOWNERS'
-    - 'DISCLAIMER'
-    - 'KEYS'
-    - 'python/mxnet/_cy3/README'
-    - 'tools/dependencies/LICENSE.binary.dependencies'
-    # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
-    - 'docs'
     # files licensed under apache-2.0 license but do not include full license headers recognized by skywalking-eyes
-    - 'python/mxnet/cython/ndarray.pyx'
-    - 'python/mxnet/cython/symbol.pyx'
     - 'src/operator/deformable_convolution-inl.h'
     - 'src/operator/deformable_convolution.cc'
     - 'src/operator/deformable_convolution.cu'
