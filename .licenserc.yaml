@@ -22,6 +22,7 @@ header:
     - '.licenserc.yaml'
     - '.asf.yaml'
     # files licensed under apache-2.0 license but do not include full license headers recognized by skywalking-eyes
+    - '**/*.ipynb'
     - 'src/operator/deformable_convolution-inl.h'
     - 'src/operator/deformable_convolution.cc'
     - 'src/operator/deformable_convolution.cu'
