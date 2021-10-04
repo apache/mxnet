@@ -22,7 +22,7 @@ from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcar
 from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
-           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross']
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer']
 __all__ += fallback_linalg.__all__
 
 
@@ -66,10 +66,51 @@ def matrix_rank(M, tol=None, hermitian=False):
     """
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
 
+
+def diagonal(a, offset=0):
+    """
+    Returns the specified diagonals of a matrix (or a stack of matrices) a.
+
+    Parameters
+    ----------
+    a : ndarray
+        The array to apply diag method.
+    offset : offset
+        Extracts or constructs kth diagonal given input array.
+        Offset specifying the off-diagonal relative to the main diagonal
+            offset = 0 : the main diagonal.
+            offset > 0 : off-diagonal above the main diagonal.
+            offset < 0 : off-diagonal below the main diagonal.
+            Default: 0.
+
+    Returns
+    ----------
+    out : ndarray
+    an array containing the diagonals and whose shape is determined by removing the last two dimensions and 
+    appending a dimension equal to the size of the resulting diagonals. 
+    The returned array must have the same data type as x .
+
+    Examples
+    --------
+    >>> x = np.arange(9).reshape((3,3))
+    >>> x
+    array([[0, 1, 2],
+           [3, 4, 5],
+           [6, 7, 8]])
+    >>> np.linlag.diagonal(x)
+    array([0, 4, 8])
+    >>> np.linlag.diagonal(x, offset=1)
+    array([1, 5])
+    >>> np.linlag.diagonal(x, offset=-1)
+    array([3, 7])
+    """
+    return _mx_nd_np.diag(v, offset=offset)
+
+
 def cross(a, b, axis=-1):
     r"""Returns the cross product of 3-element vectors.
 
-    If x1 and x2 are multi-dimensional arrays (i.e., both have a rank greater than 1 ), 
+    If x1 and x2 are multi-dimensional arrays (i.e., both have a rank greater than 1), 
     then the cross-product of each pair of corresponding 3-element vectors is independently computed.
 
     Parameters
@@ -127,6 +168,37 @@ def cross(a, b, axis=-1):
            [ 3., -6.,  3.]])
     """
     return _mx_nd_np.cross(a, b, axisa=axis, axisb=axis, axisc=axis, axis=axis)
+
+def outer(a, b):
+    r"""
+    Computes the outer product of two vectors a and b.
+
+    Parameters
+    ----------
+    a : ndarray
+        One-dimensional input array of size `N` . Should have a numeric data type.
+    b : ndarray
+        One-dimensional input array of size `M` . Should have a numeric data type.
+
+    Returns
+    -------
+    out : ndarray
+        A two-dimensional array containing the outer product and whose shape is `(N, M)`.
+        The returned array must have a data type determined by Type Promotion Rules .
+
+    Examples
+    --------
+    Make a (*very* coarse) grid for computing a Mandelbrot set:
+
+    >>> x = np.linalg.outer(np.ones((5,)), np.linspace(-2, 2, 5))
+    >>> x
+    array([[-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.]])
+    """
+    return tensordot(a.flatten(), b.flatten(), 0)
 
 def lstsq(a, b, rcond='warn'):
     r"""
