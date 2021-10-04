@@ -27,6 +27,7 @@ RUN yum -y check-update || true && \
     yum -y install epel-release centos-release-scl centos-release-scl-rh && \
     yum install -y \
         # Utilities
+        ca-certificates \
         wget \
         unzip \
         patchelf \
