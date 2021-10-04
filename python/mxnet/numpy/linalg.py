@@ -17,10 +17,12 @@
 
 """Namespace for ops used in imperative programming."""
 
+from .multiarray import ndarray
 from ..ndarray import numpy as _mx_nd_np
 from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg, tensordot
+from typing import Optional
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'vecdot']
@@ -68,7 +70,7 @@ def matrix_rank(M, tol=None, hermitian=False):
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
 
 
-def vecdot(a, b, axis=None):
+def vecdot(a: ndarray, b, ndarray, axis: Optional[int] =None) -> ndarray:
     r"""
     Return the dot product of two vectors.
     Note that `vecdot` handles multidimensional arrays differently than `dot`:
