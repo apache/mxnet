@@ -7597,7 +7597,7 @@ def max(
         a: ndarray,
         /,
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        axis: Optional[int]=None,
         out: Optional[ndarray]=None,
         keepdims: Optional[bool]=False
 ) -> ndarray:
@@ -7665,7 +7665,14 @@ def max(
 
 
 @set_module('mxnet.numpy')
-def min(a, axis=None, out=None, keepdims=False):
+def min(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int]=None,
+        out: Optional[ndarray]=None,
+        keepdims: Optional[bool]=False
+) -> ndarray:
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -8186,7 +8193,15 @@ def average(a, axis=None, weights=None, returned=False, out=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+def mean(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        dtype: Optional[Union[dtype, str]]=None,
+        out: Optional[ndarray]=None,
+        keepdims: Optional[bool]=False
+) -> ndarray:  # pylint: disable=arguments-differ
     """
     Compute the arithmetic mean along the specified axis.
     Returns the average of the array elements.
@@ -8252,7 +8267,16 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_statical_func
-def std(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # pylint: disable=too-many-arguments
+def std(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        dtype: Optional[Union[dtype, str]]=None,
+        out: Optional[ndarray]=None,
+        correction: Optional[int]=0,
+        keepdims: Optional[bool]=False
+) -> ndarray:  # pylint: disable=too-many-arguments
     """
     Compute the standard deviation along the specified axis.
     Returns the standard deviation, a measure of the spread of a distribution,
@@ -8371,7 +8395,16 @@ def delete(arr, obj, axis=None):
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_statical_func
-def var(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # pylint: disable=too-many-arguments
+def var(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        dtype: Optional[Union[dtype, str]]=None,
+        out: Optional[ndarray]=None,
+        correction: Optional[int]=0,
+        keepdims: Optional[bool]=None
+) -> ndarray:  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
     Returns the variance of the array elements, a measure of the spread of a
@@ -12420,7 +12453,16 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None): # pylint: disable=too-many-arguments
+def prod(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        dtype: Optional[Union[dtype, str]]=None,
+        out: Optional[ndarray]=None,
+        keepdims: Optional[bool]=False,
+        initial: Optional[int]=None
+) -> ndarray: # pylint: disable=too-many-arguments
     """
     Return the product of array elements over a given axis.
 
@@ -12921,7 +12963,17 @@ def diagonal(a, offset=0, axis1=0, axis2=1):
 
 # pylint: disable=redefined-outer-name, too-many-arguments
 @set_module('mxnet.numpy')
-def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
+def sum(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int]=None,
+        dtype: Optional[Union[dtype, str]]=None,
+        out: Optional[ndarray]=None,
+        keepdims: Optional[bool]=None,
+        initial: Optional[int]=None,
+        where=None
+) -> ndarray:
     r"""
     Sum of array elements over a given axis.
 
