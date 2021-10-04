@@ -3149,7 +3149,15 @@ def take(a, indices, axis=None, mode='raise', out=None):
 
 
 @set_module('mxnet.numpy')
-def unique(ar, return_index=False, return_inverse=False, return_counts=False, axis=None):
+def unique(
+        ar: ndarray,
+        /,
+        *,
+        return_index: bool=False,
+        return_inverse: bool=False,
+        return_counts: bool=False,
+        axis: Optional[int]=None
+) -> Union[ndarray, Tuple[ndarray, ...]]:
     """
     Find the unique elements of an array.
 
