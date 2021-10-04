@@ -22,7 +22,7 @@ from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcar
 from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
-           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross']
 __all__ += fallback_linalg.__all__
 
 
@@ -66,6 +66,67 @@ def matrix_rank(M, tol=None, hermitian=False):
     """
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
 
+def cross(a, b, axis=-1):
+    r"""Returns the cross product of 3-element vectors.
+
+    If x1 and x2 are multi-dimensional arrays (i.e., both have a rank greater than 1 ), 
+    then the cross-product of each pair of corresponding 3-element vectors is independently computed.
+
+    Parameters
+    ----------
+    a : ndarray
+        First input array. Should have a numeric data type.
+    b : ndarray
+        Second input array. Must have the same shape as a. Should have a numeric data type.
+    axis : int
+        If defined, the axis of `a` and `b` that defines the vector(s)
+        and cross product(s). By default `-1`.
+
+    Returns
+    -------
+    out : (...) ndarray
+        An array containing the cross products.
+
+    Examples
+    --------
+    Vector cross-product.
+
+    >>> x = np.array([1., 2., 3.])
+    >>> y = np.array([4., 5., 6.])
+    >>> np.linalg.cross(x, y)
+    array([-3.,  6., -3.])
+
+    One vector with dimension 2.
+
+    >>> x = np.array([1., 2.])
+    >>> y = np.array([4., 5., 6.])
+    >>> np.linalg.cross(x, y)
+    array([12., -6., -3.])
+
+    Equivalently:
+
+    >>> x = np.array([1., 2., 0.])
+    >>> y = np.array([4., 5., 6.])
+    >>>np.linalg.cross(x, y)
+    array([12., -6., -3.])
+
+    Both vectors with dimension 2.
+
+    >>> x = np.array([1., 2.])
+    >>> y = np.array([4., 5.])
+    >>> np.linalg.cross(x, y)
+    array(-3.)
+
+    Multiple vector cross-products. Note that the direction of the cross
+    product vector is defined by the `right-hand rule`.
+
+    >>> x = np.array([[1., 2., 3.], [4., 5., 6.]])
+    >>> y = np.array([[4., 5., 6.], [1., 2., 3.]])
+    >>> np.linalg.cross(x, y)
+    array([[-3.,  6., -3.],
+           [ 3., -6.,  3.]])
+    """
+    return _mx_nd_np.cross(a, b, axisa=axis, axisb=axis, axisc=axis, axis=axis)
 
 def lstsq(a, b, rcond='warn'):
     r"""
