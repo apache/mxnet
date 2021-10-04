@@ -28,6 +28,8 @@ except ImportError:
     from builtins import all as py_all
     from builtins import slice as py_slice
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 from array import array as native_array
 import functools
 import ctypes
@@ -568,7 +570,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             raise NotImplementedError('type %s is not supported.'%(type(value)))
 
     # pylint: disable=too-many-return-statements
-    def __getitem__(self, key):
+    def __getitem__(
+            self: ndarray,
+            key: Union[
+                int, slice, ellipsis, Tuple[Union[int, slice, ellipsis], ...], ndarray
+            ],
+            /,
+    ) -> ndarray:
         """Return self[key].
 
         Returns a sliced view of this array if the elements fetched are contiguous in memory;
@@ -840,7 +848,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             raise RuntimeError
 
     # pylint: disable=inconsistent-return-statements
-    def __setitem__(self, key, value):
+    def __setitem__(self: ndarray,
+                    key: Union[
+                        int, slice, ellipsis, Tuple[Union[int, slice, ellipsis], ...], ndarray
+                    ],
+                    value: Union[int, float, bool, ndarray],
+                    /,
+                    ) -> None:
         """Sets ``self[key]`` to ``value``.
 
         This functions supports advanced indexing as defined in `the NumPy
@@ -1005,68 +1019,68 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return value_nd
 
     @wrap_mxnp_np_ufunc
-    def __add__(self, other):
+    def __add__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__add__(y) <=> x + y"""
         return add(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __iadd__(self, other):
+    def __iadd__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__iadd__(y) <=> x += y"""
         if not self.writable:
             raise ValueError('trying to add to a readonly ndarray')
         return add(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __radd__(self, other):
+    def __radd__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__radd__(y) <=> y + x"""
         return add(other, self)
 
-    def __invert__(self):
+    def __invert__(self: ndarray, /) -> ndarray:
         """x.__invert__() <=> ~x"""
         return invert(self)
 
     @wrap_mxnp_np_ufunc
-    def __and__(self, other):
+    def __and__(self: ndarray, other:  Union[int, bool, ndarray], /) -> ndarray:
         """x.__and__(y) <=> x & y"""
         return bitwise_and(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __rand__(self, other):
+    def __rand__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__rand__(y) <=> y & x"""
         return bitwise_and(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __or__(self, other):
+    def __or__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__or__(y) <=> x | y"""
         return bitwise_or(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __ror__(self, other):
+    def __ror__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__ror__(y) <=> y | x"""
         return bitwise_or(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __xor__(self, other):
+    def __xor__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__xor__(y) <=> x ^ y"""
         return bitwise_xor(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __rxor__(self, other):
+    def __rxor__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__rxor__(y) <=> y ^ x"""
         return bitwise_xor(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __iand__(self, other):
+    def __iand__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__iand__(y) <=> x &= y"""
         return bitwise_and(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __ior__(self, other):
+    def __ior__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         r"""x.__ior__(y) <=> x \|= y"""
         return bitwise_or(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __ixor__(self, other):
+    def __ixor__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__ixor__(y) <=> x ^= y"""
         return bitwise_xor(self, other, out=self)
 
@@ -1074,7 +1088,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__round__(n)"""
         return round(self, decimals=n)
 
-    def __abs__(self):
+    def __abs__(self: ndarray, /) -> ndarray:
         """x.__abs__()"""
         return absolute(self)
 
@@ -1091,39 +1105,39 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return trunc(self)
 
     @wrap_mxnp_np_ufunc
-    def __sub__(self, other):
+    def __sub__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__sub__(y) <=> x - y"""
         return subtract(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __isub__(self, other):
+    def __isub__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__isub__(y) <=> x -= y"""
         if not self.writable:
             raise ValueError('trying to subtract from a readonly ndarray')
         return subtract(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __rsub__(self, other):
+    def __rsub__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__rsub__(y) <=> y - x"""
         return subtract(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __mul__(self, other):
+    def __mul__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__mul__(y) <=> x * y"""
         return multiply(self, other)
 
-    def __neg__(self):
+    def __neg__(self: ndarray, /):
         return negative(self)
 
     @wrap_mxnp_np_ufunc
-    def __imul__(self, other):
+    def __imul__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         r"""x.__imul__(y) <=> x \*= y"""
         if not self.writable:
             raise ValueError('trying to add to a readonly ndarray')
         return multiply(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __rmul__(self, other):
+    def __rmul__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__rmul__(y) <=> y * x"""
         return self.__mul__(other)
 
@@ -1143,52 +1157,52 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return divide(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __truediv__(self, other):
+    def __truediv__(self: ndarray,  other: Union[float, ndarray], /) -> ndarray:
         """x.__truediv__(y) <=> x / y"""
         return divide(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __rtruediv__(self, other):
+    def __rtruediv__(self: ndarray, other: Union[float, ndarray], /) -> ndarray:
         """x.__rtruediv__(y) <=> y / x"""
         return divide(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __itruediv__(self, other):
+    def __itruediv__(self: ndarray, other: Union[float, ndarray], /) -> ndarray:
         """x.__itruediv__(y) <=> x /= y"""
         return divide(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __mod__(self, other):
+    def __mod__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__mod__(y) <=> x % y"""
         return mod(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __rmod__(self, other):
+    def __rmod__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__rmod__(y) <=> y % x"""
         return mod(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __imod__(self, other):
+    def  __imod__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__imod__(y) <=> x %= y"""
         return mod(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __pow__(self, other):
+    def __pow__(self: ndarray, other: Union[int, ndarray], /) -> ndarray:
         """x.__pow__(y) <=> x ** y"""
         return power(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __rpow__(self, other):
+    def __rpow__(self: ndarray, other: Union[float, ndarray], /) -> ndarray:
         """x.__rpow__(y) <=> y ** x"""
         return power(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __ipow__(self, other):
+    def __ipow__(self: ndarray, other: Union[float, ndarray], /) -> ndarray:
         """x.__ipow__(y) <=> x **= y"""
         return power(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __eq__(self, other):
+    def __eq__(self: ndarray, other: Union[int, float, bool, ndarray], /) -> ndarray:
         """x.__eq__(y) <=> x == y"""
         return equal(self, other)
 
@@ -1196,46 +1210,46 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         raise NotImplementedError
 
     @wrap_mxnp_np_ufunc
-    def __ne__(self, other):
+    def __ne__(self: ndarray, other: Union[int, float, bool, ndarray], /) -> ndarray:
         """x.__ne__(y) <=> x != y"""
         return not_equal(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __gt__(self, other):
+    def __gt__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__gt__(y) <=> x > y"""
         return greater(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __ge__(self, other):
+    def __ge__(self: ndarray, other: Union[int, float, bool, ndarray], /) -> ndarray:
         """x.__ge__(y) <=> x >= y"""
         return greater_equal(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __lt__(self, other):
+    def __lt__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__lt__(y) <=> x < y"""
         return less(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __le__(self, other):
+    def __le__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
         """x.__le__(y) <=> x <= y"""
         return less_equal(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __matmul__(self, other):
+    def __matmul__(self: ndarray, other: ndarray, /) -> ndarray:
         """x.__matmul__(y) <=> x @ y"""
         return matmul(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __rmatmul__(self, other):
+    def __rmatmul__(self: ndarray, other: ndarray, /) -> ndarray:
         """x.__rmatmul__(y) <=> y @ x"""
         return matmul(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __imatmul__(self, other):
+    def __imatmul__(self: ndarray, other: ndarray, /) -> ndarray:
         """x.__imatmul__(y) <=> x @= y"""
         return matmul(self, other, out=self)
 
-    def __bool__(self):
+    def __bool__(self: ndarray, /) -> bool:
         num_elements = self.size
         if num_elements == 0:
             warnings.simplefilter('default')
@@ -1249,19 +1263,19 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     __nonzero__ = __bool__
 
-    def __float__(self):
+    def __float__(self: ndarray, /) -> float:
         num_elements = self.size
         if num_elements != 1:
             raise TypeError('only size-1 arrays can be converted to Python scalars')
         return float(self.item())
 
-    def __int__(self):
+    def __int__(self: ndarray, /) -> int:
         num_elements = self.size
         if num_elements != 1:
             raise TypeError('only size-1 arrays can be converted to Python scalars')
         return int(self.item())
 
-    def __len__(self):
+    def __len__(self: ndarray, /) -> int:
         """Number of elements along the first axis."""
         shape = self.shape  # pylint: disable=redefined-outer-name
         if len(shape) == 0:
@@ -1307,7 +1321,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     @property
     # pylint: disable= invalid-name, undefined-variable
-    def T(self):
+    def T(self) -> ndarray:
         """Same as self.transpose(). This always returns a copy of self."""
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
@@ -2416,7 +2430,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: enable=redefined-outer-name
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[int, ...]:
         """Tuple of array dimensions.
 
         Examples
@@ -2446,17 +2460,17 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             return tuple(pdata[:num_dim.value])  # pylint: disable=invalid-slice-index
 
     @property
-    def ndim(self):
+    def ndim(self) -> int:
         """Number of array dimensions."""
         return len(self.shape)
 
     @property
-    def size(self):
+    def size(self) -> int:
         """Number of elements in the array."""
         return super(ndarray, self).size
 
     @property
-    def dtype(self):
+    def dtype(self) -> dtype:
         """Data-type of the array's elements.
 
         Returns
@@ -2480,7 +2494,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
 
 @set_module('mxnet.numpy')
-def empty(shape, dtype=float, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def empty(
+        shape: Union[int, Tuple[int, ...]],
+        *,
+        dtype: dtype=float,
+        order: str='C',
+        ctx: Optional[Context]=None,
+) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -2641,7 +2661,14 @@ def shape(a):
 
 
 @set_module('mxnet.numpy')
-def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def zeros(
+        shape: Union[int, Tuple[int, ...]],
+        /,
+        *,
+        dtype: Optional[dtype]=None,
+        order: str='C',
+        ctx: Optional[Context]=None,
+) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2684,7 +2711,14 @@ def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-
 
 
 @set_module('mxnet.numpy')
-def ones(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def ones(
+        shape: Union[int, Tuple[int, ...]],
+        /,
+        *,
+        dtype: Optional[dtype]=None,
+        order: str='C',
+        ctx: Optional[Context]=None,
+) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2760,7 +2794,15 @@ def broadcast_to(array, shape):  # pylint: disable=redefined-outer-name
 
 # pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.numpy')
-def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
+def full(
+        shape: Union[int, Tuple[int, ...]],
+        fill_value: Union[int, float],
+        *,
+        dtype: Optional[dtype]=None,
+        order: str='C',
+        ctx: Optional[Context]=None,
+        out: Optional[ndarray]=None,
+) -> ndarray:
     r"""Return a new array of given shape and type, filled with `fill_value`.
 
     Parameters
@@ -2817,7 +2859,15 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pylint: disable=W0621
+def empty_like(
+        prototype: ndarray,
+        /,
+        *,
+        dtype: Optional[dtype]=None,
+        order: str='C',
+        subok: bool=False,
+        shape: Optional[Union[int, Tuple[int, ...]]]=None,
+) -> ndarray: # pylint: disable=W0621
     """
     Return a new array with the same shape and type as a given array.
 
@@ -5931,7 +5981,14 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def eye(N, M=None, k=0, dtype=float, **kwargs):
+def eye(N: int,
+        M: Optional[int]=None,
+        /,
+        *,
+        k: int=0,
+        dtype: dtype=float,
+        **kwargs,
+) -> ndarray:
     """
     Return a 2-D array with ones on the diagonal and zeros elsewhere.
 
@@ -5972,7 +6029,18 @@ def eye(N, M=None, k=0, dtype=float, **kwargs):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
+def linspace(
+        start: Union[int, float],
+        stop: Union[int, float],
+        /,
+        num: int=50,
+        *,
+        endpoint: bool=True,
+        retstep: bool=False,
+        dtype: Optional[dtype]=None,
+        axis: int=0,
+        ctx: Optional[Context]=None,
+) -> ndarray:  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
 
@@ -6627,7 +6695,7 @@ def tril_indices(n, k=0, m=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def triu(m, k=0):
+def triu(m: ndarray, /, *, k: int=0) -> ndarray:
     r"""
     Upper triangle of an array.
 
@@ -6652,7 +6720,15 @@ def triu(m, k=0):
 
 
 @set_module('mxnet.numpy')
-def arange(start, stop=None, step=1, dtype=None, ctx=None):
+def arange(
+        start: Union[int, float],
+        /,
+        stop: Optional[Union[int, float]]=None,
+        step: Union[int, float]=1,
+        *,
+        dtype: Optional[dtype]=None,
+        ctx: Optional[Context]=None,
+) -> ndarray:
     """Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
@@ -11221,7 +11297,16 @@ def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=to
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylint: disable=too-many-arguments
+def full_like(
+        a: ndarray,
+        /,
+        fill_value: Union[int, float],
+        *,
+        dtype: Optional[dtype]=None,
+        order: str='C',
+        ctx: Optional[Context]=None,
+        out: Optional[ndarray]=None,
+) -> ndarray: # pylint: disable=too-many-arguments
     """
     Return a full array with the same shape and type as a given array.
 
@@ -11277,7 +11362,15 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylin
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
+def zeros_like(
+        a: ndarray,
+        /,
+        *,
+        dtype: Optional[dtype]=None,
+        order: str='C',
+        ctx: Optional[Context]=None,
+        out: Optional[ndarray]=None,
+) -> ndarray:
     """
     Return an array of zeros with the same shape and type as a given array.
 
@@ -11335,7 +11428,15 @@ def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def ones_like(a, dtype=None, order='C', ctx=None, out=None):
+def ones_like(
+        a: ndarray,
+        /,
+        *,
+        dtype: Optional[dtype]=None,
+        order: str='C',
+        ctx: Optional[Context]=None,
+        out: Optional[ndarray]=None,
+) -> ndarray:
     """
     Return an array of ones with the same shape and type as a given array.
 
