@@ -5582,14 +5582,12 @@ acosh.__doc__ = """
     acosh : ndarray
         Array of the same shape as `x`.
         This is a scalar if `x` is a scalar.
-        
-    Note
-    -------
-    `acosh` is a alias for `arccosh`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acosh-x
-    instead of an official NumPy operator.
 
     .. note::
+       `acosh` is a alias for `arccosh`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acosh-x
+       instead of an official NumPy operator.
+       
        `acosh` is a multivalued function: for each `x` there are infinitely
        many numbers `z` such that `cosh(z) = x`.
 
