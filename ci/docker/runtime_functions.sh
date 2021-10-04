@@ -643,7 +643,7 @@ build_ubuntu_gpu() {
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
-    ninja
+    ninja -j$(($(nproc)/2))
 }
 
 build_ubuntu_gpu_debug() {
