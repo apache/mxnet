@@ -2928,7 +2928,14 @@ def empty_like(
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def all(a, axis=None, out=None, keepdims=False):
+def all(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        out: Optional[ndarray]=None,
+        keepdims: Optional[bool]=False
+) -> ndarray:
     """
     Test whether all array elements along a given axis evaluate to True.
 
@@ -2977,7 +2984,14 @@ def all(a, axis=None, out=None, keepdims=False):
 
 
 @set_module('mxnet.numpy')
-def any(a, axis=None, out=None, keepdims=False):
+def any(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = False,
+) -> ndarray:
     """
     Test whether any array element along a given axis evaluates to True.
     Returns single boolean unless axis is not None
