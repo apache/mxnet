@@ -224,7 +224,7 @@ struct floor_divide : public mxnet_op::tunable {
   template <typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(a / b));
-    if ((c * b != a) && (a < DType(0)) != (b < DType(0))) {
+    if ((c * b != a) && (a < 0) != (b < 0)) {
       return DType(c - 1);
     } else {
       return c;
@@ -235,7 +235,7 @@ struct floor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
     mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
     mshadow::half::half_t c = static_cast<mshadow::half::half_t>(::floor(a_half / b));
-    if ((c * b != a_half) && (a < DType(0)) != (b < mshadow::half::half_t(0))) {
+    if ((c * b != a_half) && (a < 0) != (b < 0)) {
       return mshadow::half::half_t(c - 1);
     } else {
       return c;
@@ -246,7 +246,7 @@ struct floor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static float Map(DType a, float b) {
     float a_float = static_cast<float>(a);
     float c = ::floorf(a_float / b);
-    if ((c * b != a_float) && (a < DType(0)) != (b < float(0))) {
+    if ((c * b != a_float) && (a < 0) != (b < 0)) {
       return float(c - 1);
     } else {
       return c;
@@ -257,7 +257,7 @@ struct floor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     double a_double = static_cast<double>(a);
     double c = ::floor(a_double / b);
-    if ((c * b != a_double) && (a < DType(0)) != (b < double(0))) {
+    if ((c * b != a_double) && (a < 0) != (b < 0)) {
       return double(c - 1);
     } else {
       return c;
@@ -269,7 +269,7 @@ struct rfloor_divide : public mxnet_op::tunable {
   template <typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(b / a));
-    if ((c * a != b) && (a < DType(0)) != (b < DType(0))) {
+    if ((c * a != b) && (a < 0) != (b < 0)) {
       return DType(c - 1);
     } else {
       return c;
@@ -280,7 +280,7 @@ struct rfloor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
     mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
     mshadow::half::half_t c = static_cast<mshadow::half::half_t>(::floor(b / a_half));
-    if ((c * a_half != b) && (a < DType(0)) != (b < mshadow::half::half_t(0))) {
+    if ((c * a_half != b) && (a < 0) != (b < 0)) {
       return mshadow::half::half_t(c - 1);
     } else {
       return c;
@@ -291,7 +291,7 @@ struct rfloor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static float Map(DType a, float b) {
     float a_float = static_cast<float>(a);
     float c = ::floorf(b / a_float);
-    if ((c * a_float != b) && (a < DType(0)) != (b < float(0))) {
+    if ((c * a_float != b) && (a < 0) != (b < 0)) {
       return float(c - 1);
     } else {
       return c;
@@ -302,7 +302,7 @@ struct rfloor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     double a_double = static_cast<double>(a);
     double c = ::floor(b / a_double);
-    if ((c * a_double != b) && (a < DType(0)) != (b < double(0))) {
+    if ((c * a_double != b) && (a < 0) != (b < 0)) {
       return double(c - 1);
     } else {
       return c;
