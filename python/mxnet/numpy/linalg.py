@@ -198,7 +198,7 @@ def outer(a, b):
            [-2., -1.,  0.,  1.,  2.],
            [-2., -1.,  0.,  1.,  2.]])
     """
-    return tensordot(a.flatten(), b.flatten(), 0)
+    return _mx_nd_np.tensordot(a.flatten(), b.flatten(), 0)
 
 def lstsq(a, b, rcond='warn'):
     r"""
