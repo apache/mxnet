@@ -7798,7 +7798,7 @@ def clip(a, a_min, a_max, out=None):
 
 
 @set_module('mxnet.numpy')
-def argmax(a, axis=None, out=None):
+def argmax(a: ndarray, /, *, axis: Optional[int]=None, out: Optional[ndarray]=None) -> ndarray:
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -7867,7 +7867,7 @@ def argmax(a, axis=None, out=None):
 
 
 @set_module('mxnet.numpy')
-def argmin(a, axis=None, out=None):
+def argmin(a: ndarray, /, *, axis: Optional[int]=None, out: Optional[ndarray]=None) -> ndarray:
     r"""
     Returns the indices of the minimum values along an axis.
 
@@ -10729,7 +10729,7 @@ def insert(arr, obj, values, axis=None):
 
 
 @set_module('mxnet.numpy')
-def nonzero(a):
+def nonzero(a: ndarray, /):
     """
     Return the indices of the elements that are non-zero.
 
@@ -11992,7 +11992,7 @@ def isfinite(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray
 
 
 @set_module('mxnet.numpy')
-def where(condition, x=None, y=None):
+def where(condition: ndarray, x: ndarray=None, y: ndarray=None, /) -> ndarray:
     """where(condition, [x, y])
     Return elements chosen from `x` or `y` depending on `condition`.
 
