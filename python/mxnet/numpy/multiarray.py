@@ -2406,7 +2406,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """Remove single-dimensional entries from the shape of a."""
         return squeeze(self, axis=axis)
 
-    def broadcast_to(self, shape):  # pylint: disable=redefined-outer-name
+    def broadcast_to(self: ndarray, /, shape:  Tuple[int, ...]) -> ndarray:  # pylint: disable=redefined-outer-name
         return _mx_nd_np.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
@@ -3254,7 +3254,7 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def add(x1, x2, out=None, **kwargs):
+def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
     """
     Add arguments element-wise.
 
@@ -4142,7 +4142,7 @@ def cbrt(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def abs(x, out=None, **kwargs):
+def abs(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
     r"""
     Calculate the absolute value element-wise.
 
@@ -4300,7 +4300,7 @@ def expm1(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arcsin(x, out=None, **kwargs):
+def arcsin(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
     """
     Inverse sine, element-wise.
 
@@ -4419,7 +4419,7 @@ asin.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arccos(x, out=None, **kwargs):
+def arccos(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
     """
     Trigonometric inverse cosine, element-wise.
     The inverse of cos so that, if y = cos(x), then x = arccos(y).
@@ -5475,7 +5475,7 @@ def logical_not(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arcsinh(x, out=None, **kwargs):
+def arcsinh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
     r"""
     Inverse hyperbolic cosine, element-wise.
 
@@ -5574,7 +5574,7 @@ asinh.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arccosh(x, out=None, **kwargs):
+def arccosh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
     r"""
     Inverse hyperbolic cosine, element-wise.
 
