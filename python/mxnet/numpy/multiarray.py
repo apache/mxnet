@@ -2497,8 +2497,8 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 def empty(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: dtype=float,
-        order: str='C',
+        dtype: Optional[Union[dtype, str]]=float,
+        order: Optional[str]='C',
         ctx: Optional[Context]=None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, without initializing entries.
@@ -2665,8 +2665,8 @@ def zeros(
         shape: Union[int, Tuple[int, ...]],
         /,
         *,
-        dtype: Optional[dtype]=None,
-        order: str='C',
+        dtype: Optional[Union[dtype, str]]=None,
+        order: Optional[str]='C',
         ctx: Optional[Context]=None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
@@ -2715,8 +2715,8 @@ def ones(
         shape: Union[int, Tuple[int, ...]],
         /,
         *,
-        dtype: Optional[dtype]=None,
-        order: str='C',
+        dtype: Optional[Union[dtype, str]]=None,
+        order: Optional[str]='C',
         ctx: Optional[Context]=None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
@@ -2798,8 +2798,8 @@ def full(
         shape: Union[int, Tuple[int, ...]],
         fill_value: Union[int, float],
         *,
-        dtype: Optional[dtype]=None,
-        order: str='C',
+        dtype: Optional[Union[str, dtype]]=None,
+        order: Optional[str]='C',
         ctx: Optional[Context]=None,
         out: Optional[ndarray]=None,
 ) -> ndarray:
@@ -2863,9 +2863,9 @@ def empty_like(
         prototype: ndarray,
         /,
         *,
-        dtype: Optional[dtype]=None,
-        order: str='C',
-        subok: bool=False,
+        dtype: Optional[Union[dtype, str]]=None,
+        order: Optional[str]='C',
+        subok: Optional[bool]=False,
         shape: Optional[Union[int, Tuple[int, ...]]]=None,
 ) -> ndarray: # pylint: disable=W0621
     """
@@ -3153,9 +3153,9 @@ def unique(
         ar: ndarray,
         /,
         *,
-        return_index: bool=False,
-        return_inverse: bool=False,
-        return_counts: bool=False,
+        return_index: Optional[bool]=False,
+        return_inverse: Optional[bool]=False,
+        return_counts: Optional[bool]=False,
         axis: Optional[int]=None
 ) -> Union[ndarray, Tuple[ndarray, ...]]:
     """
@@ -5776,7 +5776,14 @@ atanh.__doc__ = """
 
 
 @set_module('mxnet.numpy')
-def argsort(a, axis=-1, kind=None, order=None):
+def argsort(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int]=-1,
+        kind: Optional[str]=None,
+        order: Optional[str, Tuple[str, ...]]=None
+) -> ndarray:
     """
     Returns the indices that would sort an array.
     Perform an indirect sort along the given axis using the algorithm specified
@@ -5849,7 +5856,14 @@ def argsort(a, axis=-1, kind=None, order=None):
 
 
 @set_module('mxnet.numpy')
-def sort(a, axis=-1, kind=None, order=None):
+def sort(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int]=-1,
+        kind: Optional[str]=None,
+        order: Optional[str, Tuple[str, ...]]=None
+) -> ndarray:
     """
     Return a sorted copy of an array.
 
@@ -5993,8 +6007,8 @@ def eye(N: int,
         M: Optional[int]=None,
         /,
         *,
-        k: int=0,
-        dtype: dtype=float,
+        k: Optional[int]=0,
+        dtype: Optional[Union[dtype, str]]=float,
         **kwargs,
 ) -> ndarray:
     """
@@ -6041,12 +6055,12 @@ def linspace(
         start: Union[int, float],
         stop: Union[int, float],
         /,
-        num: int=50,
+        num: Optional[int]=50,
         *,
-        endpoint: bool=True,
-        retstep: bool=False,
-        dtype: Optional[dtype]=None,
-        axis: int=0,
+        endpoint: Optional[bool]=True,
+        retstep: Optional[bool]=False,
+        dtype: Optional[Union[dtype, str]]=None,
+        axis: Optional[int]=0,
         ctx: Optional[Context]=None,
 ) -> ndarray:  # pylint: disable=too-many-arguments
     r"""
@@ -6734,7 +6748,7 @@ def arange(
         stop: Optional[Union[int, float]]=None,
         step: Union[int, float]=1,
         *,
-        dtype: Optional[dtype]=None,
+        dtype: Optional[Union[dtype, str]]=None,
         ctx: Optional[Context]=None,
 ) -> ndarray:
     """Return evenly spaced values within a given interval.
@@ -7109,7 +7123,7 @@ def concat(seq, axis=0, out=None):
 
 @set_module('mxnet.numpy')
 def concatenate(
-        seq:  Union[Tuple[ndarray, ...], List[ndarray]], /, *, axis: int=0, out: Optional[ndarray]=None
+        seq:  Union[Tuple[ndarray, ...], List[ndarray]], /, *, axis: Optional[int]=0, out: Optional[ndarray]=None
 ) -> ndarray:
     """Join a sequence of arrays along an existing axis.
 
@@ -7206,7 +7220,7 @@ def stack(
         arrays: Union[Tuple[ndarray, ...], List[ndarray]],
         /,
         *,
-        axis: int=0,
+        axis: Optional[int]=0,
         out: Optional[ndarray]=None
 ) -> ndarray:
     """Join a sequence of arrays along a new axis.
@@ -7579,7 +7593,14 @@ def fmin(x1, x2, out=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def max(a, axis=None, out=None, keepdims=False):
+def max(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        out: Optional[ndarray]=None,
+        keepdims: Optional[bool]=False
+) -> ndarray:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -8929,7 +8950,13 @@ def blackman(M, dtype=None, ctx=None):
 
 
 @set_module('mxnet.numpy')
-def flip(m: ndarray, /, *, axis: Optional[Union[int, Tuple[int, ...]]]=None, out: Optional[ndarray]=None) -> ndarray:
+def flip(
+        m: ndarray,
+        /,
+        *,
+        axis: Optional[Union[int, Tuple[int, ...]]]=None,
+        out: Optional[ndarray]=None
+) -> ndarray:
     r"""
     flip(m, axis=None, out=None)
 
@@ -11324,8 +11351,8 @@ def full_like(
         /,
         fill_value: Union[int, float],
         *,
-        dtype: Optional[dtype]=None,
-        order: str='C',
+        dtype: Optional[Union[dtype, str]]=None,
+        order: Optional[str]='C',
         ctx: Optional[Context]=None,
         out: Optional[ndarray]=None,
 ) -> ndarray: # pylint: disable=too-many-arguments
@@ -11388,8 +11415,8 @@ def zeros_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[dtype]=None,
-        order: str='C',
+        dtype: Optional[Union[dtype, str]]=None,
+        order: Optional[str]='C',
         ctx: Optional[Context]=None,
         out: Optional[ndarray]=None,
 ) -> ndarray:
@@ -11454,8 +11481,8 @@ def ones_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[dtype]=None,
-        order: str='C',
+        dtype: Optional[Union[dtype, str]]=None,
+        order: Optional[str]='C',
         ctx: Optional[Context]=None,
         out: Optional[ndarray]=None,
 ) -> ndarray:
@@ -12585,7 +12612,7 @@ def cumsum(a, axis=None, dtype=None, out=None):
     return _mx_nd_np.cumsum(a, axis=axis, dtype=dtype, out=out)
 
 @set_module('mxnet.numpy')
-def reshape(a: ndarray, /, newshape: Tuple[int, ...], order: str='C') -> ndarray:
+def reshape(a: ndarray, /, newshape: Union[int, Tuple[int, ...]], order: Optional[str]='C') -> ndarray:
     """
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
