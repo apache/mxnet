@@ -2040,10 +2040,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     # pylint: disable=too-many-arguments, arguments-differ
+
+    @wrap_data_api_statical_func
     def std(self, axis=None, dtype=None, out=None, correction=0, keepdims=False):
         """Returns the standard deviation of the array elements along given axis."""
         return std(self, axis=axis, dtype=dtype, correction=correction, keepdims=keepdims, out=out)
 
+    @wrap_data_api_statical_func
     def var(self, axis=None, dtype=None, out=None, correction=0, keepdims=False):
         """Returns the variance of the array elements, along given axis."""
         return var(self, axis=axis, dtype=dtype, out=out, correction=correction, keepdims=keepdims)
@@ -4251,7 +4254,7 @@ def expm1(x, out=None, **kwargs):
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
 def arcsin(x, out=None, **kwargs):
-    """
+    r"""
     Inverse sine, element-wise.
 
     Parameters
@@ -4308,12 +4311,6 @@ asin = arcsin
 asin.__doc__ = """
     Inverse sine, element-wise.
     
-    Notes
-    ----------
-    `asin` is a alias for `arcsin`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asin-x
-    instead of an official NumPy operator.
-    
     >>>np.asin is np.asin
     True
 
@@ -4343,6 +4340,10 @@ asin.__doc__ = """
     0.0
 
     .. note::
+       `asin` is a alias for `arcsin`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asin-x
+       instead of an official NumPy operator.
+       
        `asin` is a multivalued function: for each `x` there are infinitely
        many numbers `z` such that :math:`sin(z) = x`.  The convention is to
        return the angle `z` whose real part lies in [-pi/2, pi/2].
@@ -4410,12 +4411,6 @@ acos.__doc__ = """
     Trigonometric inverse cosine, element-wise.
     The inverse of cos so that, if y = cos(x), then x = acos(y).
     
-    Notes
-    ----------
-    `acos` is a alias for `arccos`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acos-x
-    instead of an official NumPy operator.
-    
     >>>np.acos is np.arccos
     True
 
@@ -4436,6 +4431,10 @@ acos.__doc__ = """
 
     Notes
     ----------
+    `acos` is a alias for `arccos`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acos-x
+    instead of an official NumPy operator.
+    
     acos is a multivalued function: for each x there are infinitely many numbers z such that
     cos(z) = x. The convention is to return the angle z whose real part lies in [0, pi].
     For real-valued input data types, acos always returns real output.
@@ -4497,12 +4496,6 @@ atan = arctan
 atan.__doc__ = """
     Trigonometric inverse tangent, element-wise.
     The inverse of tan, so that if ``y = tan(x)`` then ``x = atan(y)``.
-
-    Notes
-    ---------
-    `atan` is a alias for `arctan`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan-x
-    instead of an official NumPy operator.
     
     >>>np.atan is np.arctan
     True
@@ -4525,6 +4518,10 @@ atan.__doc__ = """
 
     Notes
     -----
+    `atan` is a alias for `arctan`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan-x
+    instead of an official NumPy operator.
+    
     `atan` is a multi-valued function: for each `x` there are infinitely
     many numbers `z` such that tan(`z`) = `x`.  The convention is to return
     the angle `z` whose real part lies in [-pi/2, pi/2].
@@ -5473,12 +5470,6 @@ asinh = arcsinh
 asinh.__doc__ = """
     Inverse hyperbolic cosine, element-wise.
     
-    Notes
-    ----------
-    `asinh` is a alias for `arcsinh`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asinh-x
-    instead of an official NumPy operator.
-    
     >>>np.asinh is np.arcsinh
     True
 
@@ -5496,6 +5487,10 @@ asinh.__doc__ = """
         This is a scalar if `x` is a scalar.
 
     .. note::
+       `asinh` is a alias for `arcsinh`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asinh-x
+       instead of an official NumPy operator.
+       
        `asinh` is a multivalued function: for each `x` there are infinitely
        many numbers `z` such that `sinh(z) = x`.
 
@@ -5572,11 +5567,6 @@ acosh = arccosh
 acosh.__doc__ = """
     Inverse hyperbolic cosine, element-wise.
     
-    Notes
-    `acosh` is a alias for `arccosh`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acosh-x
-    instead of an official NumPy operator.
-    
     >>>np.acosh is np.arccosh
     True
 
@@ -5592,6 +5582,12 @@ acosh.__doc__ = """
     acosh : ndarray
         Array of the same shape as `x`.
         This is a scalar if `x` is a scalar.
+        
+    Note
+    -------
+    `acosh` is a alias for `arccosh`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acosh-x
+    instead of an official NumPy operator.
 
     .. note::
        `acosh` is a multivalued function: for each `x` there are infinitely
@@ -5669,11 +5665,6 @@ atanh = arctanh
 atanh.__doc__ = """
     Inverse hyperbolic tangent, element-wise.
 
-    Notes
-    `atanh` is a alias for `arctanh`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atanh-x
-    instead of an official NumPy operator.
-    
     >>>np.atanh is np.arctanh
     True
 
@@ -5691,6 +5682,10 @@ atanh.__doc__ = """
         This is a scalar if `x` is a scalar.
 
     .. note::
+       `atanh` is a alias for `arctanh`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atanh-x
+       instead of an official NumPy operator.
+    
        `atanh` is a multivalued function: for each `x` there are infinitely
        many numbers `z` such that `tanh(z) = x`.
 
@@ -6305,7 +6300,7 @@ def trace(a, offset=0, axis1=0, axis2=1, out=None):
 
 
 @set_module('mxnet.numpy')
-def transpose(a: array, axes=None):
+def transpose(a, axes=None):
     """
     Permute the dimensions of an array.
 
@@ -6993,6 +6988,12 @@ def concat(seq, axis=0, out=None):
     -------
     res : ndarray
         The concatenated array.
+
+    Note
+    --------
+    `concate` is a alias for `concatante`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#concat-arrays-axis-0
+    instead of an official NumPy operator.
 
     See Also
     --------
@@ -9180,12 +9181,6 @@ atan2.__doc__ = """
     This function is not defined for complex-valued arguments; for the
     so-called argument of complex values, use `angle`.
     
-    Notes
-    ----------
-    `atan2` is a alias for `arctan2`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x
-    instead of an official NumPy operator.
-    
     >>>np.atan2 is np.arctan2
     True
 
@@ -9208,6 +9203,10 @@ atan2.__doc__ = """
         `x1` and `x2` are scalars.
 
     .. notes::
+       `atan2` is a alias for `arctan2`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x
+       instead of an official NumPy operator.
+       
        *atan2* is identical to the ``atan2`` function of the underlying
        C library.  The following special values are defined in the C
        standard: [1]_
@@ -9460,52 +9459,6 @@ def ldexp(x1, x2, out=None, **kwargs):
     """
     return _mx_nd_np.ldexp(x1, x2, out)
 
-@set_module('mxnet.numpy')
-def vecdot(a, b, axis=None):
-    r"""
-        Return the dot product of two vectors.
-        Note that `vecdot` handles multidimensional arrays differently than `dot`:
-        it does *not* perform a matrix product, but flattens input arguments
-        to 1-D vectors first. Consequently, it should only be used for vectors.
-
-        Parameters
-        ----------
-        a : ndarray
-            First argument to the dot product.
-        b : ndarray
-            Second argument to the dot product.
-        axis : axis over which to compute the dot product. Must be an integer on
-            the interval [-N, N) , where N is the rank (number of dimensions) of
-            the shape determined according to Broadcasting . If specified as a
-            negative integer, the function must determine the axis along which
-            to compute the dot product by counting backward from the last dimension
-            (where -1 refers to the last dimension). If None , the function must
-            compute the dot product over the last axis. Default: None .
-
-        Returns
-        -------
-        output : ndarray
-            Dot product of `a` and `b`.
-
-        See Also
-        --------
-        dot : Return the dot product without using the complex conjugate of the
-            first argument.
-
-        Examples
-        --------
-        Note that higher-dimensional arrays are flattened!
-
-        >>> a = np.array([[1, 4], [5, 6]])
-        >>> b = np.array([[4, 1], [2, 2]])
-        >>> np.vecdot(a, b)
-        array(30.)
-        >>> np.vecdot(b, a)
-        array(30.)
-        >>> 1*4 + 4*1 + 5*2 + 6*2
-        30
-        """
-    return tensordot(a.flatten(), b.flatten(), axis)
 
 @set_module('mxnet.numpy')
 def vdot(a, b):

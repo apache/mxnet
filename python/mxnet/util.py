@@ -646,16 +646,17 @@ def wrap_np_binary_func(func):
     return _wrap_np_binary_func
 
 def wrap_data_api_statical_func(func):
-    """A convenience decorator for wrapping data apis standardized statical functions to provide
-            context keyward backward compatibility
-            Parameters
-            ----------
-            func : a numpy-compatible array statical function to be wrapped for context keyward change.
-            Returns
-            -------
-            Function
-                A function wrapped with context keyward changes.
-            """
+    """
+    A convenience decorator for wrapping data apis standardized statical functions to provide
+    context keyward backward compatibility
+    Parameters
+    ----------
+    func : a numpy-compatible array statical function to be wrapped for context keyward change.
+    Returns
+    -------
+    Function
+    A function wrapped with context keyward changes.
+    """
 
     @functools.wraps(func)
     def _wrap_api_creation_func(*args, **kwargs):
@@ -668,16 +669,17 @@ def wrap_data_api_statical_func(func):
     return _wrap_api_creation_func
 
 def wrap_data_api_linalg_func(func):
-    """A convenience decorator for wrapping data apis standardized linalg functions to provide
-        context keyward backward compatibility
-        Parameters
-        ----------
-        func : a numpy-compatible array linalg function to be wrapped for context keyward change.
-        Returns
-        -------
-        Function
-            A function wrapped with context keyward changes.
-        """
+    """
+    A convenience decorator for wrapping data apis standardized linalg functions to provide
+    context keyward backward compatibility
+    Parameters
+    ----------
+    func : a numpy-compatible array linalg function to be wrapped for context keyward change.
+    Returns
+    -------
+    Function
+    A function wrapped with context keyward changes.
+    """
 
     @functools.wraps(func)
     def _wrap_api_creation_func(*args, **kwargs):

@@ -20,10 +20,10 @@
 from ..ndarray import numpy as _mx_nd_np
 from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
-from . import fallback_linalg
+from . import fallback_linalg, tensordot
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
-           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'vecdot']
 __all__ += fallback_linalg.__all__
 
 
@@ -66,6 +66,53 @@ def matrix_rank(M, tol=None, hermitian=False):
     0
     """
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
+
+
+def vecdot(a, b, axis=None):
+    r"""
+    Return the dot product of two vectors.
+    Note that `vecdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument to the dot product.
+    b : ndarray
+        Second argument to the dot product.
+    axis : axis over which to compute the dot product. Must be an integer on
+        the interval [-N, N) , where N is the rank (number of dimensions) of
+        the shape determined according to Broadcasting . If specified as a
+        negative integer, the function must determine the axis along which
+        to compute the dot product by counting backward from the last dimension
+        (where -1 refers to the last dimension). If None , the function must
+        compute the dot product over the last axis. Default: None .
+
+    Returns
+    -------
+    output : ndarray
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.vecdot(a, b)
+    array(30.)
+    >>> np.vecdot(b, a)
+    array(30.)
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return tensordot(a.flatten(), b.flatten(), axis)
 
 
 def lstsq(a, b, rcond='warn'):
@@ -839,6 +886,7 @@ def eigvals(a):
     """
     return _mx_nd_np.linalg.eigvals(a)
 
+
 @wrap_data_api_linalg_func
 def eigvalsh(a, upper=False):
     r"""Compute the eigenvalues real symmetric matrix.
@@ -966,6 +1014,7 @@ def eig(a):
            [ 0.4021404 , -0.29585576,  0.26117516]])
     """
     return _mx_nd_np.linalg.eig(a)
+
 
 @wrap_data_api_linalg_func
 def eigh(a, upper=False):
