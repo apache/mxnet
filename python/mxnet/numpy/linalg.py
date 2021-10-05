@@ -22,7 +22,8 @@ from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcar
 from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
-           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer']
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
+           'tensordot', 'trace']
 __all__ += fallback_linalg.__all__
 
 
@@ -51,7 +52,7 @@ def matrix_rank(M, tol=None, hermitian=False):
     hermitian : bool, optional
         If True, `M` is assumed to be Hermitian (symmetric if real-valued),
         enabling a more efficient method for finding singular values.
-        Defaults to False.
+        Default: False.
 
     Returns
     -------
@@ -74,9 +75,112 @@ def matrix_rank(M, tol=None, hermitian=False):
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
 
 
+def trace(a, offset=0):
+    r"""
+    Returns a tensor contraction of `a` and `b` over specific axes.
+
+    Notes
+    -----
+    `trace` is an alias for `trace`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-trace-x-offset-0
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array having shape (..., M, N) and whose innermost two dimensions form MxN matrices.
+        Should have a numeric data type.
+    offset : int
+        Offset specifying the off-diagonal relative to the main diagonal.
+
+        offset = 0 : the main diagonal.
+        offset > 0 : off-diagonal above the main diagonal.
+        offset < 0 : off-diagonal below the main diagonal.
+
+        Default: 0.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the traces and whose shape is determined by removing the last two dimensions and storing
+        the traces in the last array dimension. For example, if `a` has rank `k` and shape `(I, J, K, ..., L, M, N)`,
+        then an output array has rank `k-2` and shape `(I, J, K, ..., L)`
+        where: `out[i, j, k, ..., l] = trace(a[i, j, k, ..., l, :, :])`
+        The returned array must have the same data type as `a`.
+
+    Examples
+    --------
+    >>> x = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    >>> np.linalg.trace(x)
+    array(3.)
+    >>> x = np.arange(8).reshape((2, 2, 2))
+    >>> np.linalg.trace(x)
+    array([6., 8.])
+    >>> x = np.arange(24).reshape((2, 2, 2, 3))
+    >>> np.linalg.trace(x).shape
+    (2, 3)
+    >>> np.linalg.trace(x)
+    array([[18., 20., 22.],
+        [24., 26., 28.]])
+    """
+    # axis1, axis2: defaults are the first two axes of `a`.
+    return _mx_nd_np.trace(a, offset=offset, axis1=0, axis2=1, out=None)
+
+
+def tensordot(a, b, axes=2):
+    r"""
+    Returns a tensor contraction of `a` and `b` over specific axes.
+
+    Notes
+    -----
+    `tensordot` is an alias for `tensordot`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-tensordot-x1-x2-axes-2
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        First input array. Should have a numeric data type.
+    b : ndarray
+        Second input array. Must be compatible with `a` (see Broadcasting). Should have a numeric data type.
+    axes : int, tuple
+        Number of axes to contract or explicit sequences of axes for `a` and `b`, respectively.
+        If axes is an int equal to `N` , then contraction must be performed over the last `N` axes of `a`
+        and the first `N` axes of `b` in order.
+        The size of each corresponding axis (dimension) must match. Must be nonnegative.
+
+        If N equals 0 , the result is the tensor (outer) product.
+        If N equals 1 , the result is the tensor dot product.
+        If N equals 2 , the result is the tensor double contraction (default).
+
+        Default: 2.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the tensor contraction whose shape consists of the non-contracted axes (dimensions) of the
+        first array `a`, followed by the non-contracted axes (dimensions) of the second array `b`.
+
+    Examples
+    --------
+    >>> x = np.arange(60.).reshape(3,4,5)
+    >>> y = np.arange(24.).reshape(4,3,2)
+    >>> z = np.linalg.tensordot(x, y, axes=([1,0],[0,1]))
+    >>> z.shape
+    (5, 2)
+    >>> z
+    array([[ 4400.,  4730.],
+           [ 4532.,  4874.],
+           [ 4664.,  5018.],
+           [ 4796.,  5162.],
+           [ 4928.,  5306.]])
+    """
+    return _mx_nd_np.tensordot(a, b, axes)
+
+
 def diagonal(a, offset=0):
     r"""
-    Returns the specified diagonals of a matrix (or a stack of matrices) a.
+    Returns the specified diagonals of a matrix (or a stack of matrices) `a`.
 
     Notes
     -----
@@ -90,41 +194,43 @@ def diagonal(a, offset=0):
         The array to apply diag method.
     offset : offset
         Extracts or constructs kth diagonal given input array.
-        Offset specifying the off-diagonal relative to the main diagonal
-            offset = 0 : the main diagonal.
-            offset > 0 : off-diagonal above the main diagonal.
-            offset < 0 : off-diagonal below the main diagonal.
-            Default: 0.
+        Offset specifying the off-diagonal relative to the main diagonal.
+
+        offset = 0 : the main diagonal.
+        offset > 0 : off-diagonal above the main diagonal.
+        offset < 0 : off-diagonal below the main diagonal.
+
+        Default: 0.
 
     Returns
     ----------
     out : ndarray
-    an array containing the diagonals and whose shape is determined by removing the last two dimensions and
-    appending a dimension equal to the size of the resulting diagonals.
-    The returned array must have the same data type as a.
+        An array containing the diagonals and whose shape is determined by removing the last two dimensions and
+        appending a dimension equal to the size of the resulting diagonals.
+        The returned array must have the same data type as a.
 
     Examples
     --------
     >>> x = np.arange(9).reshape((3,3))
     >>> x
-    array([[0, 1, 2],
-           [3, 4, 5],
-           [6, 7, 8]])
-    >>> np.linlag.diagonal(x)
-    array([0, 4, 8])
-    >>> np.linlag.diagonal(x, offset=1)
-    array([1, 5])
-    >>> np.linlag.diagonal(x, offset=-1)
-    array([3, 7])
+    array([[0., 1., 2.],
+           [3., 4., 5.],
+           [6., 7., 8.]])
+    >>> np.linalg.diagonal(x)
+    array([0., 4., 8.])
+    >>> np.linalg.diagonal(x, offset=1)
+    array([1., 5.])
+    >>> np.linalg.diagonal(x, offset=-1)
+    array([3., 7.])
     """
-    return _mx_nd_np.diag(a, offset=offset)
+    return _mx_nd_np.diag(a, k=offset)
 
 
 def cross(a, b, axis=-1):
     r"""
     Returns the cross product of 3-element vectors.
 
-    If x1 and x2 are multi-dimensional arrays (i.e., both have a rank greater than 1),
+    If `a` and `b` are multi-dimensional arrays (i.e., both have a rank greater than 1),
     then the cross-product of each pair of corresponding 3-element vectors is independently computed.
 
     Notes
@@ -140,8 +246,9 @@ def cross(a, b, axis=-1):
     b : ndarray
         Second input array. Must have the same shape as a. Should have a numeric data type.
     axis : int
-        If defined, the axis of `a` and `b` that defines the vector(s)
-        and cross product(s). By default `-1`.
+        If defined, the axis of `a` and `b` that defines the vector(s) and cross product(s).
+
+        Default: -1.
 
     Returns
     -------
@@ -193,7 +300,7 @@ def cross(a, b, axis=-1):
 
 def outer(a, b):
     r"""
-    Computes the outer product of two vectors a and b.
+    Computes the outer product of two vectors `a` and `b`.
 
     Notes
     -----
