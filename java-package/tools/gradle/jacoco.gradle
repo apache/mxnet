@@ -1,0 +1,80 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+apply plugin: 'jacoco'
+
+def jacocoProjects = subprojects.findAll {
+    if ([":jnarator"].contains(it.getPath())) {
+        return false
+    }
+    return new File(it.projectDir, "src/test/java").exists()
+}
+
+task jacocoMergeTestData(type: JacocoMerge) {
+    jacocoProjects.each { p ->
+        dependsOn(p.test, p.jacocoTestReport)
+        executionData p.tasks.withType(Test)
+    }
+}
+
+def exclusions = [":examples", ":integration"]
+
+task jacocoRootReport(type: JacocoReport) {
+    dependsOn jacocoMergeTestData
+    description = 'Generates an aggregate report from all subprojects'
+
+    jacocoProjects.each { p ->
+        if (!exclusions.contains(p.getPath())) {
+            additionalSourceDirs.from files((Set<File>) p.sourceSets.main.allJava.srcDirs)
+            sourceDirectories.from files((Set<File>) p.sourceSets.main.allSource.srcDirs)
+            classDirectories.from files((FileCollection) p.sourceSets.main.output)
+            additionalClassDirs((FileCollection) p.sourceSets.main.output)
+        }
+    }
+    executionData.from = files(jacocoProjects.jacocoTestReport.executionData).filter { f -> f.exists() }
+
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+}
+
+task jacocoRootVerification(type: JacocoCoverageVerification) {
+    dependsOn jacocoMergeTestData
+
+    jacocoProjects.each { p ->
+        if (!exclusions.contains(p.getPath())) {
+            additionalSourceDirs.from files((Set<File>) p.sourceSets.main.allJava.srcDirs)
+            sourceDirectories.from files((Set<File>) p.sourceSets.main.allSource.srcDirs)
+            classDirectories.from files((FileCollection) p.sourceSets.main.output)
+            additionalClassDirs((FileCollection) p.sourceSets.main.output)
+        }
+    }
+    executionData.from = files(jacocoProjects.jacocoTestReport.executionData).filter { f -> f.exists() }
+
+    violationRules {
+        rule {
+            limit {
+                if (Boolean.getBoolean("nightly")) {
+                    minimum = 0.70
+                } else {
+                    minimum = 0.65
+                }
+            }
+        }
+    }
+}

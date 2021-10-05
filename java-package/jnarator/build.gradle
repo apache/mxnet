@@ -1,0 +1,59 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'antlr'
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:${antlr_version}"
+
+    api "commons-cli:commons-cli:${commons_cli_version}"
+    api "org.antlr:antlr4-runtime:${antlr_version}"
+    api "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+
+    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    testRuntimeOnly project(":mxnet-engine")
+//    testRuntimeOnly ":mxnet-native-auto:${mxnet_version}"
+}
+
+checkstyleMain.source = 'src/main/java'
+
+checkstyleMain {
+    // skip check style for this package
+    exclude 'org/apache/mxnet/jnarator/**'
+}
+
+pmdMain.source = 'src/main/java'
+//pmdMain.ignoreFailures(true)
+spotbugs.ignoreFailures = true
+
+jar {
+    manifest {
+        attributes (
+                "Main-Class" : "org.apache.mxnet.jnarator.Main",
+                "Multi-Release" : true
+        )
+    }
+    includeEmptyDirs = false
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    from configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+}

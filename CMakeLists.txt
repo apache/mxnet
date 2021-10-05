@@ -91,6 +91,7 @@ cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverag
 option(BUILD_EXTENSION_PATH "Path to extension to build" "")
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
+option(BUILD_JAVA_NATIVE "Skip signal handler registration for Java Binding" OFF)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 cmake_dependent_option(MXNET_FORCE_SHARED_CRT "Build with dynamic CRT on Windows (/MD)" ON "MXNET_BUILD_SHARED_LIBS" OFF)
@@ -968,6 +969,10 @@ endif()
 if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
   target_compile_definitions(mxnet PUBLIC MXNET_USE_CPP_PACKAGE=1)
+endif()
+
+if(BUILD_JAVA_NATIVE)
+  add_definitions(-DSKIP_SIGNAL_HANDLER_REGISTRATION=1)
 endif()
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")

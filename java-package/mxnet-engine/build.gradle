@@ -1,0 +1,188 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'java'
+}
+
+group 'org.apache.mxnet'
+version '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+def getOsName() {
+    def os_name = System.properties['os.name']
+    if (os_name.contains('windows')) {
+        return "win"
+    } else if (os_name.contains('Mac OS X')) {
+        return "osx"
+    } else if (os_name.contains('Linux')) {
+        return "linux"
+    } else {
+        return System.properties['os.name']
+    }
+}
+
+dependencies {
+    api "com.google.code.gson:gson:${gson_version}"
+    api "net.java.dev.jna:jna:${jna_version}"
+    api "org.apache.commons:commons-compress:${commons_compress_version}"
+    api "org.slf4j:slf4j-api:${slf4j_version}"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    // Solve the problem: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+    implementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    def osName = getOsName()
+    implementation files("${project(':native').buildDir}/libs/native-${mxnet_version}-SNAPSHOT-${osName}-x86_64.jar")
+//    implementation fileTree(dir: "${project(':native').buildDir}/lib", includes: ["native-${mxnet_version}-SNAPSHOT-${osName}-x86_64.jar"])
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java', 'build/generated-src']
+        }
+    }
+}
+
+checkstyleMain.source = 'src/main/java'
+pmdMain.source = 'src/main/java'
+
+task jnarator(dependsOn: ":jnarator:jar") {
+    outputs.dir "${project.buildDir}/generated-src"
+    doLast {
+        File jnaGenerator = project(":jnarator").jar.outputs.files.singleFile
+        javaexec {
+            main = "-jar"
+            args = [
+                    jnaGenerator.absolutePath,
+                    "-l",
+                    "mxnet",
+                    "-p",
+                    "org.apache.mxnet.jna",
+                    "-o",
+                    "${project.buildDir}/generated-src",
+                    "-m",
+                    "${project.projectDir}/src/main/jna/mapping.properties",
+                    "-f",
+                    "../../include/mxnet/c_api.h",
+                    "../../include/nnvm/c_api.h"
+            ]
+        }
+    }
+}
+
+test {
+    useTestNG() {
+        useDefaultListeners = true
+    }
+    environment "PATH", "src/test/bin:${environment.PATH}"
+//    environment "MXNET_LIBRARY_PATH", "${MXNET_LIBRARY_PATH}"
+    maxHeapSize = '6G'
+    testLogging.showStandardStreams = true
+    beforeTest { descriptor ->
+        logger.lifecycle("Running test: " + descriptor)
+    }
+    failFast = false
+    onOutput { descriptor, event ->
+        logger.lifecycle("Test: " + descriptor + " produced standard out/err: " + event.message )
+    }
+//    debugOptions {
+//        enabled = true
+//        port = 4455
+//        server = true
+//        suspend = true
+//    }
+//    filter {
+//        includeTestsMatching("*Test")
+//    }
+}
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+//import java.util.regex.Matcher
+//import java.util.regex.Pattern
+
+//def checkForUpdate(String path, String url) {
+//    def expected = new URL(url).text
+//    def actual = new File("${project.projectDir}/src/main/include/${path}").text
+//    if (!actual.equals(expected)) {
+//        def fileName = path.replaceAll("[/\\\\]", '_')
+//        file("${project.projectDir}/build").mkdirs()
+//        (file("${project.projectDir}/build/${fileName}")).text = expected
+//        logger.warn("[\033[31mWARN\033[0m ] Header file has been changed in open source project: ${path}.")
+//    }
+//}
+
+//task checkHeaderFile() {
+//    outputs.files "${project.buildDir}/mxnet_c_api.h", "${project.buildDir}/nnvm_c_api.h"
+//    doFirst {
+//        if (gradle.startParameter.offline) {
+//            logger.warn("[\033[31mWARN\033[0m ] Ignore header validation in offline mode.")
+//            return
+//        }
+//
+//        def mxnetUrl = "https://raw.githubusercontent.com/apache/incubator-mxnet/v1.7.x/"
+//        checkForUpdate("mxnet/c_api.h", "${mxnetUrl}/include/mxnet/c_api.h")
+//        def content = new URL("https://github.com/apache/incubator-mxnet/tree/v1.7.x/3rdparty").text
+//
+//        Pattern pattern = Pattern.compile("href=\"/apache/incubator-tvm/tree/([a-z0-9]+)\"")
+//        Matcher m = pattern.matcher(content);
+//        if (!m.find()) {
+//            throw new GradleException("Failed to retrieve submodule hash for tvm from github")
+//        }
+//        String hash = m.group(1);
+//
+//        def nnvmUrl = "https://raw.githubusercontent.com/apache/incubator-tvm/${hash}"
+//        checkForUpdate("nnvm/c_api.h", "${nnvmUrl}/nnvm/include/nnvm/c_api.h")
+//    }
+//}
+
+compileJava.dependsOn(jnarator)
+
+// TODO
+//publishing {
+//    publications {
+//        maven(MavenPublication) {
+//            pom {
+//                name = "DJL Engine Adapter for Apache MXNet"
+//                description = "Deep Java Library (DJL) Engine Adapter for Apache MXNet"
+//                url = "http://www.djl.ai/mxnet/${project.name}"
+//            }
+//        }
+//    }
+//}

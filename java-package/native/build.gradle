@@ -1,0 +1,336 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'maven-publish'
+    id 'signing'
+}
+
+group = "org.apache.mxnet"
+
+def VERSION = "2.0.0"
+boolean isRelease = project.hasProperty("release") || project.hasProperty("staging")
+version = VERSION + (isRelease ? "" : "-SNAPSHOT")
+
+task syncBuiltMxnetLib(type: Sync) {
+    from "${rootProject.projectDir.parent}/build"
+    into "${project.buildDir}/mxnet/native/lib"
+    include "libmxnet.*"
+}
+
+// Create mxnet native library jar without classifier
+jar {
+    def placeholder = "${project.buildDir}/placeholder"
+    // this line is to enforce gradle to build the jar
+    // otherwise it don't generate the placeholder jar at times
+    // when there is no java code inside src/main
+    outputs.dir file("build/libs")
+    doFirst {
+        def versionName = project.version
+        if (!isRelease) {
+            versionName += String.format("-%s", new Date().format('yyyyMMdd'))
+        }
+        def dir = file("${placeholder}/native/lib")
+        dir.mkdirs()
+        def propFile = file("${placeholder}/native/lib/mxnet.properties")
+        propFile.text = "placeholder=true\nversion=${versionName}\n"
+    }
+
+    from placeholder
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+project.tasks.withType(GenerateModuleMetadata) {
+    enabled = false
+}
+
+signing {
+    required(project.hasProperty("staging") || project.hasProperty("snapshot"))
+    def signingKey = findProperty("signingKey")
+    def signingPassword = findProperty("signingPassword")
+    sign publishing.publications
+}
+
+task buildLocalLibraryJarDefault() {
+    def flavor = "mkl"
+    def osName = getOsName()
+    buildLocalLibraryJar(flavor, osName)
+}
+
+def buildLocalLibraryJar(flavorName, osName) {
+    def BINARY_ROOT = "${project.buildDir}"
+    tasks.create(name: "${flavorName}-${osName}Jar", type: Jar) {
+        doFirst {
+            copyMxnetNativeLib(flavorName, osName)
+            def propFile = file("${BINARY_ROOT}/${flavorName}/${osName}/native/lib/mxnet.properties")
+            propFile.delete()
+            def dsStore = file("${BINARY_ROOT}/${flavorName}/${osName}/native/lib/.DS_Store")
+            dsStore.delete()
+
+            def versionName = String.format("${version}-%s", new Date().format('yyyyMMdd'))
+            def dir = file("${BINARY_ROOT}/${flavorName}/${osName}/native/lib")
+            def sb = new StringBuilder()
+            sb.append("version=${versionName}\nclassifier=${flavorName}-${osName}-x86_64\nlibraries=")
+            def first = true
+            for (String name : dir.list().sort()) {
+                if (first) {
+                    first = false;
+                } else {
+                    sb.append(',')
+                }
+                sb.append(name)
+            }
+            propFile.text = sb.toString()
+            def metaInf = new File("${BINARY_ROOT}/${flavorName}/${osName}/META-INF")
+            metaInf.mkdirs()
+            def licenseFile = new File(metaInf, "LICENSE")
+            licenseFile.text = new URL("https://raw.githubusercontent.com/apache/incubator-mxnet/master/LICENSE").text
+
+            def binaryLicenseFile = new File(metaInf, "LICENSE.binary.dependencies")
+            binaryLicenseFile.text = new URL("https://raw.githubusercontent.com/apache/incubator-mxnet/master/tools/dependencies/LICENSE.binary.dependencies").text
+
+            from file("src/main/resources")
+        }
+        from file("${BINARY_ROOT}/${flavorName}/${osName}")
+        archiveClassifier = "${osName}-x86_64"
+
+        manifest {
+            attributes("Automatic-Module-Name": "org.apache.mxnet.mxnet_native_${flavorName}_${osName}")
+        }
+    }
+    return tasks["${flavorName}-${osName}Jar"]
+}
+
+def getOsName() {
+    def os_name = System.properties['os.name']
+    if (os_name.contains('windows')) {
+        return "win"
+    } else if (os_name.contains('Mac OS X')) {
+        return "osx"
+    } else if (os_name.contains('Linux')) {
+        return "linux"
+    } else {
+        return System.properties['os.name']
+    }
+
+}
+
+//def BINARY_ROOT = "${project.buildDir}/download"
+//def flavorNames = file(BINARY_ROOT).list() ?: []
+//flavorNames.each { flavor ->
+//
+//    def platformNames = file("${BINARY_ROOT}/${flavor}").list() ?: []
+//
+//    def artifactsNames = []
+//
+//    platformNames.each { osName ->
+//        tasks.create(name: "${flavor}-${osName}Jar", type: Jar) {
+//            doFirst {
+//                def propFile = file("${BINARY_ROOT}/${flavor}/${osName}/native/lib/mxnet.properties")
+//                propFile.delete()
+//                def dsStore = file("${BINARY_ROOT}/${flavor}/${osName}/native/lib/.DS_Store")
+//                dsStore.delete()
+//
+//                def versionName = String.format("${version}-%s", new Date().format('yyyyMMdd'))
+//                def dir = file("${BINARY_ROOT}/${flavor}/${osName}/native/lib")
+//                def sb = new StringBuilder()
+//                sb.append("version=${versionName}\nclassifier=${flavor}-${osName}-x86_64\nlibraries=")
+//                def first = true
+//                for (String name : dir.list().sort()) {
+//                    if (first) {
+//                        first = false;
+//                    } else {
+//                        sb.append(',')
+//                    }
+//                    sb.append(name)
+//                }
+//                propFile.text = sb.toString()
+//                def metaInf = new File("${BINARY_ROOT}/${flavor}/${osName}/META-INF")
+//                metaInf.mkdirs()
+//                def licenseFile = new File(metaInf, "LICENSE")
+//                licenseFile.text = new URL("https://raw.githubusercontent.com/apache/incubator-mxnet/master/LICENSE").text
+//
+//                def binaryLicenseFile = new File(metaInf, "LICENSE.binary.dependencies")
+//                binaryLicenseFile.text = new URL("https://raw.githubusercontent.com/apache/incubator-mxnet/master/tools/dependencies/LICENSE.binary.dependencies").text
+//
+//                from file("src/main/resources")
+//            }
+//            from file("${BINARY_ROOT}/${flavor}/${osName}")
+//            archiveClassifier = "${osName}-x86_64"
+//
+//            manifest {
+//                attributes("Automatic-Module-Name": "org.apache.mxnet.mxnet_native_${flavor}_${osName}")
+//            }
+//        }
+//        artifactsNames.add(tasks["${flavor}-${osName}Jar"])
+//    }
+
+    // Only publish if the project directory equals the current directory
+    // This means that publishing from the main project does not publish the native jars
+    // and the native jars have to be published separately
+    // TODO publish info
+//    if (project.getProjectDir().toString() == System.getProperty("user.dir")) {
+//        publishing.publications.create("${flavor}", MavenPublication) {
+//            artifactId "mxnet-native-${flavor}"
+//            from components.java
+//            artifacts = artifactsNames
+//            artifact jar
+//            artifact javadocJar
+//            artifact sourcesJar
+//            pom {
+//                name = "DJL release for Apache MXNet native binaries"
+//                description = "Deep Java Library (DJL) provided Apache MXNet native library binary distribution"
+//                url = "http://www.djl.ai/mxnet/native"
+//                packaging = "jar"
+//
+//                licenses {
+//                    license {
+//                        name = 'The Apache License, Version 2.0'
+//                        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+//                    }
+//                }
+//
+//                scm {
+//                    connection = "scm:git:git@github.com:deepjavalibrary/djl.git"
+//                    developerConnection = "scm:git:git@github.com:deepjavalibrary/djl.git"
+//                    url = "https://github.com/deepjavalibrary/djl"
+//                    tag = "HEAD"
+//                }
+//
+//                developers {
+//                    developer {
+//                        name = "DJL.AI Team"
+//                        email = "djl-dev@amazon.com"
+//                        organization = "Amazon AI"
+//                        organizationUrl = "https://amazon.com"
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+
+//publishing.repositories {
+//    maven {
+//        if (project.hasProperty("snapshot")) {
+//            name = "snapshot"
+//            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+//            credentials {
+//                username = findProperty("ossrhUsername")
+//                password = findProperty("ossrhPassword")
+//            }
+//        } else if (project.hasProperty("staging")) {
+//            name = "staging"
+//            url = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+//            credentials {
+//                username = findProperty("ossrhUsername")
+//                password = findProperty("ossrhPassword")
+//            }
+//        } else {
+//            name = "local"
+//            url = "build/repo"
+//        }
+//    }
+//}
+
+import java.util.zip.GZIPInputStream
+task copyMxnetNativeLibDefault() {
+    copyMxnetNativeLib("mkl", getOsName())
+}
+
+def copyMxnetNativeLib(flavorName, osName) {
+    // TODO: only mkl considered here
+    copy {
+        from("${rootProject.projectDir.parent}/build")
+        into("${project.buildDir}/${flavorName}/${osName}/native/lib")
+        // TODO: load map (flavor-os -> lib name) from configure file
+        switch (osName + "-" + flavorName) {
+            case "osx-mkl":
+                include "libmxnet.dylib"
+                break
+            case "win-commen":
+                include "libgcc_s_seh-1.dll"
+                include "libgfortran-3.dll"
+                include "libopenblas.dll"
+                include "libquadmath-0.dll"
+                break
+            case "win-mkl":
+                include "mxnet.dll"
+                break
+            case "linux-common":
+                include "libgfortran.so.4"
+                include "libgomp.so.1"
+                include "libopenblas.so.0"
+                include "libquadmath.so.0"
+                break
+            case "linux-mkl":
+            case "linux-cu102mkl":
+            case "linux-cu110mkl":
+                include "libmxnet.so"
+                break
+            default:
+                include ""
+        }
+    }
+}
+
+//task downloadMxnetNativeLib() {
+//    doLast {
+//        def url = "https://publish.djl.ai/mxnet-${VERSION}"
+//        def files = [
+////                "linux/common/libgfortran.so.4.gz": "mkl/linux/native/lib/libgfortran.so.4",
+//                "linux/common/libgomp.so.1.gz"    : "mkl/linux/native/lib/libgomp.so.1",
+//                "linux/common/libopenblas.so.0.gz": "mkl/linux/native/lib/libopenblas.so.0",
+//                "linux/common/libquadmath.so.0.gz": "mkl/linux/native/lib/libquadmath.so.0",
+//                "linux/mkl/libmxnet.so.gz"        : "mkl/linux/native/lib/libmxnet.so",
+//                "linux/cu102mkl/libmxnet.so.gz"   : "cu102mkl/linux/native/lib/libmxnet.so",
+//                "linux/cu110mkl/libmxnet.so.gz"   : "cu110mkl/linux/native/lib/libmxnet.so",
+//                "osx/mkl/libmxnet.dylib.gz"       : "mkl/osx/native/lib/libmxnet.dylib",
+//                "win/common/libgcc_s_seh-1.dll.gz": "mkl/win/native/lib/libgcc_s_seh-1.dll",
+//                "win/common/libgfortran-3.dll.gz" : "mkl/win/native/lib/libgfortran-3.dll",
+//                "win/common/libopenblas.dll.gz"   : "mkl/win/native/lib/libopenblas.dll",
+//                "win/common/libquadmath-0.dll.gz" : "mkl/win/native/lib/libquadmath-0.dll",
+//                "win/mkl/libmxnet.dll.gz"         : "mkl/win/native/lib/mxnet.dll"
+//        ]
+//
+//        files.each { entry ->
+//            project.logger.lifecycle("Downloading ${url}/${entry.key}")
+//            def file = new File("${BINARY_ROOT}/${entry.value}")
+//            file.getParentFile().mkdirs()
+//            new URL("${url}/${entry.key}").withInputStream { i -> file.withOutputStream { it << new GZIPInputStream(i) } }
+//        }
+//
+//        copy {
+//            from("${BINARY_ROOT}/mkl/linux/native/lib") {
+//                exclude '**/libmxnet.so'
+//            }
+//            into("${BINARY_ROOT}/cu102mkl/linux/native/lib")
+//        }
+//        copy {
+//            from("${BINARY_ROOT}/mkl/linux/native/lib") {
+//                exclude '**/libmxnet.so'
+//            }
+//            into("${BINARY_ROOT}/cu110mkl/linux/native/lib")
+//        }
+//
+//        new File("${BINARY_ROOT}/auto").mkdirs()
+//    }
+//}

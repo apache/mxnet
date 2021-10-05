@@ -1,0 +1,131 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id "com.github.spotbugs" version "4.2.0" apply true
+}
+
+defaultTasks 'build'
+
+allprojects {
+    group 'org.apache.mxnet'
+    boolean isRelease = project.hasProperty("release") || project.hasProperty("staging")
+    version = "${java_package_version}" + (isRelease ? "" : "-SNAPSHOT")
+
+    repositories {
+//        maven {
+//            url "https://mlrepo.djl.ai/maven/"
+//        }
+        mavenCentral()
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+    }
+
+    apply plugin: 'idea'
+    idea {
+        module {
+            outputDir = file('build/classes/java/main')
+            testOutputDir = file('build/classes/java/test')
+            // inheritOutputDirs = true
+        }
+    }
+}
+
+def javaProjects() {
+    return subprojects.findAll { new File(it.projectDir, "src/main").exists() }
+}
+
+configure(javaProjects()) {
+    apply plugin: 'java-library'
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+    compileJava.options.encoding = "UTF-8"
+    compileTestJava.options.encoding = "UTF-8"
+    if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+        compileJava.options.compilerArgs.addAll(["--release", "8"])
+    }
+
+    apply plugin: 'eclipse'
+
+    eclipse {
+        jdt.file.withProperties { props ->
+            props.setProperty "org.eclipse.jdt.core.circularClasspath", "warning"
+        }
+        classpath {
+            sourceSets.test.java {
+                srcDirs = ["src/test/java"]
+                exclude "**/package-info.java"
+            }
+        }
+    }
+
+    apply from: file("${rootProject.projectDir}/tools/gradle/java-formatter.gradle")
+    apply from: file("${rootProject.projectDir}/tools/gradle/check.gradle")
+
+    test {
+        // tensorflow mobilenet and resnet require more cpu memory
+        maxHeapSize = "4096m"
+        doFirst {
+            if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+                jvmArgs = [
+                        '--add-opens', "java.base/jdk.internal.loader=ALL-UNNAMED"
+                ]
+            }
+        }
+
+        useTestNG() {
+//             suiteXmlFiles << new File(rootDir, "testng.xml") //This is how to add custom testng.xml
+        }
+
+        testLogging {
+            showStandardStreams = true
+            events "passed", "skipped", "failed", "standardOut", "standardError"
+        }
+
+        doFirst {
+            systemProperties System.getProperties()
+            systemProperties.remove("user.dir")
+            systemProperty "org.apache.mxnet.logging.level", "debug"
+            systemProperty "org.slf4j.simpleLogger.defaultLogLevel", "debug"
+            systemProperty "org.slf4j.simpleLogger.log.org.mortbay.log", "warn"
+            systemProperty "disableProgressBar", "true"
+            systemProperty "nightly", System.getProperty("nightly", "false")
+//            systemProperty "java.library.path", "/Users/cspchen/Work/incubator-mxnet/build"
+            if (gradle.startParameter.offline) {
+                systemProperty "offline", "true"
+            }
+        }
+    }
+
+    compileJava {
+        options.compilerArgs << "-proc:none" << "-Xlint:all,-options,-static" << "-Werror"
+    }
+
+    compileTestJava {
+        options.compilerArgs << "-proc:none" << "-Xlint:all,-options,-static" << "-Werror"
+    }
+
+    jar {
+        manifest {
+            attributes("Automatic-Module-Name": "org.apach.mxnet.${project.name.replace('-', '_')}")
+        }
+    }
+}
+
+apply from: file("${rootProject.projectDir}/tools/gradle/jacoco.gradle")
+apply from: file("${rootProject.projectDir}/tools/gradle/stats.gradle")
