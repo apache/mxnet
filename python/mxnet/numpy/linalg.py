@@ -27,10 +27,17 @@ __all__ += fallback_linalg.__all__
 
 
 def matrix_rank(M, tol=None, hermitian=False):
-    r"""Return matrix rank of array using SVD method
+    r"""
+    Return matrix rank of array using SVD method
 
     Rank of the array is the number of singular values of the array that are
     greater than `tol`.
+
+    Notes
+    -----
+    `matrix_rank` is an alias for `matrix_rank`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-rank-x-rtol-none
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -54,22 +61,28 @@ def matrix_rank(M, tol=None, hermitian=False):
     Examples
     --------
     >>> from mxnet import np
-    >>> np.matrix_rank(np.eye(4)) # Full rank matrix
+    >>> np.linalg.matrix_rank(np.eye(4)) # Full rank matrix
     4
     >>> I=np.eye(4); I[-1,-1] = 0. # rank deficient matrix
-    >>> np.matrix_rank(I)
+    >>> np.linalg.matrix_rank(I)
     3
-    >>> np.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
+    >>> np.linalg.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
     1
-    >>> np.matrix_rank(np.zeros((4,)))
+    >>> np.linalg.matrix_rank(np.zeros((4,)))
     0
     """
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
 
 
 def diagonal(a, offset=0):
-    """
+    r"""
     Returns the specified diagonals of a matrix (or a stack of matrices) a.
+
+    Notes
+    -----
+    `diagonal` is an alias for `diagonal`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-diagonal-x-offset-0
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -86,9 +99,9 @@ def diagonal(a, offset=0):
     Returns
     ----------
     out : ndarray
-    an array containing the diagonals and whose shape is determined by removing the last two dimensions and 
-    appending a dimension equal to the size of the resulting diagonals. 
-    The returned array must have the same data type as x .
+    an array containing the diagonals and whose shape is determined by removing the last two dimensions and
+    appending a dimension equal to the size of the resulting diagonals.
+    The returned array must have the same data type as a.
 
     Examples
     --------
@@ -104,14 +117,21 @@ def diagonal(a, offset=0):
     >>> np.linlag.diagonal(x, offset=-1)
     array([3, 7])
     """
-    return _mx_nd_np.diag(v, offset=offset)
+    return _mx_nd_np.diag(a, offset=offset)
 
 
 def cross(a, b, axis=-1):
-    r"""Returns the cross product of 3-element vectors.
+    r"""
+    Returns the cross product of 3-element vectors.
 
-    If x1 and x2 are multi-dimensional arrays (i.e., both have a rank greater than 1), 
+    If x1 and x2 are multi-dimensional arrays (i.e., both have a rank greater than 1),
     then the cross-product of each pair of corresponding 3-element vectors is independently computed.
+
+    Notes
+    -----
+    `cross` is an alias for `cross`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-cross-x1-x2-axis-1
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -167,11 +187,19 @@ def cross(a, b, axis=-1):
     array([[-3.,  6., -3.],
            [ 3., -6.,  3.]])
     """
+    # For a given API standard, the axis of axisa, axisb, axisc are equal to the axis
     return _mx_nd_np.cross(a, b, axisa=axis, axisb=axis, axisc=axis, axis=axis)
+
 
 def outer(a, b):
     r"""
     Computes the outer product of two vectors a and b.
+
+    Notes
+    -----
+    `outer` is an alias for `outer`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-outer-x1-x2
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -184,7 +212,7 @@ def outer(a, b):
     -------
     out : ndarray
         A two-dimensional array containing the outer product and whose shape is `(N, M)`.
-        The returned array must have a data type determined by Type Promotion Rules .
+        The returned array must have a data type determined by Type Promotion Rules.
 
     Examples
     --------
@@ -199,6 +227,7 @@ def outer(a, b):
            [-2., -1.,  0.,  1.,  2.]])
     """
     return _mx_nd_np.tensordot(a.flatten(), b.flatten(), 0)
+
 
 def lstsq(a, b, rcond='warn'):
     r"""
@@ -340,7 +369,8 @@ def pinv(a, rcond=1e-15, hermitian=False):
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
-    r"""Matrix or vector norm.
+    r"""
+    Matrix or vector norm.
 
     This function can only support Frobenius norm for now.
     The Frobenius norm is given by [1]_:
@@ -404,7 +434,8 @@ def norm(x, ord=None, axis=None, keepdims=False):
 
 
 def svd(a):
-    r"""Singular Value Decomposition.
+    r"""
+    Singular Value Decomposition.
 
     When `a` is a 2D array, it is factorized as ``ut @ np.diag(s) @ v``,
     where `ut` and `v` are 2D orthonormal arrays and `s` is a 1D
@@ -905,7 +936,8 @@ def tensorsolve(a, b, axes=None):
 
 
 def eigvals(a):
-    r"""Compute the eigenvalues of a general matrix.
+    r"""
+    Compute the eigenvalues of a general matrix.
 
     Main difference between `eigvals` and `eig`: the eigenvectors aren't
     returned.
@@ -973,7 +1005,8 @@ def eigvals(a):
 
 
 def eigvalsh(a, UPLO='L'):
-    r"""Compute the eigenvalues real symmetric matrix.
+    r"""
+    Compute the eigenvalues real symmetric matrix.
 
     Main difference from eigh: the eigenvectors are not computed.
 
@@ -1097,7 +1130,8 @@ def eig(a):
 
 
 def eigh(a, UPLO='L'):
-    r"""Return the eigenvalues and eigenvectors real symmetric matrix.
+    r"""
+    Return the eigenvalues and eigenvectors real symmetric matrix.
 
     Returns two objects, a 1-D array containing the eigenvalues of `a`, and
     a 2-D square array or matrix (depending on the input type) of the
