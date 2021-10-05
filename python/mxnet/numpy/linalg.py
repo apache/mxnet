@@ -23,7 +23,7 @@ from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
-           'tensordot', 'trace']
+           'tensordot', 'trace', 'matrix_transpose']
 __all__ += fallback_linalg.__all__
 
 
@@ -73,6 +73,43 @@ def matrix_rank(M, tol=None, hermitian=False):
     0
     """
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
+
+
+def matrix_transpose(a):
+    r"""
+    Transposes a matrix (or a stack of matrices) `a`.
+
+    Notes
+    -----
+    `matrix_transpose` is an alias for `transpose`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-transpose-x
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array having shape (..., M, N) and whose innermost two dimensions form MxN matrices.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the transpose for each matrix and having shape (..., N, M).
+        The returned array must have the same data type as `a`.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.transpose(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.transpose(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _mx_nd_np.transpose(a, axes=None)
 
 
 def trace(a, offset=0):
@@ -192,7 +229,7 @@ def diagonal(a, offset=0):
     ----------
     a : ndarray
         The array to apply diag method.
-    offset : offset
+    offset : int
         Extracts or constructs kth diagonal given input array.
         Offset specifying the off-diagonal relative to the main diagonal.
 
