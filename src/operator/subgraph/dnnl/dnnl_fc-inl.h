@@ -17,22 +17,21 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_INL_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_INL_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_INL_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
-
-#include "mkldnn.hpp"
+#include "../../nn/dnnl/dnnl_fully_connected-inl.h"
+#include "dnnl.hpp"
 
 namespace mxnet {
 namespace op {
 
-static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
+static inline bool SupportDNNLFCEltwiseFusion(const std::string op_name) {
   if (op_name == "Activation" || op_name == "square" || op_name == "_npi_square" ||
       op_name == "sqrt" || op_name == "_npi_sqrt" || op_name == "exp" || op_name == "_npi_exp" ||
       op_name == "abs" || op_name == "_npi_absolute" || op_name == "clip" ||
@@ -43,30 +42,29 @@ static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
   }
 }
 
-static inline mkldnn::algorithm GetMKLDNNEltwiseAlgo(const std::string op_name) {
+static inline dnnl::algorithm GetDNNLEltwiseAlgo(const std::string op_name) {
   if (op_name == "square" || op_name == "_npi_square")
-    return mkldnn::algorithm::eltwise_square;
+    return dnnl::algorithm::eltwise_square;
   else if (op_name == "sqrt" || op_name == "_npi_sqrt")
-    return mkldnn::algorithm::eltwise_sqrt;
+    return dnnl::algorithm::eltwise_sqrt;
   else if (op_name == "exp" || op_name == "_npi_exp")
-    return mkldnn::algorithm::eltwise_exp;
+    return dnnl::algorithm::eltwise_exp;
   else if (op_name == "abs" || op_name == "_npi_absolute")
-    return mkldnn::algorithm::eltwise_abs;
+    return dnnl::algorithm::eltwise_abs;
   else
     LOG(FATAL) << "Unsupported eltwise fusion op: " << op_name;
 
-  return mkldnn::algorithm::undef;
+  return dnnl::algorithm::undef;
 }
 
-static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
+static inline bool IsOutputUint8(const DNNLFCFullParam& full_param) {
   auto alg = full_param.eltwise_param.alg;
   // TODO(ciyong): some alg doesn't support int8 so far.
-  if (full_param.mkldnn_param.with_eltwise &&
-      (alg == mkldnn::algorithm::eltwise_relu || alg == mkldnn::algorithm::eltwise_logistic ||
-       alg == mkldnn::algorithm::eltwise_soft_relu ||
-       alg == mkldnn::algorithm::eltwise_bounded_relu || alg == mkldnn::algorithm::eltwise_square ||
-       alg == mkldnn::algorithm::eltwise_sqrt || alg == mkldnn::algorithm::eltwise_exp ||
-       alg == mkldnn::algorithm::eltwise_abs)) {
+  if (full_param.dnnl_param.with_eltwise &&
+      (alg == dnnl::algorithm::eltwise_relu || alg == dnnl::algorithm::eltwise_logistic ||
+       alg == dnnl::algorithm::eltwise_soft_relu || alg == dnnl::algorithm::eltwise_bounded_relu ||
+       alg == dnnl::algorithm::eltwise_square || alg == dnnl::algorithm::eltwise_sqrt ||
+       alg == dnnl::algorithm::eltwise_exp || alg == dnnl::algorithm::eltwise_abs)) {
     return true;
   }
 
@@ -77,4 +75,4 @@ static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_INL_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_INL_H_

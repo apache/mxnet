@@ -17,21 +17,20 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
 #include "../common.h"
-
-#include "mkldnn_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
+class SgDNNLConcatPostQuantizeSelector : public SubgraphSelectorV2 {
  public:
   bool Select(const BiDirectedNode& sn) override {
     const auto& n = *sn.node;
@@ -105,7 +104,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
   }
 
   void Reset() override {
-    auto new_selector = SgMKLDNNConcatPostQuantizeSelector();
+    auto new_selector = SgDNNLConcatPostQuantizeSelector();
     new_selector.Select(head_);
     *this = new_selector;
   }
@@ -117,13 +116,13 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
   std::unordered_set<const nnvm::Node*> visit_list_;
 };
 
-class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
+class SgDNNLPostQuantizeAlignScaleProperty : public SubgraphProperty {
  public:
-  SgMKLDNNPostQuantizeAlignScaleProperty() : SubgraphProperty(kAdjust) {}
+  SgDNNLPostQuantizeAlignScaleProperty() : SubgraphProperty(kAdjust) {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN post-quantization scale alignment optimization pass";
-    auto property                  = std::make_shared<SgMKLDNNPostQuantizeAlignScaleProperty>();
+    static const std::string& name = "DNNL post-quantization scale alignment optimization pass";
+    auto property                  = std::make_shared<SgDNNLPostQuantizeAlignScaleProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
@@ -169,7 +168,7 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const override {
-    auto selector = std::make_shared<SgMKLDNNConcatPostQuantizeSelector>();
+    auto selector = std::make_shared<SgDNNLConcatPostQuantizeSelector>();
     return selector;
   }
 };
@@ -178,4 +177,4 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_

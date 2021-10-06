@@ -16,8 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_SUBGRAPH_BASE_INL_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_SUBGRAPH_BASE_INL_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_SUBGRAPH_BASE_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_SUBGRAPH_BASE_INL_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include "../subgraph_property.h"
@@ -25,7 +25,7 @@
 namespace mxnet {
 namespace op {
 
-static inline bool SupportMKLDNNAttr(const std::shared_ptr<NodeAttr>& node_attr) {
+static inline bool SupportDNNLAttr(const std::shared_ptr<NodeAttr>& node_attr) {
   if (node_attr) {
     int ndim = node_attr->ishape[0].ndim();
     return (node_attr->dispatch_mode == DispatchMode::kFComputeEx) &&
@@ -41,4 +41,4 @@ static inline bool SupportMKLDNNAttr(const std::shared_ptr<NodeAttr>& node_attr)
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_SUBGRAPH_BASE_INL_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_SUBGRAPH_BASE_INL_H_

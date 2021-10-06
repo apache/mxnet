@@ -17,26 +17,25 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_BN_RELU_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_BN_RELU_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_BN_RELU_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_BN_RELU_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "../../nn/mkldnn/mkldnn_act-inl.h"
-#include "../../nn/mkldnn/mkldnn_batch_norm-inl.h"
+#include "../../nn/dnnl/dnnl_act-inl.h"
+#include "../../nn/dnnl/dnnl_batch_norm-inl.h"
 #include "../common.h"
-
-#include "mkldnn_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNBNReLUSelector : public SubgraphSelector {
+class SgDNNLBNReLUSelector : public SubgraphSelector {
  public:
   enum SelectStatus { kStart, kSuccess, kFail };
 
-  explicit SgMKLDNNBNReLUSelector(const bool disable_bn_relu)
+  explicit SgDNNLBNReLUSelector(const bool disable_bn_relu)
       : disable_bn_relu_(disable_bn_relu), status_(kStart) {}
 
   bool Select(const nnvm::Node& n) override {
@@ -79,9 +78,9 @@ class SgMKLDNNBNReLUSelector : public SubgraphSelector {
   SelectStatus status_;
 };
 
-class SgMKLDNNBNReLUProperty : public SubgraphProperty {
+class SgDNNLBNReLUProperty : public SubgraphProperty {
  public:
-  SgMKLDNNBNReLUProperty() {
+  SgDNNLBNReLUProperty() {
     disable_bn_relu_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_BN_RELU", false);
   }
 
@@ -91,8 +90,8 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN BN + ReLU optimization pass";
-    auto property                  = std::make_shared<SgMKLDNNBNReLUProperty>();
+    static const std::string& name = "DNNL BN + ReLU optimization pass";
+    auto property                  = std::make_shared<SgDNNLBNReLUProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_BN_RELU_OPT", 0)) {
@@ -106,7 +105,7 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
     nnvm::ObjectPtr n = nnvm::Node::Create();
 
     std::ostringstream node_name;
-    node_name << "sg_mkldnn_batch_norm_relu_" << std::to_string(subgraph_id);
+    node_name << "sg_dnnl_batch_norm_relu_" << std::to_string(subgraph_id);
 
     // Copy params from BatchNorm node into subgraph BatchNormReLU node
     BatchNormParam param;
@@ -125,7 +124,7 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNBNReLUSelector>(disable_bn_relu_);
+    auto selector = std::make_shared<SgDNNLBNReLUSelector>(disable_bn_relu_);
     return selector;
   }
 
@@ -137,4 +136,4 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_BN_RELU_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_BN_RELU_PROPERTY_H_

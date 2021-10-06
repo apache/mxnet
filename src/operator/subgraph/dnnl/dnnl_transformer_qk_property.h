@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_QK_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_QK_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_QK_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_QK_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <map>
@@ -29,10 +29,9 @@
 #include "../../numpy/np_matrix_op-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
-
-#include "mkldnn_common.h"
-#include "mkldnn_subgraph_base-inl.h"
-#include "mkldnn_transformer-inl.h"
+#include "dnnl_common.h"
+#include "dnnl_subgraph_base-inl.h"
+#include "dnnl_transformer-inl.h"
 
 /*
               custom_op
@@ -51,7 +50,7 @@
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
+class SgDNNLTransformerQKSelector : public SubgraphSelector {
   enum SelectStatus {
     kFail = 0,
     kStart,
@@ -153,22 +152,22 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNTransformerQKSelector();
+    auto new_selector = SgDNNLTransformerQKSelector();
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
+class SgDNNLTransformerQKProperty : public SubgraphProperty {
  public:
-  SgMKLDNNTransformerQKProperty() {}
+  SgDNNLTransformerQKProperty() {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN Transformer optimization pass";
-    auto property                  = std::make_shared<SgMKLDNNTransformerQKProperty>();
+    static const std::string& name = "DNNL Transformer optimization pass";
+    auto property                  = std::make_shared<SgDNNLTransformerQKProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_TRANSFORMER_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_DNNL_TRANSFORMER_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
@@ -192,17 +191,17 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
       }
     });
 
-    node_name << "_sg_mkldnn_selfatt_qk_" << subgraph_id;
+    node_name << "_sg_dnnl_selfatt_qk_" << subgraph_id;
 
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_mkldnn_selfatt_qk");
+    n->attrs.op   = Op::Get("_sg_dnnl_selfatt_qk");
     CHECK(n->attrs.op);
     n->op()->attr_parser(&(n->attrs));
     return n;
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNTransformerQKSelector>();
+    auto selector = std::make_shared<SgDNNLTransformerQKSelector>();
     return selector;
   }
 
@@ -229,4 +228,4 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_QK_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_QK_PROPERTY_H_

@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_VALATT_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_VALATT_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_VALATT_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_VALATT_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <map>
@@ -30,10 +30,9 @@
 #include "../../swapaxis-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
-
-#include "mkldnn_common.h"
-#include "mkldnn_subgraph_base-inl.h"
-#include "mkldnn_transformer-inl.h"
+#include "dnnl_common.h"
+#include "dnnl_subgraph_base-inl.h"
+#include "dnnl_transformer-inl.h"
 
 /*
                  custom_op
@@ -83,7 +82,7 @@ bool CheckSplitConditions(const BiDirectedNode& bi_node) {
   return true;
 }
 
-class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
+class SgDNNLTransformerValAttSelector : public SubgraphSelectorV2 {
   enum InStatus { kFail = 0, kStart, kSecondStart, kIgnoreSecond, kSwapAx, kReshape, kSuccess };
   /*                 (custom_op)
              /---> kSecondStart ---\
@@ -227,22 +226,22 @@ class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNTransformerValAttSelector();
+    auto new_selector = SgDNNLTransformerValAttSelector();
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNTransformerValAttProperty : public SubgraphProperty {
+class SgDNNLTransformerValAttProperty : public SubgraphProperty {
  public:
-  SgMKLDNNTransformerValAttProperty() {}
+  SgDNNLTransformerValAttProperty() {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN Transformer optimization pass";
-    auto property                  = std::make_shared<SgMKLDNNTransformerValAttProperty>();
+    static const std::string& name = "DNNL Transformer optimization pass";
+    auto property                  = std::make_shared<SgDNNLTransformerValAttProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_TRANSFORMER_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_DNNL_TRANSFORMER_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
@@ -265,16 +264,16 @@ class SgMKLDNNTransformerValAttProperty : public SubgraphProperty {
           n->attrs.dict["heads"] = std::to_string(reshape_param.newshape[2]);
       }
     });
-    node_name << "_sg_mkldnn_selfatt_valatt_" << subgraph_id;
+    node_name << "_sg_dnnl_selfatt_valatt_" << subgraph_id;
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_mkldnn_selfatt_valatt");
+    n->attrs.op   = Op::Get("_sg_dnnl_selfatt_valatt");
     CHECK(n->attrs.op);
     n->op()->attr_parser(&(n->attrs));
     return n;
   }
 
   SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const override {
-    auto selector = std::make_shared<SgMKLDNNTransformerValAttSelector>();
+    auto selector = std::make_shared<SgDNNLTransformerValAttSelector>();
     return selector;
   }
 };
@@ -283,4 +282,4 @@ class SgMKLDNNTransformerValAttProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_VALATT_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_VALATT_PROPERTY_H_

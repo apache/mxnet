@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
@@ -27,15 +27,14 @@
 #include "../../leaky_relu-inl.h"
 #include "../../nn/activation-inl.h"
 #include "../../nn/convolution-inl.h"
-#include "../../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../nn/dnnl/dnnl_ops-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
-
-#include "mkldnn_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
-class SgMKLDNNConvSelector : public SubgraphSelector {
+class SgDNNLConvSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status_ */
   enum SelectStatus {
@@ -56,11 +55,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   std::vector<const nnvm::Node*> matched_list_;
 
  public:
-  SgMKLDNNConvSelector(int dis_all,
-                       int dis_conv_bn,
-                       int dis_conv_act,
-                       int dis_conv_sum,
-                       int quantize)
+  SgDNNLConvSelector(int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum, int quantize)
       : disable_all_(dis_all),
         disable_conv_bn_(dis_conv_bn),
         disable_conv_act_(dis_conv_act),
@@ -70,7 +65,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() && n.op()->name == "Convolution") {
       const auto& param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
-      if ((param.kernel.ndim() == 2 || param.kernel.ndim() == 3) && SupportMKLDNNAttr(node_attr)) {
+      if ((param.kernel.ndim() == 2 || param.kernel.ndim() == 3) && SupportDNNLAttr(node_attr)) {
         status_ = disable_all_ ? kSuccess : kStart;
         matched_list_.clear();
         matched_list_.push_back(&n);
@@ -119,8 +114,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
       default:
         if ((!disable_conv_act_) && node_name == "Activation") {
           const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
-          if ((quantize_ && SupportQuantizedMKLDNNAct(param)) ||
-              (!quantize_ && SupportMKLDNNAct(param))) {
+          if ((quantize_ && SupportQuantizedDNNLAct(param)) ||
+              (!quantize_ && SupportDNNLAct(param))) {
             matched_list_.push_back(&new_node);
             // not support conv+relu+sum yet.
             status_ = kSuccess;
@@ -170,16 +165,16 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNConvSelector(
+    auto new_selector = SgDNNLConvSelector(
         disable_all_, disable_conv_bn_, disable_conv_act_, disable_conv_sum_, quantize_);
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNConvProperty : public SubgraphProperty {
+class SgDNNLConvProperty : public SubgraphProperty {
  public:
-  SgMKLDNNConvProperty() {
+  SgDNNLConvProperty() {
     disable_conv_bn_  = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_BN", 0);
     disable_conv_act_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_RELU", 0);
     disable_conv_sum_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_SUM", 0);
@@ -187,8 +182,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     disable_all_ = disable_conv_bn_ && disable_conv_act_ && disable_conv_sum_;
   }
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN convolution optimization pass";
-    auto property                  = std::make_shared<SgMKLDNNConvProperty>();
+    static const std::string& name = "DNNL convolution optimization pass";
+    auto property                  = std::make_shared<SgDNNLConvProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_CONV_OPT", 0)) {
@@ -204,7 +199,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
-    node_name << "sg_mkldnn_";
+    node_name << "sg_dnnl_";
     bool _with_sum = false;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
@@ -230,7 +225,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     });
     node_name << std::to_string(subgraph_id);
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_mkldnn_conv");
+    n->attrs.op   = Op::Get("_sg_dnnl_conv");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));
@@ -239,7 +234,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     bool quantize = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
-    auto selector = std::make_shared<SgMKLDNNConvSelector>(
+    auto selector = std::make_shared<SgDNNLConvSelector>(
         disable_all_, disable_conv_bn_, disable_conv_act_, disable_conv_sum_, quantize);
     return selector;
   }
@@ -299,4 +294,4 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_PROPERTY_H_

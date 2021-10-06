@@ -18,13 +18,13 @@
  */
 
 /*!
- * \file mkldnn_fc_property.cc
+ * \file dnnl_fc_property.cc
  * \brief Partition gragph property for FullyConnected operator
  * \author Ciyong Chen
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
@@ -32,14 +32,13 @@
 
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
-
-#include "mkldnn_fc-inl.h"
-#include "mkldnn_subgraph_base-inl.h"
+#include "dnnl_fc-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNFCSelector : public SubgraphSelector {
+class SgDNNLFCSelector : public SubgraphSelector {
  public:
   /* pattern match status */
   enum SelectStatus {
@@ -55,11 +54,11 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   std::vector<const nnvm::Node*> matched_list_;
 
  public:
-  explicit SgMKLDNNFCSelector(const bool dis_fc_eltwise, bool quantized)
+  explicit SgDNNLFCSelector(const bool dis_fc_eltwise, bool quantized)
       : disable_fc_eltwise_(dis_fc_eltwise), quantized_(quantized) {}
 
   bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
-    if (n.op() == Op::Get("FullyConnected") && SupportMKLDNNAttr(node_attr)) {
+    if (n.op() == Op::Get("FullyConnected") && SupportDNNLAttr(node_attr)) {
       status_ = disable_fc_eltwise_ ? kSuccess : kStart;
       matched_list_.clear();
       matched_list_.push_back(&n);
@@ -94,8 +93,8 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
         // Currently, For INT8 FC fusion, only supports relu/bounded_relu(clip)/abs.
         if (new_node.op() == Op::Get("Activation")) {
           const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
-          if ((quantized_ && SupportQuantizedMKLDNNAct(param)) ||
-              (!quantized_ && SupportMKLDNNAct(param))) {
+          if ((quantized_ && SupportQuantizedDNNLAct(param)) ||
+              (!quantized_ && SupportDNNLAct(param))) {
             matched_list_.push_back(&new_node);
             status_ = kSuccess;
             return true;
@@ -156,21 +155,21 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNFCSelector(disable_fc_eltwise_, quantized_);
+    auto new_selector = SgDNNLFCSelector(disable_fc_eltwise_, quantized_);
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNFCProperty : public SubgraphProperty {
+class SgDNNLFCProperty : public SubgraphProperty {
  public:
-  SgMKLDNNFCProperty() {
+  SgDNNLFCProperty() {
     disable_fc_eltwise_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_FC_ELTWISE", false);
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN FullyConnected optimization pass";
-    auto property                  = std::make_shared<SgMKLDNNFCProperty>();
+    static const std::string& name = "DNNL FullyConnected optimization pass";
+    auto property                  = std::make_shared<SgDNNLFCProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FC_OPT", 0)) {
@@ -187,21 +186,21 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
-    node_name << "sg_mkldnn_";
+    node_name << "sg_dnnl_";
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
         return;
       auto& sub_name = node->op()->name;
       if (sub_name == "FullyConnected") {
         node_name << "fully_connected_";
-      } else if (SupportMKLDNNFCEltwiseFusion(sub_name)) {
+      } else if (SupportDNNLFCEltwiseFusion(sub_name)) {
         node_name << "eltwise_";
         n->attrs.dict["with_eltwise"] = "True";
       }
     });
     node_name << std::to_string(subgraph_id);
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_mkldnn_fully_connected");
+    n->attrs.op   = Op::Get("_sg_dnnl_fully_connected");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));
@@ -210,7 +209,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     bool quantized = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
-    auto selector  = std::make_shared<SgMKLDNNFCSelector>(disable_fc_eltwise_, quantized);
+    auto selector  = std::make_shared<SgDNNLFCSelector>(disable_fc_eltwise_, quantized);
     return selector;
   }
 
@@ -231,4 +230,4 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_PROPERTY_H_

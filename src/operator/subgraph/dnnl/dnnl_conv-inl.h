@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_INL_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
@@ -28,39 +28,39 @@
 #include "../../nn/activation-inl.h"
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/convolution-inl.h"
-#include "../../nn/mkldnn/mkldnn_convolution-inl.h"
+#include "../../nn/dnnl/dnnl_convolution-inl.h"
 
 namespace mxnet {
 namespace op {
 
-struct MKLDNNConvFusionParam {
-  MKLDNNConvFullParam full_conv_param;
+struct DNNLConvFusionParam {
+  DNNLConvFullParam full_conv_param;
   std::shared_ptr<BatchNormParam> bn_param;
 };
 
-static inline bool IsOutputUInt8(const MKLDNNConvFusionParam& param) {
+static inline bool IsOutputUInt8(const DNNLConvFusionParam& param) {
   bool result              = false;
-  const auto& mkldnn_param = param.full_conv_param.mkldnn_param;
-  auto IsOutputUInt8Helper = [](const MKLDNNPostEltwiseParam& param) {
-    return ((param.alg == mkldnn::algorithm::eltwise_relu && param.alpha == 0.f) ||
-            param.alg == mkldnn::algorithm::eltwise_logistic ||
-            param.alg == mkldnn::algorithm::eltwise_soft_relu ||
-            param.alg == mkldnn::algorithm::eltwise_bounded_relu);
+  const auto& dnnl_param   = param.full_conv_param.dnnl_param;
+  auto IsOutputUInt8Helper = [](const DNNLPostEltwiseParam& param) {
+    return ((param.alg == dnnl::algorithm::eltwise_relu && param.alpha == 0.f) ||
+            param.alg == dnnl::algorithm::eltwise_logistic ||
+            param.alg == dnnl::algorithm::eltwise_soft_relu ||
+            param.alg == dnnl::algorithm::eltwise_bounded_relu);
   };
-  if ((!mkldnn_param.with_sum) && mkldnn_param.with_act) {
-    CHECK(param.full_conv_param.act_param.alg != mkldnn::algorithm::undef);
+  if ((!dnnl_param.with_sum) && dnnl_param.with_act) {
+    CHECK(param.full_conv_param.act_param.alg != dnnl::algorithm::undef);
     result = IsOutputUInt8Helper(param.full_conv_param.act_param);
-  } else if (mkldnn_param.with_postsum_act) {
-    CHECK(param.full_conv_param.postsum_act_param.alg != mkldnn::algorithm::undef);
+  } else if (dnnl_param.with_postsum_act) {
+    CHECK(param.full_conv_param.postsum_act_param.alg != dnnl::algorithm::undef);
     result = IsOutputUInt8Helper(param.full_conv_param.postsum_act_param);
   }
   return result;
 }
 
-enum MKLDNNConvOpOutputs { kOut, kMin, kMax };
+enum DNNLConvOpOutputs { kOut, kMin, kMax };
 
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_INL_H_

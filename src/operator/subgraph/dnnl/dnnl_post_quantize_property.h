@@ -16,25 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <set>
 #include <string>
 #include <vector>
 
-#include "../../nn/mkldnn/mkldnn_convolution-inl.h"
+#include "../../nn/dnnl/dnnl_convolution-inl.h"
 #include "../../quantization/requantize-inl.h"
 #include "../common.h"
-
-#include "mkldnn_conv-inl.h"
-#include "mkldnn_subgraph_base-inl.h"
+#include "dnnl_conv-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
+class SgDNNLPostQuantizeSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
@@ -49,17 +48,17 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
   std::set<std::string> support_requantize_fusion_op_name;
 
  public:
-  SgMKLDNNPostQuantizeSelector() {
-    support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
+  SgDNNLPostQuantizeSelector() {
+    support_requantize_fusion_op_name.insert("_sg_dnnl_conv");
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
     support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
   }
 
   bool Select(const nnvm::Node& n) override {
     if (n.op() && support_requantize_fusion_op_name.count(n.op()->name)) {
-      if (n.op()->name == "_sg_mkldnn_conv") {
-        auto const& param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
-        if (param.full_conv_param.mkldnn_param.quantized) {
+      if (n.op()->name == "_sg_dnnl_conv") {
+        auto const& param = nnvm::get<DNNLConvFusionParam>(n.attrs.parsed);
+        if (param.full_conv_param.dnnl_param.quantized) {
           status = kStart;
           matched_list.clear();
           matched_list.push_back(&n);
@@ -112,22 +111,22 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list.size(), 1);
-    auto new_selector = SgMKLDNNPostQuantizeSelector();
+    auto new_selector = SgDNNLPostQuantizeSelector();
     new_selector.Select(*matched_list[0]);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
+class SgDNNLPostQuantizeProperty : public SubgraphProperty {
  public:
-  SgMKLDNNPostQuantizeProperty() {
-    support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
+  SgDNNLPostQuantizeProperty() {
+    support_requantize_fusion_op_name.insert("_sg_dnnl_conv");
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
     support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
   }
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "MKLDNN post-quantization optimization pass";
-    auto property                  = std::make_shared<SgMKLDNNPostQuantizeProperty>();
+    static const std::string& name = "DNNL post-quantization optimization pass";
+    auto property                  = std::make_shared<SgDNNLPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
@@ -160,7 +159,7 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNPostQuantizeSelector>();
+    auto selector = std::make_shared<SgDNNLPostQuantizeSelector>();
     return selector;
   }
 
@@ -179,4 +178,4 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_PROPERTY_H_

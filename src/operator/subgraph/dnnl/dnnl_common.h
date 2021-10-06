@@ -18,13 +18,13 @@
  */
 
 /*!
- * \file mkldnn_common.h
- * \brief Common header file for MKLDNN backend subgraph
+ * \file dnnl_common.h
+ * \brief Common header file for DNNL backend subgraph
  * \author Ciyong Chen
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_COMMON_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_COMMON_H_
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
 
@@ -65,7 +65,7 @@ static std::vector<float> GetWeightScales(const NDArray& weight,
       float scale = GetQuantizeScale(mshadow::kInt8, weight_c_min[c], weight_c_max[c]);
       if (bias_ptr && bias_ptr[c]) {
         // avoid overflow on bias
-        // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
+        // TODO(zhennan): dnnl has bug to handle INT_MAX in bias, so set the maximum value of bias
         // to INT_MAX / 2.
         float scale_max =
             static_cast<float>(bias_ptr[c] > 0 ? MaxValue<int32_t>() : MinValue<int32_t>()) / 2 /
@@ -91,31 +91,31 @@ static std::vector<float> GetWeightScales(const NDArray& weight,
   return weight_scales;
 }
 
-static inline void ConvertWeightBias2MKLDNN(NDArray* weight,
-                                            NDArray* bias,
-                                            bool has_bias,
-                                            const mkldnn::memory::desc& weight_md,
-                                            const mkldnn::memory::desc* bias_md,
-                                            const int num_group,
-                                            float data_scale,
-                                            const std::vector<float>& weight_scales,
-                                            const bool submit = true) {
-  MKLDNNStream* stream           = MKLDNNStream::Get();
+static inline void ConvertWeightBias2DNNL(NDArray* weight,
+                                          NDArray* bias,
+                                          bool has_bias,
+                                          const dnnl::memory::desc& weight_md,
+                                          const dnnl::memory::desc* bias_md,
+                                          const int num_group,
+                                          float data_scale,
+                                          const std::vector<float>& weight_scales,
+                                          const bool submit = true) {
+  DNNLStream* stream             = DNNLStream::Get();
   const auto new_weight          = NDArray(weight_md);
-  const auto conv_weights_memory = new_weight.GetMKLDNNData();
-  mkldnn::primitive_attr weight_attr;
+  const auto conv_weights_memory = new_weight.GetDNNLData();
+  dnnl::primitive_attr weight_attr;
   if (weight_scales.size()) {
     const int weight_mask = (weight_scales.size()) == 1 ? 0 : 1;
     weight_attr.set_output_scales(weight_mask, weight_scales);
   }
   auto default_weights_memory = GetWeights(*weight, num_group);
   if (default_weights_memory == nullptr)
-    default_weights_memory = weight->GetMKLDNNData();
+    default_weights_memory = weight->GetDNNLData();
   const auto weight_reorder_pd =
-      mkldnn::reorder::primitive_desc(*default_weights_memory, *conv_weights_memory, weight_attr);
-  MKLDNNStream::Get()->RegisterPrimArgs(
-      mkldnn::reorder(weight_reorder_pd),
-      {{MKLDNN_ARG_FROM, *default_weights_memory}, {MKLDNN_ARG_TO, *conv_weights_memory}});
+      dnnl::reorder::primitive_desc(*default_weights_memory, *conv_weights_memory, weight_attr);
+  DNNLStream::Get()->RegisterPrimArgs(
+      dnnl::reorder(weight_reorder_pd),
+      {{DNNL_ARG_FROM, *default_weights_memory}, {DNNL_ARG_TO, *conv_weights_memory}});
   NDArray new_bias;
   if (has_bias && data_scale) {
     std::vector<float> bias_scales(weight_scales.size());
@@ -123,16 +123,16 @@ static inline void ConvertWeightBias2MKLDNN(NDArray* weight,
       bias_scales[c] = weight_scales[c] * data_scale;
     }
     new_bias                    = NDArray(*bias_md);
-    const auto conv_bias_memory = new_bias.GetMKLDNNData();
+    const auto conv_bias_memory = new_bias.GetDNNLData();
     const int bias_mask         = (bias_scales.size()) == 1 ? 0 : 1;
-    mkldnn::primitive_attr bias_attr;
+    dnnl::primitive_attr bias_attr;
     bias_attr.set_output_scales(bias_mask, bias_scales);
-    auto bias_weights_memory = bias->GetMKLDNNData();
+    auto bias_weights_memory = bias->GetDNNLData();
     const auto bias_reorder_pd =
-        mkldnn::reorder::primitive_desc(*bias_weights_memory, *conv_bias_memory, bias_attr);
-    MKLDNNStream::Get()->RegisterPrimArgs(
-        mkldnn::reorder(bias_reorder_pd),
-        {{MKLDNN_ARG_FROM, *bias_weights_memory}, {MKLDNN_ARG_TO, *conv_bias_memory}});
+        dnnl::reorder::primitive_desc(*bias_weights_memory, *conv_bias_memory, bias_attr);
+    DNNLStream::Get()->RegisterPrimArgs(
+        dnnl::reorder(bias_reorder_pd),
+        {{DNNL_ARG_FROM, *bias_weights_memory}, {DNNL_ARG_TO, *conv_bias_memory}});
   }
   if (submit)
     stream->Submit();
@@ -172,4 +172,4 @@ static inline bool CheckSwapAxisConditions(const nnvm::Node& node) {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_COMMON_H_

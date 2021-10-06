@@ -23,15 +23,14 @@
 #include <utility>
 #include <vector>
 
-#include "../../nn/mkldnn/mkldnn_act-inl.h"
-#include "../../nn/mkldnn/mkldnn_base-inl.h"
-#include "../../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../nn/dnnl/dnnl_act-inl.h"
+#include "../../nn/dnnl/dnnl_base-inl.h"
+#include "../../nn/dnnl/dnnl_ops-inl.h"
 #include "../../quantization/quantization_utils.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
-
-#include "mkldnn_common.h"
-#include "mkldnn_conv-inl.h"
+#include "dnnl_common.h"
+#include "dnnl_conv-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -83,19 +82,18 @@ static void UpdateConvWeightBias(NDArray* weight,
   *bias   = update_bias;
 }
 
-static inline size_t GetInSumIndex(const MKLDNNConvFusionParam& param) {
-  if (param.full_conv_param.mkldnn_param.dedup_sum) {
+static inline size_t GetInSumIndex(const DNNLConvFusionParam& param) {
+  if (param.full_conv_param.dnnl_param.dedup_sum) {
     return 0;
   }
   return 2 + (param.full_conv_param.conv_param.no_bias ? 0 : 1) +
-         (param.full_conv_param.mkldnn_param.with_bn ? 4 : 0);
+         (param.full_conv_param.dnnl_param.with_bn ? 4 : 0);
 }
 
-class SgMKLDNNConvOperator {
+class SgDNNLConvOperator {
  public:
-  explicit SgMKLDNNConvOperator(const nnvm::NodeAttrs& attrs)
-      : subgraph_sym_(*attrs.subgraphs[0]),
-        param_(nnvm::get<MKLDNNConvFusionParam>(attrs.parsed)) {}
+  explicit SgDNNLConvOperator(const nnvm::NodeAttrs& attrs)
+      : subgraph_sym_(*attrs.subgraphs[0]), param_(nnvm::get<DNNLConvFusionParam>(attrs.parsed)) {}
 
   void Forward(const OpContext& ctx,
                const std::vector<NDArray>& inputs,
@@ -107,9 +105,9 @@ class SgMKLDNNConvOperator {
   bool inplace_{false};
   bool post_requantize_{false};
   nnvm::Symbol subgraph_sym_;
-  MKLDNNConvFusionParam param_;
-  std::shared_ptr<MKLDNNConvForward> fwd_;
-  mkldnn_args_map_t args_;
+  DNNLConvFusionParam param_;
+  std::shared_ptr<DNNLConvForward> fwd_;
+  dnnl_args_map_t args_;
   NDArray cached_weight_;
   NDArray cached_bias_;
   float cached_data_min_;
@@ -124,22 +122,22 @@ class SgMKLDNNConvOperator {
   std::vector<float> weight_scales_;
 };
 
-void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
-                                   const std::vector<NDArray>& inputs,
-                                   const std::vector<OpReqType>& req,
-                                   const std::vector<NDArray>& outputs) {
+void SgDNNLConvOperator::Forward(const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
   auto& full_conv_param = param_.full_conv_param;
-  auto& mkldnn_param    = param_.full_conv_param.mkldnn_param;
+  auto& dnnl_param      = param_.full_conv_param.dnnl_param;
   auto& conv_param      = param_.full_conv_param.conv_param;
   auto bn_param         = param_.bn_param.get();
   size_t input_size =
-      2 + (conv_param.no_bias ? 0 : 1) + (mkldnn_param.with_bn ? 4 : 0) +
-      (mkldnn_param.with_sum ? 1 : 0) +
-      (mkldnn_param.quantized ? 2 + (full_conv_param.mkldnn_param.with_sum ? 2 : 0) : 0);
+      2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
+      (dnnl_param.with_sum ? 1 : 0) +
+      (dnnl_param.quantized ? 2 + (full_conv_param.dnnl_param.with_sum ? 2 : 0) : 0);
   // When dedup is on, in_data is used to calculate sum instead of in_sum
-  if (mkldnn_param.dedup_sum) {
+  if (dnnl_param.dedup_sum) {
     input_size -= 1;
-    if (mkldnn_param.quantized) {
+    if (dnnl_param.quantized) {
       input_size -= 2;
     }
   }
@@ -149,17 +147,17 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
   auto in_data   = idx++;
   auto in_weight = idx++;
   auto in_bias   = conv_param.no_bias ? 0 : (idx++);
-  auto in_gamma  = mkldnn_param.with_bn ? (idx++) : 0;
-  auto in_beta   = mkldnn_param.with_bn ? (idx++) : 0;
-  auto in_mean   = mkldnn_param.with_bn ? (idx++) : 0;
-  auto in_var    = mkldnn_param.with_bn ? (idx++) : 0;
-  auto in_sum    = mkldnn_param.with_sum ? (mkldnn_param.dedup_sum ? in_data : idx++) : -1;
-  float data_min = mkldnn_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
-  float data_max = mkldnn_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
+  auto in_gamma  = dnnl_param.with_bn ? (idx++) : 0;
+  auto in_beta   = dnnl_param.with_bn ? (idx++) : 0;
+  auto in_mean   = dnnl_param.with_bn ? (idx++) : 0;
+  auto in_var    = dnnl_param.with_bn ? (idx++) : 0;
+  auto in_sum    = dnnl_param.with_sum ? (dnnl_param.dedup_sum ? in_data : idx++) : -1;
+  float data_min = dnnl_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
+  float data_max = dnnl_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
   float sum_min  = 0.0f;
   float sum_max  = 0.0f;
-  if (mkldnn_param.with_sum && mkldnn_param.quantized) {
-    if (mkldnn_param.dedup_sum) {
+  if (dnnl_param.with_sum && dnnl_param.quantized) {
+    if (dnnl_param.dedup_sum) {
       sum_min = data_min;
       sum_max = data_max;
     } else {
@@ -168,42 +166,42 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
     }
   }
   CHECK_EQ(input_size, idx);
-  bool has_bias  = mkldnn_param.with_bn || !conv_param.no_bias;
+  bool has_bias  = dnnl_param.with_bn || !conv_param.no_bias;
   NDArray data   = inputs[in_data];
-  NDArray output = mkldnn_param.with_sum ? inputs[in_sum] : outputs[kOut];
+  NDArray output = dnnl_param.with_sum ? inputs[in_sum] : outputs[kOut];
 
   // Copy inputs[in_sum] into outputs[kOut] in case inplace optimization failed.
-  if (mkldnn_param.with_sum) {
+  if (dnnl_param.with_sum) {
     if (!initialized_) {
-      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
+      // TODO(zhennan): Currently, dnnl fallback mechanism will break inplace option,
       // which make check (req[kOut] == kWriteInplace) useless.
-      auto in_mkl_mem  = inputs[in_sum].GetMKLDNNData();
-      auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
+      auto in_mkl_mem  = inputs[in_sum].GetDNNLData();
+      auto out_mkl_mem = outputs[kOut].GetDNNLData();
       if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
         inplace_ = true;
       }
     }
     if (!inplace_) {
-      auto in_mkl_mem  = inputs[in_sum].GetMKLDNNData();
-      auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
+      auto in_mkl_mem  = inputs[in_sum].GetDNNLData();
+      auto out_mkl_mem = outputs[kOut].GetDNNLData();
       if (outputs[kOut].dtype() == mshadow::kInt32) {
         const auto& mem_desc  = in_mkl_mem->get_desc();
-        const auto this_dtype = get_mkldnn_type(mshadow::kInt32);
+        const auto this_dtype = get_dnnl_type(mshadow::kInt32);
         auto omd              = mem_desc;
-        omd.data.data_type    = static_cast<mkldnn_data_type_t>(this_dtype);
-        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(
-            omd, CpuEngine::Get()->get_engine(), out_mkl_mem->get_data_handle()));
-        MKLDNNStream::Get()->RegisterMem(tmp_mem);
-        MKLDNNStream::Get()->RegisterPrimArgs(
-            mkldnn::reorder(*in_mkl_mem, *tmp_mem),
-            {{MKLDNN_ARG_FROM, *in_mkl_mem}, {MKLDNN_ARG_TO, *tmp_mem}});
+        omd.data.data_type    = static_cast<dnnl_data_type_t>(this_dtype);
+        dnnl_mem_ptr tmp_mem(
+            new dnnl::memory(omd, CpuEngine::Get()->get_engine(), out_mkl_mem->get_data_handle()));
+        DNNLStream::Get()->RegisterMem(tmp_mem);
+        DNNLStream::Get()->RegisterPrimArgs(
+            dnnl::reorder(*in_mkl_mem, *tmp_mem),
+            {{DNNL_ARG_FROM, *in_mkl_mem}, {DNNL_ARG_TO, *tmp_mem}});
         output = NDArray(tmp_mem);
       } else {
-        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(in_mkl_mem->get_desc(),
-                                                  CpuEngine::Get()->get_engine(),
-                                                  out_mkl_mem->get_data_handle()));
-        MKLDNNStream::Get()->RegisterMem(tmp_mem);
-        MKLDNNMemoryCopy(*in_mkl_mem, tmp_mem.get());
+        dnnl_mem_ptr tmp_mem(new dnnl::memory(in_mkl_mem->get_desc(),
+                                              CpuEngine::Get()->get_engine(),
+                                              out_mkl_mem->get_data_handle()));
+        DNNLStream::Get()->RegisterMem(tmp_mem);
+        DNNLMemoryCopy(*in_mkl_mem, tmp_mem.get());
         output = NDArray(tmp_mem);
       }
     }
@@ -212,13 +210,13 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
   // Check input change
   // TODO(zhennan): Only update cached_* changed.
   if (initialized_) {
-    if (mkldnn_param.with_bn) {
+    if (dnnl_param.with_bn) {
       if (weight_ver_ != inputs[in_weight].version() ||
           ((!conv_param.no_bias) && bias_ver_ != inputs[in_bias].version())) {
         initialized_ = false;
       }
     }
-    if (initialized_ && mkldnn_param.quantized) {
+    if (initialized_ && dnnl_param.quantized) {
       if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
           cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
           weight_ver_ != inputs[in_weight].version() ||
@@ -242,8 +240,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
     }
 
     // Update weight and bias after bn fusion.
-    if (mkldnn_param.with_bn) {
-      MKLDNN_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
+    if (dnnl_param.with_bn) {
+      DNNL_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
         UpdateConvWeightBias<DType>(&cached_weight_,
                                     &cached_bias_,
                                     conv_param.no_bias,
@@ -255,21 +253,21 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
       });
     }
     // Quantize weight and bias.
-    if (mkldnn_param.quantized) {
+    if (dnnl_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
       if (cached_data_min_ < 0.0f) {
         CHECK_EQ(data.dtype(), mshadow::kInt8)
             << "Expect int8 when data_min < 0.0, consider quantize model with int8.";
       }
       auto weight_channelwise_scale = false;
-      if (mkldnn_param.min_calib_range.has_value() && mkldnn_param.max_calib_range.has_value()) {
-        cached_output_min_       = mkldnn_param.min_calib_range.value();
-        cached_output_max_       = mkldnn_param.max_calib_range.value();
+      if (dnnl_param.min_calib_range.has_value() && dnnl_param.max_calib_range.has_value()) {
+        cached_output_min_       = dnnl_param.min_calib_range.value();
+        cached_output_max_       = dnnl_param.max_calib_range.value();
         post_requantize_         = true;
         weight_channelwise_scale = true;
       }
       data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
-      MKLDNN_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
+      DNNL_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
         weight_scales_ = GetWeightScales<DType>(cached_weight_,
                                                 has_bias ? &cached_bias_ : nullptr,
                                                 data_scale_,
@@ -279,7 +277,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
       size_t channel     = cached_weight_.shape()[0];
       float sum_in_scale = 1.0;
       float output_scale;
-      if (mkldnn_param.with_sum) {
+      if (dnnl_param.with_sum) {
         sum_in_scale = GetQuantizeScale(inputs[in_sum].dtype(), cached_sum_min_, cached_sum_max_);
       }
       if (post_requantize_) {
@@ -317,71 +315,71 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
         output_scale = data_scale_ * weight_scales_[0];
         full_conv_param.requantize_scales.resize(0);
       }
-      if (mkldnn_param.with_sum) {
+      if (dnnl_param.with_sum) {
         full_conv_param.sum_scale = output_scale / sum_in_scale;
       }
-      if (mkldnn_param.with_act &&
-          full_conv_param.act_param.alg == mkldnn::algorithm::eltwise_bounded_relu) {
-        if (mkldnn_param.with_sum) {
-          LOG(ERROR) << "mkldnn doesn't support conv + relu + sum fusion yet.";
+      if (dnnl_param.with_act &&
+          full_conv_param.act_param.alg == dnnl::algorithm::eltwise_bounded_relu) {
+        if (dnnl_param.with_sum) {
+          LOG(ERROR) << "dnnl doesn't support conv + relu + sum fusion yet.";
           full_conv_param.act_param.alpha *= output_scale;
         } else {
           // For conv+relu6 without sum, we don't need post_ops as output_scale can do the cut off.
-          mkldnn_param.with_act = false;
+          dnnl_param.with_act = false;
         }
       }
-      if (mkldnn_param.with_postsum_act) {
-        CHECK(full_conv_param.postsum_act_param.alg == mkldnn::algorithm::eltwise_relu);
+      if (dnnl_param.with_postsum_act) {
+        CHECK(full_conv_param.postsum_act_param.alg == dnnl::algorithm::eltwise_relu);
       }
     }
-    fwd_.reset(new MKLDNNConvForward(full_conv_param,
-                                     ctx.is_train,
-                                     data,
-                                     cached_weight_,
-                                     has_bias ? &cached_bias_ : nullptr,
-                                     output));
-    mkldnn::memory::desc bias_md;
+    fwd_.reset(new DNNLConvForward(full_conv_param,
+                                   ctx.is_train,
+                                   data,
+                                   cached_weight_,
+                                   has_bias ? &cached_bias_ : nullptr,
+                                   output));
+    dnnl::memory::desc bias_md;
     if (has_bias)
       bias_md = fwd_->GetPd().bias_desc();
-    ConvertWeightBias2MKLDNN(&cached_weight_,
-                             &cached_bias_,
-                             has_bias,
-                             fwd_->GetPd().weights_desc(),
-                             has_bias ? &bias_md : nullptr,
-                             full_conv_param.conv_param.num_group,
-                             data_scale_,
-                             weight_scales_);
-    args_[MKLDNN_ARG_SRC]     = *data.GetMKLDNNData();
-    args_[MKLDNN_ARG_WEIGHTS] = *cached_weight_.GetMKLDNNData();
+    ConvertWeightBias2DNNL(&cached_weight_,
+                           &cached_bias_,
+                           has_bias,
+                           fwd_->GetPd().weights_desc(),
+                           has_bias ? &bias_md : nullptr,
+                           full_conv_param.conv_param.num_group,
+                           data_scale_,
+                           weight_scales_);
+    args_[DNNL_ARG_SRC]     = *data.GetDNNLData();
+    args_[DNNL_ARG_WEIGHTS] = *cached_weight_.GetDNNLData();
     if (has_bias)
-      args_[MKLDNN_ARG_BIAS] = *cached_bias_.GetMKLDNNData();
-    args_[MKLDNN_ARG_DST] = *output.GetMKLDNNData();
+      args_[DNNL_ARG_BIAS] = *cached_bias_.GetDNNLData();
+    args_[DNNL_ARG_DST]   = *output.GetDNNLData();
     initialized_          = true;
   }
 
-  if (mkldnn_param.with_sum) {
-    const auto& output_mem   = output.GetMKLDNNData();
+  if (dnnl_param.with_sum) {
+    const auto& output_mem   = output.GetDNNLData();
     const auto& out_mem_desc = output_mem->get_desc();
     const auto& dst_mem_desc = fwd_->GetPd().dst_desc();
     if (out_mem_desc != dst_mem_desc) {
-      auto tmp_out_mem       = output.GetMKLDNNDataReorder(fwd_->GetPd().dst_desc());
+      auto tmp_out_mem       = output.GetDNNLDataReorder(fwd_->GetPd().dst_desc());
       auto data_md           = dst_mem_desc;
-      data_md.data.data_type = static_cast<mkldnn_data_type_t>(out_mem_desc.data.data_type);
-      mkldnn_mem_ptr new_out_mem(new mkldnn::memory(
-          data_md, CpuEngine::Get()->get_engine(), output_mem->get_data_handle()));
-      MKLDNNStream::Get()->RegisterMem(new_out_mem);
-      MKLDNNMemoryCopy(*tmp_out_mem, new_out_mem.get());
+      data_md.data.data_type = static_cast<dnnl_data_type_t>(out_mem_desc.data.data_type);
+      dnnl_mem_ptr new_out_mem(
+          new dnnl::memory(data_md, CpuEngine::Get()->get_engine(), output_mem->get_data_handle()));
+      DNNLStream::Get()->RegisterMem(new_out_mem);
+      DNNLMemoryCopy(*tmp_out_mem, new_out_mem.get());
       output = NDArray(new_out_mem);
     }
   }
 
-  if (mkldnn_param.quantized) {
-    auto data_mem         = data.GetMKLDNNDataReorder(fwd_->GetPd().src_desc());
-    mkldnn::memory* mem   = output.CreateMKLDNNData(fwd_->GetPd().dst_desc());
-    args_[MKLDNN_ARG_SRC] = *data_mem;
-    args_[MKLDNN_ARG_DST] = *mem;
-    MKLDNNStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
-    MKLDNNStream::Get()->Submit();
+  if (dnnl_param.quantized) {
+    auto data_mem       = data.GetDNNLDataReorder(fwd_->GetPd().src_desc());
+    dnnl::memory* mem   = output.CreateDNNLData(fwd_->GetPd().dst_desc());
+    args_[DNNL_ARG_SRC] = *data_mem;
+    args_[DNNL_ARG_DST] = *mem;
+    DNNLStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
+    DNNLStream::Get()->Submit();
   } else {
     std::vector<NDArray> new_inputs;
     if (has_bias) {
@@ -389,44 +387,42 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
     } else {
       new_inputs = {data, cached_weight_};
     }
-    MKLDNNConvolutionForwardFullFeature(
-        full_conv_param, ctx, fwd_.get(), new_inputs, req, {output});
+    DNNLConvolutionForwardFullFeature(full_conv_param, ctx, fwd_.get(), new_inputs, req, {output});
   }
 
-  if (mkldnn_param.quantized) {
+  if (dnnl_param.quantized) {
     *outputs[kMin].data().dptr<float>() = cached_output_min_;
     *outputs[kMax].data().dptr<float>() = cached_output_max_;
   }
-  if (mkldnn_param.with_sum) {
+  if (dnnl_param.with_sum) {
     auto out = const_cast<NDArray&>(outputs[kOut]);
-    out.UpdateMKLDNNMemDesc(fwd_->GetPd().dst_desc());
+    out.UpdateDNNLMemDesc(fwd_->GetPd().dst_desc());
   }
 }
 
-static void SgMKLDNNConvOpForward(const OpStatePtr& state_ptr,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
-  SgMKLDNNConvOperator& op = state_ptr.get_state<SgMKLDNNConvOperator>();
+static void SgDNNLConvOpForward(const OpStatePtr& state_ptr,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+  SgDNNLConvOperator& op = state_ptr.get_state<SgDNNLConvOperator>();
   op.Forward(ctx, inputs, req, outputs);
 }
 
-static uint32_t SgMKLDNNConvNumInputs(const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
+static uint32_t SgDNNLConvNumInputs(const NodeAttrs& attrs) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
   auto num_input    = DefaultSubgraphOpNumInputs(attrs);
-  if (param.full_conv_param.mkldnn_param.quantized)
+  if (param.full_conv_param.dnnl_param.quantized)
     return num_input + 2 +
-           (param.full_conv_param.mkldnn_param.with_sum &&
-                    !param.full_conv_param.mkldnn_param.dedup_sum
+           (param.full_conv_param.dnnl_param.with_sum && !param.full_conv_param.dnnl_param.dedup_sum
                 ? 2
                 : 0);
   else
     return num_input;
 }
 
-static void SgMKLDNNConvParamParser(nnvm::NodeAttrs* attrs) {
-  MKLDNNConvFusionParam param_;
+static void SgDNNLConvParamParser(nnvm::NodeAttrs* attrs) {
+  DNNLConvFusionParam param_;
 
   // For back-compatible, rename
   // with_relu -> with_act
@@ -445,7 +441,7 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs* attrs) {
   }
 
   try {
-    param_.full_conv_param.mkldnn_param.Init(attrs->dict);
+    param_.full_conv_param.dnnl_param.Init(attrs->dict);
   } catch (const dmlc::ParamError& e) {
     std::ostringstream os;
     os << e.what();
@@ -465,27 +461,27 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs* attrs) {
       return;
     auto& node_name = node->op()->name;
     if (node_name == "BatchNorm") {
-      CHECK_EQ(param_.full_conv_param.mkldnn_param.with_bn, true);
+      CHECK_EQ(param_.full_conv_param.dnnl_param.with_bn, true);
       CHECK(param_.bn_param.get() == nullptr);
       param_.bn_param =
           std::make_shared<BatchNormParam>(nnvm::get<BatchNormParam>(node->attrs.parsed));
     } else if (node_name == "Convolution") {
       param_.full_conv_param.conv_param = nnvm::get<ConvolutionParam>(node->attrs.parsed);
     } else if (node_name == "Activation" || node_name == "LeakyReLU" || node_name == "clip") {
-      auto& post_act_param = (param_.full_conv_param.mkldnn_param.with_act && !with_act)
+      auto& post_act_param = (param_.full_conv_param.dnnl_param.with_act && !with_act)
                                  ? param_.full_conv_param.act_param
                                  : param_.full_conv_param.postsum_act_param;
       with_act             = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
-        post_act_param.alg   = GetMKLDNNActAlgo(act_param);
+        post_act_param.alg   = GetDNNLActAlgo(act_param);
       } else if (node_name == "LeakyReLU") {
         const auto act_param = nnvm::get<LeakyReLUParam>(node->attrs.parsed);
         post_act_param.alpha = act_param.slope;
-        post_act_param.alg   = GetMKLDNNActAlgo(act_param);
+        post_act_param.alg   = GetDNNLActAlgo(act_param);
       } else {
         const auto clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
-        post_act_param.alg    = mkldnn::algorithm::eltwise_bounded_relu;
+        post_act_param.alg    = dnnl::algorithm::eltwise_bounded_relu;
         post_act_param.alpha  = clip_param.a_max;
       }
     }
@@ -493,53 +489,53 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param_);
 }
 
-static std::vector<std::string> SgMKLDNNConvListInputNames(const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
+static std::vector<std::string> SgDNNLConvListInputNames(const NodeAttrs& attrs) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
   std::vector<std::string> input_names;
   input_names.emplace_back("data");
   input_names.emplace_back("weight");
   if (!param.full_conv_param.conv_param.no_bias) {
     input_names.emplace_back("bias");
   }
-  if (param.full_conv_param.mkldnn_param.with_bn) {
+  if (param.full_conv_param.dnnl_param.with_bn) {
     input_names.emplace_back("gamma");
     input_names.emplace_back("beta");
     input_names.emplace_back("mean");
     input_names.emplace_back("var");
   }
-  auto& mkldnn_param = param.full_conv_param.mkldnn_param;
-  if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
+  auto& dnnl_param = param.full_conv_param.dnnl_param;
+  if (dnnl_param.with_sum && !dnnl_param.dedup_sum) {
     input_names.emplace_back("sum");
   }
-  if (param.full_conv_param.mkldnn_param.quantized) {
+  if (param.full_conv_param.dnnl_param.quantized) {
     input_names.emplace_back("data_min");
     input_names.emplace_back("data_max");
-    if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
+    if (dnnl_param.with_sum && !dnnl_param.dedup_sum) {
       input_names.emplace_back("sum_min");
       input_names.emplace_back("sum_max");
     }
   }
-  CHECK_EQ(input_names.size(), SgMKLDNNConvNumInputs(attrs));
+  CHECK_EQ(input_names.size(), SgDNNLConvNumInputs(attrs));
   return input_names;
 }
 
-static std::vector<std::string> SgMKLDNNConvListOutputNames(const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.mkldnn_param.quantized)
+static std::vector<std::string> SgDNNLConvListOutputNames(const NodeAttrs& attrs) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
+  if (param.full_conv_param.dnnl_param.quantized)
     return std::vector<std::string>{"output", "output_min", "output_max"};
   else
     return std::vector<std::string>{"output"};
 }
 
-static OpStatePtr CreateSgMKLDNNConvState(const nnvm::NodeAttrs& attrs,
-                                          Context ctx,
-                                          const mxnet::ShapeVector& in_shapes,
-                                          const std::vector<int>& in_types) {
-  return OpStatePtr::Create<SgMKLDNNConvOperator>(attrs);
+static OpStatePtr CreateSgDNNLConvState(const nnvm::NodeAttrs& attrs,
+                                        Context ctx,
+                                        const mxnet::ShapeVector& in_shapes,
+                                        const std::vector<int>& in_types) {
+  return OpStatePtr::Create<SgDNNLConvOperator>(attrs);
 }
 
 template <typename DType>
-static void FilterMinMaxIndice(const MKLDNNConvParam& mkldnn_param,
+static void FilterMinMaxIndice(const DNNLConvParam& dnnl_param,
                                std::vector<DType>* in_shapes,
                                std::vector<DType>* out_shapes,
                                std::vector<DType>* base_in_shapes,
@@ -547,7 +543,7 @@ static void FilterMinMaxIndice(const MKLDNNConvParam& mkldnn_param,
                                std::unordered_set<size_t>* minmax_indice) {
   base_out_shapes->push_back(out_shapes->at(0));
   size_t last = in_shapes->size() - 1;
-  if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
+  if (dnnl_param.with_sum && !dnnl_param.dedup_sum) {
     minmax_indice->insert(last);
     minmax_indice->insert(last - 1);
     minmax_indice->insert(last - 2);
@@ -560,16 +556,16 @@ static void FilterMinMaxIndice(const MKLDNNConvParam& mkldnn_param,
   }
 }
 
-static bool SgMKLDNNConvInferShape(const nnvm::NodeAttrs& attrs,
-                                   mxnet::ShapeVector* in_shapes,
-                                   mxnet::ShapeVector* out_shapes) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.mkldnn_param.quantized) {
+static bool SgDNNLConvInferShape(const nnvm::NodeAttrs& attrs,
+                                 mxnet::ShapeVector* in_shapes,
+                                 mxnet::ShapeVector* out_shapes) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
+  if (param.full_conv_param.dnnl_param.quantized) {
     std::unordered_set<size_t> minmax_indice;
     mxnet::ShapeVector base_in_shapes;
     mxnet::ShapeVector base_out_shapes;
 
-    FilterMinMaxIndice<mxnet::TShape>(param.full_conv_param.mkldnn_param,
+    FilterMinMaxIndice<mxnet::TShape>(param.full_conv_param.dnnl_param,
                                       in_shapes,
                                       out_shapes,
                                       &base_in_shapes,
@@ -593,15 +589,15 @@ static bool SgMKLDNNConvInferShape(const nnvm::NodeAttrs& attrs,
   }
 }
 
-static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs,
-                                  std::vector<int>* in_types,
-                                  std::vector<int>* out_types) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.mkldnn_param.quantized) {
+static bool SgDNNLConvInferType(const nnvm::NodeAttrs& attrs,
+                                std::vector<int>* in_types,
+                                std::vector<int>* out_types) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
+  if (param.full_conv_param.dnnl_param.quantized) {
     std::unordered_set<size_t> minmax_indice;
     std::vector<int> base_in_types;
     std::vector<int> base_out_types;
-    FilterMinMaxIndice<int>(param.full_conv_param.mkldnn_param,
+    FilterMinMaxIndice<int>(param.full_conv_param.dnnl_param,
                             in_types,
                             out_types,
                             &base_in_types,
@@ -612,15 +608,15 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs,
     int orig_data      = base_in_types[0];
     base_in_types[0]   = mshadow::kFloat32;
     int orig_sum       = base_in_types[0];
-    auto& mkldnn_param = param.full_conv_param.mkldnn_param;
-    if (param.full_conv_param.mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
+    auto& dnnl_param   = param.full_conv_param.dnnl_param;
+    if (param.full_conv_param.dnnl_param.with_sum && !dnnl_param.dedup_sum) {
       auto sum_index           = GetInSumIndex(param);
       orig_sum                 = base_in_types[sum_index];
       base_in_types[sum_index] = mshadow::kFloat32;
     }
     bool result      = DefaultSubgraphOpType(attrs, &base_in_types, &base_out_types);
     base_in_types[0] = orig_data;
-    if (param.full_conv_param.mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
+    if (param.full_conv_param.dnnl_param.with_sum && !dnnl_param.dedup_sum) {
       auto sum_index           = GetInSumIndex(param);
       base_in_types[sum_index] = orig_sum;
     }
@@ -632,8 +628,8 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs,
         in_types->at(i) = base_in_types[base_idx++];
       }
     }
-    if (param.full_conv_param.mkldnn_param.min_calib_range.has_value() &&
-        param.full_conv_param.mkldnn_param.max_calib_range.has_value()) {
+    if (param.full_conv_param.dnnl_param.min_calib_range.has_value() &&
+        param.full_conv_param.dnnl_param.max_calib_range.has_value()) {
       if (IsOutputUInt8(param)) {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
       } else {
@@ -651,17 +647,17 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs,
   }
 }
 
-static bool SgMKLDNNConvOpStorageType(const nnvm::NodeAttrs& attrs,
-                                      const int dev_mask,
-                                      DispatchMode* dispatch_mode,
-                                      std::vector<int>* in_stypes,
-                                      std::vector<int>* out_stypes) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.mkldnn_param.quantized) {
+static bool SgDNNLConvOpStorageType(const nnvm::NodeAttrs& attrs,
+                                    const int dev_mask,
+                                    DispatchMode* dispatch_mode,
+                                    std::vector<int>* in_stypes,
+                                    std::vector<int>* out_stypes) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
+  if (param.full_conv_param.dnnl_param.quantized) {
     std::unordered_set<size_t> minmax_indice;
     std::vector<int> base_in_stypes;
     std::vector<int> base_out_stypes;
-    FilterMinMaxIndice<int>(param.full_conv_param.mkldnn_param,
+    FilterMinMaxIndice<int>(param.full_conv_param.dnnl_param,
                             in_stypes,
                             out_stypes,
                             &base_in_stypes,
@@ -686,23 +682,22 @@ static bool SgMKLDNNConvOpStorageType(const nnvm::NodeAttrs& attrs,
   }
 }
 
-std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.mkldnn_param.with_sum &&
-      !param.full_conv_param.mkldnn_param.dedup_sum) {
+std::vector<std::pair<int, int>> SgDNNLConvInplaceOption(const NodeAttrs& attrs) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
+  if (param.full_conv_param.dnnl_param.with_sum && !param.full_conv_param.dnnl_param.dedup_sum) {
     return std::vector<std::pair<int, int>>{{GetInSumIndex(param), 0}};
   } else {
     return std::vector<std::pair<int, int>>();
   }
 }
 
-nnvm::ObjectPtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
-  auto const& param    = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
+nnvm::ObjectPtr SgDNNLConvQuantizedOp(const NodeAttrs& attrs) {
+  auto const& param    = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
   nnvm::ObjectPtr node = nnvm::Node::Create();
-  node->attrs.op       = Op::Get("_sg_mkldnn_conv");
+  node->attrs.op       = Op::Get("_sg_dnnl_conv");
   const int k_ndims    = param.full_conv_param.conv_param.kernel.ndim();
   CHECK(k_ndims == 2U || k_ndims == 3U)
-      << "Quantized Convolution of MKL-DNN supports 2D/3D kernel currently."
+      << "Quantized Convolution of DNNL supports 2D/3D kernel currently."
       << "Please exclude this layer from the quantized model.";
   node->attrs.name              = "quantized_" + attrs.name;
   node->attrs.dict              = attrs.dict;
@@ -715,10 +710,10 @@ nnvm::ObjectPtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-bool SgMKLDNNAvoidConvQuantizeInput(const NodeAttrs& attrs,
-                                    const size_t index,
-                                    const std::string quantize_granularity) {
-  auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
+bool SgDNNLAvoidConvQuantizeInput(const NodeAttrs& attrs,
+                                  const size_t index,
+                                  const std::string quantize_granularity) {
+  auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
   std::unordered_set<size_t> avoid_indice;
   size_t idx = 0;
   idx++;                       // data
@@ -726,7 +721,7 @@ bool SgMKLDNNAvoidConvQuantizeInput(const NodeAttrs& attrs,
   if (!param.full_conv_param.conv_param.no_bias) {
     avoid_indice.insert(idx++);  // bias
   }
-  if (param.full_conv_param.mkldnn_param.with_bn) {
+  if (param.full_conv_param.dnnl_param.with_bn) {
     avoid_indice.insert(idx++);  // gamma
     avoid_indice.insert(idx++);  // beta
     avoid_indice.insert(idx++);  // mean
@@ -735,22 +730,22 @@ bool SgMKLDNNAvoidConvQuantizeInput(const NodeAttrs& attrs,
   return avoid_indice.count(index);
 }
 
-NNVM_REGISTER_OP(_sg_mkldnn_conv)
-    .describe(R"code(_sg_mkldnn_conv)code" ADD_FILELINE)
-    .set_num_inputs(SgMKLDNNConvNumInputs)
+NNVM_REGISTER_OP(_sg_dnnl_conv)
+    .describe(R"code(_sg_dnnl_conv)code" ADD_FILELINE)
+    .set_num_inputs(SgDNNLConvNumInputs)
     .set_num_outputs([](const NodeAttrs& attrs) {
-      auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-      return param.full_conv_param.mkldnn_param.quantized ? 3 : 1;
+      auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
+      return param.full_conv_param.dnnl_param.quantized ? 3 : 1;
     })
-    .set_attr_parser(SgMKLDNNConvParamParser)
-    .set_attr<nnvm::FListInputNames>("FListInputNames", SgMKLDNNConvListInputNames)
-    .set_attr<nnvm::FListOutputNames>("FListOutputNames", SgMKLDNNConvListOutputNames)
-    .set_attr<FCreateOpState>("FCreateOpState", CreateSgMKLDNNConvState)
-    .set_attr<mxnet::FInferShape>("FInferShape", SgMKLDNNConvInferShape)
-    .set_attr<nnvm::FInferType>("FInferType", SgMKLDNNConvInferType)
-    .set_attr<FInferStorageType>("FInferStorageType", SgMKLDNNConvOpStorageType)
-    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNConvOpForward)
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr_parser(SgDNNLConvParamParser)
+    .set_attr<nnvm::FListInputNames>("FListInputNames", SgDNNLConvListInputNames)
+    .set_attr<nnvm::FListOutputNames>("FListOutputNames", SgDNNLConvListOutputNames)
+    .set_attr<FCreateOpState>("FCreateOpState", CreateSgDNNLConvState)
+    .set_attr<mxnet::FInferShape>("FInferShape", SgDNNLConvInferShape)
+    .set_attr<nnvm::FInferType>("FInferType", SgDNNLConvInferType)
+    .set_attr<FInferStorageType>("FInferStorageType", SgDNNLConvOpStorageType)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgDNNLConvOpForward)
+    .set_attr<bool>("TIsDNNL", true)
     // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
     // will be reverted after the improvement of CachedOP is done.
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
@@ -760,12 +755,12 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
                                 })
     .set_attr<nnvm::FMutateInputs>("FMutateInputs", DefaultSubgraphOpMutableInputs)
     .set_attr<std::string>("key_var_num_args", "num_args")
-    .set_attr<nnvm::FInplaceOption>("FInplaceOption", SgMKLDNNConvInplaceOption)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption", SgDNNLConvInplaceOption)
     .set_attr<FQuantizable>("FQuantizable",
                             [](const NodeAttrs& attrs) { return QuantizeType::kMust; })
-    .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNConvQuantizedOp)
+    .set_attr<FQuantizedOp>("FQuantizedOp", SgDNNLConvQuantizedOp)
     .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-    .set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidConvQuantizeInput);
+    .set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgDNNLAvoidConvQuantizeInput);
 
 }  // namespace op
 }  // namespace mxnet
