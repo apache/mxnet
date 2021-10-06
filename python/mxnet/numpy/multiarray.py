@@ -4252,6 +4252,7 @@ def expm1(x, out=None, **kwargs):
     """
     return _mx_nd_np.expm1(x, out=out, **kwargs)
 
+
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
 def arcsin(x, out=None, **kwargs):
