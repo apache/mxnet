@@ -18,40 +18,40 @@
  */
 
 /*!
- * \file mkldnn_deconvolution.cc
+ * \file dnnl_deconvolution.cc
  */
 
 #if MXNET_USE_ONEDNN == 1
 
 #include "../deconvolution-inl.h"
-#include "./mkldnn_deconvolution-inl.h"
+#include "./dnnl_deconvolution-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray& input) {
+bool SupportDNNLDeconv(const DeconvolutionParam& params, const NDArray& input) {
   return params.kernel.ndim() >= 1 && params.kernel.ndim() <= 3 &&
          input.shape().ndim() == (params.kernel.ndim() + 2) &&
          (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16);
 }
 
-void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs,
+void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const auto& param  = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  const auto tensors = MKLDNNDeconvFwd::Tensors(param.no_bias, inputs, outputs);
-  const auto& fwd    = MKLDNNDeconvFwd::GetCached(param, tensors);
+  const auto tensors = DNNLDeconvFwd::Tensors(param.no_bias, inputs, outputs);
+  const auto& fwd    = DNNLDeconvFwd::GetCached(param, tensors);
 
   fwd.ControlWeightsFormat(param.num_group, ctx.is_train, tensors.weights);
   fwd.Execute(param.num_group, req[deconv::kOut], tensors);
 }
 
-MKLDNNDeconvFwd& MKLDNNDeconvFwd::GetCached(const DeconvolutionParam& param,
+DNNLDeconvFwd& DNNLDeconvFwd::GetCached(const DeconvolutionParam& param,
                                             const Tensors& tensors) {
-  using deconv_fwd_map = std::unordered_map<DeconvSignature, MKLDNNDeconvFwd, OpHash>;
+  using deconv_fwd_map = std::unordered_map<DeconvSignature, DNNLDeconvFwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local deconv_fwd_map fwds;
 #else
@@ -67,13 +67,13 @@ MKLDNNDeconvFwd& MKLDNNDeconvFwd::GetCached(const DeconvolutionParam& param,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    const MKLDNNDeconvFwd fwd(param, tensors);
+    const DNNLDeconvFwd fwd(param, tensors);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
 
-std::shared_ptr<deconv_fwd_pd_t> MKLDNNDeconvFwd::CreatePrimitiveDesc(
+std::shared_ptr<deconv_fwd_pd_t> DNNLDeconvFwd::CreatePrimitiveDesc(
     const DeconvolutionParam& param,
     const Tensors& tensors) {
   DeconvDescCreator ddc(param, tensors.data, tensors.weights, tensors.bias, tensors.out);
@@ -93,13 +93,13 @@ std::shared_ptr<deconv_fwd_pd_t> MKLDNNDeconvFwd::CreatePrimitiveDesc(
   return pd;
 }
 
-void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
+void DNNLDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
                                            const bool is_train,
                                            const NDArray& weights) const {
   if (is_train) {
-    // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
+    // TODO(zhengda) kvstore doesn't handle DNNL correctly. Let's reorder it
     // to the default format for now.
-    if (weights.IsMKLDNNData()) {
+    if (weights.IsDNNLData()) {
       // This asks the engine to change the layout of the weights array after it's used.
       weights.Reorder2DefaultAsync();
     }
@@ -109,15 +109,15 @@ void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
     if (weights.IsDefaultData()) {
       // We also need to modify the layout on the original weights array.
       // The data conversion happens after the weights array is used.
-      weights.MKLDNNDataReorderAsync(IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group));
+      weights.DNNLDataReorderAsync(IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group));
     } else {
-      CHECK(weights.GetMKLDNNData()->get_desc() ==
+      CHECK(weights.GetDNNLData()->get_desc() ==
             IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group));
     }
   }
 }
 
-void MKLDNNDeconvFwd::Execute(const uint32_t num_group,
+void DNNLDeconvFwd::Execute(const uint32_t num_group,
                               const OpReqType req,
                               const Tensors& tensors) const {
   // MXNet (correctly) assumes that deconvolution is implemented using convolution primitives.
@@ -129,38 +129,38 @@ void MKLDNNDeconvFwd::Execute(const uint32_t num_group,
   // primitive_out_channels = deconv_in_channels, primitive_in_channels = deconv_out_channels,
   // so it becomes (deconv_in_channels, deconv_out_channels, h, w) and MXNet provides such tensor.
   //
-  // MKLDNN deconvolution primitive also (as convolution) expects weights tensor with the shape of
+  // DNNL deconvolution primitive also (as convolution) expects weights tensor with the shape of
   // (primitive_out_channels, primitive_in_channels, h, w), but this time we don't swap input and
   // output tensors, so:
   // primitive_out_channels = deconv_out_channels, primitive_in_channels = deconv_in_channels,
   // thus the current weights tensor won't fit (when deconv_out_channels != deconv_in_channels).
-  // However, underneath deconvolution MKLDNN also uses convolution, so even though it expects the
+  // However, underneath deconvolution DNNL also uses convolution, so even though it expects the
   // weights tensor with the logical order of oihw, it wants its physical representation to
   // match the order of iohw, which is the same as current weights tensor.
   //
   // So here we swap logical order of input and output dimensions for weights tensor just for
-  // MKLDNN operations.
-  IOLogicalSwapMKLDNNMem(tensors.weights, num_group);
+  // DNNL operations.
+  IOLogicalSwapDNNLMem(tensors.weights, num_group);
   {
-    mkldnn_args_map_t net_args;
+    dnnl_args_map_t net_args;
     const auto& out_mem = OutMem(req, tensors.out);
 
-    net_args.insert({MKLDNN_ARG_SRC, *DataMem(tensors.data)});
-    net_args.insert({MKLDNN_ARG_WEIGHTS, *WeightsMem(num_group, tensors.weights)});
-    net_args.insert({MKLDNN_ARG_DST, *out_mem.second});
+    net_args.insert({DNNL_ARG_SRC, *DataMem(tensors.data)});
+    net_args.insert({DNNL_ARG_WEIGHTS, *WeightsMem(num_group, tensors.weights)});
+    net_args.insert({DNNL_ARG_DST, *out_mem.second});
     if (tensors.bias) {
-      net_args.insert({MKLDNN_ARG_BIAS, *BiasMem(*tensors.bias)});
+      net_args.insert({DNNL_ARG_BIAS, *BiasMem(*tensors.bias)});
     }
 
     // CommitOutput should run after RegisterPrimArgs for memory dependency
-    MKLDNNStream::Get()->RegisterPrimArgs(*fwd, net_args);
+    DNNLStream::Get()->RegisterPrimArgs(*fwd, net_args);
     CommitOutput(tensors.out, out_mem);
-    MKLDNNStream::Get()->Submit();
+    DNNLStream::Get()->Submit();
   }
-  IOLogicalSwapMKLDNNMem(tensors.weights, num_group);  // swap back from oihw to iohw
+  IOLogicalSwapDNNLMem(tensors.weights, num_group);  // swap back from oihw to iohw
 }
 
-void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
+void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
@@ -169,16 +169,16 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
 
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const auto& param        = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  const auto read_tensors  = MKLDNNDeconvBwd::ReadTensors(param.no_bias, inputs);
-  const auto write_tensors = MKLDNNDeconvBwd::WriteTensors(param.no_bias, outputs);
-  MKLDNNDeconvBwd& bwd     = MKLDNNDeconvBwd::GetCached(param, read_tensors);
+  const auto read_tensors  = DNNLDeconvBwd::ReadTensors(param.no_bias, inputs);
+  const auto write_tensors = DNNLDeconvBwd::WriteTensors(param.no_bias, outputs);
+  DNNLDeconvBwd& bwd     = DNNLDeconvBwd::GetCached(param, read_tensors);
 
   bwd.Execute(param.num_group, req, read_tensors, write_tensors);
 }
 
-MKLDNNDeconvBwd& MKLDNNDeconvBwd::GetCached(const DeconvolutionParam& param,
+DNNLDeconvBwd& DNNLDeconvBwd::GetCached(const DeconvolutionParam& param,
                                             const ReadTensors& read_tensors) {
-  using deconv_bwd_map = std::unordered_map<DeconvSignature, MKLDNNDeconvBwd, OpHash>;
+  using deconv_bwd_map = std::unordered_map<DeconvSignature, DNNLDeconvBwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local deconv_bwd_map bwds;
 #else
@@ -194,13 +194,13 @@ MKLDNNDeconvBwd& MKLDNNDeconvBwd::GetCached(const DeconvolutionParam& param,
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
-    const MKLDNNDeconvBwd bwd(param, read_tensors);
+    const DNNLDeconvBwd bwd(param, read_tensors);
     it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
 }
 
-std::shared_ptr<deconv_bwd_data_pd_t> MKLDNNDeconvBwd::CreateDataPrimitiveDesc(
+std::shared_ptr<deconv_bwd_data_pd_t> DNNLDeconvBwd::CreateDataPrimitiveDesc(
     const DeconvolutionParam& param,
     const ReadTensors& read_tensors,
     const deconv_fwd_pd_t& fwd_pd) {
@@ -222,7 +222,7 @@ std::shared_ptr<deconv_bwd_data_pd_t> MKLDNNDeconvBwd::CreateDataPrimitiveDesc(
   return pd;
 }
 
-std::shared_ptr<deconv_bwd_weights_pd_t> MKLDNNDeconvBwd::CreateWeightsPrimitiveDesc(
+std::shared_ptr<deconv_bwd_weights_pd_t> DNNLDeconvBwd::CreateWeightsPrimitiveDesc(
     const DeconvolutionParam& param,
     const ReadTensors& read_tensors,
     const deconv_fwd_pd_t& fwd_pd) {
@@ -245,64 +245,64 @@ std::shared_ptr<deconv_bwd_weights_pd_t> MKLDNNDeconvBwd::CreateWeightsPrimitive
   return pd;
 }
 
-void MKLDNNDeconvBwd::Execute(const uint32_t num_group,
+void DNNLDeconvBwd::Execute(const uint32_t num_group,
                               const std::vector<OpReqType>& req,
                               const ReadTensors& read_tensors,
                               const WriteTensors& write_tensors) const {
-  // swaps are explained in MKLDNNDeconvFwd::Execute
+  // swaps are explained in DNNLDeconvFwd::Execute
   IOSwapWeightsTensors(num_group, req, read_tensors.weights, write_tensors.weights_grad);
   {
     auto* const out_grad_mem =
         ScheduleBwdData(num_group, req[deconv::kData], read_tensors, write_tensors);
     ScheduleBwdWeights(num_group, req, read_tensors, write_tensors, out_grad_mem);
-    MKLDNNStream::Get()->Submit();
+    DNNLStream::Get()->Submit();
   }
   IOSwapWeightsTensors(num_group, req, read_tensors.weights, write_tensors.weights_grad);
 }
 
-const mkldnn::memory* MKLDNNDeconvBwd::ScheduleBwdData(const uint32_t num_group,
+const dnnl::memory* DNNLDeconvBwd::ScheduleBwdData(const uint32_t num_group,
                                                        const OpReqType req,
                                                        const ReadTensors& read_tensors,
                                                        const WriteTensors& write_tensors) const {
   if (req) {
-    mkldnn_args_map_t net_args;
+    dnnl_args_map_t net_args;
     auto* const out_grad_mem  = OutGradMem(read_tensors.out_grad);
     const auto& data_grad_mem = DataGradMem(req, write_tensors.data_grad);
 
-    net_args.insert({MKLDNN_ARG_DIFF_DST, *out_grad_mem});
-    net_args.insert({MKLDNN_ARG_WEIGHTS, *WeightsMem(num_group, read_tensors.weights)});
-    net_args.insert({MKLDNN_ARG_DIFF_SRC, *data_grad_mem.second});
+    net_args.insert({DNNL_ARG_DIFF_DST, *out_grad_mem});
+    net_args.insert({DNNL_ARG_WEIGHTS, *WeightsMem(num_group, read_tensors.weights)});
+    net_args.insert({DNNL_ARG_DIFF_SRC, *data_grad_mem.second});
 
     // CommitOutput should run after RegisterPrimArgs for memory dependency
-    MKLDNNStream::Get()->RegisterPrimArgs(*bwd_data, net_args);
+    DNNLStream::Get()->RegisterPrimArgs(*bwd_data, net_args);
     CommitOutput(write_tensors.data_grad, data_grad_mem);
     return out_grad_mem;
   }
   return nullptr;
 }
 
-void MKLDNNDeconvBwd::ScheduleBwdWeights(const uint32_t num_group,
+void DNNLDeconvBwd::ScheduleBwdWeights(const uint32_t num_group,
                                          const std::vector<OpReqType>& req,
                                          const ReadTensors& read_tensors,
                                          const WriteTensors& write_tensors,
-                                         const mkldnn::memory* const out_grad_mem) const {
+                                         const dnnl::memory* const out_grad_mem) const {
   OpReqType weight_req = req[deconv::kWeight];
   OpReqType bias_req   = req.size() > deconv::kBias ? req[deconv::kBias] : OpReqType::kNullOp;
   if (weight_req || bias_req) {
-    mkldnn_args_map_t net_args;
+    dnnl_args_map_t net_args;
     const auto& weights_grad_mem =
         WeightsGradMem(num_group, weight_req, write_tensors.weights_grad);
     const auto& bias_grad_mem = BiasGradMem(bias_req, write_tensors.bias_grad);
 
-    net_args.insert({MKLDNN_ARG_DIFF_DST, *OutGradMem(read_tensors.out_grad, out_grad_mem)});
-    net_args.insert({MKLDNN_ARG_SRC, *DataMem(read_tensors.data)});
-    net_args.insert({MKLDNN_ARG_DIFF_WEIGHTS, *weights_grad_mem.second});
+    net_args.insert({DNNL_ARG_DIFF_DST, *OutGradMem(read_tensors.out_grad, out_grad_mem)});
+    net_args.insert({DNNL_ARG_SRC, *DataMem(read_tensors.data)});
+    net_args.insert({DNNL_ARG_DIFF_WEIGHTS, *weights_grad_mem.second});
     if (bias_grad_mem.second) {
-      net_args.insert({MKLDNN_ARG_DIFF_BIAS, *bias_grad_mem.second});
+      net_args.insert({DNNL_ARG_DIFF_BIAS, *bias_grad_mem.second});
     }
 
     // CommitOutput should run after RegisterPrimArgs for memory dependency
-    MKLDNNStream::Get()->RegisterPrimArgs(*bwd_weights, net_args);
+    DNNLStream::Get()->RegisterPrimArgs(*bwd_weights, net_args);
     CommitOutput(write_tensors.weights_grad, weights_grad_mem);
     if (bias_grad_mem.second) {
       CommitOutput(*write_tensors.bias_grad, bias_grad_mem);
@@ -317,7 +317,7 @@ DeconvDescCreator::DeconvDescCreator(const DeconvolutionParam& param,
                                      const NDArray& out)
     : data_md(GetMemDesc(data)),
       weights_md(GetDeconvWeightsDesc(weights, param.num_group)),
-      bias_md(bias ? GetMemDesc(*bias) : mkldnn::memory::desc()),
+      bias_md(bias ? GetMemDesc(*bias) : dnnl::memory::desc()),
       out_md(GetMemDesc(out)),
       strides(param.stride.ndim()),
       padding(param.pad.ndim()),

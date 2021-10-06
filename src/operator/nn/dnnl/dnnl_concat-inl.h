@@ -18,46 +18,45 @@
  */
 
 /*!
- * \file mkldnn_concat-inl.h
+ * \file dnnl_concat-inl.h
  * \brief
  * \author
  */
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_CONCAT_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_CONCAT_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 #include <utility>
 #include <vector>
 
-#include "./mkldnn_base-inl.h"
-#include "./mkldnn_ops-inl.h"
-
 #include "../concat-inl.h"
+#include "./dnnl_base-inl.h"
+#include "./dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class MKLDNNConcatFwd {
+class DNNLConcatFwd {
  public:
-  mkldnn::concat::primitive_desc fwd_pd;
+  dnnl::concat::primitive_desc fwd_pd;
 
-  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc>& data_md);
+  DNNLConcatFwd(int concat_dim, const std::vector<dnnl::memory::desc>& data_md);
 
-  const mkldnn::concat& GetFwd() const {
+  const dnnl::concat& GetFwd() const {
     return *fwd_;
   }
 
  private:
-  std::shared_ptr<mkldnn::concat> fwd_;
+  std::shared_ptr<dnnl::concat> fwd_;
 };
 
-static MKLDNNConcatFwd& GetConcatForward(int concat_dim,
-                                         const std::vector<NDArray>& in_data,
-                                         const std::vector<mkldnn::memory::desc>& data_md) {
+static DNNLConcatFwd& GetConcatForward(int concat_dim,
+                                       const std::vector<NDArray>& in_data,
+                                       const std::vector<dnnl::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
+  static thread_local std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
 #endif
   OpSignature key;
   key.AddSign(concat_dim);
@@ -65,7 +64,7 @@ static MKLDNNConcatFwd& GetConcatForward(int concat_dim,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNConcatFwd fwd(concat_dim, data_md);
+    DNNLConcatFwd fwd(concat_dim, data_md);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
@@ -75,4 +74,4 @@ static MKLDNNConcatFwd& GetConcatForward(int concat_dim,
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_CONCAT_INL_H_

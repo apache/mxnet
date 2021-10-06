@@ -18,27 +18,26 @@
  */
 
 /*!
- * \file mkldnn_fully_connected-inl.h
- * \brief Common functions used by MKLDNN (Quantized) FullyConnected operator
+ * \file dnnl_fully_connected-inl.h
+ * \brief Common functions used by DNNL (Quantized) FullyConnected operator
  * \author Ciyong Chen
  */
 
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FULLY_CONNECTED_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FULLY_CONNECTED_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_FULLY_CONNECTED_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_FULLY_CONNECTED_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "./mkldnn_base-inl.h"
-
 #include "../fully_connected-inl.h"
+#include "./dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-struct MKLDNNFCParam : public dmlc::Parameter<MKLDNNFCParam> {
+struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
   bool quantized;
   bool enable_float_output;
   bool with_eltwise;
@@ -46,7 +45,7 @@ struct MKLDNNFCParam : public dmlc::Parameter<MKLDNNFCParam> {
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   dmlc::optional<bool> channel_wise_quantize;
 
-  DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
+  DMLC_DECLARE_PARAMETER(DNNLFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false).describe(
         "Whether it's a quantized FullyConnected operator");
     DMLC_DECLARE_FIELD(enable_float_output)
@@ -73,71 +72,71 @@ struct MKLDNNFCParam : public dmlc::Parameter<MKLDNNFCParam> {
   }
 };
 
-struct MKLDNNFCFullParam {
+struct DNNLFCFullParam {
   FullyConnectedParam default_param;
-  MKLDNNFCParam mkldnn_param;
-  MKLDNNPostEltwiseParam eltwise_param;
+  DNNLFCParam dnnl_param;
+  DNNLPostEltwiseParam eltwise_param;
   std::vector<float> output_scales = {0.0f};
 };
 
-mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullParam& full_param,
-                                                           const bool is_train,
-                                                           const NDArray& data,
-                                                           const NDArray& weight,
-                                                           const NDArray* bias,
-                                                           const mkldnn::memory::desc& out_md);
+dnnl::inner_product_forward::primitive_desc GetFCFwdImpl(const DNNLFCFullParam& full_param,
+                                                         const bool is_train,
+                                                         const NDArray& data,
+                                                         const NDArray& weight,
+                                                         const NDArray* bias,
+                                                         const dnnl::memory::desc& out_md);
 
-class MKLDNNFullyConnectedForward {
+class DNNLFullyConnectedForward {
  public:
-  mkldnn::inner_product_forward::primitive_desc fwd_pd;
+  dnnl::inner_product_forward::primitive_desc fwd_pd;
 
-  MKLDNNFullyConnectedForward(const MKLDNNFCFullParam& full_param,
-                              const bool is_train,
-                              const NDArray& data,
-                              const NDArray& weight,
-                              const NDArray* bias,
-                              const mkldnn::memory::desc& out_md)
+  DNNLFullyConnectedForward(const DNNLFCFullParam& full_param,
+                            const bool is_train,
+                            const NDArray& data,
+                            const NDArray& weight,
+                            const NDArray* bias,
+                            const dnnl::memory::desc& out_md)
       : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {
-    fwd_ = std::make_shared<mkldnn::inner_product_forward>(fwd_pd);
+    fwd_ = std::make_shared<dnnl::inner_product_forward>(fwd_pd);
   }
 
-  const mkldnn::inner_product_forward& GetFwd() const {
+  const dnnl::inner_product_forward& GetFwd() const {
     return *fwd_;
   }
 
  private:
-  std::shared_ptr<mkldnn::inner_product_forward> fwd_;
+  std::shared_ptr<dnnl::inner_product_forward> fwd_;
 };
 
-typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;
+typedef ParamOpSign<FullyConnectedParam> DNNLFullyconSignature;
 
-MKLDNNFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
-                                      const bool is_train,
-                                      const NDArray& data,
-                                      const NDArray& weight,
-                                      const NDArray* bias,
-                                      const mkldnn::memory::desc& out_md);
+DNNLFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
+                                    const bool is_train,
+                                    const NDArray& data,
+                                    const NDArray& weight,
+                                    const NDArray* bias,
+                                    const dnnl::memory::desc& out_md);
 
-void MKLDNNFCFlattenData(const FullyConnectedParam& param,
-                         const NDArray& out_data,
-                         NDArray* in_data,
-                         mkldnn::memory::desc* out_md);
+void DNNLFCFlattenData(const FullyConnectedParam& param,
+                       const NDArray& out_data,
+                       NDArray* in_data,
+                       dnnl::memory::desc* out_md);
 
-void MKLDNNFCForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<NDArray>& in_data,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<NDArray>& out_data);
+void DNNLFCForward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<NDArray>& in_data,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<NDArray>& out_data);
 
-void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam& param,
-                                const OpContext& ctx,
-                                MKLDNNFullyConnectedForward* fwd,
-                                const std::vector<NDArray>& in_data,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& out_data);
+void DNNLFCForwardFullFeature(const DNNLFCFullParam& param,
+                              const OpContext& ctx,
+                              DNNLFullyConnectedForward* fwd,
+                              const std::vector<NDArray>& in_data,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& out_data);
 
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FULLY_CONNECTED_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_FULLY_CONNECTED_INL_H_

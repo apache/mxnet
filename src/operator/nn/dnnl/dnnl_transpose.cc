@@ -18,21 +18,21 @@
  */
 
 /*!
- * \file mkldnn_transpose.cc
- * \brief Implement transpose operator via MKL-DNN reorder primitive
+ * \file dnnl_transpose.cc
+ * \brief Implement transpose operator via DNNL reorder primitive
  * \author Tao Lv
  */
 
 #if MXNET_USE_ONEDNN == 1
 
-#include <mkldnn.hpp>
+#include <dnnl.hpp>
 
 #include "../../tensor/matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data) {
+bool SupportDNNLTranspose(const TransposeParam& param, const NDArray& data) {
   auto data_ndim = data.shape().ndim();
 
   if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0 ||
@@ -42,17 +42,17 @@ bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data) {
   return true;
 }
 
-typedef ParamOpSign<TransposeParam> MKLDNNTransposeSignature;
+typedef ParamOpSign<TransposeParam> DNNLTransposeSignature;
 
-class MKLDNNTransposeForward {
+class DNNLTransposeForward {
  public:
-  std::shared_ptr<mkldnn::memory> data_;
-  std::shared_ptr<mkldnn::memory> out_;
-  std::shared_ptr<mkldnn::memory::desc> dst_md_;
-  std::shared_ptr<mkldnn::reorder> transpose_;
+  std::shared_ptr<dnnl::memory> data_;
+  std::shared_ptr<dnnl::memory> out_;
+  std::shared_ptr<dnnl::memory::desc> dst_md_;
+  std::shared_ptr<dnnl::reorder> transpose_;
 
  public:
-  MKLDNNTransposeForward(const TransposeParam& param, const NDArray& data) {
+  DNNLTransposeForward(const TransposeParam& param, const NDArray& data) {
     auto shape     = data.shape();
     auto data_ndim = shape.ndim();
     auto axes_ndim = param.axes.ndim();
@@ -66,12 +66,12 @@ class MKLDNNTransposeForward {
     }
 
     auto engine = CpuEngine::Get()->get_engine();
-    auto in_mem = data.GetMKLDNNData();
+    auto in_mem = data.GetDNNLData();
     auto src_md = in_mem->get_desc();
-    data_       = std::make_shared<mkldnn::memory>(src_md, engine, nullptr);
+    data_       = std::make_shared<dnnl::memory>(src_md, engine, nullptr);
 
-    mkldnn_dims_t strides;
-    mkldnn_dims_t sh;
+    dnnl_dims_t strides;
+    dnnl_dims_t sh;
     dim_t total_stride = 1;
     for (int i = data_ndim - 1; i >= 0; i--) {
       sh[i]            = shape[i];
@@ -79,67 +79,64 @@ class MKLDNNTransposeForward {
       total_stride *= shape[axes[i]];
     }
 
-    mkldnn_memory_desc_t dst_fmt;
-    mkldnn_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, mkldnn_f32, strides);
+    dnnl_memory_desc_t dst_fmt;
+    dnnl_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, dnnl_f32, strides);
 
-    dst_md_ = std::make_shared<mkldnn::memory::desc>(dst_fmt);
-    out_    = std::make_shared<mkldnn::memory>(*dst_md_, engine, nullptr);
+    dst_md_ = std::make_shared<dnnl::memory::desc>(dst_fmt);
+    out_    = std::make_shared<dnnl::memory>(*dst_md_, engine, nullptr);
 
-    transpose_ = std::make_shared<mkldnn::reorder>(*data_, *out_);
+    transpose_ = std::make_shared<dnnl::reorder>(*data_, *out_);
   }
 
   void SetNewMem(const NDArray& data, const NDArray& output) {
-    if (data.IsMKLDNNData()) {
-      this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());
+    if (data.IsDNNLData()) {
+      this->data_->set_data_handle(data.GetDNNLData()->get_data_handle());
     } else {
       MSHADOW_TYPE_SWITCH(
           data.dtype(), DTYPE, { this->data_->set_data_handle(data.data().dptr<DTYPE>()); });
     }
 
-    CHECK(!output.IsMKLDNNData());
+    CHECK(!output.IsDNNLData());
     MSHADOW_TYPE_SWITCH(
         output.dtype(), DTYPE, { this->out_->set_data_handle(output.data().dptr<DTYPE>()); });
   }
 
-  const mkldnn::reorder& GetFwd() const {
+  const dnnl::reorder& GetFwd() const {
     return *transpose_;
   }
 
   void Execute() const {
-    auto stream = MKLDNNStream::Get();
-    mkldnn_args_map_t net_args;
-    net_args.insert({{MKLDNN_ARG_FROM, *(data_)}, {MKLDNN_ARG_TO, *(out_)}});
+    auto stream = DNNLStream::Get();
+    dnnl_args_map_t net_args;
+    net_args.insert({{DNNL_ARG_FROM, *(data_)}, {DNNL_ARG_TO, *(out_)}});
     stream->RegisterPrimArgs(*transpose_, net_args);
     stream->Submit();
   }
 };
 
-static MKLDNNTransposeForward& GetTransposeForward(const TransposeParam& param,
-                                                   const NDArray& data) {
+static DNNLTransposeForward& GetTransposeForward(const TransposeParam& param, const NDArray& data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNTransposeSignature, MKLDNNTransposeForward, OpHash>
-      fwds;
+  static thread_local std::unordered_map<DNNLTransposeSignature, DNNLTransposeForward, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL
-      std::unordered_map<MKLDNNTransposeSignature, MKLDNNTransposeForward, OpHash>
-          fwds;
+  static MX_THREAD_LOCAL std::unordered_map<DNNLTransposeSignature, DNNLTransposeForward, OpHash>
+      fwds;
 #endif
-  MKLDNNTransposeSignature key(param);
+  DNNLTransposeSignature key(param);
   key.AddSign(data);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNTransposeForward fwd(param, data);
+    DNNLTransposeForward fwd(param, data);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
 
-void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const NDArray& data,
-                            const OpReqType& req,
-                            const NDArray& output) {
+void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const NDArray& data,
+                          const OpReqType& req,
+                          const NDArray& output) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
 
   auto fwd = GetTransposeForward(param, data);

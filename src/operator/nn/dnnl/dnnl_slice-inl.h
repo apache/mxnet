@@ -18,13 +18,13 @@
  */
 
 /*!
- * \file mkldnn_slice-inl.h
+ * \file dnnl_slice-inl.h
  * \brief
  * \author Zhiyuan Huang
  */
 
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_SLICE_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_SLICE_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
@@ -34,39 +34,38 @@
 
 #include <utility>
 
-#include "./mkldnn_base-inl.h"
-
 #include "../../operator_common.h"
 #include "../../tensor/slice-inl.h"
+#include "./dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class MKLDNNSliceFwd {
+class DNNLSliceFwd {
  public:
-  MKLDNNSliceFwd(const SliceParam& param, const NDArray& in, const NDArray& out);
-  void SetNewMem(const mkldnn::memory& input, const mkldnn::memory& output);
+  DNNLSliceFwd(const SliceParam& param, const NDArray& in, const NDArray& out);
+  void SetNewMem(const dnnl::memory& input, const dnnl::memory& output);
   void Register();
 
  private:
-  std::shared_ptr<mkldnn::memory> data_;
-  std::shared_ptr<mkldnn::memory> out_;
-  std::shared_ptr<mkldnn::reorder> fwd_;
+  std::shared_ptr<dnnl::memory> data_;
+  std::shared_ptr<dnnl::memory> out_;
+  std::shared_ptr<dnnl::reorder> fwd_;
 };
 
-typedef ParamOpSign<SliceParam> MKLDNNSliceSignature;
-MKLDNNSliceFwd& GetSliceForward(const SliceParam& param,
-                                const bool is_train,
-                                const NDArray& in_data,
-                                const NDArray& out_data);
+typedef ParamOpSign<SliceParam> DNNLSliceSignature;
+DNNLSliceFwd& GetSliceForward(const SliceParam& param,
+                              const bool is_train,
+                              const NDArray& in_data,
+                              const NDArray& out_data);
 
-void MKLDNNSlice(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const NDArray& in,
-                 OpReqType req,
-                 const NDArray& out);
+void DNNLSlice(const nnvm::NodeAttrs& attrs,
+               const OpContext& ctx,
+               const NDArray& in,
+               OpReqType req,
+               const NDArray& out);
 
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_SLICE_INL_H_

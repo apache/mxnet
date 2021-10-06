@@ -18,41 +18,39 @@
  */
 
 /*!
- * \file mkldnn_pooling-inl.h
+ * \file dnnl_pooling-inl.h
  * \brief
  */
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_POOLING_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_POOLING_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
-#include <mkldnn.hpp>
-
+#include <dnnl.hpp>
 #include <utility>
 
-#include "./mkldnn_base-inl.h"
-
 #include "../pooling-inl.h"
+#include "./dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class MKLDNNPoolingFwd {
+class DNNLPoolingFwd {
  public:
-  MKLDNNPoolingFwd(const mxnet::NDArray& input,
-                   const mxnet::NDArray& output,
-                   const mkldnn::memory::dims& kernel,
-                   const mkldnn::memory::dims& strides,
-                   const mkldnn::memory::dims& pad_l,
-                   const mkldnn::memory::dims& pad_r,
-                   const mkldnn::algorithm alg_kind,
-                   const bool with_workspace,
-                   const bool is_train)
+  DNNLPoolingFwd(const mxnet::NDArray& input,
+                 const mxnet::NDArray& output,
+                 const dnnl::memory::dims& kernel,
+                 const dnnl::memory::dims& strides,
+                 const dnnl::memory::dims& pad_l,
+                 const dnnl::memory::dims& pad_r,
+                 const dnnl::algorithm alg_kind,
+                 const bool with_workspace,
+                 const bool is_train)
       : with_workspace_(with_workspace), fwd_(nullptr) {
     Init(input, output, kernel, strides, pad_l, pad_r, is_train, alg_kind);
   }
 
-  ~MKLDNNPoolingFwd() {}
+  ~DNNLPoolingFwd() {}
   void Execute(const NDArray& in_data,
                const OpReqType req,
                const NDArray& out_data,
@@ -61,32 +59,32 @@ class MKLDNNPoolingFwd {
  private:
   bool with_workspace_;
 
-  std::shared_ptr<mkldnn::pooling_forward::primitive_desc> fwd_pd_;
-  std::shared_ptr<mkldnn::pooling_forward> fwd_;
+  std::shared_ptr<dnnl::pooling_forward::primitive_desc> fwd_pd_;
+  std::shared_ptr<dnnl::pooling_forward> fwd_;
 
  private:
   void Init(const mxnet::NDArray& input,
             const mxnet::NDArray& output,
-            const mkldnn::memory::dims& kernel,
-            const mkldnn::memory::dims& strides,
-            const mkldnn::memory::dims& pad_l,
-            const mkldnn::memory::dims& pad_r,
+            const dnnl::memory::dims& kernel,
+            const dnnl::memory::dims& strides,
+            const dnnl::memory::dims& pad_l,
+            const dnnl::memory::dims& pad_r,
             const bool is_train,
-            const mkldnn::algorithm alg_kind);
+            const dnnl::algorithm alg_kind);
 };
 
-class MKLDNNPoolingBwd {
-  std::shared_ptr<const mkldnn::pooling_backward> bwd;
+class DNNLPoolingBwd {
+  std::shared_ptr<const dnnl::pooling_backward> bwd;
   bool with_workspace;
 
  public:
-  const mkldnn::pooling_backward::primitive_desc pd;
+  const dnnl::pooling_backward::primitive_desc pd;
 
-  MKLDNNPoolingBwd(const mkldnn::pooling_backward::primitive_desc& pdesc, bool with_ws);
+  DNNLPoolingBwd(const dnnl::pooling_backward::primitive_desc& pdesc, bool with_ws);
 
-  ~MKLDNNPoolingBwd() {}
-  const mkldnn::pooling_backward& GetBwd();
-  const mkldnn::pooling_backward::primitive_desc& GetPd();
+  ~DNNLPoolingBwd() {}
+  const dnnl::pooling_backward& GetBwd();
+  const dnnl::pooling_backward::primitive_desc& GetPd();
 };
 
 inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
@@ -97,7 +95,7 @@ inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
   }
 }
 
-inline bool SupportMKLDNNPooling(const PoolingParam& param) {
+inline bool SupportDNNLPooling(const PoolingParam& param) {
   return (param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3) &&
          (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) &&
          (!param.layout.has_value() ||
@@ -105,23 +103,23 @@ inline bool SupportMKLDNNPooling(const PoolingParam& param) {
            param.layout.value() == mshadow::kNCDHW));
 }
 
-inline bool SupportMKLDNNPooling(const PoolingParam& param, const NDArray& input) {
+inline bool SupportDNNLPooling(const PoolingParam& param, const NDArray& input) {
   const auto dshape = input.shape();
   const auto ndim   = dshape.ndim();
   const auto dtype  = input.dtype();
 
-  if (!(SupportStorageMKLDNN(input.storage_type()) && (ndim == 3 || ndim == 4 || ndim == 5) &&
+  if (!(SupportStorageDNNL(input.storage_type()) && (ndim == 3 || ndim == 4 || ndim == 5) &&
         (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16)))
     return false;
 
-  if (!SupportMKLDNNPooling(param))
+  if (!SupportDNNLPooling(param))
     return false;
 
   if (param.pooling_convention == pool_enum::kValid) {
     return true;
   } else {
     if (param.pool_type == pool_enum::kAvgPooling) {
-      // mkldnn works differently when padding is asymmetric, so let's skip this case.
+      // dnnl works differently when padding is asymmetric, so let's skip this case.
       bool is_symmetric = true;
       switch (ndim) {
         case 5:
@@ -149,30 +147,30 @@ inline bool SupportMKLDNNPooling(const PoolingParam& param, const NDArray& input
   }
 }
 
-inline bool MKLDNNRequireWorkspace(const PoolingParam& param) {
+inline bool DNNLRequireWorkspace(const PoolingParam& param) {
   return param.pool_type != pool_enum::kAvgPooling;
 }
 
-typedef ParamOpSign<PoolingParam> MKLDNNPoolingSignature;
-void MKLDNNPoolingCompute(const OpContext& ctx,
-                          const PoolingParam& param,
-                          const NDArray& in_data,
-                          const OpReqType req,
-                          const NDArray& out_data,
-                          const NDArray* workspace);
+typedef ParamOpSign<PoolingParam> DNNLPoolingSignature;
+void DNNLPoolingCompute(const OpContext& ctx,
+                        const PoolingParam& param,
+                        const NDArray& in_data,
+                        const OpReqType req,
+                        const NDArray& out_data,
+                        const NDArray* workspace);
 
-void MKLDNNPoolingGradCompute(const OpContext& ctx,
-                              const PoolingParam& param,
-                              const NDArray& out_grad,
-                              const NDArray& in_data,
-                              const NDArray* workspace,
-                              const OpReqType req,
-                              const NDArray& in_grad);
-MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
-                                const bool is_train,
-                                const NDArray& data,
-                                const NDArray& output);
+void DNNLPoolingGradCompute(const OpContext& ctx,
+                            const PoolingParam& param,
+                            const NDArray& out_grad,
+                            const NDArray& in_data,
+                            const NDArray* workspace,
+                            const OpReqType req,
+                            const NDArray& in_grad);
+DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
+                              const bool is_train,
+                              const NDArray& data,
+                              const NDArray& output);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_POOLING_INL_H_

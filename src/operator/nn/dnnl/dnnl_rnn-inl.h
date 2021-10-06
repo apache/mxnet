@@ -18,28 +18,27 @@
  */
 
 /*!
- * \file mkldnn_rnn-inl.h
- * \brief Common functions used by MKLDNN RNN operator
+ * \file dnnl_rnn-inl.h
+ * \brief Common functions used by DNNL RNN operator
  * \author Zixuan Wei
  */
 
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_RNN_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_RNN_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
 #include <vector>
 
-#include "./mkldnn_base-inl.h"
-
 #include "../../rnn-inl.h"
+#include "./dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-struct MKLDNNRnnLayerParam {
-  using memory = mkldnn::memory;
-  using dims   = mkldnn::memory::dims;
+struct DNNLRnnLayerParam {
+  using memory = dnnl::memory;
+  using dims   = dnnl::memory::dims;
 
   int mode;
   bool bidirectional;
@@ -60,21 +59,21 @@ struct MKLDNNRnnLayerParam {
   dims state_dims;         // Dimensions of the state cell in format_tag::ldnc
   dims cell_dims;          // Dimensions of LSTM cell state in format_tag::ldnc
 
-  size_t workspace_size;        // used for the cached mkl-dnn memory in Forward inference
+  size_t workspace_size;        // used for the cached DNNL memory in Forward inference
   size_t reserve_size;          // used for the reserved cached memory in Backward
   size_t single_w_size;         // weights size of a single cell
-  size_t single_b_size;         // bias size of a single cell from mkl-dnn
+  size_t single_b_size;         // bias size of a single cell from DNNL
   size_t native_single_b_size;  // bias size of a single cell from framework
   size_t single_state_size;     // state size of a single cell, hy, cy
 
-  MKLDNNRnnLayerParam(int num_layer,
-                      index_t batch_size,
-                      index_t seq_len,
-                      index_t input_size,
-                      int state_size,
-                      int proj_size,
-                      int mode,
-                      bool bidirectional = true)
+  DNNLRnnLayerParam(int num_layer,
+                    index_t batch_size,
+                    index_t seq_len,
+                    index_t input_size,
+                    int state_size,
+                    int proj_size,
+                    int mode,
+                    bool bidirectional = true)
       : mode(mode),
         bidirectional(bidirectional),
         state_outputs(true),
@@ -88,33 +87,33 @@ struct MKLDNNRnnLayerParam {
   void SetDims();
 };
 
-typedef std::vector<MKLDNNRnnLayerParam> LayerParamVector;
-struct MKLDNNRnnFullParam {
+typedef std::vector<DNNLRnnLayerParam> LayerParamVector;
+struct DNNLRnnFullParam {
   RNNParam default_param;
   LayerParamVector layer_params;
 };
 
-MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const RNNParam& rnn_param,
-                                            const index_t seq_len,
-                                            const index_t batch_size,
-                                            const index_t input_size);
+DNNLRnnFullParam DNNLRnnFullParamParser(const RNNParam& rnn_param,
+                                        const index_t seq_len,
+                                        const index_t batch_size,
+                                        const index_t input_size);
 
 /*
- * Use this to allocate memory from MKLDNNRnnOp temporary space.
+ * Use this to allocate memory from DNNLRnnOp temporary space.
  */
-class MKLDNNRnnMemMgr {
+class DNNLRnnMemMgr {
   // The memory buffer in NDArray life-cycle
   NDArray workspace_;
   // This points to the memory buffer from a NDArray
   char* curr_mem;
-  // The total bytes of the workspace of a MKLDNNRnnOp
+  // The total bytes of the workspace of a DNNLRnnOp
   size_t mem_size = 0;
   // The current available memory bytes
   size_t curr_size                 = 0;
-  const size_t alignment           = kMKLDNNAlign;
-  const mkldnn::engine& cpu_engine = CpuEngine::Get()->get_engine();
+  const size_t alignment           = kDNNLAlign;
+  const dnnl::engine& cpu_engine   = CpuEngine::Get()->get_engine();
   // Here we hold all memory related to the stateful RNN operators
-  std::vector<std::shared_ptr<const mkldnn::memory> > mem_holder;
+  std::vector<std::shared_ptr<const dnnl::memory> > mem_holder;
 
  public:
   /*!
@@ -129,11 +128,11 @@ class MKLDNNRnnMemMgr {
     return mem_size;
   }
 
-  void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
+  void RegisterMem(std::shared_ptr<const dnnl::memory> mem) {
     mem_holder.push_back(mem);
   }
 
-  mkldnn::memory* Alloc(const mkldnn::memory::desc& md);
+  dnnl::memory* Alloc(const dnnl::memory::desc& md);
 };
 
 /*
@@ -159,7 +158,7 @@ class RnnPrimitive {
     rnn_fwd_prim.weights_proj_desc_  = fwd_pd->weights_projection_desc();
     rnn_fwd_prim.workspace_desc_     = fwd_pd->workspace_desc();
 
-    rnn_fwd_prim.primitive_ = std::shared_ptr<mkldnn::primitive>(new rnn_fwd(*fwd_pd));
+    rnn_fwd_prim.primitive_ = std::shared_ptr<dnnl::primitive>(new rnn_fwd(*fwd_pd));
 
     return rnn_fwd_prim;
   }
@@ -167,10 +166,10 @@ class RnnPrimitive {
   RnnPrimitive() {
     this->fwd_pd_             = nullptr;
     this->primitive_          = nullptr;
-    this->weights_layer_desc_ = mkldnn::memory::desc();
-    this->weights_iter_desc_  = mkldnn::memory::desc();
-    this->weights_proj_desc_  = mkldnn::memory::desc();
-    this->workspace_desc_     = mkldnn::memory::desc();
+    this->weights_layer_desc_ = dnnl::memory::desc();
+    this->weights_iter_desc_  = dnnl::memory::desc();
+    this->weights_proj_desc_  = dnnl::memory::desc();
+    this->workspace_desc_     = dnnl::memory::desc();
   }
 
   RnnPrimitive(const RnnPrimitive& rnn_fwd_prim) {
@@ -198,50 +197,50 @@ class RnnPrimitive {
   const void* GetPrimDesc() const {
     return fwd_pd_.get();
   }
-  const mkldnn::primitive& GetPrim() const {
+  const dnnl::primitive& GetPrim() const {
     return *primitive_;
   }
 
-  const mkldnn::memory::desc& GetLayerDesc() const {
+  const dnnl::memory::desc& GetLayerDesc() const {
     return weights_layer_desc_;
   }
 
-  const mkldnn::memory::desc& GetIterDesc() const {
+  const dnnl::memory::desc& GetIterDesc() const {
     return weights_iter_desc_;
   }
 
-  const mkldnn::memory::desc& GetProjDesc() const {
+  const dnnl::memory::desc& GetProjDesc() const {
     return weights_proj_desc_;
   }
 
-  const mkldnn::memory::desc& GetWorkspaceDesc() const {
+  const dnnl::memory::desc& GetWorkspaceDesc() const {
     return workspace_desc_;
   }
 
  private:
   std::shared_ptr<void> fwd_pd_;
-  std::shared_ptr<mkldnn::primitive> primitive_;
-  mkldnn::memory::desc weights_layer_desc_;
-  mkldnn::memory::desc weights_iter_desc_;
-  mkldnn::memory::desc weights_proj_desc_;
-  mkldnn::memory::desc workspace_desc_;
+  std::shared_ptr<dnnl::primitive> primitive_;
+  dnnl::memory::desc weights_layer_desc_;
+  dnnl::memory::desc weights_iter_desc_;
+  dnnl::memory::desc weights_proj_desc_;
+  dnnl::memory::desc workspace_desc_;
 };
 
-RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param,
+RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
                            const bool is_train,
                            const NDArray& data,
                            const NDArray& params);
 
 /*
- * Use this to manage memory and primitive of MKL-DNN RNN forward inference.
+ * Use this to manage memory and primitive of DNNL RNN forward inference.
  */
-class MKLDNNRnnForward {
+class DNNLRnnForward {
  public:
-  MKLDNNRnnForward(const Context ctx,
-                   const MKLDNNRnnLayerParam& layer_param,
-                   const bool is_train,
-                   const NDArray& data,
-                   const NDArray& params)
+  DNNLRnnForward(const Context ctx,
+                 const DNNLRnnLayerParam& layer_param,
+                 const bool is_train,
+                 const NDArray& data,
+                 const NDArray& params)
       : ctx_(ctx),
         initialized_(false),
         param_(layer_param),
@@ -260,7 +259,7 @@ class MKLDNNRnnForward {
                      const int dtype     = mshadow::kFloat32);
   void ReorderWeights();
 
-  const mkldnn::primitive& GetFwd() const {
+  const dnnl::primitive& GetFwd() const {
     return fwd_inf_.GetPrim();
   }
 
@@ -270,11 +269,11 @@ class MKLDNNRnnForward {
     return size;
   }
 
-  const MKLDNNRnnLayerParam& GetParam() const {
+  const DNNLRnnLayerParam& GetParam() const {
     return param_;
   }
 
-  const mkldnn_args_map_t& GetArgsMap() const {
+  const dnnl_args_map_t& GetArgsMap() const {
     return net_args_;
   }
 
@@ -288,79 +287,79 @@ class MKLDNNRnnForward {
  private:
   Context ctx_;
   bool initialized_;
-  MKLDNNRnnLayerParam param_;
+  DNNLRnnLayerParam param_;
   RnnPrimitive fwd_inf_;  // forward inference primitive
 
-  MKLDNNRnnMemMgr mem_mgr_;
-  mkldnn::memory* weights_layer_ = nullptr;
-  mkldnn::memory* weights_iter_  = nullptr;
-  mkldnn::memory* weights_proj_  = nullptr;
-  mkldnn::memory* bias_          = nullptr;
+  DNNLRnnMemMgr mem_mgr_;
+  dnnl::memory* weights_layer_ = nullptr;
+  dnnl::memory* weights_iter_  = nullptr;
+  dnnl::memory* weights_proj_  = nullptr;
+  dnnl::memory* bias_          = nullptr;
 
-  mkldnn::memory* weights_layer_r_ = nullptr;
-  mkldnn::memory* weights_iter_r_  = nullptr;
-  mkldnn::memory* weights_proj_r_  = nullptr;
+  dnnl::memory* weights_layer_r_ = nullptr;
+  dnnl::memory* weights_iter_r_  = nullptr;
+  dnnl::memory* weights_proj_r_  = nullptr;
 
   /*
    * net_args must contain some keys as below:
-   *   MKLDNN_ARG_SRC
-   *   MKLDNN_ARG_SRC_ITER
-   *   MKLDNN_WEIGHTS_LAYER
-   *   MKLDNN_WEIGHTS_ITER
-   *   MKLDNN_BIAS
-   *   MKLDNN_ARG_DST
-   *   MKLDNN_ARG_DST_ITER
+   *   DNNL_ARG_SRC
+   *   DNNL_ARG_SRC_ITER
+   *   DNNL_WEIGHTS_LAYER
+   *   DNNL_WEIGHTS_ITER
+   *   DNNL_BIAS
+   *   DNNL_ARG_DST
+   *   DNNL_ARG_DST_ITER
    * if mode == Lstm, it also needs two additional key:
-   *   MKLDNN_ARG_SRC_ITER_C
-   *   MKLDNN_ARG_DST_ITER_C
+   *   DNNL_ARG_SRC_ITER_C
+   *   DNNL_ARG_DST_ITER_C
    */
-  mkldnn_args_map_t net_args_;
+  dnnl_args_map_t net_args_;
 
-  friend class MKLDNNRnnForwardTraining;
+  friend class DNNLRnnForwardTraining;
 };
 
-typedef std::shared_ptr<mkldnn::memory> mkldnn_shared_mem_t;
+typedef std::shared_ptr<dnnl::memory> dnnl_shared_mem_t;
 /*
- * Use this to manage memory and primitive of MKL-DNN RNN forward training.
+ * Use this to manage memory and primitive of DNNL RNN forward training.
  */
-class MKLDNNRnnForwardTraining {
+class DNNLRnnForwardTraining {
  public:
-  MKLDNNRnnForwardTraining(const MKLDNNRnnLayerParam& layer_param,
-                           const bool is_train,
-                           const NDArray& data,
-                           const NDArray& params)
+  DNNLRnnForwardTraining(const DNNLRnnLayerParam& layer_param,
+                         const bool is_train,
+                         const NDArray& data,
+                         const NDArray& params)
       : fwd_trn_(GetRnnFwdPrim(layer_param, is_train, data, params)), param_(&layer_param) {}
 
-  void SetTrnMem(const MKLDNNRnnForward& fwd);
-  void FetchData(const MKLDNNRnnForward& fwd);
+  void SetTrnMem(const DNNLRnnForward& fwd);
+  void FetchData(const DNNLRnnForward& fwd);
 
-  const MKLDNNRnnLayerParam& GetParam() const {
+  const DNNLRnnLayerParam& GetParam() const {
     return *param_;
   }
   const void* GetPrimDesc() const {
     return fwd_trn_.GetPrimDesc();
   }
-  const mkldnn::primitive& GetFwd() const {
+  const dnnl::primitive& GetFwd() const {
     return fwd_trn_.GetPrim();
   }
-  const mkldnn_args_map_t& GetArgsMap() const {
+  const dnnl_args_map_t& GetArgsMap() const {
     return net_args_;
   }
 
  private:
   RnnPrimitive fwd_trn_;
-  const MKLDNNRnnLayerParam* param_;
+  const DNNLRnnLayerParam* param_;
 
-  mkldnn_shared_mem_t weights_layer_ = nullptr;
-  mkldnn_shared_mem_t weights_iter_  = nullptr;
-  mkldnn::memory* bias_              = nullptr;
+  dnnl_shared_mem_t weights_layer_ = nullptr;
+  dnnl_shared_mem_t weights_iter_  = nullptr;
+  dnnl::memory* bias_              = nullptr;
 
-  mkldnn_shared_mem_t workspace_ = nullptr;
+  dnnl_shared_mem_t workspace_ = nullptr;
 
-  // Key MKLDNN_ARGS_WORKSPACE must be included in forward training
-  mkldnn_args_map_t net_args_;
+  // Key DNNL_ARGS_WORKSPACE must be included in forward training
+  dnnl_args_map_t net_args_;
 
-  friend class MKLDNNRnnBackward;
+  friend class DNNLRnnBackward;
 };
 
 /*
@@ -379,18 +378,18 @@ class RnnBwdPrimitive {
     bwd_prim.diff_weights_iter_desc_  = bwd_pd.diff_weights_iter_desc();
     bwd_prim.diff_bias_desc_          = bwd_pd.diff_bias_desc();
 
-    bwd_prim.primitive_ = std::shared_ptr<mkldnn::primitive>(new rnn_bwd(bwd_pd));
+    bwd_prim.primitive_ = std::shared_ptr<dnnl::primitive>(new rnn_bwd(bwd_pd));
 
     return bwd_prim;
   }
 
   RnnBwdPrimitive() {
     this->primitive_               = nullptr;
-    this->weights_layer_desc_      = mkldnn::memory::desc();
-    this->weights_iter_desc_       = mkldnn::memory::desc();
-    this->diff_weights_layer_desc_ = mkldnn::memory::desc();
-    this->diff_weights_iter_desc_  = mkldnn::memory::desc();
-    this->diff_bias_desc_          = mkldnn::memory::desc();
+    this->weights_layer_desc_      = dnnl::memory::desc();
+    this->weights_iter_desc_       = dnnl::memory::desc();
+    this->diff_weights_layer_desc_ = dnnl::memory::desc();
+    this->diff_weights_iter_desc_  = dnnl::memory::desc();
+    this->diff_bias_desc_          = dnnl::memory::desc();
   }
 
   RnnBwdPrimitive(const RnnBwdPrimitive& bwd) {
@@ -416,27 +415,27 @@ class RnnBwdPrimitive {
   }
 
  private:
-  std::shared_ptr<mkldnn::primitive> primitive_;
-  mkldnn::memory::desc weights_layer_desc_;
-  mkldnn::memory::desc weights_iter_desc_;
-  mkldnn::memory::desc diff_weights_layer_desc_;
-  mkldnn::memory::desc diff_weights_iter_desc_;
-  mkldnn::memory::desc diff_bias_desc_;
-  friend class MKLDNNRnnBackward;
+  std::shared_ptr<dnnl::primitive> primitive_;
+  dnnl::memory::desc weights_layer_desc_;
+  dnnl::memory::desc weights_iter_desc_;
+  dnnl::memory::desc diff_weights_layer_desc_;
+  dnnl::memory::desc diff_weights_iter_desc_;
+  dnnl::memory::desc diff_bias_desc_;
+  friend class DNNLRnnBackward;
 };
-RnnBwdPrimitive GetRnnBwdPrim(const MKLDNNRnnForwardTraining& fwd,
+RnnBwdPrimitive GetRnnBwdPrim(const DNNLRnnForwardTraining& fwd,
                               const NDArray& data,
                               const NDArray& params);
 
 /*
- * Use this to manage memory and primitive of MKL-DNN RNN backward.
+ * Use this to manage memory and primitive of DNNL RNN backward.
  */
-class MKLDNNRnnBackward {
+class DNNLRnnBackward {
  public:
-  MKLDNNRnnBackward(const MKLDNNRnnForwardTraining& fwd, const NDArray& data, const NDArray& params)
+  DNNLRnnBackward(const DNNLRnnForwardTraining& fwd, const NDArray& data, const NDArray& params)
       : bwd_(GetRnnBwdPrim(fwd, data, params)), fwd_ptr_(&fwd) {}
 
-  void FetchDataWeightsMem(const MKLDNNRnnForwardTraining& fwd);
+  void FetchDataWeightsMem(const DNNLRnnForwardTraining& fwd);
   void SetWeightsGradsMem();
   void SetDataGradsMem(void* diff_src,
                        void* diff_state,
@@ -451,45 +450,45 @@ class MKLDNNRnnBackward {
                           const OpReqType req,
                           const int dtype = mshadow::kFloat32);
 
-  const mkldnn::primitive& GetBwd() const {
+  const dnnl::primitive& GetBwd() const {
     return *bwd_.primitive_;
   }
-  const mkldnn_args_map_t& GetArgsMap() const {
+  const dnnl_args_map_t& GetArgsMap() const {
     return net_args_;
   }
 
  private:
   RnnBwdPrimitive bwd_;
-  const MKLDNNRnnForwardTraining* fwd_ptr_;
+  const DNNLRnnForwardTraining* fwd_ptr_;
 
-  mkldnn_shared_mem_t weights_layer_;
-  mkldnn_shared_mem_t weights_iter_;
+  dnnl_shared_mem_t weights_layer_;
+  dnnl_shared_mem_t weights_iter_;
 
-  mkldnn_shared_mem_t diff_weights_layer_;
-  mkldnn_shared_mem_t diff_weights_iter_;
-  mkldnn_shared_mem_t diff_weights_layer_r_;
-  mkldnn_shared_mem_t diff_weights_iter_r_;
-  mkldnn_shared_mem_t diff_bias_;
+  dnnl_shared_mem_t diff_weights_layer_;
+  dnnl_shared_mem_t diff_weights_iter_;
+  dnnl_shared_mem_t diff_weights_layer_r_;
+  dnnl_shared_mem_t diff_weights_iter_r_;
+  dnnl_shared_mem_t diff_bias_;
 
-  mkldnn_args_map_t net_args_;
+  dnnl_args_map_t net_args_;
 };
 
 /*
- * Use MKLDNNRnnOp to manage fused or unfused RNN layers. A MKLDNNRnnOp contains
+ * Use DNNLRnnOp to manage fused or unfused RNN layers. A DNNLRnnOp contains
  * the parameter(s) and primitive(s) of RNN layer(s). According to the direction,
  * input size, and state size, multple layers could be inplemented by unfused and
- * fused layers - MKLDNNRnnForward, which holds the memory and forward primitive
- * of MKL-DNN.
+ * fused layers - DNNLRnnForward, which holds the memory and forward primitive
+ * of DNNL.
  */
-class MKLDNNRnnOp {
+class DNNLRnnOp {
  public:
-  explicit MKLDNNRnnOp(const RNNParam& param,
-                       const int seq_len,
-                       const int batch_size,
-                       const int input_size)
+  explicit DNNLRnnOp(const RNNParam& param,
+                     const int seq_len,
+                     const int batch_size,
+                     const int input_size)
       : initialized_(false),
         weights_version_(0),
-        full_param_(MKLDNNRnnFullParamParser(param, seq_len, batch_size, input_size)) {}
+        full_param_(DNNLRnnFullParamParser(param, seq_len, batch_size, input_size)) {}
 
   void Forward(const OpContext& ctx,
                const std::vector<NDArray>& inputs,
@@ -508,17 +507,17 @@ class MKLDNNRnnOp {
  private:
   bool initialized_;
   size_t weights_version_;
-  MKLDNNRnnFullParam full_param_;
-  MKLDNNRnnMemMgr mgr_;
-  std::vector<MKLDNNRnnForward> fwd_inf_vec_;          // forward inference layers
-  std::vector<MKLDNNRnnForwardTraining> fwd_trn_vec_;  // forward training layers
-  std::vector<MKLDNNRnnBackward> bwd_vec_;             // backward layers
+  DNNLRnnFullParam full_param_;
+  DNNLRnnMemMgr mgr_;
+  std::vector<DNNLRnnForward> fwd_inf_vec_;          // forward inference layers
+  std::vector<DNNLRnnForwardTraining> fwd_trn_vec_;  // forward training layers
+  std::vector<DNNLRnnBackward> bwd_vec_;             // backward layers
 
   // Used to store the intermediate results of multi-layer
-  std::vector<mkldnn::memory*> dst_;
+  std::vector<dnnl::memory*> dst_;
 
   // Used to store the intermediate diff_src of multi_layer
-  mkldnn_shared_mem_t diff_src;
+  dnnl_shared_mem_t diff_src;
 
   void Init(const OpContext& ctx,
             const std::vector<NDArray>& inputs,
@@ -526,21 +525,21 @@ class MKLDNNRnnOp {
             const std::vector<NDArray>& outputs);
 };
 
-inline bool SupportMKLDNNRnn(const int input_dtype) {
+inline bool SupportDNNLRnn(const int input_dtype) {
   if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_ONEDNN_RNN", 1)) {
     return true;
   }
   return false;
 }
 
-inline bool SupportMKLDNNRnn(const RNNParam& param, const int input_dtype) {
+inline bool SupportDNNLRnn(const RNNParam& param, const int input_dtype) {
   if (param.use_sequence_length)
     return false;
-  return SupportMKLDNNRnn(input_dtype);
+  return SupportDNNLRnn(input_dtype);
 }
 
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_RNN_INL_H_

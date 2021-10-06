@@ -18,12 +18,12 @@
  */
 
 /*!
- * \file mkldnn_batch_dot-inl.h
+ * \file dnnl_batch_dot-inl.h
  * \author: Bartosz Kuncer, bartosz.kuncer@intel.com
  */
 
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BATCH_DOT_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BATCH_DOT_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_BATCH_DOT_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_BATCH_DOT_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
@@ -31,28 +31,27 @@
 #include <utility>
 #include <vector>
 
-#include "./mkldnn_base-inl.h"
-#include "./mkldnn_ops-inl.h"
-
 #include "../../tensor/dot-inl.h"
+#include "./dnnl_base-inl.h"
+#include "./dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
 
-using batch_dot_fwd_t    = mkldnn::matmul;
-using batch_dot_fwd_pd_t = mkldnn::matmul::primitive_desc;
+using batch_dot_fwd_t    = dnnl::matmul;
+using batch_dot_fwd_pd_t = dnnl::matmul::primitive_desc;
 
 typedef ParamOpSign<DotParam> BatchDotSignature;
 
-class MKLDNNBatchDotFwd {
+class DNNLBatchDotFwd {
  public:
-  static MKLDNNBatchDotFwd& GetCached(const DotParam& param,
-                                      const std::vector<NDArray>& inputs,
-                                      const std::vector<NDArray>& outputs);
+  static DNNLBatchDotFwd& GetCached(const DotParam& param,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<NDArray>& outputs);
 
-  MKLDNNBatchDotFwd(const DotParam& param,
-                    const std::vector<NDArray>& inputs,
-                    const std::vector<NDArray>& outputs);
+  DNNLBatchDotFwd(const DotParam& param,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<NDArray>& outputs);
 
   void Execute(const std::vector<NDArray>& inputs,
                const std::vector<OpReqType>& req,
@@ -66,4 +65,4 @@ class MKLDNNBatchDotFwd {
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BATCH_DOT_INL_H__
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_BATCH_DOT_INL_H__

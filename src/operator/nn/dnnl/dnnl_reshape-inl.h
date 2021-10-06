@@ -18,31 +18,30 @@
  */
 
 /*!
- * \file mkldnn_reshape-inl.h
- * \brief Function definition of mkldnn reshape operator
+ * \file dnnl_reshape-inl.h
+ * \brief Function definition of dnnl reshape operator
  */
 
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_RESHAPE_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_RESHAPE_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
 
 #include "../../tensor/matrix_op-inl.h"
-
-#include "mkldnn_base-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class MKLDNNReshapeFwd {
+class DNNLReshapeFwd {
  protected:
-  std::shared_ptr<mkldnn::memory> out_;
-  std::shared_ptr<mkldnn::memory> temp_;
-  std::vector<mkldnn::primitive> prims_;
+  std::shared_ptr<dnnl::memory> out_;
+  std::shared_ptr<dnnl::memory> temp_;
+  std::vector<dnnl::primitive> prims_;
 
  public:
-  MKLDNNReshapeFwd(const OpReqType& req, const NDArray& input, const NDArray& output);
+  DNNLReshapeFwd(const OpReqType& req, const NDArray& input, const NDArray& output);
   int GetWorkspaceSize();
   void Execute(const NDArray& input,
                const NDArray& output,
@@ -50,12 +49,12 @@ class MKLDNNReshapeFwd {
                void* workspace = nullptr);
 };
 
-typedef OpSignature MKLDNNReshapeSignature;
-MKLDNNReshapeFwd& GetReshapeForward(const OpReqType& req,
-                                    const NDArray& input,
-                                    const NDArray& output);
+typedef OpSignature DNNLReshapeSignature;
+DNNLReshapeFwd& GetReshapeForward(const OpReqType& req,
+                                  const NDArray& input,
+                                  const NDArray& output);
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_RESHAPE_INL_H_
