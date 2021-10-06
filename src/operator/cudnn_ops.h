@@ -31,7 +31,6 @@
 #include <mxnet/op_attr_types.h>
 
 #include <mutex>
-#include <optional>  // NOLINT(build/include_order)
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -42,21 +41,36 @@
 
 #include "../common/cudnn_cxx.h"
 
-namespace std {
+namespace mxnet {
+namespace tuple_util {
+
+template <size_t... Is, typename... Ts>
+auto TailImpl(std::index_sequence<Is...>, const std::tuple<Ts...>& t) {
+  return std::make_tuple(std::get<Is + 1>(t)...);
+}
+
+template <typename... Ts>
+auto Tail(const std::tuple<Ts...>& t) {
+  return TailImpl(std::make_index_sequence<sizeof...(Ts) - 1>(), t);
+}
+
+}  // namespace tuple_util
+}  // namespace mxnet
 
 // Enable tuples as keys.
+namespace std {
+
+template <>
+struct hash<std::tuple<>> {
+  size_t operator()(const std::tuple<>&) const { return 0; }
+};
+
 template <typename... Ts>
 struct hash<std::tuple<Ts...>> {
   size_t operator()(const std::tuple<Ts...>& t) const {
     size_t ret = 0;
-    if constexpr (sizeof...(Ts) > 0) {
-      std::apply(
-          [&ret](auto head, const auto&... tail) {
-            ret = dmlc::HashCombine(ret, head);
-            ret = dmlc::HashCombine(ret, std::make_tuple(tail...));
-          },
-          t);
-    }
+    ret = dmlc::HashCombine(ret, std::get<0>(t));
+    ret = dmlc::HashCombine(ret, mxnet::tuple_util::Tail(t));
     return ret;
   }
 };
@@ -88,16 +102,16 @@ void MaybeLogSelectedPlan(const cudnn_cxx::Descriptor& plan);
 // Op::Param - a type, collecting all data, required to create cuDNN descriptor(s), but not needed
 //             for execution.
 // Op::MakeKey() - a static function, which maps its arguments to a tuple - a key in the op cache.
-// Op::Make() - a static function, creating all necessary cuDNN descriptors.
-// Op::Exec() - a member function, calling cudnnBackendExecute() with the prepared descriptor(s) and
+// Op::Make() - a static function, creating the necessary cuDNN descriptor.
+// Op::Exec() - a static function, calling cudnnBackendExecute() with the prepared descriptor and
 //              the passed arguments.
 template <typename Op, typename... Args>
 bool Exec(const OpContext& ctx, const typename Op::Param& param, Args&&... args) {
   auto key = std::tuple_cat(std::make_tuple(ctx.run_ctx.ctx.dev_id),
                             Op::MakeKey(param, std::forward<Args>(args)...));
-  static std::unordered_map<decltype(key), const std::optional<const Op>> op_map;
+  static std::unordered_map<decltype(key), cudnn_cxx::Descriptor> op_map;
   static std::mutex mx;
-  std::unique_lock lk(mx);
+  std::unique_lock<std::mutex> lk(mx);
   auto it = op_map.find(key);
   if (it == op_map.end()) {
     auto op = Op::Make(ctx, param, std::forward<Args>(args)...);
@@ -105,7 +119,7 @@ bool Exec(const OpContext& ctx, const typename Op::Param& param, Args&&... args)
   }
   lk.unlock();
   if (!it->second) return false;
-  it->second.value().Exec(ctx, std::forward<Args>(args)...);
+  Op::Exec(it->second, ctx, std::forward<Args>(args)...);
   return true;
 }
 
@@ -132,25 +146,22 @@ struct Conv {
   using Param = ConvParam;
   enum UIDs { ID_X = 1, ID_W, ID_Y };
 
-  cudnn_cxx::Descriptor plan_;
-
   static auto MakeKey(const Param& p, const TBlob& x, const TBlob& w, const TBlob& y) {
     return std::make_tuple(p.kernel, p.stride, p.dilate, p.pad, p.num_filter, p.num_group,
                            p.workspace, p.layout, p.add_to, x.shape_, x.type_flag_, w.shape_,
                            w.type_flag_, y.shape_);
   }
 
-  static std::optional<Conv> Make(const OpContext& ctx, const Param& param, const TBlob& x,
-                                  const TBlob& w, const TBlob& y);
+  static cudnn_cxx::Descriptor Make(const OpContext& ctx, const Param& param, const TBlob& x,
+                                    const TBlob& w, const TBlob& y);
 
-  void Exec(const OpContext& ctx, const TBlob& x, const TBlob& w, const TBlob& y) const;
+  static void Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& x,
+                   const TBlob& w, const TBlob& y);
 };
 
 struct ConvDgrad {
   using Param = ConvParam;
   enum UIDs { ID_W = 1, ID_DY, ID_DX };
-
-  cudnn_cxx::Descriptor plan_;
 
   static auto MakeKey(const Param& p, const TBlob& w, const TBlob& dy, const TBlob& dx) {
     return std::make_tuple(p.kernel, p.stride, p.dilate, p.pad, p.num_filter, p.num_group,
@@ -158,17 +169,16 @@ struct ConvDgrad {
                            dy.type_flag_, dx.shape_);
   }
 
-  static std::optional<ConvDgrad> Make(const OpContext& ctx, const Param& param, const TBlob& w,
-                                       const TBlob& dy, const TBlob& dx);
+  static cudnn_cxx::Descriptor Make(const OpContext& ctx, const Param& param, const TBlob& w,
+                                    const TBlob& dy, const TBlob& dx);
 
-  void Exec(const OpContext& ctx, const TBlob& w, const TBlob& dy, const TBlob& dx) const;
+  static void Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& w,
+                   const TBlob& dy, const TBlob& dx);
 };
 
 struct ConvWgrad {
   using Param = ConvParam;
   enum UIDs { ID_X = 1, ID_DY, ID_DW };
-
-  cudnn_cxx::Descriptor plan_;
 
   static auto MakeKey(const Param& p, const TBlob& x, const TBlob& dy, const TBlob& dw) {
     return std::make_tuple(p.kernel, p.stride, p.dilate, p.pad, p.num_filter, p.num_group,
@@ -176,10 +186,11 @@ struct ConvWgrad {
                            dy.type_flag_, dw.shape_);
   }
 
-  static std::optional<ConvWgrad> Make(const OpContext& ctx, const Param& param, const TBlob& x,
-                                       const TBlob& dy, const TBlob& dw);
+  static cudnn_cxx::Descriptor Make(const OpContext& ctx, const Param& param, const TBlob& x,
+                                    const TBlob& dy, const TBlob& dw);
 
-  void Exec(const OpContext& ctx, const TBlob& x, const TBlob& dy, const TBlob& dw) const;
+  static void Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& x,
+                   const TBlob& dy, const TBlob& dw);
 };
 
 }  // namespace cudnn

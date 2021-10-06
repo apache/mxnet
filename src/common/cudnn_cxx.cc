@@ -116,25 +116,6 @@ std::vector<int64_t> PackedStrides(const std::vector<size_t>& order,
   return ret;
 }
 
-Sampler MakeAvgSampler(size_t n, float max_cutoff_msec, size_t warmups) {
-  size_t warmups_performed = 0;
-  size_t k = 0;
-  float s = 0.0f;
-  if (n < 1) n = 1;
-
-  return [n, max_cutoff_msec, warmups, warmups_performed, k, s](float x) mutable {
-    if (warmups_performed < warmups && x < max_cutoff_msec) {
-      warmups_performed++;
-    } else {
-      // Add this sample to the average calculation
-      s += x;
-      k++;
-    }
-    bool keep_going = k < n && x < max_cutoff_msec;
-    return keep_going ? std::nullopt : std::optional(s / k);
-  };
-}
-
 std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode, cudnnHandle_t handle,
                                  const Descriptor& op_graph, size_t workspace_limit,
                                  size_t* max_workspace,
@@ -187,6 +168,27 @@ std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode, cudnnHandle_t ha
   return plans;
 }
 
+#if !defined(__CUDACC__)  // Can be removed when CUDA 10 support is dropped.
+
+Sampler MakeAvgSampler(size_t n, float max_cutoff_msec, size_t warmups) {
+  size_t warmups_performed = 0;
+  size_t k = 0;
+  float s = 0.0f;
+  if (n < 1) n = 1;
+
+  return [n, max_cutoff_msec, warmups, warmups_performed, k, s](float x) mutable {
+    if (warmups_performed < warmups && x < max_cutoff_msec) {
+      warmups_performed++;
+    } else {
+      // Add this sample to the average calculation
+      s += x;
+      k++;
+    }
+    bool keep_going = k < n && x < max_cutoff_msec;
+    return keep_going ? std::nullopt : std::optional(s / k);
+  };
+}
+
 std::vector<FindResult> FindTopPlans(std::vector<Descriptor>&& plans, size_t max_results,
                                      cudnnHandle_t handle, const Descriptor& var_pack,
                                      Sampler sampler) {
@@ -234,6 +236,8 @@ std::vector<FindResult> FindTopPlans(std::vector<Descriptor>&& plans, size_t max
   std::sort_heap(h.begin(), h.end(), cmp);
   return h;
 }
+
+#endif  // !defined(__CUDACC__)
 
 std::string NoteStr(cudnnBackendNumericalNote_t note) {
   std::unordered_map<cudnnBackendNumericalNote_t, std::string> m{

@@ -148,7 +148,8 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
         AddBiasGrad(outputs[conv::kBias], y_grad, req[conv::kBias], param.num_filter, ctx);
       } else {
         TShape axes{static_cast<int>(li.ChannelIdx())};
-        TShape small = ReduceAxesShapeImpl(inputs[0].shape_, dmlc::optional(axes), true, true);
+        TShape small =
+            ReduceAxesShapeImpl(inputs[0].shape_, dmlc::optional<mxnet::TShape>(axes), true, true);
         ReduceAxesRTCComputeImpl(ctx, {inputs[0]}, {req[conv::kBias]}, {outputs[conv::kBias]},
                                  small, "red::sum{}");
       }

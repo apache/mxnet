@@ -480,8 +480,8 @@ enum MaxFallbacks {
   kMaxWgradFallbacks = 62
 };
 
-std::optional<Conv> Conv::Make(const OpContext& ctx, const Param& param, const TBlob& x,
-                               const TBlob& w, const TBlob& y) {
+cudnn_cxx::Descriptor Conv::Make(const OpContext& ctx, const Param& param, const TBlob& x,
+                                 const TBlob& w, const TBlob& y) {
   auto conv = MakeConvDesc(param, static_cast<mshadow::TypeFlag>(x.type_flag_));
   auto li = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
   auto x_desc = MakeTensorDesc(ID_X, x, li, true, false);
@@ -498,15 +498,14 @@ std::optional<Conv> Conv::Make(const OpContext& ctx, const Param& param, const T
   std::vector<int64_t> ids{ID_X, ID_W, ID_Y};
   std::vector<void*> ptrs{x.dptr_, w.dptr_, y.dptr_};
 
-  Conv ret;
-  ret.plan_ = SelectPlan(ctx, param, std::move(conv_fwd), kMaxConvFallbacks, make_op_str, ids, ptrs,
-                         Size(y), "MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES");
-  return ret;
+  return SelectPlan(ctx, param, std::move(conv_fwd), kMaxConvFallbacks, make_op_str, ids, ptrs,
+                    Size(y), "MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES");
 }
 
-void Conv::Exec(const OpContext& ctx, const TBlob& x, const TBlob& w, const TBlob& y) const {
+void Conv::Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& x,
+                const TBlob& w, const TBlob& y) {
   auto s = ctx.get_stream<gpu>();
-  auto workspace_size = GetAttr<int64_t>(plan_, CUDNN_ATTR_EXECUTION_PLAN_WORKSPACE_SIZE);
+  auto workspace_size = GetAttr<int64_t>(plan, CUDNN_ATTR_EXECUTION_PLAN_WORKSPACE_SIZE);
   auto workspace = ctx.requested[0].get_space_internal(workspace_size, "Conv");
 
   std::vector<int64_t> ids{ID_X, ID_W, ID_Y};
@@ -515,11 +514,11 @@ void Conv::Exec(const OpContext& ctx, const TBlob& x, const TBlob& w, const TBlo
                                 CUDNN_ATTR_VARIANT_PACK_UNIQUE_IDS, ids,
                                 CUDNN_ATTR_VARIANT_PACK_DATA_POINTERS, ptrs,
                                 CUDNN_ATTR_VARIANT_PACK_WORKSPACE, workspace);
-  CUDNN_CALL(cudnnBackendExecute(s->dnn_handle_, plan_.get(), var_pack.get()));
+  CUDNN_CALL(cudnnBackendExecute(s->dnn_handle_, plan.get(), var_pack.get()));
 }
 
-std::optional<ConvDgrad> ConvDgrad::Make(const OpContext& ctx, const Param& param, const TBlob& w,
-                                         const TBlob& dy, const TBlob& dx) {
+cudnn_cxx::Descriptor ConvDgrad::Make(const OpContext& ctx, const Param& param, const TBlob& w,
+                                      const TBlob& dy, const TBlob& dx) {
   auto conv = MakeConvDesc(param, static_cast<mshadow::TypeFlag>(w.type_flag_));
   auto li = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
   auto w_desc = MakeTensorDesc(ID_W, w, li, true, false);
@@ -536,15 +535,14 @@ std::optional<ConvDgrad> ConvDgrad::Make(const OpContext& ctx, const Param& para
   std::vector<int64_t> ids{ID_W, ID_DY, ID_DX};
   std::vector<void*> ptrs{w.dptr_, dy.dptr_, dx.dptr_};
 
-  ConvDgrad ret;
-  ret.plan_ = SelectPlan(ctx, param, std::move(dgrad), kMaxDgradFallbacks, make_op_str, ids, ptrs,
-                         Size(dx), "MXNET_CUDNN_DISABLED_CONV_DGRAD_ENGINES");
-  return ret;
+  return SelectPlan(ctx, param, std::move(dgrad), kMaxDgradFallbacks, make_op_str, ids, ptrs,
+                    Size(dx), "MXNET_CUDNN_DISABLED_CONV_DGRAD_ENGINES");
 }
 
-void ConvDgrad::Exec(const OpContext& ctx, const TBlob& w, const TBlob& dy, const TBlob& dx) const {
+void ConvDgrad::Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& w,
+                     const TBlob& dy, const TBlob& dx) {
   auto s = ctx.get_stream<gpu>();
-  auto workspace_size = GetAttr<int64_t>(plan_, CUDNN_ATTR_EXECUTION_PLAN_WORKSPACE_SIZE);
+  auto workspace_size = GetAttr<int64_t>(plan, CUDNN_ATTR_EXECUTION_PLAN_WORKSPACE_SIZE);
   auto workspace = ctx.requested[0].get_space_internal(workspace_size, "ConvDgrad");
 
   std::vector<int64_t> ids{ID_W, ID_DY, ID_DX};
@@ -553,11 +551,11 @@ void ConvDgrad::Exec(const OpContext& ctx, const TBlob& w, const TBlob& dy, cons
                                 CUDNN_ATTR_VARIANT_PACK_UNIQUE_IDS, ids,
                                 CUDNN_ATTR_VARIANT_PACK_DATA_POINTERS, ptrs,
                                 CUDNN_ATTR_VARIANT_PACK_WORKSPACE, workspace);
-  CUDNN_CALL(cudnnBackendExecute(s->dnn_handle_, plan_.get(), var_pack.get()));
+  CUDNN_CALL(cudnnBackendExecute(s->dnn_handle_, plan.get(), var_pack.get()));
 }
 
-std::optional<ConvWgrad> ConvWgrad::Make(const OpContext& ctx, const Param& param, const TBlob& x,
-                                         const TBlob& dy, const TBlob& dw) {
+cudnn_cxx::Descriptor ConvWgrad::Make(const OpContext& ctx, const Param& param, const TBlob& x,
+                                      const TBlob& dy, const TBlob& dw) {
   auto conv = MakeConvDesc(param, static_cast<mshadow::TypeFlag>(x.type_flag_));
   auto li = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
   auto x_desc = MakeTensorDesc(ID_X, x, li, true, false);
@@ -574,15 +572,14 @@ std::optional<ConvWgrad> ConvWgrad::Make(const OpContext& ctx, const Param& para
   std::vector<int64_t> ids{ID_X, ID_DY, ID_DW};
   std::vector<void*> ptrs{x.dptr_, dy.dptr_, dw.dptr_};
 
-  ConvWgrad ret;
-  ret.plan_ = SelectPlan(ctx, param, std::move(wgrad), kMaxWgradFallbacks, make_op_str, ids, ptrs,
-                         Size(dw), "MXNET_CUDNN_DISABLED_CONV_WGRAD_ENGINES");
-  return ret;
+  return SelectPlan(ctx, param, std::move(wgrad), kMaxWgradFallbacks, make_op_str, ids, ptrs,
+                    Size(dw), "MXNET_CUDNN_DISABLED_CONV_WGRAD_ENGINES");
 }
 
-void ConvWgrad::Exec(const OpContext& ctx, const TBlob& x, const TBlob& dy, const TBlob& dw) const {
+void ConvWgrad::Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& x,
+                     const TBlob& dy, const TBlob& dw) {
   auto s = ctx.get_stream<gpu>();
-  auto workspace_size = GetAttr<int64_t>(plan_, CUDNN_ATTR_EXECUTION_PLAN_WORKSPACE_SIZE);
+  auto workspace_size = GetAttr<int64_t>(plan, CUDNN_ATTR_EXECUTION_PLAN_WORKSPACE_SIZE);
   auto workspace = ctx.requested[0].get_space_internal(workspace_size, "ConvWgrad");
 
   std::vector<int64_t> ids{ID_X, ID_DY, ID_DW};
@@ -591,7 +588,7 @@ void ConvWgrad::Exec(const OpContext& ctx, const TBlob& x, const TBlob& dy, cons
                                 CUDNN_ATTR_VARIANT_PACK_UNIQUE_IDS, ids,
                                 CUDNN_ATTR_VARIANT_PACK_DATA_POINTERS, ptrs,
                                 CUDNN_ATTR_VARIANT_PACK_WORKSPACE, workspace);
-  CUDNN_CALL(cudnnBackendExecute(s->dnn_handle_, plan_.get(), var_pack.get()));
+  CUDNN_CALL(cudnnBackendExecute(s->dnn_handle_, plan.get(), var_pack.get()));
 }
 
 }  // namespace cudnn

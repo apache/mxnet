@@ -33,7 +33,11 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+
+#if !defined(__CUDACC__)  // Can be removed when CUDA 10 support is dropped.
 #include <optional>  // NOLINT(build/include_order)
+#endif  // !defined(__CUDACC__)
+
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -239,14 +243,12 @@ template <typename Note>
 inline bool IsCompatible(const std::vector<Note>& notes, const std::vector<Note>& require_notes,
                          const std::vector<Note>& exclude_notes) {
   for (auto rn : require_notes) {
-    if (auto it = std::find(notes.begin(), notes.end(), rn); it == notes.end()) {
-      return false;
-    }
+    auto it = std::find(notes.begin(), notes.end(), rn);
+    if (it == notes.end()) return false;
   }
   for (auto en : exclude_notes) {
-    if (auto it = std::find(notes.begin(), notes.end(), en); it != notes.end()) {
-      return false;
-    }
+    auto it = std::find(notes.begin(), notes.end(), en);
+    if (it != notes.end()) return false;
   }
   return true;
 }
@@ -263,6 +265,8 @@ std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode, cudnnHandle_t ha
                                  const std::vector<cudnnBackendBehaviorNote_t>& req_behavior,
                                  const std::vector<cudnnBackendBehaviorNote_t>& excl_behavior,
                                  bool verbose_filter);
+
+#if !defined(__CUDACC__)  // Can be removed when CUDA 10 support is dropped.
 
 // Defines a sampling algorithm.
 // Returns an aggregate value, to be used as a metric for time comparison, or std::nullopt to
@@ -285,6 +289,7 @@ struct FindResult {
 std::vector<FindResult> FindTopPlans(std::vector<Descriptor>&& plans, size_t max_results,
                                      cudnnHandle_t handle, const Descriptor& var_pack,
                                      Sampler sampler);
+#endif  // !defined(__CUDACC__)
 
 std::string PlanStr(const Descriptor& plan);
 
