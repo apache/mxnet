@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file matrix_op.cc
  * \brief CPU Implementation of matrix operations
  */
@@ -26,8 +25,9 @@
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../nn/mkldnn/mkldnn_base-inl.h"
+#include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/mkldnn/mkldnn_reshape-inl.h"
 #include "../nn/mkldnn/mkldnn_slice-inl.h"
 #endif
 
@@ -114,24 +114,29 @@ DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 DMLC_REGISTER_PARAMETER(SplitParam);
 
 #if MXNET_USE_ONEDNN == 1
-static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
+void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNN support the data type or the shape. Then convert
   // it to the output format and shape
-  MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+
+  if (SupportMKLDNNReshape(inputs[0], outputs[0])) {
+    MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  }
 }
 
-inline static bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
-                                      const int dev_mask,
-                                      DispatchMode* dispatch_mode,
-                                      std::vector<int>* in_attrs,
-                                      std::vector<int>* out_attrs) {
+bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
+                        const int dev_mask,
+                        DispatchMode* dispatch_mode,
+                        std::vector<int>* in_attrs,
+                        std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
@@ -228,7 +233,11 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNN support the data type or the shape. Then convert
   // it to the output format and shape
-  MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportMKLDNNReshape(inputs[0], outputs[0])) {
+    MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  }
 }
 
 static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
@@ -394,7 +403,11 @@ static void ExpandDimEx(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNN support the data type or the shape. Then convert
   // it to the output format and shape
-  MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportMKLDNNReshape(inputs[0], outputs[0])) {
+    MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  }
 }
 
 inline static bool ExpandDimStorageType(const nnvm::NodeAttrs& attrs,

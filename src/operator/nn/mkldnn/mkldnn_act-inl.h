@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_act-inl.h
  * \brief MKLDNN Activation operator
  * /author Zhiyuan Huang

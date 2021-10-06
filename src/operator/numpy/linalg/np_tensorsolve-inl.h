@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_tensorsolve-inl.h
  * \brief Placeholder for tensor solve
  */

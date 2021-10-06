@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file ndarray.cc
  * \brief ndarry module of mxnet
  */

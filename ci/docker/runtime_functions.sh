@@ -324,7 +324,7 @@ build_ubuntu_cpu_openblas() {
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
-    ninja
+    ninja -j$(($(nproc)/2))
 }
 
 build_ubuntu_cpu_mkl() {
@@ -643,7 +643,7 @@ build_ubuntu_gpu() {
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
-    ninja
+    ninja -j$(($(nproc)/2))
 }
 
 build_ubuntu_gpu_debug() {
@@ -812,6 +812,7 @@ unittest_array_api_standardization() {
     cd ..
     git clone https://github.com/data-apis/array-api-tests.git
     pushd /work/array-api-tests
+    git checkout c1dba80a196a03f880d2e0a998a272fb3867b720
     export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
     # OverflowError: Python int too large to convert to C long
     # when cython is enabled

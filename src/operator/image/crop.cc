@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file crop-cc.h
  * \brief the image crop operator registration
  */

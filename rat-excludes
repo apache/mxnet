@@ -53,6 +53,7 @@ clipboard.js
 # Licenses
 licenses/*
 LICENSE.binary.dependencies
+.licenserc.yaml
 
 # Generated files during build
 .buildinfo
@@ -121,7 +122,29 @@ deformable_im2col.cuh
 deformable_im2col.h
 FindCUDAToolkit.cmake
 FindBLAS.cmake
+FindJeMalloc.cmake
 select_compute_arch.cmake
+np_einsum_op-inl.h
+np_einsum_op.cc
+np_einsum_path_op-inl.h
+
+# Incorporated third-party source files from Microsoft that carry Apache 2.0 license, captured in licenses/
+deformable_psroi_pooling.cu
+deformable_convolution.cu
+deformable_convolution-inl.h
+psroi_pooling.cc
+multi_proposal.cu
+deformable_psroi_pooling-inl.h
+deformable_psroi_pooling.cc
+deformable_convolution.cc
+psroi_pooling.cu
+multi_proposal.cc
+multi_proposal-inl.h
+
+# Incorporated third-party source files from Microsoft that carry MIT license, captured in licenses/
+modulated_deformable_convolution-inl.h
+modulated_deformable_convolution.cc
+modulated_deformable_convolution.cu
 
 # AL2 License header not at the beginning of the file
 doap.rdf

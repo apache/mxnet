@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file low_precision_pass.cc
  * \brief Use the Mixed Precision Model to infer the dtypes of
  * unknown input nodes

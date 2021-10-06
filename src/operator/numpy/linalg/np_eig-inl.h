@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_eig-inl.h
  * \brief Placeholder for eig
  */

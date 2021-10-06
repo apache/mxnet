@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file multibox_detection.cu
  * \brief MultiBoxDetection op
  * \author Joshua Zhang

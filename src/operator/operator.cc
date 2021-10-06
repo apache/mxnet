@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file operator.cc
  * \brief operator module of mxnet
  */

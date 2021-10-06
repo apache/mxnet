@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file op_attr_types.h
  * \brief Additional operator attributes
  *  beside the ones provided by NNVM

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cross_device_copy.cc
  * \brief Special operator that copys NDArray
  */

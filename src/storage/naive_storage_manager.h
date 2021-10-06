@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file naive_storage_manager.h
  * \brief Naive storage manager.
  */

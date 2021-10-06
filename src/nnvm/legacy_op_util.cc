@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file legacy_op_util.cc
  * \brief Utility to adapt OpProperty to the new NNVM registery
  */

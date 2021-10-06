@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_slice.cu
  * \brief GPU Implementation of numpy insert operations (insert by int index)
  */

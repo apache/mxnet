@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_quantized_ops-inl.h
  * \brief Common functions used by MKLDNN Quantized FullyConnected operator
  * \author Ciyong Chen
