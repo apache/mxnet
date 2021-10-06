@@ -5422,6 +5422,7 @@ def logical_not(x, out=None, **kwargs):
     """
     return _mx_nd_np.logical_not(x, out=out, **kwargs)
 
+
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
 def arcsinh(x, out=None, **kwargs):
@@ -9076,6 +9077,7 @@ def round_(x, decimals=0, out=None, **kwargs):
     around : equivalent function; see for details.
     """
     return _mx_nd_np.round_(x, decimals, out=out, **kwargs)
+
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func

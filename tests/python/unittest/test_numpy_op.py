@@ -258,6 +258,7 @@ def test_np_dot_error(shape_a, shape_b):
     with pytest.raises(mx.base.MXNetError):
         mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
 
+
 @use_np
 @pytest.mark.parametrize('shape', [(), (5,), (3, 3)])
 @pytest.mark.parametrize('hybridize', [True, False])
