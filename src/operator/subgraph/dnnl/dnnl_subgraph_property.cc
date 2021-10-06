@@ -19,43 +19,43 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "mkldnn_bn_relu_property.h"
-#include "mkldnn_conv_property.h"
-#include "mkldnn_elemwisemul_post_quantize_property.h"
-#include "mkldnn_fc_post_quantize_property.h"
-#include "mkldnn_fc_property.h"
-#include "mkldnn_post_quantize_align_scale_property.h"
-#include "mkldnn_post_quantize_property.h"
-#include "mkldnn_transformer_post_quantize_property.h"
-#include "mkldnn_transformer_qk_property.h"
-#include "mkldnn_transformer_valatt_property.h"
+#include "dnnl_bn_relu_property.h"
+#include "dnnl_conv_property.h"
+#include "dnnl_elemwisemul_post_quantize_property.h"
+#include "dnnl_fc_post_quantize_property.h"
+#include "dnnl_fc_property.h"
+#include "dnnl_post_quantize_align_scale_property.h"
+#include "dnnl_post_quantize_property.h"
+#include "dnnl_transformer_post_quantize_property.h"
+#include "dnnl_transformer_qk_property.h"
+#include "dnnl_transformer_valatt_property.h"
 
 namespace mxnet {
 namespace op {
 
-MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN)
-    .set_attr("enable", MKLDNNEnvSet())
+MXNET_REGISTER_SUBGRAPH_BACKEND(DNNL)
+    .set_attr("enable", DNNLEnvSet())
     .set_attr("context", Context::CPU());
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNFCProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNBNReLUProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNTransformerQKProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNTransformerValAttProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL, SgDNNLConvProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL, SgDNNLFCProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL, SgDNNLBNReLUProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL, SgDNNLTransformerQKProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL, SgDNNLTransformerValAttProperty);
 
-MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN_QUANTIZE).set_attr("context", Context::CPU());
+MXNET_REGISTER_SUBGRAPH_BACKEND(DNNL_QUANTIZE).set_attr("context", Context::CPU());
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNConvProperty).set_attr("quantize", true);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLConvProperty).set_attr("quantize", true);
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCProperty).set_attr("quantize", true);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNTransformerQKProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNTransformerValAttProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLFCProperty).set_attr("quantize", true);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLTransformerQKProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLTransformerValAttProperty);
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, ElemwiseMulPostQuantizeProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeAlignScaleProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNTransformerPostQuantizeProperty)
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLPostQuantizeProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLFCPostQuantizeProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, ElemwiseMulPostQuantizeProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLPostQuantizeAlignScaleProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(DNNL_QUANTIZE, SgDNNLTransformerPostQuantizeProperty)
     .set_attr("quantize", true);
 
 }  // namespace op
