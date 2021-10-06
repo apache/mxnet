@@ -20,7 +20,7 @@
 from ..ndarray import numpy as _mx_nd_np
 from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
-from . import fallback_linalg, tensordot
+from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'vecdot']
@@ -75,6 +75,12 @@ def vecdot(a, b, axis=None):
     it does *not* perform a matrix product, but flattens input arguments
     to 1-D vectors first. Consequently, it should only be used for vectors.
 
+    Notes
+    ----------
+    `vecdot` is a alias for `vdot`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/linear_algebra_functions.html#vecdot-x1-x2-axis-1
+    instead of an official NumPy operator.
+
     Parameters
     ----------
     a : ndarray
@@ -105,14 +111,14 @@ def vecdot(a, b, axis=None):
 
     >>> a = np.array([[1, 4], [5, 6]])
     >>> b = np.array([[4, 1], [2, 2]])
-    >>> np.vecdot(a, b)
+    >>> np.linalg.vecdot(a, b)
     array(30.)
-    >>> np.vecdot(b, a)
+    >>> np.linalg.vecdot(b, a)
     array(30.)
     >>> 1*4 + 4*1 + 5*2 + 6*2
     30
     """
-    return tensordot(a.flatten(), b.flatten(), axis)
+    return _mx_nd_np.tensordot(a.flatten(), b.flatten(), axis)
 
 
 def lstsq(a, b, rcond='warn'):
