@@ -24,7 +24,7 @@ if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
     # download and build libtiff
     >&2 echo "Building libtiff..."
     download \
-        https://download.osgeo.org/libtiff/tiff-${TIFF_VERSION}.zip \
+        http://download.osgeo.org/libtiff/tiff-${TIFF_VERSION}.zip \
         ${DEPS_PATH}/libtiff.zip
     unzip -q $DEPS_PATH/libtiff.zip -d $DEPS_PATH
     pushd .
