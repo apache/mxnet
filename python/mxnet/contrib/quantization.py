@@ -555,7 +555,11 @@ def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
         raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
     if ctx.device_type != 'cpu':
         raise ValueError(
+<<<<<<< HEAD
             'quantize_model_onednn only support Intel cpu platform with oneDNN Backend')
+=======
+            'quantize_model_dnnl only support Intel cpu platform with oneDNN Backend')
+>>>>>>> review changes
 
     sym = sym.optimize_for(backend='DNNL_QUANTIZE')
 

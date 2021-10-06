@@ -22,10 +22,10 @@ The following tutorials will help you learn how to use backend tools to boost pe
 .. container:: cards
 
   .. card::
-     :title: DNNL
+     :title: oneDNN
      :link: dnnl/index.html
 
-     How to get the most from your CPU by using Intel's DNNL.
+     How to get the most from your CPU by using oneDNN.
 
   .. card::
      :title: TVM

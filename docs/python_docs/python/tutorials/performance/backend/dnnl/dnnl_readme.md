@@ -212,7 +212,7 @@ More detailed debugging and profiling information can be logged by setting the e
 ```
 export DNNL_VERBOSE=1
 ```
-For example, by running above code snippet, the following debugging logs providing more insights on ONEDNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
+For example, by running above code snippet, the following debugging logs providing more insights on oneDNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
 ```
 dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
 dnnl_verbose,info,Detected ISA is Intel AVX-512 with Intel DL Boost

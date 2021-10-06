@@ -15,22 +15,22 @@
    specific language governing permissions and limitations
    under the License.
 
-Intel DNNL
+oneDNN
 =============
 
 .. container:: cards
 
    .. card::
-      :title: DNNL Installation and Verification
+      :title: oneDNN Installation and Verification
       :link: dnnl_readme
 
-      A guide on using DNNL with MXNet.
+      A guide on using oneDNN with MXNet.
 
    .. card::
-      :title: DNNL Quantization
+      :title: oneDNN Quantization
       :link: dnnl_quantization
 
-      How to perform quantization with DNNL
+      How to perform quantization with oneDNN
 
 .. toctree::
    :hidden:

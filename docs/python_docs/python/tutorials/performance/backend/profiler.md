@@ -215,7 +215,7 @@ Reagrding ONEDNN operators, the library has already provided the internal profil
 
 `$ DNNL_VERBOSE=1 python my_script.py > dnnl_verbose.log`
 
-Now, the detailed profiling insights of each ONEDNN prmitive are saved into `dnnl_verbose.log` (like below).
+Now, the detailed profiling insights of each oneDNN prmitive are saved into `dnnl_verbose.log` (like below).
 
 ```
 dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
