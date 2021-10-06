@@ -24,7 +24,7 @@ if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
     # download and build libcurl
     >&2 echo "Building libcurl..."
     download \
-        https://curl.haxx.se/download/curl-${LIBCURL_VERSION}.zip \
+        http://curl.haxx.se/download/curl-${LIBCURL_VERSION}.zip \
         ${DEPS_PATH}/libcurl.zip
     unzip -q $DEPS_PATH/libcurl.zip -d $DEPS_PATH
     pushd .
