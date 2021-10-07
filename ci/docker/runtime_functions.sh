@@ -1692,7 +1692,6 @@ build_ubuntu_cpu_docs() {
 
 build_jekyll_docs() {
     set -ex
-    source /etc/profile.d/rvm.sh
 
     pushd .
     build_docs_setup
