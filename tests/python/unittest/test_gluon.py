@@ -1757,13 +1757,7 @@ def check_hybrid_static_memory_switching(**kwargs):
 @with_seed()
 def test_hybrid_static_memory_switching():
     check_hybrid_static_memory_switching()
-
-@with_seed()
-def test_hybrid_static_memory_switching2():
     check_hybrid_static_memory_switching(static_alloc=True)
-
-@with_seed()
-def test_hybrid_static_memory_switching3():
     check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
