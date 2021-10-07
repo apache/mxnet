@@ -170,7 +170,13 @@ def windows_build(args):
             os.chdir(path)
             env = os.environ.copy()
             if 'GPU' in args.flavour:
-                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
+                if 'MKLDNN' in args.flavour:
+                    env["CXXFLAGS"] = '/FS /MT /O2 /Ob2'
+                else:
+                    env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
+            else:
+                if 'MKLDNN' in args.flavour:
+                    env["CXXFLAGS"] = '/MT'
             cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
                                                          CMAKE_FLAGS[args.flavour],
                                                          mxnet_root)
