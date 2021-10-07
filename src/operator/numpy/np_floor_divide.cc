@@ -107,7 +107,8 @@ NNVM_REGISTER_OP(_npi_floor_divide_scalar)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}};
                                     })
-    .set_attr<FCompute>("FCompute<cpu>", FloorDivideScalarCompute<cpu, op::mshadow_op::floor_divide>)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        FloorDivideScalarCompute<cpu, op::mshadow_op::floor_divide>)
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
     .add_argument("data", "NDArray-or-Symbol", "source input")
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__());

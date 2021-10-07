@@ -247,7 +247,7 @@ struct floor_divide : public mxnet_op::tunable {
     float a_float = static_cast<float>(a);
     float c = ::floorf(a_float / b);
     if ((c * b != a_float) && (a < 0) != (b < 0)) {
-      return float(c - 1);
+      return c - 1.0f;
     } else {
       return c;
     }
@@ -258,7 +258,7 @@ struct floor_divide : public mxnet_op::tunable {
     double a_double = static_cast<double>(a);
     double c = ::floor(a_double / b);
     if ((c * b != a_double) && (a < 0) != (b < 0)) {
-      return double(c - 1);
+      return c - 1.0;
     } else {
       return c;
     }
@@ -292,7 +292,7 @@ struct rfloor_divide : public mxnet_op::tunable {
     float a_float = static_cast<float>(a);
     float c = ::floorf(b / a_float);
     if ((c * a_float != b) && (a < 0) != (b < 0)) {
-      return float(c - 1);
+      return c - 1.0f;
     } else {
       return c;
     }
@@ -303,7 +303,7 @@ struct rfloor_divide : public mxnet_op::tunable {
     double a_double = static_cast<double>(a);
     double c = ::floor(b / a_double);
     if ((c * a_double != b) && (a < 0) != (b < 0)) {
-      return double(c - 1);
+      return c - 1.0;
     } else {
       return c;
     }
