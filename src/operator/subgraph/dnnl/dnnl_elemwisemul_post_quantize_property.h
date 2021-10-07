@@ -19,7 +19,7 @@
 
 /*!
  * \file dnnl_elemwisemul_post_quantize_property.cc
- * \brief Partition gragph property for DNNL Quantized ElemwiseMul operator
+ * \brief Partition gragph property for oneDNN Quantized ElemwiseMul operator
  * \author Xinyu Chen
  */
 
@@ -160,7 +160,7 @@ class ElemwiseMulPostQuantizeProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL EltwiseMul post-quantization optimization pass";
+    static const std::string& name = "oneDNN EltwiseMul post-quantization optimization pass";
     auto property                  = std::make_shared<ElemwiseMulPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);

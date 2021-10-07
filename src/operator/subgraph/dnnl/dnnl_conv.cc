@@ -694,10 +694,10 @@ std::vector<std::pair<int, int>> SgDNNLConvInplaceOption(const NodeAttrs& attrs)
 nnvm::ObjectPtr SgDNNLConvQuantizedOp(const NodeAttrs& attrs) {
   auto const& param    = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
   nnvm::ObjectPtr node = nnvm::Node::Create();
-  node->attrs.op       = Op::Get("_sg_dnnl_conv");
+  node->attrs.op       = Op::Get("_sg_onednn_conv");
   const int k_ndims    = param.full_conv_param.conv_param.kernel.ndim();
   CHECK(k_ndims == 2U || k_ndims == 3U)
-      << "Quantized Convolution of DNNL supports 2D/3D kernel currently."
+      << "Quantized Convolution of oneDNN supports 2D/3D kernel currently."
       << "Please exclude this layer from the quantized model.";
   node->attrs.name              = "quantized_" + attrs.name;
   node->attrs.dict              = attrs.dict;
@@ -730,8 +730,8 @@ bool SgDNNLAvoidConvQuantizeInput(const NodeAttrs& attrs,
   return avoid_indice.count(index);
 }
 
-NNVM_REGISTER_OP(_sg_dnnl_conv)
-    .describe(R"code(_sg_dnnl_conv)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_sg_onednn_conv)
+    .describe(R"code(_sg_onednn_conv)code" ADD_FILELINE)
     .set_num_inputs(SgDNNLConvNumInputs)
     .set_num_outputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);

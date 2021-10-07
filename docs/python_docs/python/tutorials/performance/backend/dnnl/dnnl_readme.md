@@ -281,7 +281,7 @@ MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1
 Graph optimization with subgraph is available and enabled by default in master branch. For MXNet release v1.5, you can manually enable it by:
 
 ```
-export MXNET_SUBGRAPH_BACKEND=DNNL
+export MXNET_SUBGRAPH_BACKEND=ONEDNN
 ```
 
 This limitations of this experimental feature are:
@@ -293,7 +293,7 @@ This limitations of this experimental feature are:
 
 <h2 id="7">Quantization and Inference with INT8</h2>
 
-Benefiting from Intel ONEDNN, MXNet built with Intel ONEDNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
+Benefiting from oneDNN, MXNet built with oneDNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
 
 - [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
 
@@ -303,6 +303,6 @@ Benefiting from Intel ONEDNN, MXNet built with Intel ONEDNN brings outstanding p
 
 - For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl) website.
 
-- For questions or support specific to ONEDNN, visit the [Intel ONEDNN](https://github.com/oneapi-src/oneDNN) website.
+- For questions or support specific to oneDNN, visit the [oneDNN](https://github.com/oneapi-src/oneDNN) website.
 
-- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with ONEDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).
+- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with oneDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).

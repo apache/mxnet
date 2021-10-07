@@ -168,7 +168,7 @@ class SgDNNLFCProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL FullyConnected optimization pass";
+    static const std::string& name = "oneDNN FullyConnected optimization pass";
     auto property                  = std::make_shared<SgDNNLFCProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
@@ -186,7 +186,7 @@ class SgDNNLFCProperty : public SubgraphProperty {
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
-    node_name << "sg_dnnl_";
+    node_name << "sg_onednn_";
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
         return;
@@ -200,7 +200,7 @@ class SgDNNLFCProperty : public SubgraphProperty {
     });
     node_name << std::to_string(subgraph_id);
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_dnnl_fully_connected");
+    n->attrs.op   = Op::Get("_sg_onednn_fully_connected");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));

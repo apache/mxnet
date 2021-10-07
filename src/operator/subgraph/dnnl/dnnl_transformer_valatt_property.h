@@ -237,11 +237,11 @@ class SgDNNLTransformerValAttProperty : public SubgraphProperty {
   SgDNNLTransformerValAttProperty() {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL Transformer optimization pass";
+    static const std::string& name = "oneDNN Transformer optimization pass";
     auto property                  = std::make_shared<SgDNNLTransformerValAttProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_DNNL_TRANSFORMER_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_TRANSFORMER_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
@@ -264,9 +264,9 @@ class SgDNNLTransformerValAttProperty : public SubgraphProperty {
           n->attrs.dict["heads"] = std::to_string(reshape_param.newshape[2]);
       }
     });
-    node_name << "_sg_dnnl_selfatt_valatt_" << subgraph_id;
+    node_name << "_sg_onednn_selfatt_valatt_" << subgraph_id;
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_dnnl_selfatt_valatt");
+    n->attrs.op   = Op::Get("_sg_onednn_selfatt_valatt");
     CHECK(n->attrs.op);
     n->op()->attr_parser(&(n->attrs));
     return n;

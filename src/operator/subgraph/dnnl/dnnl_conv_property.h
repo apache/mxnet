@@ -182,7 +182,7 @@ class SgDNNLConvProperty : public SubgraphProperty {
     disable_all_ = disable_conv_bn_ && disable_conv_act_ && disable_conv_sum_;
   }
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL convolution optimization pass";
+    static const std::string& name = "oneDNN convolution optimization pass";
     auto property                  = std::make_shared<SgDNNLConvProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
@@ -199,7 +199,7 @@ class SgDNNLConvProperty : public SubgraphProperty {
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
-    node_name << "sg_dnnl_";
+    node_name << "sg_onednn_";
     bool _with_sum = false;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
@@ -225,7 +225,7 @@ class SgDNNLConvProperty : public SubgraphProperty {
     });
     node_name << std::to_string(subgraph_id);
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_dnnl_conv");
+    n->attrs.op   = Op::Get("_sg_onednn_conv");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));

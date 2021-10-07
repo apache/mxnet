@@ -19,7 +19,7 @@
 
 /*!
  * \file dnnl_fc_post_quantize_property.cc
- * \brief Partition gragph property for DNNL Quantized FullyConnected operator
+ * \brief Partition gragph property for oneDNN Quantized FullyConnected operator
  * \author Ciyong Chen
  */
 
@@ -39,7 +39,7 @@
 namespace mxnet {
 namespace op {
 
-#define QUANTIZED_FC_NAME "_sg_dnnl_fully_connected"
+#define QUANTIZED_FC_NAME "_sg_onednn_fully_connected"
 
 class SgDNNLFCPostQuantizeSelector : public SubgraphSelectorV2 {
  public:
@@ -159,7 +159,7 @@ class SgDNNLFCPostQuantizeProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL FullyConected post-quantization optimization pass";
+    static const std::string& name = "oneDNN FullyConected post-quantization optimization pass";
     auto property                  = std::make_shared<SgDNNLFCPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);

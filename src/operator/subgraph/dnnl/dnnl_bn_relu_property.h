@@ -90,7 +90,7 @@ class SgDNNLBNReLUProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL BN + ReLU optimization pass";
+    static const std::string& name = "oneDNN BN + ReLU optimization pass";
     auto property                  = std::make_shared<SgDNNLBNReLUProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
@@ -105,7 +105,7 @@ class SgDNNLBNReLUProperty : public SubgraphProperty {
     nnvm::ObjectPtr n = nnvm::Node::Create();
 
     std::ostringstream node_name;
-    node_name << "sg_dnnl_batch_norm_relu_" << std::to_string(subgraph_id);
+    node_name << "sg_onednn_batch_norm_relu_" << std::to_string(subgraph_id);
 
     // Copy params from BatchNorm node into subgraph BatchNormReLU node
     BatchNormParam param;

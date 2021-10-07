@@ -151,8 +151,8 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
         out = self.act(self.conv0(x)) + self.conv1(x)
         return out
 
-  attrs = {'sg_dnnl_conv_act_0': {'with_act': 'true'},
-           'sg_dnnl_conv_add_1': {'with_sum': 'true'}}
+  attrs = {'sg_onednn_conv_act_0': {'with_act': 'true'},
+           'sg_onednn_conv_add_1': {'with_sum': 'true'}}
 
   net = ConvActAdd(use_bias, alg)
   check_fusion(net, data_shape, attrs, check_quantization=quantize)
@@ -397,7 +397,7 @@ class ConvBNSum(nn.HybridBlock):
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
 def test_conv_bn_sum(data_shape, reverse_sum_order, dedup_subgraph):
-  attr = {'sg_dnnl_conv_bn_add_0' : {'with_bn': 'true'}}
+  attr = {'sg_onednn_conv_bn_add_0' : {'with_bn': 'true'}}
   # channels after conv+bn should be same as input channels
   net = ConvBNSum(channels=data_shape[1] ,reverse_sum_order=reverse_sum_order)
   check_fusion(net, data_shape, attr, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
@@ -426,7 +426,7 @@ class MobileNetV2Struct(nn.HybridBlock):
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
 def test_mobilenetv2_struct(data_shape, reverse_sum_order, dedup_subgraph):
-  attr = {'sg_dnnl_conv_bn_0' : {'with_bn': 'true'}}
+  attr = {'sg_onednn_conv_bn_0' : {'with_bn': 'true'}}
   net = MobileNetV2Struct(reverse_sum_order=reverse_sum_order)
   check_fusion(net, data_shape, attr, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 

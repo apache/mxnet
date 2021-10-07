@@ -49,14 +49,14 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelector {
 
  public:
   SgDNNLPostQuantizeSelector() {
-    support_requantize_fusion_op_name.insert("_sg_dnnl_conv");
+    support_requantize_fusion_op_name.insert("_sg_onednn_conv");
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
     support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
   }
 
   bool Select(const nnvm::Node& n) override {
     if (n.op() && support_requantize_fusion_op_name.count(n.op()->name)) {
-      if (n.op()->name == "_sg_dnnl_conv") {
+      if (n.op()->name == "_sg_onednn_conv") {
         auto const& param = nnvm::get<DNNLConvFusionParam>(n.attrs.parsed);
         if (param.full_conv_param.dnnl_param.quantized) {
           status = kStart;
@@ -120,12 +120,12 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelector {
 class SgDNNLPostQuantizeProperty : public SubgraphProperty {
  public:
   SgDNNLPostQuantizeProperty() {
-    support_requantize_fusion_op_name.insert("_sg_dnnl_conv");
+    support_requantize_fusion_op_name.insert("_sg_onednn_conv");
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
     support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
   }
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL post-quantization optimization pass";
+    static const std::string& name = "oneDNN post-quantization optimization pass";
     auto property                  = std::make_shared<SgDNNLPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);

@@ -121,7 +121,7 @@ class SgDNNLPostQuantizeAlignScaleProperty : public SubgraphProperty {
   SgDNNLPostQuantizeAlignScaleProperty() : SubgraphProperty(kAdjust) {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL post-quantization scale alignment optimization pass";
+    static const std::string& name = "oneDNN post-quantization scale alignment optimization pass";
     auto property                  = std::make_shared<SgDNNLPostQuantizeAlignScaleProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);

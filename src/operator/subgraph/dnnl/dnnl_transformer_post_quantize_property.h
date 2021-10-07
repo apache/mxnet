@@ -52,8 +52,8 @@ class SgDNNLTransformerPostQuantizeSelector : public SubgraphSelector {
       : disable_all(dis_all), disable_float_output(dis_float_output) {}
 
   bool Select(const nnvm::Node& n) override {
-    if ((!disable_all) && (n.op() == Op::Get("_sg_dnnl_selfatt_qk") ||
-                           n.op() == Op::Get("_sg_dnnl_selfatt_valatt"))) {
+    if ((!disable_all) && (n.op() == Op::Get("_sg_onednn_selfatt_qk") ||
+                           n.op() == Op::Get("_sg_onednn_selfatt_valatt"))) {
       status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
@@ -151,8 +151,8 @@ class SgDNNLTransformerPostQuantizeProperty : public SubgraphProperty {
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
         return;
-      if (node->op() == Op::Get("_sg_dnnl_selfatt_qk") ||
-          node->op() == Op::Get("_sg_dnnl_selfatt_valatt")) {
+      if (node->op() == Op::Get("_sg_onednn_selfatt_qk") ||
+          node->op() == Op::Get("_sg_onednn_selfatt_valatt")) {
         interleaved_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;

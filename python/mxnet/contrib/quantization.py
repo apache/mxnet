@@ -529,7 +529,10 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
 
     return qsym, qarg_params, aux_params
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dnnl -> oneDNN/ONEDNN/onednn for functions/variables visible from outside
 def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_batches=None,
@@ -556,12 +559,16 @@ def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
     if ctx.device_type != 'cpu':
         raise ValueError(
 <<<<<<< HEAD
+<<<<<<< HEAD
             'quantize_model_onednn only support Intel cpu platform with oneDNN Backend')
 =======
             'quantize_model_dnnl only support Intel cpu platform with oneDNN Backend')
 >>>>>>> review changes
+=======
+            'quantize_model_onednn only support Intel cpu platform with oneDNN Backend')
+>>>>>>> dnnl -> oneDNN/ONEDNN/onednn for functions/variables visible from outside
 
-    sym = sym.optimize_for(backend='DNNL_QUANTIZE')
+    sym = sym.optimize_for(backend='ONEDNN_QUANTIZE')
 
     qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                    data_names=data_names, ctx=ctx,
@@ -572,7 +579,7 @@ def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
                                                    quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
                                                    quantize_granularity=quantize_granularity, logger=logger)
 
-    qsym = qsym.optimize_for(backend='DNNL_QUANTIZE')
+    qsym = qsym.optimize_for(backend='ONEDNN_QUANTIZE')
 
     return qsym, qarg_params, aux_params
 
@@ -828,7 +835,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
 
     if ctx != mx.cpu():
         raise ValueError('Quantization currently supports only CPU context')
-    backend = 'DNNL_QUANTIZE'
+    backend = 'ONEDNN_QUANTIZE'
 
     network.hybridize(static_alloc=False, static_shape=False)
     data_types = None

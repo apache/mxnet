@@ -122,7 +122,7 @@ class SgDNNLSelfAttQKOp {
                 const std::vector<NDArray>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<NDArray>& outputs) {
-    LOG(FATAL) << "Not implemented: subgraph dnnl self attention qk only supports "
+    LOG(FATAL) << "Not implemented: subgraph oneDNN self attention qk only supports "
                   "inference computation.";
   }
 
@@ -294,7 +294,7 @@ void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
 nnvm::ObjectPtr SgDNNLSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node          = nnvm::Node::Create();
   auto const& param             = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
-  node->attrs.op                = Op::Get("_sg_dnnl_selfatt_qk");
+  node->attrs.op                = Op::Get("_sg_onednn_selfatt_qk");
   node->attrs.name              = "quantized_" + attrs.name;
   node->attrs.dict              = attrs.dict;
   node->attrs.dict["heads"]     = std::to_string(param.heads);
@@ -305,8 +305,8 @@ nnvm::ObjectPtr SgDNNLSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-NNVM_REGISTER_OP(_sg_dnnl_selfatt_qk)
-    .describe(R"code(_sg_dnnl_selfatt_qk)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_sg_onednn_selfatt_qk)
+    .describe(R"code(_sg_onednn_selfatt_qk)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
       if (param.quantized) {
@@ -362,7 +362,7 @@ NNVM_REGISTER_OP(_sg_dnnl_selfatt_qk)
                   "Interleaved queries, keys and values")
     .add_arguments(DNNLSelfAttParam::__FIELDS__());
 
-/**********************************_sg_dnnl_selfatt_valatt**********************************/
+/**********************************_sg_onednn_selfatt_valatt**********************************/
 
 static bool SgDNNLSelfAttValShape(const NodeAttrs& attrs,
                                   mxnet::ShapeVector* in_shape,
@@ -464,7 +464,7 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
 nnvm::ObjectPtr SgDNNLSelfAttValAttQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node          = nnvm::Node::Create();
   auto const& param             = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
-  node->attrs.op                = Op::Get("_sg_dnnl_selfatt_valatt");
+  node->attrs.op                = Op::Get("_sg_onednn_selfatt_valatt");
   node->attrs.name              = "quantized_" + attrs.name;
   node->attrs.dict              = attrs.dict;
   node->attrs.dict["heads"]     = std::to_string(param.heads);
@@ -489,7 +489,7 @@ class DNNLSelfAttValAttOp {
                 const std::vector<NDArray>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<NDArray>& outputs) {
-    LOG(FATAL) << "Not implemented: subgraph dnnl self attention val only supports "
+    LOG(FATAL) << "Not implemented: subgraph oneDNN self attention val only supports "
                   "inference computation.";
   }
 
@@ -699,8 +699,8 @@ void DNNLSelfAttValAttOp::Forward(const OpContext& ctx,
   }
 }
 
-NNVM_REGISTER_OP(_sg_dnnl_selfatt_valatt)
-    .describe(R"code(_sg_dnnl_selfatt_valatt)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_sg_onednn_selfatt_valatt)
+    .describe(R"code(_sg_onednn_selfatt_valatt)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
       if (param.quantized) {

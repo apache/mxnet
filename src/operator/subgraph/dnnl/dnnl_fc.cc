@@ -624,7 +624,7 @@ static void SgDNNLFCForward(const OpStatePtr& state_pointer,
 
 nnvm::ObjectPtr SgDNNLFCQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node          = nnvm::Node::Create();
-  node->attrs.op                = Op::Get("_sg_dnnl_fully_connected");
+  node->attrs.op                = Op::Get("_sg_onednn_fully_connected");
   node->attrs.name              = "quantized_" + attrs.name;
   node->attrs.dict              = attrs.dict;
   node->attrs.dict["quantized"] = "True";
@@ -651,8 +651,8 @@ static bool SgDNNLAvoidFCQuantizeInput(const NodeAttrs& attrs,
   return avoid_indexes.count(index_to_check);
 }
 
-NNVM_REGISTER_OP(_sg_dnnl_fully_connected)
-    .describe(R"code(_sg_dnnl_fully_connected)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_sg_onednn_fully_connected)
+    .describe(R"code(_sg_onednn_fully_connected)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) {
       auto const& full_param = nnvm::get<DNNLFCFullParam>(attrs.parsed);
       auto num_inputs        = full_param.default_param.no_bias ? 2 : 3;
