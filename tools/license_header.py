@@ -171,7 +171,7 @@ def _lines_have_multiple_license(lines):
     for l in lines:
         if any(p in l for p in _APACHE_LICENSE_PATTERNS):
             has_apache_license = True
-        elif any(p in l for p  in _OTHER_LICENSE_PATTERNS):
+        if any(p in l for p  in _OTHER_LICENSE_PATTERNS):
             has_other_license = True
     return (has_apache_license and has_other_license)
 
