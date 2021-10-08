@@ -1040,7 +1040,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return invert(self)
 
     @wrap_mxnp_np_ufunc
-    def __and__(self: ndarray, other:  Union[int, bool, ndarray], /) -> ndarray:
+    def __and__(self: ndarray, other: Union[int, bool, ndarray], /) -> ndarray:
         """x.__and__(y) <=> x & y"""
         return bitwise_and(self, other)
 
@@ -1084,7 +1084,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__ixor__(y) <=> x ^= y"""
         return bitwise_xor(self, other, out=self)
 
-    def __round__(self: ndarray, /, *, n: int=0) -> ndarray:
+    def __round__(self: ndarray, /, *, n: int = 0) -> ndarray:
         """x.__round__(n)"""
         return round(self, decimals=n)
 
@@ -1157,7 +1157,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return divide(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
-    def __truediv__(self: ndarray,  other: Union[float, ndarray], /) -> ndarray:
+    def __truediv__(self: ndarray, other: Union[float, ndarray], /) -> ndarray:
         """x.__truediv__(y) <=> x / y"""
         return divide(self, other)
 
@@ -1327,22 +1327,22 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: enable= invalid-name, undefined-variable
 
     def all(
-        self: ndarray,
-        /,
-        *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
-        out: Optional[ndarray]=None,
-        keepdims: Optional[bool]=False
-    ) -> ndarray:
+            self: ndarray,
+            /,
+            *,
+            axis: Optional[Union[int, Tuple[int, ...]]] = None,
+            out: Optional[ndarray] = None,
+            keepdims: Optional[bool] = False
+        ) -> ndarray:
         return _mx_nd_np.all(self, axis=axis, out=out, keepdims=keepdims)
 
     def any(
-        self: ndarray,
-        /,
-        *,
-        axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False
+            self: ndarray,
+            /,
+            *,
+            axis: Optional[Union[int, Tuple[int, ...]]] = None,
+            out: Optional[ndarray] = None,
+            keepdims: Optional[bool] = False
     ) -> ndarray:
         return _mx_nd_np.any(self, axis=axis, out=out, keepdims=keepdims)
 
@@ -1482,10 +1482,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             /,
             dtype: Union[str, dtype],
             *,
-            order: Optional[str]='K',
-            casting: Optional[str]='unsafe',
-            subok: Optional[bool]=True,
-            copy: Optional[bool]=True
+            order: Optional[str] = 'K',
+            casting: Optional[str] = 'unsafe',
+            subok: Optional[bool] = True,
+            copy: Optional[bool] = True
     ) -> ndarray:  # pylint: disable=arguments-differ,unused-argument, too-many-arguments
         """
         Copy of the array, cast to a specified type.
@@ -1594,7 +1594,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def asscalar(self: ndarray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
-    def argmax(self: ndarray, /, *, axis: Optional[int]=None, out: Optional[ndarray]=None) -> ndarray:  # pylint: disable=arguments-differ
+    def argmax(self: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] = None) -> ndarray:  # pylint: disable=arguments-differ
         """Return indices of the maximum values along the given axis.
         Refer to `mxnet.numpy.argmax` for full documentation."""
         return argmax(self, axis, out)
@@ -1652,7 +1652,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         warnings.warn('ndarray.context has been renamed to ndarray.ctx', DeprecationWarning)
         return self.as_nd_ndarray().context
 
-    def copy(self: ndarray, /, *, order: Optional[str]='C') -> ndarray:  # pylint: disable=arguments-differ
+    def copy(self: ndarray, /, *, order: Optional[str] = 'C') -> ndarray:  # pylint: disable=arguments-differ
         """Return a coyp of the array, keeping the same context.
 
         Parameters
@@ -1674,7 +1674,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                                       'received {}'.format(str(order)))
         return self.copyto(self.ctx)
 
-    def dot(self: ndarray, b: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+    def dot(self: ndarray, b: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
         """Dot product of two arrays.
         Refer to ``numpy.dot`` for full documentation."""
         return dot(self, b, out=out)
@@ -2523,9 +2523,9 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 def empty(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]]=float,
-        order: Optional[str]='C',
-        ctx: Optional[Context]=None,
+        dtype: Optional[Union[dtype, str]] = float,
+        order: Optional[str] = 'C',
+        ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, without initializing entries.
 
@@ -2579,8 +2579,8 @@ def array(
         object: Union[...],
         /,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        ctx: Optional[Context]=None
+        dtype: Optional[Union[dtype, str]] = None,
+        ctx: Optional[Context] = None
 ) -> ndarray:
     """
     Create an array.
@@ -2697,9 +2697,9 @@ def zeros(
         shape: Union[int, Tuple[int, ...]],
         /,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        order: Optional[str]='C',
-        ctx: Optional[Context]=None,
+        dtype: Optional[Union[dtype, str]] = None,
+        order: Optional[str] = 'C',
+        ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -2747,9 +2747,9 @@ def ones(
         shape: Union[int, Tuple[int, ...]],
         /,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        order: Optional[str]='C',
-        ctx: Optional[Context]=None,
+        dtype: Optional[Union[dtype, str]] = None,
+        order: Optional[str] = 'C',
+        ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
@@ -2830,10 +2830,10 @@ def full(
         shape: Union[int, Tuple[int, ...]],
         fill_value: Union[int, float],
         *,
-        dtype: Optional[Union[str, dtype]]=None,
-        order: Optional[str]='C',
-        ctx: Optional[Context]=None,
-        out: Optional[ndarray]=None,
+        dtype: Optional[Union[str, dtype]] = None,
+        order: Optional[str] = 'C',
+        ctx: Optional[Context] = None,
+        out: Optional[ndarray] = None,
 ) -> ndarray:
     r"""Return a new array of given shape and type, filled with `fill_value`.
 
@@ -2895,10 +2895,10 @@ def empty_like(
         prototype: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        order: Optional[str]='C',
-        subok: Optional[bool]=False,
-        shape: Optional[Union[int, Tuple[int, ...]]]=None,
+        dtype: Optional[Union[dtype, str]] = None,
+        order: Optional[str] = 'C',
+        subok: Optional[bool] = False,
+        shape: Optional[Union[int, Tuple[int, ...]]] = None,
 ) -> ndarray: # pylint: disable=W0621
     """
     Return a new array with the same shape and type as a given array.
@@ -2964,9 +2964,9 @@ def all(
         a: ndarray,
         /,
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
-        out: Optional[ndarray]=None,
-        keepdims: Optional[bool]=False
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = False
 ) -> ndarray:
     """
     Test whether all array elements along a given axis evaluate to True.
@@ -3078,7 +3078,7 @@ def any(
 
 
 @set_module('mxnet.numpy')
-def identity(n: int, /, *, dtype: Optional[Union[dtype, str]]=None, ctx: Optional[Context]=None) -> ndarray:
+def identity(n: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
     """
     Return the identity array.
 
@@ -3121,9 +3121,9 @@ def take(
         indices: ndarray,
         /,
         *,
-        axis: Optional[int]=None,
-        mode: Optional[str]='raise',
-        out: Optional[ndarray]=None
+        axis: Optional[int] = None,
+        mode: Optional[str] = 'raise',
+        out: Optional[ndarray] = None
 ) -> ndarray:
     r"""
     Take elements from an array along an axis.
@@ -3207,10 +3207,10 @@ def unique(
         ar: ndarray,
         /,
         *,
-        return_index: Optional[bool]=False,
-        return_inverse: Optional[bool]=False,
-        return_counts: Optional[bool]=False,
-        axis: Optional[int]=None
+        return_index: Optional[bool] = False,
+        return_inverse: Optional[bool] = False,
+        return_counts: Optional[bool] = False,
+        axis: Optional[int] = None
 ) -> Union[ndarray, Tuple[ndarray, ...]]:
     """
     Find the unique elements of an array.
@@ -3316,7 +3316,7 @@ def unique(
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Add arguments element-wise.
 
@@ -3360,7 +3360,7 @@ def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def subtract(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def subtract(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""Subtract arguments element-wise.
 
     Parameters
@@ -3402,7 +3402,7 @@ def subtract(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwar
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def multiply(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def multiply(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Multiply arguments element-wise.
 
@@ -3446,7 +3446,7 @@ def multiply(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwar
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """Returns a true division of the inputs, element-wise.
 
     .. note::
@@ -3486,7 +3486,7 @@ def divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs
 
 
 @set_module('mxnet.numpy')
-def true_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def true_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """Returns a true division of the inputs, element-wise.
 
     Instead of the Python traditional 'floor division', this returns a true
@@ -3532,7 +3532,7 @@ def true_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> 
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def mod(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def mod(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return element-wise remainder of division.
 
@@ -3564,7 +3564,7 @@ def mod(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def fmod(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def fmod(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return element-wise remainder of division.
 
@@ -3596,7 +3596,7 @@ def fmod(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) 
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def matmul(a: ndarray, b: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def matmul(a: ndarray, b: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""Matrix product of two arrays.
 
     Parameters
@@ -3698,7 +3698,7 @@ def matmul(a: ndarray, b: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) 
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def remainder(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def remainder(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return element-wise remainder of division.
 
@@ -3731,7 +3731,7 @@ def remainder(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwa
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def power(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def power(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     First array elements raised to powers from second array, element-wise.
 
@@ -3837,7 +3837,7 @@ pow.__doc_ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def gcd(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def gcd(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Returns the greatest common divisor of ``|x1|`` and ``|x2|``
 
@@ -3875,7 +3875,7 @@ def gcd(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def lcm(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def lcm(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Returns the lowest common multiple of ``|x1|`` and ``|x2|``
 
@@ -3913,7 +3913,7 @@ def lcm(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def sin(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def sin(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Trigonometric sine, element-wise.
 
@@ -3948,7 +3948,7 @@ def sin(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def cos(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def cos(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Cosine, element-wise.
 
@@ -3986,7 +3986,7 @@ def cos(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def sinh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def sinh(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Hyperbolic sine, element-wise.
     Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
@@ -4025,7 +4025,7 @@ def sinh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def cosh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def cosh(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Hyperbolic cosine, element-wise.
     Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
@@ -4059,7 +4059,7 @@ def cosh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def tanh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def tanh(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Compute hyperbolic tangent element-wise.
     Equivalent to ``np.sinh(x)/np.cosh(x)``.
@@ -4106,7 +4106,7 @@ def tanh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def log10(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def log10(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return the base 10 logarithm of the input array, element-wise.
 
@@ -4140,7 +4140,7 @@ def log10(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def sqrt(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def sqrt(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return the non-negative square-root of an array, element-wise.
 
@@ -4175,7 +4175,7 @@ def sqrt(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def cbrt(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def cbrt(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return the cube-root of an array, element-wise.
 
@@ -4204,7 +4204,7 @@ def cbrt(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def abs(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def abs(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Calculate the absolute value element-wise.
 
@@ -4234,7 +4234,7 @@ def abs(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def fabs(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def fabs(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Calculate the absolute value element-wise.
 
@@ -4269,7 +4269,7 @@ def fabs(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def absolute(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def absolute(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Calculate the absolute value element-wise.
     np.abs is a shorthand for this function.
@@ -4299,7 +4299,7 @@ def absolute(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def exp(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def exp(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Calculate the exponential of all elements in the input array.
 
@@ -4331,7 +4331,7 @@ def exp(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def expm1(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def expm1(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Calculate `exp(x) - 1` for all elements in the array.
 
@@ -4362,7 +4362,7 @@ def expm1(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arcsin(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs):
+def arcsin(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs):
     r"""
     Inverse sine, element-wise.
 
@@ -4479,7 +4479,7 @@ asin.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arccos(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def arccos(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Trigonometric inverse cosine, element-wise.
     The inverse of cos so that, if y = cos(x), then x = arccos(y).
@@ -4559,7 +4559,7 @@ acos.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arctan(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def arctan(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Trigonometric inverse tangent, element-wise.
     The inverse of tan, so that if ``y = tan(x)`` then ``x = arctan(y)``.
@@ -4652,7 +4652,7 @@ atan.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def sign(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def sign(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Returns an element-wise indication of the sign of a number.
     The `sign` function returns ``-1 if x < 0, 0 if x==0, 1 if x > 0``. Only supports real number.
@@ -4703,7 +4703,7 @@ def sign(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def log(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def log(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Natural logarithm, element-wise.
     The natural logarithm `log` is the inverse of the exponential function,
@@ -4757,7 +4757,7 @@ def log(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def rint(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def rint(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Round elements of the array to the nearest integer.
 
@@ -4795,7 +4795,7 @@ def rint(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def log2(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def log2(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Base-2 logarithm of x.
 
@@ -4834,7 +4834,7 @@ def log2(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def log1p(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def log1p(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return the natural logarithm of one plus the input array, element-wise.
     Calculates ``log(1 + x)``.
@@ -4880,7 +4880,7 @@ def log1p(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def degrees(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def degrees(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Convert angles from radians to degrees.
 
@@ -4930,7 +4930,7 @@ def degrees(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def rad2deg(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def rad2deg(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""Convert angles from radians to degrees.
 
     Parameters
@@ -4966,7 +4966,7 @@ def rad2deg(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def radians(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def radians(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Convert angles from degrees to radians.
 
@@ -5006,7 +5006,7 @@ def radians(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def deg2rad(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def deg2rad(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Convert angles from degrees to radians.
 
@@ -5042,7 +5042,7 @@ def deg2rad(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def reciprocal(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def reciprocal(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""Return the reciprocal of the argument, element-wise.
     Calculates ``1/x``.
 
@@ -5088,7 +5088,7 @@ def reciprocal(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarr
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def square(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def square(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Return the element-wise square of the input.
 
@@ -5130,7 +5130,7 @@ def square(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def negative(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def negative(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Numerical negative, element-wise.
 
@@ -5160,7 +5160,7 @@ def negative(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def fix(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def fix(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Round an array of floats element-wise to nearest integer towards zero.
     The rounded values are returned as floats.
@@ -5187,7 +5187,7 @@ def fix(x: ndarray, / ,*, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def tan(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def tan(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute tangent element-wise.
     Equivalent to np.sin(x)/np.cos(x) element-wise.
@@ -5218,7 +5218,7 @@ def tan(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def ceil(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def ceil(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Return the ceiling of the input, element-wise.
     The ceil of the ndarray `x` is the smallest integer `i`, such that
@@ -5257,7 +5257,7 @@ def ceil(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def floor(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def floor(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Return the floor of the input, element-wise.
     The ceil of the ndarray `x` is the largest integer `i`, such that
@@ -5295,7 +5295,7 @@ def floor(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def bitwise_invert(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def bitwise_invert(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute bit-wise inversion, or bit-wise NOT, element-wise.
     Computes the bit-wise NOT of the underlying binary representation of
@@ -5348,7 +5348,7 @@ def bitwise_invert(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> n
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def invert(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def invert(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute bit-wise inversion, or bit-wise NOT, element-wise.
     Computes the bit-wise NOT of the underlying binary representation of
@@ -5400,7 +5400,7 @@ def invert(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def bitwise_not(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def bitwise_not(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute bit-wise inversion, or bit-wise NOT, element-wise.
     Computes the bit-wise NOT of the underlying binary representation of
@@ -5453,7 +5453,7 @@ def bitwise_not(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndar
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def trunc(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def trunc(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Return the truncated value of the input, element-wise.
     The truncated value of the scalar `x` is the nearest integer `i` which
@@ -5492,7 +5492,7 @@ def trunc(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def logical_not(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def logical_not(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute the truth value of NOT x element-wise.
 
@@ -5531,7 +5531,7 @@ def logical_not(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndar
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arcsinh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def arcsinh(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Inverse hyperbolic cosine, element-wise.
 
@@ -5628,7 +5628,7 @@ asinh.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arccosh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def arccosh(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Inverse hyperbolic cosine, element-wise.
 
@@ -5724,7 +5724,7 @@ acosh.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arctanh(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def arctanh(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Inverse hyperbolic tangent, element-wise.
 
@@ -5824,9 +5824,9 @@ def argsort(
         a: ndarray,
         /,
         *,
-        axis: Optional[int]=-1,
-        kind: Optional[str]=None,
-        order: Optional[str, Tuple[str, ...]]=None
+        axis: Optional[int] = -1,
+        kind: Optional[str] = None,
+        order: Optional[str, Tuple[str, ...]] = None
 ) -> ndarray:
     """
     Returns the indices that would sort an array.
@@ -5904,9 +5904,9 @@ def sort(
         a: ndarray,
         /,
         *,
-        axis: Optional[int]=-1,
-        kind: Optional[str]=None,
-        order: Optional[str, Tuple[str, ...]]=None
+        axis: Optional[int] = -1,
+        kind: Optional[str] = None,
+        order: Optional[str, Tuple[str, ...]] = None
 ) -> ndarray:
     """
     Return a sorted copy of an array.
@@ -5949,7 +5949,7 @@ def sort(
 
 
 @set_module('mxnet.numpy')
-def tensordot(a: ndarray, b: ndarray, /, *, axes: Union[int, Tuple[Sequence[int], Sequence[int]]]=2) -> ndarray:
+def tensordot(a: ndarray, b: ndarray, /, *, axes: Union[int, Tuple[Sequence[int], Sequence[int]]] = 2) -> ndarray:
     r"""Compute tensor dot product along specified axes for arrays >= 1-D.
     Given two tensors (arrays of dimension greater than or equal to one),
     ``a`` and ``b``, and an ndarray object containing two ndarray
@@ -6048,11 +6048,11 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def eye(N: int,
-        M: Optional[int]=None,
+        M: Optional[int] = None,
         /,
         *,
-        k: Optional[int]=0,
-        dtype: Optional[Union[dtype, str]]=float,
+        k: Optional[int] = 0,
+        dtype: Optional[Union[dtype, str]] = float,
         **kwargs,
 ) -> ndarray:
     """
@@ -6099,13 +6099,13 @@ def linspace(
         start: Union[int, float],
         stop: Union[int, float],
         /,
-        num: Optional[int]=50,
+        num: Optional[int] = 50,
         *,
-        endpoint: Optional[bool]=True,
-        retstep: Optional[bool]=False,
-        dtype: Optional[Union[dtype, str]]=None,
-        axis: Optional[int]=0,
-        ctx: Optional[Context]=None,
+        endpoint: Optional[bool] = True,
+        retstep: Optional[bool] = False,
+        dtype: Optional[Union[dtype, str]] = None,
+        axis: Optional[int] = 0,
+        ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
@@ -6199,12 +6199,12 @@ def logspace(
         stop: Union[int, float],
         /,
         *,
-        num: Optional[int]=50,
-        endpoint: Optional[bool]=True,
-        base: Optional[float]=10.0,
-        dtype: Optional[Union[dtype, str]]=None,
-        axis: Optional[int]=0,
-        ctx: Optional[Context]=None
+        num: Optional[int] = 50,
+        endpoint: Optional[bool] = True,
+        base: Optional[float] = 10.0,
+        dtype: Optional[Union[dtype, str]] = None,
+        axis: Optional[int] = 0,
+        ctx: Optional[Context] = None
 ) -> ndarray:
     r"""Return numbers spaced evenly on a log scale.
 
@@ -6406,10 +6406,10 @@ def tile(A: Union[ndarray, Union[...]], reps: Union[int, Tuple[int, ...]], /) ->
 def trace(a: ndarray,
           /,
           *,
-          offset: Optional[int]=0,
-          axis1: Optional[int]=0,
-          axis2: Optional[int]=1,
-          out: Optional[ndarray]=None
+          offset: Optional[int] = 0,
+          axis1: Optional[int] = 0,
+          axis2: Optional[int] = 1,
+          out: Optional[ndarray] = None
           ) -> ndarray:
     """
     Return the sum along diagonals of the array.
@@ -6457,7 +6457,7 @@ def trace(a: ndarray,
 
 
 @set_module('mxnet.numpy')
-def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int]]]=None) -> ndarray:
+def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int]]] = None) -> ndarray:
     """
     Permute the dimensions of an array.
 
@@ -6500,7 +6500,7 @@ def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int]]]=None) -> 
 
 
 @set_module('mxnet.numpy')
-def repeat(a: Union[...], repeats: int, /, *, axis: Optional[int]=None):
+def repeat(a: Union[...], repeats: int, /, *, axis: Optional[int] = None):
     """
     Repeat elements of an array.
 
@@ -6543,7 +6543,7 @@ def repeat(a: Union[...], repeats: int, /, *, axis: Optional[int]=None):
 
 
 @set_module('mxnet.numpy')
-def tril(m: ndarray, /, *, k: Optional[int]=0) -> ndarray:
+def tril(m: ndarray, /, *, k: Optional[int] = 0) -> ndarray:
     r"""
     Lower triangle of an array.
 
@@ -6580,12 +6580,12 @@ def tril(m: ndarray, /, *, k: Optional[int]=0) -> ndarray:
 
 @set_module('mxnet.numpy')
 def tri(N: ndarray,
-        M: Optional[int]=None,
-        k: Optional[int]=0,
+        M: Optional[int] = None,
+        k: Optional[int] = 0,
         /,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        ctx: Optional[Context]=None) -> ndarray:    # pylint: disable=redefined-outer-name
+        dtype: Optional[Union[dtype, str]] = None,
+        ctx: Optional[Context] = None) -> ndarray:    # pylint: disable=redefined-outer-name
     r"""
     An array with ones at and below the given diagonal and zeros elsewhere.
     Parameters
@@ -6813,11 +6813,11 @@ def triu(m: ndarray, /, *, k: int=0) -> ndarray:
 def arange(
         start: Union[int, float],
         /,
-        stop: Optional[Union[int, float]]=None,
-        step: Union[int, float]=1,
+        stop: Optional[Union[int, float]] = None,
+        step: Union[int, float] = 1,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        ctx: Optional[Context]=None,
+        dtype: Optional[Union[dtype, str]] = None,
+        ctx: Optional[Context] = None,
 ) -> ndarray:
     """Return evenly spaced values within a given interval.
 
@@ -7197,7 +7197,7 @@ def concat(seq, axis=0, out=None):
 
 @set_module('mxnet.numpy')
 def concatenate(
-        seq:  Union[Tuple[ndarray, ...], List[ndarray]], /, *, axis: Optional[int]=0, out: Optional[ndarray]=None
+        seq:  Union[Tuple[ndarray, ...], List[ndarray]], /, *, axis: Optional[int] = 0, out: Optional[ndarray] = None
 ) -> ndarray:
     """Join a sequence of arrays along an existing axis.
 
@@ -7294,8 +7294,8 @@ def stack(
         arrays: Union[Tuple[ndarray, ...], List[ndarray]],
         /,
         *,
-        axis: Optional[int]=0,
-        out: Optional[ndarray]=None
+        axis: Optional[int] = 0,
+        out: Optional[ndarray] = None
 ) -> ndarray:
     """Join a sequence of arrays along a new axis.
         The axis parameter specifies the index of the new axis in the dimensions of the result.
@@ -7671,9 +7671,9 @@ def max(
         a: ndarray,
         /,
         *,
-        axis: Optional[int]=None,
-        out: Optional[ndarray]=None,
-        keepdims: Optional[bool]=False
+        axis: Optional[int] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = False
 ) -> ndarray:
     """
     Return the maximum of an array or maximum along an axis.
@@ -7743,9 +7743,9 @@ def min(
         a: ndarray,
         /,
         *,
-        axis: Optional[int]=None,
-        out: Optional[ndarray]=None,
-        keepdims: Optional[bool]=False
+        axis: Optional[int] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = False
 ) -> ndarray:
     """
     Return the minimum of an array or minimum along an axis.
@@ -7908,7 +7908,7 @@ def clip(a, a_min, a_max, out=None):
 
 
 @set_module('mxnet.numpy')
-def argmax(a: ndarray, /, *, axis: Optional[int]=None, out: Optional[ndarray]=None) -> ndarray:
+def argmax(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -7977,7 +7977,7 @@ def argmax(a: ndarray, /, *, axis: Optional[int]=None, out: Optional[ndarray]=No
 
 
 @set_module('mxnet.numpy')
-def argmin(a: ndarray, /, *, axis: Optional[int]=None, out: Optional[ndarray]=None) -> ndarray:
+def argmin(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Returns the indices of the minimum values along an axis.
 
@@ -8271,10 +8271,10 @@ def mean(
         a: ndarray,
         /,
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
-        dtype: Optional[Union[dtype, str]]=None,
-        out: Optional[ndarray]=None,
-        keepdims: Optional[bool]=False
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        dtype: Optional[Union[dtype, str]] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = False
 ) -> ndarray:  # pylint: disable=arguments-differ
     """
     Compute the arithmetic mean along the specified axis.
@@ -8345,11 +8345,11 @@ def std(
         a: ndarray,
         /,
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
-        dtype: Optional[Union[dtype, str]]=None,
-        out: Optional[ndarray]=None,
-        correction: Optional[int]=0,
-        keepdims: Optional[bool]=False
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        dtype: Optional[Union[dtype, str]] = None,
+        out: Optional[ndarray] = None,
+        correction: Optional[int] = 0,
+        keepdims: Optional[bool] = False
 ) -> ndarray:  # pylint: disable=too-many-arguments
     """
     Compute the standard deviation along the specified axis.
@@ -8473,11 +8473,11 @@ def var(
         a: ndarray,
         /,
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
-        dtype: Optional[Union[dtype, str]]=None,
-        out: Optional[ndarray]=None,
-        correction: Optional[int]=0,
-        keepdims: Optional[bool]=None
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        dtype: Optional[Union[dtype, str]] = None,
+        out: Optional[ndarray] = None,
+        correction: Optional[int] = 0,
+        keepdims: Optional[bool] = None
 ) -> ndarray:  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
@@ -9061,8 +9061,8 @@ def flip(
         m: ndarray,
         /,
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
-        out: Optional[ndarray]=None
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        out: Optional[ndarray] = None
 ) -> ndarray:
     r"""
     flip(m, axis=None, out=None)
@@ -9278,7 +9278,7 @@ def around(x, decimals=0, out=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def round(x: ndarray, /, *, decimals: int=0, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def round(x: ndarray, /, *, decimals: int=0, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     round(a, decimals=0, out=None)
     Round an array to the given number of decimals.
@@ -9304,7 +9304,7 @@ def round_(x, decimals=0, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def arctan2(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def arctan2(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Element-wise arc tangent of ``x1/x2`` choosing the quadrant correctly.
 
@@ -9532,7 +9532,7 @@ def hypot(x1, x2, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def bitwise_and(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def bitwise_and(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute the bit-wise XOR of two arrays element-wise.
 
@@ -9572,7 +9572,7 @@ def bitwise_and(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **k
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def bitwise_xor(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def bitwise_xor(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute the bit-wise XOR of two arrays element-wise.
 
@@ -9610,7 +9610,7 @@ def bitwise_xor(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **k
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def bitwise_or(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def bitwise_or(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Compute the bit-wise OR of two arrays element-wise.
 
@@ -10004,7 +10004,7 @@ def kron(a, b):
 
 
 @set_module('mxnet.numpy')
-def equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """
     Return (x1 == x2) element-wise.
     Parameters
@@ -10036,7 +10036,7 @@ def equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarra
 
 
 @set_module('mxnet.numpy')
-def not_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def not_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """
     Return (x1 != x2) element-wise.
     Parameters
@@ -10068,7 +10068,7 @@ def not_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> nd
 
 
 @set_module('mxnet.numpy')
-def greater(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def greater(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """
     Return the truth value of (x1 > x2) element-wise.
     Parameters
@@ -10100,7 +10100,7 @@ def greater(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndar
 
 
 @set_module('mxnet.numpy')
-def less(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def less(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """
     Return the truth value of (x1 < x2) element-wise.
     Parameters
@@ -10133,7 +10133,7 @@ def less(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def logical_and(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def logical_and(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Compute the truth value of x1 AND x2 element-wise.
     Parameters
@@ -10168,7 +10168,7 @@ def logical_and(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> 
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def logical_or(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def logical_or(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Compute the truth value of x1 OR x2 element-wise.
     Parameters
@@ -10203,7 +10203,7 @@ def logical_or(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> n
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def logical_xor(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def logical_xor(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Compute the truth value of x1 XOR x2 element-wise.
     Parameters
@@ -10237,7 +10237,7 @@ def logical_xor(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> 
 
 
 @set_module('mxnet.numpy')
-def greater_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def greater_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """
     Return the truth value of (x1 >= x2) element-wise.
     Parameters
@@ -10269,7 +10269,7 @@ def greater_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -
 
 
 @set_module('mxnet.numpy')
-def less_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None) -> ndarray:
+def less_equal(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """
     Return the truth value of (x1 <= x2) element-wise.
     Parameters
@@ -10306,7 +10306,7 @@ def roll(
         /,
         shift: Union[int, Tuple[int, ...]],
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None
+        axis: Optional[Union[int, Tuple[int, ...]]] = None
 ) -> ndarray:
     """
     Roll array elements along a given axis.
@@ -11410,10 +11410,10 @@ def full_like(
         /,
         fill_value: Union[int, float],
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        order: Optional[str]='C',
-        ctx: Optional[Context]=None,
-        out: Optional[ndarray]=None,
+        dtype: Optional[Union[dtype, str]] = None,
+        order: Optional[str] = 'C',
+        ctx: Optional[Context] = None,
+        out: Optional[ndarray] = None,
 ) -> ndarray: # pylint: disable=too-many-arguments
     """
     Return a full array with the same shape and type as a given array.
@@ -11474,10 +11474,10 @@ def zeros_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        order: Optional[str]='C',
-        ctx: Optional[Context]=None,
-        out: Optional[ndarray]=None,
+        dtype: Optional[Union[dtype, str]] = None,
+        order: Optional[str] = 'C',
+        ctx: Optional[Context] = None,
+        out: Optional[ndarray] = None,
 ) -> ndarray:
     """
     Return an array of zeros with the same shape and type as a given array.
@@ -11540,10 +11540,10 @@ def ones_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]]=None,
-        order: Optional[str]='C',
-        ctx: Optional[Context]=None,
-        out: Optional[ndarray]=None,
+        dtype: Optional[Union[dtype, str]] = None,
+        order: Optional[str] = 'C',
+        ctx: Optional[Context] = None,
+        out: Optional[ndarray] = None,
 ) -> ndarray:
     """
     Return an array of ones with the same shape and type as a given array.
@@ -11781,7 +11781,7 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def squeeze(x: ndarray, /, axis: Union[int, Tuple[int, ...]]=None) -> ndarray:
+def squeeze(x: ndarray, /, axis: Union[int, Tuple[int, ...]] = None) -> ndarray:
     r"""Remove single-dimensional entries from the shape of an array.
 
     Parameters
@@ -11831,7 +11831,7 @@ def squeeze(x: ndarray, /, axis: Union[int, Tuple[int, ...]]=None) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def isnan(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def isnan(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Test element-wise for NaN and return result as a boolean array.
 
@@ -11882,7 +11882,7 @@ def isnan(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def isinf(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def isinf(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Test element-wise for positive or negative infinity.
 
@@ -12032,7 +12032,7 @@ def isneginf(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def isfinite(x: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def isfinite(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Test element-wise for finiteness (not infinity or not Not a Number).
 
@@ -12483,11 +12483,11 @@ def prod(
         a: ndarray,
         /,
         *,
-        axis: Optional[Union[int, Tuple[int, ...]]]=None,
-        dtype: Optional[Union[dtype, str]]=None,
-        out: Optional[ndarray]=None,
-        keepdims: Optional[bool]=False,
-        initial: Optional[int]=None
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        dtype: Optional[Union[dtype, str]] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = False,
+        initial: Optional[int] = None
 ) -> ndarray: # pylint: disable=too-many-arguments
     """
     Return the product of array elements over a given axis.
@@ -12566,7 +12566,7 @@ def prod(
     return _mx_nd_np.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
 
 @set_module('mxnet.numpy')
-def dot(a: ndarray, b: ndarray, /, *, out: Optional[ndarray]=None, **kwargs) -> ndarray:
+def dot(a: ndarray, b: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Dot product of two arrays. Specifically,
 
@@ -12680,7 +12680,7 @@ def cumsum(a, axis=None, dtype=None, out=None):
     return _mx_nd_np.cumsum(a, axis=axis, dtype=dtype, out=out)
 
 @set_module('mxnet.numpy')
-def reshape(a: ndarray, /, newshape: Union[int, Tuple[int, ...]], order: Optional[str]='C') -> ndarray:
+def reshape(a: ndarray, /, newshape: Union[int, Tuple[int, ...]], order: Optional[str] = 'C') -> ndarray:
     """
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
@@ -12993,11 +12993,11 @@ def sum(
         a: ndarray,
         /,
         *,
-        axis: Optional[int]=None,
-        dtype: Optional[Union[dtype, str]]=None,
-        out: Optional[ndarray]=None,
-        keepdims: Optional[bool]=None,
-        initial: Optional[int]=None,
+        axis: Optional[int] = None,
+        dtype: Optional[Union[dtype, str]] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = None,
+        initial: Optional[int] = None,
         where=None
 ) -> ndarray:
     r"""
