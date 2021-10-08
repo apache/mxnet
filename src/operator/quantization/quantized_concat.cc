@@ -38,10 +38,11 @@ static bool QuantizedConcatShape(const nnvm::NodeAttrs& attrs,
   index_t size              = 0;
   bool has_unknown_dim_size = false;
   int axis                  = -1;
+  int param_dim             = param_.dim.has_value() ? param_.dim.value() : 0;
   for (int i = 0; i < param_.num_args; ++i) {
     mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim() > 0) {
-      axis                 = CheckAxis(param_.dim, tmp.ndim());
+      axis                 = CheckAxis(param_dim, tmp.ndim());
       has_unknown_dim_size = !mxnet::dim_size_is_known(tmp, axis) || has_unknown_dim_size;
       size += tmp[axis];
       tmp[axis] = -1;
@@ -51,7 +52,7 @@ static bool QuantizedConcatShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape tmp = (*out_shape)[0];
   if (tmp.ndim() > 0) {
-    axis      = CheckAxis(param_.dim, tmp.ndim());
+    axis      = CheckAxis(param_dim, tmp.ndim());
     tmp[axis] = -1;
     shape_assign(&dshape, tmp);
   }
@@ -146,45 +147,15 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
     .add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Concat).set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-  const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   nnvm::ObjectPtr node     = nnvm::Node::Create();
-  if (param.dim > 0) {
-    node->attrs.op   = Op::Get("_contrib_quantized_concat");
-    node->attrs.name = "quantized_" + attrs.name;
-  } else {
-    LOG(INFO) << "Currently, quantized concat only supports dim>0, exclude " << attrs.name
-              << " which dim is " << param.dim;
-    node->attrs.op   = nullptr;
-    node->attrs.name = attrs.name;
-  }
+  node->attrs.op   = Op::Get("_contrib_quantized_concat");
+  node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
   if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
     node->op()->attr_parser(&(node->attrs));
   }
   return node;
 });
-
-NNVM_REGISTER_OP(_npi_concatenate)
-    .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-      const NumpyConcatenateParam& param = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
-      nnvm::ObjectPtr node               = nnvm::Node::Create();
-      if (param.axis.has_value() && param.axis.value() > 0) {
-        node->attrs.op   = Op::Get("_contrib_quantized_concat");
-        node->attrs.name = "quantized_" + attrs.name;
-      } else {
-        LOG(INFO) << "Currently, quantized numpy concatenate only supports axis>0, exclude "
-                  << attrs.name << " which axis is " << param.axis;
-        node->attrs.op   = nullptr;
-        node->attrs.name = attrs.name;
-      }
-      node->attrs.dict        = attrs.dict;
-      node->attrs.dict["dim"] = node->attrs.dict["axis"];
-      node->attrs.dict.erase("axis");
-      if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
-        node->op()->attr_parser(&(node->attrs));
-      }
-      return node;
-    });
 
 }  // namespace op
 }  // namespace mxnet
