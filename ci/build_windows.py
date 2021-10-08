@@ -109,7 +109,7 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
-        '-T version=14.28'
+        '-T version=14.28 '
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
@@ -123,7 +123,7 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_ONEDNN': (
-        '-T version=14.28'
+        '-T version=14.28 '
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
