@@ -9211,7 +9211,7 @@ atan2.__doc__ = """
 
     .. notes::
        `atan2` is a alias for `arctan2`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x1-x2
        instead of an official NumPy operator.
        
        *atan2* is identical to the ``atan2`` function of the underlying
