@@ -575,7 +575,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             key: Union[
                 int, slice, ellipsis, Tuple[Union[int, slice, ellipsis], ...], ndarray
             ],
-            /,
+            /
     ) -> ndarray:
         """Return self[key].
 
@@ -9253,7 +9253,7 @@ def fliplr(m: Union[...], /) -> ndarray:
     """
     return flip(m, 1)
 
-
+#TODO s
 @set_module('mxnet.numpy')
 def around(x: ndarray, decimals=0, out=None, **kwargs):
     r"""
