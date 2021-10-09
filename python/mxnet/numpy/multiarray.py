@@ -6706,7 +6706,7 @@ def triu_indices_from(arr, k=0):
 
 
 @set_module('mxnet.numpy')
-def tril_indices(n, k=0, m=None):
+def tril_indices(n: int, k: Optional[int] = 0, m: Optional[int] = None) -> Tuple[ndarray, ...]:
     """
     Return the indices for the lower-triangle of an (n, m) array.
 
@@ -6879,7 +6879,7 @@ def arange(
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
 # pylint: enable=redefined-outer-name
 
-
+#TODO
 @set_module('mxnet.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -6938,7 +6938,7 @@ def split(ary, indices_or_sections, axis=0):
     """
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
 
-
+#TODO
 @set_module('mxnet.numpy')
 def array_split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -6991,7 +6991,7 @@ def array_split(ary, indices_or_sections, axis=0):
     """
     return _mx_nd_np.array_split(ary, indices_or_sections, axis=axis)
 
-
+#TODO
 @set_module('mxnet.numpy')
 def vsplit(ary, indices_or_sections):
     r"""Split an array into multiple sub-arrays vertically (row-wise).
@@ -7064,7 +7064,7 @@ def vsplit(ary, indices_or_sections):
     """
     return _mx_nd_np.vsplit(ary, indices_or_sections)
 
-
+#TODO
 @set_module('mxnet.numpy')
 def dsplit(ary, indices_or_sections):
     r"""
@@ -7139,7 +7139,7 @@ def dsplit(ary, indices_or_sections):
     return _mx_nd_np.dsplit(ary, indices_or_sections)
 
 @set_module('mxnet.numpy')
-def concat(seq, axis=0, out=None):
+def concat(seq: Tuple[Union[...]], /, *, axis: Optional[int] = 0, out: Optional[ndarray] = None) -> ndarray:
     """Join a sequence of arrays along an existing axis.
 
     Parameters
@@ -7250,7 +7250,7 @@ def concatenate(
 
 
 @set_module('mxnet.numpy')
-def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
+def append(arr: ndarray, values: ndarray, /, *, axis: Optional[int] = None) -> ndarray:  # pylint: disable=redefined-outer-name
     """
     Append values to the end of an array.
 
@@ -7348,7 +7348,7 @@ def stack(
 
 
 @set_module('mxnet.numpy')
-def vstack(arrays, out=None):
+def vstack(arrays: Tuple[ndarray], /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""Stack arrays in sequence vertically (row wise).
 
     This is equivalent to concatenation along the first axis after 1-D arrays
@@ -7393,7 +7393,7 @@ def vstack(arrays, out=None):
 
 
 @set_module('mxnet.numpy')
-def row_stack(arrays):
+def row_stack(arrays: Tuple[ndarray], /):
     r"""Stack arrays in sequence vertically (row wise).
     This is equivalent to concatenation along the first axis after 1-D arrays
     of shape `(N,)` have been reshaped to `(1,N)`. Rebuilds arrays divided by
@@ -7430,7 +7430,7 @@ def row_stack(arrays):
     """
     return _mx_nd_np.row_stack(arrays)
 
-
+#TODO
 @set_module('mxnet.numpy')
 def column_stack(tup):
     """
@@ -7468,7 +7468,7 @@ def column_stack(tup):
 
 
 @set_module('mxnet.numpy')
-def hstack(arrays):
+def hstack(arrays: Tuple[ndarray], /) -> ndarray:
     """
     Stack arrays in sequence horizontally (column wise).
     This is equivalent to concatenation along the second axis,
@@ -7507,7 +7507,7 @@ def hstack(arrays):
 
 
 @set_module('mxnet.numpy')
-def dstack(arrays):
+def dstack(arrays: Tuple[ndarray], /) -> ndarray:
     """
     Stack arrays in sequence depth wise (along third axis).
 
@@ -7552,7 +7552,7 @@ def dstack(arrays):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def maximum(x1, x2, out=None, **kwargs):
+def maximum(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs):
     """
     Returns element-wise maximum of the input arrays with broadcasting.
 
@@ -7610,7 +7610,7 @@ def fmax(x1, x2, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def minimum(x1, x2, out=None, **kwargs):
+def minimum(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Returns element-wise minimum of the input arrays with broadcasting.
 
@@ -7639,7 +7639,7 @@ def minimum(x1, x2, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def fmin(x1, x2, out=None, **kwargs):
+def fmin(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Returns element-wise minimum of the input arrays with broadcasting. (Ignores NaNs)
 
@@ -7808,7 +7808,7 @@ def min(
 
 
 @set_module('mxnet.numpy')
-def swapaxes(a, axis1, axis2):
+def swapaxes(a: ndarray, axis1: int, axis2: int, /) -> ndarray:
     """Interchange two axes of an array.
 
     Parameters
@@ -7850,7 +7850,7 @@ def swapaxes(a, axis1, axis2):
     """
     return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
 
-
+#TODO
 @set_module('mxnet.numpy')
 def clip(a, a_min, a_max, out=None):
     """clip(a, a_min, a_max, out=None)
@@ -8046,7 +8046,14 @@ def argmin(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] 
 
 
 @set_module('mxnet.numpy')
-def amax(a, axis=None, out=None, keepdims=False):
+def amax(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int]=None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool] = False
+) -> ndarray:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -8111,7 +8118,14 @@ def amax(a, axis=None, out=None, keepdims=False):
 
 
 @set_module('mxnet.numpy')
-def amin(a, axis=None, out=None, keepdims=False):
+def amin(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int] = None,
+        out: Optional[ndarray] = None,
+        keepdims: Optional[bool]=False
+) -> ndarray:
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -8173,7 +8187,15 @@ def amin(a, axis=None, out=None, keepdims=False):
 
 
 @set_module('mxnet.numpy')
-def average(a, axis=None, weights=None, returned=False, out=None):
+def average(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int] = None,
+        weights: Optional[ndarray] = None,
+        returned: Optional[bool] = False,
+        out: Optional[ndarray] = None
+) -> ndarray:
     """
     Compute the weighted average along the specified axis.
 
@@ -8416,9 +8438,9 @@ def std(
     return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=correction, keepdims=keepdims, out=out)
 # pylint: enable=redefined-outer-name
 
-
+#mark
 @set_module('mxnet.numpy')
-def delete(arr, obj, axis=None):
+def delete(arr: ndarray, obj: Union[int, ndarray], axis: Optional[int] = None) -> ndarray:
     """
     Return a new array with sub-arrays along an axis deleted. For a one
     dimensional array, this returns those entries not returned by
@@ -8551,7 +8573,13 @@ def var(
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def indices(dimensions, dtype=None, ctx=None):
+def indices(
+        dimensions: Tuple[int],
+        /,
+        *,
+        dtype: Optional[Union[dtype, str]] = None,
+        ctx: Optional[Context] = None
+) -> ndarray:
     """Return an array representing the indices of a grid.
 
     Compute an array where the subarrays contain index values 0,1,...
@@ -8614,7 +8642,7 @@ def indices(dimensions, dtype=None, ctx=None):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def copysign(x1, x2, out=None, **kwargs):
+def copysign(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Change the sign of x1 to that of x2, element-wise.
 
@@ -8663,7 +8691,7 @@ def copysign(x1, x2, out=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def ravel(x, order='C'):
+def ravel(x: ndarray, /, *, order: Optional[str]='C') -> ndarray:
     r"""
     ravel(x)
 
@@ -8709,7 +8737,7 @@ def ravel(x, order='C'):
 
 
 @set_module('mxnet.numpy')
-def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
+def unravel_index(indices: Union[...], shape: Tuple[int, ...], /, *, order: str='C') -> ndarray: # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
 
@@ -8740,7 +8768,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
 
 
 @set_module('mxnet.numpy')
-def flatnonzero(a):
+def flatnonzero(a: Union[...], /) -> ndarray:
     r"""
     Return indices that are non-zero in the flattened version of a.
 
@@ -8780,7 +8808,7 @@ def flatnonzero(a):
 
 
 @set_module('mxnet.numpy')
-def diag_indices_from(arr):
+def diag_indices_from(arr: ndarray, /) -> Tuple[ndarray, ...]:
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
     a with a.ndim >= 2 dimensions and shape (n, n, ..., n). For a.ndim = 2 this is
@@ -8821,7 +8849,7 @@ def diag_indices_from(arr):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hanning(M, dtype=None, ctx=None):
+def hanning(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -8902,7 +8930,7 @@ def hanning(M, dtype=None, ctx=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hamming(M, dtype=None, ctx=None):
+def hamming(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -8981,7 +9009,7 @@ def hamming(M, dtype=None, ctx=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def blackman(M, dtype=None, ctx=None):
+def blackman(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three
@@ -9125,7 +9153,7 @@ def flip(
 
 
 @set_module('mxnet.numpy')
-def flipud(m):
+def flipud(m: Union[...], /) -> Union[...]:
     r"""
     flipud(*args, **kwargs)
 
@@ -9178,7 +9206,7 @@ def flipud(m):
 
 
 @set_module('mxnet.numpy')
-def fliplr(m):
+def fliplr(m: Union[...], /) -> ndarray:
     r"""
     fliplr(*args, **kwargs)
 
@@ -9227,7 +9255,7 @@ def fliplr(m):
 
 
 @set_module('mxnet.numpy')
-def around(x, decimals=0, out=None, **kwargs):
+def around(x: ndarray, decimals=0, out=None, **kwargs):
     r"""
     around(x, decimals=0, out=None)
 
