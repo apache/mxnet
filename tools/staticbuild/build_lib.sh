@@ -40,9 +40,6 @@ cmake -GNinja -C $cmake_config \
       -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
       ..
 ninja
-if [[ ! $PLATFORM == 'darwin' ]] && [[ $BLAS == 'mkl' ]]; then
-    patchelf --set-rpath "/opt/intel/oneapi/mkl/${INTEL_MKL}/lib/intel64/:\$ORIGIN" --force-rpath libmxnet.so
-fi
 cd -
 
 # Move to lib

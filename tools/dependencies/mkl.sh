@@ -18,7 +18,6 @@
 # under the License.
 
 # This script downloads OneMKL
-# TODO @akarbown: Get more general link to download the OneMKL (instead of the generated one)
 set -ex
 export INTEL_MKL="2021.3.0"
 if [[  (! -e /opt/intel/oneapi/mkl/) ]]; then
