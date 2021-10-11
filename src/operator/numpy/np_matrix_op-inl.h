@@ -50,7 +50,7 @@ struct NumpyTransposeParam : public dmlc::Parameter<NumpyTransposeParam> {
             "the axes according to the values given.");
   }
 
-  bool operator==(const NumpyTransposeParam &other) const {
+  bool operator==(const NumpyTransposeParam& other) const {
     return this->axes == other.axes;
   }
 
@@ -1874,11 +1874,11 @@ void NumpyDiagIndicesFromForward(const nnvm::NodeAttrs& attrs,
 }  // namespace mxnet
 
 namespace std {
-template<>
+template <>
 struct hash<mxnet::op::NumpyTransposeParam> {
   size_t operator()(const mxnet::op::NumpyTransposeParam& val) {
     size_t ret = 0;
-    ret = dmlc::HashCombine(ret, val.axes);
+    ret        = dmlc::HashCombine(ret, val.axes);
     return ret;
   }
 };
