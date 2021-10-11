@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_interp_op.cc
  * \brief CPU Implementation of Numpy-compatible interp
  */

@@ -30,7 +30,6 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon, autograd as ag
 from mxnet.gluon import nn
-from mxnet.gluon.contrib import nn as contrib_nn
 from mxnet.image import CenterCropAug, ResizeAug
 from mxnet.io import PrefetchingIter
 from mxnet.test_utils import download
@@ -133,21 +132,20 @@ def get_dataset(prefetch=False):
 
 train_data, val_data = get_dataset()
 
-mx.random.seed(opt.seed)
+mx.np.random.seed(opt.seed)
 ctx = [mx.gpu(0)] if opt.use_gpu else [mx.cpu()]
 
 
 class SuperResolutionNet(gluon.HybridBlock):
     def __init__(self, upscale_factor):
         super(SuperResolutionNet, self).__init__()
-        with self.name_scope():
-            self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), activation='relu')
-            self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
-            self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
-            self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1))
-            self.pxshuf = contrib_nn.PixelShuffle2D(upscale_factor)
+        self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), activation='relu')
+        self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
+        self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
+        self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1))
+        self.pxshuf = nn.PixelShuffle2D(upscale_factor)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
@@ -219,8 +217,8 @@ def resolve(ctx):
     net.load_parameters(path.join(this_dir, 'superres.params'), ctx=ctx)
     img = Image.open(opt.resolve_img).convert('YCbCr')
     y, cb, cr = img.split()
-    data = mx.nd.expand_dims(mx.nd.expand_dims(mx.nd.array(y), axis=0), axis=0)
-    out_img_y = mx.nd.reshape(net(data), shape=(-3, -2)).asnumpy()
+    data = mx.np.expand_dims(mx.np.expand_dims(mx.np.array(y), axis=0), axis=0)
+    out_img_y = mx.np.reshape(net(data), shape=(-3, -2)).asnumpy()
     out_img_y = out_img_y.clip(0, 255)
     out_img_y = Image.fromarray(np.uint8(out_img_y[0]), mode='L')
 

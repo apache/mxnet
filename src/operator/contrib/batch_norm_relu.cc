@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file batch_norm_relu.cc
  * \brief
  * \author Xinyu Chen

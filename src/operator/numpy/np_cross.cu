@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file np_bicount_op.cu
  * \brief GPU Implementation of numpy-compatible cross
  */

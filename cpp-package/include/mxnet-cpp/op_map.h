@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file op_map.h
 * \brief definition of OpMap
 * \author Chuntao Hong

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file expression.h
  * \brief definitions of abstract expressions and expressions template
  * \author Tianqi Chen, Bing Xu

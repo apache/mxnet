@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file transformer.cu
  * \brief GPU implementation of the operators used in Transformer
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_gamma_op.cc
  * \brief Operator for random sampling from gamma distribution
  */

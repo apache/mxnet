@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file group_norm-inl.h
  * \brief Implements Group Normalization (https://arxiv.org/abs/1803.08494).
  * \author Hao Jin

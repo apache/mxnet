@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file c_api.h
  * \brief C API of mxnet
  */
@@ -1274,6 +1273,14 @@ MXNET_DLL int MXAutogradMarkVariables(uint32_t num_var,
                                       NDArrayHandle *var_handles,
                                       uint32_t *reqs_array,
                                       NDArrayHandle *grad_handles);
+/*!
+ * \brief unmark nonleaf NDArrays to free the memory
+ * \param num_var number of variable NDArrays
+ * \param var_handles variable NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradDropGrads(uint32_t num_var,
+                                  NDArrayHandle *var_handles);
 /*!
  * \brief compute the gradient of outputs w.r.t variabels
  * \param num_output number of output NDArray
@@ -3152,6 +3159,29 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
  */
 MXNET_DLL int MXCheckDynamicShapeOp(SymbolHandle sym_handle,
                                     bool* has_dynamic_shape);
+
+/*!
+  * \brief Push a new NVTX range. Requires building with CUDA and NVTX.
+  * \param name Name of the range.
+  * \param color Color used to display the range in the visual profiling tools.
+  *              Encoded as 256*256*R + 256*G + B.
+  */
+MXNET_DLL int MXNVTXRangePush(const char * name, mx_uint color);
+
+/*!
+  * \brief End the NVTX range. Requires building with CUDA and NVTX.
+  */
+MXNET_DLL int MXNVTXRangePop();
+
+/*!
+  * \brief Start CUDA profiling session. Requires building with CUDA and NVTX.
+  */
+MXNET_DLL int MXCUDAProfilerStart();
+
+/*!
+  * \brief End CUDA profiling session. Requires building with CUDA and NVTX.
+  */
+MXNET_DLL int MXCUDAProfilerStop();
 
 #ifdef __cplusplus
 }

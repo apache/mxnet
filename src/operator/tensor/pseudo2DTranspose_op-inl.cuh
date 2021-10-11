@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file pseudo2DTranspose_op-inl.cuh
  * \brief pseudo 2D transpose
  * \author Dawid Tracz

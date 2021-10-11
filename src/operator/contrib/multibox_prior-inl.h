@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file multibox_prior-inl.h
  * \brief generate multibox prior boxes
  * \author Joshua Zhang

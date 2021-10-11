@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_trace_op.cc
  * \brief CPU Implementation of numpy-compatible trace operator
  */

@@ -174,7 +174,7 @@ class ImagePairIter(mx.io.DataIter):
                 image = Image.open(fn).convert('YCbCr').split()[0]
                 if image.size[0] > image.size[1]:
                     image = image.transpose(Image.TRANSPOSE)
-                image = mx.nd.expand_dims(mx.nd.array(image), axis=2)
+                image = mx.np.expand_dims(mx.np.array(image), axis=2)
                 target = image.copy()
                 for aug in self.input_aug:
                     image = aug(image)
@@ -183,10 +183,10 @@ class ImagePairIter(mx.io.DataIter):
                 data.append(image)
                 label.append(target)
 
-            data = mx.nd.concat(*[mx.nd.expand_dims(d, axis=0) for d in data], dim=0)
-            label = mx.nd.concat(*[mx.nd.expand_dims(d, axis=0) for d in label], dim=0)
-            data = [mx.nd.transpose(data, axes=(0, 3, 1, 2)).astype('float32')/255]
-            label = [mx.nd.transpose(label, axes=(0, 3, 1, 2)).astype('float32')/255]
+            data = mx.np.concatenate([mx.np.expand_dims(d, axis=0) for d in data], axis=0)
+            label = mx.np.concatenate([mx.np.expand_dims(d, axis=0) for d in label], axis=0)
+            data = [mx.np.transpose(data, axes=(0, 3, 1, 2)).astype('float32')/255]
+            label = [mx.np.transpose(label, axes=(0, 3, 1, 2)).astype('float32')/255]
 
             return mx.io.DataBatch(data=data, label=label)
         else:

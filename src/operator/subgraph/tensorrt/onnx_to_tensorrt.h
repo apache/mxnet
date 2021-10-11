@@ -1,5 +1,3 @@
-#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_ONNX_TO_TENSORRT_H_
-#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_ONNX_TO_TENSORRT_H_
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,11 +18,13 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file onnx_to_tensorrt.h
  * \brief TensorRT integration with the MXNet executor
  * \author Marek Kolodziej, Clement Fuji Tsang
  */
+
+#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_ONNX_TO_TENSORRT_H_
+#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_ONNX_TO_TENSORRT_H_
 
 #if MXNET_USE_TENSORRT
 

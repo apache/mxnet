@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_delete_op-inl.h
  * \brief Function definition of delete operators
  */

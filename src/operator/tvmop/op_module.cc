@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file op_module.cc
  * \brief Invoke registered TVM operators.
  * \author Yizhi Liu

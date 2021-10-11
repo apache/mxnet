@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file optimizer_op.cu
  * \brief Optimizer operators
  * \author Junyuan Xie

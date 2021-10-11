@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file threaded_engine.h
  * \brief Implements base class of threaded engine
  *    that tracks the dependency and pushes actions to execute.
@@ -586,7 +585,7 @@ class ThreadedEngine : public Engine {
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
-   * See also #309 (https://github.com/dmlc/mxnet/issues/309)
+   * See also #309 (https://github.com/apache/mxnet/issues/309)
    */
   std::shared_ptr<common::ObjectPool<ThreadedOpr>> objpool_opr_ref_;
   std::shared_ptr<common::ObjectPool<OprBlock>> objpool_blk_ref_;

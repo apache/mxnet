@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file elemwise_binary_broadcast_op.h
  * \brief Function definition of elementwise binary broadcast operators
  */

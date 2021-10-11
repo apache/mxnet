@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file np_cross-inl.h
  * \brief Function definition of cross product of two (arrays of) vectors
  */
