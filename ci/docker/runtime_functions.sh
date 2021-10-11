@@ -701,6 +701,7 @@ build_ubuntu_gpu_large_tensor() {
 
 sanity_check() {
     set -ex
+    sanity_clang
     sanity_license
     sanity_python
     sanity_cpp
@@ -714,6 +715,43 @@ sanity_license() {
 sanity_cpp() {
     set -ex
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests --exclude_path src/operator/contrib/ctc_include include/onednn
+}
+
+sanity_clang() {
+    set -ex
+    # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
+    BASE_SHA="${GITHUB_PR_BASE_SHA}"
+    GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
+    GITHUB_BASE_REF="${GITHUB_PR_BASE_REF}"
+
+    if [ "${BASE_SHA}" == "" ]; then
+        BASE_SHA=`git show-ref --hash refs/remotes/origin/master`
+        if [ "${GITHUB_RUN_ID}" == "" ] || [ "${GITHUB_BASE_REF}" == "" ]; then
+             GITHUB_RUN_ID=`(git log --pretty=format:'%h' -n 1)`
+             GITHUB_BASE_REF="master"
+        fi
+    fi
+
+    git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
+    git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
+    
+    tools/lint/clang_format_ci.sh "${BASE_SHA}"
+    GIT_DIFFERENCE=$(git diff)
+    if [[ -z $GIT_DIFFERENCE ]]; then
+        git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
+        exit 0
+    fi
+    
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "| clang-format failures found! Run: "
+    echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
+    echo "| to fix this error. "
+    echo "| For more info, see: "
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    
+    echo "$GIT_DIFFERENCE"
+    git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
+    exit 1
 }
 
 sanity_python() {
