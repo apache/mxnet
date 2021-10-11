@@ -11,6 +11,7 @@ header:
     - 'DISCLAIMER'
     - 'KEYS'
     - 'tools/dependencies/LICENSE.binary.dependencies'
+    - 'tools/lint/git-clang-format-13'
     # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
     - 'docs'
     - 'CODEOWNERS'
