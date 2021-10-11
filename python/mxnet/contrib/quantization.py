@@ -529,10 +529,6 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
 
     return qsym, qarg_params, aux_params
 
-<<<<<<< HEAD
-
-=======
->>>>>>> dnnl -> oneDNN/ONEDNN/onednn for functions/variables visible from outside
 def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_batches=None,
@@ -558,15 +554,7 @@ def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
         raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
     if ctx.device_type != 'cpu':
         raise ValueError(
-<<<<<<< HEAD
-<<<<<<< HEAD
             'quantize_model_onednn only support Intel cpu platform with oneDNN Backend')
-=======
-            'quantize_model_dnnl only support Intel cpu platform with oneDNN Backend')
->>>>>>> review changes
-=======
-            'quantize_model_onednn only support Intel cpu platform with oneDNN Backend')
->>>>>>> dnnl -> oneDNN/ONEDNN/onednn for functions/variables visible from outside
 
     sym = sym.optimize_for(backend='ONEDNN_QUANTIZE')
 
