@@ -53,7 +53,7 @@ def matrix_rank(M, tol=None, hermitian=False):
     hermitian : bool, optional
         If True, `M` is assumed to be Hermitian (symmetric if real-valued),
         enabling a more efficient method for finding singular values.
-        Defaults to False.
+        Default: False.
 
     Returns
     -------
