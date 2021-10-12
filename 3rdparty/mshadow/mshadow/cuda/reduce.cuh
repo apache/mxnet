@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file reduce.cuh
  * \brief helper functions to do reduction
  * \author Tianqi Chen

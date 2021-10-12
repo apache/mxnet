@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_fill_diagonal_op.cu
  * \brief GPU implementation of numpy fill_diagonal operator
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file quantized_activation.cc
  */
 #include <mxnet/op_attr_types.h>

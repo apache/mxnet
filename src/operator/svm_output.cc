@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file svm_output.cc
  * \brief
  * \author Jonas Amaro
@@ -88,7 +87,7 @@ MXNET_REGISTER_OP_PROPERTY(SVMOutput, SVMOutputProp)
     .describe(R"code(Computes support vector machine based transformation of the input.
 
 This tutorial demonstrates using SVM as output layer for classification instead of softmax:
-https://github.com/dmlc/mxnet/tree/v1.x/example/svm_mnist.
+https://github.com/apache/mxnet/tree/v1.x/example/svm_mnist.
 
 )code")
     .add_argument("data", "NDArray-or-Symbol", "Input data for SVM transformation.")

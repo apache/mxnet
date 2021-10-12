@@ -10884,3 +10884,76 @@ def test_slice_like():
             xx[:] = 0.0
             xx[idx] = x.asnumpy()[idx]
             assert_allclose(x1.grad.asnumpy(), np.zeros_like(x1.grad).asnumpy())
+
+
+@use_np
+@pytest.mark.parametrize('shape,num_filter,num_group,kernel,pad', [
+    ((1, 4, 15), 16, 2, (2,), (0,)),
+    ((8, 4, 16), 16, 1, (3,), (1,)),
+
+    ((1, 4, 15, 16), 16, 2, (2, 2), (0, 0)),
+    ((8, 4, 16, 16), 16, 1, (3, 3), (1, 1)),
+
+    ((1, 4, 3, 15, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
+    ((8, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
+def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
+    if len(kernel) == 3 and mx.current_context().device_type == 'gpu':
+        pytest.skip('Skipping deconvoluition 3D tests for GPU')
+
+    class TestConv(mx.gluon.HybridBlock):
+        def __init__(self, w):
+            super().__init__()
+            self.weight = w
+
+        def forward(self, x, *args):
+            return npx.convolution(x, self.weight.data(x.ctx), no_bias=True, kernel=kernel,
+                                   pad=pad, num_filter=self.weight.shape[0], num_group=num_group)
+
+    class TestDeconv(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.weight = mx.gluon.Parameter('weight', shape=(shape[1], int(num_filter/num_group), 
+                                                              *kernel))
+            self.bias = mx.gluon.Parameter('bias', shape=num_filter)
+
+        def forward(self, x, *args):
+            return npx.deconvolution(x, self.weight.data(x.ctx), self.bias.data(x.ctx), kernel,
+                                     pad=pad, num_filter=num_filter, num_group=num_group)
+    
+    deconvNet = TestDeconv()
+    deconvNet.initialize()
+
+    # test imperative
+    deconvData = np.random.uniform(0, 1, size=shape)
+    npx_out_imp = deconvNet(deconvData)
+
+    # test symbolic
+    deconvNet.hybridize()
+    deconvNet(deconvData)
+    npx_out_sym = deconvNet(deconvData)
+    assert_almost_equal(npx_out_imp, npx_out_sym)
+
+    # compare outputs with reference tensors generated using convolution
+    convNet = TestConv(deconvNet.weight)
+    convNet.initialize()
+    convData = np.random.uniform(0, 1, size=npx_out_imp.shape)
+    convData.attach_grad()
+    with mx.autograd.record():
+        convOut = convNet(convData)
+        y = np.reshape(convOut, -1)
+        y = np.sum(y)
+    y.backward()
+    
+    deconvData = np.ones_like(convOut)  # gradient of convOut
+    deconvBias = np.repeat(deconvNet.bias.data(), int(np.prod(np.array(convData.grad.shape[2:])).item()))
+    deconvRefOut = np.copy(convData.grad) + deconvBias.reshape((convData.grad.shape[1:]))
+    deconvData.attach_grad()
+    with mx.autograd.record():
+        deconvOut = deconvNet(deconvData)
+    deconvOut.backward()
+
+    convData = np.ones_like(deconvOut)
+    deconvRefGrad = convNet(convData)
+
+    assert_almost_equal(deconvOut, deconvRefOut)
+    assert_almost_equal(deconvData.grad, deconvRefGrad)

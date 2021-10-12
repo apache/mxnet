@@ -1,0 +1,69 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: Apache Software Foundation
+
+  paths-ignore:
+    - 'licenses'
+    - 'LICENSE'
+    - 'NOTICE'
+    - '3rdparty'
+    - 'DISCLAIMER'
+    - 'KEYS'
+    - 'tools/dependencies/LICENSE.binary.dependencies'
+    # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
+    - 'docs'
+    - 'CODEOWNERS'
+    - '.gitignore'
+    - '.codecov.yml'
+    - '.gitattributes'
+    - '.github'
+    - '.gitmodules'
+    - '.licenserc.yaml'
+    - '.asf.yaml'
+    # files licensed under apache-2.0 license but do not include full license headers recognized by skywalking-eyes
+    - '**/*.ipynb'
+    - 'src/operator/deformable_convolution-inl.h'
+    - 'src/operator/deformable_convolution.cc'
+    - 'src/operator/deformable_convolution.cu'
+    - 'src/operator/contrib/deformable_psroi_pooling-inl.h'
+    - 'src/operator/contrib/deformable_psroi_pooling.cc'
+    - 'src/operator/contrib/deformable_psroi_pooling.cu'
+    - 'src/operator/contrib/multi_proposal-inl.h'
+    - 'src/operator/contrib/multi_proposal.cc'
+    - 'src/operator/contrib/multi_proposal.cu'
+    - 'src/operator/contrib/psroi_pooling.cc'
+    - 'src/operator/contrib/psroi_pooling.cu'
+    - 'src/operator/nn/mkldnn/mkldnn_base-inl.h'
+    # files licensed under boost license
+    - 'cmake/Modules/FindJeMalloc.cmake'
+    # files licensed under bsd 3-clause
+    - 'cmake/upstream/FindBLAS.cmake'
+    - 'cmake/upstream/FindCUDAToolkit.cmake'
+    - 'cmake/upstream/select_compute_arch.cmake'
+    - 'src/operator/contrib/erfinv-inl.h'
+    - 'src/operator/numpy/np_einsum_op-inl.h'
+    - 'src/operator/numpy/np_einsum_op.cc'
+    - 'src/operator/numpy/np_einsum_path_op-inl.h'
+    # files licensed under caffe/mit license
+    - 'src/operator/modulated_deformable_convolution-inl.h'
+    - 'src/operator/modulated_deformable_convolution.cc'
+    - 'src/operator/modulated_deformable_convolution.cu'
+    - 'src/operator/contrib/nn/deformable_im2col.cuh'
+    - 'src/operator/contrib/nn/deformable_im2col.h'
+    - 'src/operator/contrib/nn/modulated_deformable_im2col.cuh'
+    - 'src/operator/contrib/nn/modulated_deformable_im2col.h'
+    - 'src/operator/nn/im2col.cuh'
+    - 'src/operator/nn/im2col.h'
+    - 'src/operator/nn/pool.cuh'
+    - 'src/operator/nn/pool.h'
+    # symlinks
+    - 'include/dlpack' # symlink to 3rdparty/dlpack/include/dlpack
+    - 'include/dmlc' # symlink to 3rdparty/dmlc-core/include/dmlc
+    - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
+    - 'include/onednn' # symlinks to 3rdparty/onednn
+    # test/build data
+    - 'tests/python/mkl/data/test_mkldnn_test_mkldnn_model_model1.json'
+
+
+  comment: on-failure

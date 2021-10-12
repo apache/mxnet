@@ -21,6 +21,7 @@
 
 from ...utils import split_and_load
 from .... import autograd
+from .... import npx
 
 __all__ = ['BatchProcessor']
 
@@ -101,5 +102,7 @@ class BatchProcessor(object):
 
         for l in loss:
             l.backward()
+
+        npx.waitall()
 
         return data, label, pred, loss

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file mshadow_ps.h
  * \brief parameter server abstraction for mshadow tensor
  *  this is a plugin of mshadow that can be used to syncrhonize

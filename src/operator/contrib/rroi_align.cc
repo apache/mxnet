@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file rroi_align.cc
  * \brief rroi align operator
  * \author Yixin Bao

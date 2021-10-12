@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file np_cross.cc
  * \brief CPU Implementation of numpy-compatible cross
  */

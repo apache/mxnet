@@ -465,11 +465,6 @@ FP16_FP32_FUNCS = [
     'zeros_like',
     ]
 
-if Features().is_enabled('CUDNN'):
-    FP16_FP32_FUNCS.extend([
-        'CuDNNBatchNorm',
-    ])
-
 # Functions that have to be cast to FP32 due to possible
 # overflows
 FP32_FUNCS = [

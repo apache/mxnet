@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file mxnet_op.h
  * \brief
  * \author Junyuan Xie

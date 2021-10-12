@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file gradients.cc
  * \brief Passes that takes gradient of the graph
  * This code code was modified based on mxnet codebase by Min Lin
@@ -62,7 +61,8 @@ Graph BuildGradientGraph(const Graph& src,
                          const std::vector<ObjectPtr>& topo_order,
                          std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
                          std::function<int(const Node&)> mirror_fun,
-                         const std::unordered_map<const Node*, ObjectPtr>& mirror_map);
+                         const std::unordered_map<const Node*, ObjectPtr>& mirror_map,
+                         const std::vector<NodeEntry>& us = std::vector<NodeEntry>());
 
 /*!
  * \brief Auxiliary function that maps the forward node of the source graph to
@@ -88,6 +88,8 @@ Graph Gradient(Graph src) {
   const std::vector<NodeEntry>& ys_out_grad =
       src.GetAttr<std::vector<NodeEntry> >("grad_ys_out_grad");
   CHECK_EQ(ys.size(), ys_out_grad.size());
+  const std::vector<NodeEntry>& us =
+      src.GetAttr<std::vector<NodeEntry> >("grad_us");
 
   // initialize a topological order of the graph nodes and `output_grads`
   // that maps every operator node to its gradient entries
@@ -120,7 +122,7 @@ Graph Gradient(Graph src) {
   std::unordered_map<const Node*, ObjectPtr> mirror_map;
 
   // complete the backward graph of the src, but without backward mirroring
-  nnvm::Graph gsrc = BuildGradientGraph(src, xs, topo_order, output_grads, nullptr, mirror_map);
+  nnvm::Graph gsrc = BuildGradientGraph(src, xs, topo_order, output_grads, nullptr, mirror_map, us);
   if (mirror_fun == nullptr) {
     return gsrc;  // Gradient pass without mirroring ends here.
   }
@@ -504,12 +506,14 @@ inline bool CheckGradAllZero(const std::vector<NodeEntry>& grads,
   return true;
 }
 
+
 Graph BuildGradientGraph(const Graph& src,
                          const std::vector<NodeEntry>& xs,
                          const std::vector<ObjectPtr>& topo_order,
                          std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
                          std::function<int(const Node&)> mirror_fun,
-                         const std::unordered_map<const Node*, ObjectPtr>& mirror_map) {
+                         const std::unordered_map<const Node*, ObjectPtr>& mirror_map,
+                         const std::vector<NodeEntry>& us) {
   static auto& grad_fun_map = Op::GetAttr<nnvm::FGradient>("FGradient");
 
   // gradient aggregation function
@@ -617,7 +621,7 @@ Graph BuildGradientGraph(const Graph& src,
       CHECK(src_fwd_node->inputs.size() <= input_grads.size());
       for (auto input_iter = src_fwd_node->inputs.begin(); input_iter != src_fwd_node->inputs.end();
            ++input_iter, ++input_grad_iter) {
-        // propagate the input gradients to the output gradients of the input nodes
+        // propagate the input_grads to the corresponding GradEntries mapped by output_grads
         output_grads[input_iter->node.get()][input_iter->index].grads.emplace_back(
             std::move(*input_grad_iter));
       }
@@ -661,6 +665,20 @@ Graph BuildGradientGraph(const Graph& src,
       ret.outputs[kv.second.second] = kv.first;
     }
   }
+
+  // Take the us' grad NodeEntry and store them in graph.attrs
+  std::vector<NodeEntry> nleaf_grads;
+  nleaf_grads.reserve(us.size());
+  for (const NodeEntry& e : us) {
+    GradEntry& entry = output_grads[e.node.get()][e.index];
+    // aggregate sum if it hasn't been
+    if (entry.sum.node.get() == nullptr) {
+      entry.sum = agg_fun(std::move(entry.grads));
+    }
+    nleaf_grads.push_back(entry.sum);
+  }
+  ret.attrs["nleaf_grads"] = std::make_shared<any>(std::move(nleaf_grads));
+
   return ret;
 }
 
@@ -673,7 +691,8 @@ NNVM_REGISTER_PASS(MXGradient)
     .depend_graph_attr("grad_xs")
     .depend_graph_attr("in_arg_shapes")
     .depend_graph_attr("in_arg_dtypes")
-    .depend_graph_attr("grad_ys_out_grad");
+    .depend_graph_attr("grad_ys_out_grad")
+    .depend_graph_attr("grad_us");
 
 }  // namespace
 

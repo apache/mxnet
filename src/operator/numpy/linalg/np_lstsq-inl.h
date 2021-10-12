@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_lstsq-inl.h
  * \brief Placeholder for lstlq
  */

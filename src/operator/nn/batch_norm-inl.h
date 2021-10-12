@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file batch_norm-inl.h
  * \brief
  * \author Bing Xu, Chris Olivier, Da Zheng

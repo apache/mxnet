@@ -1282,7 +1282,7 @@ inline void CreateEngineOpSeg(const nnvm::IndexedGraph& idx,
                               std::vector<EngineOprSeg>* opr_segs) {
   size_t seg_start = start_nid;
   std::vector<std::shared_ptr<exec::OpExecutor> > seg_execs;
-  std::string opr_names;
+  std::string opr_names = "[";
   for (size_t nid = start_nid; nid < end_nid; ++nid) {
     const auto& node = idx[nid];
     if (node.source->is_variable())
@@ -1302,6 +1302,8 @@ inline void CreateEngineOpSeg(const nnvm::IndexedGraph& idx,
       auto& seg = (*opr_segs)[seg_start];
       if (seg_execs.size()) {
         seg = EngineOprSeg{false, nid};
+        opr_names.pop_back();
+        opr_names += "]";
         seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_names.c_str()));
       } else {
         seg = EngineOprSeg{true, nid, nullptr};
@@ -1312,9 +1314,18 @@ inline void CreateEngineOpSeg(const nnvm::IndexedGraph& idx,
     }
 
     seg_execs.push_back(exec);
-    if (opr_names.size())
-      opr_names += ",";
+
+    const auto& inode = idx[nid];
     opr_names += op_name;
+    opr_names += "{name=" + inode.source->attrs.name + ";";
+    const std::unordered_map<std::string, std::string> &dict = inode.source->attrs.dict;
+    auto num_dict_entries = dict.size();
+    for (auto &k : dict) {
+      opr_names += k.first + "=" + k.second;
+      if (--num_dict_entries != 0)
+        opr_names += ";";
+    }
+    opr_names += "},";
 
     auto& seg = (*opr_segs)[nid];
     if (!valid) {
@@ -1324,6 +1335,8 @@ inline void CreateEngineOpSeg(const nnvm::IndexedGraph& idx,
       seg_start = nid + 1;
     } else if (is_async) {
       seg = EngineOprSeg{false, nid + 1};
+      opr_names.pop_back();
+      opr_names += "]";
       seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_names.c_str()));
       seg_execs.clear();
       opr_names.clear();
@@ -1335,6 +1348,8 @@ inline void CreateEngineOpSeg(const nnvm::IndexedGraph& idx,
     auto& seg = (*opr_segs)[seg_start];
     if (seg_execs.size()) {
       seg = EngineOprSeg{false, end_nid};
+      opr_names.pop_back();
+      opr_names += "]";
       seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_names.c_str()));
     } else {
       seg = EngineOprSeg{true, end_nid, nullptr};

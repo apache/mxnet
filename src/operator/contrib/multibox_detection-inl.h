@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file multibox_detection-inl.h
  * \brief post-process multibox detection predictions
  * \author Joshua Zhang

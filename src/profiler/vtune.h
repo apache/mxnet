@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file vtune.h
  * \brief VTune API classes.
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file plan_memory.cc
  * \brief Assign memory tag to each of the data entries.
  */
