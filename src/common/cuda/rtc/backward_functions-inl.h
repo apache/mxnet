@@ -437,6 +437,7 @@ template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
 bitwise_left_shift_rgrad(const DType val,
                          const DType2 val2) {
+  using type = mixed_type<DType, DType2>;
   return val * op::power(static_cast<DType>(2), val2) * op::log(static_cast<type>(2));
 }
 
@@ -444,6 +445,7 @@ template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
 rbitwise_left_shift_grad(const DType val,
                          const DType2 val2) {
+  using type = mixed_type<DType, DType2>;
   return val2 * op::power(static_cast<DType>(2), val) * op::log(static_cast<type>(2));
 }
 
