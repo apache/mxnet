@@ -651,13 +651,12 @@ def wrap_np_binary_func(func):
     return _wrap_np_binary_func
 
 
-def wrap_data_api_creation_func(func):
-    """A convenience decorator for wrapping data apis standardized creation functions to provide
-    context keyward backward compatibility
+def wrap_ctx_to_device_func(func):
+    """A convenience decorator for converting ctx to device keyward backward compatibility
 
     Parameters
     ----------
-    func : a numpy-compatible array creation function to be wrapped for context keyward change.
+    func : a function to be wrapped for context keyward change.
 
     Returns
     -------
@@ -665,13 +664,13 @@ def wrap_data_api_creation_func(func):
         A function wrapped with context keyward changes.
     """
     @functools.wraps(func)
-    def _wrap_api_creation_func(*args, **kwargs):
+    def _wrap_func_with_ctx(*args, **kwargs):
         if len(kwargs) != 0:
             device = kwargs.pop('ctx', None)
             if device is not None:
                 kwargs['device'] = device
         return func(*args, **kwargs)
-    return _wrap_api_creation_func
+    return _wrap_func_with_ctx
 
 
 # pylint: disable=exec-used
