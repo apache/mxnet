@@ -20,7 +20,8 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_op_extended_thi.cu
- * \brief GPU Implementation of extended functions for elementwise binary broadcast operator. (Third extended file)
+ * \brief GPU Implementation of extended functions for elementwise binary broadcast operator. (Third
+ * extended file)
  */
 
 #include "./np_elemwise_broadcast_op.h"

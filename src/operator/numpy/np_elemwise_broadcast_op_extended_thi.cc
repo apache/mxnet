@@ -20,7 +20,8 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_op_extended_thi.cc
- * \brief CPU Implementation of extended functions for elementwise numpy binary broadcast operator. (Third extended file)
+ * \brief CPU Implementation of extended functions for elementwise numpy binary broadcast operator.
+ * (Third extended file)
  */
 
 #include "../../common/utils.h"
@@ -102,7 +103,7 @@ NNVM_REGISTER_OP(_backward_npi_bitwise_left_shift)
     .set_num_outputs(2)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
     .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs& attrs){
+                                    [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 1}};
                                     })
     .set_attr<FResourceRequest>("FResourceRequest",
@@ -110,7 +111,8 @@ NNVM_REGISTER_OP(_backward_npi_bitwise_left_shift)
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
     .set_attr<FCompute>("FCompute<cpu>",
-                        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::bitwise_left_shift_grad,
+                        BinaryBroadcastBackwardUseIn<cpu,
+                                                     mshadow_op::bitwise_left_shift_grad,
                                                      mshadow_op::bitwise_left_shift_rgrad>);
 
 NNVM_REGISTER_OP(_backward_npi_bitwise_left_shift_scalar)
@@ -124,7 +126,6 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rbitwise_left_shift_scalar)
     .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
     .set_attr<FCompute>("FCompute<cpu>",
                         BinaryScalarOp::Backward<cpu, mshadow_op::rbitwise_left_shift_grad>);
-
 
 NNVM_REGISTER_OP(_npi_bitwise_right_shift)
     .set_num_inputs(2)
@@ -184,7 +185,7 @@ NNVM_REGISTER_OP(_backward_npi_bitwise_right_shift)
     .set_num_outputs(2)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
     .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs& attrs){
+                                    [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 1}};
                                     })
     .set_attr<FResourceRequest>("FResourceRequest",
@@ -192,7 +193,8 @@ NNVM_REGISTER_OP(_backward_npi_bitwise_right_shift)
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
     .set_attr<FCompute>("FCompute<cpu>",
-                        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::bitwise_right_shift_grad,
+                        BinaryBroadcastBackwardUseIn<cpu,
+                                                     mshadow_op::bitwise_right_shift_grad,
                                                      mshadow_op::bitwise_right_shift_rgrad>);
 
 NNVM_REGISTER_OP(_backward_npi_bitwise_right_shift_scalar)

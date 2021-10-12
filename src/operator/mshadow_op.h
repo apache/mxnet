@@ -700,26 +700,30 @@ MXNET_BINARY_MATH_OP(bitwise_left_shift, static_cast<int64_t>(a) << static_cast<
 
 MXNET_BINARY_MATH_OP(bitwise_left_shift_grad, math::pow(2.0f, static_cast<int64_t>(b)));
 
-MXNET_BINARY_MATH_OP(bitwise_left_shift_rgrad, static_cast<int64_t>(a) * \
-math::pow(2.0f, static_cast<int64_t>(b)) * math::log(2.0f));
+MXNET_BINARY_MATH_OP(bitwise_left_shift_rgrad,
+                     static_cast<int64_t>(a) * math::pow(2.0f, static_cast<int64_t>(b)) *
+                         math::log(2.0f));
 
 MXNET_BINARY_MATH_OP(rbitwise_left_shift, static_cast<int64_t>(b) << static_cast<int64_t>(a));
 
-MXNET_BINARY_MATH_OP(rbitwise_left_shift_grad, static_cast<int64_t>(b) * \
-math::pow(2.0f, static_cast<int64_t>(a)) * math::log(2.0f));
+MXNET_BINARY_MATH_OP(rbitwise_left_shift_grad,
+                     static_cast<int64_t>(b) * math::pow(2.0f, static_cast<int64_t>(a)) *
+                         math::log(2.0f));
 
 /*! \brief used for generate element of bitwise_right_shift */
 MXNET_BINARY_MATH_OP(bitwise_right_shift, static_cast<int64_t>(a) >> static_cast<int64_t>(b));
 
 MXNET_BINARY_MATH_OP(bitwise_right_shift_grad, math::pow(0.5f, static_cast<int64_t>(b)));
 
-MXNET_BINARY_MATH_OP(bitwise_right_shift_rgrad, static_cast<int64_t>(a) * \
-math::pow(0.5f, static_cast<int64_t>(b)) * math::log(0.5f));
+MXNET_BINARY_MATH_OP(bitwise_right_shift_rgrad,
+                     static_cast<int64_t>(a) * math::pow(0.5f, static_cast<int64_t>(b)) *
+                         math::log(0.5f));
 
 MXNET_BINARY_MATH_OP(rbitwise_right_shift, static_cast<int64_t>(b) >> static_cast<int64_t>(a));
 
-MXNET_BINARY_MATH_OP(rbitwise_right_shift_grad, static_cast<int64_t>(b) * \
-math::pow(0.5f, static_cast<int64_t>(a)) * math::log(0.5f));
+MXNET_BINARY_MATH_OP(rbitwise_right_shift_grad,
+                     static_cast<int64_t>(b) * math::pow(0.5f, static_cast<int64_t>(a)) *
+                         math::log(0.5f));
 
 #pragma GCC diagnostic pop
 
