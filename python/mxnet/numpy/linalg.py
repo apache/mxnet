@@ -22,7 +22,7 @@ from ..ndarray import numpy as _mx_nd_np
 from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg, tensordot
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
@@ -30,7 +30,13 @@ __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 't
 __all__ += fallback_linalg.__all__
 
 
-def matrix_rank(M, tol=None, hermitian=False):
+def matrix_rank(
+        M: ndarray,
+        /,
+        *,
+        tol: Optional[float, ndarray] = None,
+        hermitian: Optional[bool] = False,
+) -> ndarray:
     r"""
     Return matrix rank of array using SVD method
 
@@ -78,7 +84,7 @@ def matrix_rank(M, tol=None, hermitian=False):
     return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
 
 
-def matrix_transpose(a):
+def matrix_transpose(a: ndarray, /) -> ndarray:
     r"""
     Transposes a matrix (or a stack of matrices) `a`.
 
@@ -115,7 +121,7 @@ def matrix_transpose(a):
     return _mx_nd_np.transpose(a, axes=None)
 
 
-def trace(a, offset=0):
+def trace(a: ndarray, /, *, offset: int = 0) -> ndarray:
     r"""
     Returns a tensor contraction of `a` and `b` over specific axes.
 
@@ -167,7 +173,7 @@ def trace(a, offset=0):
     return _mx_nd_np.trace(a, offset=offset, axis1=0, axis2=1, out=None)
 
 
-def tensordot(a, b, axes=2):
+def tensordot(a: ndarray, b: ndarray, /, *, axes: Tuple[int] = 2) -> ndarray:
     r"""
     Returns a tensor contraction of `a` and `b` over specific axes.
 
@@ -218,7 +224,7 @@ def tensordot(a, b, axes=2):
     return _mx_nd_np.tensordot(a, b, axes)
 
 
-def diagonal(a, offset=0):
+def diagonal(a: ndarray, /, *, offset: int = 0) ->ndarray:
     r"""
     Returns the specified diagonals of a matrix (or a stack of matrices) `a`.
 
@@ -266,7 +272,7 @@ def diagonal(a, offset=0):
     return _mx_nd_np.diag(a, k=offset)
 
 
-def cross(a, b, axis=-1):
+def cross(a: ndarray, b: ndarray, /, *, axis: int = -1) -> ndarray:
     r"""
     Returns the cross product of 3-element vectors.
 
@@ -338,7 +344,7 @@ def cross(a, b, axis=-1):
     return _mx_nd_np.cross(a, b, axisa=axis, axisb=axis, axisc=axis, axis=axis)
 
 
-def outer(a, b):
+def outer(a: ndarray, b: ndarray, /) -> ndarray:
     r"""
     Computes the outer product of two vectors `a` and `b`.
 
@@ -376,7 +382,7 @@ def outer(a, b):
     return _mx_nd_np.tensordot(a.flatten(), b.flatten(), 0)
 
 
-def vecdot(a: ndarray, b, ndarray, axis: Optional[int] =None) -> ndarray:
+def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] =None) -> ndarray:
     r"""
     Return the dot product of two vectors.
     Note that `vecdot` handles multidimensional arrays differently than `dot`:
@@ -422,8 +428,8 @@ def vecdot(a: ndarray, b, ndarray, axis: Optional[int] =None) -> ndarray:
     """
     return tensordot(a.flatten(), b.flatten(), axis)
 
-
-def lstsq(a, b, rcond='warn'):
+#TODO return
+def lstsq(a: ndarray, b: ndarray, / ,*, rcond: Optional[float]='warn'):
     r"""
     Return the least-squares solution to a linear matrix equation.
 
@@ -494,7 +500,13 @@ def lstsq(a, b, rcond='warn'):
     return _mx_nd_np.linalg.lstsq(a, b, rcond)
 
 
-def pinv(a, rcond=1e-15, hermitian=False):
+def pinv(
+        a:ndarray,
+        /,
+        *,
+        rcond: Optional[Union[float, ndarray]] = 1e-15,
+        hermitian: Optional[bool] = False
+) -> ndarray:
     r"""
     Compute the (Moore-Penrose) pseudo-inverse of a matrix.
 
@@ -562,7 +574,14 @@ def pinv(a, rcond=1e-15, hermitian=False):
     return _mx_nd_np.linalg.pinv(a, rcond, hermitian)
 
 
-def norm(x, ord=None, axis=None, keepdims=False):
+def norm(
+        x: ndarray,
+        /,
+        *,
+        ord: Optional[str] = None,
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        keepdims: Optional[bool] = False
+) -> ndarray:
     r"""
     Matrix or vector norm.
 
@@ -627,7 +646,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
     return _mx_nd_np.linalg.norm(x, ord, axis, keepdims)
 
 
-def svd(a):
+def svd(a: ndarray, /) -> ndarray:
     r"""
     Singular Value Decomposition.
 
@@ -699,7 +718,7 @@ def svd(a):
     return _mx_nd_np.linalg.svd(a)
 
 
-def cholesky(a):
+def cholesky(a: ndarray, /) -> ndarray:
     r"""
     Cholesky decomposition.
 
@@ -757,8 +776,8 @@ def cholesky(a):
     """
     return _mx_nd_np.linalg.cholesky(a)
 
-
-def qr(a, mode='reduced'):
+#TODO
+def qr(a: ndarray, /, *, mode: Optional[str] = 'reduced') -> ndarray:
     r"""
     Compute the qr factorization of a matrix a.
     Factor the matrix a as qr, where q is orthonormal and r is upper-triangular.
@@ -820,7 +839,7 @@ def qr(a, mode='reduced'):
     return _mx_nd_np.linalg.qr(a, mode)
 
 
-def inv(a):
+def inv(a: ndarray, /) -> ndarray:
     r"""
     Compute the (multiplicative) inverse of a matrix.
 
@@ -862,7 +881,7 @@ def inv(a):
     return _mx_nd_np.linalg.inv(a)
 
 
-def det(a):
+def det(a: ndarray, /) -> ndarray:
     r"""
     Compute the determinant of an array.
 
@@ -906,7 +925,7 @@ def det(a):
     return _mx_nd_np.linalg.det(a)
 
 
-def slogdet(a):
+def slogdet(a: ndarray, /) -> ndarray:
     r"""
     Compute the sign and (natural) logarithm of the determinant of an array.
     If an array has a very small or very large determinant, then a call to
@@ -972,7 +991,7 @@ def slogdet(a):
     return _mx_nd_np.linalg.slogdet(a)
 
 
-def solve(a, b):
+def solve(a: ndarray, b: ndarray, /) -> ndarray:
     r"""
     Solve a linear matrix equation, or system of linear scalar equations.
 
@@ -1026,7 +1045,7 @@ def solve(a, b):
     return _mx_nd_np.linalg.solve(a, b)
 
 
-def tensorinv(a, ind=2):
+def tensorinv(a: ndarray, /, *, ind: Optional[int] = 2) -> ndarray:
     r"""
     Compute the 'inverse' of an N-dimensional array.
 
@@ -1081,7 +1100,7 @@ def tensorinv(a, ind=2):
     return _mx_nd_np.linalg.tensorinv(a, ind)
 
 
-def tensorsolve(a, b, axes=None):
+def tensorsolve(a: ndarray, b: ndarray, /, *, axes: Optional[Tuple[int, ...]] = None) -> ndarray:
     r"""
     Solve the tensor equation ``a x = b`` for x.
     It is assumed that all indices of `x` are summed over in the product,
@@ -1129,7 +1148,7 @@ def tensorsolve(a, b, axes=None):
     return _mx_nd_np.linalg.tensorsolve(a, b, axes)
 
 
-def eigvals(a):
+def eigvals(a: ndarray, /) -> ndarray:
     r"""
     Compute the eigenvalues of a general matrix.
 
@@ -1198,7 +1217,7 @@ def eigvals(a):
     return _mx_nd_np.linalg.eigvals(a)
 
 
-def eigvalsh(a, upper=False):
+def eigvalsh(a: ndarray, /, *, upper: Optional[bool] = False) -> ndarray:
     r"""
     Compute the eigenvalues real symmetric matrix.
 
@@ -1259,8 +1278,8 @@ def eigvalsh(a, upper=False):
         UPLO = 'U'
     return _mx_nd_np.linalg.eigvalsh(a, UPLO)
 
-
-def eig(a):
+#TODO
+def eig(a: ndarray, /):
     r"""
     Compute the eigenvalues and right eigenvectors of a square array.
 
@@ -1326,8 +1345,8 @@ def eig(a):
     """
     return _mx_nd_np.linalg.eig(a)
 
-
-def eigh(a, upper=False):
+#TODO return
+def eigh(a: ndarray, /, *, upper: Optional[bool] = False):
     r"""
     Return the eigenvalues and eigenvectors real symmetric matrix.
 
