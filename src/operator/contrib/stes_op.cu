@@ -18,12 +18,10 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file stes_op.cu
  * \Straight-through-estimators round and sign operators.
  * \author Itay Golan
  */
-
 #include "stes_op.h"
 
 namespace mxnet {

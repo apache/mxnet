@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_pooling.cc
  */
 #include <mxnet/op_attr_types.h>

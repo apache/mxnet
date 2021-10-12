@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file ctc_loss-inl.h
  * \brief CTC Loss operator
  */

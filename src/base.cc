@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file base.cc
  * \brief Implementation of base declarations, e.g. context
  */

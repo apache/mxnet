@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright by Contributors
  * \file thread.h
  * \brief this header include the minimum necessary resource
  * for multi-threading that can be compiled in windows, linux, mac

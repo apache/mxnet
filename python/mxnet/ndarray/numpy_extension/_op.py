@@ -617,9 +617,9 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
 @set_module('mxnet.ndarray.numpy_extension')
 def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, dilate=None,
                   pad=None, adj=None, target_shape=None, num_filter=1, num_group=1,
-                  workspace=512, no_bias=False, cudnn_tune=None,
+                  workspace=1024, no_bias=False, cudnn_tune=None,
                   cudnn_off=False, layout=None):
-    r"""Computes 1D or 2D transposed convolution (aka fractionally strided convolution) of
+    r"""Computes 1D, 2D or 3D transposed convolution (aka fractionally strided convolution) of
     the input tensor. This operation can be seen as the gradient of Convolution operation
     with respect to its input. Convolution usually reduces the size of the input.
     Transposed convolution works the other way, going from a smaller input

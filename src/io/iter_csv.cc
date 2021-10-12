@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file iter_csv.cc
  * \brief define a CSV Reader to read in arrays
  */

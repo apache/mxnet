@@ -220,21 +220,39 @@
 
     3rdparty/ctc_include
     3rdparty/dlpack
+    include/dlpack (header symlinks to 3rdparty/dlpack/include/dlpack)
     3rdparty/dmlc-core
+    include/dmlc (header symlinks to 3rdparty/dmlc-core/include/dmlc)
     3rdparty/mshadow
+    include/mshadow (header symlinks to 3rdparty/mshadow/mshadow)
     3rdparty/tvm
     3rdparty/tvm/3rdparty/dmlc-core
     3rdparty/tvm/3rdparty/dlpack
+    include/nnvm (header symlinks to 3rdparty/tvm/nnvm/include/nnvm)
     3rdparty/ps-lite
     3rdparty/onednn
+    include/onednn (header symlinks to 3rdparty/onednn)
     3rdparty/googletest/googlemock/scripts/generator
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark
+    3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py
     3rdparty/onednn/tests/benchdnn (Copy of the License available at top of current file)
     src/operator/special_functions-inl.h Cephes Library Functions (Copy of the License available at top of current file)
     3rdparty/onednn/doc/assets/mathjax (Copy of the License available at top of current file)
     docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1 (Copy of the License available at top of current file)
     docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto (Copy of the License available at top of current file)
     3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc (Copy of the License available at top of current file)
+    src/operator/deformable_convolution-inl.h
+    src/operator/deformable_convolution.cc
+    src/operator/deformable_convolution.cu
+    src/operator/contrib/deformable_psroi_pooling-inl.h
+    src/operator/contrib/deformable_psroi_pooling.cc
+    src/operator/contrib/deformable_psroi_pooling.cu
+    src/operator/contrib/multi_proposal-inl.h
+    src/operator/contrib/multi_proposal.cc
+    src/operator/contrib/multi_proposal.cu
+    src/operator/contrib/psroi_pooling.cc
+    src/operator/contrib/psroi_pooling.cu
+    src/operator/nn/mkldnn/mkldnn_base-inl.h
 
     =======================================================================================
     MIT license
@@ -242,7 +260,6 @@
 
     3rdparty/miniz/miniz.c
     3rdparty/miniz/miniz.h
-    example/gluon/tree_lstm
     3rdparty/tvm/3rdparty/cma
     3rdparty/onnx-tensorrt
     3rdparty/onnx-tensorrt/third_party/onnx
@@ -250,6 +267,11 @@
     docs/python_docs/themes/mx-theme
     3rdparty/intgemm
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
+    src/operator/contrib/nn/modulated_deformable_im2col.cuh
+    src/operator/contrib/nn/modulated_deformable_im2col.h
+    src/operator/modulated_deformable_convolution-inl.h
+    src/operator/modulated_deformable_convolution.cc
+    src/operator/modulated_deformable_convolution.cu
 
     =======================================================================================
     3-clause BSD license
@@ -266,8 +288,12 @@
     3rdparty/googletest/googlemock
     3rdparty/googletest/googletest
     cmake/upstream/FindCUDAToolkit.cmake
+    cmake/upstream/FindBLAS.cmake
     cmake/upstream/select_compute_arch.cmake
     src/operator/contrib/erfinv-inl.h
+    src/operator/numpy/np_einsum_op-inl.h
+    src/operator/numpy/np_einsum_path_op-inl.h
+    src/operator/numpy/np_einsum_op.cc
 
     =======================================================================================
     2-clause BSD license
@@ -310,9 +336,6 @@
     python/mxnet/onnx/mx2onnx/_export_onnx.py
     python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py
     python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py
-    src/operator/numpy/np_einsum_op-inl.h
-    src/operator/numpy/np_einsum_path_op-inl.h
-    src/operator/numpy/np_einsum_op.cc
 
     =======================================================================================
     Apache-2.0 license + MIT License
@@ -320,14 +343,7 @@
 
     src/serialization/cnpy.h (Copy of the AL2 License available at the top of this file, MIT License available at licenses/MIT)
     src/serialization/cnpy.cc (Copy of the AL2 License available at the top of this file, MIT License available at licenses/MIT)
-    3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py (Copy of the referenced AL2 License available at top of current file)
     src/operator/nn/layer_norm.cc (function LayerNormCPUKernel is adapated from MIT-licensed code)
-
-    =======================================================================================
-    Apache-2.0 license + Boost Software License, Version 1.0
-    =======================================================================================
-
-    cmake/Modules/FindJeMalloc.cmake
 
     =======================================================================================
     Boost Software License, Version 1.0
@@ -335,6 +351,7 @@
 
     3rdparty/intgemm/test/3rd_party/catch.hpp  (Copy of the License available at licenses/BOOST1_0)
     3rdparty/onednn/src/common/primitive_hashing.hpp
+    cmake/Modules/FindJeMalloc.cmake
 
     =======================================================================================
     LLVM Release License
@@ -353,3 +370,10 @@
     =======================================================================================
 
     docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/ (Copy of the License available at licenses/OFL1_1)
+    
+    =======================================================================================
+    Apache-2.0 WITH LLVM-exception
+    =======================================================================================
+
+    tools/lint/git-clang-format-13
+    

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_choice_op.cc
  * \brief Operator for random subset sampling
  */

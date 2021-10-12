@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_moments_op.cu
  * \brief GPU Implementation of reduce functions based on value.
  */

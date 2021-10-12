@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file tensor_util-inl.h
  * \brief commonly utilized tensor operator CPU kernels
  */

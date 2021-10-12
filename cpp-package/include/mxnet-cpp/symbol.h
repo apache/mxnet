@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file symbol.h
 * \brief definition of symbol
 * \author Chuntao Hong, Zhang Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file kvstore_utils.cu
  * \brief gpu implementation of util functions
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_op_index.cu
  * \brief GPU Implementation of broadcast and reduce functions based on index.
  */

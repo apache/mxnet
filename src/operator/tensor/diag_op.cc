@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file diag_op.cc
  * \brief CPU implementation of diag operator
  * \author Istvan Fehervari, Zhijingcheng Yu

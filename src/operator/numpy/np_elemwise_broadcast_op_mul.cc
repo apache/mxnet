@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_op_mul.cc
  * \brief CPU Implementation of basic functions for elementwise numpy binary multiply.
  */

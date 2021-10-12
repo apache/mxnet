@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file multi_lamb-inl.h
  * \brief multi-tensor LAMB optimizer
  * \author Moises Hernandez

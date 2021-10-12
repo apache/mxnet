@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_norm_backward.cc
  * \brief CPU registration of np.linalg.norm
  */

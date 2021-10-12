@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file gradient_multiplier_op.cu
  * \brief
  * \author Istvan Fehervari

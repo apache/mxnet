@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file ps_dist-inl.h
  * \brief distributed version of PS
  *

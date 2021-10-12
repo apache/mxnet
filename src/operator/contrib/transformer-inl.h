@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file transformer-inl.h
  * \brief Function used in cc and cu
  */

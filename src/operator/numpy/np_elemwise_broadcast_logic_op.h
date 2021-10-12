@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_logic_op.h
  * \brief Function definition of basic logic functions for elementwise numpy binary
  * broadcast operator.
