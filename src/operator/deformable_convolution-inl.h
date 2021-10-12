@@ -328,7 +328,7 @@ class DeformableConvolutionOp : public Operator {
   index_t num_kernels_col2im_;
   bool bias_term_;  // has bias term?
   bool is_1x1_;
-};  // class ConvolutionOp
+};  // class DeformableConvolutionOp
 
 template <typename xpu>
 Operator* CreateOp(DeformableConvolutionParam param,

@@ -649,11 +649,11 @@ then set ``gamma`` to 1 and its gradient to 0.
     .set_attr<nnvm::FGradient>("FGradient", BatchNormGrad)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsMKLDNN", true)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-#endif
     .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
     .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
     .add_argument("beta", "NDArray-or-Symbol", "beta array")

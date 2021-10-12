@@ -389,7 +389,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
   index_t im2col_step_;
   bool bias_term_;  // has bias term?
   bool is_1x1_;
-};  // class ConvolutionOp
+};  // class ModulatedDeformableConvolutionOp
 
 template <typename xpu>
 Operator* CreateOp(ModulatedDeformableConvolutionParam param,

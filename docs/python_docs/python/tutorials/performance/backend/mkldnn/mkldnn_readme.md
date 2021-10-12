@@ -231,7 +231,7 @@ With MKL BLAS, the performace is expected to furtherly improved with variable ra
 You can redistribute not only dynamic libraries but also headers, examples and static libraries on accepting the license [Intel Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license).
 Installing the full MKL installation enables MKL support for all operators under the linalg namespace.
 
-  1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl) You can also install MKL through [YUM](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-yum-repo) or [APT](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo) Repository.
+  1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl) You can also install MKL through [YUM](https://software.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/yum-dnf-zypper.html) or [APT](https://software.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html) Repository.
 
   2. Run `make -j ${nproc} USE_BLAS=mkl`
 
