@@ -77,9 +77,9 @@ class Storage {
     std::string profiler_scope{MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR};
     std::string name{MXNET_STORAGE_DEFAULT_NAME_CSTR};
     /*!
-    * \brief Used to pass events back and forth between the engine Var
-    * and the storage manager.
-    */
+     * \brief Used to pass events back and forth between the engine Var
+     * and the storage manager.
+     */
     SyncObj sync_obj;
   };
   /*!
@@ -154,7 +154,7 @@ class Storage {
    *
    * \return A shared pointer to Storage singleton.
    */
-  static const std::shared_ptr<Storage> &_GetSharedRef();
+  static const std::shared_ptr<Storage>& _GetSharedRef();
 
  private:
   std::mutex cpu_mutex_;

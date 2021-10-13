@@ -783,15 +783,16 @@ inline void PushOperator(const OpStatePtr& state,
       RunContext rctx{ctx, nullptr, nullptr};
       run(rctx, engine::CallbackOnStart(), engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
-      Engine::Get()->PushSync([=](RunContext rctx) { run(rctx,
-                                                         engine::CallbackOnStart(),
-                                                         engine::CallbackOnComplete()); },
-                              ctx,
-                              read_vars,
-                              write_vars,
-                              FnProperty::kNormal,
-                              0,
-                              op->name.c_str());
+      Engine::Get()->PushSync(
+          [=](RunContext rctx) {
+            run(rctx, engine::CallbackOnStart(), engine::CallbackOnComplete());
+          },
+          ctx,
+          read_vars,
+          write_vars,
+          FnProperty::kNormal,
+          0,
+          op->name.c_str());
     } else {
       CHECK(exec_type == ExecType::kAsync);
       Engine::Get()->PushAsync(
@@ -844,15 +845,16 @@ inline void PushOperator(const OpStatePtr& state,
       RunContext rctx{ctx, nullptr};
       run(rctx, engine::CallbackOnStart(), engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
-      Engine::Get()->PushSync([=](RunContext rctx) { run(rctx,
-                                                         engine::CallbackOnStart(),
-                                                         engine::CallbackOnComplete()); },
-                              ctx,
-                              read_vars,
-                              write_vars,
-                              FnProperty::kNormal,
-                              0,
-                              op->name.c_str());
+      Engine::Get()->PushSync(
+          [=](RunContext rctx) {
+            run(rctx, engine::CallbackOnStart(), engine::CallbackOnComplete());
+          },
+          ctx,
+          read_vars,
+          write_vars,
+          FnProperty::kNormal,
+          0,
+          op->name.c_str());
     } else {
       CHECK(exec_type == ExecType::kAsync);
       Engine::Get()->PushAsync(

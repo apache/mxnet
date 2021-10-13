@@ -266,20 +266,20 @@ class ResourceManagerImpl : public ResourceManager {
     inline void Seed(uint32_t seed) {
       mshadow::Random<xpu>* r = prnd;
       Engine::Get()->PushAsync(
-        [r, seed](RunContext rctx,
-                  Engine::CallbackOnStart on_start,
-                  Engine::CallbackOnComplete on_complete) {
-          on_start();
-          r->set_stream(rctx.get_stream<xpu>());
-          r->Seed(seed);
-          on_complete();
-        },
-        ctx,
-        {},
-        {resource.var},
-        FnProperty::kNormal,
-        0,
-        "ResourceRandomSetSeed");
+          [r, seed](RunContext rctx,
+                    Engine::CallbackOnStart on_start,
+                    Engine::CallbackOnComplete on_complete) {
+            on_start();
+            r->set_stream(rctx.get_stream<xpu>());
+            r->Seed(seed);
+            on_complete();
+          },
+          ctx,
+          {},
+          {resource.var},
+          FnProperty::kNormal,
+          0,
+          "ResourceRandomSetSeed");
     }
   };
 
@@ -344,41 +344,42 @@ class ResourceManagerImpl : public ResourceManager {
       uint32_t current_seed = p->ctx.dev_id + i * kMaxNumGPUs + seed * kRandMagic;
       Resource* r           = &(p->resource[i]);
       Engine::Get()->PushAsync(
-      [r, current_seed](RunContext rctx,
-                        Engine::CallbackOnStart on_start,
-                        Engine::CallbackOnComplete on_complete) {
-        on_start();
-        auto state_space = static_cast<resource::SpaceAllocator*>(r->ptr_);
-        mshadow::Stream<gpu>* stream = rctx.get_stream<gpu>();
-        CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
-          << "The device id of cudnn dropout state space doesn't match that from stream.";
-        if (!state_space->handle.size) {
-          // not allocated yet
-          size_t dropout_state_size;
-          CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
-          // reserve GPU space
-          Storage::Get()->DirectFree(
-            Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
-          state_space->GetSpace(dropout_state_size, "cudnn_dropout_state");
-        }
-        cudnnDropoutDescriptor_t temp_descriptor;
-        CUDNN_CALL(cudnnCreateDropoutDescriptor(&temp_descriptor));
-        CUDNN_CALL(cudnnSetDropoutDescriptor(temp_descriptor, stream->dnn_handle_,
-                                             0.5,
-                                             state_space->handle.dptr,
-                                             state_space->handle.size,
-                                             current_seed));
-        CUDNN_CALL(cudnnDestroyDropoutDescriptor(temp_descriptor));
-        cudaStream_t cuda_stream = mshadow::Stream<gpu>::GetStream(stream);
-        cudaStreamSynchronize(cuda_stream);
-        on_complete();
-      },
-      p->ctx,
-      {},
-      {r->var},
-      FnProperty::kNormal,
-      0,
-      "CUDNNDropoutDescriptorSeed");
+          [r, current_seed](RunContext rctx,
+                            Engine::CallbackOnStart on_start,
+                            Engine::CallbackOnComplete on_complete) {
+            on_start();
+            auto state_space             = static_cast<resource::SpaceAllocator*>(r->ptr_);
+            mshadow::Stream<gpu>* stream = rctx.get_stream<gpu>();
+            CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
+                << "The device id of cudnn dropout state space doesn't match that from stream.";
+            if (!state_space->handle.size) {
+              // not allocated yet
+              size_t dropout_state_size;
+              CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
+              // reserve GPU space
+              Storage::Get()->DirectFree(
+                  Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
+              state_space->GetSpace(dropout_state_size, "cudnn_dropout_state");
+            }
+            cudnnDropoutDescriptor_t temp_descriptor;
+            CUDNN_CALL(cudnnCreateDropoutDescriptor(&temp_descriptor));
+            CUDNN_CALL(cudnnSetDropoutDescriptor(temp_descriptor,
+                                                 stream->dnn_handle_,
+                                                 0.5,
+                                                 state_space->handle.dptr,
+                                                 state_space->handle.size,
+                                                 current_seed));
+            CUDNN_CALL(cudnnDestroyDropoutDescriptor(temp_descriptor));
+            cudaStream_t cuda_stream = mshadow::Stream<gpu>::GetStream(stream);
+            cudaStreamSynchronize(cuda_stream);
+            on_complete();
+          },
+          p->ctx,
+          {},
+          {r->var},
+          FnProperty::kNormal,
+          0,
+          "CUDNNDropoutDescriptorSeed");
     }
 
     p->curr_ptr.store(0);
@@ -453,19 +454,19 @@ class ResourceManagerImpl : public ResourceManager {
     inline void SeedOne(size_t i, uint32_t seed) {
       common::random::RandGenerator<xpu>* r = sampler[i];
       Engine::Get()->PushAsync(
-      [r, seed](RunContext rctx,
-                Engine::CallbackOnStart on_start,
-                Engine::CallbackOnComplete on_complete) {
-        on_start();
-        r->Seed(rctx.get_stream<xpu>(), seed);
-        on_complete();
-      },
-      ctx,
-      {},
-      {resource[i].var},
-      FnProperty::kNormal,
-      0,
-      "ResourceNativeRandomSetSeed");
+          [r, seed](RunContext rctx,
+                    Engine::CallbackOnStart on_start,
+                    Engine::CallbackOnComplete on_complete) {
+            on_start();
+            r->Seed(rctx.get_stream<xpu>(), seed);
+            on_complete();
+          },
+          ctx,
+          {},
+          {resource[i].var},
+          FnProperty::kNormal,
+          0,
+          "ResourceNativeRandomSetSeed");
     }
     // get next resource in round roubin matter
     inline Resource GetNext() {

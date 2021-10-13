@@ -77,10 +77,10 @@ class P3StoreDist : public KVStoreDist {
     LOG(FATAL) << "NotImplementedError: PushCompressed not implemented in P3StoreDist.";
   }
 
-  void PushDefault(int key, const NDArray &send_buf, const PSKV& pskv, int priority) override {
-    auto push_to_servers = [this, key, pskv, send_buf, priority] (RunContext rctx,
-                                                                  Engine::CallbackOnStart on_start,
-                                                                  Engine::CallbackOnComplete cb) {
+  void PushDefault(int key, const NDArray& send_buf, const PSKV& pskv, int priority) override {
+    auto push_to_servers = [this, key, pskv, send_buf, priority](RunContext rctx,
+                                                                 Engine::CallbackOnStart on_start,
+                                                                 Engine::CallbackOnComplete cb) {
       on_start();
       const int dtype = send_buf.dtype();
       // convert to ps keys

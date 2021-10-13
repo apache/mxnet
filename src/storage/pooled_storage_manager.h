@@ -130,9 +130,8 @@ class PooledStorageManager : public StorageManager, public BucketingStrategy, pu
   void Free(Storage::Handle handle) override {
     // Insert returned memory in cache
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
-    StoringMethod::InsertInCache(BucketingStrategy::get_bucket(handle.size),
-                                 handle.dptr,
-                                 handle.sync_obj);
+    StoringMethod::InsertInCache(
+        BucketingStrategy::get_bucket(handle.size), handle.dptr, handle.sync_obj);
   }
 
   void DirectFree(Storage::Handle handle) override {
@@ -208,7 +207,7 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
   } else {
     // Reusing memory
     auto ptr_syncobj = reuse_pool->back();
-    handle->dptr = ptr_syncobj.first;
+    handle->dptr     = ptr_syncobj.first;
     if (dev_type_ == Context::kGPU) {
       handle->sync_obj = ptr_syncobj.second;
 #if MXNET_USE_CUDA

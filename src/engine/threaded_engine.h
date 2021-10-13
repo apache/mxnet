@@ -353,8 +353,10 @@ class ThreadedEngine : public Engine {
    * \param run_ctx runtime context used to execute the function.
    * \param opr_block the opr_block to be executed and deleted.
    */
-  void ExecuteOprBlock(RunContext run_ctx, OprBlock* opr_block,
-                       CallbackOnStart on_start, CallbackOnComplete callback) {
+  void ExecuteOprBlock(RunContext run_ctx,
+                       OprBlock* opr_block,
+                       CallbackOnStart on_start,
+                       CallbackOnComplete callback) {
     ThreadedOpr* threaded_opr = opr_block->opr;
     if (opr_block->profiling && threaded_opr->opr_name.size()) {
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
@@ -433,24 +435,19 @@ class ThreadedEngine : public Engine {
   }
 
  protected:
-  static void OnStartStatic(Engine *engine, void *opr_block,
-                            const dmlc::Error* error);
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr,
-                               const dmlc::Error* error);
+  static void OnStartStatic(Engine* engine, void* opr_block, const dmlc::Error* error);
+  static void OnCompleteStatic(Engine* engine, void* threaded_opr, const dmlc::Error* error);
 #if MXNET_USE_CUDA
-  static void OnStartCPU(Engine *engine, void *opr_block,
-                         const dmlc::Error* error);
-  static void OnStartGPU(Engine *engine, void *sync_info,
-                         const dmlc::Error* error);
-  static void OnCompleteGPU(Engine *engine, void *sync_info,
-                            const dmlc::Error* error);
+  static void OnStartCPU(Engine* engine, void* opr_block, const dmlc::Error* error);
+  static void OnStartGPU(Engine* engine, void* sync_info, const dmlc::Error* error);
+  static void OnCompleteGPU(Engine* engine, void* sync_info, const dmlc::Error* error);
   struct GPUWorkerSyncInfo : public common::ObjectPoolAllocatable<GPUWorkerSyncInfo> {
-    void *opr_block{nullptr};
-    void *stream{nullptr};
-    void *event_pool{nullptr};
+    void* opr_block{nullptr};
+    void* stream{nullptr};
+    void* event_pool{nullptr};
   };
 
-  std::shared_ptr<common::ObjectPool<GPUWorkerSyncInfo> >       objpool_gpu_sync_ref_;
+  std::shared_ptr<common::ObjectPool<GPUWorkerSyncInfo>> objpool_gpu_sync_ref_;
 #endif
 
  private:
@@ -559,9 +556,7 @@ class ThreadedEngine : public Engine {
     DeduplicateVarHandle(&bulk_status.const_vars, &bulk_status.mutable_vars);
     auto functions = bulk_status.functions;
     this->PushAsync(
-        [functions](RunContext ctx,
-                    CallbackOnStart on_start,
-                    CallbackOnComplete on_complete) {
+        [functions](RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
           on_start();
           for (auto& fn : *functions) {
             fn(ctx);

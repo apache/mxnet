@@ -113,7 +113,9 @@ double EvaluateWorkloads(const std::vector<Workload>& workloads,
       auto func = [wl, data](RunContext ctx,
                              Engine::CallbackOnStart on_start,
                              Engine::CallbackOnComplete cb) {
-        on_start(); EvaluateWorkload(wl, data); cb();
+        on_start();
+        EvaluateWorkload(wl, data);
+        cb();
       };
       std::vector<Engine::VarHandle> reads;
       for (auto i : wl.reads) {
@@ -356,7 +358,8 @@ TEST(Engine, basics) {
           std::this_thread::sleep_for(std::chrono::seconds{1});
           cb();
         },
-        {var}, {}));
+        {var},
+        {}));
     engine->Push(oprs.at(i), mxnet::Context{});
   }
   engine->WaitForAll();
@@ -381,7 +384,8 @@ TEST(Engine, basics) {
           std::this_thread::sleep_for(std::chrono::milliseconds{500});
           cb();
         },
-        {}, {var}));
+        {},
+        {var}));
     engine->Push(oprs.at(i), mxnet::Context{});
   }
   // std::this_thread::sleep_for(std::chrono::seconds{1});
@@ -402,7 +406,7 @@ TEST(Engine, basics) {
   var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-        [](mxnet::RunContext ctx,
+      [](mxnet::RunContext ctx,
          mxnet::Engine::CallbackOnStart on_start,
          mxnet::Engine::CallbackOnComplete cb) {
         std::this_thread::sleep_for(std::chrono::seconds{2});
@@ -410,7 +414,9 @@ TEST(Engine, basics) {
         Foo(ctx, 42);
         cb();
       },
-      {}, {var}, mxnet::FnProperty::kCopyFromGPU));
+      {},
+      {var},
+      mxnet::FnProperty::kCopyFromGPU));
   engine->Push(oprs.at(0), mxnet::Context{});
   LOG(INFO) << "IO operator pushed, should wait for 2 seconds.";
   engine->WaitForVar(var);
@@ -425,15 +431,16 @@ TEST(Engine, basics) {
   var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-        [](mxnet::RunContext ctx,
-        mxnet::Engine::CallbackOnStart on_start,
-        mxnet::Engine::CallbackOnComplete cb) {
+      [](mxnet::RunContext ctx,
+         mxnet::Engine::CallbackOnStart on_start,
+         mxnet::Engine::CallbackOnComplete cb) {
         on_start();
         Foo(ctx, 42);
         std::this_thread::sleep_for(std::chrono::seconds{2});
         cb();
       },
-      {var}, {}));
+      {var},
+      {}));
   engine->Push(oprs.at(0), mxnet::Context{});
   LOG(INFO) << "Operator pushed, should not wait.";
   engine->WaitForVar(var);
@@ -473,7 +480,8 @@ TEST(Engine, VarVersion) {
             Foo(ctx, i);
             cb();
           },
-          {var}, {}));
+          {var},
+          {}));
       engine->Push(oprs.at(i), mxnet::Context{});
     }
     engine->WaitForAll();
@@ -497,7 +505,8 @@ TEST(Engine, VarVersion) {
             Foo(ctx, i);
             cb();
           },
-          {}, {var}));
+          {},
+          {var}));
       engine->Push(oprs.at(i), mxnet::Context{});
     }
     engine->WaitForAll();

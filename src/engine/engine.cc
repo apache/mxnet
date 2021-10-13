@@ -38,9 +38,8 @@ inline Engine* CreateEngine() {
 
   // The async tag is used later to determine if we use the GPU dependecy engine
   std::string async_engine_tag = "Async";
-  auto tag_pos = stype.find(async_engine_tag);
-  if (tag_pos != std::string::npos
-      && tag_pos + async_engine_tag.length() == stype.length()) {
+  auto tag_pos                 = stype.find(async_engine_tag);
+  if (tag_pos != std::string::npos && tag_pos + async_engine_tag.length() == stype.length()) {
     stype = stype.substr(0, tag_pos);
   }
 
@@ -67,8 +66,8 @@ inline Engine* CreateEngine() {
 }
 
 #if MXNET_USE_CUDA
-CUDAEvent::CUDAEvent(Context const& ctx) :
-  event_(std::make_shared<cudaEvent_t>()), dev_id_(ctx.dev_id) {
+CUDAEvent::CUDAEvent(Context const& ctx)
+    : event_(std::make_shared<cudaEvent_t>()), dev_id_(ctx.dev_id) {
   cudaEvent_t ev;
   common::cuda::DeviceStore device_store(dev_id_);
   CUDA_CALL(cudaEventCreateWithFlags(&ev, cudaEventDisableTiming));
@@ -85,7 +84,7 @@ CUDAEvent::~CUDAEvent() {
 #endif
 }  // namespace engine
 
-const std::shared_ptr<Engine> &Engine::_GetSharedRef() {
+const std::shared_ptr<Engine>& Engine::_GetSharedRef() {
   static std::shared_ptr<Engine> sptr(engine::CreateEngine());
   return sptr;
 }

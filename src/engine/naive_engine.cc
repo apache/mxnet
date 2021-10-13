@@ -118,9 +118,7 @@ class NaiveEngine final : public Engine {
     NaiveOpr* opr                = op->Cast<NaiveOpr>();
     opr->profiling = profiling && profiler->IsProfiling(profiler::Profiler::kSymbolic);
     this->PushAsync(
-        [&](RunContext ctx,
-            CallbackOnStart on_start,
-            CallbackOnComplete on_complete) {
+        [&](RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
           if (opr->profiling) {
             std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
             if (profiler->AggregateEnabled()) {
@@ -158,7 +156,7 @@ class NaiveEngine final : public Engine {
                  bool wait            = false) override {
     std::promise<void> promise;
     std::future<void> future     = promise.get_future();
-    CallbackOnStart on_start = CreateOnStart(NaiveEngine::OnStart, &promise);
+    CallbackOnStart on_start     = CreateOnStart(NaiveEngine::OnStart, &promise);
     CallbackOnComplete callback  = CreateCallback(NaiveEngine::OnComplete, &promise);
     profiler::Profiler* profiler = profiler::Profiler::Get();
     auto opr_deleter             = [this](NaiveOpr* p) { this->DeleteOperator(p); };
@@ -192,9 +190,7 @@ class NaiveEngine final : public Engine {
         streams_[dev_id]     = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
         aux_streams_[dev_id] = new GPUAuxStream(streams_[dev_id]);
       }
-      exec_fun(RunContext{exec_ctx, streams_[dev_id], aux_streams_[dev_id]},
-               on_start,
-               callback);
+      exec_fun(RunContext{exec_ctx, streams_[dev_id], aux_streams_[dev_id]}, on_start, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -214,9 +210,8 @@ class NaiveEngine final : public Engine {
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
     NaiveVar* naive_var = NaiveVar::CastFromBase(var);
     this->PushAsync(
-        [delete_fn, naive_var](RunContext ctx,
-                               CallbackOnStart on_start,
-                               CallbackOnComplete on_complete) mutable {
+        [delete_fn, naive_var](
+            RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) mutable {
           on_start();
           delete_fn(ctx);
           NaiveVar::Delete(naive_var);
@@ -242,9 +237,7 @@ class NaiveEngine final : public Engine {
 
  private:
   // onstart
-  static void OnStart(Engine *engine, void *param,
-                         const dmlc::Error* error) {
-  }
+  static void OnStart(Engine* engine, void* param, const dmlc::Error* error) {}
   // callback to oncomplete
   static void OnComplete(Engine* engine, void* param, const dmlc::Error* error) {
     static_cast<std::promise<void>*>(param)->set_value();

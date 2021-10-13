@@ -256,7 +256,7 @@ const std::string env_var_name(const char* dev_type, env_var_type type) {
 
 }  // namespace storage
 
-const std::shared_ptr<Storage> &Storage::_GetSharedRef() {
+const std::shared_ptr<Storage>& Storage::_GetSharedRef() {
 #ifdef __MXNET_JS__
   // dummy code needed for emscripten code to pass
   // do not know why, the new will be NULLPTR

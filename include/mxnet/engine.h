@@ -46,8 +46,7 @@ class CUDAEvent final {
  public:
   explicit CUDAEvent(Context const& ctx);
 
-CUDAEvent(CUDAEvent&& other)
-    : event_(other.event_), dev_id_(other.dev_id_) {
+  CUDAEvent(CUDAEvent&& other) : event_(other.event_), dev_id_(other.dev_id_) {
     other.event_ = nullptr;
   }
 
@@ -59,6 +58,7 @@ CUDAEvent(CUDAEvent&& other)
   inline std::weak_ptr<cudaEvent_t> GetEvent() noexcept {
     return event_;
   }
+
  private:
   std::shared_ptr<cudaEvent_t> event_;
   int dev_id_;
@@ -84,6 +84,7 @@ class CUDAEventPool final {
   inline uint64_t GetCounterValue() noexcept {
     return counter_.load();
   }
+
  private:
   static constexpr size_t kPoolSize = 64;
   std::vector<CUDAEvent> events_;
@@ -155,7 +156,7 @@ class CallbackOnStart {
   /*! \brief engine can see content of callback */
   friend class ::mxnet::Engine;
   /*! \brief the real callback */
-  void (*callback_)(Engine *, void *, const dmlc::Error *);
+  void (*callback_)(Engine*, void*, const dmlc::Error*);
   /*! \brief the engine class passed to callback */
   Engine* engine_;
   /*! \brief the parameter set on callback */
@@ -345,7 +346,7 @@ class MXNET_API Engine {
    *
    * \return A shared pointer to Engine singleton.
    */
-  static const std::shared_ptr<Engine> &_GetSharedRef();
+  static const std::shared_ptr<Engine>& _GetSharedRef();
   /*!
    * \brief Push an synchronous operation to the engine.
    * \param exec_fn Execution function that executes the operation.
@@ -364,13 +365,18 @@ class MXNET_API Engine {
                         FnProperty prop = FnProperty::kNormal,
                         int priority = 0,
                         const char* opr_name = nullptr) {
-    this->PushAsync([exec_fn](RunContext ctx,
-                              CallbackOnStart on_start,
-                              CallbackOnComplete on_complete) {
-        on_start();
-        exec_fn(ctx);
-        on_complete();
-      }, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
+    this->PushAsync(
+        [exec_fn](RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
+          on_start();
+          exec_fn(ctx);
+          on_complete();
+        },
+        exec_ctx,
+        const_vars,
+        mutable_vars,
+        prop,
+        priority,
+        opr_name);
   }
 
   /*!
@@ -378,12 +384,12 @@ class MXNET_API Engine {
    * \param callback th static callback function.
    * \param param the paramter passed to callback.
    */
-  inline CallbackOnStart CreateOnStart(
-      void (*callback)(Engine *, void *, const dmlc::Error *), void *param) {
+  inline CallbackOnStart CreateOnStart(void (*callback)(Engine*, void*, const dmlc::Error*),
+                                       void* param) {
     CallbackOnStart ret;
     ret.callback_ = callback;
-    ret.engine_ = this;
-    ret.param_ = param;
+    ret.engine_   = this;
+    ret.param_    = param;
     return ret;
   }
 

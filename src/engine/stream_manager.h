@@ -91,7 +91,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(Context const& ctx) 
         if (event_pools_.at(ctx.dev_id) == nullptr) {
           event_pools_[ctx.dev_id] = std::make_unique<CUDAEventPool>(ctx);
         }
-        event_pool = event_pools_.at(ctx.dev_id).get();
+        event_pool  = event_pools_.at(ctx.dev_id).get();
         use_counter = counter;
         counter     = (counter + 1) % kStreams;
       }

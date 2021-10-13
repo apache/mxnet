@@ -164,14 +164,14 @@ class ThreadedEnginePooled : public ThreadedEngine {
       callback = this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
     } else {
       CHECK_EQ(opr_block->ctx.dev_mask(), Context::kGPU);
-      auto stream = rctx.get_stream<gpu>();
-      auto event_pool = static_cast<CUDAEventPool*>(rctx.event_pool);
-      auto* info = ThreadedEngine::GPUWorkerSyncInfo::New();
-      info->opr_block = opr_block;
-      info->stream = stream;
+      auto stream      = rctx.get_stream<gpu>();
+      auto event_pool  = static_cast<CUDAEventPool*>(rctx.event_pool);
+      auto* info       = ThreadedEngine::GPUWorkerSyncInfo::New();
+      info->opr_block  = opr_block;
+      info->stream     = stream;
       info->event_pool = event_pool;
-      on_start = this->CreateOnStart(ThreadedEngine::OnStartGPU, info);
-      callback = this->CreateCallback(ThreadedEngine::OnCompleteGPU, info);
+      on_start         = this->CreateOnStart(ThreadedEngine::OnStartGPU, info);
+      callback         = this->CreateCallback(ThreadedEngine::OnCompleteGPU, info);
     }
 #else   // MXNET_USE_CUDA
     CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartStatic, opr_block);

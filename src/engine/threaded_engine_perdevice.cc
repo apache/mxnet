@@ -122,10 +122,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
 #endif
       }
-      CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartStatic,
-                                                     opr_block);
-      CallbackOnComplete callback = this->CreateCallback(ThreadedEngine::OnCompleteStatic,
-                                                         opr_block);
+      CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartStatic, opr_block);
+      CallbackOnComplete callback =
+          this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
       this->ExecuteOprBlock(RunContext{ctx, nullptr, nullptr}, opr_block, on_start, callback);
     } else {
       if (ctx.dev_mask() == Context::kCPU) {
@@ -297,8 +296,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     if (event_pool_it != cuda_event_pool_per_worker_.end()) {
       event_pool = event_pool_it->second.get();
     } else {
-      auto res = cuda_event_pool_per_worker_.emplace(ctx.dev_id,
-                                                     std::make_unique<CUDAEventPool>(ctx));
+      auto res =
+          cuda_event_pool_per_worker_.emplace(ctx.dev_id, std::make_unique<CUDAEventPool>(ctx));
       event_pool = res.first->second.get();
     }
     // execute task
@@ -324,11 +323,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #if MXNET_USE_NVTX
       common::cuda::nvtx::gpuRangeStop();
 #endif
-      auto* info = ThreadedEngine::GPUWorkerSyncInfo::New();
-      info->opr_block = opr_block;
-      info->stream = stream;
-      info->event_pool = event_pool;
-      CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartGPU, info);
+      auto* info                  = ThreadedEngine::GPUWorkerSyncInfo::New();
+      info->opr_block             = opr_block;
+      info->stream                = stream;
+      info->event_pool            = event_pool;
+      CallbackOnStart on_start    = this->CreateOnStart(ThreadedEngine::OnStartGPU, info);
       CallbackOnComplete callback = this->CreateCallback(ThreadedEngine::OnCompleteGPU, info);
       this->ExecuteOprBlock(run_ctx, opr_block, on_start, callback);
     }
@@ -361,8 +360,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #else
       CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartStatic, opr_block);
 #endif
-      CallbackOnComplete callback = this->CreateCallback(ThreadedEngine::OnCompleteStatic,
-                                                         opr_block);
+      CallbackOnComplete callback =
+          this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
       this->ExecuteOprBlock(run_ctx, opr_block, on_start, callback);
     }
   }
