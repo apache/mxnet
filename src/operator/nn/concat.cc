@@ -200,7 +200,7 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   auto& out_stype          = out_attrs->at(0);
   bool dispatched          = false;
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
-  int param_dim = param.dim.has_value() ? param.dim.value() : 0;
+  int param_dim            = param.dim.has_value() ? param.dim.value() : 0;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kCSRStorage) && param_dim == 0) {
     dispatched =
         storage_type_assign(&out_stype, kCSRStorage, dispatch_mode, DispatchMode::kFComputeEx);

@@ -147,10 +147,10 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
     .add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Concat).set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-  nnvm::ObjectPtr node     = nnvm::Node::Create();
-  node->attrs.op   = Op::Get("_contrib_quantized_concat");
-  node->attrs.name = "quantized_" + attrs.name;
-  node->attrs.dict = attrs.dict;
+  nnvm::ObjectPtr node = nnvm::Node::Create();
+  node->attrs.op       = Op::Get("_contrib_quantized_concat");
+  node->attrs.name     = "quantized_" + attrs.name;
+  node->attrs.dict     = attrs.dict;
   if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
     node->op()->attr_parser(&(node->attrs));
   }
