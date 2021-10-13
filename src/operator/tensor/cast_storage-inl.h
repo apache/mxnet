@@ -35,7 +35,7 @@
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/mkldnn/mkldnn_base-inl.h"
+#include "../nn/dnnl/dnnl_base-inl.h"
 #endif
 
 namespace mxnet {
@@ -397,16 +397,16 @@ void CastStorageComputeImpl(const OpContext& ctx, const NDArray& input, const ND
 #if MXNET_USE_ONEDNN == 1
   } else if (src_stype == kDefaultStorage && dst_stype == kDefaultStorage) {
     CHECK_EQ(output.ctx().dev_type, input.ctx().dev_type);
-    // If one of them uses the MKLDNN layout.
-    if (input.IsMKLDNNData() || output.IsMKLDNNData()) {
+    // If one of them uses the DNNL layout.
+    if (input.IsDNNLData() || output.IsDNNLData()) {
       NDArray tmp_input = input;
-      // If the input data is MKLDNN and is a view, we need to reorder the input
+      // If the input data is DNNL and is a view, we need to reorder the input
       // data first.
-      if (input.IsMKLDNNData() && input.IsView())
+      if (input.IsDNNLData() && input.IsView())
         tmp_input = input.Reorder2Default();
-      const mkldnn::memory* in_mem = tmp_input.GetMKLDNNData();
+      const dnnl::memory* in_mem = tmp_input.GetDNNLData();
       const_cast<NDArray&>(output).CopyFrom(*in_mem);
-      MKLDNNStream::Get()->Submit();
+      DNNLStream::Get()->Submit();
     } else {
       mxnet_op::copy(ctx.get_stream<xpu>(), output.data(), input.data());
     }
@@ -445,8 +445,8 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
     // dns -> dns
     DispatchMode mode = DispatchMode::kFCompute;
 #if MXNET_USE_ONEDNN == 1
-    // If we use MKLDNN and the arrays are in CPU memory, the array may store
-    // MKLDNN layout, we should convert its layout explicitly.
+    // If we use DNNL and the arrays are in CPU memory, the array may store
+    // DNNL layout, we should convert its layout explicitly.
     if (dev_mask == kCPU)
       mode = DispatchMode::kFComputeEx;
 #endif

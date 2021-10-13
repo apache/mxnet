@@ -434,7 +434,7 @@ def test_optimize_for():
 
     out = net(a)
     b = net.collect_params().pop('d.weight').data()
-    net.optimize_for(a, b, backend="MKLDNN")
+    net.optimize_for(a, b, backend="DNNL")
     out2 = net(a)
 
 

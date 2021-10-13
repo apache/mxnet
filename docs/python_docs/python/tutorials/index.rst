@@ -84,10 +84,10 @@ Performance
       How to use int8 in your model to boost training speed.
 
    .. card::
-      :title: MKL-DNN
+      :title: oneDNN
       :link: performance/backend/mkldnn/index.html
 
-      How to get the most from your CPU by using Intel's MKL-DNN.
+      How to get the most from your CPU by using oneDNN.
 
    .. card::
       :title: TVM

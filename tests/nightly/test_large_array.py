@@ -280,7 +280,7 @@ def test_nn():
             # calculate the inverse of standard variance
             invstdvar = 1. / np.sqrt(var + eps)
             return mean, invstdvar
-        # Here use 4D input to cover mkldnn BN and non-mkldnn BN
+        # Here use 4D input to cover dnnl BN and non-dnnl BN
         shape = (1, 2, LARGE_X, SMALL_Y)
         axis = 1  # default
         eps = 1e-3
