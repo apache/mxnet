@@ -173,7 +173,7 @@ def trace(a: ndarray, /, *, offset: int = 0) -> ndarray:
     return _mx_nd_np.trace(a, offset=offset, axis1=0, axis2=1, out=None)
 
 
-def tensordot(a: ndarray, b: ndarray, /, *, axes: Tuple[int] = 2) -> ndarray:
+def tensordot(a: ndarray, b: ndarray, /, *, axes: Tuple[int, ...] = 2) -> ndarray:
     r"""
     Returns a tensor contraction of `a` and `b` over specific axes.
 
@@ -429,7 +429,7 @@ def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] =None) -> ndarray:
     return tensordot(a.flatten(), b.flatten(), axis)
 
 #TODO return
-def lstsq(a: ndarray, b: ndarray, / ,*, rcond: Optional[float]='warn'):
+def lstsq(a: ndarray, b: ndarray, / ,*, rcond: Optional[float]='warn') -> Tuple[ndarray, ndarray, int, ndarray]:
     r"""
     Return the least-squares solution to a linear matrix equation.
 
@@ -776,8 +776,8 @@ def cholesky(a: ndarray, /) -> ndarray:
     """
     return _mx_nd_np.linalg.cholesky(a)
 
-#TODO
-def qr(a: ndarray, /, *, mode: Optional[str] = 'reduced') -> ndarray:
+
+def qr(a: ndarray, /, *, mode: Optional[str] = 'reduced') -> Tuple[ndarray, ndarray]:
     r"""
     Compute the qr factorization of a matrix a.
     Factor the matrix a as qr, where q is orthonormal and r is upper-triangular.
@@ -1278,8 +1278,8 @@ def eigvalsh(a: ndarray, /, *, upper: Optional[bool] = False) -> ndarray:
         UPLO = 'U'
     return _mx_nd_np.linalg.eigvalsh(a, UPLO)
 
-#TODO
-def eig(a: ndarray, /):
+
+def eig(a: ndarray, /) -> Tuple[ndarray, ndarray]:
     r"""
     Compute the eigenvalues and right eigenvectors of a square array.
 

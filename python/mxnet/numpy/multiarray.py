@@ -2664,7 +2664,7 @@ def array(
 
 
 @set_module('mxnet.numpy')
-def shape(a) -> Tuple[int]:
+def shape(a) -> Tuple[int, ...]:
     """
     Return the shape of an array.
 
@@ -6462,7 +6462,7 @@ def trace(a: ndarray,
 
 
 @set_module('mxnet.numpy')
-def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int]]] = None) -> ndarray:
+def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int, ...]]] = None) -> ndarray:
     """
     Permute the dimensions of an array.
 
@@ -7353,7 +7353,7 @@ def stack(
 
 
 @set_module('mxnet.numpy')
-def vstack(arrays: Tuple[ndarray], /, *, out: Optional[ndarray] = None) -> ndarray:
+def vstack(arrays: Tuple[ndarray, ...], /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""Stack arrays in sequence vertically (row wise).
 
     This is equivalent to concatenation along the first axis after 1-D arrays
@@ -7398,7 +7398,7 @@ def vstack(arrays: Tuple[ndarray], /, *, out: Optional[ndarray] = None) -> ndarr
 
 
 @set_module('mxnet.numpy')
-def row_stack(arrays: Tuple[ndarray], /):
+def row_stack(arrays: Tuple[ndarray, ...], /):
     r"""Stack arrays in sequence vertically (row wise).
     This is equivalent to concatenation along the first axis after 1-D arrays
     of shape `(N,)` have been reshaped to `(1,N)`. Rebuilds arrays divided by
@@ -7437,7 +7437,7 @@ def row_stack(arrays: Tuple[ndarray], /):
 
 #TODO
 @set_module('mxnet.numpy')
-def column_stack(tup):
+def column_stack(tup: Tuple[ndarray], /) -> ndarray:
     """
     Stack 1-D arrays as columns into a 2-D array.
 
@@ -7473,7 +7473,7 @@ def column_stack(tup):
 
 
 @set_module('mxnet.numpy')
-def hstack(arrays: Tuple[ndarray], /) -> ndarray:
+def hstack(arrays: Tuple[ndarray, ...], /) -> ndarray:
     """
     Stack arrays in sequence horizontally (column wise).
     This is equivalent to concatenation along the second axis,
@@ -7512,7 +7512,7 @@ def hstack(arrays: Tuple[ndarray], /) -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def dstack(arrays: Tuple[ndarray], /) -> ndarray:
+def dstack(arrays: Tuple[ndarray, ...], /) -> ndarray:
     """
     Stack arrays in sequence depth wise (along third axis).
 
@@ -7586,7 +7586,7 @@ def maximum(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwarg
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def fmax(x1, x2, out=None, **kwargs):
+def fmax(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Returns element-wise maximum of the input arrays with broadcasting. (Ignores NaNs)
 
@@ -8579,7 +8579,7 @@ def var(
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def indices(
-        dimensions: Tuple[int],
+        dimensions: Tuple[int, ...],
         /,
         *,
         dtype: Optional[Union[dtype, str]] = None,
@@ -9726,7 +9726,7 @@ def ldexp(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwarg
 
 
 @set_module('mxnet.numpy')
-def vdot(a: ndarray, b: ndarrya, /) -> ndarray:
+def vdot(a: ndarray, b: ndarray, /) -> ndarray:
     r"""
     Return the dot product of two vectors.
     Note that `vdot` handles multidimensional arrays differently than `dot`:
@@ -10957,7 +10957,7 @@ def percentile(
         q: ndarray,
         /,
         *,
-        axis: Optional[[int, Tuple[int, ...]]] = None,
+        axis: Optional[int, Tuple[int, ...]] = None,
         out: Optional[int] = None,
         overwrite_input: Optional[bool] = None,
         interpolation: Optional[str] = 'linear',
@@ -11219,7 +11219,7 @@ def shares_memory(a: ndarray, b: ndarray, /, *, max_work=None) -> bool:
     """
     return _mx_nd_np.shares_memory(a, b, max_work)
 
-#TODO
+#TODO max_work type unknow
 @set_module('mxnet.numpy')
 def may_share_memory(a, b, max_work=None):
     """
@@ -11415,10 +11415,11 @@ def interp(
         x: ndarray,
         xp: ndarray,
         fp: ndarray,
+        /,
+        *,
         left: Optional[float] = None,
         right: Optional[float] = None,
         period: Optional[float] = None,
-        /
 ) -> ndarray:  # pylint: disable=too-many-arguments
     r"""One-dimensional linear interpolation.
 
@@ -11692,7 +11693,7 @@ def ones_like(
     return _mx_nd_np.full_like(a, fill_value=1, dtype=dtype, order=order, ctx=ctx, out=out)
 # pylint: enable=redefined-outer-name
 
-#TODO
+#TODO return type unknow
 @set_module('mxnet.numpy')
 def fill_diagonal(a, val, wrap=False):
     """
@@ -12477,7 +12478,7 @@ def atleast_3d(*arys):
         res.append(ary)
     return _mx_nd_np.atleast_3d(*res)
 
-#TODO
+#TODO pad_width
 @set_module('mxnet.numpy')
 def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-many-arguments
     # pylint: disable=too-many-return-statements
