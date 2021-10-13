@@ -1112,13 +1112,9 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   }
 
   std::unordered_map<std::string, int> kwargs;
-  std::unordered_map<std::string, int> node_name_dtype_map, node_without_dtype_map;
-  nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
   for (uint32_t i = 0; i < num_args; ++i) {
-    kwargs[arg_names[i]]              = arg_type_data[i];
-    node_name_dtype_map[arg_names[i]] = arg_type_data[i];
+    kwargs[arg_names[i]] = arg_type_data[i];
   }
-  mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
 
   g.attrs["target_dtype_ops"]     = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
   g.attrs["fp32_ops"]             = std::make_shared<nnvm::any>(std::move(fp32_ops));
@@ -1126,10 +1122,17 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["conditional_fp32_ops"] = std::make_shared<nnvm::any>(std::move(conditional_fp32_ops));
   g.attrs["excluded_syms"]        = std::make_shared<nnvm::any>(std::move(excluded_syms));
   g.attrs["target_dtype"]         = std::make_shared<nnvm::any>(target_dt);
-  g.attrs["data_name_types"]      = std::make_shared<nnvm::any>(kwargs);
+  g.attrs["data_name_types"]      = std::make_shared<nnvm::any>(std::move(kwargs));
   g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
 
-  g = ApplyPass(std::move(g), "ReducePrecision");
+  g                             = ApplyPass(std::move(g), "ReducePrecision");
+  const auto& known_input_types = g.GetAttr<decltype(kwargs)>("known_input_types");
+  nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
+  mxnet::MatchArguments(g.indexed_graph(), known_input_types, &arg_types, "InferType");
+
+  std::unordered_map<std::string, int> node_name_dtype_map = known_input_types;
+  std::unordered_map<std::string, int> node_without_dtype_map;
+
   // Need to run type inference since it is possible that inferred
   // type of some inputs has changed
   g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");

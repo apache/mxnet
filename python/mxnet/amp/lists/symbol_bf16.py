@@ -38,8 +38,6 @@ BF16_FP32_FUNCS = [
     'BatchNorm',
     'BatchNormWithReLU',
     'clip',
-    'Concat',
-    'concat',
     'Flatten',
     'LRN',
     'Pooling',
@@ -515,6 +513,8 @@ CONDITIONAL_FP32_FUNCS = [
 # Functions with multiple inputs, that need the same
 # type of all their inputs
 WIDEST_TYPE_CASTS = [
+    'Concat',
+    'concat',
     '_Plus',
     '_plus',
     '_Minus',

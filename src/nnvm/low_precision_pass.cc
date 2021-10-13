@@ -34,8 +34,8 @@ namespace mxnet {
 using nnvm::Graph;
 using nnvm::Node;
 using nnvm::NodeEntry;
+using nnvm::NodeEntryEqual;
 using nnvm::ObjectPtr;
-using nnvm::Symbol;
 
 // create a node for operator : op_name with name : node_name
 static ObjectPtr CreateNode(std::string op_name, std::string node_name) {
@@ -178,6 +178,9 @@ Graph ReducePrecision(Graph&& src) {
   nnvm::NodeEntryMap<NodeEntry> mirror_fp32_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_target_dtype_map;
 
+  auto known_input_types = data_name_types;
+  std::unordered_map<Node*, std::pair<NodeEntry, std::vector<Node*>>> outs_of_amp_var_casts;
+
   // Visit nodes in a topologically sorted order
   DFSVisit(src.outputs, [&](const ObjectPtr& node) {
     ObjectPtr new_node = Node::Create(*node);
@@ -194,7 +197,7 @@ Graph ReducePrecision(Graph&& src) {
      * amp_multicast operators between op and its inputs
      * 4. for nodes which need to run in FP32 mode, based on a specific condition,
      * check the condition, and if true add amp_cast (to fp32) after its inputs
-     * 4. for other nodes, create copy node and add it to the mirror_map
+     * 5. for other nodes, create copy node and add it to the mirror_map
      */
     if ((!node->is_variable() && fp32_ops.count(node->op()->name) > 0) ||
         (excluded_syms.count(node->attrs.name) > 0)) {
@@ -209,8 +212,10 @@ Graph ReducePrecision(Graph&& src) {
           new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
         } else if (node_entry.node->is_variable()) {
           // For variable, assume they are already fp32
-          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
-          new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
+          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
+          NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
+          new_node->inputs.emplace_back(mirror_entry);
+          mirror_fp32_map[node_entry] = mirror_entry;
         } else {
           ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
@@ -241,24 +246,18 @@ Graph ReducePrecision(Graph&& src) {
         const auto& node_entry = node->inputs[i];
         if (mirror_target_dtype_map.count(node_entry)) {
           new_node->inputs.emplace_back(mirror_target_dtype_map[node_entry]);
-        } else if ((cast_optional_params && node_entry.node->is_variable() &&
-                    !data_name_types.count(node_entry.node->attrs.name)) ||
-                   (std::find(mutable_inputs.begin(), mutable_inputs.end(), i) !=
-                    mutable_inputs.end()) ||
-                   !(in_types[i] == target_dtype || in_types[i] == -1)) {
+          if (node_entry.node->is_variable() && cast_optional_params) {
+            ObjectPtr amp_node = mirror_target_dtype_map[node_entry].node;
+            outs_of_amp_var_casts[amp_node.get()].second.push_back(new_node.get());
+          }
+        } else if (!(in_types[i] == target_dtype || in_types[i] == -1)) {
           // Here's some rules that not insert amp_cast for inputs:
-          // 1. cast_optional_params is True, node_entry.node is variable and its not the data of
-          //    the network. This is network params that offline converted to target dtype.
-          // 2. Mutable inputs.
-          // 3. Even the input[0] is target dtype, some operations still require float32 for other
+          // 1. Mutable inputs.
+          // 2. Even the input[0] is target dtype, some operations still require float32 for other
           //    inputs. For example, Batchnorm.
           ObjectPtr mirror_node   = mirror_map.at(node_entry.node.get());
           const auto mirror_entry = NodeEntry(mirror_node, node_entry.index, node_entry.version);
           new_node->inputs.push_back(mirror_entry);
-          if ((cast_optional_params && node_entry.node->is_variable())) {
-            // Node is target dtype
-            mirror_target_dtype_map[node_entry] = mirror_entry;
-          }
         } else {
           ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
@@ -269,6 +268,12 @@ Graph ReducePrecision(Graph&& src) {
                       target_dtype_str,
                       &mirror_target_dtype_map,
                       new_node);
+          if (node_entry.node->is_variable() && cast_optional_params) {
+            ObjectPtr amp_node = mirror_target_dtype_map[node_entry].node;
+            auto& temp         = outs_of_amp_var_casts[amp_node.get()];
+            temp.first         = node_entry;
+            temp.second.push_back(new_node.get());
+          }
         }
       }
     } else if (!node->is_variable() && widest_dtype_ops.count(node->op()->name) > 0 &&
@@ -386,6 +391,59 @@ Graph ReducePrecision(Graph&& src) {
     mirror_map[node.get()] = std::move(new_node);
   });
 
+  if (cast_optional_params) {
+    for (auto& kv : outs_of_amp_var_casts) {
+      Node* amp_node                    = kv.first;
+      NodeEntry src_var_node_entry      = kv.second.first;
+      std::vector<Node*>& amp_out_nodes = kv.second.second;
+      CHECK(amp_node->num_inputs() == 1 && amp_node->inputs[0].node->is_variable());
+
+      NodeEntry amp_node_entry = mirror_target_dtype_map[src_var_node_entry];
+
+      bool is_input_mutable = true;
+      for (auto* node : amp_out_nodes) {
+        if (fmutate_inputs.count(node->op()) != 0) {
+          auto mutable_inputs = fmutate_inputs[node->op()](node->attrs);
+          bool is_mutable     = false;
+          for (int i = 0; i < node->inputs.size(); ++i) {
+            if (node->inputs[i].node.get() == amp_node) {
+              is_mutable = (std::find(mutable_inputs.begin(), mutable_inputs.end(), i) !=
+                            mutable_inputs.end());
+              break;
+            }
+          }
+          if (!is_mutable) {
+            is_input_mutable = false;
+            break;
+          }
+        } else {
+          is_input_mutable = false;
+          break;
+        }
+      }
+
+      // if `src_var_node_entry` is the data of the network or some operator used it as fp32,
+      // then we cannot cast this variable (the input of `amp_node`) offline
+      if ((data_name_types.count(src_var_node_entry.node->attrs.name) && !is_input_mutable) ||
+          mirror_fp32_map.count(src_var_node_entry)) {
+        continue;
+      }
+
+      ObjectPtr var_node = mirror_map.at(src_var_node_entry.node.get());
+      NodeEntry var_entry =
+          NodeEntry{var_node, src_var_node_entry.index, src_var_node_entry.version};
+      NodeEntryEqual is_equal;
+      for (auto node : amp_out_nodes) {
+        for (auto& input_entry : node->inputs) {
+          if (is_equal(input_entry, amp_node_entry)) {
+            input_entry = var_entry;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
     if (mirror_fp32_map.count(e)) {
@@ -400,7 +458,8 @@ Graph ReducePrecision(Graph&& src) {
   }
 
   Graph ret;
-  ret.outputs = std::move(outputs);
+  ret.outputs                    = std::move(outputs);
+  ret.attrs["known_input_types"] = std::make_shared<dmlc::any>(std::move(known_input_types));
   return ret;
 }
 
