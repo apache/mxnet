@@ -55,7 +55,7 @@ struct DNNLSelfAttParam : public dmlc::Parameter<DNNLSelfAttParam> {
             "quantized self-attention op to calculate primitive scale.");
     DMLC_DECLARE_FIELD(amp_out_dtype)
         .set_default(dmlc::optional<int>()) MXNET_ADD_ALL_TYPES.describe(
-            "What is the output type, that came from the fused amp_cast.");
+            "What is the output type that came from the fused amp_cast.");
   }
 };
 

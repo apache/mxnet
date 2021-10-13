@@ -80,7 +80,7 @@ struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
         .describe("Whether support channel-wise-quantize for weight.");
     DMLC_DECLARE_FIELD(amp_out_dtype)
         .set_default(dmlc::optional<int>()) MXNET_ADD_ALL_TYPES.describe(
-            "What is the output type, that came from the fused amp_cast.");
+            "What is the output type that came from the fused amp_cast.");
   }
 };
 

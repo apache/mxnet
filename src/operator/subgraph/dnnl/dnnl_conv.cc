@@ -649,7 +649,11 @@ static bool SgDNNLConvInferType(const nnvm::NodeAttrs& attrs,
     }
     return result;
   } else {
-    return DefaultSubgraphOpType(attrs, in_types, out_types);
+    bool result = DefaultSubgraphOpType(attrs, in_types, out_types);
+    if (param.full_conv_param.dnnl_param.amp_out_dtype.has_value()) {
+      (*out_types)[0] = param.full_conv_param.dnnl_param.amp_out_dtype.value();
+    }
+    return result;
   }
 }
 

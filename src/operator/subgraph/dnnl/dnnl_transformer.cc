@@ -100,8 +100,8 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
     }
   } else {
     bool result = DefaultSubgraphOpType(attrs, in_types, out_types);
-    if (param.amp_out_dtype.has_value()) {
-      (*out_types)[0] = param.amp_out_dtype.value();
+    if (params.amp_out_dtype.has_value()) {
+      (*out_types)[0] = params.amp_out_dtype.value();
     }
     return result;
   }
@@ -459,8 +459,8 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
     }
   } else {
     bool result = DefaultSubgraphOpType(attrs, in_types, out_types);
-    if (param.amp_out_dtype.has_value()) {
-      (*out_types)[0] = param.amp_out_dtype.value();
+    if (params.amp_out_dtype.has_value()) {
+      (*out_types)[0] = params.amp_out_dtype.value();
     }
     return result;
   }
