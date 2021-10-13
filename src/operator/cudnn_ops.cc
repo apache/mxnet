@@ -62,7 +62,9 @@ cudnnDataType_t CudnnType(mshadow::TypeFlag dtype) {
       {mshadow::kUint8, CUDNN_DATA_UINT8},
       {mshadow::kInt8, CUDNN_DATA_INT8},
       {mshadow::kInt32, CUDNN_DATA_INT32},
+#if CUDNN_VERSION >= 8100
       {mshadow::kInt64, CUDNN_DATA_INT64},
+#endif  // CUDNN_VERSION >= 8100
   };
   auto it = type_map.find(dtype);
   CHECK(it != type_map.end()) << "Unsupported type: " << dtype;
@@ -294,14 +296,17 @@ void TuneWarnOnce() {
   }
 }
 
-std::vector<Descriptor> MakeFallbackPlans(const std::vector<int64_t>& ixs, cudnnHandle_t handle,
-                                  const Descriptor& op_graph, size_t workspace_limit,
-                                  size_t* max_workspace,
-                                  const std::unordered_set<int64_t>& excl_engines,
-                                  const std::vector<cudnnBackendNumericalNote_t>& req_numeric,
-                                  const std::vector<cudnnBackendNumericalNote_t>& excl_numeric,
-                                  const std::vector<cudnnBackendBehaviorNote_t>& req_behavior,
-                                  const std::vector<cudnnBackendBehaviorNote_t>& excl_behavior) {
+std::vector<Descriptor> MakeFallbackPlans(
+    const std::vector<int64_t>& ixs, cudnnHandle_t handle, const Descriptor& op_graph,
+    size_t workspace_limit, size_t* max_workspace, const std::unordered_set<int64_t>& excl_engines,
+    const std::vector<cudnnBackendNumericalNote_t>& req_numeric,
+    const std::vector<cudnnBackendNumericalNote_t>& excl_numeric
+#if CUDNN_VERSION >= 8200
+    ,
+    const std::vector<cudnnBackendBehaviorNote_t>& req_behavior,
+    const std::vector<cudnnBackendBehaviorNote_t>& excl_behavior
+#endif  // CUDNN_VERSION >= 8200
+) {
   std::vector<Descriptor> plans;
   if (max_workspace) *max_workspace = 0;
   for (auto ix : ixs) {
@@ -331,9 +336,11 @@ std::vector<Descriptor> MakeFallbackPlans(const std::vector<int64_t>& ixs, cudnn
     auto numerical = GetSomeAttrs<cudnnBackendNumericalNote_t>(
         CUDNN_NUMERICAL_NOTE_TYPE_COUNT, engine, CUDNN_ATTR_ENGINE_NUMERICAL_NOTE);
     if (!IsCompatible(numerical, req_numeric, excl_numeric)) continue;
+#if CUDNN_VERSION >= 8200
     auto behavior = GetSomeAttrs<cudnnBackendBehaviorNote_t>(CUDNN_BEHAVIOR_NOTE_TYPE_COUNT, engine,
                                                              CUDNN_ATTR_ENGINE_BEHAVIOR_NOTE);
     if (!IsCompatible(behavior, req_behavior, excl_behavior)) continue;
+#endif  // CUDNN_VERSION >= 8200
     plans.push_back(std::move(plan));
     if (max_workspace) *max_workspace = std::max(*max_workspace, static_cast<size_t>(workspace));
   }
@@ -341,8 +348,12 @@ std::vector<Descriptor> MakeFallbackPlans(const std::vector<int64_t>& ixs, cudnn
 }
 
 cudnnBackendHeurMode_t HeurMode() {
+#if CUDNN_VERSION >= 8100
   auto minor = cudnnGetVersion() / 100 % 10;
   int default_mode = minor < 2 ? CUDNN_HEUR_MODE_INSTANT : CUDNN_HEUR_MODE_B;
+#else
+  int default_mode = CUDNN_HEUR_MODE_INSTANT;
+#endif  // CUDNN_VERSION >= 8100
   return static_cast<cudnnBackendHeurMode_t>(dmlc::GetEnv("MXNET_CUDNN_HEUR_MODE", default_mode));
 }
 
@@ -415,9 +426,11 @@ Descriptor SelectPlan(const OpContext& ctx, const ConvParam& param, Descriptor o
       tune != conv::kFastest ? param.workspace << 20 : std::numeric_limits<size_t>::max();
   auto excl_engines = ExcludeEngines(excl_engines_var);
   auto plans = GetPlans(HeurMode(), s->dnn_handle_, op_graph, workspace_limit, &workspace_size,
-                        excl_engines, RequireNumerics(), ExcludeNumerics(), {}, {}, verbose > 1);
-
-
+                        excl_engines, RequireNumerics(), ExcludeNumerics(),
+#if CUDNN_VERSION >= 8200
+                        {}, {},
+#endif  // CUDNN_VERSION >= 8200
+                        verbose > 1);
   Storage::Handle out_space;
   auto ptrs = tensor_ptrs;
   if (tune != conv::kOff && param.add_to) {
@@ -434,7 +447,11 @@ Descriptor SelectPlan(const OpContext& ctx, const ConvParam& param, Descriptor o
     std::vector<int64_t> ixs(n_fallbacks);
     std::iota(ixs.begin(), ixs.end(), 0);
     plans = MakeFallbackPlans(ixs, s->dnn_handle_, op_graph, workspace_limit, &workspace_size,
-                              excl_engines, RequireNumerics(), ExcludeNumerics(), {}, {});
+                              excl_engines, RequireNumerics(), ExcludeNumerics()
+#if CUDNN_VERSION >= 8200
+                              , {}, {}
+#endif  // CUDNN_VERSION >= 8200
+    );
     workspace = AllocWorkspace(&plans, &workspace_size);
     CHECK(!plans.empty());
     LOG(WARNING) << "Using fallback engine(s) for " << make_op_str();

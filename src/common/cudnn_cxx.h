@@ -45,7 +45,7 @@
 
 #include "cuda/utils.h"
 
-STATIC_ASSERT_CUDNN_VERSION_GE(8200);
+STATIC_ASSERT_CUDNN_VERSION_GE(8002);
 
 namespace mxnet {
 namespace cudnn_cxx {
@@ -121,11 +121,6 @@ struct AttrType<cudnnPointwiseMode_t> {
 };
 
 template <>
-struct AttrType<cudnnReduceTensorOp_t> {
-  static constexpr cudnnBackendAttributeType_t type = CUDNN_TYPE_REDUCTION_OPERATOR_TYPE;
-};
-
-template <>
 struct AttrType<cudnnBackendHeurMode_t> {
   static constexpr cudnnBackendAttributeType_t type = CUDNN_TYPE_HEUR_MODE;
 };
@@ -135,10 +130,18 @@ struct AttrType<cudnnBackendNumericalNote_t> {
   static constexpr cudnnBackendAttributeType_t type = CUDNN_TYPE_NUMERICAL_NOTE;
 };
 
+#if CUDNN_VERSION >= 8100
+template <>
+struct AttrType<cudnnReduceTensorOp_t> {
+  static constexpr cudnnBackendAttributeType_t type = CUDNN_TYPE_REDUCTION_OPERATOR_TYPE;
+};
+#if CUDNN_VERSION >= 8200
 template <>
 struct AttrType<cudnnBackendBehaviorNote_t> {
   static constexpr cudnnBackendAttributeType_t type = CUDNN_TYPE_BEHAVIOR_NOTE;
 };
+#endif  // CUDNN_VERSION >= 8200
+#endif  // CUDNN_VERSION >= 8100
 
 template <>
 struct AttrType<cudnnBackendKnobType_t> {
@@ -262,8 +265,10 @@ std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode, cudnnHandle_t ha
                                  const std::unordered_set<int64_t>& excl_engines,
                                  const std::vector<cudnnBackendNumericalNote_t>& req_numeric,
                                  const std::vector<cudnnBackendNumericalNote_t>& excl_numeric,
+#if CUDNN_VERSION >= 8200
                                  const std::vector<cudnnBackendBehaviorNote_t>& req_behavior,
                                  const std::vector<cudnnBackendBehaviorNote_t>& excl_behavior,
+#endif  // CUDNN_VERSION >= 8200
                                  bool verbose_filter);
 
 #if !defined(__CUDACC__)  // Can be removed when CUDA 10 support is dropped.

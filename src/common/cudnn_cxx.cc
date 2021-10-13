@@ -122,8 +122,10 @@ std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode, cudnnHandle_t ha
                                  const std::unordered_set<int64_t>& excl_engines,
                                  const std::vector<cudnnBackendNumericalNote_t>& req_numeric,
                                  const std::vector<cudnnBackendNumericalNote_t>& excl_numeric,
+#if CUDNN_VERSION >= 8200
                                  const std::vector<cudnnBackendBehaviorNote_t>& req_behavior,
                                  const std::vector<cudnnBackendBehaviorNote_t>& excl_behavior,
+#endif  // CUDNN_VERSION >= 8200
                                  bool verbose_filter) {
   auto heur =
       MakeFinalized(CUDNN_BACKEND_ENGINEHEUR_DESCRIPTOR, CUDNN_ATTR_ENGINEHEUR_OPERATION_GRAPH,
@@ -156,12 +158,14 @@ std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode, cudnnHandle_t ha
       if (verbose_filter) LOG(INFO) << "   Plan " << PlanStr(plan) << " has incompatible numerics";
       continue;
     }
+#if CUDNN_VERSION >= 8200
     auto behavior = GetSomeAttrs<cudnnBackendBehaviorNote_t>(CUDNN_BEHAVIOR_NOTE_TYPE_COUNT, engine,
                                                              CUDNN_ATTR_ENGINE_BEHAVIOR_NOTE);
     if (!IsCompatible(behavior, req_behavior, excl_behavior)) {
       if (verbose_filter) LOG(INFO) << "   Plan " << PlanStr(plan) << " has incompatible behavior";
       continue;
     }
+#endif  // CUDNN_VERSION >= 8200
     plans.push_back(std::move(plan));
     if (max_workspace) *max_workspace = std::max(*max_workspace, static_cast<size_t>(workspace));
   }
@@ -278,7 +282,9 @@ std::string KnobStr(cudnnBackendKnobType_t knob) {
       {CUDNN_KNOB_TYPE_SINGLEBUFFER, "singlebuffer"},
       {CUDNN_KNOB_TYPE_LDGC, "ldgc"},
       {CUDNN_KNOB_TYPE_SPECFILT, "specfilt"},
+#if CUDNN_VERSION >= 8100
       {CUDNN_KNOB_TYPE_KERNEL_CFG, "kernel_cfg"},
+#endif  // CUDNN_VERSION >= 8100
   };
   auto it = m.find(knob);
   return it != m.end() ? it->second : std::to_string(knob);
