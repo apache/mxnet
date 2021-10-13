@@ -197,14 +197,14 @@ RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
   auto src_cell_desc     = memory::desc(layer_param.cell_dims, data_type, tag::ldnc);
   auto weight_peep_desc  = memory::desc();
   auto weight_proj_desc  = layer_param.proj_size > 0
-                               ? memory::desc(layer_param.weight_proj_dims, weight_type, tag::any)
-                               : memory::desc();
-  auto dst_state_desc    = layer_param.state_outputs
-                               ? memory::desc(layer_param.state_dims, data_type, tag::ldnc)
-                               : memory::desc();
-  auto dst_cell_desc     = layer_param.state_outputs
-                               ? memory::desc(layer_param.cell_dims, data_type, tag::ldnc)
-                               : memory::desc();
+                              ? memory::desc(layer_param.weight_proj_dims, weight_type, tag::any)
+                              : memory::desc();
+  auto dst_state_desc = layer_param.state_outputs
+                            ? memory::desc(layer_param.state_dims, data_type, tag::ldnc)
+                            : memory::desc();
+  auto dst_cell_desc = layer_param.state_outputs
+                           ? memory::desc(layer_param.cell_dims, data_type, tag::ldnc)
+                           : memory::desc();
 
   auto fwd = RnnPrimitive();
   switch (mode) {
@@ -259,12 +259,12 @@ RnnBwdPrimitive GetRnnBwdPrim(const DNNLRnnForwardTraining& fwd,
                               const NDArray& data,
                               const NDArray& params) {
   using namespace dnnl;
-  using tag                              = dnnl::memory::format_tag;
-  const DNNLRnnLayerParam& layer_param   = fwd.GetParam();
-  const int mode                         = layer_param.mode;
-  memory::data_type data_type            = get_dnnl_type(data.dtype());
-  memory::data_type weight_type          = get_dnnl_type(params.dtype());
-  const prop_kind prop                   = prop_kind::backward;
+  using tag                            = dnnl::memory::format_tag;
+  const DNNLRnnLayerParam& layer_param = fwd.GetParam();
+  const int mode                       = layer_param.mode;
+  memory::data_type data_type          = get_dnnl_type(data.dtype());
+  memory::data_type weight_type        = get_dnnl_type(params.dtype());
+  const prop_kind prop                 = prop_kind::backward;
   rnn_direction dnnl_rnn_direction = layer_param.bidirectional ? rnn_direction::bidirectional_concat
                                                                : rnn_direction::unidirectional;
 
@@ -275,8 +275,8 @@ RnnBwdPrimitive GetRnnBwdPrim(const DNNLRnnForwardTraining& fwd,
   auto dst_layer_desc    = memory::desc(layer_param.dst_dims, data_type, tag::tnc);
   auto src_state_desc    = memory::desc(layer_param.state_dims, data_type, tag::ldnc);
   auto dst_state_desc    = layer_param.state_outputs
-                               ? memory::desc(layer_param.state_dims, data_type, tag::ldnc)
-                               : memory::desc();
+                            ? memory::desc(layer_param.state_dims, data_type, tag::ldnc)
+                            : memory::desc();
 
   const void* fwd_pd = fwd.GetPrimDesc();
   auto bwd           = RnnBwdPrimitive();
@@ -442,10 +442,10 @@ void DNNLRnnForward::SetNewDataMem(void* x,
                                    void* hy,
                                    void* cy,
                                    const int dtype) {
-  using desc              = dnnl::memory::desc;
-  using format_tag        = dnnl::memory::format_tag;
-  auto& cpu_engine        = CpuEngine::Get()->get_engine();
-  dnnl_args_map_t& args   = net_args_;
+  using desc            = dnnl::memory::desc;
+  using format_tag      = dnnl::memory::format_tag;
+  auto& cpu_engine      = CpuEngine::Get()->get_engine();
+  dnnl_args_map_t& args = net_args_;
 
   RNN_HANDLE_FUNC(RNN_HANDLE_FUNC_NAME);
 
@@ -877,8 +877,8 @@ void DNNLRnnBackward::SetWeightsGradsMem() {
 
   if (this->diff_weights_layer_ == nullptr || this->diff_weights_iter_ == nullptr ||
       this->diff_bias_ == nullptr) {
-    const auto& cpu_engine           = CpuEngine::Get()->get_engine();
-    const DNNLRnnLayerParam& param   = fwd_ptr_->GetParam();
+    const auto& cpu_engine         = CpuEngine::Get()->get_engine();
+    const DNNLRnnLayerParam& param = fwd_ptr_->GetParam();
     const auto dnnl_type =
         static_cast<dnnl::memory::data_type>(bwd_.diff_weights_layer_desc_.data.data_type);
 
@@ -921,9 +921,9 @@ void DNNLRnnBackward::SetDataGradsMem(void* diff_src,
                                       void* diff_state_out,
                                       void* diff_statecell_out,
                                       const int dtype) {
-  using desc              = dnnl::memory::desc;
-  auto& cpu_engine        = CpuEngine::Get()->get_engine();
-  dnnl_args_map_t& args   = this->net_args_;
+  using desc            = dnnl::memory::desc;
+  auto& cpu_engine      = CpuEngine::Get()->get_engine();
+  dnnl_args_map_t& args = this->net_args_;
 
   RNN_HANDLE_FUNC(RNN_HANDLE_FUNC_NAME);
 
@@ -1126,8 +1126,8 @@ void DNNLRnnOp::Forward(const OpContext& ctx,
   const int batch_size = default_param.batch_size_;
   const int state_size = default_param.state_size;
   const int iter_size  = default_param.projection_size.has_value()
-                             ? default_param.projection_size.value()
-                             : default_param.state_size;
+                            ? default_param.projection_size.value()
+                            : default_param.state_size;
   const int directions = default_param.bidirectional ? 2 : 1;
   dnnl::memory::desc dst_desc({seq_length, batch_size, directions * iter_size},
                               get_dnnl_type(data_dtype),

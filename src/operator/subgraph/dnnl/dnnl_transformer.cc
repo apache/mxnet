@@ -585,8 +585,8 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
   // transpose = transposed tmp - output
   memory::desc result_md, tmp_md, transpose_md;
 
-  float oscale             = 1.0f;
-  auto result_dnnl_dtype   = memory::data_type::f32;
+  float oscale           = 1.0f;
+  auto result_dnnl_dtype = memory::data_type::f32;
   if (param_.quantized) {
     min_att_ = inputs[2].data().dptr<float>()[0];
     max_att_ = inputs[3].data().dptr<float>()[0];
@@ -603,8 +603,8 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
                (att_scale_ * qkv_scale_);
       result_dnnl_dtype = memory::data_type::s8;
     } else if (param_.enable_float_output) {
-      oscale              = 1.0f / (att_scale_ * qkv_scale_);
-      result_dnnl_dtype   = memory::data_type::f32;
+      oscale            = 1.0f / (att_scale_ * qkv_scale_);
+      result_dnnl_dtype = memory::data_type::f32;
     } else {
       mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
       mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(

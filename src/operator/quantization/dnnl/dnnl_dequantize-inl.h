@@ -87,9 +87,9 @@ void SgDNNLDequantizeOperator::Forward(const OpContext& ctx,
     const int mask            = 0;
     std::vector<float> scales = {scale};
     attr.set_output_scales(mask, scales);
-    dnnl::engine cpu_engine   = mxnet::CpuEngine::Get()->get_engine();
-    auto i_desc               = i_mem->get_desc();
-    size_t i_ndim             = in_buffer.shape().ndim();
+    dnnl::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+    auto i_desc             = i_mem->get_desc();
+    size_t i_ndim           = in_buffer.shape().ndim();
     if (i_ndim == 4) {
       dnnl::memory::format_tag o_fmt = dnnl::memory::format_tag::nchw;
       dnnl::memory::dims o_dims(i_desc.data.dims, i_desc.data.dims + i_desc.data.ndims);
@@ -100,7 +100,7 @@ void SgDNNLDequantizeOperator::Forward(const OpContext& ctx,
     }
     auto reorder_pd = dnnl::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc_, attr);
     fwd_pd_         = std::make_shared<dnnl::reorder>(reorder_pd);
-    initialized_ = true;
+    initialized_    = true;
   }
   auto o_mem           = CreateDNNLMem(outputs[0], o_desc_, req[0]);
   args_[DNNL_ARG_FROM] = *i_mem;

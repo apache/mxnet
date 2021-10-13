@@ -697,10 +697,10 @@ bool DNNLStorageType(const nnvm::NodeAttrs& attrs,
     check.CopyResult(outputs, indice);
 
 struct DNNLPostEltwiseParam {
-  dnnl::algorithm alg   = dnnl::algorithm::undef;
-  float scale           = 1.f;
-  float alpha           = 0.f;
-  float beta            = 1.f;
+  dnnl::algorithm alg = dnnl::algorithm::undef;
+  float scale         = 1.f;
+  float alpha         = 0.f;
+  float beta          = 1.f;
 };
 
 void DNNLRun(mxnet::FComputeEx fn,

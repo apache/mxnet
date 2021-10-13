@@ -83,8 +83,8 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
 
   dnnl::normalization_flags flags =
       dnnl::normalization_flags::use_global_stats | dnnl::normalization_flags::use_scale_shift;
-  auto& fwd                        = GetBNForward<float>(param, ctx, data_mem, flags);
-  const dnnl::memory& weight_mem   = fwd.GetWeight();
+  auto& fwd                      = GetBNForward<float>(param, ctx, data_mem, flags);
+  const dnnl::memory& weight_mem = fwd.GetWeight();
   CHECK_EQ(weight_mem.get_desc().get_size(), channel_count * sizeof(float) * 2);
   float* weight_buf = reinterpret_cast<float*>(weight_mem.get_data_handle());
 

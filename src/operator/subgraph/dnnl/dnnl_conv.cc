@@ -353,8 +353,8 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
     args_[DNNL_ARG_WEIGHTS] = *cached_weight_.GetDNNLData();
     if (has_bias)
       args_[DNNL_ARG_BIAS] = *cached_bias_.GetDNNLData();
-    args_[DNNL_ARG_DST]   = *output.GetDNNLData();
-    initialized_          = true;
+    args_[DNNL_ARG_DST] = *output.GetDNNLData();
+    initialized_        = true;
   }
 
   if (dnnl_param.with_sum) {
@@ -471,7 +471,7 @@ static void SgDNNLConvParamParser(nnvm::NodeAttrs* attrs) {
       auto& post_act_param = (param_.full_conv_param.dnnl_param.with_act && !with_act)
                                  ? param_.full_conv_param.act_param
                                  : param_.full_conv_param.postsum_act_param;
-      with_act             = true;
+      with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
         post_act_param.alg   = GetDNNLActAlgo(act_param);
@@ -605,10 +605,10 @@ static bool SgDNNLConvInferType(const nnvm::NodeAttrs& attrs,
                             &minmax_indice);
     // Override data type to fp32 for default infer type as bn doesn't support
     // uint8.
-    int orig_data      = base_in_types[0];
-    base_in_types[0]   = mshadow::kFloat32;
-    int orig_sum       = base_in_types[0];
-    auto& dnnl_param   = param.full_conv_param.dnnl_param;
+    int orig_data    = base_in_types[0];
+    base_in_types[0] = mshadow::kFloat32;
+    int orig_sum     = base_in_types[0];
+    auto& dnnl_param = param.full_conv_param.dnnl_param;
     if (param.full_conv_param.dnnl_param.with_sum && !dnnl_param.dedup_sum) {
       auto sum_index           = GetInSumIndex(param);
       orig_sum                 = base_in_types[sum_index];

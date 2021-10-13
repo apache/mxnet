@@ -84,8 +84,8 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
         s, 1, min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
   }
 
-  bool is_train               = false;
-  dnnl::memory::desc out_md   = GetMemDesc(out_data[fullc::kOut]);
+  bool is_train             = false;
+  dnnl::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);
   DNNLFCFlattenData(param, out_data[fullc::kOut], &data, &out_md);
   auto& fwd =
       GetFCFwd(param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);

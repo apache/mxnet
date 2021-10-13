@@ -81,9 +81,9 @@ DNNLLayerNormFwd& DNNLLayerNormFwd::GetCached(const LayerNormParam& param,
 }
 
 DNNLLayerNormFwd::DNNLLayerNormFwd(const LayerNormParam& param, const NDArray& data) {
-  const dnnl::memory::desc data_md   = data.GetDNNLData()->get_desc();
-  fwd_pd                             = CreatePrimitiveDesc(param, data_md);
-  fwd                                = std::make_shared<layernorm_fwd_t>(*fwd_pd);
+  const dnnl::memory::desc data_md = data.GetDNNLData()->get_desc();
+  fwd_pd                           = CreatePrimitiveDesc(param, data_md);
+  fwd                              = std::make_shared<layernorm_fwd_t>(*fwd_pd);
 }
 
 std::shared_ptr<layernorm_fwd_pd_t> DNNLLayerNormFwd::CreatePrimitiveDesc(

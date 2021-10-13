@@ -140,9 +140,9 @@ void SgDNNLQuantizeOperator::Forward(const OpContext& ctx,
       const int mask            = 0;
       std::vector<float> scales = {scale};
       attr.set_output_scales(mask, scales);
-      dnnl::engine cpu_engine   = mxnet::CpuEngine::Get()->get_engine();
-      auto i_desc               = i_mem->get_desc();
-      size_t i_ndim             = in_buffer.shape().ndim();
+      dnnl::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+      auto i_desc             = i_mem->get_desc();
+      size_t i_ndim           = in_buffer.shape().ndim();
       if (i_ndim == 4) {
         dnnl::memory::format_tag o_fmt = dnnl::memory::format_tag::nhwc;
         dnnl::memory::dims o_dims(i_desc.data.dims, i_desc.data.dims + i_desc.data.ndims);

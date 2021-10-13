@@ -129,9 +129,9 @@ static void VerifyMem(const dnnl::memory& mem) {
 }
 
 TEST(DNNL_NDArray, GetDataReorder) {
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  mxnet::ShapeVector shapes             = tas.shapes;
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  mxnet::ShapeVector shapes           = tas.shapes;
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   // Reorder from the default to any other layout.
   for (auto s : shapes) {
@@ -190,10 +190,10 @@ TEST(DNNL_NDArray, GetDataReorder) {
 }
 
 TEST(DNNL_BASE, DNNLSum) {
-  std::vector<NDArrayAttrs> in_arrs     = GetTestInputArrays();
-  std::vector<NDArrayAttrs> in_arrs2    = GetTestInputArrays(ArrayTypes::All, true);
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  std::vector<NDArrayAttrs> in_arrs   = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs2  = GetTestInputArrays(ArrayTypes::All, true);
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr  = in_arrs[i];
@@ -240,11 +240,11 @@ TEST(DNNL_BASE, DNNLSum) {
 }
 
 TEST(DNNL_BASE, CreateDNNLMem) {
-  std::vector<NDArrayAttrs> in_arrs     = GetTestInputArrays();
-  std::vector<NDArrayAttrs> in_arrs2    = GetTestInputArrays(ArrayTypes::All, true);
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
-  DNNLStream* stream                    = DNNLStream::Get();
+  std::vector<NDArrayAttrs> in_arrs   = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs2  = GetTestInputArrays(ArrayTypes::All, true);
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
+  DNNLStream* stream                  = DNNLStream::Get();
 
   // kWriteTo
   for (int i = 0; i < in_arrs.size(); i++) {
@@ -371,9 +371,9 @@ TEST(DNNL_NDArray, GetTestInputArraysConcat) {
 }
 
 TEST(DNNL_NDArray, GetTestOutputArraysConcat) {
-  auto shapes_pds                       = GetTestArrayShapes();
-  std::vector<mxnet::TShape> shapes     = shapes_pds.shapes;
-  std::vector<dnnl::memory::desc> mds   = shapes_pds.mds;
+  auto shapes_pds                     = GetTestArrayShapes();
+  std::vector<mxnet::TShape> shapes   = shapes_pds.shapes;
+  std::vector<dnnl::memory::desc> mds = shapes_pds.mds;
   for (auto& shape : shapes) {
     for (int dim = 0; dim < 5; dim++) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
@@ -397,8 +397,8 @@ TEST(DNNL_NDArray, GetTestOutputArraysConcat) {
 }
 
 TEST(DNNL_NDArray, CopyFrom) {
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   for (auto& in_arr : in_arrs) {

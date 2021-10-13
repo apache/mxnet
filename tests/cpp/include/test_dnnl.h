@@ -355,9 +355,9 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = A
                                                     std::vector<float> scale = {1},
                                                     bool spatial_data_format = false,
                                                     int max                  = 50) {
-  TestArrayShapes tas                   = GetTestArrayShapes(spatial_data_format);
-  std::vector<mxnet::TShape> shapes     = tas.shapes;
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes(spatial_data_format);
+  std::vector<mxnet::TShape> shapes   = tas.shapes;
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc_str;

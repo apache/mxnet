@@ -190,8 +190,8 @@ void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(gamma.storage_type(), mxnet::kDefaultStorage);
     CHECK_EQ(beta.storage_type(), mxnet::kDefaultStorage);
 
-    const dnnl::memory& weight_mem   = fwd.GetWeight();
-    float* weight_buf                = reinterpret_cast<float*>(weight_mem.get_data_handle());
+    const dnnl::memory& weight_mem = fwd.GetWeight();
+    float* weight_buf              = reinterpret_cast<float*>(weight_mem.get_data_handle());
 
     index_t channels_ = data.shape()[1];
     CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(float) * 2);
@@ -244,10 +244,10 @@ void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
       DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       DNNLStream::Get()->Submit();
     } else {  // training
-      const NDArray& outMean        = outputs[batchnorm::kMean];
-      const NDArray& outVar         = outputs[batchnorm::kVar];
-      net_args[DNNL_ARG_MEAN]       = *(outMean.GetDNNLData());
-      net_args[DNNL_ARG_VARIANCE]   = *(outVar.GetDNNLData());
+      const NDArray& outMean      = outputs[batchnorm::kMean];
+      const NDArray& outVar       = outputs[batchnorm::kVar];
+      net_args[DNNL_ARG_MEAN]     = *(outMean.GetDNNLData());
+      net_args[DNNL_ARG_VARIANCE] = *(outVar.GetDNNLData());
       DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       DNNLStream::Get()->Submit();
 

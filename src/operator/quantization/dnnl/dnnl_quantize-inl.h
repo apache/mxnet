@@ -65,8 +65,8 @@ static void DNNLQuantizeComputeKer(const std::vector<NDArray>& inputs,
   const int mask            = 0;
   std::vector<float> scales = {scale};
   attr.set_output_scales(mask, scales);
-  dnnl::engine cpu_engine   = mxnet::CpuEngine::Get()->get_engine();
-  NDArray in_buffer         = inputs[0];
+  dnnl::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+  NDArray in_buffer       = inputs[0];
   if (inputs[0].IsView() && inputs[0].IsDNNLData())
     in_buffer = inputs[0].Reorder2Default();
 

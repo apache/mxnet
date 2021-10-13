@@ -109,9 +109,9 @@ class DNNLRnnMemMgr {
   // The total bytes of the workspace of a DNNLRnnOp
   size_t mem_size = 0;
   // The current available memory bytes
-  size_t curr_size                 = 0;
-  const size_t alignment           = kDNNLAlign;
-  const dnnl::engine& cpu_engine   = CpuEngine::Get()->get_engine();
+  size_t curr_size               = 0;
+  const size_t alignment         = kDNNLAlign;
+  const dnnl::engine& cpu_engine = CpuEngine::Get()->get_engine();
   // Here we hold all memory related to the stateful RNN operators
   std::vector<std::shared_ptr<const dnnl::memory> > mem_holder;
 

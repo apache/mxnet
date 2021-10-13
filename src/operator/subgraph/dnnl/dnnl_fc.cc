@@ -375,8 +375,8 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     args_[DNNL_ARG_WEIGHTS] = *cached_weight_.GetDNNLData();
     if (has_bias)
       args_[DNNL_ARG_BIAS] = *cached_bias_.GetDNNLData();
-    args_[DNNL_ARG_DST]   = *cached_out_mem_;
-    initialized_          = true;
+    args_[DNNL_ARG_DST] = *cached_out_mem_;
+    initialized_        = true;
   }
 
   if (reorder_data_) {

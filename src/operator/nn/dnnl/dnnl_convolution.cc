@@ -592,7 +592,7 @@ void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
   DNNLConvBackward& convBwd = GetConvBwd(full_param, data, weight, bias, out_grad);
   auto out_grad_mem         = out_grad.GetDNNLDataReorder(convBwd.GetDataPd().diff_dst_desc());
   if (req[conv::kData]) {
-    auto weight_mem  = GetWeights(weight, convBwd.GetDataPd().weights_desc(), param.num_group);
+    auto weight_mem = GetWeights(weight, convBwd.GetDataPd().weights_desc(), param.num_group);
     auto in_grad_mem =
         CreateDNNLMem(in_grad[conv::kData], convBwd.GetDataPd().diff_src_desc(), req[conv::kData]);
     DNNLStream::Get()->RegisterPrimArgs(convBwd.GetBwdData(),

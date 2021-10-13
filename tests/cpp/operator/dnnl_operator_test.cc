@@ -447,8 +447,8 @@ void TestOp(const OpAttrs& attrs, VerifyFunc verify_fn) {
   std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
     std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
@@ -535,8 +535,8 @@ void TestConcatOp(const OpAttrs& attrs, VerifyFunc verify_fn, bool backwards = f
   std::vector<OpReqType> req(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
 
@@ -642,8 +642,8 @@ void TestOpEx(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
 
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -820,8 +820,8 @@ void TestOpExBN(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
 
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -912,8 +912,8 @@ void TestFullyConnectedOp(const OpAttrs& forward_attrs, const OpAttrs& backwards
   std::vector<OpReqType> req(forward_attrs.num_outputs);
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
 
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs =
       GetTestInputArrays(forward_attrs.input_types, true, {1}, false, 1);
@@ -1043,8 +1043,8 @@ void TestConvOp(const OpAttrs& forward_attrs,
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
   std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   P param;
   param.Init(forward_attrs.attrs.dict);
@@ -1186,8 +1186,8 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
   std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
-  TestArrayShapes tas                   = GetTestArrayShapes();
-  std::vector<dnnl::memory::desc> mds   = tas.mds;
+  TestArrayShapes tas                 = GetTestArrayShapes();
+  std::vector<dnnl::memory::desc> mds = tas.mds;
 
   mxnet::op::PoolingParam param;
   param.Init(forward_attrs.attrs.dict);
