@@ -1958,6 +1958,18 @@ int MXGetVersion(int* out) {
   API_END();
 }
 
+int MXGetBranch(const char **out) {
+  API_BEGIN();
+  *out = MXNET_BRANCH;
+  API_END();
+}
+
+int MXGetCommitHash(const char **out) {
+  API_BEGIN();
+  *out = MXNET_COMMIT_HASH;
+  API_END();
+}
+
 #if MXNET_USE_TVM_OP
 int MXLoadTVMOp(const char* libpath) {
   API_BEGIN();

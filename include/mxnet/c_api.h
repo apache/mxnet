@@ -53,6 +53,14 @@ extern "C" {
 #define MXNET_DLL
 #endif
 
+#ifndef MXNET_BRANCH
+#define MXNET_BRANCH "NotProvided"
+#endif
+
+#ifndef MXNET_COMMIT_HASH
+#define MXNET_COMMIT_HASH "NotProvided"
+#endif
+
 /*! \brief manually define unsigned int */
 typedef uint32_t mx_uint;
 /*! \brief manually define float */
@@ -541,6 +549,20 @@ MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t* free_mem, uint64_t*
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXGetVersion(int* out);
+
+/*!
+ * \brief get the MXNet library branch at build time, usually provided by cmake
+ * \param pointer to the string holding the branch name
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetBranch(const char **out);
+
+/*!
+ * \brief get the MXNet library commit hash at build time, usually provided by cmake
+ * \param pointer to the string holding the commit hash
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetCommitHash(const char **out);
 
 /*!
  * \brief Load TVM operator from the binary library
