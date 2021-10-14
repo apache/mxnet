@@ -319,10 +319,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       auto color = common::cuda::nvtx::nameToColor(nvtx_name, name_prefix_len);
       common::cuda::nvtx::gpuRangeStart(color, nvtx_name);
 #endif
-      this->ExecuteOprBlock(run_ctx, opr_block);
-#if MXNET_USE_NVTX
-      common::cuda::nvtx::gpuRangeStop();
-#endif
       auto* info                  = ThreadedEngine::GPUWorkerSyncInfo::New();
       info->opr_block             = opr_block;
       info->stream                = stream;
@@ -330,6 +326,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       CallbackOnStart on_start    = this->CreateOnStart(ThreadedEngine::OnStartGPU, info);
       CallbackOnComplete callback = this->CreateCallback(ThreadedEngine::OnCompleteGPU, info);
       this->ExecuteOprBlock(run_ctx, opr_block, on_start, callback);
+#if MXNET_USE_NVTX
+      common::cuda::nvtx::gpuRangeStop();
+#endif
     }
 #else
     ready_event->signal();

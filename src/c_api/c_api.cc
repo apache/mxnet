@@ -3806,7 +3806,7 @@ int MXEnginePushAsync(EngineAsyncFunc async_func,
     std::shared_ptr<void> shared_func_param(func_param, deleter);
     exec_fn = [async_func, shared_func_param](
                   RunContext rctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
-      async_func(&rctx, &on_start, , &on_complete, shared_func_param.get());
+      async_func(&rctx, &on_start, &on_complete, shared_func_param.get());
     };
   }
 
