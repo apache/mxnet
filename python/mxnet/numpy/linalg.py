@@ -586,7 +586,7 @@ def norm(
         *,
         ord: Optional[str] = None,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        keepdims: bool = False
+        keepdims: Optional[bool] = False
 ) -> ndarray:
     r"""
     Matrix or vector norm.
