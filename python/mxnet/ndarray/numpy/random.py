@@ -21,7 +21,7 @@ from ...util import is_np_default_dtype
 from ...device import current_device
 from . import _internal as _npi
 from . import _api_internal
-from ...util import wrap_device_to_device_func
+from ...util import wrap_ctx_to_device_func
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
@@ -30,7 +30,7 @@ __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "mul
            "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def randint(low, high=None, size=None, dtype=None, device=None, out=None):
     r"""Return random integers from `low` (inclusive) to `high` (exclusive).
 
@@ -96,7 +96,7 @@ def randint(low, high=None, size=None, dtype=None, device=None, out=None):
     return _api_internal.randint(low, high, size, dtype, device, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def uniform(low=0.0, high=1.0, size=None, dtype=None, device=None, out=None):
     r"""Draw samples from a uniform distribution.
 
@@ -143,7 +143,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, device=None, out=None):
     return _api_internal.uniform(low, high, size, device, dtype, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def normal(loc=0.0, scale=1.0, size=None, dtype=None, device=None, out=None):
     r"""Draw random samples from a normal (Gaussian) distribution.
 
@@ -186,7 +186,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, device=None, out=None):
     return _api_internal.normal(loc, scale, size, device, dtype, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, device=None, out=None):
     r"""Draw samples from a log-normal distribution.
 
@@ -223,7 +223,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, device=None, out=None)
     return _mx_np_op.exp(normal(loc=mean, scale=sigma, size=size, dtype=dtype, device=device, out=out))
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def logistic(loc=0.0, scale=1.0, size=None, device=None, out=None):
     r"""Draw samples from a logistic distribution.
 
@@ -261,7 +261,7 @@ def logistic(loc=0.0, scale=1.0, size=None, device=None, out=None):
     return _api_internal.logistic(loc, scale, size, device, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def gumbel(loc=0.0, scale=1.0, size=None, device=None, out=None):
     r"""Draw samples from a Gumbel distribution.
 
@@ -348,7 +348,7 @@ def multinomial(n, pvals, size=None):
     return _api_internal.multinomial(n, pvals, size)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def rayleigh(scale=1.0, size=None, device=None, out=None):
     r"""Draw samples from a Rayleigh distribution.
 
@@ -464,7 +464,7 @@ def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
     return _npi.mvn_fallback(mean, cov, size=size)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def choice(a, size=None, replace=True, p=None, device=None, out=None):
     r"""Generates a random sample from a given 1-D array
 
@@ -531,7 +531,7 @@ def choice(a, size=None, replace=True, p=None, device=None, out=None):
         return _api_internal.choice(a, size, replace, p, device, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def exponential(scale=1.0, size=None, device=None, out=None):
     r"""Draw samples from an exponential distribution.
 
@@ -564,7 +564,7 @@ def exponential(scale=1.0, size=None, device=None, out=None):
     return _api_internal.exponential(scale, size, device, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def weibull(a, size=None, device=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given
     parameter a, via inversion.
@@ -616,7 +616,7 @@ def weibull(a, size=None, device=None, out=None):
     return _api_internal.weibull(a, size, device, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def pareto(a, size=None, device=None, out=None):
     r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
 
@@ -658,7 +658,7 @@ def pareto(a, size=None, device=None, out=None):
     return _api_internal.pareto(a, size, device, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def power(a, size=None, device=None, out=None):
     r"""Draw samples in [0, 1] from a power distribution with given parameter a.
 
@@ -700,7 +700,7 @@ def power(a, size=None, device=None, out=None):
     return _api_internal.powerd(a, size, device, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def gamma(shape, scale=1.0, size=None, dtype=None, device=None, out=None):
     """Draw samples from a Gamma distribution.
 
@@ -749,7 +749,7 @@ def gamma(shape, scale=1.0, size=None, dtype=None, device=None, out=None):
     return _api_internal.gamma(shape, scale, size, device, dtype, out)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def beta(a, b, size=None, dtype=None, device=None):
     r"""Draw samples from a Beta distribution.
 
@@ -807,7 +807,7 @@ def beta(a, b, size=None, dtype=None, device=None):
     return out.astype(dtype)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def f(dfnum, dfden, size=None, device=None):
     r"""Draw samples from an F distribution.
 
@@ -872,7 +872,7 @@ def f(dfnum, dfden, size=None, device=None):
     return (X * dfden) / (Y * dfnum)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def chisquare(df, size=None, dtype=None, device=None):
     r"""
     chisquare(df, size=None, dtype=None, device=None)
@@ -952,7 +952,7 @@ def chisquare(df, size=None, dtype=None, device=None):
     return gamma(df/2, 2, size=size, dtype=dtype, device=device)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def rand(*size, **kwargs):
     r"""Random values in a given shape.
 
@@ -1016,7 +1016,7 @@ def shuffle(x):
     _api_internal.shuffle(x, x)
 
 
-@wrap_device_to_device_func
+@wrap_ctx_to_device_func
 def laplace(loc=0.0, scale=1.0, size=None, dtype=None, device=None, out=None):
     r"""Draw random samples from a Laplace distribution.
 
