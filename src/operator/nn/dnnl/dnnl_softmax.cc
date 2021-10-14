@@ -161,72 +161,71 @@ void DNNLSoftmaxBackward(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp)
     return;
 
-    const auto& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-    if (param.temperature.has_value()) {
-      TmpMemMgr::Get()->Init(ctx.requested[0]);
-    }
-
-    const auto tensors = DNNLSoftmaxBwd::Tensors(inputs, outputs);
-    const auto& bwd    = DNNLSoftmaxBwd::GetCached(param, tensors);
-    bwd.Execute(tensors, req);
+  const auto& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  if (param.temperature.has_value()) {
+    TmpMemMgr::Get()->Init(ctx.requested[0]);
   }
 
-  DNNLSoftmaxBwd& DNNLSoftmaxBwd::GetCached(const SoftmaxParam& param, const Tensors& tensors) {
+  const auto tensors = DNNLSoftmaxBwd::Tensors(inputs, outputs);
+  const auto& bwd    = DNNLSoftmaxBwd::GetCached(param, tensors);
+  bwd.Execute(tensors, req);
+}
+
+DNNLSoftmaxBwd& DNNLSoftmaxBwd::GetCached(const SoftmaxParam& param, const Tensors& tensors) {
 #if DMLC_CXX11_THREAD_LOCAL
-    static thread_local std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
+  static thread_local std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
 #else
-    static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
+  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
 #endif
 
-    const float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
-    const int axis          = CheckAxis(param.axis, tensors.out.shape().ndim());
-    DNNLSoftmaxSignature key(param);
-    key.AddSign(axis);
-    key.AddSign(tensors.out);
-    key.AddSign(tensors.out_grad);
-    key.AddSign(temperature);
+  const float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
+  const int axis          = CheckAxis(param.axis, tensors.out.shape().ndim());
+  DNNLSoftmaxSignature key(param);
+  key.AddSign(axis);
+  key.AddSign(tensors.out);
+  key.AddSign(tensors.out_grad);
+  key.AddSign(temperature);
 
-    auto it = bwds.find(key);
-    if (it == bwds.end()) {
-      DNNLSoftmaxBwd bwd(param, tensors);
-      it = AddToCache(&bwds, key, bwd);
-    }
-    return it->second;
+  auto it = bwds.find(key);
+  if (it == bwds.end()) {
+    DNNLSoftmaxBwd bwd(param, tensors);
+    it = AddToCache(&bwds, key, bwd);
   }
+  return it->second;
+}
 
-  void DNNLSoftmaxBwd::Execute(const Tensors& tensors, const std::vector<OpReqType>& req) const {
-    DNNLStream* stream = DNNLStream::Get();
+void DNNLSoftmaxBwd::Execute(const Tensors& tensors, const std::vector<OpReqType>& req) const {
+  DNNLStream* stream = DNNLStream::Get();
 
-    const auto original_out_grad_mem = tensors.out_grad.GetDNNLData();
-    const auto out_mem               = tensors.out.GetDNNLData();
-    const auto data_grad_mem =
-        CreateDNNLMem(tensors.data_grad, softmax_bwd_pd->diff_src_desc(), req[0]);
+  const auto original_out_grad_mem = tensors.out_grad.GetDNNLData();
+  const auto out_mem               = tensors.out.GetDNNLData();
+  const auto data_grad_mem =
+      CreateDNNLMem(tensors.data_grad, softmax_bwd_pd->diff_src_desc(), req[0]);
 
-    dnnl::memory* out_grad_mem;
-    if (temperature_fwd) {
-      // check whether additional buffer is needed, when temperature parameter is being used
-      if (original_out_grad_mem->get_desc() != softmax_bwd_pd->diff_src_desc()) {
-        out_grad_mem = TmpMemMgr::Get()->Alloc(original_out_grad_mem->get_desc());
-      } else {
-        out_grad_mem = const_cast<dnnl::memory*>(data_grad_mem.second);
-      }
-      stream->RegisterPrimArgs(
-          *temperature_fwd,
-          {{DNNL_ARG_SRC, *original_out_grad_mem}, {DNNL_ARG_DST, *out_grad_mem}});
+  dnnl::memory* out_grad_mem;
+  if (temperature_fwd) {
+    // check whether additional buffer is needed, when temperature parameter is being used
+    if (original_out_grad_mem->get_desc() != softmax_bwd_pd->diff_src_desc()) {
+      out_grad_mem = TmpMemMgr::Get()->Alloc(original_out_grad_mem->get_desc());
     } else {
-      out_grad_mem = const_cast<dnnl::memory*>(original_out_grad_mem);
+      out_grad_mem = const_cast<dnnl::memory*>(data_grad_mem.second);
     }
-
-    dnnl_args_map_t args = {{DNNL_ARG_DST, *out_mem},
-                            {DNNL_ARG_DIFF_DST, *out_grad_mem},
-                            {DNNL_ARG_DIFF_SRC, *data_grad_mem.second}};
-
-    stream->RegisterPrimArgs(*softmax_bwd, args);
-
-    CommitOutput(tensors.data_grad, data_grad_mem);
-    stream->Submit();
+    stream->RegisterPrimArgs(
+        *temperature_fwd, {{DNNL_ARG_SRC, *original_out_grad_mem}, {DNNL_ARG_DST, *out_grad_mem}});
+  } else {
+    out_grad_mem = const_cast<dnnl::memory*>(original_out_grad_mem);
   }
 
+  dnnl_args_map_t args = {{DNNL_ARG_DST, *out_mem},
+                          {DNNL_ARG_DIFF_DST, *out_grad_mem},
+                          {DNNL_ARG_DIFF_SRC, *data_grad_mem.second}};
+
+  stream->RegisterPrimArgs(*softmax_bwd, args);
+
+  CommitOutput(tensors.data_grad, data_grad_mem);
+  stream->Submit();
+}
+
 }  // namespace op
-}  // namespace op
+}  // namespace mxnet
 #endif

@@ -28,7 +28,7 @@
  *                |Softmax|<--- out
  *  data_grad <---|  BWD  |
  *                |_______|<--- out_grad
-*/
+ */
 
 #ifndef MXNET_OPERATOR_NN_DNNL_DNNL_SOFTMAX_INL_H_
 #define MXNET_OPERATOR_NN_DNNL_DNNL_SOFTMAX_INL_H_
@@ -63,8 +63,8 @@ class DNNLSoftmaxFwd {
   };
 
   static DNNLSoftmaxFwd& GetCached(const SoftmaxParam& param,
-                                     const Tensors& tensors,
-                                     const bool is_train);
+                                   const Tensors& tensors,
+                                   const bool is_train);
 
   static softmax_fwd_pd_t GetSoftmaxFwdPd(const dnnl::memory& input_mem,
                                           const int axis,
@@ -86,8 +86,8 @@ DNNLSoftmaxFwd::Tensors::Tensors(const NDArray& data, const NDArray& output)
     : data(data), out(output) {}
 
 DNNLSoftmaxFwd::DNNLSoftmaxFwd(const SoftmaxParam& param,
-                                   const Tensors& tensors,
-                                   const bool is_train) {
+                               const Tensors& tensors,
+                               const bool is_train) {
   const float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
   const int axis          = CheckAxis(param.axis, tensors.data.shape().ndim());
   const auto input_mem    = tensors.data.GetDNNLData();
@@ -127,7 +127,7 @@ class DNNLSoftmaxBwd {
 };
 
 DNNLSoftmaxBwd::Tensors::Tensors(const std::vector<NDArray>& inputs,
-                                   const std::vector<NDArray>& outputs)
+                                 const std::vector<NDArray>& outputs)
     : out_grad(inputs[0]), out(inputs[1]), data_grad(outputs[0]) {}
 
 DNNLSoftmaxBwd::DNNLSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors) {
