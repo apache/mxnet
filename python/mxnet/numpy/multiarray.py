@@ -4366,6 +4366,7 @@ def expm1(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     return _mx_nd_np.expm1(x, out=out, **kwargs)
 
+
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
 def arcsin(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs):
@@ -8457,9 +8458,9 @@ def std(
     return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=correction, keepdims=keepdims, out=out)
 # pylint: enable=redefined-outer-name
 
-#mark
+
 @set_module('mxnet.numpy')
-def delete(arr: ndarray, obj: Union[int, ndarray], axis: Optional[int] = None) -> ndarray:
+def delete(arr: ndarray, obj: Union[slice, int, ndarray], axis: Optional[int] = None) -> ndarray:
     """
     Return a new array with sub-arrays along an axis deleted. For a one
     dimensional array, this returns those entries not returned by
@@ -10805,7 +10806,7 @@ def einsum(*operands, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def insert(arr: ndarray, obj: Union[int, ndarray], values: ndarray, /, *, axis: Optional[int]=None) -> ndarray:
+def insert(arr: ndarray, obj: Union[slice, int, ndarray], values: ndarray, /, *, axis: Optional[int]=None) -> ndarray:
     r"""Insert values along the given axis before the given indices.
 
     Parameters
