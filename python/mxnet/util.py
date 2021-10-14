@@ -650,6 +650,54 @@ def wrap_np_binary_func(func):
         return func(x1, x2, out=out)
     return _wrap_np_binary_func
 
+def wrap_data_api_statical_func(func):
+    """
+    A convenience decorator for wrapping data apis standardized statical functions to provide
+    context keyward backward compatibility
+    Parameters
+    ----------
+    func : a numpy-compatible array statical function to be wrapped for context keyward change.
+    Returns
+    -------
+    Function
+    A function wrapped with context keyward changes.
+    """
+
+    @functools.wraps(func)
+    def _wrap_api_creation_func(*args, **kwargs):
+        if len(kwargs) != 0:
+            correction = kwargs.pop('ddof', None)
+            if correction is not None:
+                kwargs['correction'] = correction
+        return func(*args, **kwargs)
+
+    return _wrap_api_creation_func
+
+def wrap_data_api_linalg_func(func):
+    """
+    A convenience decorator for wrapping data apis standardized linalg functions to provide
+    context keyward backward compatibility
+    Parameters
+    ----------
+    func : a numpy-compatible array linalg function to be wrapped for context keyward change.
+    Returns
+    -------
+    Function
+    A function wrapped with context keyward changes.
+    """
+
+    @functools.wraps(func)
+    def _wrap_api_creation_func(*args, **kwargs):
+        if len(kwargs) != 0:
+            upper = kwargs.pop('UPLO', None)
+            if upper is not None:
+                if upper == 'U':
+                    kwargs['upper'] = True
+                else:
+                    kwargs['upper'] = False
+        return func(*args, **kwargs)
+
+    return _wrap_api_creation_func
 
 def wrap_ctx_to_device_func(func):
     """A convenience decorator for converting ctx to device keyward backward compatibility
