@@ -35,6 +35,10 @@
 #include "./elemwise_binary_broadcast_op.h"
 #include "../mxnet_op.h"
 
+#if MXNET_USE_ONEDNN
+#include "../nn/dnnl/dnnl_ops-inl.h"
+#endif  // MXNET_USE_ONEDNN
+
 namespace mxnet {
 namespace op {
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
@@ -229,6 +233,10 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
     (*dict)["rhs_axes"] = rhs_axes_s.str();
   }
 };
+
+inline NumpyReduceAxesParam ConvertReduceNDParamsToNumpy(const ReduceAxesParam& original_param,
+                                                         const NDArray& input,
+                                                         const NDArray& output);
 
 /*
  * Check whether the axis is within the legal range.
@@ -598,10 +606,14 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
       invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   bool dispatched = false;
   if (!dispatched && in_stype == kDefaultStorage) {
+#if MXNET_USE_ONEDNN == 1
+    dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+#else
     // When input is dense output storage is set as dense and dispatched to
     // dense operator
     dispatched =
         storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+#endif
   }
   mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
   if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 &&
@@ -1040,6 +1052,24 @@ void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs,
   if (istype == kCSRStorage) {
     NDArray output = outputs[0];
     ReduceCsr<xpu, mshadow::red::sum, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
+#if MXNET_USE_ONEDNN == 1
+  } else if (istype == kDefaultStorage) {
+    const ReduceAxesParam& original_param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+    const auto numpy_params = ConvertReduceNDParamsToNumpy(original_param, inputs[0], outputs[0]);
+
+    nnvm::NodeAttrs new_attrs;
+    new_attrs.parsed = numpy_params;
+    if (SupportDNNLReduce(inputs[0], outputs[0], numpy_params)) {
+      constexpr dnnl::algorithm alg =
+          normalize ? dnnl::algorithm::reduction_mean : dnnl::algorithm::reduction_sum;
+
+      DNNLRun(DNNLReduceForward<alg>, new_attrs, ctx, inputs[0], req[0], outputs[0]);
+      return;
+    } else {
+      FallBackCompute(ReduceAxesCompute<cpu, reducer, normalize>, attrs, ctx, inputs, req, outputs);
+      return;
+    }
+#endif
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
@@ -1619,7 +1649,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   }
 #else
   const std::string& red = param.ord == 1 ? "red::sum{}" : "red::nrm2{}";
-  const std::string& op  = param.ord == 1 ? "abs" : "identity";
+  const std::string& op = param.ord == 1 ? "abs" : "identity";
   ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, red, nullptr, false, op);
 #endif
 }

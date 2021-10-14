@@ -32,6 +32,10 @@
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 
+#if MXNET_USE_ONEDNN
+#include "../nn/dnnl/dnnl_ops-inl.h"
+#endif  // MXNET_USE_ONEDNN
+
 #include "np_broadcast_reduce_op.h"
 
 namespace mxnet {
@@ -185,6 +189,45 @@ inline bool NumpyBroadcastToShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, pshape);
   return true;
 }
+
+#if MXNET_USE_ONEDNN == 1
+template <dnnl::algorithm reduction_alg>
+static void DNNLReduceEx(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+
+  if (SupportDNNLReduce(inputs[0], outputs[0], param)) {
+    DNNLRun(DNNLReduceForward<reduction_alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  } else {
+    FallBackCompute(
+        NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+}
+
+inline static bool NumpyReduceAxesStorageType(const nnvm::NodeAttrs& attrs,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int>* in_attrs,
+                                              std::vector<int>* out_attrs) {
+  const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+
+  bool onednn_disptach = true;
+  if (param.dtype.has_value()) {
+    onednn_disptach = param.dtype.value() == mshadow::kFloat32;
+  }
+
+  return DNNLStorageType(attrs, dev_mask, onednn_disptach, dispatch_mode, in_attrs, out_attrs);
+}
+#endif
 
 }  // namespace op
 }  // namespace mxnet

@@ -22,9 +22,39 @@
  * \brief CPU Implementation of broadcast and reduce sum (and related) functions based on value.
  */
 #include "./broadcast_reduce_op.h"
+#include "../numpy/np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
+
+NumpyReduceAxesParam ConvertReduceNDParamsToNumpy(const ReduceAxesParam& original_param,
+                                                  const NDArray& input,
+                                                  const NDArray& output) {
+  NumpyReduceAxesParam numpy_param;
+  numpy_param.axis = dmlc::optional<mxnet::Tuple<int>>();
+  if (original_param.axis.has_value()) {
+    mxnet::Tuple<int> axes(original_param.axis.value().begin(), original_param.axis.value().end());
+    std::sort(axes.begin(), axes.end());
+
+    if (original_param.exclude) {
+      const size_t in_ndim = input.shape().ndim();
+      mxnet::Tuple<int> inverted_axes(in_ndim - axes.ndim(), -1);
+      for (int i = 0, j = 0; i < input.shape().ndim(); i++) {
+        if (j >= axes.ndim() || i != axes[j]) {
+          inverted_axes[i - j] = i;
+        } else {
+          j++;
+        }
+      }
+      numpy_param.axis = inverted_axes;
+    } else {
+      numpy_param.axis = axes;
+    }
+  }
+  numpy_param.keepdims = original_param.keepdims;
+  numpy_param.dtype    = dmlc::optional<int>(output.dtype());
+  return numpy_param;
+}
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
 MXNET_ADD_SPARSE_OP_ALIAS(sum)
@@ -67,6 +97,9 @@ Example::
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum>)
     .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsMKLDNN", true)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -84,6 +117,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(mean)
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum, true>)
     .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsMKLDNN", true)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

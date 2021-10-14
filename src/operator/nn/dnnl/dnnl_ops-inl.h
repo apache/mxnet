@@ -101,6 +101,13 @@ void DNNLLeakyReluBackward(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& outputs);
 
+template <dnnl::algorithm reduction_alg>
+void DNNLReduceForward(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const NDArray& in_data,
+                       const OpReqType& req,
+                       const NDArray& out_data);
+
 /* For softmax */
 void DNNLSoftmaxForward(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
