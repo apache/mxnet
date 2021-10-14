@@ -29,7 +29,7 @@ except ImportError:
     from builtins import slice as py_slice
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Tuple, Union, Sequence, List
+from typing import TYPE_CHECKING, Optional, Tuple, Union, Sequence, List, SupportsIndex
 from array import array as native_array
 import functools
 import ctypes
@@ -1332,7 +1332,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             *,
             axis: Optional[Union[int, Tuple[int, ...]]] = None,
             out: Optional[ndarray] = None,
-            keepdims: Optional[bool] = False
+            keepdims: bool = False
         ) -> ndarray:
         return _mx_nd_np.all(self, axis=axis, out=out, keepdims=keepdims)
 
@@ -1342,7 +1342,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             *,
             axis: Optional[Union[int, Tuple[int, ...]]] = None,
             out: Optional[ndarray] = None,
-            keepdims: Optional[bool] = False
+            keepdims: bool = False
     ) -> ndarray:
         return _mx_nd_np.any(self, axis=axis, out=out, keepdims=keepdims)
 
@@ -2971,7 +2971,7 @@ def all(
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray:
     """
     Test whether all array elements along a given axis evaluate to True.
@@ -3027,7 +3027,7 @@ def any(
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False,
+        keepdims: bool = False,
 ) -> ndarray:
     """
     Test whether any array element along a given axis evaluates to True.
@@ -6624,9 +6624,16 @@ def tri(N: ndarray,
     """
     return _mx_nd_np.tri(N, M, k, dtype, ctx)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def triu_indices(n, k=0, m=None, ctx=None):    # pylint: disable=redefined-outer-name
+def triu_indices(
+        n: int,
+        /,
+        *,
+        k: Optional[int] = 0,
+        m: Optional[int] = None,
+        ctx: Optional[Context] = None
+) -> Tuple[ndarray, ndarray]:    # pylint: disable=redefined-outer-name
     r"""
     Return the indices for the upper-triangle of an (n, m) array.
     Parameters
@@ -6687,9 +6694,9 @@ def triu_indices(n, k=0, m=None, ctx=None):    # pylint: disable=redefined-outer
         """
     return _mx_nd_np.triu_indices(n, k, m, ctx)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def triu_indices_from(arr, k=0):
+def triu_indices_from(arr: ndarray, k: Optional[int] = 0) -> Tuple[ndarray, ndarray]:
     """
     Return the indices for the upper-triangle of arr.
     See `triu_indices` for full details.
@@ -6884,9 +6891,9 @@ def arange(
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
 # pylint: enable=redefined-outer-name
 
-#TODO
+
 @set_module('mxnet.numpy')
-def split(ary, indices_or_sections, axis=0):
+def split(ary: ndarray, indices_or_sections: Tuple[int, ...], /, *, axis: Optional[int] = 0) -> List[ndarray]:
     """Split an array into multiple sub-arrays.
 
     Parameters
@@ -6943,9 +6950,15 @@ def split(ary, indices_or_sections, axis=0):
     """
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def array_split(ary, indices_or_sections, axis=0):
+def array_split(
+        ary: ndarray,
+        indices_or_sections: Union[SupportsIndex, Sequence[SupportsIndex]],
+        /,
+        *,
+        axis: Optional[int] = 0
+) -> List[ndarray]:
     """Split an array into multiple sub-arrays.
 
     If `indices_or_sections` is an integer, N, the array will be divided
@@ -6996,9 +7009,9 @@ def array_split(ary, indices_or_sections, axis=0):
     """
     return _mx_nd_np.array_split(ary, indices_or_sections, axis=axis)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def vsplit(ary, indices_or_sections):
+def vsplit(ary: ndarray, indices_or_sections: Union[SupportsIndex, Sequence[SupportsIndex]], /) -> List[ndarray]:
     r"""Split an array into multiple sub-arrays vertically (row-wise).
 
     ``vsplit`` is equivalent to ``split`` with `axis=0` (default): the array is always split
@@ -7069,9 +7082,9 @@ def vsplit(ary, indices_or_sections):
     """
     return _mx_nd_np.vsplit(ary, indices_or_sections)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def dsplit(ary, indices_or_sections):
+def dsplit(ary: ndarray, indices_or_sections: Union[SupportsIndex, Sequence[SupportsIndex]], /) -> List[ndarray]:
     r"""
     Split array into multiple sub-arrays along the 3rd axis (depth).
     Please refer to the `split` documentation.  `dsplit` is equivalent
@@ -7435,7 +7448,7 @@ def row_stack(arrays: Tuple[ndarray, ...], /):
     """
     return _mx_nd_np.row_stack(arrays)
 
-#TODO
+
 @set_module('mxnet.numpy')
 def column_stack(tup: Tuple[ndarray], /) -> ndarray:
     """
@@ -7678,7 +7691,7 @@ def max(
         *,
         axis: Optional[int] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray:
     """
     Return the maximum of an array or maximum along an axis.
@@ -7750,7 +7763,7 @@ def min(
         *,
         axis: Optional[int] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray:
     """
     Return the minimum of an array or minimum along an axis.
@@ -7855,9 +7868,9 @@ def swapaxes(a: ndarray, axis1: int, axis2: int, /) -> ndarray:
     """
     return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def clip(a, a_min, a_max, out=None):
+def clip(a: ndarray, a_min: ndarray, a_max: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """clip(a, a_min, a_max, out=None)
 
     Clip (limit) the values in an array.
@@ -8057,7 +8070,7 @@ def amax(
         *,
         axis: Optional[int]=None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray:
     """
     Return the maximum of an array or maximum along an axis.
@@ -8129,7 +8142,7 @@ def amin(
         *,
         axis: Optional[int] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool]=False
+        keepdims: bool=False
 ) -> ndarray:
     """
     Return the minimum of an array or minimum along an axis.
@@ -8301,7 +8314,7 @@ def mean(
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
         dtype: Optional[Union[dtype, str]] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray:  # pylint: disable=arguments-differ
     """
     Compute the arithmetic mean along the specified axis.
@@ -8376,7 +8389,7 @@ def std(
         dtype: Optional[Union[dtype, str]] = None,
         out: Optional[ndarray] = None,
         correction: Optional[int] = 0,
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray:  # pylint: disable=too-many-arguments
     """
     Compute the standard deviation along the specified axis.
@@ -8504,7 +8517,7 @@ def var(
         dtype: Optional[Union[dtype, str]] = None,
         out: Optional[ndarray] = None,
         correction: Optional[int] = 0,
-        keepdims: Optional[bool] = None
+        keepdims: bool = None
 ) -> ndarray:  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
@@ -10420,9 +10433,9 @@ def roll(
    """
     return _mx_nd_np.roll(a, shift, axis=axis)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def rot90(m, k=1, axes=(0, 1)):
+def rot90(m :ndarray, k: int = 1, axes: Tuple[int, ...] = (0, 1), /) -> ndarray:
     """
     Rotate an array by 90 degrees in the plane specified by axes.
     Rotation direction is from the first towards the second axis.
@@ -10555,7 +10568,7 @@ def hsplit(ary: ndarray, indices_or_sections: Union[int, Tuple[int, ...], List[n
     """
     return _mx_nd_np.hsplit(ary, indices_or_sections)
 
-#TODO
+
 @set_module('mxnet.numpy')
 def einsum(*operands, **kwargs):
     r"""
@@ -10961,7 +10974,7 @@ def percentile(
         out: Optional[int] = None,
         overwrite_input: Optional[bool] = None,
         interpolation: Optional[str] = 'linear',
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray: # pylint: disable=too-many-arguments
     """
     Compute the q-th percentile of the data along the specified axis.
@@ -11038,7 +11051,7 @@ def median(
         axis: Optional[int, Tuple[int, ...]] = None,
         out: Optional[ndarray] = None,
         overwrite_input: Optional[bool] = None,
-        keepdims: Optional[bool] = False
+        keepdims: bool = False
 ) -> ndarray:
     r"""Compute the median along the specified axis.
     Returns the median of the array elements.
@@ -11100,7 +11113,7 @@ def quantile(
         out: Optional[ndarray] = None,
         overwrite_input: Optional[ndarray] = None,
         interpolation: Optional[str] = 'linear',
-        keepdims: Optional[bool]=False
+        keepdims: bool=False
 ) -> ndarray: # pylint: disable=too-many-arguments
     """Compute the q-th quantile of the data along the specified axis.
     New in version 1.15.0.
@@ -11185,9 +11198,9 @@ def quantile(
     return _mx_nd_np.quantile(a, q, axis=axis, out=out, overwrite_input=overwrite_input,
                               interpolation=interpolation, keepdims=keepdims)
 
-#TODO
+
 @set_module('mxnet.numpy')
-def shares_memory(a: ndarray, b: ndarray, /, *, max_work=None) -> bool:
+def shares_memory(a: ndarray, b: ndarray, /, *, max_work: Optional[int] = None) -> bool:
     """
     Determine if two arrays share memory
 
@@ -11195,6 +11208,7 @@ def shares_memory(a: ndarray, b: ndarray, /, *, max_work=None) -> bool:
     ----------
     a, b : ndarray
         Input arrays
+    max_work : int, optional
 
     Returns
     -------
@@ -11219,9 +11233,9 @@ def shares_memory(a: ndarray, b: ndarray, /, *, max_work=None) -> bool:
     """
     return _mx_nd_np.shares_memory(a, b, max_work)
 
-#TODO max_work type unknow
+
 @set_module('mxnet.numpy')
-def may_share_memory(a, b, max_work=None):
+def may_share_memory(a: ndarray, b: ndarray, /, *, max_work: Optional[int] = None) -> bool:
     """
     Determine if two arrays might share memory
 
@@ -11693,9 +11707,9 @@ def ones_like(
     return _mx_nd_np.full_like(a, fill_value=1, dtype=dtype, order=order, ctx=ctx, out=out)
 # pylint: enable=redefined-outer-name
 
-#TODO return type unknow
+
 @set_module('mxnet.numpy')
-def fill_diagonal(a, val, wrap=False):
+def fill_diagonal(a: ndarray, val: ndarray, wrap: bool = False, /) -> None:
     """
     Fill the main diagonal of the given array of any dimensionality.
     For an array `a` with ``a.ndim >= 2``, the diagonal is the list of
@@ -12478,9 +12492,14 @@ def atleast_3d(*arys):
         res.append(ary)
     return _mx_nd_np.atleast_3d(*res)
 
-#TODO pad_width
+
 @set_module('mxnet.numpy')
-def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-many-arguments
+def pad(
+        x: ndarray,
+        pad_width: Union[Tuple[int, ...], int] = None,
+        mode: Optional[str]="constant",
+        **kwargs: any
+) -> ndarray: # pylint: disable=too-many-arguments
     # pylint: disable=too-many-return-statements
     """
     Pad an array.
@@ -12588,7 +12607,7 @@ def prod(
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
         dtype: Optional[Union[dtype, str]] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = False,
+        keepdims: bool = False,
         initial: Optional[int] = None
 ) -> ndarray: # pylint: disable=too-many-arguments
     """
@@ -13105,7 +13124,7 @@ def sum(
         axis: Optional[int] = None,
         dtype: Optional[Union[dtype, str]] = None,
         out: Optional[ndarray] = None,
-        keepdims: Optional[bool] = None,
+        keepdims: Optional[bool = None,
         initial: Optional[int] = None,
         where=None
 ) -> ndarray:
