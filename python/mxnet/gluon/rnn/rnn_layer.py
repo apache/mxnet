@@ -23,7 +23,7 @@
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import np, npx, context
+from ... import np, npx, cpu
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
 from ...util import use_np
@@ -162,7 +162,7 @@ class _RNNLayer(HybridBlock):
             else:
                 info = kwargs
             state = func(shape=info.pop("shape", ()),
-                         ctx=info.pop("ctx", context.cpu()),
+                         device=info.pop("device", cpu()),
                          dtype=info.pop("dtype", "float32"))
             states.append(state)
         return states
@@ -171,7 +171,7 @@ class _RNNLayer(HybridBlock):
         self.skip_states = states is None
         if states is None:
             batch_size = inputs.shape[self._layout.find('N')]
-            states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
+            states = self.begin_state(batch_size, device=inputs.device, dtype=inputs.dtype)
         if isinstance(states, tensor_types):
             states = [states]
 
@@ -209,17 +209,17 @@ class _RNNLayer(HybridBlock):
 
     def _forward_kernel(self, inputs, states, sequence_length):
         """ forward using CUDNN or CPU kenrel"""
-        ctx = inputs.ctx
+        device = inputs.device
         if self._layout == 'NTC':
             inputs = np.swapaxes(inputs, 0, 1)
         if self._projection_size is None:
-            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(ctx).reshape(-1)
+            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(device).reshape(-1)
                       for t in ['weight', 'bias']
                       for l in range(self._num_layers)
                       for d in ['l', 'r'][:self._dir]
                       for g in ['i2h', 'h2h'])
         else:
-            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(ctx).reshape(-1)
+            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(device).reshape(-1)
                       for t in ['weight', 'bias']
                       for l in range(self._num_layers)
                       for d in ['l', 'r'][:self._dir]
@@ -233,12 +233,12 @@ class _RNNLayer(HybridBlock):
         else:
             rnn_args = states
 
-        rnn_args_ctx = []
+        rnn_args_device = []
         for args in rnn_args:
-            new_args = args.as_in_ctx(ctx)
-            rnn_args_ctx.append(new_args)
+            new_args = args.to_device(device)
+            rnn_args_device.append(new_args)
 
-        rnn = npx.rnn(inputs, params, *rnn_args_ctx, use_sequence_length=self._use_sequence_length,
+        rnn = npx.rnn(inputs, params, *rnn_args_device, use_sequence_length=self._use_sequence_length,
                       state_size=self._hidden_size, projection_size=self._projection_size,
                       num_layers=self._num_layers, bidirectional=self._dir == 2,
                       p=self._dropout, state_outputs=True, mode=self._mode,

@@ -136,7 +136,7 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
     def group_by_ctx(arr_list):
         groups = collections.defaultdict(list)
         for arr in arr_list:
-            ctx = arr.ctx
+            ctx = arr.device
             groups[ctx].append(arr)
         return groups
     def multi_sum_sq(*args, ctx=None):
@@ -146,7 +146,7 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
         return sum
     arrays_groups = group_by_ctx(arrays)
     all_ctx_sum = _mx_np.array([0])
-    ctx = arrays[0].ctx
+    ctx = arrays[0].device
     for group in arrays_groups:
         sum_sq = multi_sum_sq(*arrays_groups[group], ctx=ctx)
         all_ctx_sum += sum_sq

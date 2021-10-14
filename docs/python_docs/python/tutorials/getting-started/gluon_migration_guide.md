@@ -78,8 +78,8 @@ MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is
     |                   Deprecated Attributes               |    NumPy ndarray Equivalent    |
     | ----------------------------------------------------- | ------------------------------ |
     |                   `a.asscalar()`                      |         `a.item()`         |
-    |                 `a.as_in_context()`                   |      `a.as_in_ctx()`       |
-    |                    `a.context`                        |          `a.ctx`           |
+    |                 `a.as_in_context()`                   |      `a.to_device()`       |
+    |                    `a.context`                        |          `a.device`           |
     |                   `a.reshape_like(b)`                 |    `a.reshape(b.shape)`    |
     |                    `a.zeros_like(b)`                  |   `mx.np.zeros_like(b)`  |
     |                    `a.ones_like(b)`                   |   `mx.np.ones_like(b)`   |
@@ -223,7 +223,7 @@ Now, in deferred computation mode of Gluon2.0, the divergence of NDArray and Sym
 # forward interface, no F any more
 def forward(self, x):
     # get the context information of input array and make parameters run on the same context
-    ctx = x.ctx
+    ctx = x.device
     # use np/npx interfaces instead of F
     act = npx.fully_connected(x, self.weight.data(ctx),
                               self.bias.data(ctx) if self.bias is not None else None,
@@ -276,7 +276,7 @@ class Dense(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        ctx = x.ctx
+        ctx = x.device
         act = npx.fully_connected(x, self.weight.data(ctx),
                                   self.bias.data(ctx) if self.bias is not None else None,
                                   no_bias=self.bias is None,

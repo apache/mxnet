@@ -190,7 +190,7 @@ def verify_loaded_model(net):
 
         # Display the predictions
         data = np.transpose(data, (0, 3, 1, 2))
-        out = net(data.as_in_ctx(ctx))
+        out = net(data.to_device(ctx))
         predictions = np.argmax(out, axis=1)
         print('Model predictions: ', predictions.asnumpy())
 

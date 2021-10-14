@@ -272,7 +272,7 @@ with mx.Context(mx.gpu(0)):
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("ignore")
         model = get_model("resnet50_v1")
-        model.initialize(ctx=mx.current_context())
+        model.initialize(ctx=mx.current_device())
         model.hybridize()
         model(mx.np.zeros((1, 3, 224, 224)))
         converted_model = amp.convert_hybrid_block(model)

@@ -198,7 +198,7 @@ def main():
         "Output file {output_file} already exists.".format(output_file=args.output_file)
 
     # 2. RUN BENCHMARKS
-    ctx = _parse_mxnet_context(args.ctx)
+    ctx = _parse_mxnet_context(args.device)
     dtype = args.dtype
     profiler = args.profiler
     int64_tensor = args.int64_tensor

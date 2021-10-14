@@ -1548,12 +1548,12 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.to_device``."""
         warnings.warn('ndarray.as_in_context has been renamed to'
-                      ' ndarray.as_in_ctx', DeprecationWarning)
+                      ' ndarray.to_device', DeprecationWarning)
         return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
 
-    def as_in_ctx(self, ctx):
+    def default_device(self, ctx):
         """This function has been deprecated. Please refer to ``ndarray.to_device``."""
-        warnings.warn('ndarray.as_in_ctx has been renamed to'
+        warnings.warn('ndarray.to_device has been renamed to'
                       ' ndarray.to_device', DeprecationWarning)
         return self.to_device(ctx)
 
@@ -6294,7 +6294,7 @@ def arange(start, stop=None, step=1, dtype=None, device=None):
         * When npx.is_np_default_dtype() returns True, default dtype is int64.
     device : device context, optional
         Device context on which the memory is allocated. Default is
-        `mxnet.context.current_context()`.
+        `mxnet.device.current_device()`.
 
     Returns
     -------

@@ -16,7 +16,7 @@
 # under the License.
 """Context management API of mxnet."""
 from warnings import warn
-from .device import Device, _current
+from .device import Device, _current, cpu, gpu, cpu_pinned
 
 
 def Context(*args, **kwargs):

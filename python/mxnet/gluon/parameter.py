@@ -637,6 +637,12 @@ class Parameter(object):
                 "because grad_req='null'"%(self.name))
         return self._check_and_get(self._grad, list)
 
+    def list_ctx(self):
+        """This function has been deprecated. Please refer to ``Parameter.list_device``."""
+        warnings.warn('Parameter.list_ctx has been renamed to'
+                      ' Parameter.list_device', DeprecationWarning)
+        return self.list_device()
+
     def list_device(self):
         """Returns a list of devices this parameter is initialized on."""
         if self._data is None:

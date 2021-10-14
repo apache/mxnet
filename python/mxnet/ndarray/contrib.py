@@ -21,7 +21,7 @@
 import math
 import numpy as np
 import mxnet as mx
-from ..context import current_context
+from ..device import current_device
 from ..random import uniform
 from ..base import _as_list
 from . import ndarray

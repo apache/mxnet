@@ -25,9 +25,9 @@ import pytest
 import itertools
 import scipy.sparse as sps
 import mxnet.ndarray.sparse as mxsps
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
+from mxnet.test_utils import check_consistency, set_default_device, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
+from mxnet.test_utils import default_device, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -53,7 +53,7 @@ from test_contrib_operator import test_multibox_target_op
 from test_optimizer import test_adamW
 del test_custom_op_fork  #noqa
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
@@ -2059,8 +2059,8 @@ def test_bilinear_sampler_versions():
         data_shape, grid_shape = item
         # kWriteTo
         exe_cpu = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
-        exe_gpu = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
-        exe_cudnn = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_gpu = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='write')
+        exe_cudnn = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='write')
         exe_list = [exe_cpu, exe_gpu, exe_cudnn]
         ref_idx = 0
         test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
@@ -2082,8 +2082,8 @@ def test_bilinear_sampler_versions():
 
         # kAddTo
         exe_cpu_addto = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
-        exe_gpu_addto = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
-        exe_cudnn_addto = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_gpu_addto = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='add')
+        exe_cudnn_addto = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='add')
         exe_list = [exe_cpu_addto, exe_gpu_addto, exe_cudnn_addto]
         data_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['data'].shape).astype(np.float32)
         grid_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['grid'].shape).astype(np.float32)
@@ -2102,8 +2102,8 @@ def test_bilinear_sampler_versions():
         for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
             # Mixture of kWriteTo and kNullOp
             exe_cpu_mix = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
-            exe_gpu_mix = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
-            exe_cudnn_mix = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_gpu_mix = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req=req_dict)
+            exe_cudnn_mix = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req=req_dict)
             exe_list = [exe_cpu_mix, exe_gpu_mix, exe_cudnn_mix]
             for exe in exe_list:
                 exe.arg_dict['data'][:] = test_data
@@ -2122,7 +2122,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
     num_ops = 1000
     num_iterations = 20
 
-    ctx = default_context()
+    ctx = default_device()
     # build symbol
     X = mx.sym.Variable('X')
     sym = mx.sym.flip(X, axis=0)

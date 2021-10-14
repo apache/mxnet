@@ -55,16 +55,16 @@ from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
 
-def default_context():
-    """Get default context for regression test."""
-    # _TODO: get context from environment variable to support
+def default_device():
+    """Get default device for regression test."""
+    # _TODO: get device from environment variable to support
     # testing with GPUs
     return current_device()
 
 
-def set_default_context(ctx):
-    """Set default context."""
-    mx.context._current.set(ctx)
+def set_default_device(device):
+    """Set default device."""
+    mx.device._current.set(device)
 
 
 def default_dtype():
@@ -116,25 +116,25 @@ def effective_dtype(dat):
     # inputs to be of comparable precision to a float16, so float16 becomes the
     # 'effective dtype' for tolerance tests involving such op outputs.
 
-    # Is TF32 enabled in the ctx (the default on arch 80 GPUs)
-    def is_TF32_enabled(ctx):
+    # Is TF32 enabled in the device (the default on arch 80 GPUs)
+    def is_TF32_enabled(device):
         try:
-            return (ctx.device_type == 'gpu' and
-                    get_cuda_compute_capability(ctx) == 80 and
+            return (device.device_type == 'gpu' and
+                    get_cuda_compute_capability(device) == 80 and
                     os.environ.get('NVIDIA_TF32_OVERRIDE') != '0')
         except:  # pylint: disable=bare-except
             return False
 
-    ctx = dat.ctx if hasattr(dat, 'ctx') else None
+    device = dat.device if hasattr(dat, 'device') else None
     dtype = np.dtype(dat.dtype)
-    if dtype == np.dtype(np.float32) and is_TF32_enabled(ctx):
+    if dtype == np.dtype(np.float32) and is_TF32_enabled(device):
         return np.dtype(np.float16)
     else:
         return dtype
 
 
 def get_tolerance(dat, tol, default_tol):
-    """ Return the tolerance to be used for dat comparisons based on the given tol, datatype and context.
+    """ Return the tolerance to be used for dat comparisons based on the given tol, datatype and device.
     Parameters
     ----------
     dat : np.ndarray or mx.nd.array or mx.np.ndarray
@@ -437,7 +437,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     >>> assert(row4nnz == 2*row3nnz)
 
     """
-    ctx = ctx if ctx else default_context()
+    ctx = ctx if ctx else default_device()
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
     distribution = "uniform" if distribution is None else distribution
@@ -485,7 +485,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
 def rand_ndarray(shape, stype='default', density=None, dtype=None, modifier_func=None,
                  shuffle_csr_indices=False, distribution=None, ctx=None):
     """Generate a random sparse ndarray. Returns the generated ndarray."""
-    ctx = ctx if ctx else default_context()
+    ctx = ctx if ctx else default_device()
     if stype == 'default':
         arr = mx.nd.array(random_arrays(shape), dtype=dtype, ctx=ctx)
     else:
@@ -683,7 +683,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         b = b.asnumpy()
     use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:
-        if not (hasattr(a, 'ctx') and hasattr(b, 'ctx') and a.ctx == b.ctx and a.dtype == b.dtype):
+        if not (hasattr(a, 'ctx') and hasattr(b, 'ctx') and a.device == b.device and a.dtype == b.dtype):
             use_np_allclose = True
             if isinstance(a, mx.nd.NDArray):
                 a = a.asnumpy()
@@ -843,7 +843,7 @@ def assert_exception(f, exception_type, *args, **kwargs):
         return
 
 
-def _parse_location(sym, location, ctx, dtype=default_dtype()):
+def _parse_location(sym, location, device, dtype=default_dtype()):
     """Parses the given location to a ordered dictionary.
 
     Arguments of the provided op `sym` are used as dictionary keys
@@ -862,7 +862,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         - if type is dict of str -> `np.ndarray`
             maps the name of arguments to the corresponding `np.ndarray`.
         *In either case, value of all the arguments must be provided.*
-    ctx : Context
+    device : Device
         Device context.
     dtype: "asnumpy" or np.float16 or np.float32 or np.float64
         If dtype is "asnumpy" then the mx.nd.array created will have the same
@@ -898,12 +898,12 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+    location = {k: mx.nd.array(v, ctx=device, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                if isinstance(v, np.ndarray) else v for k, v in location.items()}
     return _sorted_dict(location)
 
 
-def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
+def _parse_aux_states(sym, aux_states, device, dtype=default_dtype()):
     """Parses the given auxiliary states to a dictionary.
 
     Auxiliary states of the provided op `sym` are used as dictionary
@@ -922,7 +922,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         - if type is dict of str -> `np.ndarray`
             maps the name of arguments to the corresponding `np.ndarray`.
         *In either case, all aux states of `sym` must be provided.*
-    ctx : Context
+    device : Device
         Device context.
     dtype: "asnumpy" or np.float16 or np.float32 or np.float64
         If dtype is "asnumpy" then the mx.nd.array created will have the same
@@ -963,7 +963,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         elif isinstance(aux_states, (list, tuple)):
             aux_names = sym.list_auxiliary_states()
             aux_states = {k:v for k, v in zip(aux_names, aux_states)}
-        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+        aux_states = {k: mx.nd.array(v, ctx=device, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                       for k, v in aux_states.items()}
     return aux_states
 
@@ -1087,7 +1087,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=None, rto
     """
     assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
-        ctx = default_context()
+        ctx = default_device()
 
     def random_projection(shape):
         """Get a random weight matrix with not too small elements
@@ -1224,7 +1224,7 @@ def check_symbolic_forward(sym, location, expected, rtol=None, atol=None,
             Contains all the NumPy arrays corresponding to sym.list_auxiliary_states
         - if type is dict of str to np.ndarray
             Contains the mapping between names of auxiliary states and their values.
-    ctx : Context, optional
+    device : Device, optional
         running context
     dtype: "asnumpy" or np.float16 or np.float32 or np.float64
         If dtype is "asnumpy" then the mx.nd.array created will have the same
@@ -1248,7 +1248,7 @@ def check_symbolic_forward(sym, location, expected, rtol=None, atol=None,
     """
     assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
-        ctx = default_context()
+        ctx = default_device()
 
     location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
@@ -1330,7 +1330,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=None, atol=
     >>> mat2 = np.array([[5, 6], [7, 8]])
     >>> grad1 = mx.nd.zeros(shape)
     >>> grad2 = mx.nd.zeros(shape)
-    >>> exec_add = sym_add._bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
+    >>> exec_add = sym_add._bind(default_device(), args={'lhs': mat1, 'rhs': mat2},
     ... args_grad={'lhs': grad1, 'rhs': grad2}, grad_req={'lhs': 'write', 'rhs': 'write'})
     >>> exec_add.forward(is_train=True)
     >>> ograd = mx.nd.ones(shape)
@@ -1339,7 +1339,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=None, atol=
     """
     assert dtype == 'asnumpy' or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
-        ctx = default_context()
+        ctx = default_device()
 
     location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
@@ -1439,7 +1439,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
             Only test the forward speed.
     """
     if ctx is None:
-        ctx = default_context()
+        ctx = default_device()
 
     if grad_req is None:
         grad_req = 'write'
@@ -1673,8 +1673,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                     assert_almost_equal(arr, gtarr, rtol=rt, atol=at, equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: {} {} ctx {} vs {} {} ctx {} at {}'.format(
-                        np.dtype(arr.dtype).name, arr.ctx, i,
-                        np.dtype(gtarr.dtype).name, gtarr.ctx, gt_idx, name))
+                        np.dtype(arr.dtype).name, arr.device, i,
+                        np.dtype(gtarr.dtype).name, gtarr.device, gt_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
                         raise e
@@ -2253,19 +2253,19 @@ def compare_optimizer(opt1, opt2, shapes, dtype, w_stype='default', g_stype='def
     s1_list, s2_list = [], []
     for i, shape in enumerate(shapes):
         if w_stype == 'default':
-            w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-            w1 = w2.copyto(default_context())
+            w2 = mx.random.uniform(shape=shape, ctx=default_device(), dtype=dtype)
+            w1 = w2.copyto(default_device())
         elif w_stype in ('row_sparse', 'csr'):
             w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
-            w1 = w2.copyto(default_context()).tostype('default')
+            w1 = w2.copyto(default_device()).tostype('default')
         else:
             raise Exception("type not supported yet")
         if g_stype == 'default':
-            g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-            g1 = g2.copyto(default_context())
+            g2 = mx.random.uniform(shape=shape, ctx=default_device(), dtype=dtype)
+            g1 = g2.copyto(default_device())
         elif g_stype in ('row_sparse', 'csr'):
             g2 = rand_ndarray(shape, g_stype, dtype=dtype)
-            g1 = g2.copyto(default_context()).tostype('default')
+            g1 = g2.copyto(default_device()).tostype('default')
         else:
             raise Exception("type not supported yet")
         s1 = opt1.create_state_multi_precision(i, w1)
@@ -2301,19 +2301,19 @@ def compare_optimizer_noise_seeded(opt1, opt2, shapes, dtype, noise_seed,
     s1_list, s2_list = [], []
     for i, shape in enumerate(shapes):
         if w_stype == 'default':
-            w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-            w1 = w2.copyto(default_context())
+            w2 = mx.random.uniform(shape=shape, ctx=default_device(), dtype=dtype)
+            w1 = w2.copyto(default_device())
         elif w_stype in ('row_sparse', 'csr'):
             w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
-            w1 = w2.copyto(default_context()).tostype('default')
+            w1 = w2.copyto(default_device()).tostype('default')
         else:
             raise Exception("type not supported yet")
         if g_stype == 'default':
-            g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-            g1 = g2.copyto(default_context())
+            g2 = mx.random.uniform(shape=shape, ctx=default_device(), dtype=dtype)
+            g1 = g2.copyto(default_device())
         elif g_stype in ('row_sparse', 'csr'):
             g2 = rand_ndarray(shape, g_stype, dtype=dtype)
-            g1 = g2.copyto(default_context()).tostype('default')
+            g1 = g2.copyto(default_device()).tostype('default')
         else:
             raise Exception("type not supported yet")
         s1 = opt1.create_state_multi_precision(i, w1)

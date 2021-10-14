@@ -48,7 +48,7 @@ class Updater(object):
             grads = _as_classic(grad, allow_np)
             weights = _as_classic(weight, allow_np)
         if weights:
-            self.optimizer._set_current_context(weights[0].context.device_id)
+            self.optimizer._set_current_device(weights[0].context.device_id)
         for i, idx in enumerate(indices):
             # convert ctypes.char_p.value back to python str if needed
             if isinstance(idx, bytes):

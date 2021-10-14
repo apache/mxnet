@@ -37,8 +37,8 @@ def test_float64_fallback():
 
     def forward(self, x):
         out = mx.npx.convolution(x, kernel=(1,1), num_filter=3,
-                                 weight=self.weight.data(x.ctx), no_bias=False,
-                                 bias=self.bias.data(x.ctx))
+                                 weight=self.weight.data(x.device), no_bias=False,
+                                 bias=self.bias.data(x.device))
         return out
     
     def infer_shape(self, x):
@@ -300,13 +300,13 @@ def test_pos_concat_scale_align(data_shape, out_type):
 
     def forward(self, x):
         conv1 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
-                                   weight=self.shared_weight.data(x.ctx), no_bias=True)
+                                   weight=self.shared_weight.data(x.device), no_bias=True)
         conv2 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
-                                   weight=self.shared_weight.data(x.ctx)*2, no_bias=True)
+                                   weight=self.shared_weight.data(x.device)*2, no_bias=True)
         conv3 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
-                                   weight=self.shared_weight.data(x.ctx)*3, no_bias=True)
+                                   weight=self.shared_weight.data(x.device)*3, no_bias=True)
         conv4 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
-                                   weight=self.shared_weight.data(x.ctx)*4, no_bias=True)
+                                   weight=self.shared_weight.data(x.device)*4, no_bias=True)
         return mx.np.concatenate([conv1, conv2, conv3, conv4], axis=1)
 
     def infer_shape(self, x, *args):
@@ -436,7 +436,7 @@ def test_mobilenetv2_struct(data_shape, reverse_sum_order, dedup_subgraph):
 @pytest.mark.parametrize('reverse_sum_order', [False, True])
 @pytest.mark.parametrize('model_name', ['conv_bn_sum', 'mobilenetv2_struct'])
 def test_deduplication(data_shape, reverse_sum_order, model_name):
-  data_nd = mx.np.random.uniform(-1, 1, size=data_shape, ctx=mx.cpu())
+  data_nd = mx.np.random.uniform(-1, 1, size=data_shape, device=mx.cpu())
   if (model_name == 'mobilenetv2_struct'):
     model_dedup = MobileNetV2Struct(reverse_sum_order=reverse_sum_order)
   else:
@@ -539,7 +539,7 @@ def test_neg_conv_add(data_shape):
     def forward(self, x):
       conv = self.conv1(x)
       print(conv.shape)
-      sum1 = conv + self.add_value.data(x.ctx)
+      sum1 = conv + self.add_value.data(x.device)
       pool = self.pool(conv)
       return self.tailneg(sum1, pool)
     
@@ -629,7 +629,7 @@ def test_neg_conv_bn_add_relu(data_shape):
       conv = self.conv1(x)
       bn = self.bn(conv)
       print(bn.shape)
-      sum1 = bn + self.add_value.data(x.ctx)
+      sum1 = bn + self.add_value.data(x.device)
       relu = self.act(sum1)
       if self.connect_mode == "conv_customop":
         pool = self.pool(conv)
@@ -673,9 +673,9 @@ def test_neg_conv_bn_add_relu(data_shape):
 ])
 def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32, 2, 2)
-  data_nd = mx.np.random.uniform(data_min, data_max, size=data_shape, ctx=mx.cpu())
-  weight_nd = mx.np.random.uniform(weight_min, weight_max, size=[64, 32, 1, 1], ctx=mx.cpu())
-  bias_nd = mx.np.random.uniform(-1, +1, size=[64], ctx=mx.cpu())
+  data_nd = mx.np.random.uniform(data_min, data_max, size=data_shape, device=mx.cpu())
+  weight_nd = mx.np.random.uniform(weight_min, weight_max, size=[64, 32, 1, 1], device=mx.cpu())
+  bias_nd = mx.np.random.uniform(-1, +1, size=[64], device=mx.cpu())
 
   class ConvBiasOverflow(nn.HybridBlock):
         def __init__(self, dtype='float32', **kwargs):
@@ -685,8 +685,8 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
 
         def forward(self, x):
             conv1 = mx.npx.convolution(x, num_filter=64, kernel=(1,1),
-                                       weight=self.weight.data(x.ctx),
-                                       no_bias=False, bias=self.bias.data(x.ctx))
+                                       weight=self.weight.data(x.device),
+                                       no_bias=False, bias=self.bias.data(x.device))
             return conv1
         
         def infer_shape(self, x):
@@ -703,7 +703,7 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
   
   calib_data = mx.gluon.data.DataLoader(data_nd, batch_size=data_shape[0])
   qnet = quantization.quantize_net(net,
-                                   ctx=mx.cpu(),
+                                   device=mx.cpu(),
                                    exclude_layers=None,
                                    exclude_operators=None,
                                    quantized_dtype='int8',
@@ -748,7 +748,7 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   qsym, qarg_params, qaux_params = quantization.quantize_model(sym=sym_sg,
                                                                arg_params=arg_params,
                                                                aux_params={},
-                                                               ctx=mx.cpu(),
+                                                               device=mx.cpu(),
                                                                excluded_sym_names=None,
                                                                excluded_op_names=None,
                                                                quantized_dtype='int8',

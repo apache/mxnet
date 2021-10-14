@@ -99,7 +99,7 @@ img = mx.image.color_normalize(img.astype(dtype='float32')/255,
                                std=mx.np.array([0.229, 0.224, 0.225])) # normalize
 img = img.transpose((2, 0, 1)) # channel first
 img = mx.np.expand_dims(img, axis=0) # batchify
-img = img.as_in_ctx(ctx)
+img = img.to_device(ctx)
 
 prob = mx.npx.softmax(net(img)) # predict and normalize output
 idx = mx.npx.topk(prob, k=5)[0] # get top 5 result

@@ -22,7 +22,7 @@ import math
 import warnings
 import numpy as np
 
-from ...context import Context, cpu
+from ...device import Device, cpu
 from ... import ndarray as nd
 from ... import numpy as _np
 from ...util import is_np_array
@@ -82,7 +82,7 @@ class Stack(object):
             dtype = data[0].dtype
             if self._use_shared_mem:
                 out = _arr.empty((len(data),) + data[0].shape, dtype=dtype,
-                                 ctx=Context('cpu_shared', 0))
+                                 device=Device('cpu_shared', 0))
                 return _arr.stack(data, out=out) if is_np_array() else _arr.stack(*data, out=out)
             else:
                 return _arr.stack(data) if is_np_array() else _arr.stack(*data)
@@ -93,7 +93,7 @@ class Stack(object):
             out = np.asarray(data)
             dtype = out.dtype
             if self._use_shared_mem:
-                return _arr.array(out, ctx=Context('cpu_shared', 0), dtype=dtype)
+                return _arr.array(out, device=Device('cpu_shared', 0), dtype=dtype)
             else:
                 return _arr.array(out, dtype=dtype)
 
@@ -148,8 +148,8 @@ def _pad_arrs_to_max_length(arrs, pad_val, use_shared_mem, dtype, round_to=None)
             ret[tuple(slices)] = arr
 
 
-    ctx = Context('cpu_shared', 0) if use_shared_mem else cpu()
-    ret = _arr.array(ret, ctx=ctx, dtype=dtype)
+    device = Device('cpu_shared', 0) if use_shared_mem else cpu()
+    ret = _arr.array(ret, device=device, dtype=dtype)
 
     return ret
 
@@ -261,12 +261,12 @@ def _append_arrs(arrs, use_shared_mem=False, expand=False, batch_axis=0):
     _arr = _np if is_np_array() else nd
     if isinstance(arrs[0], _arr.NDArray):
         if use_shared_mem:
-            out = [x.as_in_context(Context('cpu_shared', 0)) for x in arrs]
+            out = [x.as_in_context(Device('cpu_shared', 0)) for x in arrs]
         else:
             out = arrs
     else:
         if use_shared_mem:
-            out = [_arr.array(x, ctx=Context('cpu_shared', 0)) for x in arrs]
+            out = [_arr.array(x, device=Device('cpu_shared', 0)) for x in arrs]
         else:
             out = [_arr.array(x) for x in arrs]
 

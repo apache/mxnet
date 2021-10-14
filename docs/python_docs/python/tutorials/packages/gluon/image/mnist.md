@@ -163,9 +163,9 @@ for i in range(epoch):
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
-                z = net(x.as_in_ctx(ctx))
+                z = net(x.to_device(ctx))
                 # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y.as_in_ctx(ctx))
+                loss = softmax_cross_entropy_loss(z, y.to_device(ctx))
                 # Backpropagate the error for one iteration.
                 loss.backward()
                 outputs.append(z)
@@ -192,7 +192,7 @@ metric = mx.gluon.metric.Accuracy()
 for batch_num, (data, label) in enumerate(val_data):
     outputs = []
     for x in data:
-        outputs.append(net(x.as_in_ctx(ctx)))
+        outputs.append(net(x.to_device(ctx)))
     # Updates internal evaluation
     metric.update(label, outputs)
 print('validation acc: %s=%f'%metric.get())
@@ -279,9 +279,9 @@ for i in range(epoch):
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
-                z = net(x.as_in_ctx(ctx))
+                z = net(x.to_device(ctx))
                 # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y.as_in_ctx(ctx))
+                loss = softmax_cross_entropy_loss(z, y.to_device(ctx))
                 # Backpropogate the error for one iteration.
                 loss.backward()
                 outputs.append(z)
@@ -308,7 +308,7 @@ metric = mx.gluon.metric.Accuracy()
 for batch_num, (data, label) in enumerate(val_data):
     outputs = []
     for x in data:
-        outputs.append(net(x.as_in_ctx(ctx)))
+        outputs.append(net(x.to_device(ctx)))
     # Updates internal evaluation
     metric.update(label, outputs)
 print('validation acc: %s=%f'%metric.get())
