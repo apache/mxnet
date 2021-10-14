@@ -21,6 +21,7 @@
 """numpy ndarray and util functions."""
 
 
+from __future__ import annotations
 try:
     from __builtin__ import all as py_all
     from __builtin__ import slice as py_slice
@@ -28,7 +29,6 @@ except ImportError:
     from builtins import all as py_all
     from builtins import slice as py_slice
 
-from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Sequence, List, SupportsIndex
 from array import array as native_array
 import functools
