@@ -278,9 +278,9 @@ MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1
 
 <h2 id="6">Graph optimization</h2>
 
-Limitations of this experimental feature are:
+Graph optimization with subgraph is available and enabled by default on master branch. Limitations of this experimental feature are:
 
-- Use this feature only for inference.
+- It works only for inference.
 
 - This feature will only run on the CPU, even if you're using a GPU-enabled build of MXNet.
 
