@@ -24,6 +24,7 @@ from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcar
 from . import fallback_linalg
 from typing import Optional, Tuple, Union
 
+
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
            'tensordot', 'trace', 'matrix_transpose', 'vecdot']
@@ -434,7 +435,7 @@ def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] =None) -> ndarray:
     """
     return _mx_nd_np.tensordot(a.flatten(), b.flatten(), axis)
 
-#TODO return
+
 def lstsq(a: ndarray, b: ndarray, / ,*, rcond: Optional[float]='warn') -> Tuple[ndarray, ndarray, int, ndarray]:
     r"""
     Return the least-squares solution to a linear matrix equation.
