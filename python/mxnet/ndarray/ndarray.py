@@ -40,7 +40,7 @@ from ..base import ctypes2buffer
 from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
 from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
 from ..runtime import Features
-from ..context import Context, current_context
+from ..device import Device, current_device
 from ..util import is_np_array
 from . import _internal
 from . import op
@@ -2499,7 +2499,7 @@ fixed-size items.
         >>> x.context
         cpu(0)
         >>> type(x.context)
-        <class 'mxnet.context.Context'>
+        <class 'mxnet.device.Device'>
         >>> y = mx.nd.zeros((2,3), mx.gpu(0))
         >>> y.context
         gpu(0)
@@ -2508,7 +2508,7 @@ fixed-size items.
         dev_id = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetContext(
             self.handle, ctypes.byref(dev_typeid), ctypes.byref(dev_id)))
-        return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
+        return Device(Device.devtype2str[dev_typeid.value], dev_id.value)
 
     @property
     def ctx(self):
@@ -2523,6 +2523,23 @@ fixed-size items.
         <class 'mxnet.context.Context'>
         >>> y = mx.nd.zeros((2,3), mx.gpu(0))
         >>> y.ctx
+        gpu(0)
+        """
+        return self.context
+
+    @property
+    def device(self):
+        """Device context of the array. Has the same meaning as context.
+
+        Examples
+        --------
+        >>> x = mx.nd.array([1, 2, 3, 4])
+        >>> x.device
+        cpu(0)
+        >>> type(x.device)
+        <class 'mxnet.device.Device'>
+        >>> y = mx.nd.zeros((2,3), mx.gpu(0))
+        >>> y.device
         gpu(0)
         """
         return self.context
@@ -3354,7 +3371,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -3538,7 +3555,7 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dty
         warnings.warn('`infer_range` argument has been deprecated',
                       DeprecationWarning)
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              infer_range=False, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
@@ -3584,7 +3601,7 @@ def linspace(start, stop, num, endpoint=True, ctx=None, dtype=mx_real_t):
     array([ 2.,  2.2.,  2.4,  2.6,  2.8], dtype=float32)
     """
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     return _internal._linspace(start=start, stop=stop, num=num,
                                endpoint=endpoint, dtype=dtype, ctx=str(ctx))
 # pylint: disable= no-member, protected-access, too-many-arguments
@@ -4816,7 +4833,7 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -4858,7 +4875,7 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
@@ -4886,7 +4903,7 @@ def empty(shape, ctx=None, dtype=None):
     if isinstance(shape, int):
         shape = (shape, )
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     if dtype is None:
         dtype = mx_real_t
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
