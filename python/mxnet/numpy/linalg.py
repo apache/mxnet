@@ -421,7 +421,7 @@ def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] =None) -> ndarray:
     >>> b = np.array([[4, 1], [2, 2]])
     >>> np.vecdot(a, b)
     array(30.)
-    >>> np.vecdot(b, a)
+    >>> np.linalg.vecdot(b, a)
     array(30.)
     >>> 1*4 + 4*1 + 5*2 + 6*2
     30
