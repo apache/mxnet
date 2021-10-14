@@ -24,7 +24,7 @@
 #include "./requantize-inl.h"
 #include "./quantize-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_requantize-inl.h"
+#include "./dnnl/dnnl_requantize-inl.h"
 #endif
 
 namespace mxnet {
@@ -73,8 +73,8 @@ inference accuracy.
     // will be reverted after the improvement of CachedOP is done.
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNRequantizeForward)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLRequantizeForward)
 #else
 .set_attr<FCompute>("FCompute<cpu>", RequantizeForward<cpu>)
 #endif

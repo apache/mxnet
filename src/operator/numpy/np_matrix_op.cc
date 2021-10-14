@@ -380,12 +380,13 @@ NNVM_REGISTER_OP(_npx_reshape)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
     .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
     .set_attr<FInferStorageType>("FInferStorageType", ReshapeStorageType)
-    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
 #endif
     .set_attr<nnvm::FInplaceOption>("FInplaceOption",
                                     [](const NodeAttrs& attrs) {

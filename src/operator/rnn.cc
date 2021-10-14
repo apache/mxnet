@@ -27,7 +27,7 @@
 
 #include "./rnn-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./nn/mkldnn/mkldnn_rnn-inl.h"
+#include "./nn/dnnl/dnnl_rnn-inl.h"
 #endif  // MXNET_USE_ONEDNN == 1
 
 namespace mxnet {
@@ -199,9 +199,9 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int>* in_attrs,
                                   std::vector<int>* out_attrs) {
   const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-  const bool support_mkldnn_rnn =
+  const bool support_dnnl_rnn =
       !param.use_sequence_length && dmlc::GetEnv("MXNET_USE_ONEDNN_RNN", 1);
-  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_rnn, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, support_dnnl_rnn, dispatch_mode, in_attrs, out_attrs);
 }
 #endif  // MXNET_USE_ONEDNN == 1
 
@@ -246,9 +246,9 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs& attrs,
   }
 
 #if MXNET_USE_ONEDNN == 1
-  if (ctx.dev_type == kCPU && SupportMKLDNNRnn(param, in_types[rnn_enum::kData])) {
+  if (ctx.dev_type == kCPU && SupportDNNLRnn(param, in_types[rnn_enum::kData])) {
     const mxnet::TShape& data_shape = in_shapes[rnn_enum::kData];
-    state = OpStatePtr::Create<MKLDNNRnnOp>(param, data_shape[0], data_shape[1], data_shape[2]);
+    state = OpStatePtr::Create<DNNLRnnOp>(param, data_shape[0], data_shape[1], data_shape[2]);
     return state;
   }
 #endif  // MXNET_USE_ONEDNN == 1
@@ -271,8 +271,8 @@ static void RNNStatefulComputeExCPU(const OpStatePtr& state_ptr,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNRnn(inputs[rnn_enum::kData].dtype())) {
-    MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
+  if (SupportDNNLRnn(inputs[rnn_enum::kData].dtype())) {
+    DNNLRnnOp& op = state_ptr.get_state<DNNLRnnOp>();
     op.Forward(ctx, inputs, req, outputs);
   } else {
     FallBackCompute(RNNStatefulCompute<cpu>, state_ptr, ctx, inputs, req, outputs);
@@ -284,8 +284,8 @@ static void RNNStatefulGradComputeExCPU(const OpStatePtr& state_ptr,
                                         const std::vector<NDArray>& inputs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNRnn(inputs[rnn_enum::kData].dtype())) {
-    MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
+  if (SupportDNNLRnn(inputs[rnn_enum::kData].dtype())) {
+    DNNLRnnOp& op = state_ptr.get_state<DNNLRnnOp>();
     op.Backward(ctx, inputs, req, outputs);
   } else {
     FallBackCompute(RNNStatefulGradCompute<cpu>, state_ptr, ctx, inputs, req, outputs);
@@ -405,7 +405,7 @@ The definition of GRU here is slightly different from paper but compatible with 
     .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeExCPU)
 #endif
     .set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
@@ -449,7 +449,7 @@ NNVM_REGISTER_OP(_backward_RNN)
     .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulGradCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulGradComputeExCPU)
 #endif
     .set_attr<FResourceRequestEx>("FResourceRequestEx", RNNResourceEx);

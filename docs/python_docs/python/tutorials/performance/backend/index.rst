@@ -22,10 +22,10 @@ The following tutorials will help you learn how to use backend tools to boost pe
 .. container:: cards
 
   .. card::
-     :title: MKL-DNN
-     :link: mkldnn/index.html
+     :title: oneDNN
+     :link: dnnl/index.html
 
-     How to get the most from your CPU by using Intel's MKL-DNN.
+     How to get the most from your CPU by using oneDNN.
 
   .. card::
      :title: TVM
@@ -50,7 +50,7 @@ The following tutorials will help you learn how to use backend tools to boost pe
    :hidden:
    :maxdepth: 1
 
-   mkldnn/index
+   dnnl/index
    tvm
    profiler
    amp

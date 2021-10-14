@@ -11,6 +11,7 @@ header:
     - 'DISCLAIMER'
     - 'KEYS'
     - 'tools/dependencies/LICENSE.binary.dependencies'
+    - 'tools/lint/git-clang-format-13'
     # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
     - 'docs'
     - 'CODEOWNERS'
@@ -34,7 +35,7 @@ header:
     - 'src/operator/contrib/multi_proposal.cu'
     - 'src/operator/contrib/psroi_pooling.cc'
     - 'src/operator/contrib/psroi_pooling.cu'
-    - 'src/operator/nn/mkldnn/mkldnn_base-inl.h'
+    - 'src/operator/nn/dnnl/dnnl_base-inl.h'
     # files licensed under boost license
     - 'cmake/Modules/FindJeMalloc.cmake'
     # files licensed under bsd 3-clause
@@ -63,7 +64,7 @@ header:
     - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
     - 'include/onednn' # symlinks to 3rdparty/onednn
     # test/build data
-    - 'tests/python/mkl/data/test_mkldnn_test_mkldnn_model_model1.json'
+    - 'tests/python/dnnl/data/test_dnnl_test_dnnl_model_model1.json'
 
 
   comment: on-failure
