@@ -60,7 +60,6 @@ BF16_USE_FP32_PARAMS = {
 FP32_FUNCS = [
     'Deconvolution',
     'RNN',
-    'BatchNorm_v1',
     'BilinearSampler',
     'BlockGrad',
     'Cast',
