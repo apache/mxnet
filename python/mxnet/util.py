@@ -676,52 +676,52 @@ def wrap_ctx_to_device_func(func):
 # pylint: disable=exec-used
 def numpy_fallback(func):
     """decorator for falling back to offical numpy for a specific function"""
-    def get_ctx(ctx, new_ctx):
-        if ctx is None:
-            return new_ctx
+    def get_device(device, new_device):
+        if device is None:
+            return new_device
         else:
-            if new_ctx is None:
-                new_ctx = ctx
-            assert ctx == new_ctx, "inconsistent context %s and %s" % (str(ctx), str(new_ctx))
-            return ctx
+            if new_device is None:
+                new_device = device
+            assert device == new_device, "inconsistent device %s and %s" % (str(device), str(new_device))
+            return device
 
     def _as_official_np_array(object):
-        ctx = None
+        device = None
         if hasattr(object, 'asnumpy'):
-            return object.asnumpy(), object.ctx
+            return object.asnumpy(), object.device
         elif isinstance(object, (list, tuple)):
             tmp = []
             for arr in object:
-                new_arr, new_ctx = _as_official_np_array(arr)
-                ctx = get_ctx(ctx, new_ctx)
+                new_arr, new_device = _as_official_np_array(arr)
+                device = get_device(device, new_device)
                 tmp.append(new_arr)
-            return object.__class__(tmp), ctx
+            return object.__class__(tmp), device
         elif isinstance(object, dict):
             tmp = {}
             for k, v in object.items():
-                new_v, new_ctx = _as_official_np_array(v)
-                ctx = get_ctx(ctx, new_ctx)
+                new_v, new_device = _as_official_np_array(v)
+                device = get_device(device, new_device)
                 tmp[k] = new_v
-            return tmp, ctx
+            return tmp, device
         else:
             return object, None
 
     from .ndarray import from_numpy
     from .numpy import array
-    from .context import current_context
-    def _as_mx_np_array(object, ctx=current_context()):
+    from .device import current_device
+    def _as_mx_np_array(object, device=current_device()):
         import numpy as _np
         if isinstance(object, _np.ndarray):
             try:
                 ret = from_numpy(object).as_np_ndarray()
             except ValueError:
-                ret = array(object, dtype=object.dtype, ctx=ctx)
-            return (ret if ('cpu' in str(ctx)) else ret.as_in_ctx(ctx))
+                ret = array(object, dtype=object.dtype, device=device)
+            return (ret if ('cpu' in str(device)) else ret.to_device(device))
         elif isinstance(object, (list, tuple)):
-            tmp = [_as_mx_np_array(arr, ctx) for arr in object]
+            tmp = [_as_mx_np_array(arr, device) for arr in object]
             return object.__class__(tmp)
         elif isinstance(object, dict):
-            return {k:_as_mx_np_array(v, ctx) for k, v in object}
+            return {k:_as_mx_np_array(v, device) for k, v in object}
         else:
             return object
 
@@ -747,13 +747,13 @@ def numpy_fallback(func):
     @functools.wraps(func)
     def _fallback_to_official_np(*args, **kwargs):
         # for every ndarray input, fallback
-        new_args, ctx0 = _as_official_np_array(args)
-        new_kwargs, ctx1 = _as_official_np_array(kwargs)
-        ctx = get_ctx(ctx0, ctx1)
+        new_args, device0 = _as_official_np_array(args)
+        new_kwargs, device1 = _as_official_np_array(kwargs)
+        device = get_device(device0, device1)
         ret = func(*new_args, **new_kwargs)
         if ret is None:
             raise ValueError("Only functions with return values are allowed to use this decorator")
-        ret = _as_mx_np_array(ret, ctx=ctx)
+        ret = _as_mx_np_array(ret, device=device)
         return ret
 
     return _fallback_to_official_np
@@ -881,12 +881,12 @@ def reset_np():
 _CUDA_SUCCESS = 0
 
 
-def get_cuda_compute_capability(ctx):
-    """Returns the cuda compute capability of the input `ctx`.
+def get_cuda_compute_capability(device):
+    """Returns the cuda compute capability of the input `device`.
 
     Parameters
     ----------
-    ctx : Context
+    device : Device
         GPU context whose corresponding cuda compute capability is to be retrieved.
 
     Returns
@@ -898,9 +898,9 @@ def get_cuda_compute_capability(ctx):
     ----------
     https://gist.github.com/f0k/63a664160d016a491b2cbea15913d549#file-cuda_check-py
     """
-    if ctx.device_type != 'gpu':
+    if device.device_type != 'gpu':
         raise ValueError('Expecting a gpu context to get cuda compute capability, '
-                         'while received ctx {}'.format(str(ctx)))
+                         'while received device {}'.format(str(device)))
 
     libnames = ('libcuda.so', 'libcuda.dylib', 'nvcuda.dll', 'cuda.dll')
     for libname in libnames:
@@ -926,7 +926,7 @@ def get_cuda_compute_capability(ctx):
         raise RuntimeError('cuInit failed with erro code {}: {}'
                            .format(ret, error_str.value.decode()))
 
-    ret = cuda.cuDeviceGet(ctypes.byref(device), ctx.device_id)
+    ret = cuda.cuDeviceGet(ctypes.byref(device), device.device_id)
     if ret != _CUDA_SUCCESS:
         cuda.cuGetErrorString(ret, ctypes.byref(error_str))
         raise RuntimeError('cuDeviceGet failed with error code {}: {}'
@@ -939,7 +939,7 @@ def get_cuda_compute_capability(ctx):
     return cc_major.value * 10 + cc_minor.value
 
 
-def default_array(source_array, ctx=None, dtype=None):
+def default_array(source_array, device=None, dtype=None):
     """Creates an array from any object exposing the default(nd or np) array interface.
 
     Parameters
@@ -947,7 +947,7 @@ def default_array(source_array, ctx=None, dtype=None):
     source_array : array_like
         An object exposing the array interface, an object whose `__array__`
         method returns an array, or any (nested) sequence.
-    ctx : Context, optional
+    device : Device, optional
         Device context (default is the current default context).
     dtype : str or numpy.dtype, optional
         The data type of the output array. The default dtype is ``source_array.dtype``
@@ -961,9 +961,9 @@ def default_array(source_array, ctx=None, dtype=None):
     from . import nd as _mx_nd
     from . import np as _mx_np
     if is_np_array():
-        return _mx_np.array(source_array, ctx=ctx, dtype=dtype)
+        return _mx_np.array(source_array, device=device, dtype=dtype)
     else:
-        return _mx_nd.array(source_array, ctx=ctx, dtype=dtype)
+        return _mx_nd.array(source_array, device=device, dtype=dtype)
 
 class _NumpyDefaultDtypeScope(object):
     """Scope for managing NumPy default dtype semantics.
@@ -1213,10 +1213,10 @@ def get_max_supported_compute_capability():
     return max_supported_cc.value
 
 
-def get_rtc_compile_opts(ctx):
+def get_rtc_compile_opts(device):
     """Get the compile ops suitable for the context, given the toolkit/driver config
     """
-    device_cc = get_cuda_compute_capability(ctx)
+    device_cc = get_cuda_compute_capability(device)
     max_supported_cc = get_max_supported_compute_capability()
 
     # CUDA toolkits starting with 11.1 (first to support arch 86) can compile directly to SASS

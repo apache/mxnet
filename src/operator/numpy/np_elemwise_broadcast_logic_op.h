@@ -158,8 +158,7 @@ struct GetBinaryBroadcastCompute {
 
     const TBlob& a = inputs[0];
     const TBlob& b = inputs[1];
-    if (a.type_flag_ != b.type_flag_ ||
-        a.type_flag_ == mshadow::kBool ||
+    if (a.type_flag_ != b.type_flag_ || a.type_flag_ == mshadow::kBool ||
         outputs[0].shape_.ndim() > 5) {
       if (outputs[0].shape_.Size() == 0U)
         return;

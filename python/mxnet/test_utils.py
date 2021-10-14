@@ -45,7 +45,7 @@ except ImportError:
     # in rare cases requests may be not installed
     pass
 import mxnet as mx
-from .context import current_context
+from .device import current_device
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
@@ -59,7 +59,7 @@ def default_context():
     """Get default context for regression test."""
     # _TODO: get context from environment variable to support
     # testing with GPUs
-    return current_context()
+    return current_device()
 
 
 def set_default_context(ctx):
@@ -2461,13 +2461,13 @@ def has_tvm_ops():
     is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported.
     """
     built_with_tvm_op = _features.is_enabled("TVM_OP")
-    ctx = current_context()
-    if ctx.device_type == 'gpu':
+    device = current_device()
+    if device.device_type == 'gpu':
         try:
-            cc = get_cuda_compute_capability(ctx)
+            cc = get_cuda_compute_capability(device)
         except:  # pylint: disable=bare-except
             print('Failed to get CUDA compute capability for context {}. The operators '
-                  'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
+                  'built with USE_TVM_OP=1 will not be run in unit tests.'.format(device))
             return False
         print('Cuda arch compute capability: sm_{}'.format(str(cc)))
         return built_with_tvm_op and cc >= 53
@@ -2479,16 +2479,16 @@ def is_op_runnable():
     1. Built with USE_TVM_OP=0.
     2. Built with USE_TVM_OP=1, but with compute capability >= 53.
     """
-    ctx = current_context()
-    if ctx.device_type == 'gpu':
+    device = current_device()
+    if device.device_type == 'gpu':
         if not _features.is_enabled("TVM_OP"):
             return True
         else:
             try:
-                cc = get_cuda_compute_capability(ctx)
+                cc = get_cuda_compute_capability(device)
             except:  # pylint: disable=bare-except
                 print('Failed to get CUDA compute capability for context {}. The operators '
-                      'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
+                      'built with USE_TVM_OP=1 will not be run in unit tests.'.format(device))
                 return False
             print('Cuda arch compute capability: sm_{}'.format(str(cc)))
             return cc >= 53

@@ -269,7 +269,7 @@ def gpu_memory_info(device_id=0):
     return (free.value, total.value)
 
 
-_current = contextvars.DeviceVar('namemanager', default=Device('cpu', 0))
+_current = contextvars.ContextVar('namemanager', default=Device('cpu', 0))
 
 
 def current_device():
