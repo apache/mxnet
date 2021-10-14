@@ -23,7 +23,7 @@
  */
 #include "./quantize-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_quantize-inl.h"
+#include "./dnnl/dnnl_quantize-inl.h"
 #endif
 
 namespace mxnet {
@@ -87,8 +87,8 @@ where
     // will be reverted after the improvement of CachedOP is done.
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeCompute)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizeCompute)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", QuantizeCompute<cpu>)
     .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")

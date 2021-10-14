@@ -219,8 +219,8 @@ class CustomSubgraphProperty : public SubgraphProperty {
         const NDArray& in_arg = *(in_args_ptr[i]);
 
 #if MXNET_USE_ONEDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_arg.IsMKLDNNData()) {
+        // reorder data if in DNNL format
+        if (in_arg.IsDNNLData()) {
           in_arg.Reorder2DefaultAsync();
           in_arg.WaitToRead();
         }
@@ -253,8 +253,8 @@ class CustomSubgraphProperty : public SubgraphProperty {
         const auto& in_aux = *(in_aux_ptr[i]);
 
 #if MXNET_USE_ONEDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_aux.IsMKLDNNData()) {
+        // reorder data if in DNNL format
+        if (in_aux.IsDNNLData()) {
           in_aux.Reorder2DefaultAsync();
           in_aux.WaitToRead();
         }
