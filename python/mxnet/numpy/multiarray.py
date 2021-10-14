@@ -46,7 +46,7 @@ from ..runtime import Features
 from ..device import Device
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype, wrap_ctx_to_device_func,\
-                   dtype_from_number
+                   dtype_from_number, wrap_data_api_statical_func
 from ..device import current_device
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
