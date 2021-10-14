@@ -36,7 +36,7 @@ def matrix_rank(
         M: ndarray,
         /,
         *,
-        tol: Optional[float, ndarray] = None,
+        tol: Optional[Union[float, ndarray]] = None,
         hermitian: Optional[bool] = False,
 ) -> ndarray:
     r"""
