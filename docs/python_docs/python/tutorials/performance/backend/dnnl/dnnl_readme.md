@@ -276,17 +276,11 @@ MKL_VERBOSE Intel(R) MKL 2019.0 Update 3 Product build 20190125 for Intel(R) 64 
 MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
 ```
 
-<h2 id="6">Enable graph optimization</h2>
+<h2 id="6">Graph optimization</h2>
 
-Graph optimization with subgraph is available and enabled by default in master branch. For MXNet release v1.5, you can manually enable it by:
+Limitations of this experimental feature are:
 
-```
-export MXNET_SUBGRAPH_BACKEND=ONEDNN
-```
-
-This limitations of this experimental feature are:
-
-- Use this feature only for inference. When training, be sure to turn the feature off by unsetting the `MXNET_SUBGRAPH_BACKEND` environment variable.
+- Use this feature only for inference.
 
 - This feature will only run on the CPU, even if you're using a GPU-enabled build of MXNet.
 
