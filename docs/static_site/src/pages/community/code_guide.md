@@ -33,7 +33,7 @@ contributing and process.
 C++ Code Styles
 ---------------
 
--   Use the [clang-format]({% link pages/community/clang_format_guide.md %}) tool to reformat your code.
+-   Use the [clang-format]({% link pages/community/clang_format_guide.md %}) to reformat your code.
 -   The public facing functions are documented in [doxygen](https://www.doxygen.nl/manual/docblocks.html) format.
 -   Favor concrete type declaration over `auto` as long as it is short.
 -   Favor passing by const reference (e.g. `const Expr&`) over passing
