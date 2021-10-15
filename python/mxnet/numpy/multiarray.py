@@ -2701,7 +2701,6 @@ def shape(a) -> Tuple[int, ...]:
 @set_module('mxnet.numpy')
 def zeros(
         shape: Union[int, Tuple[int, ...]],
-        /,
         *,
         dtype: Optional[Union[dtype, str]] = None,
         order: Optional[str] = 'C',
@@ -2751,7 +2750,6 @@ def zeros(
 @set_module('mxnet.numpy')
 def ones(
         shape: Union[int, Tuple[int, ...]],
-        /,
         *,
         dtype: Optional[Union[dtype, str]] = None,
         order: Optional[str] = 'C',
