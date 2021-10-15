@@ -152,8 +152,8 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
             out = self.act(self.conv0(x)) + self.conv1(x)
             return out
 
-  attrs = {'sg_onednn_conv_act_0': {'with_act': 'true'},
-           'sg_onednn_conv_add_1': {'with_sum': 'true'}}
+    attrs = {'sg_onednn_conv_act_0': {'with_act': 'true'},
+            'sg_onednn_conv_add_1': {'with_sum': 'true'}}
 
     net = ConvActAdd(use_bias, alg)
     check_fusion(net, data_shape, attrs, check_quantization=quantize)
