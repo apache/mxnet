@@ -39,7 +39,7 @@ detailed guidelines.
     ```
 
 -   Make sure code style check pass by typing the following command, and
-    all the existing test-cases pass.
+    all the existing test-cases pass. Use the [Clang format]({% link pages/community/clang_format_guide.md %}) tool to reformat your code.
 
     ```bash
     # Reproduce the lint procedure in the CI.

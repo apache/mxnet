@@ -91,7 +91,6 @@ We value all forms of contributions, including, but not limited to:
 - [Code Guide and Tips]({% link pages/community/code_guide.md %})
 - [Error Handling Guide]({% link pages/community/error_handling.md %})
 - [Git Usage Tips]({% link pages/community/git_howto.md %})
-- [Clang format]({% link pages/community/clang_format_guide.md %})
 
 
 #### RFC Process
