@@ -650,7 +650,7 @@ def test_rnn_layers_fp32():
     run_rnn_layers('float32', 'float32')
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
+@pytest.mark.skipif(mx.device.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
 @pytest.mark.serial
 def test_rnn_layers_fp16():
     run_rnn_layers('float16', 'float32', mx.gpu())

@@ -2738,7 +2738,7 @@ fixed-size items.
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
                 return False
             return _internal._copyto(self, out=other)
-        elif isinstance(other, Context):
+        elif isinstance(other, Device):
             hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))
             return _internal._copyto(self, out=hret)
         else:

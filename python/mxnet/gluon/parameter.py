@@ -472,7 +472,7 @@ class Parameter(object):
             return
         self._data = self._grad = None
         if device is None:
-            device = [device.current_device()]
+            device = [_device.current_device()]
         if isinstance(device, Device):
             device = [device]
         if init is None:
@@ -497,7 +497,7 @@ class Parameter(object):
             copy will be made for each device.
         """
         if device is None:
-            device = [device.current_device()]
+            device = [_device.current_device()]
         if isinstance(device, Device):
             device = [device]
         if self._data:
