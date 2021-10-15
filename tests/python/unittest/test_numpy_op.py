@@ -2573,13 +2573,13 @@ def test_np_transpose(data_shape, axes_workload, hybridize, dtype, grad_req):
 
 
 @use_np
-def test_np_transpose_error2():
+def test_np_transpose_error1():
     # Test for error raising
     dat = np.random.normal(0, 1, (3, 4, 5), dtype=np.float32)
     pytest.raises(ValueError, lambda: dat.transpose((0, 0, 1)))
 
 @use_np
-def test_np_transpose_error1():
+def test_np_transpose_error2():
     dat = np.random.normal(0, 1, (3, 4, 5), dtype=np.float32)
     pytest.raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
 
