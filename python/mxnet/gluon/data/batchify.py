@@ -93,7 +93,7 @@ class Stack(object):
             out = np.asarray(data)
             dtype = out.dtype
             if self._use_shared_mem:
-                return _arr.array(out, device=Device('cpu_shared', 0), dtype=dtype)
+                return _arr.array(out, ctx=Device('cpu_shared', 0), dtype=dtype)
             else:
                 return _arr.array(out, dtype=dtype)
 
@@ -149,7 +149,7 @@ def _pad_arrs_to_max_length(arrs, pad_val, use_shared_mem, dtype, round_to=None)
 
 
     device = Device('cpu_shared', 0) if use_shared_mem else cpu()
-    ret = _arr.array(ret, device=device, dtype=dtype)
+    ret = _arr.array(ret, ctx=device, dtype=dtype)
 
     return ret
 
@@ -266,7 +266,7 @@ def _append_arrs(arrs, use_shared_mem=False, expand=False, batch_axis=0):
             out = arrs
     else:
         if use_shared_mem:
-            out = [_arr.array(x, device=Device('cpu_shared', 0)) for x in arrs]
+            out = [_arr.array(x, ctx=Device('cpu_shared', 0)) for x in arrs]
         else:
             out = [_arr.array(x) for x in arrs]
 

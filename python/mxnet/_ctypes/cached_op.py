@@ -74,6 +74,8 @@ class CachedOp(object):
         """ctypes implementation of imperative invoke wrapper"""
         # New FFI only supports numpy ndarray
         default_device = kwargs.pop('default_device', None)
+        if not default_device:
+            default_device = kwargs.pop('default_ctx', None)
         out = kwargs.pop('out', None)
         if kwargs:
             raise TypeError(

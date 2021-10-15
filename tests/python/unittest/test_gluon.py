@@ -566,7 +566,7 @@ def test_batchnorm_backward_synchronization(variable):
     Tests if synchronization of BatchNorm running variables is done correctly.
     If not, the test sometimes fails - depending on the timing.
     """
-    device = mx.test_utils.to_device()
+    device = mx.test_utils.default_device()
 
     for _ in range(20):
         layer = nn.BatchNorm()

@@ -350,13 +350,14 @@ class Parameter(object):
 
         with autograd.pause(), dc.context(False):
             if data is None:
-                kwargs = {'shape': self.shape, 'dtype': self.dtype, 'device': cpu()}
                 if is_np_array():
+                    kwargs = {'shape': self.shape, 'dtype': self.dtype, 'device': cpu()}
                     if self._stype != 'default':
                         raise ValueError("mxnet.numpy.zeros does not support stype = {}"
                                          .format(self._stype))
                     zeros_fn = _mx_np.zeros
                 else:
+                    kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': cpu()}
                     kwargs['stype'] = self._stype
                     zeros_fn = ndarray.zeros
                 data = zeros_fn(**kwargs)
@@ -391,7 +392,7 @@ class Parameter(object):
             self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, device=i.device)
                           for i in self._data]
         else:
-            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, device=i.device,
+            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
                                         stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
@@ -412,7 +413,7 @@ class Parameter(object):
         else:
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', device=device)
-            data = ndarray.zeros(self.shape, stype='row_sparse', device=device)
+            data = ndarray.zeros(self.shape, stype='row_sparse', ctx=device)
             trainer = self._trainer() if self._trainer else None
             if not trainer:
                 raise RuntimeError("Cannot reduce row_sparse data for Parameter '%s' when no " \

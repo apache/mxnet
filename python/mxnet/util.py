@@ -1011,7 +1011,7 @@ def default_array(source_array, device=None, dtype=None):
     if is_np_array():
         return _mx_np.array(source_array, device=device, dtype=dtype)
     else:
-        return _mx_nd.array(source_array, device=device, dtype=dtype)
+        return _mx_nd.array(source_array, ctx=device, dtype=dtype)
 
 class _NumpyDefaultDtypeScope(object):
     """Scope for managing NumPy default dtype semantics.
