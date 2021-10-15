@@ -33,7 +33,7 @@
 #endif  // MXNET_USE_TVM_OP
 
 #if MXNET_USE_ONEDNN
-#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "../nn/dnnl/dnnl_reduce-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 #include "np_broadcast_reduce_op.h"
@@ -201,7 +201,7 @@ static void DNNLReduceEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
 
-  if (SupportDNNLReduce(inputs[0], outputs[0], param)) {
+  if (SupportDNNLReduce<NumpyReduceAxesParam>(inputs[0], outputs[0], attrs)) {
     DNNLRun(DNNLReduceForward<reduction_alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else {

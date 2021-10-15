@@ -30,14 +30,13 @@
 #include "./dnnl_base-inl.h"
 #include "./dnnl_ops-inl.h"
 
-#include "../../numpy/np_broadcast_reduce_op.h"
-
 namespace mxnet {
 namespace op {
 
 using reduce_fwd_t    = dnnl::reduction;
 using reduce_fwd_pd_t = dnnl::reduction::primitive_desc;
-
+struct NumpyReduceAxesParam;
+struct ReduceAxesParam;
 class DNNLReduceFwd {
  public:
   struct Tensors {
@@ -74,21 +73,29 @@ void DNNLReduceForwardImpl(const nnvm::NodeAttrs& attrs,
                            const NDArray& out_data,
                            const dnnl::algorithm reduction_alg);
 
-template <>
-void DNNLReduceForward<dnnl::algorithm::reduction_sum>(const nnvm::NodeAttrs& attrs,
-                                                       const OpContext& ctx,
-                                                       const NDArray& in_data,
-                                                       const OpReqType& req,
-                                                       const NDArray& out_data) {
-  DNNLReduceForwardImpl(attrs, ctx, in_data, req, out_data, dnnl::algorithm::reduction_sum);
+template <dnnl::algorithm reduction_alg>
+void DNNLReduceForward(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const NDArray& in_data,
+                       const OpReqType& req,
+                       const NDArray& out_data) {
+  DNNLReduceForwardImpl(attrs, ctx, in_data, req, out_data, reduction_alg);
 }
-template <>
-void DNNLReduceForward<dnnl::algorithm::reduction_mean>(const nnvm::NodeAttrs& attrs,
-                                                        const OpContext& ctx,
-                                                        const NDArray& in_data,
-                                                        const OpReqType& req,
-                                                        const NDArray& out_data) {
-  DNNLReduceForwardImpl(attrs, ctx, in_data, req, out_data, dnnl::algorithm::reduction_mean);
+
+bool SupportDNNLReduceImpl(const NDArray& input,
+                           const NDArray& output,
+                           const NumpyReduceAxesParam& param);
+
+template <class T>
+NumpyReduceAxesParam ConvertParamsToNumpy(const T& original_param,
+                                          const NDArray& input,
+                                          const NDArray& output);
+
+template <class T>
+bool SupportDNNLReduce(const NDArray& input, const NDArray& output, const nnvm::NodeAttrs& attrs) {
+  const T& org_param         = nnvm::get<T>(attrs.parsed);
+  NumpyReduceAxesParam param = ConvertParamsToNumpy<T>(org_param, input, output);
+  return SupportDNNLReduceImpl(input, output, param);
 }
 
 }  // namespace op

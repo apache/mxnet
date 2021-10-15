@@ -36,7 +36,7 @@
 #include "../mxnet_op.h"
 
 #if MXNET_USE_ONEDNN
-#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "../nn/dnnl/dnnl_reduce-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
@@ -233,10 +233,6 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
     (*dict)["rhs_axes"] = rhs_axes_s.str();
   }
 };
-
-inline NumpyReduceAxesParam ConvertReduceNDParamsToNumpy(const ReduceAxesParam& original_param,
-                                                         const NDArray& input,
-                                                         const NDArray& output);
 
 /*
  * Check whether the axis is within the legal range.
@@ -1054,16 +1050,11 @@ void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs,
     ReduceCsr<xpu, mshadow::red::sum, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
 #if MXNET_USE_ONEDNN == 1
   } else if (istype == kDefaultStorage) {
-    const ReduceAxesParam& original_param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-    const auto numpy_params = ConvertReduceNDParamsToNumpy(original_param, inputs[0], outputs[0]);
-
-    nnvm::NodeAttrs new_attrs;
-    new_attrs.parsed = numpy_params;
-    if (SupportDNNLReduce(inputs[0], outputs[0], numpy_params)) {
+    if (SupportDNNLReduce<ReduceAxesParam>(inputs[0], outputs[0], attrs)) {
       constexpr dnnl::algorithm alg =
           normalize ? dnnl::algorithm::reduction_mean : dnnl::algorithm::reduction_sum;
 
-      DNNLRun(DNNLReduceForward<alg>, new_attrs, ctx, inputs[0], req[0], outputs[0]);
+      DNNLRun(DNNLReduceForward<alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
       return;
     } else {
       FallBackCompute(ReduceAxesCompute<cpu, reducer, normalize>, attrs, ctx, inputs, req, outputs);

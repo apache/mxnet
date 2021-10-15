@@ -25,13 +25,52 @@
 #if MXNET_USE_ONEDNN == 1
 
 #include "./dnnl_reduce-inl.h"
+#include "../../numpy/np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLReduce(const NDArray& input,
-                       const NDArray& output,
-                       const NumpyReduceAxesParam& param) {
+template <>
+NumpyReduceAxesParam ConvertParamsToNumpy<ReduceAxesParam>(const ReduceAxesParam& original_param,
+                                                           const NDArray& input,
+                                                           const NDArray& output) {
+  NumpyReduceAxesParam numpy_param;
+  numpy_param.axis = dmlc::optional<mxnet::Tuple<int>>();
+  if (original_param.axis.has_value()) {
+    mxnet::Tuple<int> axes(original_param.axis.value().begin(), original_param.axis.value().end());
+    std::sort(axes.begin(), axes.end());
+
+    if (original_param.exclude) {
+      const size_t in_ndim = input.shape().ndim();
+      mxnet::Tuple<int> inverted_axes(in_ndim - axes.ndim(), -1);
+      for (int i = 0, j = 0; i < input.shape().ndim(); i++) {
+        if (j >= axes.ndim() || i != axes[j]) {
+          inverted_axes[i - j] = i;
+        } else {
+          j++;
+        }
+      }
+      numpy_param.axis = inverted_axes;
+    } else {
+      numpy_param.axis = axes;
+    }
+  }
+  numpy_param.keepdims = original_param.keepdims;
+  numpy_param.dtype    = dmlc::optional<int>(output.dtype());
+  return numpy_param;
+}
+
+template <>
+NumpyReduceAxesParam ConvertParamsToNumpy<NumpyReduceAxesParam>(
+    const NumpyReduceAxesParam& original_param,
+    const NDArray& input,
+    const NDArray& output) {
+  return original_param;
+}
+
+bool SupportDNNLReduceImpl(const NDArray& input,
+                           const NDArray& output,
+                           const NumpyReduceAxesParam& param) {
   int in_ndim          = input.shape().ndim();
   int out_ndim         = output.shape().ndim();
   int in_size          = input.shape().Size();

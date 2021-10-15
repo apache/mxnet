@@ -183,7 +183,6 @@ struct SoftmaxParam;
 struct SoftmaxOutputParam;
 struct ReshapeParam;
 struct LayerNormParam;
-struct NumpyReduceAxesParam;
 bool SupportDNNLAct(const ActivationParam& param);
 bool SupportDNNLAct(const ActivationParam& param, const NDArray& input);
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param);
@@ -198,9 +197,6 @@ bool SupportDNNLTranspose(const NDArray& data);
 bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs);
 bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
-bool SupportDNNLReduce(const NDArray& input,
-                       const NDArray& output,
-                       const NumpyReduceAxesParam& param);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
