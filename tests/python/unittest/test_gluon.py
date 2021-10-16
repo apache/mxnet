@@ -698,7 +698,7 @@ def test_sync_batchnorm():
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
     cfgs = [(1, False)]
-    num_gpus = 0 if default_device().device_type != 'gpu' else mx.context.num_gpus()
+    num_gpus = 0 if default_device().device_type != 'gpu' else mx.device.num_gpus()
     batch_size = 24
     for i in range(1, num_gpus + 1):
         if batch_size % i == 0:
@@ -1442,7 +1442,7 @@ def test_zero_grad():
             shape = ()
             for _ in range(onp.random.randint(1, 5)):
                 shape = shape + (onp.random.randint(1, 10),)
-            arr.append(mx.nd.random.uniform(shape=shape, dtype=arrType, device=device))
+            arr.append(mx.nd.random.uniform(shape=shape, dtype=arrType, ctx=device))
 
         # Reset all arrays
         mx.nd.reset_arrays(*arr, num_arrays=len(arr))
@@ -1465,7 +1465,7 @@ def test_zero_grad():
     with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
         for type in ['float16', 'float32', 'float64']:
             for embType in ['float32', 'float64']:
-                _test_grad_reset(ctx, dtype=type, sparse=False, embeddingType=embType)
+                _test_grad_reset(device, dtype=type, sparse=False, embeddingType=embType)
 
 
 @pytest.mark.parametrize('static_alloc', [False, True])

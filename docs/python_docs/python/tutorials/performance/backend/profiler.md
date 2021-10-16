@@ -101,7 +101,7 @@ Let's define a function that will run a single training iteration given `data` a
 
 ```{.python .input}
 # Use GPU if available
-if mx.context.num_gpus():
+if mx.device.num_gpus():
     ctx=mx.gpu()
 else:
     ctx=mx.cpu()

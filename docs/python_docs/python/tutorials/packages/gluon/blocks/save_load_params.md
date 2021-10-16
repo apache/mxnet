@@ -49,7 +49,7 @@ Let's define a helper function to build a LeNet model and another helper to trai
 
 ```{.python .input}
 # Use GPU if one exists, else use CPU
-ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
+ctx = mx.gpu() if mx.device.num_gpus() else mx.cpu()
 
 # MNIST images are 28x28. Total pixels in input layer is 28x28 = 784
 num_inputs = 784

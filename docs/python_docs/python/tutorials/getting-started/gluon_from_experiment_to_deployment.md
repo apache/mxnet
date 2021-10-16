@@ -91,7 +91,7 @@ lr_factor = 0.75
 # learning rate change at following epochs
 lr_epochs = [10, 20, 30]
 
-num_gpus = mx.context.num_gpus()
+num_gpus = mx.device.num_gpus()
 # you can replace num_workers with the number of cores on you device
 num_workers = 8
 ctx = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]

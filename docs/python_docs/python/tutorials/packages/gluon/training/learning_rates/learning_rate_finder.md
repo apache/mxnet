@@ -231,7 +231,7 @@ Using a Pre-activation ResNet-18 from the Gluon model zoo, we instantiate our Le
 
 
 ```{.python .input}
-ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
+ctx = mx.gpu() if mx.device.num_gpus() else mx.cpu()
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
 lr_finder = LRFinder(learner)

@@ -412,7 +412,7 @@ class Parameter(object):
                 data = self.data().copyto(device)
         else:
             # fetch all rows for 'row_sparse' param
-            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', device=device)
+            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=device)
             data = ndarray.zeros(self.shape, stype='row_sparse', ctx=device)
             trainer = self._trainer() if self._trainer else None
             if not trainer:

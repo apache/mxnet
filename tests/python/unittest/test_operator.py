@@ -7857,7 +7857,7 @@ def test_context_num_gpus():
     try:
         # Note: the test is run both on GPU and CPU hosts, so that we can not assert
         # on a specific number here.
-        assert mx.context.num_gpus() >= 0
+        assert mx.device.num_gpus() >= 0
     except mx.MXNetError as e:
         # Note: On a CPU only host CUDA sometimes is not able to determine the number
         # of GPUs

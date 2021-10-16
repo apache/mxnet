@@ -52,7 +52,7 @@ kv = mx.kv.create(args.name)
 my_rank = kv.rank
 my_num_workers = kv.num_workers
 
-has_gpu = mx.context.num_gpus() > 0
+has_gpu = mx.device.num_gpus() > 0
 
 def get_current_device(device=False):
     if has_gpu and device==True:

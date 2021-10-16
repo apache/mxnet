@@ -38,7 +38,7 @@ from mxnet.gluon.model_zoo import vision
 from mxnet.gluon.contrib.estimator import estimator
 from mxnet.gluon.contrib.estimator.event_handler import TrainBegin, TrainEnd, EpochEnd, CheckpointHandler
 
-gpu_count = mx.context.num_gpus()
+gpu_count = mx.device.num_gpus()
 ctx = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
 ```
 

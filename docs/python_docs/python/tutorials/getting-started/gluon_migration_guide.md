@@ -342,7 +342,7 @@ Example:
 import mxnet as mx
 # create key-value store with horovod backend
 kv = mx.kv.create('horovod') # or choose 'kvstore', 'byteps' as backend
-ctx = mx.gpu(kv.local_rank) if mx.context.num_gpus() > 0 else mx.cpu(kv.local_rank)
+ctx = mx.gpu(kv.local_rank) if mx.device.num_gpus() > 0 else mx.cpu(kv.local_rank)
 val = mx.np.zeros((2, 3), ctx=ctx)
 # broadcast the value at rank 0 to all ranks
 kv.broadcast('0', mx.np.zeros((2, 3), ctx=ctx), out=val)

@@ -843,7 +843,7 @@ def assert_exception(f, exception_type, *args, **kwargs):
         return
 
 
-def _parse_location(sym, location, device, dtype=default_dtype()):
+def _parse_location(sym, location, ctx, dtype=default_dtype()):
     """Parses the given location to a ordered dictionary.
 
     Arguments of the provided op `sym` are used as dictionary keys
@@ -862,7 +862,7 @@ def _parse_location(sym, location, device, dtype=default_dtype()):
         - if type is dict of str -> `np.ndarray`
             maps the name of arguments to the corresponding `np.ndarray`.
         *In either case, value of all the arguments must be provided.*
-    device : Device
+    ctx : Device
         Device context.
     dtype: "asnumpy" or np.float16 or np.float32 or np.float64
         If dtype is "asnumpy" then the mx.nd.array created will have the same
@@ -898,7 +898,7 @@ def _parse_location(sym, location, device, dtype=default_dtype()):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=device, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+    location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                if isinstance(v, np.ndarray) else v for k, v in location.items()}
     return _sorted_dict(location)
 

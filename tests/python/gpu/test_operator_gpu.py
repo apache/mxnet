@@ -2193,7 +2193,7 @@ def test_allclose_function_gpu():
 
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
-    assert mx.context.num_gpus() > 0
+    assert mx.device.num_gpus() > 0
 
 def math_log(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))

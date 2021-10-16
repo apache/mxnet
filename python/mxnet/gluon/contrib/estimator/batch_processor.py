@@ -61,7 +61,7 @@ class BatchProcessor(object):
         batch_axis : int, default 0
             Batch axis to split the validation data into devices.
         """
-        data, label = self._get_data_and_label(val_batch, estimator.context, batch_axis)
+        data, label = self._get_data_and_label(val_batch, estimator.device, batch_axis)
         pred = [estimator.val_net(x) for x in data]
         loss = [estimator.val_loss(y_hat, y) for y_hat, y in zip(pred, label)]
 
@@ -94,7 +94,7 @@ class BatchProcessor(object):
         loss: List of NDArray
             Loss on each of the sharded inputs.
         """
-        data, label = self._get_data_and_label(train_batch, estimator.context, batch_axis)
+        data, label = self._get_data_and_label(train_batch, estimator.device, batch_axis)
 
         with autograd.record():
             pred = [estimator.net(x) for x in data]

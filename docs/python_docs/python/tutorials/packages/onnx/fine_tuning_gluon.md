@@ -272,7 +272,7 @@ We pick a context, fine-tuning on CPU will be **WAY** slower.
 
 
 ```{.python .input}
-ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
+ctx = mx.gpu() if mx.device.num_gpus() > 0 else mx.cpu()
 ```
 
 We create a symbol block that is going to hold all our pre-trained layers, and assign the weights of the different pre-trained layers to the newly created SymbolBlock
