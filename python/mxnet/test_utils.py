@@ -903,7 +903,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     return _sorted_dict(location)
 
 
-def _parse_aux_states(sym, aux_states, device, dtype=default_dtype()):
+def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     """Parses the given auxiliary states to a dictionary.
 
     Auxiliary states of the provided op `sym` are used as dictionary
@@ -922,7 +922,7 @@ def _parse_aux_states(sym, aux_states, device, dtype=default_dtype()):
         - if type is dict of str -> `np.ndarray`
             maps the name of arguments to the corresponding `np.ndarray`.
         *In either case, all aux states of `sym` must be provided.*
-    device : Device
+    ctx : Device
         Device context.
     dtype: "asnumpy" or np.float16 or np.float32 or np.float64
         If dtype is "asnumpy" then the mx.nd.array created will have the same
@@ -963,7 +963,7 @@ def _parse_aux_states(sym, aux_states, device, dtype=default_dtype()):
         elif isinstance(aux_states, (list, tuple)):
             aux_names = sym.list_auxiliary_states()
             aux_states = {k:v for k, v in zip(aux_names, aux_states)}
-        aux_states = {k: mx.nd.array(v, ctx=device, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                       for k, v in aux_states.items()}
     return aux_states
 
