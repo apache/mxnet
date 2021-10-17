@@ -91,18 +91,18 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, device=None, out=Non
         is_tensor = isinstance(prob, tensor_type_name)
         if is_tensor:
             return _npi.bernoulli(prob, prob=None, logit=None, is_logit=False,
-                                  size=size, device=device, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
         else:
             return _npi.bernoulli(prob=prob, logit=None, is_logit=False,
-                                  size=size, device=device, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
     else:
         is_tensor = isinstance(logit, tensor_type_name)
         if is_tensor:
             return _npi.bernoulli(logit, prob=None, logit=None, is_logit=True,
-                                  size=size, device=device, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
         else:
             return _npi.bernoulli(prob=None, logit=logit, is_logit=True,
-                                  size=size, device=device, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
 
 
 @wrap_ctx_to_device_func
@@ -174,16 +174,16 @@ def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, device=None):
         batch_shape = (-2,) + batch_shape
     if input_type == (True, True):
         return _npi.uniform(low, high, low=None, high=None, size=batch_shape,
-                            device=device, dtype=dtype)
+                            ctx=device, dtype=dtype)
     elif input_type == (False, True):
         return _npi.uniform(high, low=low, high=None, size=batch_shape,
-                            device=device, dtype=dtype)
+                            ctx=device, dtype=dtype)
     elif input_type == (True, False):
         return _npi.uniform(low, low=None, high=high, size=batch_shape,
-                            device=device, dtype=dtype)
+                            ctx=device, dtype=dtype)
     else:
         return _npi.uniform(low=low, high=high, size=batch_shape,
-                            device=device, dtype=dtype)
+                            ctx=device, dtype=dtype)
 
 
 @wrap_ctx_to_device_func
@@ -266,13 +266,13 @@ def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, device=None):
         batch_shape = (-2,) + batch_shape
     if input_type == (True, True):
         return _npi.normal(loc, scale, loc=None, scale=None, size=batch_shape,
-                           device=device, dtype=dtype)
+                           ctx=device, dtype=dtype)
     elif input_type == (False, True):
         return _npi.normal(scale, loc=loc, scale=None, size=batch_shape,
-                           device=device, dtype=dtype)
+                           ctx=device, dtype=dtype)
     elif input_type == (True, False):
         return _npi.normal(loc, loc=None, scale=scale, size=batch_shape,
-                           device=device, dtype=dtype)
+                           ctx=device, dtype=dtype)
     else:
         return _npi.normal(loc=loc, scale=scale, size=batch_shape,
-                           device=device, dtype=dtype)
+                           ctx=device, dtype=dtype)

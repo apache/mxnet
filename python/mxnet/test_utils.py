@@ -1639,7 +1639,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                           for (out, dt) in zip(exe_list[0].outputs, least_precise_dtype)]
         # Perform backward()
         for exe in exe_list:
-            out_grads = [mx.nd.array(golden_np, ctx=exe._ctx,
+            out_grads = [mx.nd.array(golden_np, ctx=exe._device,
                                      dtype=out.dtype).tostype(out.stype)
                          for (golden_np, out) in zip(golden_data_np, exe.outputs)]
             exe.backward(out_grads)
