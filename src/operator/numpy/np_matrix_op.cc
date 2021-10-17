@@ -120,8 +120,7 @@ static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportDNNLTranspose(inputs[0]) && req[0] == kWriteTo) {
-    DNNLRun(
-        DNNLTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNLRun(DNNLTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(NumpyTranspose<cpu>, attrs, ctx, inputs, req, outputs);

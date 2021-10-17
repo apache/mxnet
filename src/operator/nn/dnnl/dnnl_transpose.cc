@@ -107,8 +107,7 @@ DNNLTransposeFwd& GetTransposeForward(const NumpyTransposeParam& param, const ND
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLTransposeSignature, DNNLTransposeFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLTransposeSignature, DNNLTransposeFwd, OpHash>
-      fwds;
+  static MX_THREAD_LOCAL std::unordered_map<DNNLTransposeSignature, DNNLTransposeFwd, OpHash> fwds;
 #endif
   DNNLTransposeSignature key(param);
   key.AddSign(data);

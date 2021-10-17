@@ -63,10 +63,10 @@ NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const nnvm::NodeAttrs&
 
 template <typename ParamType>
 void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const NDArray& data,
-                            const OpReqType& req,
-                            const NDArray& output) {
+                          const OpContext& ctx,
+                          const NDArray& data,
+                          const OpReqType& req,
+                          const NDArray& output) {
   const NumpyTransposeParam param = ProcessTransposeParam<ParamType>(attrs);
   auto fwd                        = GetTransposeForward(param, data);
   fwd.SetNewMem(data, output);
