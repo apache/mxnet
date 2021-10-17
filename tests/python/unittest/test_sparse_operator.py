@@ -1907,7 +1907,7 @@ def test_batchnorm_fallback():
 
 
 @pytest.mark.serial
-def test_mkldnn_sparse():
+def test_dnnl_sparse():
     # This test is trying to create a race condition describedd in
     # https://github.com/apache/incubator-mxnet/issues/10189
     arr = mx.nd.random.uniform(shape=(10, 10, 32, 32))

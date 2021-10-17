@@ -30,7 +30,7 @@
 
 #include "batch_norm-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_batch_norm-inl.h"
+#include "./dnnl/dnnl_batch_norm-inl.h"
 #endif
 
 namespace mxnet {
@@ -446,7 +446,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_ONEDNN == 1
-static inline bool SupportMKLDNNBN(const NDArray& input, const BatchNormParam& param) {
+static inline bool SupportDNNLBN(const NDArray& input, const BatchNormParam& param) {
   if (mxnet::op::batchnorm::disable_mkl)
     return false;
   const mxnet::TShape shape = input.shape();
@@ -455,7 +455,7 @@ static inline bool SupportMKLDNNBN(const NDArray& input, const BatchNormParam& p
     return false;
   const int dtype = input.dtype();
   return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
-         SupportStorageMKLDNN(input.storage_type());
+         SupportStorageDNNL(input.storage_type());
 }
 
 void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -466,12 +466,12 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   bool fuse_relu              = false;
-  if (SupportMKLDNNBN(inputs[0], param)) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-      MKLDNNBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
+  if (SupportDNNLBN(inputs[0], param)) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNL_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
+      DNNLBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
     });
-    MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -484,10 +484,10 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<NDArray>& outputs) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   bool fuse_relu              = false;
-  if (SupportMKLDNNBN(inputs[0], param)) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
-    MKLDNN_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLBN(inputs[0], param)) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
+    DNNL_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -504,9 +504,9 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
 #if MXNET_USE_ONEDNN == 1
   if (!dispatched) {
-    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+    dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
   }
-  if (!MKLDNNEnvSet()) {
+  if (!DNNLEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
   }
 #else
@@ -648,7 +648,7 @@ then set ``gamma`` to 1 and its gradient to 0.
 #endif
     .set_attr<nnvm::FGradient>("FGradient", BatchNormGrad)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
 #endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
@@ -687,7 +687,7 @@ NNVM_REGISTER_OP(_backward_BatchNorm)
                                 })
     .set_attr_parser(ParamParser<BatchNormParam>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormGradComputeExCPU)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute<cpu>);

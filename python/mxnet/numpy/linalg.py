@@ -18,12 +18,13 @@
 """Namespace for ops used in imperative programming."""
 
 from ..ndarray import numpy as _mx_nd_np
+from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
-           'tensordot', 'trace', 'matrix_transpose']
+           'tensordot', 'trace', 'matrix_transpose', 'vecdot']
 __all__ += fallback_linalg.__all__
 
 
@@ -371,6 +372,59 @@ def outer(a, b):
            [-2., -1.,  0.,  1.,  2.]])
     """
     return _mx_nd_np.tensordot(a.flatten(), b.flatten(), 0)
+
+
+def vecdot(a, b, axis=None):
+    r"""
+    Return the dot product of two vectors.
+    Note that `vecdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Notes
+    ----------
+    `vecdot` is a alias for `vdot`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/linear_algebra_functions.html#vecdot-x1-x2-axis-1
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument to the dot product.
+    b : ndarray
+        Second argument to the dot product.
+    axis : axis over which to compute the dot product. Must be an integer on
+        the interval [-N, N) , where N is the rank (number of dimensions) of
+        the shape determined according to Broadcasting . If specified as a
+        negative integer, the function must determine the axis along which
+        to compute the dot product by counting backward from the last dimension
+        (where -1 refers to the last dimension). If None , the function must
+        compute the dot product over the last axis. Default: None .
+
+    Returns
+    -------
+    output : ndarray
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.linalg.vecdot(a, b)
+    array(30.)
+    >>> np.linalg.vecdot(b, a)
+    array(30.)
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return _mx_nd_np.tensordot(a.flatten(), b.flatten(), axis)
 
 
 def lstsq(a, b, rcond='warn'):
@@ -1148,7 +1202,8 @@ def eigvals(a):
     return _mx_nd_np.linalg.eigvals(a)
 
 
-def eigvalsh(a, UPLO='L'):
+@wrap_data_api_linalg_func
+def eigvalsh(a, upper=False):
     r"""
     Compute the eigenvalues real symmetric matrix.
 
@@ -1203,6 +1258,10 @@ def eigvalsh(a, UPLO='L'):
     >>> LA.eigvalsh(a, UPLO='L')
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
+    if not upper:
+        UPLO = 'L'
+    else:
+        UPLO = 'U'
     return _mx_nd_np.linalg.eigvalsh(a, UPLO)
 
 
@@ -1273,7 +1332,8 @@ def eig(a):
     return _mx_nd_np.linalg.eig(a)
 
 
-def eigh(a, UPLO='L'):
+@wrap_data_api_linalg_func
+def eigh(a, upper=False):
     r"""
     Return the eigenvalues and eigenvectors real symmetric matrix.
 
@@ -1329,7 +1389,7 @@ def eigh(a, UPLO='L'):
     >>> a = np.array([[ 6.8189726 , -3.926585  ,  4.3990498 ],
     ...               [-0.59656644, -1.9166266 ,  9.54532   ],
     ...               [ 2.1093285 ,  0.19688708, -1.1634291 ]])
-    >>> w, v = LA.eigh(a, UPLO='L')
+    >>> w, v = LA.eigh(a, upper=False)
     >>> w
     array([-2.175445 , -1.4581827,  7.3725457])
     >>> v
@@ -1337,4 +1397,8 @@ def eigh(a, UPLO='L'):
            [ 0.8242942 ,  0.56326365, -0.05721384],
            [-0.53661287,  0.80949366,  0.23825769]])
     """
+    if not upper:
+        UPLO = 'L'
+    else:
+        UPLO = 'U'
     return _mx_nd_np.linalg.eigh(a, UPLO)

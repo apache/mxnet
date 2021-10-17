@@ -27,9 +27,9 @@
 #include "./np_matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/mkldnn/mkldnn_ops-inl.h"
-#include "../nn/mkldnn/mkldnn_base-inl.h"
-#include "../nn/mkldnn/mkldnn_transpose-inl.h"
+#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "../nn/dnnl/dnnl_base-inl.h"
+#include "../nn/dnnl/dnnl_transpose-inl.h"
 #endif
 namespace mxnet {
 namespace op {
@@ -119,9 +119,9 @@ static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportMKLDNNTranspose(inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNRun(
-        MKLDNNTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportDNNLTranspose(inputs[0]) && req[0] == kWriteTo) {
+    DNNLRun(
+        DNNLTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(NumpyTranspose<cpu>, attrs, ctx, inputs, req, outputs);
@@ -134,7 +134,7 @@ inline static bool NumpyTransposeStorageType(const nnvm::NodeAttrs& attrs,
                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -172,7 +172,7 @@ NNVM_REGISTER_OP(_npi_transpose)
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", NumpyTransposeComputeExCPU)
     .set_attr<FInferStorageType>("FInferStorageType", NumpyTransposeStorageType)
 #endif
@@ -422,7 +422,7 @@ NNVM_REGISTER_OP(_npx_reshape)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
     .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
     .set_attr<FInferStorageType>("FInferStorageType", ReshapeStorageType)
     .set_attr<FResourceRequest>("FResourceRequest",

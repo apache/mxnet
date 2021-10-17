@@ -27,8 +27,8 @@
 #include "../operator_common.h"
 #include "../../common/utils.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_base-inl.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_ops-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
@@ -41,10 +41,10 @@ static void DeconvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {
   const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  if (SupportMKLDNNDeconv(params, inputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNDeconvolutionForward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLDeconv(params, inputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLDeconvolutionForward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -56,10 +56,10 @@ static void DeconvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
   const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  if (SupportMKLDNNDeconv(params, inputs[0])) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNDeconvolutionBackward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLDeconv(params, inputs[0])) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLDeconvolutionBackward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -75,7 +75,7 @@ inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
@@ -89,7 +89,7 @@ inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), out_expected);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -436,7 +436,7 @@ NNVM_REGISTER_OP(Deconvolution)
     .set_attr<FCompute>("FCompute<cpu>", DeconvolutionCompute<cpu>)
     .set_attr<nnvm::FGradient>("FGradient", DeconvolutionGrad{"_backward_Deconvolution"})
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FInferStorageType>("FInferStorageType", DeconvStorageType)
     .set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionComputeExCPU)
 #endif
@@ -464,7 +464,7 @@ NNVM_REGISTER_OP(_backward_Deconvolution)
                                 })
     .set_attr_parser(DeconvolutionParamParser)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FInferStorageType>("FInferStorageType", BackwardDeconvStorageType)
     .set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionGradComputeExCPU)
 #endif
