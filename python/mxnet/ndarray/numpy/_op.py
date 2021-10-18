@@ -1169,6 +1169,7 @@ def true_divide(x1, x2, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
 def floor_divide(x1, x2, out=None):
     """Return the largest integer smaller or equal to the division of the inputs.
     It is equivalent to the Python // operator and pairs with the Python % (remainder),

@@ -28,13 +28,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_floor_divide)
-    .set_attr<FCompute>("FCompute<gpu>", FloorDivideBroadcastCompute<gpu>);
-
-NNVM_REGISTER_OP(_npi_floor_divide_scalar)
-    .set_attr<FCompute>("FCompute<gpu>", FloorDivideScalarCompute<gpu, mshadow_op::floor_divide>);
-
-NNVM_REGISTER_OP(_npi_rfloor_divide_scalar)
-    .set_attr<FCompute>("FCompute<gpu>", FloorDivideScalarCompute<gpu, mshadow_op::rFloor_divide>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"floor_divide"});
 
 }  // namespace op
 }  // namespace mxnet

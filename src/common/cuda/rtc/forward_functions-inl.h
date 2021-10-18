@@ -261,6 +261,28 @@ rsub(const DType a, const DType2 b) {
 
 template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
+floor_divide(const DType a, const DType2 b) {
+  mixed_type<DType, DType2> c = op::floor(op::div(a, b));
+  if ((c * b != a) && (a < 0) != (b < 0)) {
+    return mixed_type<DType, DType2>(c - 1);
+  } else {
+    return c;
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+rfloor_divide(const DType a, const DType2 b) {
+  mixed_type<DType, DType2> c = op::floor(op::div(b, a));
+  if ((c * a != b) && (a < 0) != (b < 0)) {
+    return mixed_type<DType, DType2>(c - 1);
+  } else {
+    return c;
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
 mul(const DType a, const DType2 b) {
   return a * b;
 }

@@ -22,117 +22,17 @@
  * \brief CPU Implementation of floor_divide operator.
  */
 
-#include "./np_floor_divide-inl.h"
+#include "./np_elemwise_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
 
-int FloorDivideOutType(int ltype, int rtype) {
-  if (common::is_float(ltype) && common::is_float(rtype)) {
-    // If both inputs are float, return the one with the higher precision
-    return common::get_more_precise_type(ltype, rtype);
-  } else if (common::is_float(ltype) || common::is_float(rtype)) {
-    // If only one of the inputs is float, return that float type
-    return (common::is_float(ltype)) ? ltype : rtype;
-  }
-  // If neither of the inputs is float, return the higher precision int dtype
-  return common::get_more_precise_type(ltype, rtype);
-}
-
-bool FloorDivideType(const nnvm::NodeAttrs& attrs,
-                     std::vector<int>* in_attrs,
-                     std::vector<int>* out_attrs) {
-  CHECK_GT(in_attrs->size(), 0U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  for (const int dtype : *in_attrs) {
-    if (dtype == -1)
-      return false;
-  }
-
-  const int lhs_dtype = in_attrs->at(0);
-  const int rhs_dtype = in_attrs->at(1);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, FloorDivideOutType(lhs_dtype, rhs_dtype));
-  return true;
-}
-
-bool FloorDivideScalarType(const nnvm::NodeAttrs& attrs,
-                           std::vector<int>* in_attrs,
-                           std::vector<int>* out_attrs) {
-  CHECK_GT(in_attrs->size(), 0U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  for (const int dtype : *in_attrs) {
-    if (dtype == -1)
-      return false;
-  }
-
-  const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
-  bool is_int = param.is_int;
-  const int lhs_dtype = in_attrs->at(0);
-  const int rhs_dtype =
-      common::is_float(lhs_dtype)
-          ? lhs_dtype
-          : (is_int ? mxnet::common::GetDefaultIntType() : mxnet::common::GetDefaultDtype());
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, FloorDivideOutType(lhs_dtype, rhs_dtype));
-  return true;
-}
-
-NNVM_REGISTER_OP(_npi_floor_divide)
-    .set_num_inputs(2)
-    .set_num_outputs(1)
-    .set_attr<nnvm::FListInputNames>("FListInputNames",
-                                     [](const NodeAttrs& attrs) {
-                                       return std::vector<std::string>{"lhs", "rhs"};
-                                     })
-    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-    .set_attr<nnvm::FInferType>("FInferType", FloorDivideType)
-    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs& attrs) {
-                                      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
-                                    })
-    .set_attr<FCompute>("FCompute<cpu>", FloorDivideBroadcastCompute<cpu>)
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
-    .add_argument("rhs", "NDArray-or-Symbol", "Divisor array");
-
-
-NNVM_REGISTER_OP(_npi_floor_divide_scalar)
-    .set_num_inputs(1)
-    .set_num_outputs(1)
-    .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-    .set_attr<nnvm::FInferType>("FInferType", FloorDivideScalarType)
-    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs& attrs) {
-                                      return std::vector<std::pair<int, int> >{{0, 0}};
-                                    })
-    .set_attr<FCompute>("FCompute<cpu>",
-                        FloorDivideScalarCompute<cpu, op::mshadow_op::floor_divide>)
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .add_argument("data", "NDArray-or-Symbol", "source input")
-    .add_arguments(NumpyBinaryScalarParam::__FIELDS__());
-
-NNVM_REGISTER_OP(_npi_rfloor_divide_scalar)
-    .set_num_inputs(1)
-    .set_num_outputs(1)
-    .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-    .set_attr<nnvm::FInferType>("FInferType", FloorDivideType)
-    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs& attrs) {
-                                      return std::vector<std::pair<int, int> >{{0, 0}};
-                                    })
-#ifdef _WIN32
-    .set_attr<FResourceRequest>("FResourceRequest",
-                                [](const NodeAttrs& attrs) {
-                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-                                })
-#endif
-    .set_attr<FCompute>("FCompute<cpu>", FloorDivideScalarCompute<cpu, mshadow_op::rfloor_divide>)
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .add_argument("data", "NDArray-or-Symbol", "source input")
-    .add_arguments(NumpyBinaryScalarParam::__FIELDS__());
+MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_floor_divide)
+.set_attr<FCompute>(
+  "FCompute<cpu>",
+  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::floor_divide, op::mshadow_op::mixed_floor_divide,
+                                      op::mshadow_op::mixed_rfloor_divide>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet
