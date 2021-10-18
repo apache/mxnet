@@ -1683,6 +1683,7 @@ class SymbolBlock(HybridBlock):
     >>> print(feat_model(x))
     """
     @staticmethod
+    @wrap_ctx_to_device_func
     def imports(symbol_file, input_names, param_file=None, device=None, allow_missing=False,
                 ignore_extra=False):
         """Import model previously saved by `gluon.HybridBlock.export`

@@ -82,7 +82,7 @@ class Stack(object):
             dtype = data[0].dtype
             if self._use_shared_mem:
                 out = _arr.empty((len(data),) + data[0].shape, dtype=dtype,
-                                 device=Device('cpu_shared', 0))
+                                 ctx=Device('cpu_shared', 0))
                 return _arr.stack(data, out=out) if is_np_array() else _arr.stack(*data, out=out)
             else:
                 return _arr.stack(data) if is_np_array() else _arr.stack(*data)
