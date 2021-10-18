@@ -51,6 +51,7 @@ apt-get install -y \
     libedit-dev \
     libxml2-dev \
     ninja-build \
+    openssl \
     software-properties-common \
     sudo \
     unzip \
