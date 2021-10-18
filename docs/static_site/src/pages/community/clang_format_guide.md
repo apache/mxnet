@@ -4,7 +4,7 @@ title: Clang format
 subtitle: Clang format in MXNet codebase for reviewers and contributors.
 action: Contribute
 action_url: /community/index
-permalink: /community/code_guide
+permalink: /community/clang_format_guide
 ---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
