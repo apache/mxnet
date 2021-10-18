@@ -205,8 +205,13 @@ static void DNNLReduceEx(const nnvm::NodeAttrs& attrs,
     DNNLRun(DNNLReduceForward<reduction_alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else {
-    FallBackCompute(
-        NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>, attrs, ctx, inputs, req, outputs);
+    constexpr bool normalize = reduction_alg == dnnl::algorithm::reduction_mean;
+    FallBackCompute(NumpyReduceAxesCompute<cpu, mshadow_op::sum, true, normalize>,
+                    attrs,
+                    ctx,
+                    inputs,
+                    req,
+                    outputs);
     return;
   }
 }

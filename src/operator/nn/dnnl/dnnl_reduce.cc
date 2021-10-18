@@ -68,29 +68,52 @@ NumpyReduceAxesParam ConvertParamsToNumpy<NumpyReduceAxesParam>(
   return original_param;
 }
 
+mxnet::Tuple<int> CanonicalizeAndSortAxes(const NDArray& input,
+                                          const NumpyReduceAxesParam& param,
+                                          mxnet::Tuple<int> original_axes) {
+  int in_ndim = input.shape().ndim();
+  mxnet::Tuple<int> axes(param.axis.value());
+  // canonicalize
+  for (index_t i = 0; i < axes.ndim(); i++) {
+    if (axes[i] < 0) {
+      axes[i] += in_ndim;
+    }
+  }
+  std::sort(axes.begin(), axes.end());
+  return axes;
+}
+
 bool SupportDNNLReduceImpl(const NDArray& input,
                            const NDArray& output,
                            const NumpyReduceAxesParam& param) {
   int in_ndim          = input.shape().ndim();
-  int out_ndim         = output.shape().ndim();
+  int out_size         = output.shape().Size();
   int in_size          = input.shape().Size();
-  bool param_supported = false;
+  bool param_supported = true;
   if (param.axis.has_value()) {
-    for (const auto& ax : param.axis.value()) {
-      if (input.shape()[ax] == 1) {
-        return false;
+    auto axes    = CanonicalizeAndSortAxes(input, param, param.axis.value());
+    int last_dim = *(axes.end() - 1);
+    if (last_dim != input.shape().ndim() - 1) {
+      return false;
+    } else {
+      for (int i = 0; i < axes.ndim(); i++) {
+        // oneDNN doesnt support reduction of axes with dimension 1
+        // use oneDNN implementation only when dealing with consecutive trailing dimensions
+        if (input.shape()[axes[i]] == 1 || (last_dim - axes[i]) != (axes.ndim() - 1 - i)) {
+          return false;
+        }
       }
     }
+
     // if axis = () it's identity op and it is not supported by oneDNN
     param_supported = param.axis.value().ndim() > 0;
   }
   // initial value not supported by oneDNN
   param_supported = param_supported && !param.initial.has_value();
-
   return param_supported &&
-         (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
-         (output.dtype() == mshadow::kFloat32 || output.dtype() == mshadow::kBfloat16) &&
-         in_ndim >= 1 && out_ndim >= 1 && in_size > 0;
+           (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
+           (output.dtype() == mshadow::kFloat32 || output.dtype() == mshadow::kBfloat16) &&
+           in_ndim >= 1 && out_size > 0 && in_size > 0;
 }
 
 void DNNLReduceForwardImpl(const nnvm::NodeAttrs& attrs,
@@ -161,15 +184,7 @@ DNNLReduceFwd::DNNLReduceFwd(const NumpyReduceAxesParam& param,
     out_md       = out_mem->get_desc();
   } else {
     if (param.axis.has_value()) {
-      mxnet::Tuple<int> axes(param.axis.value());
-      // canonicalize
-      for (index_t i = 0; i < axes.ndim(); i++) {
-        if (axes[i] < 0) {
-          axes[i] += in_ndim;
-        }
-      }
-      std::sort(axes.begin(), axes.end());
-
+      auto axes = CanonicalizeAndSortAxes(tensors.data, param, param.axis.value());
       dnnl::memory::dims out_shape(in_ndim);
       int axis_indice = 0;
       for (int i = 0; i < in_ndim; i++) {
@@ -202,10 +217,17 @@ reduce_fwd_pd_t DNNLReduceFwd::GetReduceFwdPd(const dnnl::memory::desc& input_md
 }
 
 void DNNLReduceFwd::Execute(const Tensors& tensors) const {
-  DNNLStream* stream = DNNLStream::Get();
-  auto input_mem     = tensors.data.GetDNNLData();
-  auto out_mem       = tensors.out.GetDNNLData(reduce_pd->dst_desc());
-  stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, *out_mem}});
+  auto stream    = DNNLStream::Get();
+  auto engine    = CpuEngine::Get()->get_engine();
+  auto input_mem = tensors.data.GetDNNLData();
+  if (tensors.out.shape().Size() == 1) {
+    // scalar result
+    auto out_mem = dnnl::memory(reduce_pd->dst_desc(), engine, tensors.out.data().dptr<float>());
+    stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, out_mem}});
+  } else {
+    auto out_mem = tensors.out.GetDNNLData(reduce_pd->dst_desc());
+    stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, *out_mem}});
+  }
   stream->Submit();
 }
 
