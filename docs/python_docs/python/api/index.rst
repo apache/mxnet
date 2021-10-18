@@ -86,7 +86,7 @@ Gluon related modules
       Key value store interface of MXNet for parameter synchronization.
 
    .. card::
-      :title: mxnet.context
+      :title: mxnet.device
       :link: mxnet/context/index.html
 
       CPU and GPU context information.
@@ -116,8 +116,8 @@ Advanced modules
       API for querying MXNet enabled features.
 
    .. card::
-      :title: mxnet.context
-      :link: context/index.html
+      :title: mxnet.device
+      :link: device/index.html
 
       MXNet array context for specifying in-memory storage device.
 

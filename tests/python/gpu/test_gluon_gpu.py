@@ -473,7 +473,7 @@ def test_large_models():
     # The idea is to create models with large tensors of (say) 20% of the total memory.
     # This in the past has given cudnnFind() trouble when it needed to allocate similar I/O's
     # from the area carved out by the MXNET_GPU_MEM_POOL_RESERVE setting (by default 5%).
-    (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(device.device_id)
+    (free_mem_bytes, total_mem_bytes) = mx.device.gpu_memory_info(device.device_id)
     # This test needs to be 'qualified' for use with each new larger memory size
     largest_supported_total_mem_GB = 32
     if (total_mem_bytes > largest_supported_total_mem_GB * 1024 * 1024 * 1024):
