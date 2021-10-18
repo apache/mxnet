@@ -28,17 +28,17 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_logaddexp)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logaddexp"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logaddexp"});
 
 NNVM_REGISTER_OP(_npi_logaddexp_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"logaddexp"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"logaddexp"});
 
 NNVM_REGISTER_OP(_backward_npi_logaddexp)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"logaddexp_grad",
-                                                                     "logaddexp_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        BinaryBroadcastRTCBackwardUseIn{"logaddexp_grad", "logaddexp_rgrad"});
 
 NNVM_REGISTER_OP(_backward_npi_logaddexp_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"logaddexp_grad"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"logaddexp_grad"});
 
 }  // namespace op
 }  // namespace mxnet

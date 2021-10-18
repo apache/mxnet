@@ -140,12 +140,12 @@ MXNET_REGISTER_API("_npi.bitwise_and")
     });
 
 MXNET_REGISTER_API("_npi.logaddexp")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_logaddexp");
-  const nnvm::Op* op_scalar = Op::Get("_npi_logaddexp_scalar");
-  UFuncHelper(args, ret, op, op_scalar, nullptr);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op        = Op::Get("_npi_logaddexp");
+      const nnvm::Op* op_scalar = Op::Get("_npi_logaddexp_scalar");
+      UFuncHelper(args, ret, op, op_scalar, nullptr);
+    });
 
 MXNET_REGISTER_API("_npi.copysign")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
