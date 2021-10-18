@@ -88,7 +88,7 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     <NDArray 4 @cpu(0)>
     """
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     log_range = math.log(range_max + 1)
     rand = uniform(0, log_range, shape=(num_sampled,), dtype='float64', ctx=ctx)
     # make sure sampled_classes are in the range of [0, range_max)
