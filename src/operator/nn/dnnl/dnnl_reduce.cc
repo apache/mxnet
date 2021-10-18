@@ -111,9 +111,9 @@ bool SupportDNNLReduceImpl(const NDArray& input,
   // initial value not supported by oneDNN
   param_supported = param_supported && !param.initial.has_value();
   return param_supported &&
-           (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
-           (output.dtype() == mshadow::kFloat32 || output.dtype() == mshadow::kBfloat16) &&
-           in_ndim >= 1 && out_size > 0 && in_size > 0;
+         (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
+         (output.dtype() == mshadow::kFloat32 || output.dtype() == mshadow::kBfloat16) &&
+         in_ndim >= 1 && out_size > 0 && in_size > 0;
 }
 
 void DNNLReduceForwardImpl(const nnvm::NodeAttrs& attrs,
