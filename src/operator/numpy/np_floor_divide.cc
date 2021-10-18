@@ -28,11 +28,12 @@ namespace mxnet {
 namespace op {
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_floor_divide)
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::floor_divide, op::mshadow_op::mixed_floor_divide,
-                                      op::mshadow_op::mixed_rfloor_divide>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyBinaryBroadcastComputeWithBool<cpu,
+                                                            op::mshadow_op::floor_divide,
+                                                            op::mshadow_op::mixed_floor_divide,
+                                                            op::mshadow_op::mixed_rfloor_divide>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet

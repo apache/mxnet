@@ -261,7 +261,7 @@ struct mixed_floor_divide {
   template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
     mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
-    mshadow::half::half_t c = static_cast<mshadow::half::half_t>(::floor(a_half / b));
+    mshadow::half::half_t c      = static_cast<mshadow::half::half_t>(::floor(a_half / b));
     if ((c * b != a_half) && (a < 0) != (b < 0)) {
       return mshadow::half::half_t(c - 1);
     } else {
@@ -275,7 +275,7 @@ struct mixed_floor_divide {
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     float a_float = static_cast<float>(a);
-    float c = ::floorf(a_float / b);
+    float c       = ::floorf(a_float / b);
     if ((c * b != a_float) && (a < 0) != (b < 0)) {
       return c - 1.0f;
     } else {
@@ -287,9 +287,10 @@ struct mixed_floor_divide {
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
                                         std::is_same<DType, float>::value ||
                                         std::is_integral<DType>::value,
-                                    int>::type = 0>  MSHADOW_XINLINE static double Map(DType a, double b) {
+                                    int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
     double a_double = static_cast<double>(a);
-    double c = ::floor(a_double / b);
+    double c        = ::floor(a_double / b);
     if ((c * b != a_double) && (a < 0) != (b < 0)) {
       return c - 1.0;
     } else {
@@ -302,7 +303,7 @@ struct mixed_rfloor_divide {
   template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
     mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
-    mshadow::half::half_t c = static_cast<mshadow::half::half_t>(::floor(b / a_half));
+    mshadow::half::half_t c      = static_cast<mshadow::half::half_t>(::floor(b / a_half));
     if ((c * a_half != b) && (a < 0) != (b < 0)) {
       return mshadow::half::half_t(c - 1);
     } else {
@@ -316,7 +317,7 @@ struct mixed_rfloor_divide {
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     float a_float = static_cast<float>(a);
-    float c = ::floorf(b / a_float);
+    float c       = ::floorf(b / a_float);
     if ((c * a_float != b) && (a < 0) != (b < 0)) {
       return c - 1.0f;
     } else {
@@ -331,7 +332,7 @@ struct mixed_rfloor_divide {
                                     int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     double a_double = static_cast<double>(a);
-    double c = ::floor(b / a_double);
+    double c        = ::floor(b / a_double);
     if ((c * a_double != b) && (a < 0) != (b < 0)) {
       return c - 1.0;
     } else {
