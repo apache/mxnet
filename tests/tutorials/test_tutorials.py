@@ -220,6 +220,6 @@ def test_amp():
     assert _test_tutorial_nb('amp/amp_tutorial')
 # https://github.com/apache/incubator-mxnet/issues/16181
 """
-def test_mkldnn_quantization():
-    assert _test_tutorial_nb('mkldnn/mkldnn_quantization')
+def test_dnnl_quantization():
+    assert _test_tutorial_nb('dnnl/dnnl_quantization')
 """

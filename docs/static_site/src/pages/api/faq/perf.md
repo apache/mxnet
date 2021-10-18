@@ -58,7 +58,7 @@ We also find that setting the following environment variables can help:
 | :-------- | :---------- |
 | `OMP_NUM_THREADS`            | Suggested value: `vCPUs / 2` in which `vCPUs` is the number of virtual CPUs. For more information, please see the guide for [setting the number of threads using an OpenMP environment variable](https://software.intel.com/en-us/mkl-windows-developer-guide-setting-the-number-of-threads-using-an-openmp-environment-variable) |
 | `KMP_AFFINITY`               | Suggested value: `granularity=fine,compact,1,0`.  For more information, please see the guide for [Thread Affinity Interface (Linux* and Windows*)](https://software.intel.com/en-us/node/522691). |
-| `MXNET_SUBGRAPH_BACKEND` | Set to ONEDNN to enable the [subgraph feature](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN) for better performance. For more information please see [Build/Install MXNet with ONEDNN](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html)|
+| `MXNET_SUBGRAPH_BACKEND` | Set to ONEDNN to enable the [subgraph feature](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN) for better performance. For more information please see [Build/Install MXNet with oneDNN](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/dnnl/dnnl_readme.html)|
 
 Note that _MXNet_ treats all CPUs on a single machine as a single device.
 So whether you specify `cpu(0)` or `cpu()`, _MXNet_ will use all CPU cores on the machine.

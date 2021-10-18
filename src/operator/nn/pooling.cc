@@ -25,8 +25,8 @@
 #include "../elemwise_op_common.h"
 #include "./pooling-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_pooling-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_pooling-inl.h"
 #endif  // MXNET_USE_ONEDNN
 namespace mxnet {
 namespace op {
@@ -63,7 +63,7 @@ void PoolingParamParser(nnvm::NodeAttrs* attrs) {
 
 int GetNumOutputs(const PoolingParam& param) {
 #if MXNET_USE_ONEDNN == 1
-  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
+  return DNNLRequireWorkspace(param) && SupportDNNLPooling(param) ? 2 : 1;
 #else
   return 1;
 #endif
@@ -71,7 +71,7 @@ int GetNumOutputs(const PoolingParam& param) {
 
 int GetNumBackInputs(const PoolingParam& param) {
 #if MXNET_USE_ONEDNN == 1
-  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 5 : 3;
+  return DNNLRequireWorkspace(param) && SupportDNNLPooling(param) ? 5 : 3;
 #else
   return 3;
 #endif
@@ -83,7 +83,7 @@ static bool PoolingType(const nnvm::NodeAttrs& attrs,
   out_attrs->at(0) = in_attrs->at(0);
 #if MXNET_USE_ONEDNN == 1
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param)) {
+  if (DNNLRequireWorkspace(param) && SupportDNNLPooling(param)) {
     CHECK_GT(out_attrs->size(), 1U);
     out_attrs->at(1) = mshadow::kInt32;
   }
@@ -147,7 +147,7 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_ONEDNN == 1
-    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
+    if (DNNLRequireWorkspace(param) && SupportDNNLPooling(param))
       out_shape->push_back(oshape);  // for workspace
 #endif
   } else if (param.kernel.ndim() == 0) {
@@ -181,7 +181,7 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_ONEDNN == 1
-    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
+    if (DNNLRequireWorkspace(param) && SupportDNNLPooling(param))
       out_shape->push_back(oshape);  // for workspace
 #endif
   } else if (param.kernel.ndim() == 2) {
@@ -218,7 +218,7 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_ONEDNN == 1
-    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
+    if (DNNLRequireWorkspace(param) && SupportDNNLPooling(param))
       out_shape->push_back(oshape);  // for workspace
 #endif
   } else if (param.kernel.ndim() == 3) {
@@ -261,7 +261,7 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_ONEDNN == 1
-    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
+    if (DNNLRequireWorkspace(param) && SupportDNNLPooling(param))
       out_shape->push_back(oshape);  // for workspace
 #endif
   }
@@ -284,14 +284,14 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  if (SupportMKLDNNPooling(param, inputs[0])) {
-    if (MKLDNNRequireWorkspace(param)) {
+  if (SupportDNNLPooling(param, inputs[0])) {
+    if (DNNLRequireWorkspace(param)) {
       CHECK_GT(outputs.size(), 1U);
       workspace = &outputs[1];
     }
-    MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
-    MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
-    MKLDNN_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
+    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
+    DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -310,11 +310,11 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  if (SupportMKLDNNPooling(param, inputs[0])) {
+  if (SupportDNNLPooling(param, inputs[0])) {
     const NDArray& out_grad  = inputs[0];
     const NDArray* workspace = nullptr;
     const NDArray* in_data   = nullptr;
-    if (MKLDNNRequireWorkspace(param)) {
+    if (DNNLRequireWorkspace(param)) {
       // The first two elements are the gradient of the outputs in forward.
       // The third is the input of forward.
       // The fourth and the fifth are the outputs of forward.
@@ -326,9 +326,9 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs& attrs,
       in_data = &inputs[1];
     }
     const NDArray& in_grad = outputs[0];
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNPoolingGradCompute(ctx, param, out_grad, *in_data, workspace, req[0], in_grad);
-    MKLDNN_OPCHECK_RUN(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLPoolingGradCompute(ctx, param, out_grad, *in_data, workspace, req[0], in_grad);
+    DNNL_OPCHECK_RUN(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -341,10 +341,9 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs& attrs,
                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  bool support_mkldnn_pool  = SupportMKLDNNPooling(param);
+  bool support_dnnl_pool    = SupportDNNLPooling(param);
 
-  return MKLDNNStorageType(
-      attrs, dev_mask, support_mkldnn_pool, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, support_dnnl_pool, dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs& attrs,
@@ -355,10 +354,9 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs& attrs,
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), GetNumBackInputs(param));
   CHECK_EQ(out_attrs->size(), 1);
-  bool support_mkldnn_pool = SupportMKLDNNPooling(param);
+  bool support_dnnl_pool = SupportDNNLPooling(param);
 
-  return MKLDNNStorageType(
-      attrs, dev_mask, support_mkldnn_pool, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, support_dnnl_pool, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -446,7 +444,7 @@ For each window ``X``, the mathematical expression for Lp pooling is:
     .set_attr<mxnet::FInferShape>("FInferShape", PoolingShape)
     .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingComputeExCPU)
 #endif
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_Pooling"})
@@ -467,8 +465,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
 #if MXNET_USE_ONEDNN == 1
                                       const PoolingParam& param =
                                           nnvm::get<PoolingParam>(attrs.parsed);
-                                      if (MKLDNNRequireWorkspace(param) &&
-                                          SupportMKLDNNPooling(param))
+                                      if (DNNLRequireWorkspace(param) && SupportDNNLPooling(param))
                                         return std::vector<std::pair<int, int> >{{1, 0}};
 #endif
                                       return std::vector<std::pair<int, int> >();
@@ -482,7 +479,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
 #endif
     .set_attr_parser(PoolingParamParser)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradComputeExCPU)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>);

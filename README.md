@@ -91,7 +91,7 @@ What's New
 
 ### Ecosystem News
 
-* [ONEDNN for Faster CPU Performance](docs/python_docs/python/tutorials/performance/backend/mkldnn/mkldnn_readme.md)
+* [oneDNN for Faster CPU Performance](docs/python_docs/python/tutorials/performance/backend/dnnl/dnnl_readme.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)](https://github.com/dmlc/mxnet.js/)

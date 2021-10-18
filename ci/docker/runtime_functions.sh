@@ -718,7 +718,8 @@ sanity_cpp() {
 }
 
 sanity_clang() {
-    set -ex
+    set -e
+    set +x
     # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
     BASE_SHA="${GITHUB_PR_BASE_SHA}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
@@ -741,14 +742,14 @@ sanity_clang() {
         git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
         exit 0
     fi
-    
+
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    echo "| clang-format failures found! Run: "
-    echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
+    echo "| Clang-format failures found! Run: "
+    echo "|    tools/lint/clang_format_ci.sh ${BASE_SHA} "
     echo "| to fix this error. "
-    echo "| For more info, see: "
+    echo "| For more info, see: https://mxnet.apache.org/versions/master/community/clang_format_guide"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    
+
     echo "$GIT_DIFFERENCE"
     git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
     exit 1
@@ -801,7 +802,7 @@ cd_unittest_ubuntu() {
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
-        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/mkl
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/dnnl
     fi
 }
 
@@ -841,7 +842,7 @@ unittest_ubuntu_python3_cpu_onednn() {
     MXNET_ENGINE_TYPE=NaiveEngine \
                      OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
+    pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/dnnl
 }
 
 unittest_array_api_standardization() {

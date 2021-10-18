@@ -45,7 +45,7 @@ def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
 
 
-def is_test_for_mkldnn():
+def is_test_for_dnnl():
     return (mx.current_context().device_type == 'cpu'
             and os.environ.get('ENABLE_ONEDNN_QUANTIZATION_TEST') == '1')
 
@@ -216,9 +216,9 @@ def test_quantized_conv():
         if is_test_for_native_cpu():
             print('skipped testing quantized_conv for native cpu since it is not supported yet')
             return
-        elif is_test_for_mkldnn():
+        elif is_test_for_dnnl():
             # (TODO)Xinyu: https://github.com/apache/incubator-mxnet/issues/16830
-            print('skipped testing quantized_conv for mkldnn cpu since it is a flaky case')
+            print('skipped testing quantized_conv for dnnl cpu since it is a flaky case')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_conv for gpu uint8 since it is not supported yet')
@@ -699,7 +699,7 @@ def test_quantized_fc():
             assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
 
     for qdtype in ['int8', 'uint8']:
-        if is_test_for_mkldnn():
+        if is_test_for_dnnl():
             check_quantized_fc((32, 512, 2), 100, False, qdtype, flatten=False)
             check_quantized_fc((32, 512, 2), 100, True, qdtype, flatten=False)
             check_quantized_fc((32, 512, 2, 2), 100, False, qdtype, flatten=False)
@@ -822,8 +822,8 @@ def test_quantized_act():
         if is_test_for_native_cpu():
             print('skipped testing quantized_act for native cpu since it is not supported yet')
             return
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantized_act for mkldnn cpu int8 since it is not supported yet')
+        elif qdtype == 'int8' and is_test_for_dnnl():
+            print('skipped testing quantized_act for dnnl cpu int8 since it is not supported yet')
             return
         elif is_test_for_gpu():
             print('skipped testing quantized_act for gpu since it is not supported yet')
@@ -1057,8 +1057,8 @@ def test_quantize_model():
         if is_test_for_native_cpu():
             print('skipped testing quantize_model for native cpu since it is not supported yet')
             return True
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantize_model for mkldnn cpu int8 since it is not supported yet')
+        elif qdtype == 'int8' and is_test_for_dnnl():
+            print('skipped testing quantize_model for dnnl cpu int8 since it is not supported yet')
             return True
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantize_model for gpu uint8 since it is not supported yet')
@@ -1069,8 +1069,8 @@ def test_quantize_model():
         if is_test_for_native_cpu():
             print('skipped testing quantize_model for native cpu since it is not supported yet')
             return
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantize_model for mkldnn cpu int8 since it is not supported yet')
+        elif qdtype == 'int8' and is_test_for_dnnl():
+            print('skipped testing quantize_model for dnnl cpu int8 since it is not supported yet')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantize_model for gpu uint8 since it is not supported yet')

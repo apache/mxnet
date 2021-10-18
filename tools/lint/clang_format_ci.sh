@@ -16,5 +16,5 @@
 # under the License.
 
 #!/bin/sh
-set -eux 
+set -eu 
     tools/lint/git-clang-format-13 --verbose "$1" --

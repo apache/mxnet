@@ -94,7 +94,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     const auto& nd = src[i];
 
 #if MXNET_USE_ONEDNN == 1
-    if (req->at(i) == kWriteInplace && nd.IsMKLDNNData())
+    if (req->at(i) == kWriteInplace && nd.IsDNNLData())
       // If it's write inplace and the output array doesn't use the default
       // layout, we'll generate a temporary output array below, which means
       // the input array and the output array are no longer the same array.
@@ -108,7 +108,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
       if (bufs != nullptr) {
         temp = bufs->at(i);
       } else if (kAddTo == req->at(i)) {
-        temp = nd.IsMKLDNNData() ? nd.Reorder2Default() : nd;
+        temp = nd.IsDNNLData() ? nd.Reorder2Default() : nd;
       } else {
         temp = NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
       }
