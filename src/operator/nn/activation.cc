@@ -26,8 +26,8 @@
 #include "../mshadow_op.h"
 #include "../tensor/elemwise_unary_op.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_base-inl.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_ops-inl.h"
 #endif  // MXNET_USE_ONEDNN == 1
 #include "../operator_common.h"
 #include "../../common/utils.h"
@@ -112,10 +112,10 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  if (SupportMKLDNNAct(param, inputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNActivationForward, attrs, ctx, inputs[0], req[0], outputs[0]);
-    MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLAct(param, inputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLActivationForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNL_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ActivationComputeImpl<cpu>, attrs, ctx, inputs, req, outputs);
@@ -128,10 +128,10 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& outputs) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), activation::GradNumInputs(param.act_type));
-  if (SupportMKLDNNAct(param, inputs[0])) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNActivationBackward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLAct(param, inputs[0])) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLActivationBackward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ActivationGradComputeImpl<cpu>, attrs, ctx, inputs, req, outputs);
@@ -145,8 +145,8 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  return MKLDNNStorageType(
-      attrs, dev_mask, SupportMKLDNNAct(param), dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(
+      attrs, dev_mask, SupportDNNLAct(param), dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
@@ -156,8 +156,8 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int>* out_attrs) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), activation::GradNumInputs(param.act_type));
-  return MKLDNNStorageType(
-      attrs, dev_mask, SupportMKLDNNAct(param), dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(
+      attrs, dev_mask, SupportDNNLAct(param), dispatch_mode, in_attrs, out_attrs);
 }
 #endif  // MXNET_USE_ONEDNN == 1
 
@@ -186,7 +186,7 @@ The following activation functions are supported:
                                       })
     .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationComputeExCPU)
 #endif
     .set_attr<nnvm::FGradient>("FGradient", ActivationGrad{"_backward_Activation"})
@@ -216,7 +216,7 @@ NNVM_REGISTER_OP(_backward_Activation)
 #endif
     .set_attr_parser(ParamParser<ActivationParam>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationGradComputeExCPU)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", ActivationGradCompute<cpu>);

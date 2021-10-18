@@ -36,10 +36,10 @@ namespace mxnet {
 namespace exec {
 
 #if MXNET_USE_ONEDNN == 1
-#define CREATE_DEFAULT_INPUTS_MKLDNN(in_array, in_array_fallback, attrs) \
+#define CREATE_DEFAULT_INPUTS_DNNL(in_array, in_array_fallback, attrs) \
   CREATE_DEFAULT_INPUTS(true, attrs, CreateDefaultInputs(in_array, in_array_fallback))
 #else
-#define CREATE_DEFAULT_INPUTS_MKLDNN(in_array, in_array_fallback, attrs)  // empty macro
+#define CREATE_DEFAULT_INPUTS_DNNL(in_array, in_array_fallback, attrs)  // empty macro
 #endif
 
 // abstract OpExecutor which provides storage fallback procedure on
@@ -168,7 +168,7 @@ class StatefulComputeExExecutor : public OpExecutor {
     op_ctx.run_ctx = rctx;
     INVALIDATE_OUTPUTS(out_array, req);
     std::vector<NDArray>* pInArray = &in_array;
-    CREATE_DEFAULT_INPUTS_MKLDNN(in_array, pInArray = &in_array_fallback, attrs_);
+    CREATE_DEFAULT_INPUTS_DNNL(in_array, pInArray = &in_array_fallback, attrs_);
     fcompute_(state_, op_ctx, *pInArray, req, out_array);
   }
 
@@ -240,7 +240,7 @@ class FComputeExExecutor : public OpExecutor {
     op_ctx.run_ctx = rctx;
     INVALIDATE_OUTPUTS(out_array, req);
     std::vector<NDArray>* pInArray = &in_array;
-    CREATE_DEFAULT_INPUTS_MKLDNN(in_array, pInArray = &in_array_fallback, attrs_);
+    CREATE_DEFAULT_INPUTS_DNNL(in_array, pInArray = &in_array_fallback, attrs_);
     fcompute_(attrs_, op_ctx, *pInArray, req, out_array);
   }
 

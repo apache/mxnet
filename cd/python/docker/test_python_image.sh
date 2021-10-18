@@ -33,7 +33,7 @@ fi
 
 # Execute tests
 if [[ $mxnet_variant != native ]]; then
-    python3 tests/python/mkl/test_mkldnn.py
+    python3 tests/python/dnnl/test_dnnl.py
 fi
 
 # TODO: Add more tests (18549)

@@ -24,8 +24,8 @@
 
 #include "./dot-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./../nn/mkldnn/mkldnn_base-inl.h"
-#include "./../nn/mkldnn/mkldnn_ops-inl.h"
+#include "./../nn/dnnl/dnnl_base-inl.h"
+#include "./../nn/dnnl/dnnl_ops-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
@@ -121,10 +121,10 @@ static void BatchDotComputeExCPU(const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNBatchDot(inputs, outputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNBatchDotForward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLBatchDot(inputs, outputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLBatchDotForward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);
@@ -138,7 +138,7 @@ static bool BatchDotStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -172,7 +172,7 @@ which is computed by::
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
     .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FInferStorageType>("FInferStorageType", BatchDotStorageType)
     .set_attr<FComputeEx>("FComputeEx<cpu>", BatchDotComputeExCPU)
 #endif

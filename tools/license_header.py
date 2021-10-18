@@ -134,7 +134,7 @@ _WHITE_LIST = [
                'src/operator/contrib/multi_proposal-inl.h',
 
                # Licensed under Apache 2.0 license
-               'src/operator/nn/mkldnn/mkldnn_base-inl.h',
+               'src/operator/nn/dnnl/dnnl_base-inl.h',
 
                # This file
                'tools/license_header.py',

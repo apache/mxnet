@@ -22,10 +22,11 @@
  * \brief CPU Implementation of elementwise power (x^k for fixed k) function.
  */
 #include <mxnet/base.h>
-#include "elemwise_unary_op.h"
-#include "./elemwise_binary_op-inl.h"
-#include "../nn/mkldnn/mkldnn_ops-inl.h"
+
 #include "../../nnvm/node_op_util.h"
+#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "./elemwise_binary_op-inl.h"
+#include "elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {

@@ -23,10 +23,10 @@
  * \author Bing Xu
  */
 
-#include "./concat-inl.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
 #include "../../common/utils.h"
+#include "./concat-inl.h"
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -212,7 +212,7 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
 #if MXNET_USE_ONEDNN == 1
-  if (!MKLDNNEnvSet())
+  if (!DNNLEnvSet())
     *dispatch_mode = DispatchMode::kFComputeFallback;
 #endif  // MXNET_USE_ONEDNN == 1
   return dispatched;
@@ -234,13 +234,13 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
 #endif  // MXNET_USE_ONEDNN == 1
     wanted_mode = DispatchMode::kFCompute;
 #if MXNET_USE_ONEDNN == 1
-  if (!MKLDNNEnvSet())
+  if (!DNNLEnvSet())
     wanted_mode = DispatchMode::kFComputeFallback;
 #endif  // MXNET_USE_ONEDNN == 1
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
 }
 #if MXNET_USE_ONEDNN == 1
-bool SupportMKLDNNConcat(const std::vector<NDArray>& arrs) {
+bool SupportDNNLConcat(const std::vector<NDArray>& arrs) {
   for (auto& arr : arrs) {
     if (arr.IsView())
       return false;
@@ -250,8 +250,8 @@ bool SupportMKLDNNConcat(const std::vector<NDArray>& arrs) {
     if (arr.shape().Size() == 0)
       return false;
     int ndim               = arr.shape().ndim();
-    const int mkldnn_ndims = arr.GetMKLDNNData()->get_desc().data.ndims;
-    if (!(ndim == 2 || ndim == 4) || ndim != mkldnn_ndims)
+    const int dnnl_ndims   = arr.GetDNNLData()->get_desc().data.ndims;
+    if (!(ndim == 2 || ndim == 4) || ndim != dnnl_ndims)
       return false;
   }
   return true;
@@ -271,10 +271,10 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
       outputs[0].storage_type() == kCSRStorage) {
     ConcatCSRImpl<cpu>(attrs, op_ctx, inputs, req, outputs);
 #if MXNET_USE_ONEDNN == 1
-  } else if (SupportMKLDNNConcat(inputs)) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNConcatForward, attrs, op_ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
+  } else if (SupportDNNLConcat(inputs)) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLConcatForward, attrs, op_ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
 #endif  // MXNET_USE_ONEDNN == 1
@@ -289,10 +289,10 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNConcat(inputs)) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNConcatBackward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLConcat(inputs)) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLConcatBackward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -390,7 +390,7 @@ Example::
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
 #endif  // MXNET_USE_ONEDNN == 1
         CONCAT_FORWARD_ATTRS.set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
     .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
@@ -419,7 +419,7 @@ NNVM_REGISTER_OP(_backward_Concat)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
     .set_attr<FInferStorageType>("FInferStorageType", BackwardConcatStorageType)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatGradComputeExCPU)
 #endif  // MXNET_USE_ONEDNN == 1
     .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
