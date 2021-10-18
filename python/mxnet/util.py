@@ -965,7 +965,7 @@ def get_cuda_compute_capability(device):
 
     cc_major = ctypes.c_int()
     cc_minor = ctypes.c_int()
-    device = ctypes.c_int()
+    cuda_device = ctypes.c_int()
     error_str = ctypes.c_char_p()
 
     ret = cuda.cuInit(0)
@@ -974,12 +974,12 @@ def get_cuda_compute_capability(device):
         raise RuntimeError('cuInit failed with erro code {}: {}'
                            .format(ret, error_str.value.decode()))
 
-    ret = cuda.cuDeviceGet(ctypes.byref(device), device.device_id)
+    ret = cuda.cuDeviceGet(ctypes.byref(cuda_device), device.device_id)
     if ret != _CUDA_SUCCESS:
         cuda.cuGetErrorString(ret, ctypes.byref(error_str))
         raise RuntimeError('cuDeviceGet failed with error code {}: {}'
                            .format(ret, error_str.value.decode()))
-    ret = cuda.cuDeviceComputeCapability(ctypes.byref(cc_major), ctypes.byref(cc_minor), device)
+    ret = cuda.cuDeviceComputeCapability(ctypes.byref(cc_major), ctypes.byref(cc_minor), cuda_device)
     if ret != _CUDA_SUCCESS:
         cuda.cuGetErrorString(ret, ctypes.byref(error_str))
         raise RuntimeError('cuDeviceComputeCapability failed with error code {}: {}'
