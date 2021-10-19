@@ -3591,6 +3591,8 @@ def positive(x, out=None, **kwargs):
     >>> +x1
     array([ 1., -1.])
     """
+    if out is x:
+        return x
     return _pure_unary_func_helper(x, _api_internal.copy, _np.positive, out=out)
 
 

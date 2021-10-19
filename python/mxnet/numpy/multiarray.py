@@ -4857,7 +4857,7 @@ def positive(x, out=None, **kwargs):
     >>> +x1
     array([ 1., -1.])
     """
-    return _mx_nd_np.positive(x)
+    return _mx_nd_np.positive(x, out=out)
 
 
 @set_module('mxnet.numpy')
