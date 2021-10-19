@@ -79,7 +79,7 @@ class SgDNNLBatchDotProperty : public SubgraphProperty {
     });
 
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_sg_dnnl_batch_dot");
+    n->attrs.op   = Op::Get("_sg_onednn_batch_dot");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(sym));
     n->attrs.dict["transpose_a"] = std::to_string(param.transpose_a);

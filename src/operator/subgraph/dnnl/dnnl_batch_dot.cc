@@ -114,8 +114,8 @@ inline static bool DNNLBatchDotStorageType(const nnvm::NodeAttrs& attrs,
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-NNVM_REGISTER_OP(_sg_dnnl_batch_dot)
-    .describe(R"code(_sg_dnnl_batch_dot)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_sg_onednn_batch_dot)
+    .describe(R"code(_sg_onednn_batch_dot)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLDotParam>(attrs.parsed);
       // two normal inputs + min/max for quantized version
@@ -158,7 +158,7 @@ NNVM_REGISTER_OP(_sg_dnnl_batch_dot)
     .set_attr<FQuantizedOp>("FQuantizedOp",
                             [](const NodeAttrs& attrs) {
                               nnvm::ObjectPtr node          = nnvm::Node::Create();
-                              node->attrs.op                = Op::Get("_sg_dnnl_batch_dot");
+                              node->attrs.op                = Op::Get("_sg_onednn_batch_dot");
                               node->attrs.name              = "quantized_" + attrs.name;
                               node->attrs.dict              = attrs.dict;
                               node->attrs.dict["quantized"] = "True";

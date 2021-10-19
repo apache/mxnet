@@ -53,7 +53,8 @@ class SgDNNLMatmulPostQuantizeSelector : public SubgraphSelector {
 
   bool Select(const nnvm::Node& n) override {
     if ((!disable_all) && (n.op() == Op::Get("_sg_onednn_selfatt_qk") ||
-                           n.op() == Op::Get("_sg_onednn_selfatt_valatt"))) {
+                           n.op() == Op::Get("_sg_onednn_selfatt_valatt") ||
+                           n.op() == Op::Get("_sg_onednn_batch_dot"))) {
       status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
@@ -152,7 +153,8 @@ class SgDNNLMatmulPostQuantizeProperty : public SubgraphProperty {
       if (node->is_variable())
         return;
       if (node->op() == Op::Get("_sg_onednn_selfatt_qk") ||
-          node->op() == Op::Get("_sg_onednn_selfatt_valatt")) {
+          node->op() == Op::Get("_sg_onednn_selfatt_valatt") ||
+          node->op() == Op::Get("_sg_onednn_batch_dot")) {
         interleaved_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;
