@@ -12010,7 +12010,7 @@ def rollaxis(a, axis, start=0):
         change relative to one another.
     start: int, optional
         The axis is rolled until it lies before this position.
-        The default, 0, results in a “complete” roll.
+        The default, 0, results in a "complete" roll.
 
     Returns
     -------
