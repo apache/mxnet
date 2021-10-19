@@ -83,9 +83,9 @@ mxnet::Tuple<int> CanonicalizeAndSortAxes(const NDArray& input,
   return axes;
 }
 
-bool SupportDNNLReduceImpl(const NDArray& input,
-                           const NDArray& output,
-                           const NumpyReduceAxesParam& param) {
+bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
+                           const NDArray& input,
+                           const NDArray& output) {
   int in_ndim          = input.shape().ndim();
   int out_size         = output.shape().Size();
   int in_size          = input.shape().Size();
@@ -116,7 +116,7 @@ bool SupportDNNLReduceImpl(const NDArray& input,
          in_ndim >= 1 && out_size > 0 && in_size > 0;
 }
 
-void DNNLReduceForwardImpl(const nnvm::NodeAttrs& attrs,
+void DNNLReduceForwardImpl(const NumpyReduceAxesParam& param,
                            const OpContext& ctx,
                            const NDArray& in_data,
                            const OpReqType& req,
@@ -125,7 +125,6 @@ void DNNLReduceForwardImpl(const nnvm::NodeAttrs& attrs,
   if (req == kNullOp)
     return;
   CHECK_NE(req, kAddTo);
-  const auto& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
 
   const bool is_train = ctx.is_train;
   const auto tensors  = DNNLReduceFwd::Tensors(in_data, out_data);

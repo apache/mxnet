@@ -201,8 +201,13 @@ static void DNNLReduceEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
 
-  if (SupportDNNLReduce<NumpyReduceAxesParam>(inputs[0], outputs[0], attrs)) {
-    DNNLRun(DNNLReduceForward<reduction_alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportDNNLReduce<NumpyReduceAxesParam>(attrs, inputs[0], outputs[0])) {
+    DNNLRun(DNNLReduceForward<NumpyReduceAxesParam, reduction_alg>,
+            attrs,
+            ctx,
+            inputs[0],
+            req[0],
+            outputs[0]);
     return;
   } else {
     constexpr bool normalize = reduction_alg == dnnl::algorithm::reduction_mean;

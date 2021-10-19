@@ -1050,11 +1050,11 @@ void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs,
     ReduceCsr<xpu, mshadow::red::sum, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
 #if MXNET_USE_ONEDNN == 1
   } else if (istype == kDefaultStorage) {
-    if (SupportDNNLReduce<ReduceAxesParam>(inputs[0], outputs[0], attrs)) {
+    if (SupportDNNLReduce<ReduceAxesParam>(attrs, inputs[0], outputs[0])) {
       constexpr dnnl::algorithm alg =
           normalize ? dnnl::algorithm::reduction_mean : dnnl::algorithm::reduction_sum;
 
-      DNNLRun(DNNLReduceForward<alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
+      DNNLRun(DNNLReduceForward<ReduceAxesParam, alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
       return;
     } else {
       FallBackCompute(ReduceAxesCompute<cpu, reducer, normalize>, attrs, ctx, inputs, req, outputs);
