@@ -72,16 +72,16 @@ class SgDNNLFCOp {
   std::shared_ptr<dnnl::memory> cached_out_mem_;
   NDArray cached_weight_;
   NDArray cached_bias_;
-  float cached_min_data_;
-  float cached_max_data_;
-  float cached_min_weight_;
-  float cached_max_weight_;
-  float cached_min_bias_;
-  float cached_max_bias_;
+  float cached_data_min_;
+  float cached_data_max_;
+  float cached_weight_min_;
+  float cached_weight_max_;
+  float cached_bias_min_;
+  float cached_bias_max_;
   size_t weight_ver_;
   size_t bias_ver_;
-  float cached_min_output_;
-  float cached_max_output_;
+  float cached_output_min_;
+  float cached_output_max_;
   float data_scale_{0.0f};
   std::vector<float> weight_scales_;
   size_t total_num_inputs_;
@@ -98,12 +98,12 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   size_t base_num_inputs  = has_bias ? 3 : 2;
   size_t base_num_outputs = 1;
 
-  float min_data   = 0.0f;
-  float max_data   = 0.0f;
-  float min_weight = 0.0f;
-  float max_weight = 0.0f;
-  float min_bias   = 0.0f;
-  float max_bias   = 0.0f;
+  float data_min   = 0.0f;
+  float data_max   = 0.0f;
+  float weight_min = 0.0f;
+  float weight_max = 0.0f;
+  float bias_min   = 0.0f;
+  float bias_max   = 0.0f;
 
   if (!initialized_) {
     if (dnnl_param.channel_wise_quantize.has_value() && dnnl_param.channel_wise_quantize) {
@@ -127,28 +127,28 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
 
   if (dnnl_param.quantized) {
     if (!channel_wise_runtime_) {
-      min_weight = in_data[base_num_inputs + quantized_fullc::kWeightMin].data().dptr<float>()[0];
-      max_weight = in_data[base_num_inputs + quantized_fullc::kWeightMax].data().dptr<float>()[0];
+      weight_min = in_data[base_num_inputs + quantized_fullc::kWeightMin].data().dptr<float>()[0];
+      weight_max = in_data[base_num_inputs + quantized_fullc::kWeightMax].data().dptr<float>()[0];
       if (has_bias) {
-        min_bias = in_data[base_num_inputs + quantized_fullc::kBiasMin].data().dptr<float>()[0];
-        max_bias = in_data[base_num_inputs + quantized_fullc::kBiasMax].data().dptr<float>()[0];
+        bias_min = in_data[base_num_inputs + quantized_fullc::kBiasMin].data().dptr<float>()[0];
+        bias_max = in_data[base_num_inputs + quantized_fullc::kBiasMax].data().dptr<float>()[0];
       }
     }
-    min_data = in_data[base_num_inputs + quantized_fullc::kDataMin].data().dptr<float>()[0];
-    max_data = in_data[base_num_inputs + quantized_fullc::kDataMax].data().dptr<float>()[0];
+    data_min = in_data[base_num_inputs + quantized_fullc::kDataMin].data().dptr<float>()[0];
+    data_max = in_data[base_num_inputs + quantized_fullc::kDataMax].data().dptr<float>()[0];
   }
 
   if (initialized_ && dnnl_param.quantized && dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
     if (channel_wise_runtime_) {
-      if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
+      if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
           weight_ver_ != weight.version() ||
           (has_bias && (bias_ver_ != in_data[fullc::kBias].version()))) {
         initialized_ = false;
       }
     } else {
-      if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
-          cached_min_weight_ != min_weight || cached_max_weight_ != max_weight ||
-          (has_bias && (cached_min_bias_ != min_bias || cached_max_bias_ != max_bias))) {
+      if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
+          cached_data_min_ != weight_min || cached_data_max_ != weight_max ||
+          (has_bias && (cached_bias_min_ != bias_min || cached_bias_max_ != bias_max))) {
         initialized_ = false;
       }
     }
@@ -157,15 +157,15 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   if (!initialized_) {
     const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     const auto engine   = CpuEngine::Get()->get_engine();
-    cached_min_data_    = min_data;
-    cached_max_data_    = max_data;
-    cached_min_weight_  = min_weight;
-    cached_max_weight_  = max_weight;
+    cached_data_min_    = data_min;
+    cached_data_max_    = data_max;
+    cached_weight_min_  = weight_min;
+    cached_weight_max_  = weight_max;
     weight_ver_         = weight.version();
     cached_weight_      = weight;
     if (has_bias) {
-      cached_min_bias_ = min_bias;
-      cached_max_bias_ = max_bias;
+      cached_bias_min_ = bias_min;
+      cached_bias_max_ = bias_max;
       bias_ver_        = in_data[fullc::kBias].version();
       cached_bias_     = in_data[fullc::kBias];
     } else {
@@ -210,13 +210,13 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     bool support_channelwise_scale = false;
     if (dnnl_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
-      data_scale_ = GetQuantizeScale(data.dtype(), cached_min_data_, cached_max_data_);
+      data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
 
       bool fuse_requantize = false;
       // Channelwise scaling is only supported when fusion is enabled (requantize or dequantize).
       if (dnnl_param.min_calib_range.has_value() && dnnl_param.max_calib_range.has_value()) {
-        cached_min_output_        = dnnl_param.min_calib_range.value();
-        cached_max_output_        = dnnl_param.max_calib_range.value();
+        cached_output_min_        = dnnl_param.min_calib_range.value();
+        cached_output_max_        = dnnl_param.max_calib_range.value();
         support_channelwise_scale = true;
         fuse_requantize           = true;
       }
@@ -248,14 +248,14 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
       } else {
         weight_scales_.resize(1);
         weight_scales_[0] =
-            GetQuantizeScale(cached_weight_.dtype(), cached_min_weight_, cached_max_weight_);
+            GetQuantizeScale(cached_weight_.dtype(), cached_weight_min_, cached_weight_max_);
         if (has_bias) {
-          float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
+          float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_bias_min_, cached_bias_max_);
           float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
           // TODO(zhennan): dnnl has bug to handle INT_MAX in bias, so set the maximum value
           // of bias to INT_MAX / 2.
           float bias_max_rescale =
-              MaxValue<int32_t>() / 2 / MaxAbs(cached_min_bias_, cached_max_bias_) / bias_scale;
+              MaxValue<int32_t>() / 2 / MaxAbs(cached_bias_min_, cached_bias_max_) / bias_scale;
           if (bias_int32_rescale > bias_max_rescale) {
             // avoid overflow on bias
             bias_int32_rescale = bias_max_rescale;
@@ -289,9 +289,9 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
           if (dnnl_param.with_eltwise) {
             tmp_scale_ = 1.0 / data_scale_;
             full_param_.eltwise_param.scale =
-                GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
+                GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_);
           } else {
-            tmp_scale_ = GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_) /
+            tmp_scale_ = GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_) /
                          data_scale_;
           }
         } else {
@@ -314,22 +314,22 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
           mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
               s,
               1,
-              &cached_min_output_,
-              &cached_max_output_,
-              &min_data,
-              &max_data,
-              &min_weight,
-              &max_weight);
+              &cached_output_min_,
+              &cached_output_max_,
+              &data_min,
+              &data_max,
+              &weight_min,
+              &weight_max);
         } else {
           mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
               s,
               1,
-              &cached_min_output_,
-              &cached_max_output_,
-              &min_data,
-              &max_data,
-              &min_weight,
-              &max_weight);
+              &cached_output_min_,
+              &cached_output_max_,
+              &data_min,
+              &data_max,
+              &weight_min,
+              &weight_max);
         }
         full_param_.output_scales.resize(0);
       }
@@ -392,10 +392,10 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   DNNLStream::Get()->Submit();
 
   if (dnnl_param.quantized && !dnnl_param.enable_float_output) {
-    float* min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
-    float* max_output_ptr = out_data[quantized_fullc::kOutMax].data().dptr<float>();
-    *min_output_ptr       = cached_min_output_;
-    *max_output_ptr       = cached_max_output_;
+    float* output_min_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
+    float* output_max_ptr = out_data[quantized_fullc::kOutMax].data().dptr<float>();
+    *output_min_ptr       = cached_output_min_;
+    *output_max_ptr       = cached_output_max_;
   }
 }
 
@@ -457,14 +457,14 @@ static std::vector<std::string> SgDNNLFCListInputNames(const NodeAttrs& attrs) {
         full_param.dnnl_param.channel_wise_quantize) {
       channel_wise = true;
     }
-    input_names.emplace_back("min_data");
-    input_names.emplace_back("max_data");
+    input_names.emplace_back("data_min");
+    input_names.emplace_back("data_max");
     if (!channel_wise) {
-      input_names.emplace_back("min_weight");
-      input_names.emplace_back("max_weight");
+      input_names.emplace_back("weight_min");
+      input_names.emplace_back("weight_max");
       if (!full_param.default_param.no_bias) {
-        input_names.emplace_back("min_bias");
-        input_names.emplace_back("max_bias");
+        input_names.emplace_back("bias_min");
+        input_names.emplace_back("bias_max");
       }
     }
   }
@@ -477,7 +477,7 @@ static std::vector<std::string> SgDNNLFCListOutputNames(const NodeAttrs& attrs) 
     if (full_param.dnnl_param.enable_float_output)
       return std::vector<std::string>{"output"};
     else
-      return std::vector<std::string>{"output", "min_output", "max_output"};
+      return std::vector<std::string>{"output", "output_min", "output_max"};
   } else {
     return std::vector<std::string>{"output"};
   }
@@ -660,7 +660,7 @@ NNVM_REGISTER_OP(_sg_onednn_fully_connected)
       if (full_param.dnnl_param.quantized) {
         if (full_param.dnnl_param.channel_wise_quantize.has_value() &&
             full_param.dnnl_param.channel_wise_quantize) {
-          return num_inputs + 2;  // min_data, max_data
+          return num_inputs + 2;  // data_min, data_max
         } else {
           return num_inputs * 3;
         }
