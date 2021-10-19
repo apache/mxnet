@@ -37,7 +37,7 @@ def matrix_rank(
         /,
         *,
         tol: Optional[Union[float, ndarray]] = None,
-        hermitian: Optional[bool] = False,
+        hermitian: bool = False,
 ) -> ndarray:
     r"""
     Return matrix rank of array using SVD method
