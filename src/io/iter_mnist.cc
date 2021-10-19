@@ -18,10 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file iter_mnist.cc
  * \brief register mnist iterator
-*/
+ */
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <dmlc/io.h>
@@ -56,35 +55,36 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
   int part_index;
   // declare parameters
   DMLC_DECLARE_PARAMETER(MNISTParam) {
-    DMLC_DECLARE_FIELD(image).set_default("./train-images-idx3-ubyte")
+    DMLC_DECLARE_FIELD(image)
+        .set_default("./train-images-idx3-ubyte")
         .describe("Dataset Param: Mnist image path.");
-    DMLC_DECLARE_FIELD(label).set_default("./train-labels-idx1-ubyte")
+    DMLC_DECLARE_FIELD(label)
+        .set_default("./train-labels-idx1-ubyte")
         .describe("Dataset Param: Mnist label path.");
-    DMLC_DECLARE_FIELD(batch_size).set_lower_bound(1).set_default(128)
+    DMLC_DECLARE_FIELD(batch_size)
+        .set_lower_bound(1)
+        .set_default(128)
         .describe("Batch Param: Batch Size.");
-    DMLC_DECLARE_FIELD(shuffle).set_default(true)
-        .describe("Augmentation Param: Whether to shuffle data.");
-    DMLC_DECLARE_FIELD(flat).set_default(false)
-        .describe("Augmentation Param: Whether to flat the data into 1D.");
-    DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("Augmentation Param: Random Seed.");
-    DMLC_DECLARE_FIELD(silent).set_default(false)
-        .describe("Auxiliary Param: Whether to print out data info.");
-    DMLC_DECLARE_FIELD(num_parts).set_default(1)
-        .describe("partition the data into multiple parts");
-    DMLC_DECLARE_FIELD(part_index).set_default(0)
-        .describe("the index of the part will read");
+    DMLC_DECLARE_FIELD(shuffle).set_default(true).describe(
+        "Augmentation Param: Whether to shuffle data.");
+    DMLC_DECLARE_FIELD(flat).set_default(false).describe(
+        "Augmentation Param: Whether to flat the data into 1D.");
+    DMLC_DECLARE_FIELD(seed).set_default(0).describe("Augmentation Param: Random Seed.");
+    DMLC_DECLARE_FIELD(silent).set_default(false).describe(
+        "Auxiliary Param: Whether to print out data info.");
+    DMLC_DECLARE_FIELD(num_parts).set_default(1).describe("partition the data into multiple parts");
+    DMLC_DECLARE_FIELD(part_index).set_default(0).describe("the index of the part will read");
   }
 };
 
-class MNISTIter: public IIterator<TBlobBatch> {
+class MNISTIter : public IIterator<TBlobBatch> {
  public:
-  MNISTIter()  {
+  MNISTIter() {
     img_.dptr_ = nullptr;
     out_.data.resize(2);
   }
   ~MNISTIter() override {
-    delete []img_.dptr_;
+    delete[] img_.dptr_;
   }
   // intialize iterator loads data in
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -98,20 +98,21 @@ class MNISTIter: public IIterator<TBlobBatch> {
       batch_data_.shape_ = mshadow::Shape4(param_.batch_size, 1, img_.size(1), img_.size(2));
     }
     out_.data.clear();
-    batch_label_.shape_ = mshadow::Shape2(param_.batch_size, 1);
+    batch_label_.shape_  = mshadow::Shape2(param_.batch_size, 1);
     batch_label_.stride_ = 1;
-    batch_data_.stride_ = batch_data_.size(3);
-    out_.batch_size = param_.batch_size;
-    if (param_.shuffle) this->Shuffle();
+    batch_data_.stride_  = batch_data_.size(3);
+    out_.batch_size      = param_.batch_size;
+    if (param_.shuffle)
+      this->Shuffle();
     if (param_.silent == 0) {
       mxnet::TShape s;
       s = batch_data_.shape_;
       if (param_.flat) {
-        LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle="
-            << param_.shuffle << ", shape=" << s.FlatTo2D();
+        LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0)
+                  << " images, shuffle=" << param_.shuffle << ", shape=" << s.FlatTo2D();
       } else {
-        LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle="
-            << param_.shuffle << ", shape=" << s;
+        LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0)
+                  << " images, shuffle=" << param_.shuffle << ", shape=" << s;
       }
     }
   }
@@ -120,13 +121,13 @@ class MNISTIter: public IIterator<TBlobBatch> {
   }
   bool Next() override {
     if (loc_ + param_.batch_size <= img_.size(0)) {
-      batch_data_.dptr_ = img_[loc_].dptr_;
+      batch_data_.dptr_  = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
       out_.data.clear();
       if (param_.flat) {
-          out_.data.emplace_back(batch_data_.FlatTo2D());
+        out_.data.emplace_back(batch_data_.FlatTo2D());
       } else {
-          out_.data.emplace_back(batch_data_);
+        out_.data.emplace_back(batch_data_);
       }
       out_.data.emplace_back(batch_label_);
       loc_ += param_.batch_size;
@@ -135,25 +136,23 @@ class MNISTIter: public IIterator<TBlobBatch> {
       return false;
     }
   }
-  const TBlobBatch &Value() const override {
+  const TBlobBatch& Value() const override {
     return out_;
   }
 
  private:
-  inline void GetPart(int count, int* start, int *end) {
+  inline void GetPart(int count, int* start, int* end) {
     CHECK_GE(param_.part_index, 0);
     CHECK_GT(param_.num_parts, 0);
     CHECK_GT(param_.num_parts, param_.part_index);
 
-    *start = static_cast<int>(
-        static_cast<double>(count) / param_.num_parts * param_.part_index);
-    *end = static_cast<int>(
-        static_cast<double>(count) / param_.num_parts * (param_.part_index+1));
+    *start = static_cast<int>(static_cast<double>(count) / param_.num_parts * param_.part_index);
+    *end =
+        static_cast<int>(static_cast<double>(count) / param_.num_parts * (param_.part_index + 1));
   }
 
   inline void LoadImage() {
-    dmlc::SeekStream* stdimg
-        = dmlc::SeekStream::CreateForRead(param_.image.c_str());
+    dmlc::SeekStream* stdimg = dmlc::SeekStream::CreateForRead(param_.image.c_str());
     ReadInt(stdimg);
     int image_count = ReadInt(stdimg);
     int image_rows  = ReadInt(stdimg);
@@ -166,7 +165,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
       stdimg->Seek(stdimg->Tell() + start * image_rows * image_cols);
     }
 
-    img_.shape_ = mshadow::Shape3(image_count, image_rows, image_cols);
+    img_.shape_  = mshadow::Shape3(image_count, image_rows, image_cols);
     img_.stride_ = img_.size(2);
 
     // allocate continuous memory
@@ -185,8 +184,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
     delete stdimg;
   }
   inline void LoadLabel() {
-    dmlc::SeekStream* stdlabel
-        = dmlc::SeekStream::CreateForRead(param_.label.c_str());
+    dmlc::SeekStream* stdlabel = dmlc::SeekStream::CreateForRead(param_.label.c_str());
     ReadInt(stdlabel);
     int labels_count = ReadInt(stdlabel);
 
@@ -221,10 +219,9 @@ class MNISTIter: public IIterator<TBlobBatch> {
   }
 
  private:
-  inline static int ReadInt(dmlc::Stream *fi) {
+  inline static int ReadInt(dmlc::Stream* fi) {
     unsigned char buf[4];
-    CHECK(fi->Read(buf, sizeof(buf)) == sizeof(buf))
-        << "invalid mnist format";
+    CHECK(fi->Read(buf, sizeof(buf)) == sizeof(buf)) << "invalid mnist format";
 #ifdef _MSC_VER
     return (buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3]);
 #else
@@ -258,16 +255,10 @@ class MNISTIter: public IIterator<TBlobBatch> {
 DMLC_REGISTER_PARAMETER(MNISTParam);
 
 MXNET_REGISTER_IO_ITER(MNISTIter)
-.describe(R"code(Iterating on the MNIST dataset.
-
-One can download the dataset from http://yann.lecun.com/exdb/mnist/
-
-)code" ADD_FILELINE)
-.add_arguments(MNISTParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
-.set_body([]() {
-    return new PrefetcherIter(new MNISTIter());
-  });
+    .describe("Iterating on the MNIST dataset." ADD_FILELINE)
+    .add_arguments(MNISTParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .set_body([]() { return new PrefetcherIter(new MNISTIter()); });
 
 }  // namespace io
 }  // namespace mxnet

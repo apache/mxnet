@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file pointwise_fusion_pass.cc
  * \brief Pass applying pointwise fusion.
  * \author Clement Fuji Tsang
@@ -49,8 +48,8 @@ void WarnFusionNotSupported() {
                  << "Unset env var MXNET_USE_FUSION=1 to quiet this message.";
 #else
     LOG(WARNING) << "Omitting dynamic fused op creation- needs MXNet lib built with "
-                   << "USE_CUDA=1.  Unset env var MXNET_USE_FUSION=1 "
-                   << "to quiet this message.";
+                 << "USE_CUDA=1.  Unset env var MXNET_USE_FUSION=1 "
+                 << "to quiet this message.";
 #endif  // defined(_WIN32)
   }
 }
@@ -68,24 +67,21 @@ bool IsFusionCompatible(const nnvm::Node* n) {
     return true;
   if (slice_ops.count(op_name))
     return false;
-  if (std::find(variable_io_ops.begin(),
-                variable_io_ops.end(),
-                op_name) !=
-      variable_io_ops.end())
+  if (std::find(variable_io_ops.begin(), variable_io_ops.end(), op_name) != variable_io_ops.end())
     return true;
   if (op_name == "LeakyReLU") {
-      std::string act_type = n->attrs.dict.at("act_type");
-      if (LeakyReLU_ops.count(act_type))
-        return true;
-      else
-        return false;
+    std::string act_type = n->attrs.dict.at("act_type");
+    if (LeakyReLU_ops.count(act_type))
+      return true;
+    else
+      return false;
   }
   if (op_name == "_backward_LeakyReLU") {
-      std::string act_type = n->attrs.dict.at("act_type");
-      if (LeakyReLU_bwd_ops.count(act_type))
-        return true;
-      else
-        return false;
+    std::string act_type = n->attrs.dict.at("act_type");
+    if (LeakyReLU_bwd_ops.count(act_type))
+      return true;
+    else
+      return false;
   }
   return false;
 }
@@ -100,8 +96,7 @@ bool IsInputsOnlyCompatible(const nnvm::Node* n) {
       // slice with non-default step attribute is not supported
       // currently
       if (n->attrs.dict.count("step") &&
-          !(n->attrs.dict.at("step") == "()" ||
-            n->attrs.dict.at("step") == "[]")) {
+          !(n->attrs.dict.at("step") == "()" || n->attrs.dict.at("step") == "[]")) {
         return false;
       }
     }
@@ -116,9 +111,9 @@ void CreateSubgraphNode(const nnvm::Graph& subgraph,
   static const Op* fused_op_ptr = Op::Get("_FusedOp");
   subgraph_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>());
   subgraph_node->attrs.subgraphs.back()->outputs = subgraph.outputs;
-  subgraph_node->attrs.dict["num_inputs"] = std::to_string(inputs_size);
-  subgraph_node->attrs.dict["num_outputs"] = std::to_string(subgraph.outputs.size());
-  subgraph_node->attrs.op = fused_op_ptr;
+  subgraph_node->attrs.dict["num_inputs"]        = std::to_string(inputs_size);
+  subgraph_node->attrs.dict["num_outputs"]       = std::to_string(subgraph.outputs.size());
+  subgraph_node->attrs.op                        = fused_op_ptr;
   subgraph_node->op()->attr_parser(&(subgraph_node->attrs));
 }
 
@@ -127,8 +122,7 @@ struct EntryInfo {
   int index;
 };
 
-inline int SetInsert(const EntryInfo& new_elem,
-                     std::vector<EntryInfo>* elements) {
+inline int SetInsert(const EntryInfo& new_elem, std::vector<EntryInfo>* elements) {
   for (size_t i = 0; i < elements->size(); ++i) {
     if ((new_elem.source_node == elements->at(i).source_node) &&
         (new_elem.index == elements->at(i).index)) {
@@ -152,7 +146,7 @@ inline int SetInsert(const EntryInfo& new_elem,
  * \param num_subgraphs number of subgraphs.
  * \param create_subgraph_node function used to prepare the subgraph node.
  */
-template<typename FCreateNode>
+template <typename FCreateNode>
 Graph CopyAndReplaceSubgraphs(const Graph& g,
                               const std::vector<int>& subgraph_assignment,
                               const int num_subgraphs,
@@ -165,8 +159,8 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
 
   const auto& idx = g.indexed_graph();
 
-  CHECK_EQ(idx.num_nodes(), subgraph_assignment.size()) <<
-    "Every node in the graph needs to be included in subgraph assignment.";
+  CHECK_EQ(idx.num_nodes(), subgraph_assignment.size())
+      << "Every node in the graph needs to be included in subgraph assignment.";
 
   std::vector<nnvm::ObjectPtr> new_nodes;
   new_nodes.reserve(idx.num_nodes());
@@ -190,49 +184,43 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
     // subgraph. Variables are not copied.
     if (idx[i].source->op() != nullptr) {
       new_nodes.emplace_back(nnvm::Node::Create());
-      auto& node_copy = new_nodes.back();
+      auto& node_copy  = new_nodes.back();
       node_copy->attrs = idx[i].source->attrs;
-      node_copy->info = idx[i].source->info;
+      node_copy->info  = idx[i].source->info;
     } else {
       new_nodes.emplace_back(idx[i].weak_ref.lock());
       continue;
     }
-    auto& node_copy = new_nodes.back();
+    auto& node_copy       = new_nodes.back();
     const int subgraph_id = subgraph_assignment[i];
     if (subgraph_id != -1) {
       auto& info = subgraphs[subgraph_id];
       for (const auto& input : idx[i].inputs) {
         const int their_subgraph = subgraph_assignment[input.node_id];
         if (their_subgraph == subgraph_id) {
-          node_copy->inputs.emplace_back(new_nodes[input.node_id],
-                                         input.index,
-                                         input.version);
+          node_copy->inputs.emplace_back(new_nodes[input.node_id], input.index, input.version);
         } else {
           int input_num;
           int output_num;
           if (their_subgraph == -1) {
-            input_num = SetInsert({static_cast<int>(input.node_id),
-                                   static_cast<int>(input.index)}, &(info.inputs));
+            input_num = SetInsert({static_cast<int>(input.node_id), static_cast<int>(input.index)},
+                                  &(info.inputs));
           } else {
             auto& their_subgraph_info = subgraphs[their_subgraph];
-            output_num = SetInsert({static_cast<int>(input.node_id),
-                                    static_cast<int>(input.index)},
+            output_num = SetInsert({static_cast<int>(input.node_id), static_cast<int>(input.index)},
                                    &(their_subgraph_info.outputs));
-            input_num = SetInsert({static_cast<int>(idx.num_nodes() + their_subgraph),
-                                   output_num},
+            input_num  = SetInsert({static_cast<int>(idx.num_nodes() + their_subgraph), output_num},
                                   &(info.inputs));
           }
           if (static_cast<size_t>(input_num) == info.input_nodes.size()) {
             info.input_nodes.emplace_back(nnvm::Node::Create());
             info.input_nodes.back()->attrs.name = "input_" + std::to_string(input_num);
             if (their_subgraph == -1) {
-              info.subgraph_node->inputs.emplace_back(new_nodes[input.node_id],
-                                                      input.index,
-                                                      input.version);
+              info.subgraph_node->inputs.emplace_back(
+                  new_nodes[input.node_id], input.index, input.version);
             } else {
-              info.subgraph_node->inputs.emplace_back(subgraphs[their_subgraph].subgraph_node,
-                                                      output_num,
-                                                      input.version);
+              info.subgraph_node->inputs.emplace_back(
+                  subgraphs[their_subgraph].subgraph_node, output_num, input.version);
             }
           }
           node_copy->inputs.emplace_back(info.input_nodes[input_num], 0, 0);
@@ -242,17 +230,12 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
       for (const auto& input : idx[i].inputs) {
         const int subgraph_id = subgraph_assignment[input.node_id];
         if (subgraph_id == -1) {
-          node_copy->inputs.emplace_back(new_nodes[input.node_id],
-                                         input.index,
-                                         input.version);
+          node_copy->inputs.emplace_back(new_nodes[input.node_id], input.index, input.version);
         } else {
-          auto& info = subgraphs[subgraph_id];
-          const int output_num = SetInsert({static_cast<int>(input.node_id),
-                                            static_cast<int>(input.index)},
-                                           &(info.outputs));
-          node_copy->inputs.emplace_back(info.subgraph_node,
-                                         output_num,
-                                         input.version);
+          auto& info           = subgraphs[subgraph_id];
+          const int output_num = SetInsert(
+              {static_cast<int>(input.node_id), static_cast<int>(input.index)}, &(info.outputs));
+          node_copy->inputs.emplace_back(info.subgraph_node, output_num, input.version);
         }
       }
     }
@@ -269,25 +252,19 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
   for (const auto& output : idx.outputs()) {
     const int subgraph_id = subgraph_assignment[output.node_id];
     if (subgraph_id == -1) {
-      ret.outputs.emplace_back(new_nodes[output.node_id],
-                               output.index,
-                               output.version);
+      ret.outputs.emplace_back(new_nodes[output.node_id], output.index, output.version);
     } else {
-      const int output_num = SetInsert({static_cast<int>(output.node_id),
-                                        static_cast<int>(output.index)},
-                                       &(subgraphs[subgraph_id].outputs));
-      ret.outputs.emplace_back(subgraphs[subgraph_id].subgraph_node,
-                               output_num,
-                               output.version);
+      const int output_num =
+          SetInsert({static_cast<int>(output.node_id), static_cast<int>(output.index)},
+                    &(subgraphs[subgraph_id].outputs));
+      ret.outputs.emplace_back(subgraphs[subgraph_id].subgraph_node, output_num, output.version);
     }
   }
 
   for (auto& info : subgraphs) {
     info.graph.outputs.reserve(info.outputs.size());
     for (const auto& entry_info : info.outputs) {
-      info.graph.outputs.emplace_back(new_nodes[entry_info.source_node],
-                                      entry_info.index,
-                                      0);
+      info.graph.outputs.emplace_back(new_nodes[entry_info.source_node], entry_info.index, 0);
     }
     create_subgraph_node(info.graph, info.inputs.size(), info.subgraph_node.get());
   }
@@ -296,46 +273,41 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
     // Add _FusedOpHelper nodes
     const int subgraph_id = subgraph_assignment[i];
     for (size_t dep_num = 0; dep_num < idx[i].control_deps.size(); ++dep_num) {
-      const auto& dep = idx[i].control_deps[dep_num];
+      const auto& dep             = idx[i].control_deps[dep_num];
       const int their_subgraph_id = subgraph_assignment[dep];
       if (subgraph_id != -1 && their_subgraph_id == -1) {
         // Not in any subgraph, use FusedOpOutHelper
-        auto& info = subgraphs[subgraph_id];
+        auto& info     = subgraphs[subgraph_id];
         size_t node_id = info.subgraph_node->control_deps.size();
         info.subgraph_node->control_deps.emplace_back(new_nodes[dep]);
-        auto helper_node = op::MakeNode("_FusedOpOutHelper",
+        auto helper_node          = op::MakeNode("_FusedOpOutHelper",
                                         "FusedOp_" + new_nodes[i]->attrs.name + "_outhelper",
                                         nullptr,
                                         nullptr,
                                         nullptr);
-        helper_node->attrs.parsed =
-          FusedOpHelperParamPtr(new FusedOpHelperParam(
-                nnvm::get<FusedOpPtr>(info.subgraph_node->attrs.parsed),
-                node_id));
+        helper_node->attrs.parsed = FusedOpHelperParamPtr(new FusedOpHelperParam(
+            nnvm::get<FusedOpPtr>(info.subgraph_node->attrs.parsed), node_id));
         new_nodes[i]->control_deps.insert(new_nodes[i]->control_deps.begin() + dep_num,
                                           std::move(helper_node));
-      } else if (their_subgraph_id != subgraph_id &&
-                 their_subgraph_id != -1) {
-        auto& info = subgraphs[their_subgraph_id];
+      } else if (their_subgraph_id != subgraph_id && their_subgraph_id != -1) {
+        auto& info               = subgraphs[their_subgraph_id];
         const auto& subgraph_idx = info.graph.indexed_graph();
-        uint32_t node_id = subgraph_idx.node_id(new_nodes[dep].get());
-        auto helper_node = op::MakeNode("_FusedOpHelper",
-                                        info.subgraph_node->attrs.name + "_"
-                                        + idx[i].source->attrs.name + "_helper",
-                                        nullptr,
-                                        nullptr,
-                                        nullptr);
-        helper_node->attrs.parsed =
-          FusedOpHelperParamPtr(new FusedOpHelperParam(
-                nnvm::get<FusedOpPtr>(info.subgraph_node->attrs.parsed),
-                node_id));
+        uint32_t node_id         = subgraph_idx.node_id(new_nodes[dep].get());
+        auto helper_node         = op::MakeNode(
+            "_FusedOpHelper",
+            info.subgraph_node->attrs.name + "_" + idx[i].source->attrs.name + "_helper",
+            nullptr,
+            nullptr,
+            nullptr);
+        helper_node->attrs.parsed = FusedOpHelperParamPtr(new FusedOpHelperParam(
+            nnvm::get<FusedOpPtr>(info.subgraph_node->attrs.parsed), node_id));
         new_nodes[i]->control_deps.insert(new_nodes[i]->control_deps.begin() + dep_num,
                                           std::move(helper_node));
       }
     }
   }
   for (auto& info : subgraphs) {
-    const auto& idx = info.graph.indexed_graph();
+    const auto& idx         = info.graph.indexed_graph();
     const auto& input_nodes = idx.input_nodes();
     std::vector<nnvm::NodeEntry> subgraph_inputs;
     subgraph_inputs.reserve(info.subgraph_node->inputs.size());
@@ -359,19 +331,18 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
   return ret;
 }
 
-Graph FusePointwise(const Graph &g, const size_t num_forward_outputs) {
-  auto start = std::chrono::steady_clock::now();
-  auto [subset_assignment, num_subsets] = GetCompatibleSubsets(g, num_forward_outputs,  // NOLINT(*)
+Graph FusePointwise(const Graph& g, const size_t num_forward_outputs) {
+  auto start                            = std::chrono::steady_clock::now();
+  auto [subset_assignment, num_subsets] = GetCompatibleSubsets(g,                    // NOLINT(*)
+                                                               num_forward_outputs,  // NOLINT(*)
                                                                IsFusionCompatible,
                                                                IsInputsOnlyCompatible);
-  Graph ret = CopyAndReplaceSubgraphs(g, subset_assignment, num_subsets,
-                                      CreateSubgraphNode);
-  auto end = std::chrono::steady_clock::now();
+  Graph ret = CopyAndReplaceSubgraphs(g, subset_assignment, num_subsets, CreateSubgraphNode);
+  auto end  = std::chrono::steady_clock::now();
   if (dmlc::GetEnv("MXNET_RTC_VERBOSE", false)) {
     auto diff = end - start;
     LOG(INFO) << "Pointwise fusion graph pass took: "
-              << std::chrono::duration<double, std::milli>(diff).count()
-              << "ms.";
+              << std::chrono::duration<double, std::milli>(diff).count() << "ms.";
   }
   return ret;
 }
@@ -379,4 +350,3 @@ Graph FusePointwise(const Graph &g, const size_t num_forward_outputs) {
 
 }  // namespace exec
 }  // namespace mxnet
-

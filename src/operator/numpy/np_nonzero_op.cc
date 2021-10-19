@@ -17,17 +17,16 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file np_nonzero_op.cc
-*/
+ */
 #include "np_nonzero_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
 bool NonzeroType(const nnvm::NodeAttrs& attrs,
-                 std::vector<int> *in_attrs,
-                 std::vector<int> *out_attrs) {
+                 std::vector<int>* in_attrs,
+                 std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   // Output must be int64.
@@ -40,14 +39,14 @@ bool NonzeroType(const nnvm::NodeAttrs& attrs,
 bool NonzeroStorageType(const nnvm::NodeAttrs& attrs,
                         const int dev_mask,
                         DispatchMode* dispatch_mode,
-                        std::vector<int> *in_attrs,
-                        std::vector<int> *out_attrs) {
+                        std::vector<int>* in_attrs,
+                        std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  for (int &attr : *in_attrs) {
+  for (int& attr : *in_attrs) {
     CHECK_EQ(attr, kDefaultStorage) << "Only default storage is supported";
   }
-  for (int &attr : *out_attrs) {
+  for (int& attr : *out_attrs) {
     attr = kDefaultStorage;
   }
   *dispatch_mode = DispatchMode::kFComputeEx;
@@ -55,14 +54,14 @@ bool NonzeroStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
-                       const OpContext &ctx,
-                       const std::vector<NDArray> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<NDArray> &outputs) {
+                       const OpContext& ctx,
+                       const std::vector<NDArray>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const NDArray &in = inputs[0];
-  const NDArray &out = outputs[0];
+  const NDArray& in  = inputs[0];
+  const NDArray& out = outputs[0];
   CHECK_LE(in.shape().ndim(), MAXDIM) << "ndim of input cannot larger than " << MAXDIM;
   // 0-dim
   if (0 == in.shape().ndim()) {
@@ -70,12 +69,12 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
       DType* in_dptr = in.data().dptr<DType>();
       if (*in_dptr) {
         mxnet::TShape s(2, 1);
-        const_cast<NDArray &>(out).Init(s);
+        const_cast<NDArray&>(out).Init(s);
         *(out.data().dptr<int64_t>()) = 0;
       } else {
         mxnet::TShape s(2, 1);
         s[0] = 0;
-        const_cast<NDArray &>(out).Init(s);
+        const_cast<NDArray&>(out).Init(s);
       }
     });
     return;
@@ -85,7 +84,7 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
   if (0 == in_size) {
     mxnet::TShape s(2, in.shape().ndim());
     s[0] = 0;
-    const_cast<NDArray &>(out).Init(s);
+    const_cast<NDArray&>(out).Init(s);
     return;
   }
   std::vector<index_t> prefix_sum(in_size, 0);
@@ -101,29 +100,29 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
   // set the output shape forcefully
   mxnet::TShape s(2, in.shape().ndim());
   s[0] = valid_num;
-  const_cast<NDArray &>(out).Init(s);
+  const_cast<NDArray&>(out).Init(s);
   // get the shape from the input
   MXNET_NDIM_SWITCH(in.shape().ndim(), ndim, {
-    mshadow::Shape<ndim> shape = in.shape().get<ndim>();
-    mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
+    mshadow::Shape<ndim> shape   = in.shape().get<ndim>();
+    mshadow::Stream<cpu>* stream = ctx.get_stream<cpu>();
     mxnet_op::Kernel<NonzeroForwardKernel, cpu>::Launch(
-      stream, in_size, out.data().dptr<int64_t>(), prefix_sum.data(), shape);
+        stream, in_size, out.data().dptr<int64_t>(), prefix_sum.data(), shape);
   })
 }
 
 NNVM_REGISTER_OP(_npx_nonzero)
-.add_alias("_npi_nonzero")
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"x"};
-  })
-.set_attr<nnvm::FInferType>("FInferType", NonzeroType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", NonzeroForwardCPU)
-.set_attr<FInferStorageType>("FInferStorageType", NonzeroStorageType)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("x", "NDArray-or-Symbol", "The input array.");
+    .add_alias("_npi_nonzero")
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"x"};
+                                     })
+    .set_attr<nnvm::FInferType>("FInferType", NonzeroType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", NonzeroForwardCPU)
+    .set_attr<FInferStorageType>("FInferStorageType", NonzeroStorageType)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("x", "NDArray-or-Symbol", "The input array.");
 
 }  // namespace op
 }  // namespace mxnet

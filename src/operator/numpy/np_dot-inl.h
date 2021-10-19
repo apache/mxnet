@@ -35,7 +35,7 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu>
+template <typename xpu>
 inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const std::vector<TBlob>& inputs,
@@ -47,9 +47,9 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
-  const TBlob& a = inputs[0];
-  const TBlob& b = inputs[1];
-  const TBlob& out = outputs[0];
+  const TBlob& a              = inputs[0];
+  const TBlob& b              = inputs[1];
+  const TBlob& out            = outputs[0];
   const mxnet::TShape a_shape = a.shape_;
   const mxnet::TShape b_shape = b.shape_;
 
@@ -63,18 +63,16 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
       //         of a and the 2nd-to-last axis of b
       const Tuple<int> a_axes_summed({a_shape.ndim() - 1});
       const Tuple<int> b_axes_summed({b_shape.ndim() - 2});
-      size_t workspace_size = TensordotWorkspaceSize<xpu>(a_axes_summed,
-                                                          b_axes_summed,
-                                                          a, b, out,
-                                                          req);
+      size_t workspace_size =
+          TensordotWorkspaceSize<xpu>(a_axes_summed, b_axes_summed, a, b, out, req);
       Tensor<xpu, 1, char> workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
-        Shape1(workspace_size), ctx.get_stream<xpu>());
+          Shape1(workspace_size), ctx.get_stream<xpu>());
       TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req, workspace);
     }
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
                              const std::vector<TBlob>& inputs,
@@ -86,11 +84,11 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
 
-  const TBlob& ograd = inputs[0];
-  const TBlob& a = inputs[1];
-  const TBlob& b = inputs[2];
-  const TBlob& grad_a = outputs[0];
-  const TBlob& grad_b = outputs[1];
+  const TBlob& ograd          = inputs[0];
+  const TBlob& a              = inputs[1];
+  const TBlob& b              = inputs[2];
+  const TBlob& grad_a         = outputs[0];
+  const TBlob& grad_b         = outputs[1];
   const mxnet::TShape a_shape = a.shape_;
   const mxnet::TShape b_shape = b.shape_;
 
@@ -104,14 +102,12 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
       //         of a and the 2nd-to-last axis of b
       const Tuple<int> a_axes_summed({a_shape.ndim() - 1});
       const Tuple<int> b_axes_summed({b_shape.ndim() - 2});
-      size_t workspace_size = TensordotBackwardWorkspaceSize<xpu>(a_axes_summed, b_axes_summed,
-                                                                  ograd, a, b, grad_a,
-                                                                  grad_b, req);
-      Tensor<xpu, 1, char> workspace =
-        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size),
-                                                       ctx.get_stream<xpu>());
-      TensordotBackwardImpl<xpu>(a_axes_summed, b_axes_summed, ctx, ograd, a, b, grad_a,
-                                 grad_b, req, workspace);
+      size_t workspace_size = TensordotBackwardWorkspaceSize<xpu>(
+          a_axes_summed, b_axes_summed, ograd, a, b, grad_a, grad_b, req);
+      Tensor<xpu, 1, char> workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
+          Shape1(workspace_size), ctx.get_stream<xpu>());
+      TensordotBackwardImpl<xpu>(
+          a_axes_summed, b_axes_summed, ctx, ograd, a, b, grad_a, grad_b, req, workspace);
     }
   });
 }

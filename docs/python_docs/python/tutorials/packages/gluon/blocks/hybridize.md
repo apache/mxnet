@@ -98,7 +98,7 @@ Through the use of experiments, this section will demonstrate the benefits of hy
 Previously, we learned how to use the Sequential class to concatenate multiple layers. Next, we will replace the Sequential class with the HybridSequential class in order to make use of hybrid programming.
 
 ```{.python .input}
-from mxnet import np, npx
+from mxnet import np, npx, sym
 from mxnet.gluon import nn
 import time
 
@@ -156,7 +156,7 @@ The .json and .params files generated during this process are a symbolic program
 
 In MXNet, a symbolic program refers to a program that makes use of the Symbol type. We know that, when the NDArray input `x` is provided to `net`, `net(x)` will directly calculate the model output and return a result based on `x`. For models that have called the `hybridize` function, we can also provide a Symbol-type input variable, and `net(x)` will return Symbol type results.
 
-```{.python .input}
+```{.python}
 x = sym.var('data')
 net(x)
 ```

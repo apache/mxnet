@@ -490,7 +490,7 @@ def test_elemwise_binary_ops():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-        for ii in range(1):
+        for _ in range(1):
             # Run defaults
             check_elemwise_binary_ops('default', 'default', rand_shape_2d(5, 5))
 
@@ -1733,7 +1733,7 @@ def test_sparse_elementwise_sum():
             test_len = np.random.randint(5, 10)
             # at least one default type
             stypes = ['default']
-            for i in range(test_len):
+            for _ in range(test_len):
                 pick_side = np.random.randint(2)
                 pick_type = np.random.randint(3)
                 stypes = ([all_stypes[pick_type]] if pick_side is 0 else []) + stypes + ([all_stypes[pick_type]] if pick_side is 1 else [])
@@ -1907,7 +1907,7 @@ def test_batchnorm_fallback():
 
 
 @pytest.mark.serial
-def test_mkldnn_sparse():
+def test_dnnl_sparse():
     # This test is trying to create a race condition describedd in
     # https://github.com/apache/incubator-mxnet/issues/10189
     arr = mx.nd.random.uniform(shape=(10, 10, 32, 32))

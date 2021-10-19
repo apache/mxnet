@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_tril_op.cu
  * \brief GPU implementation of numpy tril operator
  */
@@ -28,11 +27,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_tril)
-.set_attr<FCompute>("FCompute<gpu>", TrilOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_tril).set_attr<FCompute>("FCompute<gpu>", TrilOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_tril)
-.set_attr<FCompute>("FCompute<gpu>", TrilOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_tril).set_attr<FCompute>("FCompute<gpu>", TrilOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

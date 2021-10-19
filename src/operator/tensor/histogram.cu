@@ -20,7 +20,7 @@
 /*!
  * \file histogram.cu
  * \brief GPU implementation of histogram operator
-*/
+ */
 #include "./histogram-inl.h"
 #include "./util/tensor_util-inl.cuh"
 
@@ -28,9 +28,14 @@ namespace mxnet {
 namespace op {
 
 struct HistogramFusedKernel {
-  template<typename DType, typename CType>
-  static MSHADOW_XINLINE void Map(int i, const DType* in_data, const DType* bin_bounds, CType* bins,
-                                  const int bin_cnt, const double min, const double max) {
+  template <typename DType, typename CType>
+  static MSHADOW_XINLINE void Map(int i,
+                                  const DType* in_data,
+                                  const DType* bin_bounds,
+                                  CType* bins,
+                                  const int bin_cnt,
+                                  const double min,
+                                  const double max) {
     DType data = in_data[i];
     int target = -1;
     if (data >= min && data <= max) {
@@ -44,8 +49,11 @@ struct HistogramFusedKernel {
     }
   }
 
-  template<typename DType, typename CType>
-  static MSHADOW_XINLINE void Map(int i, const DType* in_data, const DType* bin_bounds, CType* bins,
+  template <typename DType, typename CType>
+  static MSHADOW_XINLINE void Map(int i,
+                                  const DType* in_data,
+                                  const DType* bin_bounds,
+                                  CType* bins,
                                   const int bin_cnt) {
     DType data = in_data[i];
     int target = -1;
@@ -62,7 +70,7 @@ struct HistogramFusedKernel {
   }
 };
 
-template<>
+template <>
 void HistogramForwardImpl<gpu>(const OpContext& ctx,
                                const TBlob& in_data,
                                const TBlob& bin_bounds,
@@ -70,21 +78,24 @@ void HistogramForwardImpl<gpu>(const OpContext& ctx,
                                const TBlob& out_bins) {
   using namespace mshadow;
   using namespace mxnet_op;
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(in_data.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, CType, {
       int bin_cnt = out_bins.Size() - 1;
       Kernel<set_zero, gpu>::Launch(s, bin_cnt, out_data.dptr<CType>());
-      Kernel<HistogramFusedKernel, gpu>::Launch(
-        s, in_data.Size(), in_data.dptr<DType>(), bin_bounds.dptr<DType>(),
-        out_data.dptr<CType>(), bin_cnt);
+      Kernel<HistogramFusedKernel, gpu>::Launch(s,
+                                                in_data.Size(),
+                                                in_data.dptr<DType>(),
+                                                bin_bounds.dptr<DType>(),
+                                                out_data.dptr<CType>(),
+                                                bin_cnt);
       Kernel<op_with_req<mshadow_op::identity, kWriteTo>, gpu>::Launch(
-        s, bin_bounds.Size(), out_bins.dptr<DType>(), bin_bounds.dptr<DType>());
+          s, bin_bounds.Size(), out_bins.dptr<DType>(), bin_bounds.dptr<DType>());
     });
   });
 }
 
-template<>
+template <>
 void HistogramForwardImpl<gpu>(const OpContext& ctx,
                                const TBlob& in_data,
                                const TBlob& out_data,
@@ -94,22 +105,25 @@ void HistogramForwardImpl<gpu>(const OpContext& ctx,
                                const double max) {
   using namespace mshadow;
   using namespace mxnet_op;
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(in_data.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, CType, {
       Kernel<set_zero, gpu>::Launch(s, bin_cnt, out_data.dptr<CType>());
       Kernel<FillBinBoundsKernel, gpu>::Launch(
-        s, bin_cnt+1, out_bins.dptr<DType>(), bin_cnt, min, max);
-      Kernel<HistogramFusedKernel, gpu>::Launch(
-        s, in_data.Size(), in_data.dptr<DType>(), out_bins.dptr<DType>(), out_data.dptr<CType>(),
-        bin_cnt, min, max);
+          s, bin_cnt + 1, out_bins.dptr<DType>(), bin_cnt, min, max);
+      Kernel<HistogramFusedKernel, gpu>::Launch(s,
+                                                in_data.Size(),
+                                                in_data.dptr<DType>(),
+                                                out_bins.dptr<DType>(),
+                                                out_data.dptr<CType>(),
+                                                bin_cnt,
+                                                min,
+                                                max);
     });
   });
 }
 
-NNVM_REGISTER_OP(_histogram)
-.set_attr<FCompute>("FCompute<gpu>", HistogramOpForward<gpu>);
+NNVM_REGISTER_OP(_histogram).set_attr<FCompute>("FCompute<gpu>", HistogramOpForward<gpu>);
 
-}   // namespace op
-}   // namespace mxnet
-
+}  // namespace op
+}  // namespace mxnet

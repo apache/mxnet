@@ -35,11 +35,10 @@ Let's look at the above methods in more detail. Let's start by importing the mod
 from __future__ import print_function
 
 import mxnet as mx
-import mxnet.ndarray as nd
-from mxnet import nd, autograd, gluon
+from mxnet import np, npx, autograd, gluon
 from mxnet.gluon.data.vision import transforms
 
-import numpy as np
+import numpy as onp
 ```
 
 ## Setup: build and train a simple model
@@ -109,7 +108,7 @@ def train_model(model):
 
             # Print loss once in a while
             if batch_num % 50 == 0:
-                curr_loss = nd.mean(loss).asscalar()
+                curr_loss = np.mean(loss).item()
                 print("Epoch: %d; Batch %d; Loss %f" % (epoch, batch_num, curr_loss))
 ```
 
@@ -183,16 +182,16 @@ def verify_loaded_model(net):
     for data, label in sample_data:
 
         # Display the images
-        img = nd.transpose(data, (1,0,2,3))
-        img = nd.reshape(img, (28,10*28,1))
-        imtiles = nd.tile(img, (1,1,3))
+        img = np.transpose(data, (1,0,2,3))
+        img = npx.reshape(img, (28,10*28,1))
+        imtiles = np.tile(img, (1,1,3))
         plt.imshow(imtiles.asnumpy())
         plt.show()
 
         # Display the predictions
-        data = nd.transpose(data, (0, 3, 1, 2))
-        out = net(data.as_in_context(ctx))
-        predictions = nd.argmax(out, axis=1)
+        data = np.transpose(data, (0, 3, 1, 2))
+        out = net(data.as_in_ctx(ctx))
+        predictions = np.argmax(out, axis=1)
         print('Model predictions: ', predictions.asnumpy())
 
         break
@@ -246,11 +245,6 @@ net.export("lenet", epoch=1)
 
 ## Loading model parameters AND architecture from file
 
-### From a different frontend
-
-One of the main reasons to serialize model architecture into a JSON file is to load it from a different frontend like C, C++ or Scala. Here is a couple of examples:
-1. [Loading serialized Hybrid networks from C](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/predict-cpp/image-classification-predict.cc)
-2. [Loading serialized Hybrid networks from Scala](https://github.com/apache/incubator-mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/ImageClassifier.scala)
 
 ### From Python
 

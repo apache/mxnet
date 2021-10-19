@@ -18,28 +18,23 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file im2col.cu
  * \brief
  * \author Jiajun Wang
-*/
+ */
 
 #include "./im2col-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(im2col)
-.set_attr<FCompute>("FCompute<gpu>", Im2colCompute<gpu>);
+NNVM_REGISTER_OP(im2col).set_attr<FCompute>("FCompute<gpu>", Im2colCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_im2col)
-.set_attr<FCompute>("FCompute<gpu>", Im2colGradCompute<gpu>);
+NNVM_REGISTER_OP(_backward_im2col).set_attr<FCompute>("FCompute<gpu>", Im2colGradCompute<gpu>);
 
-NNVM_REGISTER_OP(col2im)
-.set_attr<FCompute>("FCompute<gpu>", Col2imCompute<gpu>);
+NNVM_REGISTER_OP(col2im).set_attr<FCompute>("FCompute<gpu>", Col2imCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_col2im)
-.set_attr<FCompute>("FCompute<gpu>", Col2imGradCompute<gpu>);
+NNVM_REGISTER_OP(_backward_col2im).set_attr<FCompute>("FCompute<gpu>", Col2imGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

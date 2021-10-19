@@ -33,7 +33,7 @@ from matplotlib import pyplot as plt
 
 def visualize_activation(activation_fn):
     data = np.linspace(-10, 10, 501)
-    x = mx.nd.array(data)
+    x = mx.np.array(data)
     x.attach_grad()
     with mx.autograd.record():
         y = activation_fn(x)
@@ -42,7 +42,7 @@ def visualize_activation(activation_fn):
     plt.figure()
     plt.plot(data, y.asnumpy())
     plt.plot(data, x.grad.asnumpy())
-    activation = activation_fn.name[:-1]
+    activation = activation_fn.__class__.__name__[:-1]
     plt.legend(["{} activation".format(activation), "{} gradient".format(activation)])
 
 ```

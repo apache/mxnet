@@ -26,11 +26,11 @@
 # The link to the problem on Kaggle:
 # https://www.kaggle.com/c/house-prices-advanced-regression-techniques
 
-import numpy as np
+import numpy as onp
 import pandas as pd
 from mxnet import autograd
 from mxnet import gluon
-from mxnet import ndarray as nd
+from mxnet import np
 
 # After logging in www.kaggle.com, the training and testing data sets can be downloaded at:
 # https://www.kaggle.com/c/house-prices-advanced-regression-techniques/download/train.csv
@@ -56,26 +56,25 @@ X_train = all_X[:num_train].as_matrix()
 X_test = all_X[num_train:].as_matrix()
 y_train = train.SalePrice.as_matrix()
 
-X_train = nd.array(X_train)
-y_train = nd.array(y_train)
+X_train = np.array(X_train)
+y_train = np.array(y_train)
 y_train.reshape((num_train, 1))
 
-X_test = nd.array(X_test)
+X_test = np.array(X_test)
 square_loss = gluon.loss.L2Loss()
 
 def get_rmse_log(net, X_train, y_train):
     """Gets root mse between the logarithms of the prediction and the truth."""
     num_train = X_train.shape[0]
-    clipped_preds = nd.clip(net(X_train), 1, float('inf'))
-    return np.sqrt(2 * nd.sum(square_loss(
-        nd.log(clipped_preds), nd.log(y_train))).asscalar() / num_train)
+    clipped_preds = np.clip(net(X_train), 1, float('inf'))
+    return np.sqrt(2 * np.sum(square_loss(
+        np.log(clipped_preds), np.log(y_train))).item() / num_train)
 
 def get_net():
     """Gets a neural network. Better results are obtained with modifications."""
     net = gluon.nn.Sequential()
-    with net.name_scope():
-        net.add(gluon.nn.Dense(50, activation="relu"))
-        net.add(gluon.nn.Dense(1))
+    net.add(gluon.nn.Dense(50, activation="relu"))
+    net.add(gluon.nn.Dense(1))
     net.initialize()
     return net
 
@@ -123,8 +122,8 @@ def k_fold_cross_valid(k, epochs, verbose_epoch, X_train, y_train,
                     y_val_train = y_cur_fold
                     val_train_defined = True
                 else:
-                    X_val_train = nd.concat(X_val_train, X_cur_fold, dim=0)
-                    y_val_train = nd.concat(y_val_train, y_cur_fold, dim=0)
+                    X_val_train = np.concatenate([X_val_train, X_cur_fold], axis=0)
+                    y_val_train = np.concatenate([y_val_train, y_cur_fold], axis=0)
         net = get_net()
         train_loss = train(net, X_val_train, y_val_train, epochs, verbose_epoch,
                            learning_rate, weight_decay, batch_size)

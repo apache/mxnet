@@ -30,26 +30,26 @@
 namespace mxnet {
 namespace common {
 
-void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables) {
+void CopyGraph(nnvm::Graph* dst, const nnvm::Graph& src, bool copy_variables) {
   using nnvm::Node;
-  using nnvm::ObjectPtr;
   using nnvm::NodeEntry;
+  using nnvm::ObjectPtr;
   std::unordered_map<Node*, ObjectPtr> old_new;
   // use DFSVisit to copy all the nodes
   DFSVisit(src.outputs, [&old_new, copy_variables](const ObjectPtr& node) {
-      ObjectPtr np;
-      if (copy_variables || !node->is_variable()) {
-        np = Node::Create();
-        np->attrs = node->attrs;
-      } else {
-        np = node;
-      }
-      old_new[node.get()] = std::move(np);
-    });
+    ObjectPtr np;
+    if (copy_variables || !node->is_variable()) {
+      np        = Node::Create();
+      np->attrs = node->attrs;
+    } else {
+      np = node;
+    }
+    old_new[node.get()] = std::move(np);
+  });
   // connect nodes of new graph
-  for (const auto &kv : old_new) {
+  for (const auto& kv : old_new) {
     for (const NodeEntry& e : kv.first->inputs) {
-      Node *ptr = e.node.get();
+      Node* ptr = e.node.get();
       kv.second->inputs.emplace_back(NodeEntry{old_new[ptr], e.index, e.version});
     }
     for (const ObjectPtr& p : kv.first->control_deps) {
@@ -57,15 +57,15 @@ void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables) {
     }
   }
   // set the head
-  for (const NodeEntry &e : src.outputs) {
+  for (const NodeEntry& e : src.outputs) {
     (*dst).outputs.emplace_back(NodeEntry{old_new[e.node.get()], e.index, e.version});
   }
 }
 
-bool CheckForInputNameDuplicates(const nnvm::IndexedGraph &idx) {
+bool CheckForInputNameDuplicates(const nnvm::IndexedGraph& idx) {
   std::unordered_set<std::string> names;
   for (const auto& nid : idx.input_nodes()) {
-    const std::string &name = idx[nid].source->attrs.name;
+    const std::string& name = idx[nid].source->attrs.name;
     if (names.count(name)) {
       LOG(WARNING) << "Variable name " << name << " is used more than once!";
       return false;

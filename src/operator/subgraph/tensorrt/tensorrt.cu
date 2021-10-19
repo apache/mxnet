@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file tensorrt.cu
  * \brief TensorRT GPU operation registration
  * \author Marek Kolodziej, Clement Fuji Tsang
-*/
+ */
 
 #if MXNET_USE_TENSORRT
 
@@ -31,23 +30,30 @@
 namespace mxnet {
 namespace op {
 
-#define CHECK_CUDART(x) do { \
-  cudaError_t res = (x); \
-  if (res != cudaSuccess) { \
-    fprintf(stderr, "CUDART: %s = %d (%s) at (%s:%d)\n", \
-      #x, res, cudaGetErrorString(res), __FILE__, __LINE__); \
-    exit(1); \
-  } \
-} while (0)
+#define CHECK_CUDART(x)                            \
+  do {                                             \
+    cudaError_t res = (x);                         \
+    if (res != cudaSuccess) {                      \
+      fprintf(stderr,                              \
+              "CUDART: %s = %d (%s) at (%s:%d)\n", \
+              #x,                                  \
+              res,                                 \
+              cudaGetErrorString(res),             \
+              __FILE__,                            \
+              __LINE__);                           \
+      exit(1);                                     \
+    }                                              \
+  } while (0)
 
-void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
+void TRTCompute(const OpStatePtr& state,
+                const OpContext& ctx,
                 const std::vector<TBlob>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   cudaStream_t cuda_s = Stream<gpu>::GetStream(ctx.get_stream<gpu>());
-  const auto& param = state.get_state<TRTEngineParam>();
+  const auto& param   = state.get_state<TRTEngineParam>();
   for (size_t i = 0; i < param.binding_order->size(); ++i) {
     auto& p = param.binding_order->at(i);
     if (p.second == true) {
@@ -60,8 +66,8 @@ void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
 }
 
 NNVM_REGISTER_OP(_TensorRT)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", TRTCompute)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", TRTCompute)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet

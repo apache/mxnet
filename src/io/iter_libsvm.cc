@@ -49,24 +49,24 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
   DMLC_DECLARE_PARAMETER(LibSVMIterParam) {
     DMLC_DECLARE_FIELD(data_libsvm)
         .describe("The input zero-base indexed LibSVM data file or a directory path.");
-    DMLC_DECLARE_FIELD(data_shape)
-        .describe("The shape of one example.");
-    DMLC_DECLARE_FIELD(label_libsvm).set_default("NULL")
-        .describe("The input LibSVM label file or a directory path. "
-                  "If NULL, all labels will be read from ``data_libsvm``.");
+    DMLC_DECLARE_FIELD(data_shape).describe("The shape of one example.");
+    DMLC_DECLARE_FIELD(label_libsvm)
+        .set_default("NULL")
+        .describe(
+            "The input LibSVM label file or a directory path. "
+            "If NULL, all labels will be read from ``data_libsvm``.");
     index_t shape1[] = {1};
-    DMLC_DECLARE_FIELD(label_shape).set_default(mxnet::TShape(shape1, shape1 + 1))
+    DMLC_DECLARE_FIELD(label_shape)
+        .set_default(mxnet::TShape(shape1, shape1 + 1))
         .describe("The shape of one label.");
-    DMLC_DECLARE_FIELD(num_parts).set_default(1)
-        .describe("partition the data into multiple parts");
-    DMLC_DECLARE_FIELD(part_index).set_default(0)
-        .describe("the index of the part will read");
+    DMLC_DECLARE_FIELD(num_parts).set_default(1).describe("partition the data into multiple parts");
+    DMLC_DECLARE_FIELD(part_index).set_default(0).describe("the index of the part will read");
   }
 };
 
-class LibSVMIter: public SparseIIterator<DataInst> {
+class LibSVMIter : public SparseIIterator<DataInst> {
  public:
-  LibSVMIter() = default;
+  LibSVMIter()           = default;
   ~LibSVMIter() override = default;
 
   // intialize iterator loads data in
@@ -75,18 +75,16 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     CHECK_EQ(param_.data_shape.ndim(), 1) << "dimension of data_shape is expected to be 1";
     CHECK_GT(param_.num_parts, 0) << "number of parts should be positive";
     CHECK_GE(param_.part_index, 0) << "part index should be non-negative";
-    data_parser_.reset(dmlc::Parser<uint64_t>::Create(param_.data_libsvm.c_str(),
-                                                      param_.part_index,
-                                                      param_.num_parts, "libsvm"));
+    data_parser_.reset(dmlc::Parser<uint64_t>::Create(
+        param_.data_libsvm.c_str(), param_.part_index, param_.num_parts, "libsvm"));
     if (param_.label_libsvm != "NULL") {
-      label_parser_.reset(dmlc::Parser<uint64_t>::Create(param_.label_libsvm.c_str(),
-                                                         param_.part_index,
-                                                         param_.num_parts, "libsvm"));
+      label_parser_.reset(dmlc::Parser<uint64_t>::Create(
+          param_.label_libsvm.c_str(), param_.part_index, param_.num_parts, "libsvm"));
       CHECK_GT(param_.label_shape.Size(), 1)
-        << "label_shape is not expected to be (1,) when param_.label_libsvm is set.";
+          << "label_shape is not expected to be (1,) when param_.label_libsvm is set.";
     } else {
       CHECK_EQ(param_.label_shape.Size(), 1)
-        << "label_shape is expected to be (1,) when param_.label_libsvm is NULL";
+          << "label_shape is expected to be (1,) when param_.label_libsvm is NULL";
     }
     // both data and label are of CSRStorage in libsvm format
     if (param_.label_shape.Size() > 1) {
@@ -104,17 +102,19 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     }
     data_ptr_ = label_ptr_ = 0;
     data_size_ = label_size_ = 0;
-    inst_counter_ = 0;
-    end_ = false;
+    inst_counter_            = 0;
+    end_                     = false;
   }
 
   bool Next() override {
-    if (end_) return false;
+    if (end_)
+      return false;
     while (data_ptr_ >= data_size_) {
       if (!data_parser_->Next()) {
-        end_ = true; return false;
+        end_ = true;
+        return false;
       }
-      data_ptr_ = 0;
+      data_ptr_  = 0;
       data_size_ = data_parser_->Value().size;
     }
     out_.index = inst_counter_++;
@@ -129,7 +129,7 @@ class LibSVMIter: public SparseIIterator<DataInst> {
       while (label_ptr_ >= label_size_) {
         CHECK(label_parser_->Next())
             << "Data LibSVM's row is smaller than the number of rows in label_libsvm";
-        label_ptr_ = 0;
+        label_ptr_  = 0;
         label_size_ = label_parser_->Value().size;
       }
       CHECK_LT(label_ptr_, label_size_);
@@ -144,17 +144,19 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     return true;
   }
 
-  const DataInst &Value() const override {
+  const DataInst& Value() const override {
     return out_;
   }
 
   const NDArrayStorageType GetStorageType(bool is_data) const override {
-    if (is_data) return kCSRStorage;
+    if (is_data)
+      return kCSRStorage;
     return param_.label_shape.Size() > 1 ? kCSRStorage : kDefaultStorage;
   }
 
   const mxnet::TShape GetShape(bool is_data) const override {
-    if (is_data) return param_.data_shape;
+    if (is_data)
+      return param_.data_shape;
     return param_.label_shape;
   }
 
@@ -162,13 +164,13 @@ class LibSVMIter: public SparseIIterator<DataInst> {
   inline TBlob AsDataBlob(const dmlc::Row<uint64_t>& row) {
     const real_t* ptr = row.value;
     mxnet::TShape shape(mshadow::Shape1(row.length));
-    return TBlob((real_t*) ptr, shape, cpu::kDevMask);  // NOLINT(*)
+    return TBlob((real_t*)ptr, shape, cpu::kDevMask);  // NOLINT(*)
   }
 
   inline TBlob AsIdxBlob(const dmlc::Row<uint64_t>& row) {
     const uint64_t* ptr = row.index;
     mxnet::TShape shape(mshadow::Shape1(row.length));
-    return TBlob((int64_t*) ptr, shape, cpu::kDevMask, mshadow::kInt64);  // NOLINT(*)
+    return TBlob((int64_t*)ptr, shape, cpu::kDevMask, mshadow::kInt64);  // NOLINT(*)
   }
 
   inline TBlob AsIndPtrPlaceholder(const dmlc::Row<uint64_t>& row) {
@@ -177,7 +179,7 @@ class LibSVMIter: public SparseIIterator<DataInst> {
 
   inline TBlob AsScalarLabelBlob(const dmlc::Row<uint64_t>& row) {
     const real_t* ptr = row.label;
-    return TBlob((real_t*) ptr, mshadow::Shape1(1), cpu::kDevMask);  // NOLINT(*)
+    return TBlob((real_t*)ptr, mshadow::Shape1(1), cpu::kDevMask);  // NOLINT(*)
   }
 
   LibSVMIterParam param_;
@@ -194,11 +196,10 @@ class LibSVMIter: public SparseIIterator<DataInst> {
   std::unique_ptr<dmlc::Parser<uint64_t> > data_parser_;
 };
 
-
 DMLC_REGISTER_PARAMETER(LibSVMIterParam);
 
 MXNET_REGISTER_IO_ITER(LibSVMIter)
-.describe(R"code(Returns the LibSVM iterator which returns data with `csr`
+    .describe(R"code(Returns the LibSVM iterator which returns data with `csr`
 storage type. This iterator is experimental and should be used with care.
 
 The input data is stored in a format similar to LibSVM file format, except that the **indices
@@ -296,14 +297,10 @@ Example::
    [ 0.          0.          1.2 ]]
 
 )code" ADD_FILELINE)
-.add_arguments(LibSVMIterParam::__FIELDS__())
-.add_arguments(BatchParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
-.set_body([]() {
-    return new SparsePrefetcherIter(
-        new SparseBatchLoader(
-            new LibSVMIter()));
-  });
+    .add_arguments(LibSVMIterParam::__FIELDS__())
+    .add_arguments(BatchParam::__FIELDS__())
+    .add_arguments(PrefetcherParam::__FIELDS__())
+    .set_body([]() { return new SparsePrefetcherIter(new SparseBatchLoader(new LibSVMIter())); });
 
 }  // namespace io
 }  // namespace mxnet

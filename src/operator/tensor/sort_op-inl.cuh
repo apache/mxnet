@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file sort_op-inl.cuh
  * \brief CUDA implementations for sort_op.h
  */

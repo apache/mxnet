@@ -69,6 +69,9 @@ from mxnet import np, npx, gluon
 autosummary_generate = True
 numpydoc_show_class_members = False
 
+# Disable SSL verification in link check.
+tls_verify = False
+
 autodoc_member_order = 'alphabetical'
 
 autodoc_default_flags = ['members', 'show-inheritance']

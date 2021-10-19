@@ -17,9 +17,6 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2015 by Contributors
- */
 #include <mxnet/storage.h>
 #include "./storage_manager.h"
 #include "./naive_storage_manager.h"
@@ -40,20 +37,21 @@ class StorageImpl : public Storage {
   void Alloc(Handle* handle) override;
   void Free(Handle handle) override;
   void DirectFree(Handle handle) override;
-  void ReleaseAll(Context ctx) override   { storage_manager(ctx)->ReleaseAll(); }
+  void ReleaseAll(Context ctx) override {
+    storage_manager(ctx)->ReleaseAll();
+  }
 
   void SharedIncrementRefCount(Handle handle) override;
-  StorageImpl() = default;
+  StorageImpl()           = default;
   ~StorageImpl() override = default;
 
  private:
-  std::shared_ptr<StorageManager> storage_manager(const Context &ctx) {
-    auto &&device = storage_managers_.at(ctx.dev_type);
-    std::shared_ptr<StorageManager> manager = device.Get(
-      ctx.real_dev_id(), []() {
+  std::shared_ptr<StorageManager> storage_manager(const Context& ctx) {
+    auto&& device                           = storage_managers_.at(ctx.dev_type);
+    std::shared_ptr<StorageManager> manager = device.Get(ctx.real_dev_id(), []() {
       LOG(FATAL) << "Cannot Free space to a device you have not allocated";
       return nullptr;
-      });
+    });
     return manager;
   }
 
@@ -63,16 +61,18 @@ class StorageImpl : public Storage {
   profiler::DeviceStorageProfiler profiler_;
 };  // struct Storage::Impl
 
-StorageManager *CreateStorageManager(const Context &ctx, const char *context,
-                                     int num_gpu_device, std::string *pStrategy) {
+StorageManager* CreateStorageManager(const Context& ctx,
+                                     const char* context,
+                                     int num_gpu_device,
+                                     std::string* pStrategy) {
   const auto env_var = env_var_name(context, pool_type);
-  const char *type = getenv(env_var.c_str());
+  const char* type   = getenv(env_var.c_str());
   if (type == nullptr) {
-    type = "Naive";   // default pool
+    type = "Naive";  // default pool
   }
 
-  *pStrategy = type;
-  StorageManager *ptr = nullptr;
+  *pStrategy          = type;
+  StorageManager* ptr = nullptr;
   if (*pStrategy == "Round") {
     ptr = new PooledStorageManager<RoundPower2, VectorContainer>(ctx, num_gpu_device);
   } else if (*pStrategy == "Naive") {
@@ -83,14 +83,14 @@ StorageManager *CreateStorageManager(const Context &ctx, const char *context,
 #if MXNET_USE_CUDA
     else if (ctx.dev_type == Context::kGPU)
       ptr = new NaiveStorageManager<GPUDeviceStorage>();
-    else              // Context::kCPUPinned
+    else  // Context::kCPUPinned
       ptr = new NaiveStorageManager<PinnedMemoryStorage>();
 #endif
   }
   return ptr;
 }
 
-void StorageImpl::Alloc(Storage::Handle *handle) {
+void StorageImpl::Alloc(Storage::Handle* handle) {
   // Set dptr to nullptr when handle size is 0.
   if (handle->size == 0) {
     handle->dptr = nullptr;
@@ -98,11 +98,10 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
   }
 
   // space already recycled, ignore request
-  auto &&device = storage_managers_.at(handle->ctx.dev_type);
-  std::shared_ptr<StorageManager> manager = device.Get(
-    handle->ctx.real_dev_id(), [handle]() {
+  auto&& device                           = storage_managers_.at(handle->ctx.dev_type);
+  std::shared_ptr<StorageManager> manager = device.Get(handle->ctx.real_dev_id(), [handle]() {
     const auto dev_type = handle->ctx.dev_type;
-    int num_gpu_device = 0;
+    int num_gpu_device  = 0;
 #if MXNET_USE_CUDA
     switch (dev_type) {
       case Context::kGPU:
@@ -114,7 +113,7 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
     }
 #endif
 
-    const char *context = nullptr;
+    const char* context = nullptr;
     switch (dev_type) {
       case Context::kCPU:
         context = "CPU";
@@ -134,7 +133,7 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
         // We will not generate the log messages for CPUShared
         // It could be as many of them as the number of "workers".
 #if !defined(ANDROID) && !defined(__ANDROID__)
-        break;   // For Android shared memory is not implemented
+        break;  // For Android shared memory is not implemented
 #endif
       default:
         LOG(FATAL) << "Unimplemented device " << dev_type;
@@ -147,39 +146,43 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       // following dev_type's, we will also use the naive storage managers
       switch (dev_type) {
 #if MXNET_USE_CUDA
-        case Context::kCPUPinned: if (num_gpu_device > 0)
-                                     break;
+        case Context::kCPUPinned:
+          if (num_gpu_device > 0)
+            break;
 #endif
-        case Context::kCPUShared:  naive_storage_manager = true;
-        default:                   break;
+        case Context::kCPUShared:
+          naive_storage_manager = true;
+        default:
+          break;
       }
     }
 
-    StorageManager *ptr = nullptr;
+    StorageManager* ptr = nullptr;
     std::string strategy, storage_manager_type;
     if (naive_storage_manager) {
       storage_manager_type = "Naive";
       switch (dev_type) {
 #if MXNET_USE_CUDA
         case Context::kGPU:
-              ptr = new NaiveStorageManager<GPUDeviceStorage>();
-              break;
+          ptr = new NaiveStorageManager<GPUDeviceStorage>();
+          break;
         case Context::kCPUPinned:
-              if (num_gpu_device > 0) {
-                ptr = new NaiveStorageManager<PinnedMemoryStorage>();
-                break;
-              }
+          if (num_gpu_device > 0) {
+            ptr = new NaiveStorageManager<PinnedMemoryStorage>();
+            break;
+          }
 #else
         case Context::kCPUPinned:
 #endif
         case Context::kCPU:
-              ptr = new NaiveStorageManager<CPUDeviceStorage>();
-              break;
+          ptr = new NaiveStorageManager<CPUDeviceStorage>();
+          break;
 #if !defined(ANDROID) && !defined(__ANDROID__)
         case Context::kCPUShared:
-              ptr = new CPUSharedStorageManager();
+          ptr = new CPUSharedStorageManager();
 #endif
-        default: break;
+        default:
+          break;
       }
     } else {
       // Some Pooled Storage Manager will be used
@@ -208,7 +211,8 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
 void StorageImpl::Free(Storage::Handle handle) {
   // Do nothing if dtpr is nullptr because the handle may have already
   // been freed or have not been allocated memory yet.
-  if (handle.dptr == nullptr) return;
+  if (handle.dptr == nullptr)
+    return;
 
   storage_manager(handle.ctx)->Free(handle);
   profiler_.OnFree(handle);
@@ -217,7 +221,8 @@ void StorageImpl::Free(Storage::Handle handle) {
 void StorageImpl::DirectFree(Storage::Handle handle) {
   // Do nothing if dtpr is nullptr because the handle may have already
   // been freed or have not been allocated memory yet.
-  if (handle.dptr == nullptr) return;
+  if (handle.dptr == nullptr)
+    return;
 
   storage_manager(handle.ctx)->DirectFree(handle);
   profiler_.OnFree(handle);
@@ -226,10 +231,10 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
 void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
   CHECK_EQ(handle.ctx.dev_type, Context::kCPUShared);
   auto&& device = storage_managers_.at(Context::kCPUShared);
-  auto manager = device.Get(0, []() {
-      LOG(FATAL) << "Cannot increment ref count before allocating any shared memory.";
-      return nullptr;
-    });
+  auto manager  = device.Get(0, []() {
+    LOG(FATAL) << "Cannot increment ref count before allocating any shared memory.";
+    return nullptr;
+  });
 #if !defined(ANDROID) && !defined(__ANDROID__)
   dynamic_cast<CPUSharedStorageManager*>(manager.get())->IncrementRefCount(handle);
 #else
@@ -239,12 +244,12 @@ void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
 
 const std::string env_var_name(const char* dev_type, env_var_type type) {
   static const std::array<std::string, 5> name = {
-                        "MEM_POOL_TYPE",
-                        "POOL_PAGE_SIZE",
-                        "MEM_LARGE_ALLOC_ROUND_SIZE",
-                        "MEM_POOL_ROUND_LINEAR_CUTOFF",
-                        "MEM_POOL_RESERVE",
-                        };
+      "MEM_POOL_TYPE",
+      "POOL_PAGE_SIZE",
+      "MEM_LARGE_ALLOC_ROUND_SIZE",
+      "MEM_POOL_ROUND_LINEAR_CUTOFF",
+      "MEM_POOL_RESERVE",
+  };
 
   return std::string("MXNET_") + dev_type + "_" + name[type];
 }
@@ -255,14 +260,14 @@ std::shared_ptr<Storage> Storage::_GetSharedRef() {
 #ifdef __MXNET_JS__
   // dummy code needed for emscripten code to pass
   // do not know why, the new will be NULLPTR
-  static int *q = new int();
+  static int* q = new int();
 #endif
   static std::shared_ptr<Storage> inst(new storage::StorageImpl());
   return inst;
 }
 
 Storage* Storage::Get() {
-  static Storage *ptr = _GetSharedRef().get();
+  static Storage* ptr = _GetSharedRef().get();
   return ptr;
 }
 }  // namespace mxnet

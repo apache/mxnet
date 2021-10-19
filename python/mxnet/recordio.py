@@ -245,10 +245,11 @@ class MXIndexedRecordIO(MXRecordIO):
 
     def open(self):
         super(MXIndexedRecordIO, self).open()
-        self.idx = {}
-        self.keys = []
         self.fidx = open(self.idx_path, self.flag)
-        if not self.writable:
+        if self.writable:
+            self.idx = {}
+            self.keys = []
+        elif not self.idx:
             for line in iter(self.fidx.readline, ''):
                 line = line.strip().split('\t')
                 key = self.key_type(line[0])

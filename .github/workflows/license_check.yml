@@ -1,0 +1,25 @@
+name: license check
+
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  licensecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Update Submodules
+        run: |
+          git submodule update --init --recursive
+
+      - name: Check License Header
+        uses: apache/skywalking-eyes@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

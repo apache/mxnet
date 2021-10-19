@@ -37,8 +37,8 @@ GradientCompression::GradientCompression() {
   type_ = CompressionType::kNone;
 }
 
-void GradientCompression::SetParams(const std::vector<std::pair<std::string, std::string> >
-                                    & kwargs) {
+void GradientCompression::SetParams(
+    const std::vector<std::pair<std::string, std::string> >& kwargs) {
   GradientCompressionParam params;
   params.InitAllowUnknown(kwargs);
   if (params.type == "1bit") {
@@ -60,12 +60,12 @@ std::string GradientCompression::get_type_str() {
 }
 
 void GradientCompression::SetOneBitCompression(const float threshold) {
-  type_ = CompressionType::kOneBit;
+  type_      = CompressionType::kOneBit;
   threshold_ = threshold;
 }
 
 void GradientCompression::SetTwoBitCompression(const float threshold) {
-  type_ = CompressionType::kTwoBit;
+  type_      = CompressionType::kTwoBit;
   threshold_ = threshold;
 }
 
@@ -78,7 +78,7 @@ std::string GradientCompression::EncodeParams() {
   return rval;
 }
 
-void GradientCompression::DecodeParams(const std::string &s) {
+void GradientCompression::DecodeParams(const std::string& s) {
   std::vector<std::string> elems;
   mxnet::kvstore::split(s, ',', std::back_inserter(elems));
   type_ = static_cast<CompressionType>(stoi(elems[0]));
@@ -102,32 +102,44 @@ int GradientCompression::GetCompressionFactor() {
 
 int64_t GradientCompression::GetCompressedSize(const int64_t original_size) {
   const int bits = GetCompressionFactor();
-  return ((original_size % bits == 0) ?
-          original_size / bits :
-          original_size / bits + 1);
+  return ((original_size % bits == 0) ? original_size / bits : original_size / bits + 1);
 }
 
-void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
-                  mxnet::NDArray *residual, const int priority) {
+void GradientCompression::Quantize(const mxnet::NDArray& from,
+                                   mxnet::NDArray* to,
+                                   mxnet::NDArray* residual,
+                                   const int priority) {
   CHECK(shape_is_known(from.shape())) << "source operand has undefined shape";
   CHECK(shape_is_known(to->shape())) << "destination operand has undefined shape";
   CHECK(shape_is_known(residual->shape())) << "residual operand has undefined shape";
-  const int a = from.ctx().dev_mask();
-  const int b = to->ctx().dev_mask();
+  const int a           = from.ctx().dev_mask();
+  const int b           = to->ctx().dev_mask();
   const float threshold = threshold_;
   if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
     if (type_ == CompressionType::kOneBit) {
-      mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
-        std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-        Quantize1BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
-      }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-      mxnet::FnProperty::kNormal, priority, "QuantizeCPU");
+      mxnet::Engine::Get()->PushSync(
+          [from, to, residual, threshold](mxnet::RunContext ctx) {
+            std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
+            Quantize1BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+          },
+          from.ctx(),
+          {from.var()},
+          {to->var(), residual->var()},
+          mxnet::FnProperty::kNormal,
+          priority,
+          "QuantizeCPU");
     } else if (type_ == CompressionType::kTwoBit) {
-      mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
-        std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-        Quantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
-      }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-      mxnet::FnProperty::kNormal, priority, "QuantizeCPU");
+      mxnet::Engine::Get()->PushSync(
+          [from, to, residual, threshold](mxnet::RunContext ctx) {
+            std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
+            Quantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+          },
+          from.ctx(),
+          {from.var()},
+          {to->var(), residual->var()},
+          mxnet::FnProperty::kNormal,
+          priority,
+          "QuantizeCPU");
     } else {
       LOG(FATAL) << "Unsupported quantization of type " << get_type_str();
     }
@@ -135,26 +147,38 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
     if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
 #if MXNET_USE_CUDA
       if (type_ == CompressionType::kOneBit) {
-        mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
-          std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-          Quantize1BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-          // Wait GPU kernel to complete
-          ctx.get_stream<mshadow::gpu>()->Wait();
-        }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-        mxnet::FnProperty::kNormal, priority, "QuantizeGPU");
+        mxnet::Engine::Get()->PushSync(
+            [from, to, residual, threshold](mxnet::RunContext ctx) {
+              std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
+              Quantize1BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+              // Wait GPU kernel to complete
+              ctx.get_stream<mshadow::gpu>()->Wait();
+            },
+            from.ctx(),
+            {from.var()},
+            {to->var(), residual->var()},
+            mxnet::FnProperty::kNormal,
+            priority,
+            "QuantizeGPU");
       } else if (type_ == CompressionType::kTwoBit) {
-        mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
-          std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-          Quantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-          // Wait GPU kernel to complete
-          ctx.get_stream<mshadow::gpu>()->Wait();
-        }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-        mxnet::FnProperty::kNormal, priority, "QuantizeGPU");
+        mxnet::Engine::Get()->PushSync(
+            [from, to, residual, threshold](mxnet::RunContext ctx) {
+              std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
+              Quantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+              // Wait GPU kernel to complete
+              ctx.get_stream<mshadow::gpu>()->Wait();
+            },
+            from.ctx(),
+            {from.var()},
+            {to->var(), residual->var()},
+            mxnet::FnProperty::kNormal,
+            priority,
+            "QuantizeGPU");
       } else {
         LOG(FATAL) << "Unsupported quantization of type " << get_type_str();
       }
 #else
-    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     } else {
       LOG(FATAL) << "Unknown device mask, from device mask " << a << " to device mask " << b;
@@ -162,26 +186,39 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
   }
 }
 
-void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to,
+void GradientCompression::Dequantize(const mxnet::NDArray& from,
+                                     mxnet::NDArray* to,
                                      const int priority) {
   CHECK(shape_is_known(from.shape())) << "source operand has undefined shape";
   CHECK(shape_is_known(to->shape())) << "destination operand has undefined shape";
-  const int a = from.ctx().dev_mask();
-  const int b = to->ctx().dev_mask();
+  const int a           = from.ctx().dev_mask();
+  const int b           = to->ctx().dev_mask();
   const float threshold = threshold_;
   if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
     if (type_ == CompressionType::kOneBit) {
-      mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
-        std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-        Dequantize1BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
-      }, from.ctx(), {from.var()}, {to->var()},
-      mxnet::FnProperty::kNormal, priority, "DequantizeCPU");
+      mxnet::Engine::Get()->PushSync(
+          [from, to, threshold](mxnet::RunContext ctx) {
+            std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
+            Dequantize1BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+          },
+          from.ctx(),
+          {from.var()},
+          {to->var()},
+          mxnet::FnProperty::kNormal,
+          priority,
+          "DequantizeCPU");
     } else if (type_ == CompressionType::kTwoBit) {
-      mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
-        std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-        Dequantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
-      }, from.ctx(), {from.var()}, {to->var()},
-      mxnet::FnProperty::kNormal, priority, "DequantizeCPU");
+      mxnet::Engine::Get()->PushSync(
+          [from, to, threshold](mxnet::RunContext ctx) {
+            std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
+            Dequantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+          },
+          from.ctx(),
+          {from.var()},
+          {to->var()},
+          mxnet::FnProperty::kNormal,
+          priority,
+          "DequantizeCPU");
     } else {
       LOG(FATAL) << "Unsupported dequantization of type " << get_type_str();
     }
@@ -189,26 +226,38 @@ void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray 
     if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
 #if MXNET_USE_CUDA
       if (type_ == CompressionType::kOneBit) {
-        mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
-          std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-          Dequantize1BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-          // Wait GPU kernel to complete
-          ctx.get_stream<mshadow::gpu>()->Wait();
-        }, from.ctx(), {from.var()}, {to->var()},
-        mxnet::FnProperty::kNormal, priority, "DequantizeGPU");
+        mxnet::Engine::Get()->PushSync(
+            [from, to, threshold](mxnet::RunContext ctx) {
+              std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
+              Dequantize1BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+              // Wait GPU kernel to complete
+              ctx.get_stream<mshadow::gpu>()->Wait();
+            },
+            from.ctx(),
+            {from.var()},
+            {to->var()},
+            mxnet::FnProperty::kNormal,
+            priority,
+            "DequantizeGPU");
       } else if (type_ == CompressionType::kTwoBit) {
-        mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
-          std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-          Dequantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-          // Wait GPU kernel to completes
-          ctx.get_stream<mshadow::gpu>()->Wait();
-        }, from.ctx(), {from.var()}, {to->var()},
-        mxnet::FnProperty::kNormal, priority, "DequantizeGPU");
+        mxnet::Engine::Get()->PushSync(
+            [from, to, threshold](mxnet::RunContext ctx) {
+              std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
+              Dequantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+              // Wait GPU kernel to completes
+              ctx.get_stream<mshadow::gpu>()->Wait();
+            },
+            from.ctx(),
+            {from.var()},
+            {to->var()},
+            mxnet::FnProperty::kNormal,
+            priority,
+            "DequantizeGPU");
       } else {
         LOG(FATAL) << "Unsupported dequantization of type " << get_type_str();
       }
 #else
-    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     } else {
       LOG(FATAL) << "Unknown device mask, from device mask " << a << " to device mask " << b;
@@ -217,4 +266,3 @@ void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray 
 }
 }  // namespace kvstore
 }  // namespace mxnet
-

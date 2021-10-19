@@ -459,11 +459,6 @@ FP16_FP32_FUNCS = [
     'zeros_like',
     ]
 
-if Features().is_enabled('CUDNN'):
-    FP16_FP32_FUNCS.extend([
-        'CuDNNBatchNorm',
-    ])
-
 # Functions that have to be cast to FP32 due to possible
 # overflows
 FP32_FUNCS = [
@@ -616,10 +611,10 @@ FP32_FUNCS = [
 
 if Features().is_enabled('ONEDNN'):
     FP32_FUNCS.extend([
-        '_sg_mkldnn_conv',
-        '_sg_mkldnn_fully_connected',
-        '_sg_mkldnn_selfatt_qk',
-        '_sg_mkldnn_selfatt_valatt',
+        '_sg_onednn_conv',
+        '_sg_onednn_fully_connected',
+        '_sg_onednn_selfatt_qk',
+        '_sg_onednn_selfatt_valatt',
     ])
 
 # Functions that have to be cast to FP32 only for

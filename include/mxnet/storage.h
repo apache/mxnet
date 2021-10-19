@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file storage.h
  * \brief Storage manager across multiple devices.
  */

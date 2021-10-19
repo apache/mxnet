@@ -645,6 +645,54 @@ def wrap_np_binary_func(func):
         return func(x1, x2, out=out)
     return _wrap_np_binary_func
 
+def wrap_data_api_statical_func(func):
+    """
+    A convenience decorator for wrapping data apis standardized statical functions to provide
+    context keyward backward compatibility
+    Parameters
+    ----------
+    func : a numpy-compatible array statical function to be wrapped for context keyward change.
+    Returns
+    -------
+    Function
+    A function wrapped with context keyward changes.
+    """
+
+    @functools.wraps(func)
+    def _wrap_api_creation_func(*args, **kwargs):
+        if len(kwargs) != 0:
+            correction = kwargs.pop('ddof', None)
+            if correction is not None:
+                kwargs['correction'] = correction
+        return func(*args, **kwargs)
+
+    return _wrap_api_creation_func
+
+def wrap_data_api_linalg_func(func):
+    """
+    A convenience decorator for wrapping data apis standardized linalg functions to provide
+    context keyward backward compatibility
+    Parameters
+    ----------
+    func : a numpy-compatible array linalg function to be wrapped for context keyward change.
+    Returns
+    -------
+    Function
+    A function wrapped with context keyward changes.
+    """
+
+    @functools.wraps(func)
+    def _wrap_api_creation_func(*args, **kwargs):
+        if len(kwargs) != 0:
+            upper = kwargs.pop('UPLO', None)
+            if upper is not None:
+                if upper == 'U':
+                    kwargs['upper'] = True
+                else:
+                    kwargs['upper'] = False
+        return func(*args, **kwargs)
+
+    return _wrap_api_creation_func
 
 # pylint: disable=exec-used
 def numpy_fallback(func):
@@ -875,7 +923,7 @@ def get_cuda_compute_capability(ctx):
         raise ValueError('Expecting a gpu context to get cuda compute capability, '
                          'while received ctx {}'.format(str(ctx)))
 
-    libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
+    libnames = ('libcuda.so', 'libcuda.dylib', 'nvcuda.dll', 'cuda.dll')
     for libname in libnames:
         try:
             cuda = ctypes.CDLL(libname)
@@ -1176,3 +1224,51 @@ def setenv(name, value):
     """
     passed_value = None if value is None else c_str(value)
     check_call(_LIB.MXSetEnv(c_str(name), passed_value))
+
+
+def get_max_supported_compute_capability():
+    """Get the maximum compute capability (SM arch) supported by the nvrtc compiler
+    """
+    max_supported_cc = ctypes.c_int()
+    check_call(_LIB.MXGetMaxSupportedArch(ctypes.byref(max_supported_cc)))
+    return max_supported_cc.value
+
+
+def get_rtc_compile_opts(ctx):
+    """Get the compile ops suitable for the context, given the toolkit/driver config
+    """
+    device_cc = get_cuda_compute_capability(ctx)
+    max_supported_cc = get_max_supported_compute_capability()
+
+    # CUDA toolkits starting with 11.1 (first to support arch 86) can compile directly to SASS
+    can_compile_to_SASS = max_supported_cc >= 86
+    should_compile_to_SASS = can_compile_to_SASS and \
+                             device_cc <= max_supported_cc
+    device_cc_as_used = min(device_cc, max_supported_cc)
+    arch_opt = "--gpu-architecture={}_{}".format("sm" if should_compile_to_SASS else "compute",
+                                                 device_cc_as_used)
+    return [arch_opt]
+
+def set_flush_denorms(value):
+    """Change floating-point calculations on CPU when dealing with denormalized values.
+       This is only applicable to architectures which supports flush-to-zero.
+       Denormalized values are positive and negative values that are very close to 0
+       (exponent is the smallest possible value).
+       Flushing denormalized values to 0 can speedup calculations if such values occurs,
+       but if fulfilling whole IEEE 754 standard is required this option should be disabled.
+       Flushing denormalized values is enabled in MXNet by default.
+
+    Parameters
+    ----------
+    value : bool
+        State of flush-to-zero and denormals-are-zero in MXCSR register
+
+    Returns
+    -------
+    prev_state : bool
+        Previous state of flush-to-zero in MXCSR register
+    """
+    ret = ctypes.c_bool()
+    passed_value = ctypes.c_bool(value)
+    check_call(_LIB.MXSetFlushDenorms(passed_value, ctypes.byref(ret)))
+    return ret.value

@@ -262,12 +262,12 @@ def test_aggregate_stats_sorting():
     def check_sorting(debug_str, sort_by, ascending):
         target_dict = json.loads(debug_str, object_pairs_hook=OrderedDict)
         lst = []
-        for domain_name, domain in target_dict['Time'].items():
+        for _, domain in target_dict['Time'].items():
             lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
             check_ascending(lst, ascending)
         # Memory items do not have stat 'Total'
         if sort_by != 'total':
-            for domain_name, domain in target_dict['Memory'].items():
+            for _, domain in target_dict['Memory'].items():
                 lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
                 check_ascending(lst, ascending)
 

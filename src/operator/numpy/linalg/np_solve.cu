@@ -32,10 +32,10 @@ namespace op {
 #if MXNET_USE_CUSOLVER == 1
 
 NNVM_REGISTER_OP(_npi_solve)
-.set_attr<FCompute>("FCompute<gpu>", LaOpForwardSolve<gpu, 2, 2, 2, 1, solve>);
+    .set_attr<FCompute>("FCompute<gpu>", LaOpForwardSolve<gpu, 2, 2, 2, 1, solve>);
 
 NNVM_REGISTER_OP(_backward_npi_solve)
-.set_attr<FCompute>("FCompute<gpu>", LaOpBackwardSolve<gpu, 2, 2, 4, 2, solve_backward>);
+    .set_attr<FCompute>("FCompute<gpu>", LaOpBackwardSolve<gpu, 2, 2, 4, 2, solve_backward>);
 
 #endif
 

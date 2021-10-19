@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -28,8 +28,7 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.lstsq")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.lstsq").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_lstsq");
   nnvm::NodeAttrs attrs;
@@ -46,20 +45,21 @@ MXNET_REGISTER_API("_npi.lstsq")
   } else {
     param.rcond = args[2].operator double();
   }
-  param.finfoEps32 = args[3].operator double();
-  param.finfoEps64 = args[4].operator double();
+  param.finfoEps32  = args[3].operator double();
+  param.finfoEps64  = args[4].operator double();
   param.new_default = args[2].type_code() == kNull ? true : false;
-  attrs.parsed = param;
-  attrs.op = op;
+  attrs.parsed      = param;
+  attrs.op          = op;
   SetAttrDict<op::LstsqParam>(&attrs);
-  int num_inputs = 2;
-  int num_outputs = 0;
+  int num_inputs    = 2;
+  int num_outputs   = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
-                 NDArrayHandle(ndoutputs[1]),
-                 NDArrayHandle(ndoutputs[2]),
-                 NDArrayHandle(ndoutputs[3])});
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret              = ADT(0,
+             {NDArrayHandle(ndoutputs[0]),
+              NDArrayHandle(ndoutputs[1]),
+              NDArrayHandle(ndoutputs[2]),
+              NDArrayHandle(ndoutputs[3])});
 });
 
 }  // namespace mxnet

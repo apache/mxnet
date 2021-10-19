@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_broadcast_op_extended.cu
  * \brief GPU Implementation of extended functions for elementwise binary broadcast operator.
  */
@@ -29,29 +28,30 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(broadcast_power)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"power"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"power"});
 
 NNVM_REGISTER_OP(_backward_broadcast_power)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"power_grad", "power_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        BinaryBroadcastRTCBackwardUseIn{"power_grad", "power_rgrad"});
 
 NNVM_REGISTER_OP(broadcast_maximum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"max"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"max"});
 
 NNVM_REGISTER_OP(_backward_broadcast_maximum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"greater_equal", "less"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"greater_equal", "less"});
 
 NNVM_REGISTER_OP(broadcast_minimum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"min"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"min"});
 
 NNVM_REGISTER_OP(_backward_broadcast_minimum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"less_equal", "greater"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"less_equal", "greater"});
 
 NNVM_REGISTER_OP(broadcast_hypot)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"hypot"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"hypot"});
 
 NNVM_REGISTER_OP(_backward_broadcast_hypot)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"hypot_grad_left",
-                                                                     "hypot_grad_right"});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        BinaryBroadcastRTCBackwardUseIn{"hypot_grad_left", "hypot_grad_right"});
 
 }  // namespace op
 }  // namespace mxnet

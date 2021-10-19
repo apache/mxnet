@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -35,7 +35,7 @@ void SetInOut(std::vector<NDArray*>* ndinputs,
               std::vector<NDArray*>* ndoutputs,
               int num_inputs,
               NDArray** inputs,
-              int *num_outputs,
+              int* num_outputs,
               int infered_num_outputs,
               int num_visible_outputs,
               NDArray** out_array);
@@ -50,14 +50,14 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
 bool is_recording();
 bool is_deferred_compute();
 
-template<typename T>
+template <typename T>
 void SetAttrDict(nnvm::NodeAttrs* attrs) {
   if (is_recording() || is_deferred_compute()) {
     ::dmlc::get<T>(attrs->parsed).SetAttrDict(&(attrs->dict));
   }
 }
 
-template<typename ValueType, typename T>
+template <typename ValueType, typename T>
 Tuple<ValueType> Obj2Tuple(const runtime::ObjectRef& src) {
   runtime::ADT adt = Downcast<runtime::ADT, runtime::ObjectRef>(src);
   Tuple<ValueType> ret(adt.size(), 0);

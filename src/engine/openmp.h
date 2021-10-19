@@ -42,19 +42,27 @@ class OpenMP {
    * \brief Set whether clients of this class receive pro-OMP behavior guidance
    * \param enabled Set to 'true' if this class should provide OMP behavior
    */
-  void set_enabled(bool enabled) { enabled_ = enabled; }
-  bool enabled() const { return enabled_; }
+  void set_enabled(bool enabled) {
+    enabled_ = enabled;
+  }
+  bool enabled() const {
+    return enabled_;
+  }
 
   /*!
    * \brief Set maximum number of threads to be used in an OMP region
    * \param thread_max Maximum number of threads to be used in an OMP region
    */
-  void set_thread_max(int thread_max) { omp_thread_max_ = thread_max; }
+  void set_thread_max(int thread_max) {
+    omp_thread_max_ = thread_max;
+  }
   /*!
    * \brief Maximum number of threads to be used in an OMP region
    * \return Maximum number of threads
    */
-  int thread_max() const { return omp_thread_max_; }
+  int thread_max() const {
+    return omp_thread_max_;
+  }
 
   /*!
    * \brief Reserve cores to be excluded from OMP regions
@@ -65,7 +73,9 @@ class OpenMP {
    * \brief Get number of cores to be excluded from OMP regions
    * \return Number of cores to be excluded from OMP regions
    */
-  int reserve_cores() const { return reserve_cores_; }
+  int reserve_cores() const {
+    return reserve_cores_;
+  }
 
   /*!
    * \brief Call at the beginning of a worker thread's life.  This will set the omp_num_threads
@@ -85,7 +95,7 @@ class OpenMP {
    * \brief Get the OpenMP object's singleton pointer
    * \return Singleton OpenMP object pointer
    */
-  static OpenMP *Get();
+  static OpenMP* Get();
 
  private:
   /*!

@@ -31,33 +31,28 @@
 namespace mxnet {
 namespace runtime {
 
-MXNET_REGISTER_GLOBAL("container._GetADTTag")
-.set_body([](MXNetArgs args, MXNetRetValue* rv) {
-  ObjectRef obj = args[0];
+MXNET_REGISTER_GLOBAL("container._GetADTTag").set_body([](MXNetArgs args, MXNetRetValue* rv) {
+  ObjectRef obj   = args[0];
   const auto& adt = Downcast<ADT>(obj);
-  *rv = static_cast<int64_t>(adt.tag());
+  *rv             = static_cast<int64_t>(adt.tag());
 });
 
-MXNET_REGISTER_GLOBAL("container._GetADTSize")
-.set_body([](MXNetArgs args, MXNetRetValue* rv) {
-  ObjectRef obj = args[0];
+MXNET_REGISTER_GLOBAL("container._GetADTSize").set_body([](MXNetArgs args, MXNetRetValue* rv) {
+  ObjectRef obj   = args[0];
   const auto& adt = Downcast<ADT>(obj);
-  *rv = static_cast<int64_t>(adt.size());
+  *rv             = static_cast<int64_t>(adt.size());
 });
 
-
-MXNET_REGISTER_GLOBAL("container._GetADTFields")
-.set_body([](MXNetArgs args, MXNetRetValue* rv) {
-  ObjectRef obj = args[0];
-  int idx = args[1];
+MXNET_REGISTER_GLOBAL("container._GetADTFields").set_body([](MXNetArgs args, MXNetRetValue* rv) {
+  ObjectRef obj   = args[0];
+  int idx         = args[1];
   const auto& adt = Downcast<ADT>(obj);
   CHECK_LT(idx, adt.size());
   *rv = adt[idx];
 });
 
-MXNET_REGISTER_GLOBAL("container._ADT")
-.set_body([](MXNetArgs args, MXNetRetValue* rv) {
-  int itag = args[0];
+MXNET_REGISTER_GLOBAL("container._ADT").set_body([](MXNetArgs args, MXNetRetValue* rv) {
+  int itag   = args[0];
   size_t tag = static_cast<size_t>(itag);
   std::vector<ObjectRef> fields;
   for (int i = 1; i < args.size(); i++) {
@@ -66,8 +61,7 @@ MXNET_REGISTER_GLOBAL("container._ADT")
   *rv = ADT(tag, fields);
 });
 
-MXNET_REGISTER_GLOBAL("container._Map")
-.set_body([] (MXNetArgs args, MXNetRetValue* rv) {
+MXNET_REGISTER_GLOBAL("container._Map").set_body([](MXNetArgs args, MXNetRetValue* rv) {
   CHECK_EQ(args.size() % 2, 0);
   std::unordered_map<ObjectRef, ObjectRef, ObjectHash, ObjectEqual> data;
   for (int i = 0; i < args.num_args; i += 2) {
@@ -75,8 +69,8 @@ MXNET_REGISTER_GLOBAL("container._Map")
         String::CanConvertFrom(args[i]) ? args[i].operator String() : args[i].operator ObjectRef();
     ObjectRef v;
     if (args[i + 1].type_code() == kNDArrayHandle) {
-      mxnet::NDArray *array = args[i + 1].operator mxnet::NDArray*();
-      v = NDArrayHandle(array);
+      mxnet::NDArray* array = args[i + 1].operator mxnet::NDArray*();
+      v                     = NDArrayHandle(array);
     } else {
       v = args[i + 1];
     }
@@ -85,17 +79,15 @@ MXNET_REGISTER_GLOBAL("container._Map")
   *rv = Map<ObjectRef, ObjectRef>(data);
 });
 
-MXNET_REGISTER_GLOBAL("container._MapSize")
-.set_body([] (MXNetArgs args, MXNetRetValue* rv) {
+MXNET_REGISTER_GLOBAL("container._MapSize").set_body([](MXNetArgs args, MXNetRetValue* rv) {
   CHECK_EQ(args[0].type_code(), kObjectHandle);
   Object* ptr = static_cast<Object*>(args[0].value().v_handle);
   CHECK(ptr->IsInstance<MapObj>());
   auto* n = static_cast<const MapObj*>(ptr);
-  *rv = static_cast<int64_t>(n->size());
+  *rv     = static_cast<int64_t>(n->size());
 });
 
-MXNET_REGISTER_GLOBAL("container._MapGetItem")
-.set_body([] (MXNetArgs args, MXNetRetValue* rv) {
+MXNET_REGISTER_GLOBAL("container._MapGetItem").set_body([](MXNetArgs args, MXNetRetValue* rv) {
   CHECK_EQ(args[0].type_code(), kObjectHandle);
   Object* ptr = static_cast<Object*>(args[0].value().v_handle);
   CHECK(ptr->IsInstance<MapObj>());
@@ -107,11 +99,10 @@ MXNET_REGISTER_GLOBAL("container._MapGetItem")
   *rv = (*it).second;
 });
 
-MXNET_REGISTER_GLOBAL("container._MapItems")
-.set_body([] (MXNetArgs args, MXNetRetValue* rv) {
+MXNET_REGISTER_GLOBAL("container._MapItems").set_body([](MXNetArgs args, MXNetRetValue* rv) {
   CHECK_EQ(args[0].type_code(), kObjectHandle);
   Object* ptr = static_cast<Object*>(args[0].value().v_handle);
-  auto* n = static_cast<const MapObj*>(ptr);
+  auto* n     = static_cast<const MapObj*>(ptr);
   std::vector<ObjectRef> rkvs;
   for (const auto& kv : *n) {
     if (kv.first->IsInstance<StringObj>()) {
@@ -124,28 +115,25 @@ MXNET_REGISTER_GLOBAL("container._MapItems")
   *rv = ADT(0, rkvs.begin(), rkvs.end());
 });
 
-MXNET_REGISTER_GLOBAL("container._MapCount")
-.set_body([] (MXNetArgs args, MXNetRetValue* rv) {
+MXNET_REGISTER_GLOBAL("container._MapCount").set_body([](MXNetArgs args, MXNetRetValue* rv) {
   CHECK_EQ(args[0].type_code(), kObjectHandle);
   Object* ptr = static_cast<Object*>(args[0].value().v_handle);
   CHECK(ptr->IsInstance<MapObj>());
   const MapObj* n = static_cast<const MapObj*>(ptr);
-  auto key = String::CanConvertFrom(args[1]) ? args[1].operator String()
-                                             : args[1].operator ObjectRef();
+  auto key =
+      String::CanConvertFrom(args[1]) ? args[1].operator String() : args[1].operator ObjectRef();
   int64_t cnt = n->count(key);
-  *rv = cnt;
+  *rv         = cnt;
 });
 
-MXNET_REGISTER_GLOBAL("container._String")
-.set_body([] (MXNetArgs args, MXNetRetValue* rv) {
+MXNET_REGISTER_GLOBAL("container._String").set_body([](MXNetArgs args, MXNetRetValue* rv) {
   std::string str = args[0].operator std::string();
-  *rv = String(std::move(str));
+  *rv             = String(std::move(str));
 });
 
-MXNET_REGISTER_GLOBAL("container._GetFFIString")
-.set_body([] (MXNetArgs args, MXNetRetValue* rv) {
+MXNET_REGISTER_GLOBAL("container._GetFFIString").set_body([](MXNetArgs args, MXNetRetValue* rv) {
   String str = args[0].operator String();
-  *rv = std::string(str);
+  *rv        = std::string(str);
 });
 
 MXNET_REGISTER_OBJECT_TYPE(ADTObj);

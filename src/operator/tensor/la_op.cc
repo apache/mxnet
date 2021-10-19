@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file la_op.cc
  * \brief CPU implementation of Operators for advanced linear algebra.
  */
@@ -38,8 +37,8 @@ DMLC_REGISTER_PARAMETER(LaTrianParam);
 DMLC_REGISTER_PARAMETER(LaSyrkParam);
 
 NNVM_REGISTER_OP(_linalg_gemm)
-.add_alias("linalg_gemm")
-.describe(R"code(Performs general matrix multiplication and accumulation.
+    .add_alias("linalg_gemm")
+    .describe(R"code(Performs general matrix multiplication and accumulation.
 Input are tensors *A*, *B*, *C*, each of dimension *n >= 2* and having the same shape
 on the leading *n-2* dimensions.
 
@@ -87,36 +86,44 @@ Examples::
    gemm(A, B, C, transpose_b=True, alpha=2.0 , beta=10.0)
            = [[[104.0]], [[0.14]]]
 )code" ADD_FILELINE)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaMatrixMacParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A", "B", "C"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{2, 0}}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpGemmForward<cpu, 2, 2, 3, 1, gemm>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_gemm"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices")
-.add_argument("B", "NDArray-or-Symbol", "Tensor of input matrices")
-.add_argument("C", "NDArray-or-Symbol", "Tensor of input matrices")
-.add_arguments(LaMatrixMacParam::__FIELDS__());
+    .set_num_inputs(3)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaMatrixMacParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A", "B", "C"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{2, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", LaOpGemmForward<cpu, 2, 2, 3, 1, gemm>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_gemm"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices")
+    .add_argument("B", "NDArray-or-Symbol", "Tensor of input matrices")
+    .add_argument("C", "NDArray-or-Symbol", "Tensor of input matrices")
+    .add_arguments(LaMatrixMacParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_gemm)
-.set_num_inputs(4)
-.set_num_outputs(3)
-.set_attr_parser(ParamParser<LaMatrixMacParam>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{2, 1}, {3, 2}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpGemmBackward<cpu, 2, 2, 4, 3, gemm_backward>);
+    .set_num_inputs(4)
+    .set_num_outputs(3)
+    .set_attr_parser(ParamParser<LaMatrixMacParam>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{2, 1}, {3, 2}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpGemmBackward<cpu, 2, 2, 4, 3, gemm_backward>);
 
 NNVM_REGISTER_OP(_linalg_gemm2)
-.add_alias("linalg_gemm2")
-.describe(R"code(Performs general matrix multiplication.
+    .add_alias("linalg_gemm2")
+    .describe(R"code(Performs general matrix multiplication.
 Input are tensors *A*, *B*, each of dimension *n >= 2* and having the same shape
 on the leading *n-2* dimensions.
 
@@ -161,33 +168,39 @@ Examples::
    gemm2(A, B, transpose_b=True, alpha=2.0)
            = [[[4.0]], [[0.04 ]]]
 )code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaMatrixMultParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A", "B"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaOpGemmForward<cpu, 2, 2, 2, 1, gemm2>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_gemm2"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices")
-.add_argument("B", "NDArray-or-Symbol", "Tensor of input matrices")
-.add_arguments(LaMatrixMultParam::__FIELDS__());
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaMatrixMultParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A", "B"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpGemmForward<cpu, 2, 2, 2, 1, gemm2>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_gemm2"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices")
+    .add_argument("B", "NDArray-or-Symbol", "Tensor of input matrices")
+    .add_arguments(LaMatrixMultParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_gemm2)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr_parser(ParamParser<LaMatrixMultParam>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{2, 1}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpGemmBackward<cpu, 2, 2, 3, 2, gemm2_backward>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr_parser(ParamParser<LaMatrixMultParam>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{2, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpGemmBackward<cpu, 2, 2, 3, 2, gemm2_backward>);
 
 NNVM_REGISTER_OP(_linalg_potrf)
-.add_alias("linalg_potrf")
-.describe(R"code(Performs Cholesky factorization of a symmetric positive-definite matrix.
+    .add_alias("linalg_potrf")
+    .describe(R"code(Performs Cholesky factorization of a symmetric positive-definite matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, the Cholesky factor *B* of the symmetric, positive definite matrix *A* is
@@ -212,34 +225,41 @@ Examples::
    A = [[[4.0, 1.0], [1.0, 4.25]], [[16.0, 4.0], [4.0, 17.0]]]
    potrf(A) = [[[2.0, 0], [0.5, 2.0]], [[4.0, 0], [1.0, 4.0]]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaCholeskyParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{0, 0}}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, potrf>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_potrf"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be decomposed");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaCholeskyParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, potrf>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_potrf"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be decomposed");
 
 NNVM_REGISTER_OP(_backward_linalg_potrf)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaCholeskyParam>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{0, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, potrf_backward>);
-
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaCholeskyParam>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, potrf_backward>);
 
 NNVM_REGISTER_OP(_linalg_potri)
-.add_alias("linalg_potri")
-.describe(R"code(Performs matrix inversion from a Cholesky factorization.
+    .add_alias("linalg_potri")
+    .describe(R"code(Performs matrix inversion from a Cholesky factorization.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, *A* is a triangular matrix (entries of upper or lower triangle are all zero)
@@ -273,31 +293,37 @@ Examples::
    potri(A) = [[[0.26563, -0.0625], [-0.0625, 0.25]],
                [[0.06641, -0.01562], [-0.01562, 0,0625]]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaCholeskyParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{0, 0}}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, potri>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_linalg_potri"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of lower triangular matrices");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaCholeskyParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, potri>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_linalg_potri"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of lower triangular matrices");
 
 NNVM_REGISTER_OP(_backward_linalg_potri)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaCholeskyParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 3, 1, potri_backward>);
+    .set_num_inputs(3)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaCholeskyParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 3, 1, potri_backward>);
 
 NNVM_REGISTER_OP(_linalg_trmm)
-.add_alias("linalg_trmm")
-.describe(R"code(Performs multiplication with a lower triangular matrix.
+    .add_alias("linalg_trmm")
+    .describe(R"code(Performs multiplication with a lower triangular matrix.
 Input are tensors *A*, *B*, each of dimension *n >= 2* and having the same shape
 on the leading *n-2* dimensions.
 
@@ -331,35 +357,43 @@ Examples::
    trmm(A, B, alpha=2.0) = [[[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]],
                             [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0]]]
 )code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A", "B"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{1, 0}}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 2, 1, trmm>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_trmm"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of lower triangular matrices")
-.add_argument("B", "NDArray-or-Symbol", "Tensor of matrices")
-.add_arguments(LaTriangMatrixMultParam::__FIELDS__());
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A", "B"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{1, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 2, 1, trmm>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_trmm"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of lower triangular matrices")
+    .add_argument("B", "NDArray-or-Symbol", "Tensor of matrices")
+    .add_arguments(LaTriangMatrixMultParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_trmm)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{0, 1}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 3, 2, trmm_backward>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 3, 2, trmm_backward>);
 
 NNVM_REGISTER_OP(_linalg_trsm)
-.add_alias("linalg_trsm")
-.describe(R"code(Solves matrix equation involving a lower triangular matrix.
+    .add_alias("linalg_trsm")
+    .describe(R"code(Solves matrix equation involving a lower triangular matrix.
 Input are tensors *A*, *B*, each of dimension *n >= 2* and having the same shape
 on the leading *n-2* dimensions.
 
@@ -394,35 +428,43 @@ Examples::
    trsm(A, B, alpha=0.5) = [[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
                             [[2.0, 2.0, 2.0], [2.0, 2.0, 2.0]]]
 )code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A", "B"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{1, 0}}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 2, 1, trsm>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_linalg_trsm"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of lower triangular matrices")
-.add_argument("B", "NDArray-or-Symbol", "Tensor of matrices")
-.add_arguments(LaTriangMatrixMultParam::__FIELDS__());
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A", "B"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{1, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 2, 1, trsm>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_linalg_trsm"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of lower triangular matrices")
+    .add_argument("B", "NDArray-or-Symbol", "Tensor of matrices")
+    .add_arguments(LaTriangMatrixMultParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_trsm)
-.set_num_inputs(4)
-.set_num_outputs(2)
-.set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{0, 1}, {1, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 2, trsm_backward>);
+    .set_num_inputs(4)
+    .set_num_outputs(2)
+    .set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 1}, {1, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 2, trsm_backward>);
 
 NNVM_REGISTER_OP(_linalg_sumlogdiag)
-.add_alias("linalg_sumlogdiag")
-.describe(R"code(Computes the sum of the logarithms of the diagonal elements of a square matrix.
+    .add_alias("linalg_sumlogdiag")
+    .describe(R"code(Computes the sum of the logarithms of the diagonal elements of a square matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, *A* must be square with positive diagonal entries. We sum the natural
@@ -443,29 +485,35 @@ Examples::
    A = [[[1.0, 1.0], [1.0, 7.0]], [[3.0, 0], [0, 17.0]]]
    sumlogdiag(A) = [1.9459, 3.9318]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaReduceShape<2>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 0, 1, 1, sumlogdiag>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_sumlogdiag"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaReduceShape<2>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 0, 1, 1, sumlogdiag>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_sumlogdiag"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices");
 
 NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{1, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, sumlogdiag_backward>);
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{1, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, sumlogdiag_backward>);
 
 NNVM_REGISTER_OP(_linalg_extractdiag)
-.add_alias("linalg_extractdiag")
-.describe(R"code(Extracts the diagonal entries of a square matrix.
+    .add_alias("linalg_extractdiag")
+    .describe(R"code(Extracts the diagonal entries of a square matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, then *A* represents a single square matrix which diagonal elements get extracted as a 1-dimensional tensor.
@@ -493,30 +541,34 @@ Examples::
     extractdiag(A) = [[1.0, 4.0],
                       [5.0, 8.0]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaDiagParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<true, true>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 1, 1, 1, copydiag>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_extractdiag"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices")
-.add_arguments(LaDiagParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaDiagParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<true, true>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 1, 1, 1, copydiag>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_extractdiag"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices")
+    .add_arguments(LaDiagParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_extractdiag)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaDiagParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 1, 2, 1, 1, copydiag>);
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaDiagParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 1, 2, 1, 1, copydiag>);
 
 NNVM_REGISTER_OP(_linalg_makediag)
-.add_alias("linalg_makediag")
-.describe(R"code(Constructs a square matrix with the input as diagonal.
+    .add_alias("linalg_makediag")
+    .describe(R"code(Constructs a square matrix with the input as diagonal.
 Input is a tensor *A* of dimension *n >= 1*.
 
 If *n=1*, then *A* represents the diagonal entries of a single square matrix. This matrix will be returned as a 2-dimensional tensor.
@@ -545,30 +597,34 @@ Examples::
                    [[3.0, 0.0],
                     [0.0, 4.0]]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaDiagParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<true, false>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 1, 2, 1, 1, copydiag>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_makediag"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of diagonal entries")
-.add_arguments(LaDiagParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaDiagParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<true, false>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 1, 2, 1, 1, copydiag>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_makediag"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of diagonal entries")
+    .add_arguments(LaDiagParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_makediag)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaDiagParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 1, 1, 1, copydiag>);
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaDiagParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 1, 1, 1, copydiag>);
 
 NNVM_REGISTER_OP(_linalg_extracttrian)
-.add_alias("linalg_extracttrian")
-.describe(R"code(Extracts a triangular sub-matrix from a square matrix.
+    .add_alias("linalg_extracttrian")
+    .describe(R"code(Extracts a triangular sub-matrix from a square matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, then *A* represents a single square matrix from which a triangular sub-matrix is extracted as a 1-dimensional tensor.
@@ -603,30 +659,35 @@ Examples::
     extracttrian(A) = [[1.0, 3.0, 4.0],
                        [5.0, 7.0, 8.0]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaTrianParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<false, true>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 1, 1, 1, copytrian>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_extracttrian"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices")
-.add_arguments(LaTrianParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaTrianParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<false, true>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 1, 1, 1, copytrian>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_extracttrian"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices")
+    .add_arguments(LaTrianParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_extracttrian)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaTrianParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 1, 2, 1, 1, copytrian>);
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaTrianParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 1, 2, 1, 1, copytrian>);
 
 NNVM_REGISTER_OP(_linalg_maketrian)
-.add_alias("linalg_maketrian")
-.describe(R"code(Constructs a square matrix with the input representing a specific triangular sub-matrix.
+    .add_alias("linalg_maketrian")
+    .describe(
+        R"code(Constructs a square matrix with the input representing a specific triangular sub-matrix.
 This is basically the inverse of *linalg.extracttrian*. Input is a tensor *A* of dimension *n >= 1*.
 
 If *n=1*, then *A* represents the entries of a triangular matrix which is lower triangular if *offset<0* or *offset=0*, *lower=true*. The resulting matrix is derived by first constructing the square
@@ -671,30 +732,34 @@ Examples::
                                [0.0, 0.0, 6.0],
                                [0.0, 0.0, 0.0]]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaTrianParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<false, false>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 1, 2, 1, 1, copytrian>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_maketrian"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of triangular matrices stored as vectors")
-.add_arguments(LaTrianParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaTrianParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<false, false>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 1, 2, 1, 1, copytrian>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_maketrian"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of triangular matrices stored as vectors")
+    .add_arguments(LaTrianParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_maketrian)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaTrianParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 1, 1, 1, copytrian>);
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaTrianParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 1, 1, 1, copytrian>);
 
 NNVM_REGISTER_OP(_linalg_syrk)
-.add_alias("linalg_syrk")
-.describe(R"code(Multiplication of matrix with its transpose.
+    .add_alias("linalg_syrk")
+    .describe(R"code(Multiplication of matrix with its transpose.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, the operator performs the BLAS3 function *syrk*:
@@ -728,30 +793,34 @@ Examples::
    A = [[[1., 1.]], [[0.1, 0.1]]]
    syrk(A, alpha=2., transpose=False) = [[[4.]], [[0.04]]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaSyrkParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaSyrkShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, syrk>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_syrk"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices")
-.add_arguments(LaSyrkParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaSyrkParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaSyrkShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, syrk>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_syrk"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices")
+    .add_arguments(LaSyrkParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_linalg_syrk)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaSyrkParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, syrk_backward>);
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaSyrkParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, syrk_backward>);
 
 NNVM_REGISTER_OP(_linalg_gelqf)
-.add_alias("linalg_gelqf")
-.describe(R"code(LQ factorization for general matrix.
+    .add_alias("linalg_gelqf")
+    .describe(R"code(LQ factorization for general matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, we compute the LQ factorization (LAPACK *gelqf*, followed by *orglq*). *A*
@@ -796,33 +865,43 @@ Examples::
         [[-13.92838828, 0.],
          [-19.09768702, 0.52758934]]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaLQFactShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{0, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 2, gelqf>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_gelqf"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be factorized");
+    .set_num_inputs(1)
+    .set_num_outputs(2)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaLQFactShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 2, gelqf>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_gelqf"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be factorized");
 
 NNVM_REGISTER_OP(_backward_linalg_gelqf)
-.set_num_inputs(4)
-.set_num_outputs(1)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{0, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 1, gelqf_backward>);
+    .set_num_inputs(4)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 1, gelqf_backward>);
 
 NNVM_REGISTER_OP(_linalg_syevd)
-.describe(R"code(Eigendecomposition for symmetric matrix.
+    .describe(R"code(Eigendecomposition for symmetric matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, *A* must be symmetric, of shape *(x, x)*. We compute the eigendecomposition,
@@ -866,35 +945,45 @@ Examples::
    L = [[0., 5.],
         [0.17157288, 5.82842712]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", LaEigFactShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{0, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForwSyevd<cpu, syevd>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_syevd"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be factorized");
+    .set_num_inputs(1)
+    .set_num_outputs(2)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", LaEigFactShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForwSyevd<cpu, syevd>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_syevd"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be factorized");
 
 NNVM_REGISTER_OP(_backward_linalg_syevd)
-.set_num_inputs(4)
-.set_num_outputs(1)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{0, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackwSyevd<cpu, syevd_backward>);
+    .set_num_inputs(4)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackwSyevd<cpu, syevd_backward>);
 
 NNVM_REGISTER_OP(_linalg_inverse)
-.add_alias("linalg_inverse")
-.add_alias("_npi_inv")
-.describe(R"code(Compute the inverse of a matrix.
+    .add_alias("linalg_inverse")
+    .add_alias("_npi_inv")
+    .describe(R"code(Compute the inverse of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, *A* is a square matrix. We compute:
@@ -918,35 +1007,45 @@ Examples::
    inverse(A) = [[[-0.6, 0.8], [0.4, -0.2]],
                  [[-2., 1.5], [1., -0.5]]]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", InverseShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{0, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, inverse>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_inverse"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", InverseShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, inverse>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_inverse"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 NNVM_REGISTER_OP(_backward_linalg_inverse)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{0, 0}}; })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, inverse_backward>);
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, inverse_backward>);
 
 NNVM_REGISTER_OP(_linalg_det)
-.add_alias("linalg_det")
-.add_alias("_npi_det")
-.describe(R"code(Compute the determinant of a matrix.
+    .add_alias("linalg_det")
+    .add_alias("_npi_det")
+    .describe(R"code(Compute the determinant of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, *A* is a square matrix. We compute:
@@ -973,33 +1072,39 @@ Examples::
         [[2., 3.], [1., 4.]]]
    det(A) = [-5., 5.]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(3)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; })
-.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
-  return 1; })
-.set_attr<mxnet::FInferShape>("FInferShape", DetShape<1>)
-.set_attr<nnvm::FInferType>("FInferType", DetType<1>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, det>)
-.set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<1>{"_backward_linalg_det"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+    .set_num_inputs(1)
+    .set_num_outputs(3)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+                                        [](const NodeAttrs& attrs) { return 1; })
+    .set_attr<mxnet::FInferShape>("FInferShape", DetShape<1>)
+    .set_attr<nnvm::FInferType>("FInferType", DetType<1>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, det>)
+    .set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<1>{"_backward_linalg_det"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 NNVM_REGISTER_OP(_backward_linalg_det)
-.set_num_inputs(4)
-.set_num_outputs(1)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 1, det_backward>);
+    .set_num_inputs(4)
+    .set_num_outputs(1)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 1, det_backward>);
 
 NNVM_REGISTER_OP(_linalg_slogdet)
-.add_alias("linalg_slogdet")
-.add_alias("_npi_slogdet")
-.describe(R"code(Compute the sign and log of the determinant of a matrix.
+    .add_alias("linalg_slogdet")
+    .add_alias("_npi_slogdet")
+    .describe(R"code(Compute the sign and log of the determinant of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
 If *n=2*, *A* is a square matrix. We compute:
@@ -1032,27 +1137,33 @@ Examples::
    sign = [1., 0., -1.]
    logabsdet = [1.609438, -inf, 1.609438]
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(4)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; })
-.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
-  return 2; })
-.set_attr<mxnet::FInferShape>("FInferShape", DetShape<2>)
-.set_attr<nnvm::FInferType>("FInferType", DetType<2>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 2, slogdet>)
-.set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<2>{"_backward_linalg_slogdet"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+    .set_num_inputs(1)
+    .set_num_outputs(4)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+                                        [](const NodeAttrs& attrs) { return 2; })
+    .set_attr<mxnet::FInferShape>("FInferShape", DetShape<2>)
+    .set_attr<nnvm::FInferType>("FInferType", DetType<2>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 2, slogdet>)
+    .set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<2>{"_backward_linalg_slogdet"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 NNVM_REGISTER_OP(_backward_linalg_slogdet)
-.set_num_inputs(5)
-.set_num_outputs(1)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 2, slogdet_backward>);
+    .set_num_inputs(5)
+    .set_num_outputs(1)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 2, slogdet_backward>);
 
 }  // namespace op
 }  // namespace mxnet

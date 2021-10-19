@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_bernoulli_op.cu
  * \brief Operator for numpy sampling from bernoulli distributions
  */
@@ -28,8 +27,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_bernoulli)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBernoulliForward<gpu>);
+NNVM_REGISTER_OP(_npi_bernoulli).set_attr<FCompute>("FCompute<gpu>", NumpyBernoulliForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

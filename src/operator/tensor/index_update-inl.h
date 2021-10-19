@@ -20,7 +20,7 @@
 /*!
  * \file index_update-inl.h
  * \brief Function definition of index_update operator
-*/
+ */
 #ifndef MXNET_OPERATOR_TENSOR_INDEX_UPDATE_INL_H_
 #define MXNET_OPERATOR_TENSOR_INDEX_UPDATE_INL_H_
 
@@ -36,9 +36,10 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, typename DType>
-void IndexUpdateForwardCalc(mshadow::Stream<xpu> *s,
-                            const int ind_num, DType* out,
+template <typename xpu, typename DType>
+void IndexUpdateForwardCalc(mshadow::Stream<xpu>* s,
+                            const int ind_num,
+                            DType* out,
                             const DType* val,
                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_tail_shape,
                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_pre_stride,
@@ -46,10 +47,11 @@ void IndexUpdateForwardCalc(mshadow::Stream<xpu> *s,
                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_shape,
                             const int a_tail_size,
-                            const int ind_ndim, const int* ind,
+                            const int ind_ndim,
+                            const int* ind,
                             const int a_ndim);
 
-template<typename xpu>
+template <typename xpu>
 void IndexUpdateOpForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
@@ -59,20 +61,19 @@ void IndexUpdateOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob a = inputs[0];
-  TBlob ind = inputs[1];
-  TBlob val = inputs[2];
-  TBlob out = outputs[0];
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  const TBlob a  = inputs[0];
+  TBlob ind      = inputs[1];
+  TBlob val      = inputs[2];
+  TBlob out      = outputs[0];
   CHECK_GT(a.shape_.ndim(), 0) << "The first input is saclar, please use '=' instead.";
   int a_ndim = a.shape_.ndim();
   CHECK_LE(a_ndim, MXNET_SPECIAL_MAX_NDIM)
-    << "ndim should less than "<< MXNET_SPECIAL_MAX_NDIM
-    << "but get " << a_ndim <<"\n";
+      << "ndim should less than " << MXNET_SPECIAL_MAX_NDIM << "but get " << a_ndim << "\n";
   int val_ndim = val.shape_.ndim();
   if (val_ndim == 0) {
     val.shape_ = Shape1(1);
-    val_ndim = 1;
+    val_ndim   = 1;
   }
   // ind=np.array([]), ind.shape_.ndim() = 1
   // ind=np.array(1), ind.shape_.ndim() = 0
@@ -85,22 +86,22 @@ void IndexUpdateOpForward(const nnvm::NodeAttrs& attrs,
     ind.shape_ = Shape2(1, ind.shape_[0]);
   }
   int ind_ndim = ind.shape_[0];
-  int ind_num = ind.shape_[1];
+  int ind_num  = ind.shape_[1];
   CHECK_LE(ind_ndim, a_ndim) << "IndexError: too many indices for array.";
 
   // check 'val' broadcast legality
   CHECK_LE(val_ndim, a_ndim - ind_ndim + 1)
-    << "The ndim of param 'val' is " << val_ndim
-    << ", but it should less than or equal to " << a_ndim - ind_ndim + 1;
-  for (int i = a_ndim - 1, j = val_ndim - 1; j >= 0 ; --i, --j) {
+      << "The ndim of param 'val' is " << val_ndim << ", but it should less than or equal to "
+      << a_ndim - ind_ndim + 1;
+  for (int i = a_ndim - 1, j = val_ndim - 1; j >= 0; --i, --j) {
     if ((j == 0) && (val_ndim == a_ndim - ind_ndim + 1)) {
       // val_ndim == a_ndim - ind_ndim + 1, check the first dim of input 'val'
       CHECK(val.shape_[j] == ind_num || val.shape_[j] == 1)
-        << "can not broadcast from " << val.shape_[j] << " to " << ind_num;
+          << "can not broadcast from " << val.shape_[j] << " to " << ind_num;
     } else {
       CHECK(val.shape_[j] == a.shape_[i] || val.shape_[j] == 1)
-        << "can not broadcast from " << val.shape_[j] << " to " << a.shape_[i]
-        << " in axis " << i;
+          << "can not broadcast from " << val.shape_[j] << " to " << a.shape_[i] << " in axis "
+          << i;
     }
   }
   int a_tail_size = static_cast<int>(a.shape_.ProdShape(ind_ndim, a_ndim));
@@ -122,22 +123,28 @@ void IndexUpdateOpForward(const nnvm::NodeAttrs& attrs,
     val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
   }
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_pre_stride = calc_stride(a_pre_shape);
-  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride = calc_stride(val_shape);
+  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride   = calc_stride(val_shape);
   mxnet_op::copy(s, out, a);
-  TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int>
-                (Shape1(ind.shape_.Size()), s));
+  TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(ind.shape_.Size()), s));
   mxnet_op::copy(s, t_ind, ind);
   MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
-    IndexUpdateForwardCalc<xpu, DType>(s, ind_num,
-                                       out.dptr<DType>(), val.dptr<DType>(),
-                                       a_tail_shape, a_pre_stride,
-                                       val_stride, val_shape, a_shape,
-                                       a_tail_size, ind_ndim,
-                                       t_ind.dptr<int>(), a_ndim);
+    IndexUpdateForwardCalc<xpu, DType>(s,
+                                       ind_num,
+                                       out.dptr<DType>(),
+                                       val.dptr<DType>(),
+                                       a_tail_shape,
+                                       a_pre_stride,
+                                       val_stride,
+                                       val_shape,
+                                       a_shape,
+                                       a_tail_size,
+                                       ind_ndim,
+                                       t_ind.dptr<int>(),
+                                       a_ndim);
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 void IndexUpdateOpBackwardValImpl(const OpContext& ctx,
                                   const TBlob& grad_val,
                                   const TBlob& ograd,
@@ -146,10 +153,12 @@ void IndexUpdateOpBackwardValImpl(const OpContext& ctx,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
-                                  const int tail_size, const int ind_num, const int ind_ndim,
+                                  const int tail_size,
+                                  const int ind_num,
+                                  const int ind_ndim,
                                   const int ndim);
 
-template<typename xpu>
+template <typename xpu>
 inline void IndexUpdateOpBackwardVal(const nnvm::NodeAttrs& attrs,
                                      const OpContext& ctx,
                                      const std::vector<TBlob>& inputs,
@@ -162,19 +171,19 @@ inline void IndexUpdateOpBackwardVal(const nnvm::NodeAttrs& attrs,
   }
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  const TBlob& ograd = inputs[0];
-  TBlob ind = inputs[1];
-  const TBlob& grad_val = outputs[0];
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& ograd      = inputs[0];
+  TBlob ind               = inputs[1];
+  const TBlob& grad_val   = outputs[0];
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   // get the number of 'ind' index
   if (ind.shape_.ndim() == 0) {
     ind.shape_ = Shape2(1, 1);
   } else if (ind.shape_.ndim() == 1) {
     ind.shape_ = Shape2(1, ind.shape_[0]);
   }
-  int ind_ndim = ind.shape_[0];
-  int ind_num = ind.shape_[1];
-  int out_ndim = ograd.shape_.ndim();
+  int ind_ndim  = ind.shape_[0];
+  int ind_num   = ind.shape_[1];
+  int out_ndim  = ograd.shape_.ndim();
   int tail_size = static_cast<int>(ograd.shape_.ProdShape(ind_ndim, out_ndim));
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_shape, val_shape;
   for (int i = MXNET_SPECIAL_MAX_NDIM - 1, j = out_ndim - 1; i >= 0; --i, --j) {
@@ -182,8 +191,7 @@ inline void IndexUpdateOpBackwardVal(const nnvm::NodeAttrs& attrs,
   }
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_shape(ograd_shape);
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape(ograd_shape);
-  TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int>
-                (Shape1(ind.shape_.Size()), s));
+  TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(ind.shape_.Size()), s));
   mxnet_op::copy(s, t_ind, ind);
   int seg = MXNET_SPECIAL_MAX_NDIM - out_ndim;
   for (int i = seg; i < seg + ind_ndim; ++i) {
@@ -196,28 +204,41 @@ inline void IndexUpdateOpBackwardVal(const nnvm::NodeAttrs& attrs,
     val_shape[i] = (j >= 0) ? grad_val.shape_[j] : 1;
   }
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride = mxnet_op::calc_stride(ograd_pre_shape);
-  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride = mxnet_op::calc_stride(val_shape);
-  IndexUpdateOpBackwardValImpl<xpu>(ctx, grad_val, ograd, t_ind, ograd_tail_shape, ograd_pre_stride,
-                                    val_stride, val_shape, tail_size, ind_num, ind_ndim, out_ndim);
+  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride       = mxnet_op::calc_stride(val_shape);
+  IndexUpdateOpBackwardValImpl<xpu>(ctx,
+                                    grad_val,
+                                    ograd,
+                                    t_ind,
+                                    ograd_tail_shape,
+                                    ograd_pre_stride,
+                                    val_stride,
+                                    val_shape,
+                                    tail_size,
+                                    ind_num,
+                                    ind_ndim,
+                                    out_ndim);
 }
 
-template<typename DType>
+template <typename DType>
 struct ReqCopy {
   MSHADOW_XINLINE static void Map(size_t i, DType* dest, const DType* src, const int req) {
     KERNEL_ASSIGN(dest[i], req, src[i]);
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void IndexUpdateOpBackwardAImpl(const OpContext& ctx,
                                 const TBlob& grad_a,
                                 const TBlob& ograd,
                                 const TBlob& t_ind,
                                 const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> grada_pre_stride,
-                                const int tail_size, const int ind_num, const int ind_ndim,
-                                const int seg, const int req);
+                                const int tail_size,
+                                const int ind_num,
+                                const int ind_ndim,
+                                const int seg,
+                                const int req);
 
-template<typename xpu>
+template <typename xpu>
 inline void IndexUpdateOpBackwardA(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
                                    const std::vector<TBlob>& inputs,
@@ -230,19 +251,19 @@ inline void IndexUpdateOpBackwardA(const nnvm::NodeAttrs& attrs,
   }
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  TBlob ograd = inputs[0];
-  TBlob ind = inputs[1];
-  const TBlob& grad_a = outputs[0];
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  TBlob ograd             = inputs[0];
+  TBlob ind               = inputs[1];
+  const TBlob& grad_a     = outputs[0];
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   // get the number of 'ind' index
   if (ind.shape_.ndim() == 0) {
     ind.shape_ = Shape2(1, 1);
   } else if (ind.shape_.ndim() == 1) {
     ind.shape_ = Shape2(1, ind.shape_[0]);
   }
-  int ind_ndim = ind.shape_[0];
-  int ind_num = ind.shape_[1];
-  int out_ndim = ograd.shape_.ndim();
+  int ind_ndim  = ind.shape_[0];
+  int ind_num   = ind.shape_[1];
+  int out_ndim  = ograd.shape_.ndim();
   int tail_size = static_cast<int>(ograd.shape_.ProdShape(ind_ndim, out_ndim));
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> grada_shape;
   for (int i = MXNET_SPECIAL_MAX_NDIM - 1, j = out_ndim - 1; i >= 0; --i, --j) {
@@ -254,11 +275,11 @@ inline void IndexUpdateOpBackwardA(const nnvm::NodeAttrs& attrs,
     grada_pre_shape[i] = 1;
   }
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> grada_pre_stride = mxnet_op::calc_stride(grada_pre_shape);
-  IndexUpdateOpBackwardAImpl<xpu>(ctx, grad_a, ograd, ind, grada_pre_stride,
-                                  tail_size, ind_num, ind_ndim, seg, req[0]);
+  IndexUpdateOpBackwardAImpl<xpu>(
+      ctx, grad_a, ograd, ind, grada_pre_stride, tail_size, ind_num, ind_ndim, seg, req[0]);
 }
 
-}   // namespace op
-}   // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_TENSOR_INDEX_UPDATE_INL_H_

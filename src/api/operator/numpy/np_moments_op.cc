@@ -29,8 +29,7 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.std")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.std").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_std");
   op::NumpyMomentsParam param;
@@ -70,12 +69,12 @@ MXNET_REGISTER_API("_npi.std")
   SetAttrDict<op::NumpyMomentsParam>(&attrs);
 
   NDArray* inputs[] = {args[0].operator NDArray*()};
-  int num_inputs = 1;
+  int num_inputs    = 1;
 
   NDArray* outputs[] = {args[5].operator NDArray*()};
-  NDArray** out = (outputs[0] == nullptr) ? nullptr : outputs;
-  int num_outputs = (outputs[0] != nullptr);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
+  NDArray** out      = (outputs[0] == nullptr) ? nullptr : outputs;
+  int num_outputs    = (outputs[0] != nullptr);
+  auto ndoutputs     = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
 
   if (out) {
     *ret = PythonArg(5);
@@ -84,8 +83,7 @@ MXNET_REGISTER_API("_npi.std")
   }
 });
 
-MXNET_REGISTER_API("_npi.var")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.var").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_var");
   op::NumpyMomentsParam param;
@@ -125,12 +123,12 @@ MXNET_REGISTER_API("_npi.var")
   SetAttrDict<op::NumpyMomentsParam>(&attrs);
 
   NDArray* inputs[] = {args[0].operator NDArray*()};
-  int num_inputs = 1;
+  int num_inputs    = 1;
 
   NDArray* outputs[] = {args[5].operator NDArray*()};
-  NDArray** out = (outputs[0] == nullptr) ? nullptr : outputs;
-  int num_outputs = (outputs[0] != nullptr);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
+  NDArray** out      = (outputs[0] == nullptr) ? nullptr : outputs;
+  int num_outputs    = (outputs[0] != nullptr);
+  auto ndoutputs     = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
 
   if (out) {
     *ret = PythonArg(5);
@@ -140,70 +138,66 @@ MXNET_REGISTER_API("_npi.var")
 });
 
 MXNET_REGISTER_API("_npi.average")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_average");
-  op::NumpyWeightedAverageParam param;
-  nnvm::NodeAttrs attrs;
-  attrs.op = op;
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_average");
+      op::NumpyWeightedAverageParam param;
+      nnvm::NodeAttrs attrs;
+      attrs.op = op;
 
-  // parse axis
-  if (args[2].type_code() == kNull) {
-    param.axis = dmlc::nullopt;
-  } else {
-    if (args[2].type_code() == kDLInt) {
-      param.axis = Tuple<int>(1, args[2].operator int64_t());
-    } else {
-      param.axis = Tuple<int>(args[2].operator ObjectRef());
-    }
-  }
-
-  // parse returned
-  CHECK_NE(args[3].type_code(), kNull)
-    << "returned cannot be None";
-  param.returned = args[3].operator bool();
-
-  // parse weighted
-  CHECK_NE(args[4].type_code(), kNull)
-    << "weighted cannot be None";
-  param.weighted = args[4].operator bool();
-
-  attrs.parsed = param;
-
-  SetAttrDict<op::NumpyWeightedAverageParam>(&attrs);
-
-  int num_inputs = param.weighted ? 2 : 1;
-  NDArray* outputs[] = {args[5].operator NDArray*()};
-  NDArray** out = (outputs[0] == nullptr) ? nullptr : outputs;
-  int num_outputs = (outputs[0] != nullptr);
-
-  if (param.weighted) {
-    NDArray* inputs[] = {args[0].operator NDArray*(), args[1].operator NDArray*()};
-    auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
-    if (out) {
-      *ret = PythonArg(5);
-    } else {
-      if (param.returned) {
-        *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
-                       NDArrayHandle(ndoutputs[1])});
+      // parse axis
+      if (args[2].type_code() == kNull) {
+        param.axis = dmlc::nullopt;
       } else {
-        *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+        if (args[2].type_code() == kDLInt) {
+          param.axis = Tuple<int>(1, args[2].operator int64_t());
+        } else {
+          param.axis = Tuple<int>(args[2].operator ObjectRef());
+        }
       }
-    }
-  } else {
-    NDArray* inputs[] = {args[0].operator NDArray*()};
-    auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
-    if (out) {
-      *ret = PythonArg(5);
-    } else {
-      if (param.returned) {
-        *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
-                       NDArrayHandle(ndoutputs[1])});
+
+      // parse returned
+      CHECK_NE(args[3].type_code(), kNull) << "returned cannot be None";
+      param.returned = args[3].operator bool();
+
+      // parse weighted
+      CHECK_NE(args[4].type_code(), kNull) << "weighted cannot be None";
+      param.weighted = args[4].operator bool();
+
+      attrs.parsed = param;
+
+      SetAttrDict<op::NumpyWeightedAverageParam>(&attrs);
+
+      int num_inputs     = param.weighted ? 2 : 1;
+      NDArray* outputs[] = {args[5].operator NDArray*()};
+      NDArray** out      = (outputs[0] == nullptr) ? nullptr : outputs;
+      int num_outputs    = (outputs[0] != nullptr);
+
+      if (param.weighted) {
+        NDArray* inputs[] = {args[0].operator NDArray*(), args[1].operator NDArray*()};
+        auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
+        if (out) {
+          *ret = PythonArg(5);
+        } else {
+          if (param.returned) {
+            *ret = ADT(0, {NDArrayHandle(ndoutputs[0]), NDArrayHandle(ndoutputs[1])});
+          } else {
+            *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+          }
+        }
       } else {
-        *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+        NDArray* inputs[] = {args[0].operator NDArray*()};
+        auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
+        if (out) {
+          *ret = PythonArg(5);
+        } else {
+          if (param.returned) {
+            *ret = ADT(0, {NDArrayHandle(ndoutputs[0]), NDArrayHandle(ndoutputs[1])});
+          } else {
+            *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+          }
+        }
       }
-    }
-  }
-});
+    });
 
 };  // namespace mxnet
