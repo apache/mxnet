@@ -35,7 +35,7 @@ def test_sync_push_pull():
         nrepeat = 10
         # checks pull after push in loop, because behavior during
         # consecutive pushes doesn't offer any guarantees
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             kv.push(key, mx.nd.ones(shape, dtype='float32') * (my_rank+1))
             val = mx.nd.zeros(shape, dtype='float32')
             kv.pull(key, out=val)

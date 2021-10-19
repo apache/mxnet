@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_activation.cu
  * \brief
  * \author Junyuan Xie, Da Zheng
-*/
+ */
 #include "./softmax_activation-inl.h"
 #include "../mshadow_op.h"
 #if MXNET_USE_CUDNN == 1
@@ -34,7 +33,7 @@ namespace op {
 
 #if MXNET_USE_CUDNN == 1
 
-static inline CuDNNSoftmaxActivationOp &GetCuDNNSoftmaxActOp(const SoftmaxActivationParam& param) {
+static inline CuDNNSoftmaxActivationOp& GetCuDNNSoftmaxActOp(const SoftmaxActivationParam& param) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local CuDNNSoftmaxActivationOp op;
 #else
@@ -44,7 +43,7 @@ static inline CuDNNSoftmaxActivationOp &GetCuDNNSoftmaxActOp(const SoftmaxActiva
   return op;
 }
 
-template<>
+template <>
 void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
                                    const std::vector<TBlob>& inputs,
@@ -56,7 +55,7 @@ void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
   GetCuDNNSoftmaxActOp(param).Forward(ctx, inputs[0], req[0], outputs[0]);
 }
 
-template<>
+template <>
 void SoftmaxActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                        const OpContext& ctx,
                                        const std::vector<TBlob>& inputs,
@@ -71,11 +70,10 @@ void SoftmaxActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 #endif
 
 NNVM_REGISTER_OP(SoftmaxActivation)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxActivationCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", SoftmaxActivationCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_SoftmaxActivation)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxActivationGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", SoftmaxActivationGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-

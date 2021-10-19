@@ -313,7 +313,7 @@ def test_simple_bind_gradient_graph_possible_with_cycle():
 def test_children_same_name():
     a = mx.sym.Variable('data')
     b = a + a
-    for c in b.get_children():
+    for _ in b.get_children():
         pass
 
 def test_transpose_nullop():

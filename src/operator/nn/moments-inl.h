@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file moments-inl.h
  * \brief Moments operator
  * \author Hao Jin
-*/
+ */
 
 #ifndef MXNET_OPERATOR_NN_MOMENTS_INL_H_
 #define MXNET_OPERATOR_NN_MOMENTS_INL_H_
@@ -37,10 +36,11 @@ struct MomentsParam : public dmlc::Parameter<MomentsParam> {
   dmlc::optional<mxnet::TShape> axes;
   bool keepdims;
   DMLC_DECLARE_PARAMETER(MomentsParam) {
-    DMLC_DECLARE_FIELD(axes).set_default(dmlc::optional<mxnet::TShape>())
-      .describe("Array of ints. Axes along which to compute mean and variance.");
-    DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("produce moments with the same dimensionality as the input.");
+    DMLC_DECLARE_FIELD(axes)
+        .set_default(dmlc::optional<mxnet::TShape>())
+        .describe("Array of ints. Axes along which to compute mean and variance.");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false).describe(
+        "produce moments with the same dimensionality as the input.");
   }
 };
 
@@ -51,8 +51,7 @@ inline bool MomentsShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 2U);
 
-  mxnet::TShape out_shape =
-    ReduceAxesShapeImpl((*in_attrs)[0], param.axes, param.keepdims, false);
+  mxnet::TShape out_shape = ReduceAxesShapeImpl((*in_attrs)[0], param.axes, param.keepdims, false);
   if (!param.axes.has_value() || param.axes.value().ndim() == 0) {
     LOG(FATAL) << "Empty axes is not supported, if you would like to do global moments, "
                << "please pass all axes to axes argument";
@@ -76,15 +75,15 @@ inline bool MomentsType(const nnvm::NodeAttrs& attrs,
 }
 
 struct VarBroadcastKernel {
-  template<typename DType>
+  template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i,
-                                  DType *out,
-                                  const DType *data,
-                                  const DType *mean,
+                                  DType* out,
+                                  const DType* data,
+                                  const DType* mean,
                                   mshadow::Shape<6> data_shape,
                                   mshadow::Shape<6> mean_shape) {
-    index_t data_idx = i;
-    index_t mean_idx = i;
+    index_t data_idx    = i;
+    index_t mean_idx    = i;
     index_t data_stride = 1;
     index_t mean_stride = 1;
     for (int axis = 5; axis >= 0; --axis) {
@@ -98,11 +97,11 @@ struct VarBroadcastKernel {
       mean_stride *= mean_shape[axis];
     }
     DType res = (data[i] - mean[mean_idx]);
-    out[i] = res * res;
+    out[i]    = res * res;
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 inline void MomentsForwardImpl(const OpContext& ctx,
                                const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
@@ -113,11 +112,11 @@ inline void MomentsForwardImpl(const OpContext& ctx,
   using namespace mshadow_op;
   using namespace mxnet_op;
 
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
 
   const TBlob& data = inputs[0];
   const TBlob& mean = outputs[0];
-  const TBlob& var = outputs[1];
+  const TBlob& var  = outputs[1];
 
   mxnet::TShape small;
   if (keepdims) {
@@ -139,21 +138,27 @@ inline void MomentsForwardImpl(const OpContext& ctx,
       mean_shape[i] = (i < small.ndim()) ? small[i] : 1;
     }
     Tensor<xpu, 1, DType> temp_data =
-      ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(data.shape_.Size()), s);;
-    Kernel<VarBroadcastKernel, xpu>::Launch(s, data.shape_.Size(), temp_data.dptr_,
-      data.dptr<DType>(), mean.dptr<DType>(), data_shape, mean_shape);
+        ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(data.shape_.Size()), s);
+
+    Kernel<VarBroadcastKernel, xpu>::Launch(s,
+                                            data.shape_.Size(),
+                                            temp_data.dptr_,
+                                            data.dptr<DType>(),
+                                            mean.dptr<DType>(),
+                                            data_shape,
+                                            mean_shape);
     temp = TBlob(temp_data);
   });
 #if !defined(__CUDACC__)
   ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, true>(
-    ctx, {temp.reshape(data.shape_)}, {kWriteTo}, {var}, small);
+      ctx, {temp.reshape(data.shape_)}, {kWriteTo}, {var}, small);
 #else
-  ReduceAxesRTCComputeImpl(ctx, {temp.reshape(data.shape_)},
-                           {kWriteTo}, {var}, small, "red::sum{}", nullptr, true);
+  ReduceAxesRTCComputeImpl(
+      ctx, {temp.reshape(data.shape_)}, {kWriteTo}, {var}, small, "red::sum{}", nullptr, true);
 #endif
 }
 
-template<typename xpu>
+template <typename xpu>
 inline void MomentsForward(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
@@ -171,20 +176,20 @@ inline void MomentsForward(const nnvm::NodeAttrs& attrs,
   MomentsForwardImpl<xpu>(ctx, inputs, req, outputs, param.axes, param.keepdims);
 }
 
-template<int req>
+template <int req>
 struct VarBackwardKernel {
-  template<typename DType>
+  template <typename DType>
   MSHADOW_XINLINE static void Map(int i,
-                                  DType *igrad,
-                                  const DType *ograd,
-                                  const DType *data,
-                                  const DType *mean,
+                                  DType* igrad,
+                                  const DType* ograd,
+                                  const DType* data,
+                                  const DType* mean,
                                   mshadow::Shape<6> data_shape,
                                   mshadow::Shape<6> mean_shape,
                                   const float N,
                                   const float ddof = 0.0f) {
-    size_t data_idx = i;
-    size_t mean_idx = i;
+    size_t data_idx    = i;
+    size_t mean_idx    = i;
     size_t data_stride = 1;
     size_t mean_stride = 1;
     for (int axis = 5; axis >= 0; --axis) {
@@ -201,7 +206,7 @@ struct VarBackwardKernel {
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 inline void MomentsBackwardImpl(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<TBlob>& inputs,
@@ -213,36 +218,42 @@ inline void MomentsBackwardImpl(const nnvm::NodeAttrs& attrs,
   using namespace mshadow_op;
   using namespace mxnet_op;
 
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
 
   const TBlob& mean_grad = inputs[0];
-  const TBlob& var_grad = inputs[1];
-  const TBlob& data = inputs[2];
-  const TBlob& mean = inputs[3];
-  const TBlob& var = inputs[4];
+  const TBlob& var_grad  = inputs[1];
+  const TBlob& data      = inputs[2];
+  const TBlob& mean      = inputs[3];
+  const TBlob& var       = inputs[4];
   const TBlob& data_grad = outputs[0];
 
   mxnet::TShape small = ReduceAxesShapeImpl(data.shape_, axes, true, false);
   BroadcastComputeImpl<xpu>(attrs, ctx, {mean_grad}, req, outputs, small);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
-    igrad /= scalar<DType>(outputs[0].Size()/inputs[0].Size());
+    igrad /= scalar<DType>(outputs[0].Size() / inputs[0].Size());
   });
 
   Shape<6> data_shape, var_shape;
   float N = data_grad.Size() / var.Size();
   for (int i = 0; i < 6; ++i) {
     data_shape[i] = (i < data.shape_.ndim()) ? data.shape_[i] : 1;
-    var_shape[i] = (i < small.ndim()) ? small[i] : 1;
+    var_shape[i]  = (i < small.ndim()) ? small[i] : 1;
   }
   MSHADOW_TYPE_SWITCH(data_grad.type_flag_, DType, {
-    Kernel<VarBackwardKernel<kAddTo>, xpu>::Launch(
-      s, data_grad.shape_.Size(), data_grad.dptr<DType>(), var_grad.dptr<DType>(),
-      data.dptr<DType>(), mean.dptr<DType>(), data_shape, var_shape, N);
+    Kernel<VarBackwardKernel<kAddTo>, xpu>::Launch(s,
+                                                   data_grad.shape_.Size(),
+                                                   data_grad.dptr<DType>(),
+                                                   var_grad.dptr<DType>(),
+                                                   data.dptr<DType>(),
+                                                   mean.dptr<DType>(),
+                                                   data_shape,
+                                                   var_shape,
+                                                   N);
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 inline void MomentsBackward(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const std::vector<TBlob>& inputs,

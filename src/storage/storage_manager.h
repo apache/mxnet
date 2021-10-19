@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file storage_manager.h
  * \brief Storage manager.
  */
@@ -53,12 +52,12 @@ class StorageManager {
    */
   virtual void DirectFree(Storage::Handle handle) = 0;
   /*!
-  * \brief Release all memory if using a pool storage manager
-  *
-  * This release all memory from pool storage managers such as
-  * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
-  * For non-pool memory managers this has no effect.
-  */
+   * \brief Release all memory if using a pool storage manager
+   *
+   * This release all memory from pool storage managers such as
+   * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
+   * For non-pool memory managers this has no effect.
+   */
   virtual void ReleaseAll() {}
   /*!
    * \brief Destructor.

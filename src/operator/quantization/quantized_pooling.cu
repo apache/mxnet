@@ -18,9 +18,8 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_pooling.cu
-*/
+ */
 #include <mxnet/operator_util.h>
 #include <vector>
 #include "../nn/pooling-inl.h"
@@ -31,7 +30,7 @@ namespace op {
 
 #if MXNET_USE_CUDNN == 1 && CUDA_VERSION >= 8000
 STATIC_ASSERT_CUDNN_VERSION_GE(6000);
-template<typename DType>
+template <typename DType>
 class QuantizedCuDNNPoolingOp {
  public:
   QuantizedCuDNNPoolingOp() {
@@ -51,20 +50,10 @@ class QuantizedCuDNNPoolingOp {
     } else {
       LOG(FATAL) << "QuantizedCuDNNPoolingOp only supports pool_type=max/avg";
     }
-    CUDNN_CALL(cudnnSetTensor4dDescriptor(in_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype,
-                                          dshape[N],
-                                          dshape[C],
-                                          dshape[H],
-                                          dshape[W]));
-    CUDNN_CALL(cudnnSetTensor4dDescriptor(out_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype,
-                                          oshape[N],
-                                          oshape[C],
-                                          oshape[H],
-                                          oshape[W]));
+    CUDNN_CALL(cudnnSetTensor4dDescriptor(
+        in_desc_, CUDNN_TENSOR_NCHW, dtype, dshape[N], dshape[C], dshape[H], dshape[W]));
+    CUDNN_CALL(cudnnSetTensor4dDescriptor(
+        out_desc_, CUDNN_TENSOR_NCHW, dtype, oshape[N], oshape[C], oshape[H], oshape[W]));
     CUDNN_CALL(cudnnSetPooling2dDescriptor(pool_desc_,
                                            mode_,
                                            CUDNN_NOT_PROPAGATE_NAN,
@@ -73,7 +62,7 @@ class QuantizedCuDNNPoolingOp {
                                            param.pad[0],
                                            param.pad[1],
                                            param.global_pool ? 1 : param.stride[0],
-                                           param.global_pool ? 1 :param.stride[1]));
+                                           param.global_pool ? 1 : param.stride[1]));
   }
 
   ~QuantizedCuDNNPoolingOp() {
@@ -83,9 +72,9 @@ class QuantizedCuDNNPoolingOp {
   }
 
   void Forward(mshadow::Stream<gpu>* s,
-               const std::vector<TBlob> &inputs,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &outputs) {
+               const std::vector<TBlob>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& outputs) {
     CHECK_EQ(inputs.size(), 3U);
     CHECK_EQ(outputs.size(), 3U);
     using namespace mshadow;
@@ -104,10 +93,8 @@ class QuantizedCuDNNPoolingOp {
 
     Tensor<gpu, 1, float> omin_range = outputs[1].FlatTo1D<gpu, float>(s);
     Tensor<gpu, 1, float> omax_range = outputs[2].FlatTo1D<gpu, float>(s);
-    ASSIGN_DISPATCH(omin_range, req[1],
-      F<mshadow_op::identity>(inputs[1].FlatTo1D<gpu, float>(s)));
-    ASSIGN_DISPATCH(omax_range, req[2],
-      F<mshadow_op::identity>(inputs[2].FlatTo1D<gpu, float>(s)));
+    ASSIGN_DISPATCH(omin_range, req[1], F<mshadow_op::identity>(inputs[1].FlatTo1D<gpu, float>(s)));
+    ASSIGN_DISPATCH(omax_range, req[2], F<mshadow_op::identity>(inputs[2].FlatTo1D<gpu, float>(s)));
   }
 
  private:
@@ -115,7 +102,7 @@ class QuantizedCuDNNPoolingOp {
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
   cudnnPoolingDescriptor_t pool_desc_;
-};  // class QuantizedCuDNNPoolingOp
+};      // class QuantizedCuDNNPoolingOp
 #endif  // MXNET_USE_CUDNN == 1 && CUDA_VERSION >= 8000
 
 void QuantizedPoolingForwardGPU(const nnvm::NodeAttrs& attrs,
@@ -125,7 +112,7 @@ void QuantizedPoolingForwardGPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<TBlob>& outputs) {
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(param.kernel.ndim(), 2U)
-    << "QuantizedPoolingForward<gpu> only supports 2D convolution for now";
+      << "QuantizedPoolingForward<gpu> only supports 2D convolution for now";
 #if MXNET_USE_CUDNN == 1 && CUDA_VERSION >= 8000
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local QuantizedCuDNNPoolingOp<int8_t> op;
@@ -141,7 +128,7 @@ void QuantizedPoolingForwardGPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_pooling)
-.set_attr<FCompute>("FCompute<gpu>", QuantizedPoolingForwardGPU);
+    .set_attr<FCompute>("FCompute<gpu>", QuantizedPoolingForwardGPU);
 
 }  // namespace op
 }  // namespace mxnet

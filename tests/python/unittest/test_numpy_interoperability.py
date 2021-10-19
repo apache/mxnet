@@ -25,7 +25,7 @@ import itertools
 import numpy as _np
 import unittest
 import pytest
-from mxnet import np
+from mxnet import np, util
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
@@ -421,7 +421,7 @@ def _add_workload_swapaxes():
     # assertRaises(np.AxisError, np.swapaxes, -5, 0)
     for i in range(-4, 4):
         for j in range(-4, 4):
-            for k, src in enumerate((a, b)):
+            for src in (a, b):
                 OpArgMngr.add_workload('swapaxes', src, i, j)
 
 
@@ -448,7 +448,7 @@ def _add_workload_tile():
     shape = [(3,), (2, 3), (3, 4, 3), (3, 2, 3), (4, 3, 2, 4), (2, 2)]
     for s in shape:
         b = np.random.randint(0, 10, size=s)
-        for r in reps:
+        for _ in reps:
             # RuntimeError to be tracked
             # where s = (3, 4, 3), r = (2, 3, 2)
             # OpArgMngr.add_workload('tile', b, r)
@@ -3341,7 +3341,11 @@ def test_np_array_function_protocol():
 @with_array_ufunc_protocol
 @pytest.mark.serial
 def test_np_array_ufunc_protocol():
-    check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+    prev_state = util.set_flush_denorms(False)
+    try:
+        check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+    finally:
+        util.set_flush_denorms(prev_state)
 
 
 @use_np

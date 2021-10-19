@@ -32,7 +32,7 @@ namespace mxnet {
  * \brief iterator type
  * \param DType data type
  */
-template<typename DType>
+template <typename DType>
 class SparseIIterator : public IIterator<DType> {
  public:
   /*! \brief storage type of the data or label */

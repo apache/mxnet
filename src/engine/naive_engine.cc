@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file naive_engine.cc
  * \brief Implementation of NaiveEngine
  */
@@ -40,14 +39,12 @@ namespace engine {
  * \brief var used in Naive Engine for tracking the version
  * of the objects it is associated with.
  */
-class NaiveVar final
-    : public Var, public common::ObjectPoolAllocatable<NaiveVar> {
+class NaiveVar final : public Var, public common::ObjectPoolAllocatable<NaiveVar> {
  public:
   inline static NaiveVar* CastFromBase(Var* ptr) {
     return ptr->Cast<NaiveVar>();
   }
 };  // class NaiveVar
-
 
 // implement naive engine
 class NaiveEngine final : public Engine {
@@ -87,11 +84,9 @@ class NaiveEngine final : public Engine {
   ~NaiveEngine() override = default;
 #endif
 
-  void Stop() override {
-  }
+  void Stop() override {}
 
-  void Start() override {
-  }
+  void Start() override {}
 
   // new variables
   VarHandle NewVariable() override {
@@ -101,86 +96,84 @@ class NaiveEngine final : public Engine {
   OprHandle NewOperator(AsyncFn fn,
                         std::vector<VarHandle> const& const_vars,
                         std::vector<VarHandle> const& mutable_vars,
-                        FnProperty prop = FnProperty::kNormal,
+                        FnProperty prop      = FnProperty::kNormal,
                         const char* opr_name = nullptr,
-                        bool wait = false) override {
-    NaiveOpr *opr = new NaiveOpr();
-    opr->fn = fn;
-    opr->const_vars = const_vars;
+                        bool wait            = false) override {
+    NaiveOpr* opr     = new NaiveOpr();
+    opr->fn           = fn;
+    opr->const_vars   = const_vars;
     opr->mutable_vars = mutable_vars;
-    opr->prop = prop;
-    opr->opr_name = opr_name ? std::string(opr_name) : std::string();
+    opr->prop         = prop;
+    opr->opr_name     = opr_name ? std::string(opr_name) : std::string();
     return opr;
   }
 
   void DeleteOperator(OprHandle op) override {
-    NaiveOpr *opr = op->Cast<NaiveOpr>();
+    NaiveOpr* opr = op->Cast<NaiveOpr>();
     delete opr;
   }
 
   void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override {
-    profiler::Profiler *profiler = profiler::Profiler::Get();
-    NaiveOpr *opr = op->Cast<NaiveOpr>();
+    profiler::Profiler* profiler = profiler::Profiler::Get();
+    NaiveOpr* opr                = op->Cast<NaiveOpr>();
     opr->profiling = profiling && profiler->IsProfiling(profiler::Profiler::kSymbolic);
-    this->PushAsync([&](RunContext ctx, CallbackOnComplete on_complete) {
-        if (opr->profiling) {
-          std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
-          if (profiler->AggregateEnabled()) {
-            attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
+    this->PushAsync(
+        [&](RunContext ctx, CallbackOnComplete on_complete) {
+          if (opr->profiling) {
+            std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
+            if (profiler->AggregateEnabled()) {
+              attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
+            }
+            opr->opr_profile =
+                std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(), attrs.release());
+            opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
           }
-          opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(),
-                                                               attrs.release());
-          opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
-        }
-        opr->fn(ctx, on_complete);
-        if (opr->profiling) {
-          opr->opr_profile->stop();
-        }
-      },
-      exec_ctx,
-      opr->const_vars,
-      opr->mutable_vars,
-      opr->prop,
-      priority,
-      opr->opr_name.c_str());
+          opr->fn(ctx, on_complete);
+          if (opr->profiling) {
+            opr->opr_profile->stop();
+          }
+        },
+        exec_ctx,
+        opr->const_vars,
+        opr->mutable_vars,
+        opr->prop,
+        priority,
+        opr->opr_name.c_str());
   }
 
-/*!
- * \brief NaiveEngine's PushAsync was intentionally synchronous.
- * User should not make any assumption about execution order when using async interface of any engine.
- */
+  /*!
+   * \brief NaiveEngine's PushAsync was intentionally synchronous.
+   * User should not make any assumption about execution order when using async interface of any
+   * engine.
+   */
   void PushAsync(AsyncFn exec_fun,
                  Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
-                 FnProperty prop = FnProperty::kNormal,
-                 int priority = 0,
+                 FnProperty prop      = FnProperty::kNormal,
+                 int priority         = 0,
                  const char* opr_name = nullptr,
-                 bool wait = false) override {
+                 bool wait            = false) override {
     std::promise<void> promise;
-    std::future<void> future = promise.get_future();
-    CallbackOnComplete callback = CreateCallback(
-        NaiveEngine::OnComplete, &promise);
-    profiler::Profiler *profiler = profiler::Profiler::Get();
-    auto opr_deleter = [this](NaiveOpr* p) {
-      this->DeleteOperator(p);
-    };
+    std::future<void> future     = promise.get_future();
+    CallbackOnComplete callback  = CreateCallback(NaiveEngine::OnComplete, &promise);
+    profiler::Profiler* profiler = profiler::Profiler::Get();
+    auto opr_deleter             = [this](NaiveOpr* p) { this->DeleteOperator(p); };
     std::unique_ptr<NaiveOpr, decltype(opr_deleter)> opr(nullptr, opr_deleter);
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
     // GenerateDisplayName() will return a pointer to the correct name of the operator
-    const char* display_name = profiling ?
-                               profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) :
-                               opr_name;
+    const char* display_name =
+        profiling ? profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) : opr_name;
     if (profiling) {
-      opr.reset(NewOperator(exec_fun, const_vars, mutable_vars,
-                        prop, display_name)->Cast<NaiveOpr>());
+      opr.reset(
+          NewOperator(exec_fun, const_vars, mutable_vars, prop, display_name)->Cast<NaiveOpr>());
       opr->profiling = profiling;
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler->AggregateEnabled()) {
         attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
       }
-      opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(),
-                                                                     attrs.release());
+      opr->opr_profile =
+          std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(), attrs.release());
       opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
     }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
@@ -193,7 +186,7 @@ class NaiveEngine final : public Engine {
         aux_streams_.resize(dev_id + 1, nullptr);
       }
       if (streams_[dev_id] == nullptr) {
-        streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
+        streams_[dev_id]     = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
         aux_streams_[dev_id] = new GPUAuxStream(streams_[dev_id]);
       }
       exec_fun(RunContext{exec_ctx, streams_[dev_id], aux_streams_[dev_id], false}, callback);
@@ -215,21 +208,25 @@ class NaiveEngine final : public Engine {
 
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
     NaiveVar* naive_var = NaiveVar::CastFromBase(var);
-    this->PushAsync([delete_fn, naive_var](RunContext ctx, CallbackOnComplete on_complete) mutable {
-        delete_fn(ctx);
-        NaiveVar::Delete(naive_var);
-        on_complete();
-      }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0, "DeleteVariable");
+    this->PushAsync(
+        [delete_fn, naive_var](RunContext ctx, CallbackOnComplete on_complete) mutable {
+          delete_fn(ctx);
+          NaiveVar::Delete(naive_var);
+          on_complete();
+        },
+        exec_ctx,
+        {},
+        {var},
+        FnProperty::kDeleteVar,
+        0,
+        "DeleteVariable");
   }
 
-  void WaitForVar(VarHandle var) override {
-  }
+  void WaitForVar(VarHandle var) override {}
 
-  void WaitForAll() override {
-  }
+  void WaitForAll() override {}
 
-  void Throw(VarHandle var) override {
-  }
+  void Throw(VarHandle var) override {}
 
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
@@ -237,8 +234,7 @@ class NaiveEngine final : public Engine {
 
  private:
   // callback to oncomplete
-  static void OnComplete(Engine *engine, void *param,
-                         const dmlc::Error* error) {
+  static void OnComplete(Engine* engine, void* param, const dmlc::Error* error) {
     static_cast<std::promise<void>*>(param)->set_value();
   }
   /*! \brief whether it is during shutdown phase*/
@@ -251,16 +247,17 @@ class NaiveEngine final : public Engine {
   // GPU auxiliary streams
   std::vector<GPUAuxStream*> aux_streams_;
 #endif
-/*!
- * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
- * See also #309 (https://github.com/dmlc/mxnet/issues/309) and similar fix in threaded_engine.h.
- * Without this, segfaults seen on CentOS7 in test_operator_gpu.py:test_convolution_multiple_streams
- */
+  /*!
+   * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
+   * See also #309 (https://github.com/apache/mxnet/issues/309) and similar fix in threaded_engine.h.
+   * Without this, segfaults seen on CentOS7 in
+   * test_operator_gpu.py:test_convolution_multiple_streams
+   */
   std::shared_ptr<common::ObjectPool<NaiveOpr> > objpool_opr_ref_;
   std::shared_ptr<common::ObjectPool<NaiveVar> > objpool_var_ref_;
 };  // class NaiveEngine
 
-Engine *CreateNaiveEngine() {
+Engine* CreateNaiveEngine() {
   return new NaiveEngine();
 }
 

@@ -28,7 +28,7 @@ def test_bulk():
         x.wait_to_read()
         x += 1
         assert (x.asnumpy() == 4).all()
-        for i in range(100):
+        for _ in range(100):
             x += 1
     assert (x.asnumpy() == 104).all()
 

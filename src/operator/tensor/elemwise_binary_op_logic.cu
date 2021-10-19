@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_op_logic.cu
  * \brief GPU Implementation of unary function.
  */
@@ -26,32 +25,29 @@
 
 namespace mxnet {
 namespace op {
-NNVM_REGISTER_OP(_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"equal"});
+NNVM_REGISTER_OP(_equal).set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"equal"});
 
 NNVM_REGISTER_OP(_not_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"not_equal"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"not_equal"});
 
-NNVM_REGISTER_OP(_greater)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"greater"});
+NNVM_REGISTER_OP(_greater).set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"greater"});
 
 NNVM_REGISTER_OP(_greater_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"greater_equal"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"greater_equal"});
 
-NNVM_REGISTER_OP(_lesser)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"less"});
+NNVM_REGISTER_OP(_lesser).set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"less"});
 
 NNVM_REGISTER_OP(_lesser_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"less_equal"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"less_equal"});
 
 NNVM_REGISTER_OP(_logical_and)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_and"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_and"});
 
 NNVM_REGISTER_OP(_logical_or)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_or"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_or"});
 
 NNVM_REGISTER_OP(_logical_xor)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_xor"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_xor"});
 
 }  // namespace op
 }  // namespace mxnet

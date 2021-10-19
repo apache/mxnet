@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file bfloat.h
  * \brief definition of bfloat type.
  *

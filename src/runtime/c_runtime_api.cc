@@ -44,7 +44,6 @@ struct MXNetRuntimeEntry {
   std::string last_error;
 };
 
-
 typedef dmlc::ThreadLocalStore<MXNetRuntimeEntry> MXNetAPIRuntimeStore;
 
 int MXNetFuncFree(MXNetFunctionHandle func) {
@@ -61,17 +60,16 @@ int MXNetFuncCall(MXNetFunctionHandle func,
                   int* ret_type_code) {
   API_BEGIN();
   MXNetRetValue rv;
-  (*static_cast<const PackedFunc*>(func)).CallPacked(
-      MXNetArgs(args, arg_type_codes, num_args), &rv);
+  (*static_cast<const PackedFunc*>(func))
+      .CallPacked(MXNetArgs(args, arg_type_codes, num_args), &rv);
   // handle return string.
-  if (rv.type_code() == kStr ||
-      rv.type_code() == kBytes) {
+  if (rv.type_code() == kStr || rv.type_code() == kBytes) {
     MXNetRuntimeEntry* e = MXNetAPIRuntimeStore::Get();
-    e->ret_str = *rv.ptr<std::string>();
+    e->ret_str           = *rv.ptr<std::string>();
     if (rv.type_code() == kBytes) {
       e->ret_bytes.data = e->ret_str.c_str();
       e->ret_bytes.size = e->ret_str.length();
-      *ret_type_code = kBytes;
+      *ret_type_code    = kBytes;
       ret_val->v_handle = &(e->ret_bytes);
     } else {
       *ret_type_code = kStr;
@@ -141,38 +139,47 @@ std::string NormalizeError(std::string err_msg) {
       getline(is, line);
       return true;
     }
-    if (!(is >> line)) return false;
+    if (!(is >> line))
+      return false;
     // get filename
-    while (is.peek() == ' ') is.get();
+    while (is.peek() == ' ')
+      is.get();
     if (!getline(is, file_name, ':')) {
       return false;
     } else {
       if (is.peek() == '\\' || is.peek() == '/') {
         // windows path
-        if (!getline(is, line, ':')) return false;
+        if (!getline(is, line, ':'))
+          return false;
         file_name = file_name + ':' + line;
       }
     }
     // get line number
-    if (!(is >> line_number)) return false;
+    if (!(is >> line_number))
+      return false;
     // get rest of the message.
-    while (is.peek() == ' ' || is.peek() == ':') is.get();
-    if (!getline(is, line)) return false;
+    while (is.peek() == ' ' || is.peek() == ':')
+      is.get();
+    if (!getline(is, line))
+      return false;
     // detect check message, rewrite to remote extra :
     if (line.compare(0, 13, "Check failed:") == 0) {
       size_t end_pos = line.find(':', 13);
-      if (end_pos == std::string::npos) return false;
+      if (end_pos == std::string::npos)
+        return false;
       check_msg = line.substr(0, end_pos + 1) + ' ';
-      line = line.substr(end_pos + 1);
+      line      = line.substr(end_pos + 1);
     }
     return true;
   };
   // if not in correct format, do not do any rewrite.
-  if (!parse_log_header()) return err_msg;
+  if (!parse_log_header())
+    return err_msg;
   // Parse error type.
   {
     size_t start_pos = 0, end_pos;
-    for (; start_pos < line.length() && line[start_pos] == ' '; ++start_pos) {}
+    for (; start_pos < line.length() && line[start_pos] == ' '; ++start_pos) {
+    }
     for (end_pos = start_pos; end_pos < line.length(); ++end_pos) {
       char ch = line[end_pos];
       if (ch == ':') {
@@ -180,16 +187,18 @@ std::string NormalizeError(std::string err_msg) {
         break;
       }
       // [A-Z0-9a-z_.]
-      if (!std::isalpha(ch) && !std::isdigit(ch) && ch != '_' && ch != '.') break;
+      if (!std::isalpha(ch) && !std::isdigit(ch) && ch != '_' && ch != '.')
+        break;
     }
     if (error_type.length() != 0) {
       // if we successfully detected error_type: trim the following space.
-      for (start_pos = end_pos + 1;
-           start_pos < line.length() && line[start_pos] == ' '; ++start_pos) {}
+      for (start_pos = end_pos + 1; start_pos < line.length() && line[start_pos] == ' ';
+           ++start_pos) {
+      }
       line = line.substr(start_pos);
     } else {
       // did not detect error_type, use default value.
-      line = line.substr(start_pos);
+      line       = line.substr(start_pos);
       error_type = "MXNetError";
     }
   }
@@ -206,7 +215,8 @@ std::string NormalizeError(std::string err_msg) {
       } else {
         trace_mode = false;
         // remove EOL trailing stacktrace.
-        if (line.length() == 0) continue;
+        if (line.length() == 0)
+          continue;
       }
     }
     if (!trace_mode) {
@@ -250,12 +260,12 @@ std::string NormalizeError(std::string err_msg) {
 }
 #endif
 
-int MXAPIHandleException(const std::exception &e) {
+int MXAPIHandleException(const std::exception& e) {
   MXAPISetLastError(NormalizeError(e.what()).c_str());
   return -1;
 }
 
-const char *MXGetLastError() {
+const char* MXGetLastError() {
   return MXNetAPIRuntimeStore::Get()->last_error.c_str();
 }
 

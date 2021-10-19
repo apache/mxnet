@@ -18,20 +18,18 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file group_norm.cu
  * \brief Implements Group Normalization (https://arxiv.org/abs/1803.08494).
-*/
+ */
 #include "./group_norm-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(GroupNorm)
-.set_attr<FCompute>("FCompute<gpu>", GroupNormCompute<gpu>);
+NNVM_REGISTER_OP(GroupNorm).set_attr<FCompute>("FCompute<gpu>", GroupNormCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_GroupNorm)
-.set_attr<FCompute>("FCompute<gpu>", GroupNormGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", GroupNormGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

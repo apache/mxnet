@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file model.h
 * \brief MXNET.cpp model module
 * \author Zhang Chen

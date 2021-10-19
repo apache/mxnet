@@ -21,7 +21,7 @@ In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.ap
 
 With the Fit API, you can train a deep learning model with a minimal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches (often called as 'training loop'). Advanced users can train with bespoke training loops, and many of these use cases will be covered by the Fit API.
 
-To demonstrate the Fit API, you will train an image classification model using the [ResNet-18](https://arxiv.org/abs/1512.03385) neural network architecture. The model will be trained using the [Fashion-MNIST dataset](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/).
+To demonstrate the Fit API, you will train an image classification model using the [ResNet-18](https://arxiv.org/abs/1512.03385) neural network architecture. The model will be trained using the [Fashion-MNIST dataset](https://github.com/zalandoresearch/fashion-mnist).
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ ctx = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
 
 ## Dataset
 
-[Fashion-MNIST](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/) dataset consists of fashion items divided into ten categories: t-shirt/top, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag and ankle boot.
+[Fashion-MNIST](https://github.com/zalandoresearch/fashion-mnist) dataset consists of fashion items divided into ten categories: t-shirt/top, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag and ankle boot.
 
 - It has 60,000 grayscale images of size 28 * 28 for training.
 - It has 10,000 grayscale images of size 28 * 28 for testing/validation.
@@ -125,12 +125,12 @@ In the basic usage example, with just 2 lines of code, we will set up our model 
 
 
 ```{.python .input}
-train_acc = mx.metric.Accuracy() # Metric to monitor
+train_acc = mx.gluon.metric.Accuracy() # Metric to monitor
 
 # Define the estimator, by passing to it the model, loss function, metrics, trainer object and context
 est = estimator.Estimator(net=resnet_18_v1,
                           loss=loss_fn,
-                          metrics=train_acc,
+                          train_metrics=train_acc,
                           trainer=trainer,
                           context=ctx)
 
@@ -194,7 +194,7 @@ class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
         for metric in estimator.train_metrics:
             # look for train Loss in training metrics
             # we wrapped loss value as a metric to record it
-            if isinstance(metric, mx.metric.Loss):
+            if isinstance(metric, mx.gluon.metric.Loss):
                 loss_name, loss_val = metric.get()
                 # append loss value for this epoch
                 self.loss_history.setdefault(loss_name, []).append(loss_val)
@@ -207,7 +207,7 @@ class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
 resnet_18_v1.initialize(force_reinit=True, init = mx.init.Xavier(), ctx=ctx)
 trainer = gluon.Trainer(resnet_18_v1.collect_params(),
                         'sgd', {'learning_rate': learning_rate})
-train_acc = mx.metric.Accuracy()
+train_acc = mx.gluon.metric.Accuracy()
 ```
 
 
@@ -215,7 +215,7 @@ train_acc = mx.metric.Accuracy()
 # Define the estimator, by passing to it the model, loss function, metrics, trainer object and context
 est = estimator.Estimator(net=resnet_18_v1,
                           loss=loss_fn,
-                          metrics=train_acc,
+                          train_metrics=train_acc,
                           trainer=trainer,
                           context=ctx)
 

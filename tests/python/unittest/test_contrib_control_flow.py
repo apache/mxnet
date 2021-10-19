@@ -990,7 +990,7 @@ def test_foreach():
             e = out._bind(ctx=default_context(), args=arg_dict)
         # the inputs to forward and backward are the same so forward and backward
         # should always return the same outputs.
-        for i in range(num_iters):
+        for _ in range(num_iters):
             e.forward(is_train=is_train)
             if (is_train):
                 # backward
@@ -1000,7 +1000,7 @@ def test_foreach():
 
         # Below we use imperative to reimplement foreach and compute its gradients.
         res = []
-        for i in range(len(_as_list(out_grads[0]))):
+        for _ in range(len(_as_list(out_grads[0]))):
             res.append([])
         for arr in _as_list(in_arrs):
             arr.attach_grad()

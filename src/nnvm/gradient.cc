@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file gradients.cc
  * \brief Passes that takes gradient of the graph
  * This code code was modified based on mxnet codebase by Min Lin
@@ -53,18 +52,17 @@ struct GradEntry {
   std::vector<NodeEntry> grads;
 };
 
-
 /*!
  * \brief Build the backward graph from the mirror map. This function will be
  *        invoked twice if backward mirroring has been enabled.
  */
-Graph BuildGradientGraph(
-    const Graph& src,
-    const std::vector<NodeEntry>& xs,
-    const std::vector<ObjectPtr>& topo_order,
-    std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
-    std::function<int(const Node&)> mirror_fun,
-    const std::unordered_map<const Node*, ObjectPtr>& mirror_map);
+Graph BuildGradientGraph(const Graph& src,
+                         const std::vector<NodeEntry>& xs,
+                         const std::vector<ObjectPtr>& topo_order,
+                         std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
+                         std::function<int(const Node&)> mirror_fun,
+                         const std::unordered_map<const Node*, ObjectPtr>& mirror_map,
+                         const std::vector<NodeEntry>& us = std::vector<NodeEntry>());
 
 /*!
  * \brief Auxiliary function that maps the forward node of the source graph to
@@ -74,41 +72,36 @@ inline const ObjectPtr& MapFwdNodeToMirrorPath(
     const ObjectPtr& n,
     const std::unordered_map<const Node*, ObjectPtr>& mirror_map) {
   auto iter = mirror_map.find(n.get());
-  if (iter == mirror_map.end() ||
-      iter->second == nullptr) {
+  if (iter == mirror_map.end() || iter->second == nullptr) {
     return n;
   }
   return iter->second;
 }
 
-
 Graph Gradient(Graph src) {
-  CHECK_NE(src.attrs.count("grad_ys"), 0U)
-      << "Gradient require grad_ys to be presented.";
-  CHECK_NE(src.attrs.count("grad_xs"), 0U)
-      << "Gradient require grad_xs to be presented.";
+  CHECK_NE(src.attrs.count("grad_ys"), 0U) << "Gradient require grad_ys to be presented.";
+  CHECK_NE(src.attrs.count("grad_xs"), 0U) << "Gradient require grad_xs to be presented.";
   CHECK_NE(src.attrs.count("grad_ys_out_grad"), 0U)
       << "Gradient require grad_ys_out_grad to be presented.";
-  const std::vector<NodeEntry>& xs =
-      src.GetAttr<std::vector<NodeEntry> >("grad_xs");
-  const std::vector<NodeEntry>& ys =
-      src.GetAttr<std::vector<NodeEntry> >("grad_ys");
+  const std::vector<NodeEntry>& xs = src.GetAttr<std::vector<NodeEntry> >("grad_xs");
+  const std::vector<NodeEntry>& ys = src.GetAttr<std::vector<NodeEntry> >("grad_ys");
   const std::vector<NodeEntry>& ys_out_grad =
       src.GetAttr<std::vector<NodeEntry> >("grad_ys_out_grad");
   CHECK_EQ(ys.size(), ys_out_grad.size());
+  const std::vector<NodeEntry>& us =
+      src.GetAttr<std::vector<NodeEntry> >("grad_us");
 
   // initialize a topological order of the graph nodes and `output_grads`
   // that maps every operator node to its gradient entries
   std::vector<ObjectPtr> topo_order;
   std::unordered_map<const Node*, std::vector<GradEntry> > output_grads;
 
-  DFSVisit(ys,
-           [&](const ObjectPtr& node) {
-             if (output_grads.count(node.get()) == 0) {
-               output_grads[node.get()].resize(node->num_outputs());
-             }
-             topo_order.push_back(node);
-           });
+  DFSVisit(ys, [&](const ObjectPtr& node) {
+    if (output_grads.count(node.get()) == 0) {
+      output_grads[node.get()].resize(node->num_outputs());
+    }
+    topo_order.push_back(node);
+  });
 
   for (size_t i = 0; i < ys.size(); ++i) {
     output_grads[ys[i].node.get()][ys[i].index].grads = {ys_out_grad[i]};
@@ -117,12 +110,11 @@ Graph Gradient(Graph src) {
   // check that all xs are reachable from ys
   for (size_t i = 0; i < xs.size(); ++i) {
     CHECK(output_grads.find(xs[i].node.get()) != output_grads.end())
-        << "Cannot differentiate with respect to the "
-        << (i + 1) << "-th variable "
+        << "Cannot differentiate with respect to the " << (i + 1) << "-th variable "
         << "because it is unreachable from the outputs.";
   }
 
-  using MirrorFun = std::function<int (const Node&)>;
+  using MirrorFun      = std::function<int(const Node&)>;
   MirrorFun mirror_fun = nullptr;
   if (src.attrs.count("mirror_fun") != 0) {
     mirror_fun = src.GetAttr<MirrorFun>("mirror_fun");
@@ -130,22 +122,18 @@ Graph Gradient(Graph src) {
   std::unordered_map<const Node*, ObjectPtr> mirror_map;
 
   // complete the backward graph of the src, but without backward mirroring
-  nnvm::Graph gsrc = BuildGradientGraph(src, xs, topo_order,
-                                        output_grads,
-                                        nullptr, mirror_map);
+  nnvm::Graph gsrc = BuildGradientGraph(src, xs, topo_order, output_grads, nullptr, mirror_map, us);
   if (mirror_fun == nullptr) {
     return gsrc;  // Gradient pass without mirroring ends here.
   }
-  const IndexedGraph& idx = src.indexed_graph(),
-                    & gidx = gsrc.indexed_graph();
+  const IndexedGraph &idx = src.indexed_graph(), &gidx = gsrc.indexed_graph();
   // ===========================================================================
   // ----- Gradient Pass w/ Backward Mirroring -----
   // ===========================================================================
   // Record, for each node entry ∈ gsrc, the nodes that reference it as inputs.
   // It is important to note that since the node entry reference mapping is
   // constructed from gradient graph, it can only be indexed using gidx entry ID.
-  std::vector<std::unordered_set<const Node*> > node_entry_ref_map(
-      gidx.num_node_entries());
+  std::vector<std::unordered_set<const Node*> > node_entry_ref_map(gidx.num_node_entries());
   static const auto& fignore_inputs = Op::GetAttr<FIgnoreInputs>("FIgnoreInputs");
   for (uint32_t gnid = 0; gnid < gidx.num_nodes(); ++gnid) {
     const IndexedGraph::Node& inode = gidx[gnid];
@@ -156,8 +144,7 @@ Graph Gradient(Graph src) {
       if (fignore_inputs.count(inode.source->op()) != 0) {
         std::vector<uint32_t> ignore_inputs =
             fignore_inputs[inode.source->op()](inode.source->attrs);
-        if (std::find(ignore_inputs.begin(), ignore_inputs.end(), i)
-            != ignore_inputs.end()) {
+        if (std::find(ignore_inputs.begin(), ignore_inputs.end(), i) != ignore_inputs.end()) {
           continue;
         }
       }
@@ -208,9 +195,8 @@ Graph Gradient(Graph src) {
     // B
     // After invoking this function. `subgraph` will become {A, B}.
     // Note that this function will be invoked multiple times.
-    auto subworklist_backprop = [&subworklist, &subgraph,
-                                 &subgraph_topo_order,
-                                 &mirror_fun, &worklist]() {
+    auto subworklist_backprop =
+        [&subworklist, &subgraph, &subgraph_topo_order, &mirror_fun, &worklist]() {
           std::deque<const Node*> subworklist_topo_order;
           for (; !subworklist.empty(); subworklist.pop()) {
             const Node* const subworkitem = subworklist.front();
@@ -266,8 +252,7 @@ Graph Gradient(Graph src) {
     do {
       has_subgraph_converged = true;
       for (const Node* const subgraph_node : subgraph_topo_order) {
-        for (const NodeEntry& subgraph_node_entry :
-             subgraph_node->inputs) {
+        for (const NodeEntry& subgraph_node_entry : subgraph_node->inputs) {
           const std::unordered_set<const Node*> ref_nodes =
               node_entry_ref_map[gidx.entry_id(subgraph_node_entry)];
 
@@ -289,7 +274,7 @@ Graph Gradient(Graph src) {
               ref_node_heads.push(ref_node);
               for (; !ref_node_heads.empty(); ref_node_heads.pop()) {
                 const Node* const ref_node_head = ref_node_heads.front();
-                bool is_ref_node_head_output = false;
+                bool is_ref_node_head_output    = false;
                 for (const NodeEntry& y : ys) {
                   if (ref_node_head == y.node.get()) {
                     is_ref_node_head_output = true;
@@ -309,7 +294,7 @@ Graph Gradient(Graph src) {
                     }
                   }
                 }  // for (oid ∈ [0, ref_node_head->num_outputs()))
-              }  // for (ref_node_head ∈ ref_node_heads)
+              }    // for (ref_node_head ∈ ref_node_heads)
               // Do the backpropagation again. The topological order of the
               // subworklist can be directly appended to the end of the existing
               // order. E,g, in our previous example, we expect to have
@@ -320,7 +305,7 @@ Graph Gradient(Graph src) {
               break;
             }  // if (ref_node != subgraph_node && idx.exist(ref_node) &&
                //     subgraph.find(ref_node) == subgraph.end()
-          }  // for (ref_node ∈ ref_nodes)
+          }    // for (ref_node ∈ ref_nodes)
           if (!has_subgraph_converged) {
             break;
           }
@@ -365,15 +350,13 @@ Graph Gradient(Graph src) {
         bool is_frontier = true;
         for (const NodeEntry& e : subgraph_node->inputs) {
           auto iter = mirror_map.find(e.node.get());
-          if (mirror_fun(*(e.node)) &&
-              !(iter != mirror_map.end() && iter->second == nullptr)) {
+          if (mirror_fun(*(e.node)) && !(iter != mirror_map.end() && iter->second == nullptr)) {
             is_frontier = false;
           }
         }
         for (const ObjectPtr& n : subgraph_node->control_deps) {
           auto iter = mirror_map.find(n.get());
-          if (mirror_fun(*n) &&
-              !(iter != mirror_map.end() && iter->second == nullptr)) {
+          if (mirror_fun(*n) && !(iter != mirror_map.end() && iter->second == nullptr)) {
             is_frontier = false;
           }
         }
@@ -404,7 +387,7 @@ Graph Gradient(Graph src) {
           has_forward_candidates_converged = true;
           for (const Node* const candidate : forward_candidates) {
             for (const NodeEntry& candidate_input : candidate->inputs) {
-              uint32_t geid = gidx.entry_id(candidate_input);
+              uint32_t geid                                    = gidx.entry_id(candidate_input);
               const std::unordered_set<const Node*>& ref_nodes = node_entry_ref_map[geid];
               for (const Node* const ref_node : ref_nodes) {
                 if (ref_node != frontier_node.first &&
@@ -427,23 +410,19 @@ Graph Gradient(Graph src) {
         // Record the node entries that are newly allocated and those that are
         // released. A node entry can be released if all its referencing nodes
         // are part of the subgraph frontier. Otherwise, it is in the allocated set.
-        std::unordered_set<uint32_t> newly_allocated_node_entries,
-                                     released_node_entries;
+        std::unordered_set<uint32_t> newly_allocated_node_entries, released_node_entries;
         for (const Node* const candidate : forward_candidates) {
-          uint32_t nid = idx.node_id(candidate),
-                   gnid = gidx.node_id(candidate);
+          uint32_t nid = idx.node_id(candidate), gnid = gidx.node_id(candidate);
           for (uint32_t oid = 0; oid < candidate->num_outputs(); ++oid) {
-            uint32_t eid = idx.entry_id(nid, oid),
-                     geid = gidx.entry_id(gnid, oid);
+            uint32_t eid = idx.entry_id(nid, oid), geid = gidx.entry_id(gnid, oid);
             if (node_entry_ref_map[geid].size() != 0) {
               newly_allocated_node_entries.insert(eid);
             }
           }
           for (const NodeEntry& candidate_input : candidate->inputs) {
-            uint32_t eid = idx.entry_id(candidate_input),
-                     geid = gidx.entry_id(candidate_input);
+            uint32_t eid = idx.entry_id(candidate_input), geid = gidx.entry_id(candidate_input);
             const std::unordered_set<const Node*>& ref_nodes = node_entry_ref_map[geid];
-            bool can_be_released = true;
+            bool can_be_released                             = true;
             for (const Node* const ref_node : ref_nodes) {
               if (subgraph_frontier.find(ref_node) == subgraph_frontier.end()) {
                 newly_allocated_node_entries.insert(eid);
@@ -454,7 +433,7 @@ Graph Gradient(Graph src) {
               released_node_entries.insert(eid);
             }
           }  // for (candidate_input ∈ candidate->input)
-        }  // for (candidate ∈ forward_candidates)
+        }    // for (candidate ∈ forward_candidates)
 
         // Now, compare the total amount of newly allocated storage versus the
         // released storage, if the latter is greater or equal to the former,
@@ -462,8 +441,7 @@ Graph Gradient(Graph src) {
         // forward candidate nodes are marked as on the mirror path.
         size_t newly_allocated_storage = 0, released_storage = 0;
         for (const uint32_t eid : newly_allocated_node_entries) {
-          newly_allocated_storage += src_shapes[eid].Size() *
-                                     MXGetDTypeSize(src_dtypes[eid]);
+          newly_allocated_storage += src_shapes[eid].Size() * MXGetDTypeSize(src_dtypes[eid]);
         }
         for (const uint32_t eid : released_node_entries) {
           released_storage += src_shapes[eid].Size() * MXGetDTypeSize(src_dtypes[eid]);
@@ -477,7 +455,7 @@ Graph Gradient(Graph src) {
           has_subgraph_converged = false;
           break;
         }  // if (released_storage >= newly_allocated_storage)
-      }  // for (frontier_node ∈ subgraph_frontier)
+      }    // for (frontier_node ∈ subgraph_frontier)
     } while (!has_subgraph_converged);
 
     // Finally, mark all the remaining nodes of the subgraph as on the mirror path.
@@ -486,7 +464,7 @@ Graph Gradient(Graph src) {
         continue;
       }
       ObjectPtr subgraph_node_mirror = Node::Create();
-      *subgraph_node_mirror = *subgraph_node;
+      *subgraph_node_mirror          = *subgraph_node;
       subgraph_node_mirror->attrs.name += "_mirror";
       for (NodeEntry& e : subgraph_node_mirror->inputs) {
         e.node = MapFwdNodeToMirrorPath(e.node, mirror_map);
@@ -497,26 +475,23 @@ Graph Gradient(Graph src) {
       mirror_map[subgraph_node] = subgraph_node_mirror;
     }
   }  // for (workitem ∈ worklist)
-  DFSVisit(ys,
-           [&](const ObjectPtr& node) {
-             if (mirror_map.at(node.get()) != nullptr) {
-               node->attrs.dict["__mirror_stage__"] = "1";
-             } else {
-               node->attrs.dict["__mirror_stage__"] = "0";
-             }
-           });
-  return BuildGradientGraph(src, xs, topo_order,
-                            output_grads,
-                            mirror_fun, mirror_map);
+  DFSVisit(ys, [&](const ObjectPtr& node) {
+    if (mirror_map.at(node.get()) != nullptr) {
+      node->attrs.dict["__mirror_stage__"] = "1";
+    } else {
+      node->attrs.dict["__mirror_stage__"] = "0";
+    }
+  });
+  return BuildGradientGraph(src, xs, topo_order, output_grads, mirror_fun, mirror_map);
 }
-
 
 /*!
  * \brief Auxiliary function that checks whether all the gradients are zero or not.
  */
 inline bool CheckGradAllZero(const std::vector<NodeEntry>& grads,
                              const std::vector<const Op*>& zero_ops) {
-  if (!grads.size() || !zero_ops.size()) return false;
+  if (!grads.size() || !zero_ops.size())
+    return false;
   for (const auto& g : grads) {
     bool found = false;
     for (const auto& op : zero_ops) {
@@ -525,43 +500,43 @@ inline bool CheckGradAllZero(const std::vector<NodeEntry>& grads,
         break;
       }
     }
-    if (!found) return false;
+    if (!found)
+      return false;
   }
   return true;
 }
 
 
-Graph BuildGradientGraph(
-    const Graph& src,
-    const std::vector<NodeEntry>& xs,
-    const std::vector<ObjectPtr>& topo_order,
-    std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
-    std::function<int(const Node&)> mirror_fun,
-    const std::unordered_map<const Node*, ObjectPtr>& mirror_map) {
+Graph BuildGradientGraph(const Graph& src,
+                         const std::vector<NodeEntry>& xs,
+                         const std::vector<ObjectPtr>& topo_order,
+                         std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
+                         std::function<int(const Node&)> mirror_fun,
+                         const std::unordered_map<const Node*, ObjectPtr>& mirror_map,
+                         const std::vector<NodeEntry>& us) {
   static auto& grad_fun_map = Op::GetAttr<nnvm::FGradient>("FGradient");
 
   // gradient aggregation function
-  using AggFun = std::function<NodeEntry (std::vector<NodeEntry>&&)>;
-  AggFun agg_fun = [](std::vector<NodeEntry>&& v)->NodeEntry {
-        if (v.size() == 1) {
-          return std::move(v[0]);
-        } else if (v.size() == 0) {
-          ObjectPtr zero_grad_node = Node::Create();
-          zero_grad_node->attrs.op = Op::Get("zeros");
-          zero_grad_node->attrs.name = "zero_grad";
-          zero_grad_node->attrs.op->attr_parser(&(zero_grad_node->attrs));
-          return NodeEntry{zero_grad_node, 0, 0};
-        } else {
-          ObjectPtr grad_sum_node = Node::Create();
-          grad_sum_node->attrs.op = Op::Get("elemwise_sum");
-          grad_sum_node->inputs = std::move(v);
-          grad_sum_node->attrs.name = "grad_sum";
-          grad_sum_node->attrs.dict["num_args"] =
-              std::to_string(grad_sum_node->inputs.size());
-          grad_sum_node->attrs.op->attr_parser(&(grad_sum_node->attrs));
-          return NodeEntry{grad_sum_node, 0, 0};
-        }
-      };
+  using AggFun   = std::function<NodeEntry(std::vector<NodeEntry> &&)>;
+  AggFun agg_fun = [](std::vector<NodeEntry>&& v) -> NodeEntry {
+    if (v.size() == 1) {
+      return std::move(v[0]);
+    } else if (v.size() == 0) {
+      ObjectPtr zero_grad_node   = Node::Create();
+      zero_grad_node->attrs.op   = Op::Get("zeros");
+      zero_grad_node->attrs.name = "zero_grad";
+      zero_grad_node->attrs.op->attr_parser(&(zero_grad_node->attrs));
+      return NodeEntry{zero_grad_node, 0, 0};
+    } else {
+      ObjectPtr grad_sum_node               = Node::Create();
+      grad_sum_node->attrs.op               = Op::Get("elemwise_sum");
+      grad_sum_node->inputs                 = std::move(v);
+      grad_sum_node->attrs.name             = "grad_sum";
+      grad_sum_node->attrs.dict["num_args"] = std::to_string(grad_sum_node->inputs.size());
+      grad_sum_node->attrs.op->attr_parser(&(grad_sum_node->attrs));
+      return NodeEntry{grad_sum_node, 0, 0};
+    }
+  };
   if (src.attrs.count("grad_aggregate_fun") != 0) {
     agg_fun = src.GetAttr<AggFun>("grad_aggregate_fun");
   }
@@ -571,19 +546,21 @@ Graph BuildGradientGraph(
   if (src.attrs.count("zero_ops") != 0) {
     zero_ops = src.GetAttr<std::vector<const Op*> >("zero_ops");
   }
-  const Op* copy_op = (src.attrs.count("copy_op_str") != 0) ?
-      Op::Get(src.GetAttr<std::string>("copy_op_str")) : nullptr;
+  const Op* copy_op = (src.attrs.count("copy_op_str") != 0)
+                          ? Op::Get(src.GetAttr<std::string>("copy_op_str"))
+                          : nullptr;
 
   std::vector<NodeEntry> out_agg_grads;
-  for (auto topo_order_rit = topo_order.rbegin();
-       topo_order_rit != topo_order.rend(); ++topo_order_rit) {
+  for (auto topo_order_rit = topo_order.rbegin(); topo_order_rit != topo_order.rend();
+       ++topo_order_rit) {
     const ObjectPtr& src_fwd_node = *topo_order_rit;
-    if (src_fwd_node->is_variable()) continue;
+    if (src_fwd_node->is_variable())
+      continue;
 
     // gather all the output gradient entries and apply the aggregation function
     out_agg_grads.clear();
     auto& out_grad_vec = output_grads.at(src_fwd_node.get());
-    for (auto & e : out_grad_vec) {
+    for (auto& e : out_grad_vec) {
       e.sum = agg_fun(std::move(e.grads));
       out_agg_grads.push_back(e.sum);
     }
@@ -606,15 +583,13 @@ Graph BuildGradientGraph(
         if (mirror_fun != nullptr && !mirror_fun(*fwd_node)) {
           for (NodeEntry& input_grad : input_grads) {
             for (NodeEntry& grad_input : input_grad.node->inputs) {
-              const ObjectPtr& grad_input_node_mirrored = MapFwdNodeToMirrorPath(
-                  grad_input.node, mirror_map);
-              grad_input = NodeEntry(
-                  grad_input_node_mirrored,
-                  grad_input.index,
-                  grad_input.version);
+              const ObjectPtr& grad_input_node_mirrored =
+                  MapFwdNodeToMirrorPath(grad_input.node, mirror_map);
+              grad_input =
+                  NodeEntry(grad_input_node_mirrored, grad_input.index, grad_input.version);
             }  // for (grad_input ∈ input_grad.node->inputs)
-          }  // for (input_grad ∈ input_grads)
-        }  // if (mirror_fun != nullptr && !mirror_fun(*fwd_node))
+          }    // for (input_grad ∈ input_grads)
+        }      // if (mirror_fun != nullptr && !mirror_fun(*fwd_node))
       } else if (CheckGradAllZero(out_agg_grads, zero_ops)) {
         for (size_t i = 0; i < src_fwd_node->num_inputs(); ++i) {
           std::ostringstream os;
@@ -623,8 +598,8 @@ Graph BuildGradientGraph(
           } else {
             os << fwd_node->attrs.name << "_in" << i << "_backward";
           }
-          auto p = Node::Create();
-          p->attrs.op = zero_ops[0];
+          auto p        = Node::Create();
+          p->attrs.op   = zero_ops[0];
           p->attrs.name = os.str();
           p->inputs.push_back(fwd_node->inputs[i]);
           p->control_deps.emplace_back(fwd_node);
@@ -634,8 +609,9 @@ Graph BuildGradientGraph(
           input_grads.emplace_back(p, 0, 0);
         }  // for (i ∈ src_fwd_node->num_inputs())
       } else {
-        std::string message = "Operator " + std::string(src_fwd_node->op()->name)
-          + "is non-differentiable because it didn't register FGradient attribute.";
+        std::string message =
+            "Operator " + std::string(src_fwd_node->op()->name) +
+            "is non-differentiable because it didn't register FGradient attribute.";
         throw nnvm::pass::InvalidGraphError(message);
       }
       for (const auto& e : input_grads) {
@@ -643,15 +619,14 @@ Graph BuildGradientGraph(
       }
       auto input_grad_iter = input_grads.begin();
       CHECK(src_fwd_node->inputs.size() <= input_grads.size());
-      for (auto input_iter = src_fwd_node->inputs.begin();
-           input_iter != src_fwd_node->inputs.end();
+      for (auto input_iter = src_fwd_node->inputs.begin(); input_iter != src_fwd_node->inputs.end();
            ++input_iter, ++input_grad_iter) {
-        // propagate the input gradients to the output gradients of the input nodes
-        output_grads[input_iter->node.get()][input_iter->index]
-            .grads.emplace_back(std::move(*input_grad_iter));
+        // propagate the input_grads to the corresponding GradEntries mapped by output_grads
+        output_grads[input_iter->node.get()][input_iter->index].grads.emplace_back(
+            std::move(*input_grad_iter));
       }
     }  // if (src_fwd_node->inputs.size() != 0)
-  }  // for (topo_order_rit ∈ reverse(topo_order))
+  }    // for (topo_order_rit ∈ reverse(topo_order))
   // take out the xs' grads
   Graph ret;
   ret.outputs.resize(xs.size());
@@ -672,14 +647,13 @@ Graph BuildGradientGraph(
         std::ostringstream os;
         os << entry.sum.node->attrs.name << "_" << kv->second.first << "_copy";
         kv->second.first++;
-        copy_node->attrs.op = copy_op;
+        copy_node->attrs.op   = copy_op;
         copy_node->attrs.name = os.str();
         copy_node->inputs.emplace_back(entry.sum);
         if (copy_node->attrs.op->attr_parser != nullptr) {
           copy_node->attrs.op->attr_parser(&(copy_node->attrs));
         }
-        unique_grads.emplace(NodeEntry{std::move(copy_node), 0, 0},
-                             std::make_pair(1, counter));
+        unique_grads.emplace(NodeEntry{std::move(copy_node), 0, 0}, std::make_pair(1, counter));
       }
     } else {
       ret.outputs[counter] = entry.sum;
@@ -691,20 +665,34 @@ Graph BuildGradientGraph(
       ret.outputs[kv.second.second] = kv.first;
     }
   }
+
+  // Take the us' grad NodeEntry and store them in graph.attrs
+  std::vector<NodeEntry> nleaf_grads;
+  nleaf_grads.reserve(us.size());
+  for (const NodeEntry& e : us) {
+    GradEntry& entry = output_grads[e.node.get()][e.index];
+    // aggregate sum if it hasn't been
+    if (entry.sum.node.get() == nullptr) {
+      entry.sum = agg_fun(std::move(entry.grads));
+    }
+    nleaf_grads.push_back(entry.sum);
+  }
+  ret.attrs["nleaf_grads"] = std::make_shared<any>(std::move(nleaf_grads));
+
   return ret;
 }
 
-
 // register pass
 NNVM_REGISTER_PASS(MXGradient)
-.describe(R"(Return a gradient graph of src.attrs["ys"] wrt src.attrs["xs"])")
-.set_body(Gradient)
-.set_change_graph(true)
-.depend_graph_attr("grad_ys")
-.depend_graph_attr("grad_xs")
-.depend_graph_attr("in_arg_shapes")
-.depend_graph_attr("in_arg_dtypes")
-.depend_graph_attr("grad_ys_out_grad");
+    .describe(R"(Return a gradient graph of src.attrs["ys"] wrt src.attrs["xs"])")
+    .set_body(Gradient)
+    .set_change_graph(true)
+    .depend_graph_attr("grad_ys")
+    .depend_graph_attr("grad_xs")
+    .depend_graph_attr("in_arg_shapes")
+    .depend_graph_attr("in_arg_dtypes")
+    .depend_graph_attr("grad_ys_out_grad")
+    .depend_graph_attr("grad_us");
 
 }  // namespace
 

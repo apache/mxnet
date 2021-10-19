@@ -21,6 +21,7 @@ sphinx==2.4.0
 matplotlib
 notebook
 nbconvert==5.6.1
+jupyter-client<=6.1.12
 nbsphinx==0.4.3
 recommonmark==0.6.0
 notedown==1.5.1

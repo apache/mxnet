@@ -31,11 +31,9 @@ namespace op {
 
 #if MXNET_USE_CUSOLVER == 1
 
-NNVM_REGISTER_OP(_npi_qr)
-.set_attr<FCompute>("FCompute<gpu>", NumpyLaQrForward<gpu>);
+NNVM_REGISTER_OP(_npi_qr).set_attr<FCompute>("FCompute<gpu>", NumpyLaQrForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_qr)
-.set_attr<FCompute>("FCompute<gpu>", NumpyLaQrBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_qr).set_attr<FCompute>("FCompute<gpu>", NumpyLaQrBackward<gpu>);
 
 #endif
 

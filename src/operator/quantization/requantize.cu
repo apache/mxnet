@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantize.cu
  * \brief
  */
@@ -27,8 +26,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_contrib_requantize)
-.set_attr<FCompute>("FCompute<gpu>", RequantizeForward<gpu>);
+NNVM_REGISTER_OP(_contrib_requantize).set_attr<FCompute>("FCompute<gpu>", RequantizeForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

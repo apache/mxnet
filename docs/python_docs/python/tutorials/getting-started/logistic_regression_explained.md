@@ -24,13 +24,13 @@ Before anything else, let's import required packages for this tutorial.
 
 
 ```{.python .input}
-import numpy as np
+import numpy as onp
 import mxnet as mx
-from mxnet import nd, autograd, gluon
+from mxnet import np, npx, autograd, gluon
 from mxnet.gluon import nn, Trainer
 from mxnet.gluon.data import DataLoader, ArrayDataset
 
-mx.random.seed(12345)  # Added for reproducibility
+mx.np.random.seed(12345)  # Added for reproducibility
 ```
 
 In this tutorial we will use fake dataset, which contains 10 features drawn from a normal distribution with mean equals to 0 and standard deviation equals to 1, and a class label, which can be either 0 or 1. The size of the dataset is an arbitrary value. The function below helps us to generate a dataset. Class label `y` is generated via a non-random logic, so the network would have a pattern to look for. Boundary of 3 is selected to make sure that number of positive examples smaller than negative, but not too small
@@ -38,7 +38,7 @@ In this tutorial we will use fake dataset, which contains 10 features drawn from
 
 ```{.python .input}
 def get_random_data(size, ctx):
-    x = nd.normal(0, 1, shape=(size, 10), ctx=ctx)
+    x = np.random.normal(0, 1, size=(size, 10), ctx=ctx)
     y = x.sum(axis=1) > 3
     return x, y
 ```
@@ -103,8 +103,8 @@ Below we define these objects.
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 trainer = Trainer(params=net.collect_params(), optimizer='sgd',
                   optimizer_params={'learning_rate': 0.1})
-accuracy = mx.metric.Accuracy()
-f1 = mx.metric.F1()
+accuracy = mx.gluon.metric.Accuracy()
+f1 = mx.gluon.metric.F1()
 ```
 
 The next step is to define the training function in which we iterate over all batches of training data, execute the forward pass on each batch and calculate training loss. On line 19, we sum losses of every batch per epoch into a single variable, because we calculate loss per single batch, but want to display it per epoch.
@@ -129,7 +129,7 @@ def train_model():
         trainer.step(batch_size)
 
         # sum losses of every batch
-        cumulative_train_loss += nd.sum(loss_result).asscalar()
+        cumulative_train_loss += np.sum(loss_result).item()
 
     return cumulative_train_loss
 ```
@@ -140,13 +140,13 @@ Our validation function is very similar to the training one. The main difference
 
 `Accuracy` metric requires 2 arguments: 1) a vector of ground-truth classes and 2) A vector or matrix of predictions. When predictions are of the same shape as the vector of ground-truth classes, `Accuracy` class assumes that prediction vector contains predicted classes. So, it converts the vector to `Int32` and compare each item of ground-truth classes to prediction vector.
 
-Because of the behaviour above, you will get an unexpected result if you just apply [Sigmoid](../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.sigmoid) function to the network result and pass it to `Accuracy` metric. As mentioned before, we need to apply `Sigmoid` function to the output of the neuron to get a probability of belonging to the class 1. But `Sigmoid` function produces output in range [0; 1], and all numbers in that range are going to be casted to 0, even if it is as high as 0.99. To avoid this we write a custom bit of code on line 12, that:
+Because of the behaviour above, you will get an unexpected result if you just apply [Sigmoid](https://mxnet.apache.org/versions/master/api/python/docs/api/npx/generated/mxnet.npx.sigmoid.html) function to the network result and pass it to `Accuracy` metric. As mentioned before, we need to apply `Sigmoid` function to the output of the neuron to get a probability of belonging to the class 1. But `Sigmoid` function produces output in range [0; 1], and all numbers in that range are going to be casted to 0, even if it is as high as 0.99. To avoid this we write a custom bit of code on line 12, that:
 
 1. Calculates sigmoid using `Sigmoid` function
 
 2. Subtracts a threshold from the original sigmoid output. Usually, the threshold is equal to 0.5, but it can be higher, if you want to increase certainty of an item to belong to class 1.
 
-3. Uses [mx.nd.ceil](../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.ceil) function, which converts all negative values to 0 and all positive values to 1
+3. Uses [mx.np.ceil](https://mxnet.apache.org/versions/master/api/python/docs/api/np/generated/mxnet.np.ceil.html#mxnet-np-ceil) function, which converts all negative values to 0 and all positive values to 1
 
 After these transformations we can pass the result to `Accuracy.update()` method and expect it to behave in a proper way.
 
@@ -168,20 +168,20 @@ def validate_model(threshold):
         output = net(val_data)
 
         # Similar to cumulative training loss, calculate cumulative validation loss
-        cumulative_val_loss += nd.sum(loss(output, val_ground_truth_class)).asscalar()
+        cumulative_val_loss += np.sum(loss(output, val_ground_truth_class)).item()
 
         # getting prediction as a sigmoid
-        prediction = net(val_data).sigmoid()
+        prediction = npx.sigmoid(net(val_data))
 
         # Converting neuron outputs to classes
-        predicted_classes = mx.nd.ceil(prediction - threshold)
+        predicted_classes = mx.np.ceil(prediction - threshold)
 
         # Update validation accuracy
         accuracy.update(val_ground_truth_class, predicted_classes.reshape(-1))
 
         # calculate probabilities of belonging to different classes. F1 metric works only with this notation
         prediction = prediction.reshape(-1)
-        probabilities = mx.nd.stack(1 - prediction, prediction, axis=1)
+        probabilities = mx.np.stack([1 - prediction, prediction], axis=1)
 
         f1.update(val_ground_truth_class, probabilities)
 

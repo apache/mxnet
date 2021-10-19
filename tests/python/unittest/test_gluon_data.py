@@ -218,7 +218,7 @@ def test_image_list_dataset_handle(prepare_record):
 def test_list_dataset():
     for num_worker in range(0, 3):
         data = mx.gluon.data.DataLoader([([1,2], 0), ([3, 4], 1)], batch_size=1, num_workers=num_worker)
-        for d, l in data:
+        for _ in data:
             pass
 
 
@@ -325,14 +325,14 @@ def _batchify(data):
 def test_multi_worker_forked_data_loader():
     data = _Dummy(False)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify, num_workers=2)
-    for epoch in range(1):
-        for i, data in enumerate(loader):
+    for _ in range(1):
+        for _ in loader:
             pass
 
     data = _Dummy(True)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify_list, num_workers=2)
-    for epoch in range(1):
-        for i, data in enumerate(loader):
+    for _ in range(1):
+        for _ in loader:
             pass
 
 def test_multi_worker_dataloader_release_pool():
@@ -382,12 +382,12 @@ def test_dataset_filter():
     a = mx.gluon.data.SimpleDataset([i for i in range(length)])
     a_filtered = a.filter(lambda x: x % 10 == 0)
     assert(len(a_filtered) == 10)
-    for idx, sample in enumerate(a_filtered):
+    for sample in a_filtered:
         assert sample % 10 == 0
     a_xform_filtered = a.transform(lambda x: x + 1).filter(lambda x: x % 10 == 0)
     assert(len(a_xform_filtered) == 10)
     # the filtered data is already transformed
-    for idx, sample in enumerate(a_xform_filtered):
+    for sample in a_xform_filtered:
         assert sample % 10 == 0
 
 def test_dataset_filter_handle():
@@ -395,12 +395,12 @@ def test_dataset_filter_handle():
     a = mx.gluon.data.SimpleDataset(np.arange(length))
     a_filtered = a.filter(lambda x: x % 10 == 0).__mx_handle__()
     assert(len(a_filtered) == 10)
-    for idx, sample in enumerate(a_filtered):
+    for sample in a_filtered:
         assert sample % 10 == 0
     a_xform_filtered = a.transform(lambda x: x + 1).filter(lambda x: x % 10 == 0)
     assert(len(a_xform_filtered) == 10)
     # the filtered data is already transformed
-    for idx, sample in enumerate(a_xform_filtered):
+    for sample in a_xform_filtered:
         assert sample % 10 == 0
 
 def test_dataset_shard():
@@ -417,7 +417,7 @@ def test_dataset_shard():
     assert len(shard_3) == 2
     total = 0
     for shard in [shard_0, shard_1, shard_2, shard_3]:
-        for idx, sample in enumerate(shard):
+        for sample in shard:
             total += sample
     assert total == sum(a)
 
@@ -435,7 +435,7 @@ def test_dataset_shard_handle():
     assert len(shard_3) == 2
     total = 0
     for shard in [shard_0, shard_1, shard_2, shard_3]:
-        for idx, sample in enumerate(shard):
+        for sample in shard:
             total += sample
     assert total == sum(a)
 
@@ -451,7 +451,7 @@ def test_dataset_take():
     assert len(a_take_10) == count
     expected_total = sum([i for i in range(count)])
     total = 0
-    for idx, sample in enumerate(a_take_10):
+    for sample in a_take_10:
         assert sample < count
         total += sample
     assert total == expected_total
@@ -460,7 +460,7 @@ def test_dataset_take():
     assert len(a_xform_take_10) == count
     expected_total = sum([i * 10 for i in range(count)])
     total = 0
-    for idx, sample in enumerate(a_xform_take_10):
+    for sample in a_xform_take_10:
         assert sample < count * 10
         total += sample
     assert total == expected_total
@@ -477,7 +477,7 @@ def test_dataset_take_handle():
     assert len(a_take_10) == count
     expected_total = sum([i for i in range(count)])
     total = 0
-    for idx, sample in enumerate(a_take_10):
+    for sample in a_take_10:
         assert sample < count
         total += sample
     assert total == expected_total
@@ -486,7 +486,7 @@ def test_dataset_take_handle():
     assert len(a_xform_take_10) == count
     expected_total = sum([i for i in range(count)])
     total = 0
-    for idx, sample in enumerate(a_xform_take_10):
+    for sample in a_xform_take_10:
         assert sample < count
         total += sample
     assert total == expected_total

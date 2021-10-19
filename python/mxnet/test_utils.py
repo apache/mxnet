@@ -50,6 +50,7 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np, use_np_default_dtype, getenv, setenv  # pylint: disable=unused-import
+from .util import get_max_supported_compute_capability, get_rtc_compile_opts # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
@@ -1583,7 +1584,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             else:
                 arg_params[n] = np.random.normal(size=arr.shape,
                                                  scale=scale).astype(rand_type)
-    for n, arr in exe_list[0].aux_dict.items():
+    for n in exe_list[0].aux_dict:
         if n not in aux_params:
             aux_params[n] = 0
     for exe in exe_list:

@@ -55,7 +55,7 @@ def test_MNISTIter(tmpdir):
     # test_loop
     nbatch = 60000 / batch_size
     batch_count = 0
-    for batch in train_dataiter:
+    for _ in train_dataiter:
         batch_count += 1
     assert(nbatch == batch_count)
     # test_reset
@@ -104,7 +104,7 @@ def test_inter_methods_in_augmenter(inter_method, cifar10):
         data_shape=(3, 28, 28),
         batch_size=100,
         inter_method=inter_method)
-    for batch in dataiter:
+    for _ in dataiter:
         pass
 
 def test_image_iter_exception(cifar10):
@@ -121,7 +121,7 @@ def test_image_iter_exception(cifar10):
             prefetch_buffer=1)
         labelcount = [0 for i in range(10)]
         batchcount = 0
-        for batch in dataiter:
+        for _ in dataiter:
             pass
 
 def _init_NDArrayIter_data(data_type, is_image=False):
@@ -345,7 +345,7 @@ def test_LibSVMIter(tmpdir):
         first = mx.nd.array([[0.5, 0., 1.2], [0., 0., 0.], [0.6, 2.4, 1.2]])
         second = mx.nd.array([[0., 0., -1.2], [0.5, 0., 1.2], [0., 0., 0.]])
         i = 0
-        for batch in iter(data_train):
+        for _ in iter(data_train):
             expected = first.asnumpy() if i == 0 else second.asnumpy()
             data = data_train.getdata()
             data.check_format(True)
@@ -369,7 +369,7 @@ def test_LibSVMIter(tmpdir):
         path = os.path.join(data_dir, news_metadata['name'])
         data_train = mx.io.LibSVMIter(data_libsvm=path, data_shape=(news_metadata['feature_dim'],),
                                       batch_size=batch_size)
-        for epoch in range(2):
+        for _ in range(2):
             num_batches = 0
             for batch in data_train:
                 # check the range of labels
@@ -401,7 +401,7 @@ def test_LibSVMIter(tmpdir):
         data_dir = os.path.join(str(tmpdir), 'data')
         data_train = mx.io.LibSVMIter(data_libsvm=data_path, label_libsvm=label_path,
                                       data_shape=(3, ), label_shape=(3, ), batch_size=3)
-        for batch in iter(data_train):
+        for _ in iter(data_train):
             data_train.get_data().asnumpy()
 
     check_libSVMIter_synthetic()
@@ -432,16 +432,16 @@ def test_CSVIter(tmpdir):
         if dtype is 'int64':
             entry_str = '2147483648'
         with open(data_path, 'w') as fout:
-            for i in range(1000):
+            for _ in range(1000):
                 fout.write(','.join([entry_str for _ in range(8*8)]) + '\n')
         with open(label_path, 'w') as fout:
-            for i in range(1000):
+            for _ in range(1000):
                 fout.write('0\n')
 
         data_train = mx.io.CSVIter(data_csv=data_path, data_shape=(8, 8),
                                    label_csv=label_path, batch_size=100, dtype=dtype)
         expected = mx.nd.ones((100, 8, 8), dtype=dtype) * int(entry_str)
-        for batch in iter(data_train):
+        for _ in iter(data_train):
             data_batch = data_train.getdata()
             assert_almost_equal(data_batch.asnumpy(), expected.asnumpy())
             assert data_batch.asnumpy().dtype == expected.asnumpy().dtype

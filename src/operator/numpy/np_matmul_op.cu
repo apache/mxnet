@@ -26,11 +26,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_matmul)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMatmulForward<gpu>);
+NNVM_REGISTER_OP(_npi_matmul).set_attr<FCompute>("FCompute<gpu>", NumpyMatmulForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_matmul)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMatmulBackward<gpu>);
+NNVM_REGISTER_OP(_backward_np_matmul).set_attr<FCompute>("FCompute<gpu>", NumpyMatmulBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

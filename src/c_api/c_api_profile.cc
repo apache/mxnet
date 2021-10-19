@@ -22,7 +22,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file c_api_profile.cc
  * \brief C API of mxnet profiler and support functions
  */
@@ -39,13 +38,12 @@ namespace mxnet {
 
 static profiler::ProfileDomain api_domain("MXNET_C_API");
 static profiler::ProfileCounter api_call_counter("MXNet C API Calls", &api_domain);
-static profiler::ProfileCounter api_concurrency_counter("MXNet C API Concurrency",
-                                                        &api_domain);
+static profiler::ProfileCounter api_concurrency_counter("MXNet C API Concurrency", &api_domain);
 
 /*! \brief Per-API-call timing data */
 struct APICallTimingData {
-  const char *name_;
-  profiler::ProfileTask *task_;
+  const char* name_;
+  profiler::ProfileTask* task_;
 };
 
 /*!
@@ -64,12 +62,14 @@ class ProfilingThreadData {
    * \param domain Domain of the task
    * \return Pointer to the stored or created ProfileTask object
    */
-  profiler::ProfileTask *profile_task(const char *name, profiler::ProfileDomain *domain) {
+  profiler::ProfileTask* profile_task(const char* name, profiler::ProfileDomain* domain) {
     // Per-thread so no lock necessary
     auto iter = tasks_.find(name);
     if (iter == tasks_.end()) {
-      iter = tasks_.emplace(std::make_pair(
-        name, std::make_unique<profiler::ProfileTask>(name, domain))).first;
+      iter =
+          tasks_
+              .emplace(std::make_pair(name, std::make_unique<profiler::ProfileTask>(name, domain)))
+              .first;
     }
     return iter->second.get();
   }
@@ -90,15 +90,13 @@ static thread_local ProfilingThreadData thread_profiling_data;
 static MX_THREAD_LOCAL ProfilingThreadData thread_profiling_data;
 #endif
 
-extern void on_enter_api(const char *function) {
+extern void on_enter_api(const char* function) {
   if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kAPI)) {
     if (!thread_profiling_data.ignore_call_) {
       ++api_call_counter;
       ++api_concurrency_counter;
-      APICallTimingData data = {
-        function
-        , thread_profiling_data.profile_task(function, &api_domain)
-      };
+      APICallTimingData data = {function,
+                                thread_profiling_data.profile_task(function, &api_domain)};
       thread_profiling_data.calls_.push(data);
       data.task_->start();
     }
@@ -120,7 +118,7 @@ extern void on_exit_api() {
  * \brief Don't profile calls in this scope using RAII
  */
 struct IgnoreProfileCallScope {
-  IgnoreProfileCallScope()  {
+  IgnoreProfileCallScope() {
     DCHECK_EQ(thread_profiling_data.ignore_call_, false);
     thread_profiling_data.ignore_call_ = true;
   }
@@ -149,24 +147,19 @@ struct PythonProfileObjects {
   std::mutex cs_frames_;
   std::mutex cs_events_;
   std::list<std::shared_ptr<profiler::ProfileDomain>> domains_;
-  std::unordered_map<profiler::ProfileCounter *, std::shared_ptr<profiler::ProfileCounter>>
-    counters_;
-  std::unordered_map<profiler::ProfileDuration *, std::shared_ptr<profiler::ProfileDuration>>
-    tasks_;
-  std::unordered_map<profiler::ProfileDuration *, std::shared_ptr<profiler::ProfileDuration>>
-    frames_;
-  std::unordered_map<profiler::ProfileDuration *, std::shared_ptr<profiler::ProfileDuration>>
-    events_;
+  std::unordered_map<profiler::ProfileCounter*, std::shared_ptr<profiler::ProfileCounter>>
+      counters_;
+  std::unordered_map<profiler::ProfileDuration*, std::shared_ptr<profiler::ProfileDuration>> tasks_;
+  std::unordered_map<profiler::ProfileDuration*, std::shared_ptr<profiler::ProfileDuration>>
+      frames_;
+  std::unordered_map<profiler::ProfileDuration*, std::shared_ptr<profiler::ProfileDuration>>
+      events_;
 };
 static PythonProfileObjects python_profile_objects;
 
-enum class ProfileProcess {
-  kWorker, kServer
-};
+enum class ProfileProcess { kWorker, kServer };
 
-enum class PrintFormat {
-  table, json
-};
+enum class PrintFormat { table, json };
 
 struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
   bool profile_all;
@@ -181,38 +174,48 @@ struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
   bool aggregate_stats;
   int profile_process;
   DMLC_DECLARE_PARAMETER(ProfileConfigParam) {
-    DMLC_DECLARE_FIELD(profile_all).set_default(false)
-      .describe("Profile all. Default is False.");
-    DMLC_DECLARE_FIELD(profile_symbolic).set_default(true)
-      .describe("Profile symbolic operators.  Default is True.");
-    DMLC_DECLARE_FIELD(profile_imperative).set_default(true)
-      .describe("Profile imperative operators.  Default is True.");
-    DMLC_DECLARE_FIELD(profile_memory).set_default(true)
-      .describe("Profile memory.  Default is True.");
-    DMLC_DECLARE_FIELD(profile_api).set_default(true)
-      .describe("Profile C API.  Default is True.");
-    DMLC_DECLARE_FIELD(filename).set_default("profile.json")
-      .describe("File name to write profiling info.");
+    DMLC_DECLARE_FIELD(profile_all).set_default(false).describe("Profile all. Default is False.");
+    DMLC_DECLARE_FIELD(profile_symbolic)
+        .set_default(true)
+        .describe("Profile symbolic operators.  Default is True.");
+    DMLC_DECLARE_FIELD(profile_imperative)
+        .set_default(true)
+        .describe("Profile imperative operators.  Default is True.");
+    DMLC_DECLARE_FIELD(profile_memory)
+        .set_default(true)
+        .describe("Profile memory.  Default is True.");
+    DMLC_DECLARE_FIELD(profile_api).set_default(true).describe("Profile C API.  Default is True.");
+    DMLC_DECLARE_FIELD(filename)
+        .set_default("profile.json")
+        .describe("File name to write profiling info.");
 #if MXNET_USE_CUDA
-    DMLC_DECLARE_FIELD(gpu_memory_profile_filename_prefix).set_default("gpu_memory_profile")
-      .describe("File name prefix to write GPU memory profile info.");
+    DMLC_DECLARE_FIELD(gpu_memory_profile_filename_prefix)
+        .set_default("gpu_memory_profile")
+        .describe("File name prefix to write GPU memory profile info.");
 #endif  // MXNET_USE_CUDA
-    DMLC_DECLARE_FIELD(continuous_dump).set_default(true)
-      .describe("Periodically dump (and append) profiling data to file while running. "
-                "Default is True.");
-    DMLC_DECLARE_FIELD(dump_period).set_default(1.0f)
-      .describe("When continuous dump is enabled, the period between subsequent "
-                  "profile info dumping.");
-    DMLC_DECLARE_FIELD(aggregate_stats).set_default(false)
-      .describe("Maintain aggregate stats, required for MXDumpAggregateStats.  Note that "
-      "this can have a negative performance impact. Default is False.");
+    DMLC_DECLARE_FIELD(continuous_dump)
+        .set_default(true)
+        .describe(
+            "Periodically dump (and append) profiling data to file while running. "
+            "Default is True.");
+    DMLC_DECLARE_FIELD(dump_period)
+        .set_default(1.0f)
+        .describe(
+            "When continuous dump is enabled, the period between subsequent "
+            "profile info dumping.");
+    DMLC_DECLARE_FIELD(aggregate_stats)
+        .set_default(false)
+        .describe(
+            "Maintain aggregate stats, required for MXDumpAggregateStats.  Note that "
+            "this can have a negative performance impact. Default is False.");
     DMLC_DECLARE_FIELD(profile_process)
-      .add_enum("worker", static_cast<int>(ProfileProcess::kWorker))
-      .add_enum("server", static_cast<int>(ProfileProcess::kServer))
-      .set_default(static_cast<int>(ProfileProcess::kWorker))
-      .describe("Specifies which process to profile: "
-                "worker: this is default. for single node training it should always be worker."
-                "server: for distributed training, this profiles server process");
+        .add_enum("worker", static_cast<int>(ProfileProcess::kWorker))
+        .add_enum("server", static_cast<int>(ProfileProcess::kServer))
+        .set_default(static_cast<int>(ProfileProcess::kWorker))
+        .describe(
+            "Specifies which process to profile: "
+            "worker: this is default. for single node training it should always be worker."
+            "server: for distributed training, this profiles server process");
   }
 };
 
@@ -221,59 +224,70 @@ DMLC_REGISTER_PARAMETER(ProfileConfigParam);
 struct ProfileMarkerScopeParam : public dmlc::Parameter<ProfileMarkerScopeParam> {
   int scope;
   DMLC_DECLARE_PARAMETER(ProfileMarkerScopeParam) {
-    DMLC_DECLARE_FIELD(scope).set_default(profiler::ProfileMarker::kProcess)
-      .add_enum("global", profiler::ProfileMarker::kGlobal)
-      .add_enum("process", profiler::ProfileMarker::kProcess)
-      .add_enum("thread", profiler::ProfileMarker::kThread)
-      .add_enum("task", profiler::ProfileMarker::kTask)
-      .add_enum("marker", profiler::ProfileMarker::kMarker)
-      .describe("Profile Instant-Marker scope.");
+    DMLC_DECLARE_FIELD(scope)
+        .set_default(profiler::ProfileMarker::kProcess)
+        .add_enum("global", profiler::ProfileMarker::kGlobal)
+        .add_enum("process", profiler::ProfileMarker::kProcess)
+        .add_enum("thread", profiler::ProfileMarker::kThread)
+        .add_enum("task", profiler::ProfileMarker::kTask)
+        .add_enum("marker", profiler::ProfileMarker::kMarker)
+        .describe("Profile Instant-Marker scope.");
   }
 };
 
 DMLC_REGISTER_PARAMETER(ProfileMarkerScopeParam);
 
-int MXSetProcessProfilerConfig(int num_params, const char* const* keys, const char* const* vals,
+int MXSetProcessProfilerConfig(int num_params,
+                               const char* const* keys,
+                               const char* const* vals,
                                KVStoreHandle kvstoreHandle) {
-    mxnet::IgnoreProfileCallScope ignore;
+  mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    std::vector<std::pair<std::string, std::string>> kwargs;
-    kwargs.reserve(num_params);
+  std::vector<std::pair<std::string, std::string>> kwargs;
+  kwargs.reserve(num_params);
+  for (int i = 0; i < num_params; ++i) {
+    CHECK_NOTNULL(keys[i]);
+    CHECK_NOTNULL(vals[i]);
+    kwargs.emplace_back(std::make_pair(keys[i], vals[i]));
+  }
+  ProfileConfigParam param;
+  param.Init(kwargs);
+  if (static_cast<ProfileProcess>(param.profile_process) == ProfileProcess::kServer) {
+    std::ostringstream os;
     for (int i = 0; i < num_params; ++i) {
-      CHECK_NOTNULL(keys[i]);
-      CHECK_NOTNULL(vals[i]);
-      kwargs.emplace_back(std::make_pair(keys[i], vals[i]));
+      // this will be sent to the server now, those configs shouldn't have profile server again
+      if (strcmp(keys[i], "profile_process") == 0)
+        continue;
+      os << keys[i] << ":" << vals[i];
+      if (i != num_params - 1)
+        os << ",";
     }
-    ProfileConfigParam param;
-    param.Init(kwargs);
-    if (static_cast<ProfileProcess>(param.profile_process) == ProfileProcess::kServer) {
-      std::ostringstream os;
-      for (int i = 0; i < num_params; ++i) {
-        // this will be sent to the server now, those configs shouldn't have profile server again
-        if (strcmp(keys[i], "profile_process") == 0) continue;
-        os << keys[i] << ":" << vals[i];
-        if (i != num_params - 1) os << ",";
-      }
-      CHECK(kvstoreHandle) << "KVStoreHandle passed to profiler is null";
-      static_cast<KVStore*>(kvstoreHandle)->SetServerProfilerCommand(
-      mxnet::KVStoreServerProfilerCommand::kSetConfig, os.str());
-    } else {
-      int mode = 0;
-      if (param.profile_api || param.profile_all)        { mode |= profiler::Profiler::kAPI; }
-      if (param.profile_symbolic || param.profile_all)   { mode |= profiler::Profiler::kSymbolic; }
-      if (param.profile_imperative ||
-          param.profile_all) { mode |= profiler::Profiler::kImperative; }
-      if (param.profile_memory || param.profile_all)     { mode |= profiler::Profiler::kMemory; }
-      profiler::Profiler::Get()->SetConfig(profiler::Profiler::ProfilerMode(mode),
-                                           std::string(param.filename),
-                                           param.continuous_dump,
-                                           param.dump_period,
-                                           param.aggregate_stats);
+    CHECK(kvstoreHandle) << "KVStoreHandle passed to profiler is null";
+    static_cast<KVStore*>(kvstoreHandle)
+        ->SetServerProfilerCommand(mxnet::KVStoreServerProfilerCommand::kSetConfig, os.str());
+  } else {
+    int mode = 0;
+    if (param.profile_api || param.profile_all) {
+      mode |= profiler::Profiler::kAPI;
+    }
+    if (param.profile_symbolic || param.profile_all) {
+      mode |= profiler::Profiler::kSymbolic;
+    }
+    if (param.profile_imperative || param.profile_all) {
+      mode |= profiler::Profiler::kImperative;
+    }
+    if (param.profile_memory || param.profile_all) {
+      mode |= profiler::Profiler::kMemory;
+    }
+    profiler::Profiler::Get()->SetConfig(profiler::Profiler::ProfilerMode(mode),
+                                         std::string(param.filename),
+                                         param.continuous_dump,
+                                         param.dump_period,
+                                         param.aggregate_stats);
 #if MXNET_USE_CUDA
-      profiler::GpuDeviceStorageProfiler::Get()->SetConfig(
-          param.gpu_memory_profile_filename_prefix);
+    profiler::GpuDeviceStorageProfiler::Get()->SetConfig(param.gpu_memory_profile_filename_prefix);
 #endif  // MXNET_USE_CUDA
-    }
+  }
   API_END();
 }
 
@@ -281,30 +295,33 @@ int MXSetProfilerConfig(int num_params, const char* const* keys, const char* con
   return MXSetProcessProfilerConfig(num_params, keys, vals, nullptr);
 }
 
-int MXAggregateProfileStatsPrint(const char **out_str, int reset, int format, int sort_by,
+int MXAggregateProfileStatsPrint(const char** out_str,
+                                 int reset,
+                                 int format,
+                                 int sort_by,
                                  int ascending) {
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  MXAPIThreadLocalEntry<>* ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
-    CHECK_NOTNULL(out_str);
-    profiler::Profiler *profiler = profiler::Profiler::Get();
-    if (profiler->IsEnableOutput()) {
-      // Register stats up until now
-      profiler->DumpProfile(false);
-    }
-    std::shared_ptr<profiler::AggregateStats> stats = profiler->GetAggregateStats();
-    std::ostringstream os;
-    if (stats) {
-      if (static_cast<PrintFormat>(format) == PrintFormat::table)
-        stats->DumpTable(os, sort_by, ascending);
-      else if (static_cast<PrintFormat>(format) == PrintFormat::json)
-        stats->DumpJson(os, sort_by, ascending);
-      else
-        LOG(FATAL) << "Invalid value for parameter format";
-    }
-    if (reset != 0)
-      stats->clear();
-    ret->ret_str = os.str();
-    *out_str = (ret->ret_str).c_str();
+  CHECK_NOTNULL(out_str);
+  profiler::Profiler* profiler = profiler::Profiler::Get();
+  if (profiler->IsEnableOutput()) {
+    // Register stats up until now
+    profiler->DumpProfile(false);
+  }
+  std::shared_ptr<profiler::AggregateStats> stats = profiler->GetAggregateStats();
+  std::ostringstream os;
+  if (stats) {
+    if (static_cast<PrintFormat>(format) == PrintFormat::table)
+      stats->DumpTable(os, sort_by, ascending);
+    else if (static_cast<PrintFormat>(format) == PrintFormat::json)
+      stats->DumpJson(os, sort_by, ascending);
+    else
+      LOG(FATAL) << "Invalid value for parameter format";
+  }
+  if (reset != 0)
+    stats->clear();
+  ret->ret_str = os.str();
+  *out_str     = (ret->ret_str).c_str();
   API_END();
 }
 
@@ -317,13 +334,13 @@ int MXDumpProcessProfile(int finished, int profile_process, KVStoreHandle kvStor
   API_BEGIN();
   if (static_cast<ProfileProcess>(profile_process) == ProfileProcess::kServer) {
     CHECK(kvStoreHandle) << "Kvstore Handle passed to profiler is null";
-    static_cast<KVStore*>(kvStoreHandle)->SetServerProfilerCommand(
-      mxnet::KVStoreServerProfilerCommand::kDump,
-      std::to_string(finished));
+    static_cast<KVStore*>(kvStoreHandle)
+        ->SetServerProfilerCommand(mxnet::KVStoreServerProfilerCommand::kDump,
+                                   std::to_string(finished));
   } else {
-    profiler::Profiler *profiler = profiler::Profiler::Get();
+    profiler::Profiler* profiler = profiler::Profiler::Get();
     CHECK(profiler->IsEnableOutput())
-      << "Profiler hasn't been run. Config and start profiler first";
+        << "Profiler hasn't been run. Config and start profiler first";
     profiler->DumpProfile(finished != 0);
 #if MXNET_USE_CUDA
     profiler::GpuDeviceStorageProfiler::Get()->DumpProfile();
@@ -348,9 +365,9 @@ int MXSetProcessProfilerState(int state, int profile_process, KVStoreHandle kvSt
   API_BEGIN();
   if (static_cast<ProfileProcess>(profile_process) == ProfileProcess::kServer) {
     CHECK(kvStoreHandle) << "Kvstore Handle passed to profiler is null";
-    static_cast<KVStore*>(kvStoreHandle)->SetServerProfilerCommand(
-      mxnet::KVStoreServerProfilerCommand::kState,
-      std::to_string(state));
+    static_cast<KVStore*>(kvStoreHandle)
+        ->SetServerProfilerCommand(mxnet::KVStoreServerProfilerCommand::kState,
+                                   std::to_string(state));
   } else {
     switch (state) {
       case profiler::Profiler::kNotRunning:
@@ -365,134 +382,127 @@ int MXSetProcessProfilerState(int state, int profile_process, KVStoreHandle kvSt
   API_END();
 }
 
-int MXProfileCreateDomain(const char *domain, ProfileHandle *out) {
+int MXProfileCreateDomain(const char* domain, ProfileHandle* out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    auto dom = std::make_shared<profiler::ProfileDomain>(domain);
-    {
-      std::unique_lock<std::mutex> lock(python_profile_objects.cs_domains_);
-      python_profile_objects.domains_.push_back(dom);
-    }
-    *out = dom.get();
+  auto dom = std::make_shared<profiler::ProfileDomain>(domain);
+  {
+    std::unique_lock<std::mutex> lock(python_profile_objects.cs_domains_);
+    python_profile_objects.domains_.push_back(dom);
+  }
+  *out = dom.get();
   API_END();
 }
 
-int MXProfileCreateTask(ProfileHandle domain,
-                        const char *task_name,
-                        ProfileHandle *out) {
+int MXProfileCreateTask(ProfileHandle domain, const char* task_name, ProfileHandle* out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    auto ctr =
-      std::make_shared<profiler::ProfileTask>(task_name,
-                                                static_cast<profiler::ProfileDomain *>(domain));
-    {
-      std::unique_lock<std::mutex> lock(python_profile_objects.cs_tasks_);
-      python_profile_objects.tasks_.emplace(std::make_pair(ctr.get(), ctr));
-    }
-    *out = ctr.get();
+  auto ctr = std::make_shared<profiler::ProfileTask>(task_name,
+                                                     static_cast<profiler::ProfileDomain*>(domain));
+  {
+    std::unique_lock<std::mutex> lock(python_profile_objects.cs_tasks_);
+    python_profile_objects.tasks_.emplace(std::make_pair(ctr.get(), ctr));
+  }
+  *out = ctr.get();
   API_END();
 }
 
-int MXProfileCreateFrame(ProfileHandle domain,
-                         const char *frame_name,
-                         ProfileHandle *out) {
+int MXProfileCreateFrame(ProfileHandle domain, const char* frame_name, ProfileHandle* out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    auto ctr =
-      std::make_shared<profiler::ProfileFrame>(frame_name,
-                                              static_cast<profiler::ProfileDomain *>(domain));
-    {
-      std::unique_lock<std::mutex> lock(python_profile_objects.cs_frames_);
-      python_profile_objects.frames_.emplace(std::make_pair(ctr.get(), ctr));
-    }
-    *out = ctr.get();
+  auto ctr = std::make_shared<profiler::ProfileFrame>(
+      frame_name, static_cast<profiler::ProfileDomain*>(domain));
+  {
+    std::unique_lock<std::mutex> lock(python_profile_objects.cs_frames_);
+    python_profile_objects.frames_.emplace(std::make_pair(ctr.get(), ctr));
+  }
+  *out = ctr.get();
   API_END();
 }
 
-int MXProfileCreateEvent(const char *event_name, ProfileHandle *out) {
+int MXProfileCreateEvent(const char* event_name, ProfileHandle* out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    auto ctr =
-      std::make_shared<profiler::ProfileEvent>(event_name);
-    {
-      std::unique_lock<std::mutex> lock(python_profile_objects.cs_events_);
-      python_profile_objects.events_.emplace(std::make_pair(ctr.get(), ctr));
-    }
-    *out = ctr.get();
+  auto ctr = std::make_shared<profiler::ProfileEvent>(event_name);
+  {
+    std::unique_lock<std::mutex> lock(python_profile_objects.cs_events_);
+    python_profile_objects.events_.emplace(std::make_pair(ctr.get(), ctr));
+  }
+  *out = ctr.get();
   API_END();
 }
 
 int MXProfileDestroyHandle(ProfileHandle object_handle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    CHECK_NE(object_handle, static_cast<ProfileHandle>(nullptr))
+  CHECK_NE(object_handle, static_cast<ProfileHandle>(nullptr))
       << "Invalid NULL handle passed to MXProfileDestroyHandle";
-    std::shared_ptr<profiler::ProfileObject> shared_object_ptr(nullptr);
-    {
-      auto object = static_cast<profiler::ProfileObject *>(object_handle);
-      switch (object->type()) {
-        case profiler::kTask: {
-          auto p = static_cast<profiler::ProfileDuration *>(object_handle);
-          std::unique_lock<std::mutex> lock(python_profile_objects.cs_tasks_);
-          auto iter = python_profile_objects.tasks_.find(p);
-          if (iter != python_profile_objects.tasks_.end()) {
-            shared_object_ptr = iter->second;
-            python_profile_objects.tasks_.erase(iter);
-          }
-          break;
+  std::shared_ptr<profiler::ProfileObject> shared_object_ptr(nullptr);
+  {
+    auto object = static_cast<profiler::ProfileObject*>(object_handle);
+    switch (object->type()) {
+      case profiler::kTask: {
+        auto p = static_cast<profiler::ProfileDuration*>(object_handle);
+        std::unique_lock<std::mutex> lock(python_profile_objects.cs_tasks_);
+        auto iter = python_profile_objects.tasks_.find(p);
+        if (iter != python_profile_objects.tasks_.end()) {
+          shared_object_ptr = iter->second;
+          python_profile_objects.tasks_.erase(iter);
         }
-        case profiler::kEvent: {
-          auto p = static_cast<profiler::ProfileDuration *>(object_handle);
-          std::unique_lock<std::mutex> lock(python_profile_objects.cs_events_);
-          auto iter = python_profile_objects.events_.find(p);
-          if (iter != python_profile_objects.events_.end()) {
-            shared_object_ptr = iter->second;
-            python_profile_objects.events_.erase(iter);
-          }
-          break;
-        }
-        case profiler::kFrame: {
-          auto p = static_cast<profiler::ProfileDuration *>(object_handle);
-          std::unique_lock<std::mutex> lock(python_profile_objects.cs_frames_);
-          auto iter = python_profile_objects.frames_.find(p);
-          if (iter != python_profile_objects.frames_.end()) {
-            shared_object_ptr = iter->second;
-            python_profile_objects.frames_.erase(iter);
-          }
-          break;
-        }
-        case profiler::kCounter: {
-          auto p = static_cast<profiler::ProfileCounter *>(object_handle);
-          std::unique_lock<std::mutex> lock(python_profile_objects.cs_counters_);
-          auto iter = python_profile_objects.counters_.find(p);
-          if (iter != python_profile_objects.counters_.end()) {
-            shared_object_ptr = iter->second;
-            python_profile_objects.counters_.erase(iter);
-          }
-          break;
-        }
-        case profiler::kDomain:
-          // Not destroyed
-          break;
+        break;
       }
+      case profiler::kEvent: {
+        auto p = static_cast<profiler::ProfileDuration*>(object_handle);
+        std::unique_lock<std::mutex> lock(python_profile_objects.cs_events_);
+        auto iter = python_profile_objects.events_.find(p);
+        if (iter != python_profile_objects.events_.end()) {
+          shared_object_ptr = iter->second;
+          python_profile_objects.events_.erase(iter);
+        }
+        break;
+      }
+      case profiler::kFrame: {
+        auto p = static_cast<profiler::ProfileDuration*>(object_handle);
+        std::unique_lock<std::mutex> lock(python_profile_objects.cs_frames_);
+        auto iter = python_profile_objects.frames_.find(p);
+        if (iter != python_profile_objects.frames_.end()) {
+          shared_object_ptr = iter->second;
+          python_profile_objects.frames_.erase(iter);
+        }
+        break;
+      }
+      case profiler::kCounter: {
+        auto p = static_cast<profiler::ProfileCounter*>(object_handle);
+        std::unique_lock<std::mutex> lock(python_profile_objects.cs_counters_);
+        auto iter = python_profile_objects.counters_.find(p);
+        if (iter != python_profile_objects.counters_.end()) {
+          shared_object_ptr = iter->second;
+          python_profile_objects.counters_.erase(iter);
+        }
+        break;
+      }
+      case profiler::kDomain:
+        // Not destroyed
+        break;
     }
-    shared_object_ptr.reset();  // Destroy out of lock scope
+  }
+  shared_object_ptr.reset();  // Destroy out of lock scope
   API_END();
 }
 
 int MXProfileDurationStart(ProfileHandle duration_handle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    CHECK_NOTNULL(duration_handle);
-    static_cast<profiler::ProfileDuration *>(duration_handle)->start();
+  CHECK_NOTNULL(duration_handle);
+  static_cast<profiler::ProfileDuration*>(duration_handle)->start();
   API_END();
 }
 
 int MXProfileDurationStop(ProfileHandle duration_handle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    CHECK_NOTNULL(duration_handle);
-    static_cast<profiler::ProfileDuration *>(duration_handle)->stop();
+  CHECK_NOTNULL(duration_handle);
+  static_cast<profiler::ProfileDuration*>(duration_handle)->stop();
   API_END();
 }
 
@@ -505,9 +515,9 @@ int MXProcessProfilePause(int paused, int profile_process, KVStoreHandle kvStore
   API_BEGIN();
   if (static_cast<ProfileProcess>(profile_process) == ProfileProcess::kServer) {
     CHECK(kvStoreHandle) << "Kvstore Handle passed to profiler is null";
-    static_cast<KVStore*>(kvStoreHandle)->SetServerProfilerCommand(
-      mxnet::KVStoreServerProfilerCommand::kPause,
-      std::to_string(paused));
+    static_cast<KVStore*>(kvStoreHandle)
+        ->SetServerProfilerCommand(mxnet::KVStoreServerProfilerCommand::kPause,
+                                   std::to_string(paused));
   } else {
     if (paused) {
       profiler::vtune::vtune_pause();
@@ -520,48 +530,42 @@ int MXProcessProfilePause(int paused, int profile_process, KVStoreHandle kvStore
   API_END();
 }
 
-int MXProfileCreateCounter(ProfileHandle domain,
-                           const char *counter_name,
-                           ProfileHandle *out) {
+int MXProfileCreateCounter(ProfileHandle domain, const char* counter_name, ProfileHandle* out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    auto ctr =
-      std::make_shared<profiler::ProfileCounter>(counter_name,
-                                                static_cast<profiler::ProfileDomain *>(domain));
-    {
-      std::unique_lock<std::mutex> lock(python_profile_objects.cs_counters_);
-      python_profile_objects.counters_.emplace(std::make_pair(ctr.get(), ctr));
-    }
-    *out = ctr.get();
+  auto ctr = std::make_shared<profiler::ProfileCounter>(
+      counter_name, static_cast<profiler::ProfileDomain*>(domain));
+  {
+    std::unique_lock<std::mutex> lock(python_profile_objects.cs_counters_);
+    python_profile_objects.counters_.emplace(std::make_pair(ctr.get(), ctr));
+  }
+  *out = ctr.get();
   API_END();
 }
 
 int MXProfileSetCounter(ProfileHandle counter_handle, uint64_t value) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    static_cast<profiler::ProfileCounter *>(counter_handle)->operator=(value);
+  static_cast<profiler::ProfileCounter*>(counter_handle)->operator=(value);
   API_END();
 }
 
 int MXProfileAdjustCounter(ProfileHandle counter_handle, int64_t by_value) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    static_cast<profiler::ProfileCounter *>(counter_handle)->operator+=(by_value);
+  static_cast<profiler::ProfileCounter*>(counter_handle)->operator+=(by_value);
   API_END();
 }
 
-int MXProfileSetMarker(ProfileHandle domain,
-                       const char *instant_marker_name,
-                       const char *scope) {
+int MXProfileSetMarker(ProfileHandle domain, const char* instant_marker_name, const char* scope) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-    ProfileMarkerScopeParam param;
-    std::vector<std::pair<std::string, std::string>> kwargs = {{ "scope", scope }};
-    param.Init(kwargs);
-    profiler::ProfileMarker marker(instant_marker_name,
-                                         static_cast<profiler::ProfileDomain *>(domain),
-                                         static_cast<profiler::ProfileMarker::MarkerScope>(
-                                           param.scope));
-    marker.mark();
+  ProfileMarkerScopeParam param;
+  std::vector<std::pair<std::string, std::string>> kwargs = {{"scope", scope}};
+  param.Init(kwargs);
+  profiler::ProfileMarker marker(instant_marker_name,
+                                 static_cast<profiler::ProfileDomain*>(domain),
+                                 static_cast<profiler::ProfileMarker::MarkerScope>(param.scope));
+  marker.mark();
   API_END();
 }

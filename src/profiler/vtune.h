@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file vtune.h
  * \brief VTune API classes.
  */
@@ -79,24 +78,30 @@ struct VTuneResume {
 
 /*
  * Intel VTune APIs. For API meanings, see:
- * https://software.intel.com/en-us/vtune-amplifier-help-instrumentation-and-tracing-technology-api-reference NOLINT()
+ * https://software.intel.com/en-us/vtune-amplifier-help-instrumentation-and-tracing-technology-api-reference
+ * NOLINT()
  */
 class VTuneDomain {
  public:
-  inline explicit VTuneDomain(const char *name) throw()
-    : domain_(__itt_domain_create(name)) {
+  inline explicit VTuneDomain(const char* name) throw() : domain_(__itt_domain_create(name)) {
     CHECK_NOTNULL(domain_);
     domain_->flags = 1;
   }
 
-  inline operator __itt_domain *() { return domain_; }
+  inline operator __itt_domain*() {
+    return domain_;
+  }
 
-  inline __itt_domain *dom() { return domain_; }
+  inline __itt_domain* dom() {
+    return domain_;
+  }
 
-  inline const char *name() const { return domain_->nameA; }
+  inline const char* name() const {
+    return domain_->nameA;
+  }
 
  private:
-  __itt_domain *domain_;
+  __itt_domain* domain_;
 };
 
 /*!
@@ -105,7 +110,7 @@ class VTuneDomain {
  * \note Some objects are expensive to create, such as VTuneEvent, so it's more desirable to
  *       do the mutex lock and reuse
  */
-template<typename VTuneObject>
+template <typename VTuneObject>
 class VTuneRegistry {
  public:
   /*!
@@ -115,14 +120,14 @@ class VTuneRegistry {
    * \param args Arguments to pass to constructor after 'name'
    * \return Pointer to the cached or new VTuneObject
    */
-  template<typename ...Args>
-  inline VTuneObject *get(const char *name, Args... args) {
+  template <typename... Args>
+  inline VTuneObject* get(const char* name, Args... args) {
     dmlc::ReadLock read_lock(m_);
     auto iter = registry_.find(name);
     if (iter == registry_.end()) {
       dmlc::WriteLock write_lock(m_);
-      iter = registry_.emplace(name, std::unique_ptr<VTuneObject>(
-        new VTuneObject(name, args...))).first;
+      iter = registry_.emplace(name, std::unique_ptr<VTuneObject>(new VTuneObject(name, args...)))
+                 .first;
     }
     return iter->second.get();
   }
@@ -135,15 +140,18 @@ class VTuneRegistry {
    * \param args Arguments to pass to constructor after 'domain'
    * \return Pointer to the cached or new VTuneObject
    */
-  template<typename ...Args>
-  inline VTuneObject *get(const char *name, const VTuneDomain *domain, Args... args) {
+  template <typename... Args>
+  inline VTuneObject* get(const char* name, const VTuneDomain* domain, Args... args) {
     dmlc::ReadLock read_lock(m_);
     auto iter = registry_.find(name);
     if (iter == registry_.end()) {
       dmlc::WriteLock write_lock(m_);
       std::unique_ptr<VTuneObject> ev(new VTuneObject(name, domain, args...));
-      iter = registry_.emplace(name, std::unique_ptr<VTuneObject>(
-        new VTuneObject(make_key(name, domain), args...))).first;
+      iter = registry_
+                 .emplace(
+                     name,
+                     std::unique_ptr<VTuneObject>(new VTuneObject(make_key(name, domain), args...)))
+                 .first;
     }
     return iter->second.get();
   }
@@ -155,7 +163,7 @@ class VTuneRegistry {
    * \param domain Domain of the object
    * \return String key created form the name and domain names
    */
-  static inline std::string make_key(const char *name, const VTuneDomain *domain) {
+  static inline std::string make_key(const char* name, const VTuneDomain* domain) {
     return std::string(domain->name()) + "::" + std::string(name);
   }
 
@@ -170,12 +178,16 @@ class VTuneRegistry {
  */
 class VTuneEvent {
  public:
-  inline explicit VTuneEvent(const char *name) throw()
-    : itt_event_(__itt_event_create(name, strlen(name))) {}
+  inline explicit VTuneEvent(const char* name) throw()
+      : itt_event_(__itt_event_create(name, strlen(name))) {}
 
-  inline void start() { __itt_event_start(itt_event_); }
+  inline void start() {
+    __itt_event_start(itt_event_);
+  }
 
-  inline void stop() { __itt_event_end(itt_event_); }
+  inline void stop() {
+    __itt_event_end(itt_event_);
+  }
 
   static VTuneRegistry<VTuneEvent> registry_;
 
@@ -190,22 +202,28 @@ class VTuneEvent {
  */
 class VTuneTask {
  public:
-  inline VTuneTask(const char *name, VTuneDomain *domain) throw()
-    : name_(__itt_string_handle_create(name))
-      , domain_(domain) {
+  inline VTuneTask(const char* name, VTuneDomain* domain) throw()
+      : name_(__itt_string_handle_create(name)), domain_(domain) {}
+
+  inline void start() {
+    __itt_task_begin(domain()->dom(), __itt_null, __itt_null, name_);
   }
 
-  inline void start() { __itt_task_begin(domain()->dom(), __itt_null, __itt_null, name_); }
+  inline void stop() {
+    __itt_task_end(domain()->dom());
+  }
 
-  inline void stop() { __itt_task_end(domain()->dom()); }
+  inline VTuneDomain* domain() {
+    return domain_;
+  }
 
-  inline VTuneDomain *domain() { return domain_; }
-
-  const char *name() const { return name_->strA; }
+  const char* name() const {
+    return name_->strA;
+  }
 
  private:
-  __itt_string_handle *name_;
-  VTuneDomain *domain_;
+  __itt_string_handle* name_;
+  VTuneDomain* domain_;
 };
 
 /*!
@@ -215,8 +233,7 @@ class VTuneTask {
  */
 class VTuneFrame {
  public:
-  inline explicit VTuneFrame(VTuneDomain *domain) throw()
-    : domain_(domain) {
+  inline explicit VTuneFrame(VTuneDomain* domain) throw() : domain_(domain) {
     id_ = __itt_id_make(this, 0);
     __itt_id_create(domain->dom(), id_);
   }
@@ -225,24 +242,36 @@ class VTuneFrame {
     __itt_id_destroy(domain_->dom(), id_);
   }
 
-#ifdef  MXNET_VTUNE_FRAME_GENERATE_ID
-  inline void start() { __itt_frame_begin_v3(domain()->dom(), nullptr); }
-  inline void stop()  { __itt_frame_end_v3(domain()->dom(), nullptr); }
+#ifdef MXNET_VTUNE_FRAME_GENERATE_ID
+  inline void start() {
+    __itt_frame_begin_v3(domain()->dom(), nullptr);
+  }
+  inline void stop() {
+    __itt_frame_end_v3(domain()->dom(), nullptr);
+  }
 #else
 
-  inline void start() { __itt_frame_begin_v3(domain()->dom(), &id_); }
+  inline void start() {
+    __itt_frame_begin_v3(domain()->dom(), &id_);
+  }
 
-  inline void stop() { __itt_frame_end_v3(domain()->dom(), &id_); }
+  inline void stop() {
+    __itt_frame_end_v3(domain()->dom(), &id_);
+  }
 
 #endif
 
-  inline operator __itt_id *() { return &id_; }
+  inline operator __itt_id*() {
+    return &id_;
+  }
 
-  inline VTuneDomain *domain() { return domain_; }
+  inline VTuneDomain* domain() {
+    return domain_;
+  }
 
  private:
   __itt_id id_;
-  VTuneDomain *domain_;
+  VTuneDomain* domain_;
 };
 
 /*!
@@ -252,10 +281,8 @@ class VTuneFrame {
  */
 class VTuneCounter {
  public:
-  inline VTuneCounter(const char *name, VTuneDomain *domain) throw()
-    : name_(name)
-      , domain_(domain)
-      , counter_(__itt_counter_create(name, domain->name())) {
+  inline VTuneCounter(const char* name, VTuneDomain* domain) throw()
+      : name_(name), domain_(domain), counter_(__itt_counter_create(name, domain->name())) {
     CHECK_NOTNULL(counter_);
   }
 
@@ -263,13 +290,21 @@ class VTuneCounter {
     __itt_counter_destroy(counter_);
   }
 
-  inline void operator++() { __itt_counter_inc_delta(counter_, 1); }
+  inline void operator++() {
+    __itt_counter_inc_delta(counter_, 1);
+  }
 
-  inline void operator++(int) { __itt_counter_inc_delta(counter_, 1); }
+  inline void operator++(int) {
+    __itt_counter_inc_delta(counter_, 1);
+  }
 
-  inline void operator--() { __itt_counter_dec_delta(counter_, 1); }
+  inline void operator--() {
+    __itt_counter_dec_delta(counter_, 1);
+  }
 
-  inline void operator--(int) { __itt_counter_dec_delta(counter_, 1); }
+  inline void operator--(int) {
+    __itt_counter_dec_delta(counter_, 1);
+  }
 
   inline void operator+=(int64_t v) {
     if (v > 0) {
@@ -279,16 +314,18 @@ class VTuneCounter {
     }
   }
 
-  inline void operator-=(int64_t v) { this->operator+=(-v); }
+  inline void operator-=(int64_t v) {
+    this->operator+=(-v);
+  }
 
-  inline VTuneCounter &operator=(uint64_t v) {
+  inline VTuneCounter& operator=(uint64_t v) {
     __itt_counter_set_value(counter_, &v);
     return *this;
   }
 
  private:
-  const char *name_;
-  VTuneDomain *domain_;
+  const char* name_;
+  VTuneDomain* domain_;
   __itt_counter counter_;
 };
 
@@ -298,19 +335,18 @@ class VTuneCounter {
  */
 class VTuneInstantMarker {
  public:
-  inline VTuneInstantMarker(const char *name,
-                            VTuneDomain *domain,
+  inline VTuneInstantMarker(const char* name,
+                            VTuneDomain* domain,
                             __itt_scope scope = __itt_scope_global) throw()
-    : name_(__itt_string_handle_create(name))
-      , domain_(domain)
-      , scope_(scope) {
+      : name_(__itt_string_handle_create(name)), domain_(domain), scope_(scope) {}
+
+  void signal() {
+    __itt_marker(domain_->dom(), __itt_null, name_, scope_);
   }
 
-  void signal() { __itt_marker(domain_->dom(), __itt_null, name_, scope_); }
-
  private:
-  __itt_string_handle *name_;
-  VTuneDomain *domain_;
+  __itt_string_handle* name_;
+  VTuneDomain* domain_;
   __itt_scope scope_;
 };
 

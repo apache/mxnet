@@ -43,7 +43,7 @@ greatly simplifies the process of doing deep learning.
 Let's see what happens when we instantiate a network. We start by defining a multi-layer perceptron.
 
 ```{.python .input}
-from mxnet import init, nd
+from mxnet import init, np
 from mxnet.gluon import nn
 
 
@@ -85,7 +85,7 @@ As we can see, nothing really changed. Only once we provide the network with
 some data do we see a difference. Let's try it out.
 
 ```{.python .input}
-x = nd.random.uniform(shape=(2, 20))
+x = np.random.uniform(size=(2, 20))
 net(x)  # Forward computation
 print(net.collect_params())
 ```
@@ -113,13 +113,13 @@ nothing but report a debug message stating when it was invoked and with which
 parameters.
 
 ```{.python .input  n=22}
-class PrintInit(init.Initializer):
+class MyInit(init.Initializer):
     def _init_weight(self, name, data):
         print('Init', name, data.shape)
         # The actual initialization logic is omitted here.
 
 net = getnet()
-net.initialize(init=PrintInit())
+net.initialize(init=MyInit())
 ```
 
 Note that, although `MyInit` will print information about the model parameters
@@ -130,7 +130,7 @@ initialization when calling the `initialize` function - this
 we define the input and perform a forward calculation.
 
 ```{.python .input  n=25}
-x = nd.random.uniform(shape=(2, 20))
+x = np.random.uniform(size=(2, 20))
 y = net(x)
 ```
 
@@ -254,8 +254,8 @@ $$
 class MyInit(init.Initializer):
     def _init_weight(self, name, data):
         print('Init', name, data.shape)
-        data[:] = nd.random.uniform(low=-10, high=10, shape=data.shape)
-        data *= data.abs() >= 5
+        data[:] = np.random.uniform(low=-10, high=10, size=data.shape)
+        data *= np.abs(data) >= 5
 
 net.initialize(MyInit(), force_reinit=True)
 net[0].weight.data()[0]
@@ -288,11 +288,11 @@ net = nn.Sequential()
 shared = nn.Dense(8, activation='relu')
 net.add(nn.Dense(8, activation='relu'),
         shared,
-        nn.Dense(8, activation='relu', params=shared.params),
+        nn.Dense(8, activation='relu').share_parameters(shared.params),
         nn.Dense(10))
 net.initialize()
 
-x = nd.random.uniform(shape=(2, 20))
+x = np.random.uniform(size=(2, 20))
 net(x)
 
 # Check whether the parameters are the same.

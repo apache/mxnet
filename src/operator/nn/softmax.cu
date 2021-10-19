@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file softmax.cu
  * \brief GPU Implementation of softmax
  */
@@ -347,20 +346,23 @@ __global__ void softmax_stride1_compute_kernel(const softmax_params param,
 }
 )code";
 
-int get_rows_per_block(const index_t row_size, const int nvec,
-                       const index_t max_storage, const int num_threads_per_block,
-                       const index_t total_rows, const int dev_id) {
+int get_rows_per_block(const index_t row_size,
+                       const int nvec,
+                       const index_t max_storage,
+                       const int num_threads_per_block,
+                       const index_t total_rows,
+                       const int dev_id) {
   CHECK(common::IsPower2(num_threads_per_block))
-    << "Number of threads in a block must be power of 2 to use get_rows_per_block function";
+      << "Number of threads in a block must be power of 2 to use get_rows_per_block function";
   // How many read instructions should 1 thread at least do
-  const int read_instructions = 16;
-  const size_t row_size_in_vec = (row_size + nvec - 1) / nvec;
-  int desired_num_threads_per_row = (row_size_in_vec + read_instructions - 1) / read_instructions;
-  desired_num_threads_per_row = common::RoundToPower2(desired_num_threads_per_row);
-  desired_num_threads_per_row = std::min(desired_num_threads_per_row, num_threads_per_block);
+  const int read_instructions      = 16;
+  const size_t row_size_in_vec     = (row_size + nvec - 1) / nvec;
+  int desired_num_threads_per_row  = (row_size_in_vec + read_instructions - 1) / read_instructions;
+  desired_num_threads_per_row      = common::RoundToPower2(desired_num_threads_per_row);
+  desired_num_threads_per_row      = std::min(desired_num_threads_per_row, num_threads_per_block);
   const int desired_rows_per_block = num_threads_per_block / desired_num_threads_per_row;
-  int actual_rows_per_block = desired_rows_per_block;
-  int num_sms = MultiprocessorCount(dev_id);
+  int actual_rows_per_block        = desired_rows_per_block;
+  int num_sms                      = MultiprocessorCount(dev_id);
   while (actual_rows_per_block > 1 &&
          ((max_storage != -1 && max_storage < row_size * actual_rows_per_block) ||
           (total_rows + actual_rows_per_block - 1) / actual_rows_per_block < num_sms)) {
@@ -380,74 +382,88 @@ void SoftmaxRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
   using common::mshadow_type_info;
   using namespace common::cuda::rtc;
   using common::div_round;
-  if (req[0] == kNullOp || inputs[0].Size() == 0U) return;
+  if (req[0] == kNullOp || inputs[0].Size() == 0U)
+    return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  int axis = CheckAxis(param.axis, inputs[0].ndim());
-  const double temperature = param.temperature.has_value() ?
-                             param.temperature.value() : 1.0;
-  mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
+  int axis                  = CheckAxis(param.axis, inputs[0].ndim());
+  const double temperature  = param.temperature.has_value() ? param.temperature.value() : 1.0;
+  mxnet::TShape shape       = AxisShapeCompact(inputs[0].shape_, &axis, true);
 
-  void* length_ptr = nullptr;
+  void* length_ptr            = nullptr;
   std::string length_typename = "int";
   if (param.use_length.value()) {
     CHECK(inputs.size() > 1)
-      << "Mask needs to be provided when using softmax with use_length=True.";
-    length_ptr = inputs[1].dptr_;
+        << "Mask needs to be provided when using softmax with use_length=True.";
+    length_ptr      = inputs[1].dptr_;
     length_typename = mshadow_type_info(inputs[1].type_flag_).name;
   }
   CHECK_EQ(outputs.size(), 1);
   index_t M = shape[axis];
-  if (M == 0 || shape.Size() == 0) return;
+  if (M == 0 || shape.Size() == 0)
+    return;
   index_t stride = 1;
   if (axis == shape.ndim() - 2) {
     stride = shape[shape.ndim() - 1];
   }
-  const index_t N = shape.Size() / M;
-  softmax_params params = {{inputs[0].dptr_, length_ptr, nullptr},
-                           {outputs[0].dptr_},
-                           stride, M,
-                           temperature, 1, N};
-  std::string code = "#define OP " + OP + "\n"
-                     "const OpReqType req = " + util::to_string(req[0]) + ";\n"
-                     "const bool negate = " + std::to_string(negate) + ";\n"
-                     "using InputType1 = " + length_typename + ";\n";
+  const index_t N       = shape.Size() / M;
+  softmax_params params = {
+      {inputs[0].dptr_, length_ptr, nullptr}, {outputs[0].dptr_}, stride, M, temperature, 1, N};
+  std::string code = "#define OP " + OP +
+                     "\n"
+                     "const OpReqType req = " +
+                     util::to_string(req[0]) +
+                     ";\n"
+                     "const bool negate = " +
+                     std::to_string(negate) +
+                     ";\n"
+                     "using InputType1 = " +
+                     length_typename + ";\n";
   Stream<gpu>* s = ctx.get_stream<gpu>();
 
   constexpr int nvec = 2;
   // Using 20 kB of shared memory for persistent storage in the optimized case
   const size_t acc_type_size = std::max(mshadow_type_info(inputs[0].type_flag_).acc_size,
                                         mshadow_type_info(outputs[0].type_flag_).acc_size);
-  const size_t max_opt_M = 20 * 1024 / acc_type_size;
-  int rows_per_block = get_rows_per_block(M, nvec, max_opt_M,
-                                          vectorized_kernel_thread_num,
-                                          N, ctx.run_ctx.ctx.dev_id);
+  const size_t max_opt_M     = 20 * 1024 / acc_type_size;
+  int rows_per_block         = get_rows_per_block(
+      M, nvec, max_opt_M, vectorized_kernel_thread_num, N, ctx.run_ctx.ctx.dev_id);
   constexpr int warp_size = common::cuda::warp_size;
-  if (stride == 1 &&
-      static_cast<size_t>(M * rows_per_block) <= max_opt_M) {
-    code += "const bool only_full_blocks = " + std::to_string(N % rows_per_block == 0) + ";\n"
+  if (stride == 1 && static_cast<size_t>(M * rows_per_block) <= max_opt_M) {
+    code += "const bool only_full_blocks = " + std::to_string(N % rows_per_block == 0) +
+            ";\n"
             "const bool reduction_inside_warp = " +
             std::to_string(vectorized_kernel_thread_num / rows_per_block <= warp_size) + ";\n";
     params.rows_per_block = rows_per_block;
-    int nblocks = (N + rows_per_block - 1) / rows_per_block;
-    VectorizedKernelRTCLauncher(code + softmax_common_functions, "softmax_stride1_compute_kernel",
-                                softmax_stride1_kernel_fwd, nvec,
-                                M * rows_per_block, N / rows_per_block, s, params,
-                                inputs, outputs,
-                                ctx.run_ctx.ctx.dev_id, 0, nblocks);
+    int nblocks           = (N + rows_per_block - 1) / rows_per_block;
+    VectorizedKernelRTCLauncher(code + softmax_common_functions,
+                                "softmax_stride1_compute_kernel",
+                                softmax_stride1_kernel_fwd,
+                                nvec,
+                                M * rows_per_block,
+                                N / rows_per_block,
+                                s,
+                                params,
+                                inputs,
+                                outputs,
+                                ctx.run_ctx.ctx.dev_id,
+                                0,
+                                nblocks);
     MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_stride1_compute_kernel);
   } else {
-    code += "using InputType0 = " + mshadow_type_info(inputs[0].type_flag_).name + ";\n"
-            "using OutputType0 = " + mshadow_type_info(outputs[0].type_flag_).name + ";\n";
+    code += "using InputType0 = " + mshadow_type_info(inputs[0].type_flag_).name +
+            ";\n"
+            "using OutputType0 = " +
+            mshadow_type_info(outputs[0].type_flag_).name + ";\n";
     std::vector<const void*> args;
     args.emplace_back(&params);
     args.emplace_back(&M);
     int num_threads = std::min(static_cast<size_t>(128),
                                common::RoundToPower2(div_round(M, warp_size) * warp_size));
     if (stride != 1) {
-      const int num_sms = MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
+      const int num_sms         = MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
       const index_t rows_per_sm = div_round(N, (512 / num_threads) * num_sms);
-      params.rows_per_block = std::min(static_cast<size_t>(warp_size),
-                                       common::RoundToPower2(rows_per_sm));
+      params.rows_per_block =
+          std::min(static_cast<size_t>(warp_size), common::RoundToPower2(rows_per_sm));
     }
     const auto& kernel_func = get_function(code + softmax_common_functions,
                                            "simple_softmax_kernel",
@@ -709,61 +725,73 @@ void SoftmaxRTCGradCompute::operator()(const nnvm::NodeAttrs& attrs,
   Stream<gpu>* s = ctx.get_stream<gpu>();
   if (softmax_use_length(attrs)) {
     if (req[1] != kNullOp) {
-      cudaMemsetAsync(outputs[1].dptr_, 0,
+      cudaMemsetAsync(outputs[1].dptr_,
+                      0,
                       outputs[1].Size() * mshadow_type_info(outputs[1].type_flag_).size,
                       Stream<gpu>::GetStream(s));
     }
   }
-  if (req[0] == kNullOp || inputs[0].Size() == 0U) return;
+  if (req[0] == kNullOp || inputs[0].Size() == 0U)
+    return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  int axis = CheckAxis(param.axis, inputs[0].ndim());
-  const double temperature = param.temperature.has_value() ?
-                             param.temperature.value() : 1.0;
-  mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
+  int axis                  = CheckAxis(param.axis, inputs[0].ndim());
+  const double temperature  = param.temperature.has_value() ? param.temperature.value() : 1.0;
+  mxnet::TShape shape       = AxisShapeCompact(inputs[0].shape_, &axis, true);
 
   int out_idx = softmax_has_dtype_override(attrs) ? 2 : 1;
-  out_idx = softmax_use_length(attrs) ? 3 : out_idx;
+  out_idx     = softmax_use_length(attrs) ? 3 : out_idx;
 
-  void* length_ptr = nullptr;
+  void* length_ptr            = nullptr;
   std::string length_typename = "int";
   if (softmax_use_length(attrs)) {
-    length_ptr = inputs[2].dptr_;
+    length_ptr      = inputs[2].dptr_;
     length_typename = mshadow_type_info(inputs[2].type_flag_).name;
   }
   index_t M = shape[axis];
-  if (M == 0 || shape.Size() == 0) return;
+  if (M == 0 || shape.Size() == 0)
+    return;
   index_t stride = 1;
   if (axis == shape.ndim() - 2) {
     stride = shape[shape.ndim() - 1];
   }
-  const index_t N = shape.Size() / M;
+  const index_t N       = shape.Size() / M;
   softmax_params params = {{inputs[out_idx].dptr_, inputs[0].dptr_, length_ptr},
                            {outputs[0].dptr_},
-                           stride, M,
-                           temperature, 1, N};
-  std::string code = "#define OP1 " + OP1 + "\n"
-                     "#define OP2 " + OP2 + "\n"
-                     "const OpReqType req = " + util::to_string(req[0]) + ";\n"
-                     "const bool negate = " + std::to_string(negate) + ";\n"
-                     "using InputType2 = " + length_typename + ";\n";
+                           stride,
+                           M,
+                           temperature,
+                           1,
+                           N};
+  std::string code      = "#define OP1 " + OP1 +
+                     "\n"
+                     "#define OP2 " +
+                     OP2 +
+                     "\n"
+                     "const OpReqType req = " +
+                     util::to_string(req[0]) +
+                     ";\n"
+                     "const bool negate = " +
+                     std::to_string(negate) +
+                     ";\n"
+                     "using InputType2 = " +
+                     length_typename + ";\n";
 
   constexpr int nvec = 2;
   // Using 20 kB of shared memory for persistent storage in the optimized case
   const size_t acc_type_size = std::max(mshadow_type_info(inputs[0].type_flag_).acc_size,
                                         mshadow_type_info(outputs[0].type_flag_).acc_size);
-  const size_t max_opt_M = 10 * 1024 / acc_type_size;
-  int rows_per_block = get_rows_per_block(M, nvec, max_opt_M,
-                                          vectorized_kernel_thread_num,
-                                          N, ctx.run_ctx.ctx.dev_id);
+  const size_t max_opt_M     = 10 * 1024 / acc_type_size;
+  int rows_per_block         = get_rows_per_block(
+      M, nvec, max_opt_M, vectorized_kernel_thread_num, N, ctx.run_ctx.ctx.dev_id);
   params.rows_per_block = rows_per_block;
-  bool debug_softmax = dmlc::GetEnv("DEBUG_SOFTMAX_GRAD", false);
-  if (!debug_softmax && stride == 1 &&
-      static_cast<size_t>(M * rows_per_block) <= max_opt_M) {
+  bool debug_softmax    = dmlc::GetEnv("DEBUG_SOFTMAX_GRAD", false);
+  if (!debug_softmax && stride == 1 && static_cast<size_t>(M * rows_per_block) <= max_opt_M) {
     const int warp_size = 32;
-    code += "const bool only_full_blocks = " + std::to_string(N % rows_per_block == 0) + ";\n"
+    code += "const bool only_full_blocks = " + std::to_string(N % rows_per_block == 0) +
+            ";\n"
             "const bool reduction_inside_warp = " +
             std::to_string(vectorized_kernel_thread_num / rows_per_block <= warp_size) + ";\n";
-    int nblocks = div_round(N, rows_per_block);
+    int nblocks                   = div_round(N, rows_per_block);
     std::vector<TBlob> new_inputs = {inputs[out_idx], inputs[0]};
     if (softmax_use_length(attrs)) {
       new_inputs.emplace_back(inputs[2]);
@@ -771,26 +799,37 @@ void SoftmaxRTCGradCompute::operator()(const nnvm::NodeAttrs& attrs,
     std::vector<TBlob> new_outputs = {outputs[0]};
     VectorizedKernelRTCLauncher(code + softmax_common_functions,
                                 "softmax_stride1_compute_grad_kernel",
-                                softmax_stride1_kernel_bwd, nvec,
-                                M * rows_per_block, N / rows_per_block, s, params,
-                                new_inputs, new_outputs,
-                                ctx.run_ctx.ctx.dev_id, 0, nblocks);
+                                softmax_stride1_kernel_bwd,
+                                nvec,
+                                M * rows_per_block,
+                                N / rows_per_block,
+                                s,
+                                params,
+                                new_inputs,
+                                new_outputs,
+                                ctx.run_ctx.ctx.dev_id,
+                                0,
+                                nblocks);
     MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_stride1_compute_grad_kernel);
   } else {
-    code += "using InputType0 = " + mshadow_type_info(inputs[out_idx].type_flag_).name + ";\n"
-            "using InputType1 = " + mshadow_type_info(inputs[0].type_flag_).name + ";\n"
-            "using OutputType0 = " + mshadow_type_info(outputs[0].type_flag_).name + ";\n";
+    code += "using InputType0 = " + mshadow_type_info(inputs[out_idx].type_flag_).name +
+            ";\n"
+            "using InputType1 = " +
+            mshadow_type_info(inputs[0].type_flag_).name +
+            ";\n"
+            "using OutputType0 = " +
+            mshadow_type_info(outputs[0].type_flag_).name + ";\n";
     std::vector<const void*> args;
     args.emplace_back(&params);
     args.emplace_back(&M);
     const int warp_size = 32;
-    int num_threads = std::min(static_cast<size_t>(128),
+    int num_threads     = std::min(static_cast<size_t>(128),
                                common::RoundToPower2(div_round(M, warp_size) * warp_size));
     if (stride != 1) {
-      const int num_sms = MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
+      const int num_sms         = MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
       const index_t rows_per_sm = div_round(N, (512 / num_threads) * num_sms);
-      params.rows_per_block = std::min(static_cast<size_t>(warp_size),
-                                       common::RoundToPower2(rows_per_sm));
+      params.rows_per_block =
+          std::min(static_cast<size_t>(warp_size), common::RoundToPower2(rows_per_sm));
     }
     const auto& kernel_func = get_function(code + softmax_common_functions,
                                            "simple_softmax_grad_kernel",
@@ -801,18 +840,16 @@ void SoftmaxRTCGradCompute::operator()(const nnvm::NodeAttrs& attrs,
   }
 }
 
-NNVM_REGISTER_OP(softmax)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxRTCCompute{"softmax_fwd"});
+NNVM_REGISTER_OP(softmax).set_attr<FCompute>("FCompute<gpu>", SoftmaxRTCCompute{"softmax_fwd"});
 
 NNVM_REGISTER_OP(_backward_softmax)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxRTCGradCompute{"op::mul", "softmax_bwd"});
+    .set_attr<FCompute>("FCompute<gpu>", SoftmaxRTCGradCompute{"op::mul", "softmax_bwd"});
 
 NNVM_REGISTER_OP(masked_softmax)
-.set_attr<FCompute>("FCompute<gpu>", MaskedSoftmaxCompute<gpu, mxnet_op::softmax_fwd,
-                                                          false>);
+    .set_attr<FCompute>("FCompute<gpu>", MaskedSoftmaxCompute<gpu, mxnet_op::softmax_fwd, false>);
 
 NNVM_REGISTER_OP(_backward_masked_softmax)
-.set_attr<FCompute>("FCompute<gpu>", MaskedSoftmaxGradCompute<gpu, op::mshadow_op::mul,
-                                                              mxnet_op::softmax_bwd>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        MaskedSoftmaxGradCompute<gpu, op::mshadow_op::mul, mxnet_op::softmax_bwd>);
 }  // namespace op
 }  // namespace mxnet

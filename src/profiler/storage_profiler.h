@@ -40,17 +40,16 @@ class DeviceStorageProfiler {
   /*!
    * \brief Constructor
    */
-  explicit DeviceStorageProfiler(const char *domain_name = "Device Storage")
-    : domain_(domain_name) {
-  }
+  explicit DeviceStorageProfiler(const char* domain_name = "Device Storage")
+      : domain_(domain_name) {}
 
   /*!
    * \brief Called when memory has been allocated in order to record the allocation size
    * \param handle Handle to the allocated storage
    */
-  void OnAlloc(const Storage::Handle &handle) {
+  void OnAlloc(const Storage::Handle& handle) {
     if (handle.size > 0) {
-      profiler::Profiler *prof = profiler::Profiler::Get();
+      profiler::Profiler* prof = profiler::Profiler::Get();
       if (prof->IsProfiling(profiler::Profiler::kMemory)) {
         Init();
         const size_t idx = prof->DeviceIndex(handle.ctx.dev_type, handle.ctx.dev_id);
@@ -70,9 +69,9 @@ class DeviceStorageProfiler {
    * \brief Called when memory has been freed in order to record the deallocation size
    * \param handle Handle to the allocated storage
    */
-  void OnFree(const Storage::Handle &handle) {
+  void OnFree(const Storage::Handle& handle) {
     if (handle.size > 0) {
-      profiler::Profiler *prof = profiler::Profiler::Get();
+      profiler::Profiler* prof = profiler::Profiler::Get();
       if (prof->IsProfiling(profiler::Profiler::kMemory)) {
         Init();  // In case of bug which tries to free first
         const size_t idx = prof->DeviceIndex(handle.ctx.dev_type, handle.ctx.dev_id);
@@ -84,9 +83,9 @@ class DeviceStorageProfiler {
         }
         CHECK_LT(idx, mem_counters_.size()) << "Invalid device index: " << idx;
         if (*mem_counters_[idx] >= handle.size) {
-            *mem_counters_[idx] -= handle.size;
+          *mem_counters_[idx] -= handle.size;
         } else {
-            *mem_counters_[idx] = 0;
+          *mem_counters_[idx] = 0;
         }
       }
     }
@@ -102,14 +101,14 @@ class DeviceStorageProfiler {
       std::unique_lock<std::mutex> lk(init_mutex_);
       // Check again in case of collision and someone else filled it
       if (mem_counters_.empty()) {
-        profiler::Profiler *prof = profiler::Profiler::Get();
+        profiler::Profiler* prof  = profiler::Profiler::Get();
         const size_t device_count = prof->DeviceCount();
         mem_counters_.reserve(device_count);
         for (size_t i = 0, n = device_count; i < n; ++i) {
           std::string name = "Memory: ";
           name += prof->DeviceName(i);
-          mem_counters_.emplace_back(std::make_shared<profiler::ProfileCounter>(name.c_str(),
-                                                                              &domain_));
+          mem_counters_.emplace_back(
+              std::make_shared<profiler::ProfileCounter>(name.c_str(), &domain_));
         }
       }
     }
@@ -134,56 +133,47 @@ class GpuDeviceStorageProfiler {
   static GpuDeviceStorageProfiler* Get();
   /*!
    * \brief Similar functions to the `DeviceStorageProfiler` methods above.
-   *        However, in the case of the `GpuDeviceStorageProfiler`, we are 
+   *        However, in the case of the `GpuDeviceStorageProfiler`, we are
    *        recording extra piece of information on the actual allocation size
    *        and whether the allocation is a reuse or not.
    */
-  void OnAlloc(const Storage::Handle &handle,
-               const size_t actual_size, const bool reuse) {
+  void OnAlloc(const Storage::Handle& handle, const size_t actual_size, const bool reuse) {
     if (handle.size > 0) {
-      profiler::Profiler *prof = profiler::Profiler::Get();
+      profiler::Profiler* prof = profiler::Profiler::Get();
       if (prof->IsProfiling(profiler::Profiler::kMemory)) {
 #ifdef _MSC_VER
         gpu_mem_alloc_entries_[handle.dptr] = AllocEntry{
-            handle.profiler_scope,
-            handle.name,
-            handle.size,
-            handle.ctx.dev_id,
-            actual_size, reuse};
+            handle.profiler_scope, handle.name, handle.size, handle.ctx.dev_id, actual_size, reuse};
 #else
         gpu_mem_alloc_entries_[handle.dptr] = {
-            handle.profiler_scope,
-            handle.name,
-            handle.size,
-            handle.ctx.dev_id,
-            actual_size, reuse};
+            handle.profiler_scope, handle.name, handle.size, handle.ctx.dev_id, actual_size, reuse};
 #endif
       }
     }
   }
 
-  inline void OnFree(void *dptr) {
+  inline void OnFree(void* dptr) {
     // In case of bug which tries to free first
     if (gpu_mem_alloc_entries_.find(dptr) != gpu_mem_alloc_entries_.end())
       gpu_mem_alloc_entries_.erase(dptr);
   }
 
-  void OnFree(const Storage::Handle &handle) {
+  void OnFree(const Storage::Handle& handle) {
     if (handle.size > 0) {
-      profiler::Profiler *prof = profiler::Profiler::Get();
+      profiler::Profiler* prof = profiler::Profiler::Get();
       if (prof->IsProfiling(profiler::Profiler::kMemory))
         OnFree(handle.dptr);
     }
   }
 
-  void UpdateStorageInfo(const Storage::Handle &handle) {
+  void UpdateStorageInfo(const Storage::Handle& handle) {
     if (handle.size > 0) {
-      profiler::Profiler *prof = profiler::Profiler::Get();
+      profiler::Profiler* prof = profiler::Profiler::Get();
       if (prof->IsProfiling(profiler::Profiler::kMemory)) {
         auto entry_iter = gpu_mem_alloc_entries_.find(handle.dptr);
         if (entry_iter != gpu_mem_alloc_entries_.end()) {
           entry_iter->second.profiler_scope = handle.profiler_scope;
-          entry_iter->second.name = handle.name;
+          entry_iter->second.name           = handle.name;
         }
       }
     }
@@ -197,7 +187,7 @@ class GpuDeviceStorageProfiler {
   void DumpProfile() const;
 
   bool inline IsProfiling() const {
-    profiler::Profiler *prof = profiler::Profiler::Get();
+    profiler::Profiler* prof = profiler::Profiler::Get();
     return prof->IsProfiling(profiler::Profiler::kMemory);
   }
 

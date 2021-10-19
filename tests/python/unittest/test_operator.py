@@ -193,7 +193,7 @@ def check_elementwise_sum_with_shape(shape, n):
 def test_elementwise_sum():
     nrepeat = 2
     maxdim = 4
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         for dim in range(1, maxdim):
             shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
             check_elementwise_sum_with_shape(shape, np.random.randint(1, 8))
@@ -1297,26 +1297,46 @@ def test_deconvolution():
         pad = (3,)
     )
 
-def test_deconvolution_forward_with_bias():
+@pytest.mark.parametrize('shape,num_filter,num_group,kernel,pad', [
+    ((1, 4, 15), 16, 2, (2,), (0,)),
+    ((8, 4, 16), 16, 1, (3,), (1,)),
+
+    ((1, 4, 15, 16), 16, 2, (2, 2), (0, 0)),
+    ((8, 4, 16, 16), 16, 1, (3, 3), (1, 1)),
+
+    ((1, 4, 3, 15, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
+    ((8, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
+def test_deconvolution_forward_with_bias(shape, num_filter, num_group, kernel, pad):
     """Check if deconvolution forward can work well with bias=True
     """
-    def check_deconvolution_forward_with_bias(shape=(1, 16, 5, 5), num_filter=32, num_group=1, kernel=(3, 3), pad=(1, 1)):
-        x = mx.sym.Variable('x')
-        w = mx.sym.Variable('w')
-        input_data = mx.random.uniform(-5, 5, shape, ctx=mx.cpu())
-        y = mx.sym.Deconvolution(data=x, weight=w, num_filter=num_filter, num_group=num_group, kernel=kernel, no_bias=False, pad=pad)
-        exe = y._simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+    if len(kernel) == 3 and mx.current_context().device_type == 'gpu':
+        pytest.skip('Skipping Conv3DTranspose tests for GPU')
 
-        exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
-        exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
-
-        exe.forward(is_train=False)
-        o = exe.outputs[0]
-        t = o.asnumpy()
-    check_deconvolution_forward_with_bias((1, 16, 5), 32, 1, (3,), (1,))
-    check_deconvolution_forward_with_bias((32, 16, 5), 32, 1, (3,), (1,))
-    check_deconvolution_forward_with_bias((1, 16, 5, 5), 32, 1, (3, 3), (1, 1))
-    check_deconvolution_forward_with_bias((32, 16, 5, 5), 32, 1, (3, 3), (1, 1))
+    x = mx.sym.Variable('x')
+    w = mx.sym.Variable('w')
+    b = mx.sym.Variable('b')
+    y_nb = mx.sym.Deconvolution(data=x, weight=w, num_filter=num_filter, num_group=num_group, kernel=kernel, no_bias=True, pad=pad)
+    y_b = mx.sym.Deconvolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel, no_bias=False, pad=pad)
+    
+    exe_nb = y_nb._simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+    exe_b = y_b._simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+    
+    data = np.random.uniform(-5, 5, size=exe_b.arg_arrays[0].shape)
+    weights = np.random.normal(size=exe_b.arg_arrays[1].shape)
+    bias = np.random.normal(size=exe_b.arg_arrays[2].shape)
+    
+    def exe_forward(exe):
+        exe.arg_arrays[0][:] = data
+        exe.arg_arrays[1][:] = weights
+        if len(exe.arg_arrays) == 3:
+            exe.arg_arrays[2][:] = bias
+        return exe.forward(is_train=False)[0].asnumpy()
+    
+    out_nb = exe_forward(exe_nb)
+    out_b = exe_forward(exe_b)
+    bias = np.broadcast_to(bias, [np.prod(out_nb.shape[2:])] + [num_filter]).T
+    bias = np.broadcast_to(bias.reshape((num_filter, *out_nb.shape[2:])), out_b.shape)
+    assert_almost_equal(out_nb + bias, out_b)
 
 
 def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
@@ -2518,7 +2538,7 @@ def test_reduce():
 
 def test_broadcast():
     sample_num = 200
-    for i in range(sample_num):
+    for _ in range(sample_num):
         # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
         ndim = np.random.randint(1, 6)
         target_shape = np.random.randint(1, 6, size=(ndim,))
@@ -2561,7 +2581,7 @@ def test_broadcast():
 
 def test_transpose():
     for ndim in range(1, 10):
-        for t in range(5):
+        for _ in range(5):
             dims = list(np.random.randint(1, 5, size=ndim))
             axes = list(range(ndim))
             random.shuffle(axes)
@@ -2634,12 +2654,12 @@ def test_expand_dims():
 
 def test_crop():
     for ndim in range(1, 6):
-        for t in range(5):
+        for _ in range(5):
             dims = []
             begin = []
             end = []
             idx = []
-            for i in range(ndim):
+            for _ in range(ndim):
                 d = random.randint(1, 5)
                 b = random.randint(0, d-1)
                 e = random.randint(b+1, d)
@@ -2779,7 +2799,7 @@ def test_broadcast_like_different_types():
 
 def test_flip():
     for ndim in range(1, 6):
-        for t in range(5):
+        for _ in range(5):
             dims = [random.randint(1,10) for i in range(ndim)]
             axis = random.randint(0, ndim-1)
             idx = [slice(None, None, -1) if i == axis else slice(None, None) for i in range(ndim)]
@@ -4179,56 +4199,56 @@ def test_take(mode, out_of_range, data_ndim, idx_ndim):
             grad_in[:, :, :, :, idx] += 1.0
         else:
             raise ValueError("axis %d is not supported..." % axis)
-
+            
     for axis in range(-data_ndim, data_ndim):
-        data_shape = ()
-        for _ in range(data_ndim):
-            data_shape += (np.random.randint(low=1, high=5), )
-        idx_shape = ()
-        for _ in range(idx_ndim):
-            idx_shape += (np.random.randint(low=1, high=5), )
+            data_shape = ()
+            for _ in range(data_ndim):
+                data_shape += (np.random.randint(low=1, high=5), )
+            idx_shape = ()
+            for _ in range(idx_ndim):
+                idx_shape += (np.random.randint(low=1, high=5), )
 
-    data = mx.sym.Variable('a')
-    idx = mx.sym.Variable('indices')
-    idx = mx.sym.BlockGrad(idx)
-    result = mx.sym.take(a=data, indices=idx, axis=axis, mode=mode)
-    exe = result._simple_bind(default_context(), a=data_shape,
-                             indices=idx_shape)
-    data_real = np.random.normal(size=data_shape).astype('float32')
-    if out_of_range:
-        idx_real = np.random.randint(low=-data_shape[axis], high=data_shape[axis], size=idx_shape)
-        if mode == 'raise':
-            idx_real[idx_real == 0] = 1
-            idx_real *= data_shape[axis]
-    else:
-        idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
-    if axis < 0:
-        axis += len(data_shape)
+            data = mx.sym.Variable('a')
+            idx = mx.sym.Variable('indices')
+            idx = mx.sym.BlockGrad(idx)
+            result = mx.sym.take(a=data, indices=idx, axis=axis, mode=mode)
+            exe = result._simple_bind(default_context(), a=data_shape,
+                                    indices=idx_shape)
+            data_real = np.random.normal(size=data_shape).astype('float32')
+            if out_of_range:
+                idx_real = np.random.randint(low=-data_shape[axis], high=data_shape[axis], size=idx_shape)
+                if mode == 'raise':
+                    idx_real[idx_real == 0] = 1
+                    idx_real *= data_shape[axis]
+            else:
+                idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
+            if axis < 0:
+                axis += len(data_shape)
 
-    grad_out = np.ones((data_shape[0:axis] if axis > 0 else ()) + idx_shape + (data_shape[axis+1:] if axis < len(data_shape) - 1 else ()), dtype='float32')
-    grad_in = np.zeros(data_shape, dtype='float32')
+            grad_out = np.ones((data_shape[0:axis] if axis > 0 else ()) + idx_shape + (data_shape[axis+1:] if axis < len(data_shape) - 1 else ()), dtype='float32')
+            grad_in = np.zeros(data_shape, dtype='float32')
 
-    exe.arg_dict['a'][:] = mx.nd.array(data_real)
-    exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
-    exe.forward(is_train=True)
-    if out_of_range and mode == 'raise':
-        try:
-            mx_out = exe.outputs[0].asnumpy()
-        except MXNetError as e:
-            return
-        else:
-            # Did not raise exception
-            assert False, "did not raise %s" % MXNetError.__name__
+            exe.arg_dict['a'][:] = mx.nd.array(data_real)
+            exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
+            exe.forward(is_train=True)
+            if out_of_range and mode == 'raise':
+                try:
+                    mx_out = exe.outputs[0].asnumpy()
+                except MXNetError as e:
+                    return
+                else:
+                    # Did not raise exception
+                    assert False, "did not raise %s" % MXNetError.__name__
 
-    assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
+            assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
 
-    for i in np.nditer(idx_real):
-        if mode == 'clip':
-            i = np.clip(i, 0, data_shape[axis])
-        grad_helper(grad_in, axis, i)
+            for i in np.nditer(idx_real):
+                if mode == 'clip':
+                    i = np.clip(i, 0, data_shape[axis])
+                grad_helper(grad_in, axis, i)
 
-    exe.backward([mx.nd.array(grad_out)])
-    assert_almost_equal(exe.grad_dict['a'], grad_in)
+            exe.backward([mx.nd.array(grad_out)])
+            assert_almost_equal(exe.grad_dict['a'], grad_in)
 
 
 def test_grid_generator():
@@ -4443,7 +4463,7 @@ def test_repeat():
         repeats = 3
         for ndim in range(1, ndim_max+1):
             shape = ()
-            for i in range(0, ndim):
+            for _ in range(0, ndim):
                 shape += (np.random.randint(1, size_max+1), )
             a = np.random.random_sample(size=shape)
             aa = np.repeat(a, repeats)
@@ -4530,7 +4550,7 @@ def test_tile():
         rep_max = 10  # max number of tiling in each dim
         for ndim in range(ndim_min, ndim_max+1):
             shape = []
-            for i in range(1, ndim+1):
+            for _ in range(1, ndim+1):
                 shape.append(np.random.randint(1, size_max+1))
             shape = tuple(shape)
             a = np.random.randint(0, 100, shape)
@@ -4538,7 +4558,7 @@ def test_tile():
 
             reps_len = np.random.randint(1, length_max+1)
             reps_tuple = ()
-            for i in range(1, reps_len):
+            for _ in range(1, reps_len):
                 reps_tuple += (np.random.randint(1, rep_max), )
             reps_array = np.asarray(reps_tuple)
 
@@ -4623,7 +4643,7 @@ def test_one_hot():
         off_value = 0
         for ndim in range(1, ndim_max+1):
             shape = ()
-            for i in range(1, ndim+1):
+            for _ in range(1, ndim+1):
                 shape += (np.random.randint(1, dim_size_max+1), )
             indices = np.random.randint(-dim_size_max, dim_size_max+1,
                                         size=np.prod(shape)).reshape(shape)
@@ -8703,7 +8723,7 @@ def test_np_shape_decorator():
     check_concat((0, 3, 4), (5, 3, 4), 0)
     check_concat((8, 0, 5), (8, 7, 5), 1)
     check_concat((8, 0, 0), (8, 0, 0), 2)
-    for active in [True, False]:
+    for _ in [True, False]:
         check_concat((0, 3, 4), (5, 3, 4), 0)
         check_concat((8, 0, 5), (8, 7, 5), 1)
         check_concat((8, 0, 0), (8, 0, 0), 2)
@@ -9523,7 +9543,7 @@ def test_take_grads():
 
     def run_model(model, loss, X, Y, num_iters=5):
         grads = []
-        for i in range(num_iters):
+        for _ in range(num_iters):
             with autograd.record():
                 Y_hat = model(X)
                 ll = loss(Y_hat, Y)

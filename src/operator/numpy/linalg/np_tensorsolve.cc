@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_tensorsolve.cc
  * \brief CPU implementation placeholder of Tensor Solve Operator
  */
@@ -28,15 +27,15 @@ namespace mxnet {
 namespace op {
 
 bool TensorsolveOpShape(const nnvm::NodeAttrs& attrs,
-                        mxnet::ShapeVector *in_attrs,
-                        mxnet::ShapeVector *out_attrs) {
+                        mxnet::ShapeVector* in_attrs,
+                        mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
   const mxnet::TShape& a_shape = in_attrs->at(0);
   const mxnet::TShape& b_shape = in_attrs->at(1);
-  const int a_ndim = a_shape.ndim();
-  const int b_ndim = b_shape.ndim();
+  const int a_ndim             = a_shape.ndim();
+  const int b_ndim             = b_shape.ndim();
 
   if (!ndim_is_known(a_shape) || !ndim_is_known(b_shape)) {
     return false;
@@ -47,17 +46,15 @@ bool TensorsolveOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, b_shape);
   } else if (0 == a_ndim && 0 != b_ndim) {
     // a is scalar, b is tensor
-    CHECK_EQ(b_shape.Size(), 1U)
-      << "a's and b's dimensions don't match";
+    CHECK_EQ(b_shape.Size(), 1U) << "a's and b's dimensions don't match";
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, a_shape);
   } else if (0 != a_ndim && 0 == b_ndim) {
     // a is tensor, a is scalar
-    CHECK_EQ(a_shape.Size(), 1U)
-      << "a's and b's dimensions don't match";
+    CHECK_EQ(a_shape.Size(), 1U) << "a's and b's dimensions don't match";
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, a_shape);
   } else {
     // a and b of at least 1 dimensions.
-    const TensorsolveParam& param = nnvm::get<TensorsolveParam>(attrs.parsed);
+    const TensorsolveParam& param  = nnvm::get<TensorsolveParam>(attrs.parsed);
     mxnet::Tuple<int> a_axes_param = param.a_axes;
     FixNegativeAxes(&a_axes_param, a_shape);
 
@@ -94,10 +91,8 @@ inline bool TensorsolveOpType(const nnvm::NodeAttrs& attrs,
   int a_type = in_attrs->at(0);
   int b_type = in_attrs->at(1);
   // unsupport float16
-  CHECK_NE(a_type, mshadow::kFloat16)
-    << "array type float16 is unsupported in linalg";
-  CHECK_NE(b_type, mshadow::kFloat16)
-    << "array type float16 is unsupported in linalg";
+  CHECK_NE(a_type, mshadow::kFloat16) << "array type float16 is unsupported in linalg";
+  CHECK_NE(b_type, mshadow::kFloat16) << "array type float16 is unsupported in linalg";
   if (mshadow::kFloat32 == a_type && mshadow::kFloat32 == b_type) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
   } else {
@@ -109,37 +104,39 @@ inline bool TensorsolveOpType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(TensorsolveParam);
 
 NNVM_REGISTER_OP(_npi_tensorsolve)
-.set_attr_parser(mxnet::op::ParamParser<TensorsolveParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "b"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", TensorsolveOpShape)
-.set_attr<nnvm::FInferType>("FInferType", TensorsolveOpType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", TensorsolveOpForward<cpu, tensorsolve>)
-.set_attr<nnvm::FGradient>("FGradient",
-  mxnet::op::ElemwiseGradUseInOut{"_backward_npi_tensorsolve"})
-.add_argument("a", "NDArray-or-Symbol", "First input")
-.add_argument("b", "NDArray-or-Symbol", "Second input")
-.add_arguments(TensorsolveParam::__FIELDS__());
+    .set_attr_parser(mxnet::op::ParamParser<TensorsolveParam>)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", TensorsolveOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", TensorsolveOpType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", TensorsolveOpForward<cpu, tensorsolve>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               mxnet::op::ElemwiseGradUseInOut{"_backward_npi_tensorsolve"})
+    .add_argument("a", "NDArray-or-Symbol", "First input")
+    .add_argument("b", "NDArray-or-Symbol", "Second input")
+    .add_arguments(TensorsolveParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npi_tensorsolve)
-.set_attr_parser(mxnet::op::ParamParser<TensorsolveParam>)
-.set_num_inputs(4)
-.set_num_outputs(2)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& ){
-    return std::vector<ResourceRequest>{1, ResourceRequest::kTempSpace};
-  })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", TensorsolveOpBackward<cpu, tensorsolve_backward>);
+    .set_attr_parser(mxnet::op::ParamParser<TensorsolveParam>)
+    .set_num_inputs(4)
+    .set_num_outputs(2)
+    .set_attr<FResourceRequest>(
+        "FResourceRequest",
+        [](const NodeAttrs&) {
+          return std::vector<ResourceRequest>{1, ResourceRequest::kTempSpace};
+        })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", TensorsolveOpBackward<cpu, tensorsolve_backward>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -1129,7 +1129,7 @@ def test_np_multinomial():
             if pvals_mx_np_array:
                 pvals = mx.np.array(pvals)
             x = np.random.multinomial(small_exp, pvals)
-            for i in range(total_exp // small_exp):
+            for _ in range(total_exp // small_exp):
                 x = x + np.random.multinomial(20, pvals)
         freq = (x.asnumpy() / _np.float32(total_exp)).reshape((-1, len(pvals)))
         for i in range(freq.shape[0]):

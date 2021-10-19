@@ -25,12 +25,12 @@ If you have just started to use MXNet, you might be tempted to measure the execu
 
 ```{.python .input}
 from time import time
-from mxnet import autograd, nd
+from mxnet import autograd, np
 import mxnet as mx
 
 start = time()
-x = nd.random_uniform(shape=(2000,2000))
-y = nd.dot(x, x)
+x = np.random.uniform(size=(2000,2000))
+y = np.dot(x, x)
 print('Time for matrix multiplication: %f sec\n' % (time() - start))
 
 start = time()                                
@@ -44,9 +44,9 @@ print('Time for converting to numpy: %f sec' % (time() - start))
 
 From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't seem right.
 
-This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [asnumpy](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asnumpy#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [asscalar](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asscalar#mxnet.ndarray.NDArray.asscalar) and [wait_to_read](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=wait_to_read#mxnet.ndarray.NDArray.wait_to_read).
+This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [asnumpy](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [asscalar](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asscalar) and [wait_to_read](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.wait_to_read).
 
-While it is possible to use [NDArray.waitall()](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=waitall#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [Sequential](https://mxnet.apache.org/api/python/gluon/gluon.html?highlight=sequential#mxnet.gluon.nn.Sequential) or hybridized network.
+While it is possible to use [NDArray.waitall()](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [Sequential](../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) or hybridized network.
 
 ## The correct way to profile
 
@@ -151,7 +151,7 @@ profiler.set_state('run')
 run_training_iteration(*next(itr))
 
 # Make sure all operations have completed
-mx.nd.waitall()
+mx.npx.waitall()
 # Ask the profiler to stop recording
 profiler.set_state('stop')
 # Dump all results to log file before download
@@ -211,11 +211,11 @@ Let's zoom in to check the time taken by operators
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
 ### Profiling ONEDNN Operators
-Reagrding ONEDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `MKLDNN_VERBOSE=1` to enable internal profiler.
+Reagrding ONEDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `DNNL_VERBOSE=1` to enable internal profiler.
 
-`$ MKLDNN_VERBOSE=1 python my_script.py > mkldnn_verbose.log`
+`$ DNNL_VERBOSE=1 python my_script.py > dnnl_verbose.log`
 
-Now, the detailed profiling insights of each ONEDNN prmitive are saved into `mkldnn_verbose.log` (like below).
+Now, the detailed profiling insights of each oneDNN prmitive are saved into `dnnl_verbose.log` (like below).
 
 ```
 dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
@@ -225,13 +225,13 @@ dnnl_verbose,exec,cpu,convolution,jit:avx512_common,forward_inference,src_f32::b
 
 For example, if you want to calculate the total executing time of `convolution` primitive, you can just run:
 
-`$ cat mkldnn_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+`$ cat dnnl_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
 
-Moreover, you can set `MKLDNN_VERBOSE=2` to collect both creating and executing time of each primitive.
+Moreover, you can set `DNNL_VERBOSE=2` to collect both creating and executing time of each primitive.
 
-`$ cat mkldnn_verbose.log | grep "create,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+`$ cat dnnl_verbose.log | grep "create,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
 
-`$ cat mkldnn_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+`$ cat dnnl_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
 
 
 ### Profiling Custom Operators
@@ -265,7 +265,7 @@ class CustomAddOneProp(mx.operator.CustomOpProp):
         return MyAddOne()
 
 
-inp = mx.nd.zeros(shape=(500, 500))
+inp = mx.np.zeros(shape=(500, 500))
 
 profiler.set_config(profile_all=True, continuous_dump=True, \
                     aggregate_stats=True)
@@ -273,7 +273,7 @@ profiler.set_state('run')
 
 w = nd.Custom(inp, op_type="MyAddOne")
 
-mx.nd.waitall()
+mx.npx.waitall()
 
 profiler.set_state('stop')
 print(profiler.dumps())
@@ -286,7 +286,7 @@ Here, we have created a custom operator called `MyAddOne`, and within its `forwa
 
 As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are executed.
 
-Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
+Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/api/python/docs/api/legacy/symbol/index.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
 
 ```{.python .input} 
 # Set profile_all to True
@@ -301,7 +301,7 @@ a = mx.symbol.Variable('a')
 b = mx.symbol.Custom(data=a, op_type='MyAddOne')
 c = b.bind(mx.cpu(), {'a': inp})
 y = c.forward()
-mx.nd.waitall()
+mx.npx.waitall()
 profiler.set_state('stop')
 print(profiler.dumps())
 profiler.dump()

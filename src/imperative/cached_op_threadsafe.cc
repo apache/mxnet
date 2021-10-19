@@ -39,9 +39,7 @@ struct CachedOpThreadSafe::DynamicRuntime {
   std::vector<OpStatePtr> op_states;
 };
 
-OpStatePtr CachedOpThreadSafe::GetCachedOpState(
-    const Context& ctx) {
-
+OpStatePtr CachedOpThreadSafe::GetCachedOpState(const Context& ctx) {
   for (const auto& i : cached_op_states_[ctx]) {
     // only create one state per device when not using static memory
     if (!config_.static_alloc || i.unique()) {
@@ -55,26 +53,24 @@ OpStatePtr CachedOpThreadSafe::GetCachedOpState(
   return state_ptr;
 }
 
-
-CachedOpThreadSafe::CachedOpThreadSafe(const nnvm::Symbol& sym,
-                                       const std::vector<std::pair<std::string,
-                                       std::string> >& flags) : CachedOp(sym, flags) {
+CachedOpThreadSafe::CachedOpThreadSafe(
+    const nnvm::Symbol& sym,
+    const std::vector<std::pair<std::string, std::string>>& flags)
+    : CachedOp(sym, flags) {
   using namespace nnvm;
   using namespace imperative;
-  static const std::vector<const Op *> zero_ops{Op::Get("zeros_like"),
-                                                Op::Get("_zeros")};
+  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   config_.Init(flags);
 
   if (config_.static_shape) {
-      CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
+    CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
   }
 
   // construct forward graph
   CreateForwardGraph(sym.Copy(), &fwd_graph_);
   SetForwardRefCounts(&fwd_graph_);
 
-  SetInputIndices(fwd_graph_, config_.param_indices,
-                  &config_.data_indices);
+  SetInputIndices(fwd_graph_, config_.param_indices, &config_.data_indices);
 }
 
 /*
@@ -88,10 +84,10 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   using namespace imperative;
 
   auto state_ptr = GetCachedOpState(default_ctx);
-  auto op_state = OpStatePtr::Create<DynamicRuntime>();
-  auto &runtime = op_state.get_state<DynamicRuntime>();
+  auto op_state  = OpStatePtr::Create<DynamicRuntime>();
+  auto& runtime  = op_state.get_state<DynamicRuntime>();
   {
-    auto &state = state_ptr.get_state<CachedOpState>();
+    auto& state = state_ptr.get_state<CachedOpState>();
     // Need to lock the mutex on the state, this allows
     // for multi context push of ops to dependency engine.
     // SetForwardGraph runs infer passes on graphs as well
@@ -104,28 +100,28 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
     SetForwardGraph(default_ctx, &state.info, false, inputs);
     runtime.info.fwd_graph = state.info.fwd_graph;
   }
-  nnvm::Graph &g = runtime.info.fwd_graph;
-  const auto &idx = g.indexed_graph();
+  nnvm::Graph& g   = runtime.info.fwd_graph;
+  const auto& idx  = g.indexed_graph();
   size_t max_nodes = runtime.info.fwd_graph.indexed_graph().num_nodes();
   runtime.op_states.resize(max_nodes);
-  auto &states = runtime.op_states;
+  auto& states = runtime.op_states;
 
   // Allocate entries
   // This buff is thread local and used to store intermediate
   // nodes in the graph
   buff.resize(idx.num_node_entries());
   states.resize(idx.num_nodes());
-  std::vector<NDArray *> arrays;
+  std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto &buffered_array : buff) {
+  for (auto& buffered_array : buff) {
     arrays.push_back(&buffered_array);
   }
   std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
-  const auto &dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  std::vector<uint32_t> ref_count = g.GetAttr<std::vector<uint32_t>>(
-      "forward_ref_count");
+  const auto& dispatch_modes      = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  std::vector<uint32_t> ref_count = g.GetAttr<std::vector<uint32_t>>("forward_ref_count");
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
-    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
+    if (ref_count[i] == 0)
+      array_reqs[i] = kNullOp;
   }
 
   const MemoryPlanVector& mem_plan = g.GetAttr<MemoryPlanVector>("forward_mem_plan");
@@ -140,8 +136,16 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   // that.
   CreateGraphNDs(g, default_ctx, mem_plan, &array_reqs, &arrays);
   // Invokes operators in the graph in a topologically sorted manner
-  RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
-           std::move(ref_count), &states, dispatch_modes, false);
+  RunGraph(false,
+           idx,
+           arrays,
+           0,
+           idx.num_nodes(),
+           std::move(array_reqs),
+           std::move(ref_count),
+           &states,
+           dispatch_modes,
+           false);
   return op_state;
 }
 
@@ -165,10 +169,8 @@ OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOp>& op_ptr,
   for (size_t i = 0; i < inputs.size(); ++i) {
     CHECK_EQ(inputs[i]->ctx(), default_ctx)
         << "CachedOp requires all inputs to live on the same context. But "
-        << idx[idx.input_nodes()[0]].source->attrs.name
-        << " is on " << default_ctx << " while "
-        << idx[idx.input_nodes()[i]].source->attrs.name
-        << " is on " << inputs[i]->ctx();
+        << idx[idx.input_nodes()[0]].source->attrs.name << " is on " << default_ctx << " while "
+        << idx[idx.input_nodes()[i]].source->attrs.name << " is on " << inputs[i]->ctx();
   }
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
@@ -199,9 +201,9 @@ struct CachedOpThreadSafeActualState {
   }
 };
 OpStatePtr CreateCachedOpThreadSafeState(const NodeAttrs& attrs,
-                               Context ctx,
-                               const mxnet::ShapeVector& in_shapes,
-                               const std::vector<int>& in_types) {
+                                         Context ctx,
+                                         const mxnet::ShapeVector& in_shapes,
+                                         const std::vector<int>& in_types) {
   const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
   return OpStatePtr::Create<CachedOpThreadSafeActualState>(op);
 }
@@ -211,11 +213,11 @@ void CachedOpThreadSafeForward(const OpStatePtr& state_ptr,
                                const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs) {
-  CachedOpThreadSafeActualState &s = state_ptr.get_state<CachedOpThreadSafeActualState>();
-  std::vector<NDArray> in_bufs = inputs;
-  std::vector<NDArray> out_bufs = outputs;
-  std::vector<NDArray *> in_ptrs(in_bufs.size());
-  std::vector<NDArray *> out_ptrs(out_bufs.size());
+  CachedOpThreadSafeActualState& s = state_ptr.get_state<CachedOpThreadSafeActualState>();
+  std::vector<NDArray> in_bufs     = inputs;
+  std::vector<NDArray> out_bufs    = outputs;
+  std::vector<NDArray*> in_ptrs(in_bufs.size());
+  std::vector<NDArray*> out_ptrs(out_bufs.size());
   for (size_t i = 0; i < in_ptrs.size(); i++)
     in_ptrs[i] = &in_bufs[i];
   for (size_t i = 0; i < out_ptrs.size(); i++)
@@ -226,7 +228,7 @@ void CachedOpThreadSafeForward(const OpStatePtr& state_ptr,
   CHECK(!ctx.is_train) << "Only inference use case supported with thread safe cached op";
   CHECK(inputs.size() > 0) << "thread safe cached op requires at least one input";
   Context default_ctx = inputs[0].ctx();
-  s.forward_state = s.op->Forward(nullptr, in_ptrs, out_ptrs, default_ctx);
+  s.forward_state     = s.op->Forward(nullptr, in_ptrs, out_ptrs, default_ctx);
   // The arrays in out_ptrs may be changed by CachedOp.
   // If it is, we need to copy data back.
   for (size_t i = 0; i < out_bufs.size(); i++)
@@ -253,64 +255,71 @@ void CachedOpThreadSafeParamParser(nnvm::NodeAttrs* attrs) {
 CachedOpThreadSafe::~CachedOpThreadSafe() = default;
 
 NNVM_REGISTER_OP(_CachedOpThreadSafe)
-.set_num_inputs([](const NodeAttrs& attrs) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op->num_inputs();
-  })
-.set_num_outputs([](const NodeAttrs& attrs) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op->num_outputs();
-  })
-.set_attr_parser(CachedOpThreadSafeParamParser)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op->ListForwardInputNames();
-  })
-.set_attr<nnvm::FListOutputNames>("FListOutputNames",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op->ListForwardOutputNames();
-  })
-.set_attr<FCreateOpState>("FCreateOpState", CreateCachedOpThreadSafeState)
-.set_attr<mxnet::FInferShape>("FInferShape",
-  [](const nnvm::NodeAttrs& attrs,
-     mxnet::ShapeVector *in_shapes,
-     mxnet::ShapeVector *out_shapes) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op::DefaultSubgraphOpShapeHelper(op->GetForwardSym(), in_shapes, out_shapes);
-  })
-.set_attr<nnvm::FInferType>("FInferType",
-  [](const nnvm::NodeAttrs& attrs,
-     std::vector<int> *in_types,
-     std::vector<int> *out_types) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op::DefaultSubgraphOpTypeHelper(op->GetForwardSym(), in_types, out_types);
-  })
-.set_attr<FInferStorageType>("FInferStorageType",
-  [](const nnvm::NodeAttrs& attrs,
-     const int dev_mask,
-     DispatchMode* dispatch_mode,
-     std::vector<int>* in_stypes,
-     std::vector<int>* out_stypes) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op::DefaultSubgraphOpStorageTypeHelper(op->GetForwardSym(),
-                                                  dev_mask, dispatch_mode,
-                                                  in_stypes, out_stypes);
-  })
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CachedOpThreadSafeForward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CachedOpThreadSafeForward)
-.set_attr<nnvm::FMutateInputs>("FMutateInputs",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op::DefaultSubgraphOpMutableInputsHelper(op->GetForwardSym());
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
-    return op::DefaultSubgraphOpResourceRequestHelper(op->GetForwardSym());
-  })
-.set_attr<FExecType>("FExecType", op::DefaultSubgraphOpExecType)
-.add_argument("data", "NDArray-or-Symbol[]", "input data list");
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+      return op->num_inputs();
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+      return op->num_outputs();
+    })
+    .set_attr_parser(CachedOpThreadSafeParamParser)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const nnvm::NodeAttrs& attrs) {
+                                       const CachedOpThreadSafePtr& op =
+                                           nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+                                       return op->ListForwardInputNames();
+                                     })
+    .set_attr<nnvm::FListOutputNames>("FListOutputNames",
+                                      [](const nnvm::NodeAttrs& attrs) {
+                                        const CachedOpThreadSafePtr& op =
+                                            nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+                                        return op->ListForwardOutputNames();
+                                      })
+    .set_attr<FCreateOpState>("FCreateOpState", CreateCachedOpThreadSafeState)
+    .set_attr<mxnet::FInferShape>("FInferShape",
+                                  [](const nnvm::NodeAttrs& attrs,
+                                     mxnet::ShapeVector* in_shapes,
+                                     mxnet::ShapeVector* out_shapes) {
+                                    const CachedOpThreadSafePtr& op =
+                                        nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+                                    return op::DefaultSubgraphOpShapeHelper(
+                                        op->GetForwardSym(), in_shapes, out_shapes);
+                                  })
+    .set_attr<nnvm::FInferType>(
+        "FInferType",
+        [](const nnvm::NodeAttrs& attrs, std::vector<int>* in_types, std::vector<int>* out_types) {
+          const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+          return op::DefaultSubgraphOpTypeHelper(op->GetForwardSym(), in_types, out_types);
+        })
+    .set_attr<FInferStorageType>(
+        "FInferStorageType",
+        [](const nnvm::NodeAttrs& attrs,
+           const int dev_mask,
+           DispatchMode* dispatch_mode,
+           std::vector<int>* in_stypes,
+           std::vector<int>* out_stypes) {
+          const CachedOpThreadSafePtr& op = nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+          return op::DefaultSubgraphOpStorageTypeHelper(
+              op->GetForwardSym(), dev_mask, dispatch_mode, in_stypes, out_stypes);
+        })
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CachedOpThreadSafeForward)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CachedOpThreadSafeForward)
+    .set_attr<nnvm::FMutateInputs>("FMutateInputs",
+                                   [](const nnvm::NodeAttrs& attrs) {
+                                     const CachedOpThreadSafePtr& op =
+                                         nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+                                     return op::DefaultSubgraphOpMutableInputsHelper(
+                                         op->GetForwardSym());
+                                   })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const nnvm::NodeAttrs& attrs) {
+                                  const CachedOpThreadSafePtr& op =
+                                      nnvm::get<CachedOpThreadSafePtr>(attrs.parsed);
+                                  return op::DefaultSubgraphOpResourceRequestHelper(
+                                      op->GetForwardSym());
+                                })
+    .set_attr<FExecType>("FExecType", op::DefaultSubgraphOpExecType)
+    .add_argument("data", "NDArray-or-Symbol[]", "input data list");
 
 }  // namespace mxnet

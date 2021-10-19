@@ -20,7 +20,11 @@
 set -eo pipefail
 
 # This script builds the libraries of mxnet.
-cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}.cmake
+if [[ ! $BLAS ]] || [[ $BLAS == 'open' ]]; then
+    cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}.cmake
+else
+    cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}_${BLAS}.cmake
+fi
 if [[ ! -f $cmake_config ]]; then
     >&2 echo "Couldn't find cmake config $make_config for the current settings."
     exit 1
@@ -42,7 +46,9 @@ cd -
 rm -rf lib; mkdir lib;
 if [[ $PLATFORM == 'linux' ]]; then
     cp -L build/libmxnet.so lib/libmxnet.so
-    cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
+    if [[ $BLAS == 'open' ]]; then
+        cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
+    fi
 elif [[ $PLATFORM == 'darwin' ]]; then
     cp -L build/libmxnet.dylib lib/libmxnet.dylib
 fi

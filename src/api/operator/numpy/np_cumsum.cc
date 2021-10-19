@@ -29,39 +29,39 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npi.cumsum")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  const nnvm::Op* op = Op::Get("_npi_cumsum");
-  op::CumsumParam param;
-  // axis
-  if (args[1].type_code() == kNull) {
-    param.axis = dmlc::nullopt;
-  } else {
-    param.axis = args[1].operator int();
-  }
-  // dtype
-  if (args[2].type_code() == kNull) {
-    param.dtype = dmlc::nullopt;
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
-  }
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::CumsumParam>(&attrs);
-  // inputs
-  NDArray* inputs[] = {args[0].operator NDArray*()};
-  int num_inputs = 1;
-  // outputs
-  NDArray* outputs[] = {args[3].operator NDArray*()};
-  NDArray** out = outputs[0] == nullptr ? nullptr : outputs;
-  int num_outputs = outputs[0] != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
-  if (out) {
-    *ret = PythonArg(3);
-  } else {
-    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
-  }
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      nnvm::NodeAttrs attrs;
+      const nnvm::Op* op = Op::Get("_npi_cumsum");
+      op::CumsumParam param;
+      // axis
+      if (args[1].type_code() == kNull) {
+        param.axis = dmlc::nullopt;
+      } else {
+        param.axis = args[1].operator int();
+      }
+      // dtype
+      if (args[2].type_code() == kNull) {
+        param.dtype = dmlc::nullopt;
+      } else {
+        param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
+      }
+      attrs.parsed = param;
+      attrs.op     = op;
+      SetAttrDict<op::CumsumParam>(&attrs);
+      // inputs
+      NDArray* inputs[] = {args[0].operator NDArray*()};
+      int num_inputs    = 1;
+      // outputs
+      NDArray* outputs[] = {args[3].operator NDArray*()};
+      NDArray** out      = outputs[0] == nullptr ? nullptr : outputs;
+      int num_outputs    = outputs[0] != nullptr;
+      auto ndoutputs     = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
+      if (out) {
+        *ret = PythonArg(3);
+      } else {
+        *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+      }
+    });
 
 }  // namespace mxnet

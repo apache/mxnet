@@ -34,7 +34,7 @@ class Executor:
     >>> c = 2 * a + b
     >>> texec = c._bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
     """
-    def __init__(self, sym, ctx, args, args_grad, grad_req, aux_states):
+    def __init__(self, sym, ctx, args, args_grad, grad_req, aux_states static_alloc=False):
         self.outputs = None
         self._input_names = sym.list_inputs()
         self._aux_names = sym.list_auxiliary_states()
@@ -42,6 +42,7 @@ class Executor:
         self._output_names = sym.list_outputs()
         self._ctx = ctx
         self._grad_req = grad_req
+        self.static_alloc = static_alloc
         # grad_req
         self._requires_grad = False
         if isinstance(grad_req, dict):
@@ -121,7 +122,7 @@ class Executor:
                         with self._ctx:
                             self._args[i].attach_grad(req, stype=g.stype)
                             self._args[i].grad[:] = g
-        self._cached_op = ndarray.CachedOp(sym)
+        self._cached_op = ndarray.CachedOp(sym, flags=[("static_alloc", self.static_alloc)])
 
     def get_optimized_symbol(self):
         """Get an optimized version of the symbol from the executor.

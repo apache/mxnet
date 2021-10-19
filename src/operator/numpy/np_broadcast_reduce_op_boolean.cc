@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_broadcast_reduce_op_boolean.cc
  * \brief CPU Implementation of broadcast and reduce functions based on boolean.
  */
@@ -29,8 +28,8 @@ namespace mxnet {
 namespace op {
 
 inline bool NumpyReduceAxesBoolType(const nnvm::NodeAttrs& attrs,
-                                    std::vector<int> *in_attrs,
-                                    std::vector<int> *out_attrs) {
+                                    std::vector<int>* in_attrs,
+                                    std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kBool);
@@ -40,47 +39,48 @@ inline bool NumpyReduceAxesBoolType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(NumpyReduceAxesBoolParam);
 
 NNVM_REGISTER_OP(_npi_any)
-.add_alias("_np_sometrue")
-.set_attr_parser(ParamParser<NumpyReduceAxesBoolParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesBoolShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyReduceAxesBoolType)
-.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBoolCompute<cpu,
-  mshadow_op::sum, mshadow_op::NonZero, 0>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(NumpyReduceAxesBoolParam::__FIELDS__());
+    .add_alias("_np_sometrue")
+    .set_attr_parser(ParamParser<NumpyReduceAxesBoolParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesBoolShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyReduceAxesBoolType)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyReduceAxesBoolCompute<cpu, mshadow_op::sum, mshadow_op::NonZero, 0>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(NumpyReduceAxesBoolParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_all)
-.set_attr_parser(ParamParser<NumpyReduceAxesBoolParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesBoolShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyReduceAxesBoolType)
-.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBoolCompute<cpu,
-  mshadow_op::product, mshadow_op::NonZero, 1>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(NumpyReduceAxesBoolParam::__FIELDS__());
+    .set_attr_parser(ParamParser<NumpyReduceAxesBoolParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesBoolShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyReduceAxesBoolType)
+    .set_attr<FCompute>(
+        "FCompute<cpu>",
+        NumpyReduceAxesBoolCompute<cpu, mshadow_op::product, mshadow_op::NonZero, 1>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(NumpyReduceAxesBoolParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
