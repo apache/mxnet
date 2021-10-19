@@ -1516,12 +1516,13 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<typename ParamType>
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector* in_attrs,
                           mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
   // return false if lhs and rhs both have fully unknown shape
@@ -1564,16 +1565,4 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-namespace std {
-template <>
-struct hash<mxnet::op::DotParam> {
-  size_t operator()(const mxnet::op::DotParam& val) {
-    size_t ret = 0;
-    ret        = dmlc::HashCombine(ret, val.transpose_a);
-    ret        = dmlc::HashCombine(ret, val.transpose_b);
-    ret        = dmlc::HashCombine(ret, val.forward_stype);
-    return ret;
-  }
-};
-}  // namespace std
 #endif  // MXNET_OPERATOR_TENSOR_DOT_INL_H_
