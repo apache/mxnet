@@ -153,6 +153,10 @@ Example::
     .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
     .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
 #endif
     .set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmax"})
     // .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
@@ -186,6 +190,10 @@ NNVM_REGISTER_OP(_backward_softmax)
     .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxGradComputeExCPU)
     .set_attr<FInferStorageType>("FInferStorageType", SoftmaxGradStorageType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
 #endif
     .set_attr<FCompute>("FCompute<cpu>",
                         SoftmaxGradCompute<cpu, op::mshadow_op::mul, mxnet_op::softmax_bwd>);
