@@ -251,7 +251,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'lcm',
     'gcd',
     # 'ldexp',
-    'logaddexp'
+    'logaddexp',
     'subtract',
     'multiply',
     'true_divide',
