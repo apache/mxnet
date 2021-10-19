@@ -314,8 +314,9 @@ bool CachedOp::SetBackwardGraph(GraphInfo* info,
     for (size_t i = 0; i < info->grad_graph.outputs.size(); ++i) {
       if (reqs[i] == kAddTo) {
         auto entry = info->grad_graph.outputs[i];
-        if (!idx.exist(entry.node.get())) continue;
-        auto eid = idx.entry_id(entry);
+        if (!idx.exist(entry.node.get()))
+          continue;
+        auto eid         = idx.entry_id(entry);
         addto_entry[eid] = 1;
       }
     }
