@@ -187,8 +187,7 @@ inline QuantizeType NeedQuantize(ObjectPtr node,
         need = false;
       if (need) {
         if ((quantize_granularity == "channel-wise") &&
-            (node->op() == Op::Get("_sg_onednn_fully_connected") ||
-             node->op() == Op::Get("_sg_mkldnn_fully_connected"))) {
+            (node->op() == Op::Get("_sg_onednn_fully_connected"))) {
           quantized_node->attrs.dict["channel_wise_quantize"] = "True";
         }
         quantized_node_map->insert(std::make_pair(node, quantized_node));
