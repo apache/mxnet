@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file nnz.cc
  * \brief CPU Implementation of nnz operator
  */
@@ -38,15 +37,16 @@ struct NNZParam : public dmlc::Parameter<NNZParam> {
   dmlc::optional<int> axis;
   DMLC_DECLARE_PARAMETER(NNZParam) {
     DMLC_DECLARE_FIELD(axis)
-    .set_default(dmlc::optional<int>())
-    .describe("Select between the number of values across the whole matrix, "
-              "in each column, or in each row.");
+        .set_default(dmlc::optional<int>())
+        .describe(
+            "Select between the number of values across the whole matrix, "
+            "in each column, or in each row.");
   }
 };
 
 static bool NNZType(const nnvm::NodeAttrs& attrs,
-                    std::vector<int> *in_attrs,
-                    std::vector<int> *out_attrs) {
+                    std::vector<int>* in_attrs,
+                    std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   // infer int64 for count
@@ -55,8 +55,8 @@ static bool NNZType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NNZShape(const nnvm::NodeAttrs& attrs,
-                     mxnet::ShapeVector *in_attrs,
-                     mxnet::ShapeVector *out_attrs) {
+                     mxnet::ShapeVector* in_attrs,
+                     mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   // csr_matrix is 2-D
@@ -73,12 +73,12 @@ inline bool NNZShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(in_attrs->at(0)[0]));
   } else {
     LOG(FATAL) << "Unexpected value for axis(" << param.axis.value()
-      << "). Candidates are None, 0, and 1";
+               << "). Candidates are None, 0, and 1";
   }
   return true;
 }
 
-template<typename xpu>
+template <typename xpu>
 void NNZComputeCsrImpl(const NNZParam& param,
                        const OpContext& ctx,
                        const NDArray& input,
@@ -92,13 +92,13 @@ struct CsrNNZRowKernel {
    * \param out           ptr to output
    * \param indptr        ptr to source csr indptr
    */
-  template<typename IType, typename DType>
+  template <typename IType, typename DType>
   MSHADOW_XINLINE static void Map(int tid, DType* out, const IType* indptr) {
     out[tid] = static_cast<DType>(indptr[tid + 1] - indptr[tid]);
   }
 };
 
-template<>
+template <>
 void NNZComputeCsrImpl<cpu>(const NNZParam& param,
                             const OpContext& ctx,
                             const NDArray& input,
@@ -106,15 +106,15 @@ void NNZComputeCsrImpl<cpu>(const NNZParam& param,
                             const TBlob& output) {
   using namespace csr;
   CHECK_EQ(req, kWriteTo);
-  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   if (!input.storage_initialized()) {
     Fill<false>(s, output, kWriteTo, 0);
     return;
   }
   MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), IType, {
-      DType* out_ptr = output.dptr<DType>();
-      const IType* indptr = input.aux_data(kIndPtr).dptr<IType>();
+      DType* out_ptr             = output.dptr<DType>();
+      const IType* indptr        = input.aux_data(kIndPtr).dptr<IType>();
       const nnvm::dim_t num_rows = input.shape()[0];
       if (!param.axis.has_value()) {
         // whole matrix
@@ -130,7 +130,7 @@ void NNZComputeCsrImpl<cpu>(const NNZParam& param,
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 void NNZComputeEx(const nnvm::NodeAttrs& attrs,
                   const OpContext& ctx,
                   const std::vector<NDArray>& inputs,
@@ -139,8 +139,8 @@ void NNZComputeEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const auto in_stype = inputs[0].storage_type();
-  const auto out_stype = outputs[0].storage_type();
+  const auto in_stype   = inputs[0].storage_type();
+  const auto out_stype  = outputs[0].storage_type();
   const NNZParam& param = nnvm::get<NNZParam>(attrs.parsed);
   if (in_stype == kCSRStorage && out_stype == kDefaultStorage) {
     NNZComputeCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0].data());
@@ -152,17 +152,17 @@ void NNZComputeEx(const nnvm::NodeAttrs& attrs,
 bool NNZStorageType(const nnvm::NodeAttrs& attrs,
                     const int dev_mask,
                     DispatchMode* dispatch_mode,
-                    std::vector<int> *in_attrs,
-                    std::vector<int> *out_attrs) {
+                    std::vector<int>* in_attrs,
+                    std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  bool dispatched = false;
+  bool dispatched     = false;
   const auto in_stype = in_attrs->at(0);
-  auto& out_stype = out_attrs->at(0);
+  auto& out_stype     = out_attrs->at(0);
   // only support csr for now
   if (!dispatched && in_stype == kCSRStorage) {
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+    dispatched =
+        storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
   }
   return dispatched;
 }
@@ -170,20 +170,20 @@ bool NNZStorageType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(NNZParam);
 
 NNVM_REGISTER_OP(_contrib_getnnz)
-.describe(R"code(Number of stored values for a sparse tensor, including explicit zeros.
+    .describe(R"code(Number of stored values for a sparse tensor, including explicit zeros.
 
 This operator only supports CSR matrix on CPU.
 
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NNZParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", NNZShape)
-.set_attr<nnvm::FInferType>("FInferType", NNZType)
-.set_attr<FInferStorageType>("FInferStorageType", NNZStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", NNZComputeEx<cpu>)
-.add_argument("data", "NDArray-or-Symbol", "Input")
-.add_arguments(NNZParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NNZParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", NNZShape)
+    .set_attr<nnvm::FInferType>("FInferType", NNZType)
+    .set_attr<FInferStorageType>("FInferStorageType", NNZStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", NNZComputeEx<cpu>)
+    .add_argument("data", "NDArray-or-Symbol", "Input")
+    .add_arguments(NNZParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

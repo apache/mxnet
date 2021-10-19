@@ -17,9 +17,8 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file np_nonzero_op-inl.h
-*/
+ */
 
 #ifndef MXNET_OPERATOR_NUMPY_NP_NONZERO_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_NONZERO_OP_INL_H_
@@ -44,7 +43,7 @@ namespace op {
 
 struct NonzeroForwardKernel {
   // this is for cpu
-  template<int ndim>
+  template <int ndim>
   MSHADOW_XINLINE static void Map(index_t i,
                                   int64_t* out,
                                   const index_t* idx,
@@ -62,7 +61,7 @@ struct NonzeroForwardKernel {
 
 struct NonzeroForwardKernelGPU {
   // for gpu implementation because it does not support int 64 indexing
-  template<int ndim>
+  template <int ndim>
   MSHADOW_XINLINE static void Map(int i,
                                   int64_t* out,
                                   const int32_t* idx,

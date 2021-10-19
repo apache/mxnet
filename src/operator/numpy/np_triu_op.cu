@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_triu_op.cu
  * \brief GPU implementation of numpy triu operator
  */
@@ -28,11 +27,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_triu)
-.set_attr<FCompute>("FCompute<gpu>", TriuOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_triu).set_attr<FCompute>("FCompute<gpu>", TriuOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_triu)
-.set_attr<FCompute>("FCompute<gpu>", TriuOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_triu).set_attr<FCompute>("FCompute<gpu>", TriuOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -29,7 +29,7 @@ We'll first import the modules, where the `mxnet.gluon.loss` module is imported 
 from IPython import display
 from matplotlib import pyplot as plt
 import mxnet as mx
-from mxnet import nd, autograd
+from mxnet import np, npx, autograd
 from mxnet.gluon import nn, loss as gloss
 ```
 
@@ -44,8 +44,8 @@ loss = gloss.L2Loss()
 And then feed two inputs to compute the elementwise loss values.
 
 ```{.python .input}
-x = nd.ones((2,))
-y = nd.ones((2,)) * 2
+x = np.ones((2,))
+y = np.ones((2,)) * 2
 loss(x, y)
 ```
 
@@ -58,7 +58,7 @@ These values should be equal to the math definition: $0.5\|x-y\|^2$.
 Next we show how to use a loss function to compute gradients.
 
 ```{.python .input}
-X = nd.random.uniform(shape=(2, 4))
+X = np.random.uniform(size=(2, 4))
 net = nn.Dense(1)
 net.initialize()
 with autograd.record():
@@ -88,8 +88,8 @@ def plot(x, y):
     plt.show()
 
 def show_regression_loss(loss):
-    x = nd.arange(-5, 5, .1)
-    y = loss(x, nd.zeros_like(x))
+    x = np.arange(-5, 5, .1)
+    y = loss(x, np.zeros_like(x))
     plot(x, y)
 
 ```
@@ -98,8 +98,8 @@ Then plot the classification losses with label values fixed to be 1.
 
 ```{.python .input}
 def show_classification_loss(loss):
-    x = nd.arange(-5, 5, .1)
-    y = loss(x, nd.ones_like(x))
+    x = np.arange(-5, 5, .1)
+    y = loss(x, np.ones_like(x))
     plot(x, y)
 ```
 
@@ -167,8 +167,8 @@ Running these two steps one-by-one, however, may lead to numerical instabilities
 
 ```{.python .input}
 loss = gloss.SoftmaxCrossEntropyLoss()
-x = nd.array([[1, 10], [8, 2]])
-y = nd.array([0, 1])
+x = np.array([[1, 10], [8, 2]])
+y = np.array([0, 1])
 loss(x, y)
 ```
 
@@ -210,9 +210,9 @@ The loss is large, if the predicted probability distribution is far from the gro
 For instance, in the following example we get a KL divergence of 0.02. We set ```from_logits=False```, so the loss functions will apply ```log_softmax``` on the network output, before computing the KL divergence.
 
 ```{.python .input}
-output = mx.nd.array([[0.39056206, 1.3068528, 0.39056206, -0.30258512]])
-print('output.softmax(): {}'.format(output.softmax().asnumpy().tolist()))
-target_dist = mx.nd.array([[0.3, 0.4, 0.1, 0.2]])
+output = mx.np.array([[0.39056206, 1.3068528, 0.39056206, -0.30258512]])
+print('output.softmax(): {}'.format(npx.softmax(output).asnumpy().tolist()))
+target_dist = mx.np.array([[0.3, 0.4, 0.1, 0.2]])
 loss_fn = gloss.KLDivLoss(from_logits=False)
 loss = loss_fn(output, target_dist)
 print('loss (kl divergence): {}'.format(loss.asnumpy().tolist()))
@@ -236,7 +236,7 @@ The network would learn to minimize the distance between the two `A`'s and maxim
 
 #### [CTC Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.CTCLoss)
 
-CTC Loss is the [connectionist temporal classification loss](https://distill.pub/2017/ctc/) . It is used to train recurrent neural networks with variable time dimension. It learns the alignment and labelling of input sequences. It takes a sequence as input and gives probabilities for each timestep. For instance, in the following image the word is not well aligned with the 5 timesteps because of the different sizes of characters. CTC Loss finds for each timestep the highest probability e.g. `t1` presents with high probability a `C`. It combines the highest probapilities and returns the best path decoding. For an in-depth tutorial on how to use CTC-Loss in MXNet, check out this [example](https://github.com/apache/incubator-mxnet/tree/master/example/ctc).
+CTC Loss is the [connectionist temporal classification loss](https://distill.pub/2017/ctc/) . It is used to train recurrent neural networks with variable time dimension. It learns the alignment and labelling of input sequences. It takes a sequence as input and gives probabilities for each timestep. For instance, in the following image the word is not well aligned with the 5 timesteps because of the different sizes of characters. CTC Loss finds for each timestep the highest probability e.g. `t1` presents with high probability a `C`. It combines the highest probapilities and returns the best path decoding.
 
 ![ctc_loss](/_static/ctc_loss.png)
 
@@ -253,9 +253,9 @@ Cosine distance measures the similarity between two arrays given a label and is 
 For instance, in the following code example we measure the similarity between the input vectors `x` and `y`. Since they are the same the label equals `1`. The loss function returns $$ \sum_i 1 - {cos\_sim({input1}_i, {input2}_i)} $$ which is equal `0`.
 
 ```{.python .input}
-x = mx.nd.array([1,0,1,0,1,0])
-y = mx.nd.array([1,0,1,0,1,0])
-label = mx.nd.array(1)
+x = mx.np.array([1,0,1,0,1,0])
+y = mx.np.array([1,0,1,0,1,0])
+label = mx.np.array([1])
 loss = gloss.CosineEmbeddingLoss()
 print(loss(x,y,label))
 ```
@@ -263,9 +263,9 @@ print(loss(x,y,label))
 Now let's make `y` the opposite of `x`, so we set the label `-1` and the function will return  $$ \sum_i cos\_sim(input1, input2) $$
 
 ```{.python .input}
-x = mx.nd.array([1,0,1,0,1,0])
-y = mx.nd.array([0,1,0,1,0,1])
-label = mx.nd.array(-1)
+x = mx.np.array([1,0,1,0,1,0])
+y = mx.np.array([0,1,0,1,0,1])
+label = mx.np.array([-1])
 loss = gloss.CosineEmbeddingLoss()
 print(loss(x,y,label))
 ```
@@ -293,10 +293,10 @@ $$ L = \text{pred} - \text{target} * \log(\text{pred}) +\log(\text{target!}) $$
 Some examples in a batch may be more important than others. We can apply weights to individual examples during the forward pass of the loss function using the `sample_weight` argument. All examples are weighted equally by default.
 
 ```{.python .input}
-x = nd.ones((2,))
-y = nd.ones((2,)) * 2
+x = np.ones((2,))
+y = np.ones((2,)) * 2
 loss = gloss.L2Loss()
-loss(x, y, nd.array([1, 2]))
+loss(x, y, np.array([1, 2]))
 ```
 
 ## Conclusion

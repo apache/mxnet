@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file pinned_memory_storage.h
  * \brief CPU storage with pinned memory
  */

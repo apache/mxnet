@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file base.cc
  * \brief Implementation of base declarations, e.g. context
  */
@@ -33,7 +32,7 @@ namespace mxnet {
 // Users that have rebuilt MXNet against older versions will we advised with a warning to upgrade
 // their systems to match the CI level.  Minimally, users should rerun the CI locally.
 #if defined(_MSC_VER)
-#define MXNET_CI_OLDEST_CUDA_VERSION  9020
+#define MXNET_CI_OLDEST_CUDA_VERSION 9020
 #else
 #define MXNET_CI_OLDEST_CUDA_VERSION 10000
 #endif
@@ -82,7 +81,7 @@ void Context::CuDNNLibChecks() {
                      << "Set MXNET_CUDNN_LIB_CHECKING=0 to quiet this warning.";
       if (CUDNN_VERSION < MXNET_CI_OLDEST_CUDNN_VERSION)
         LOG(WARNING) << "Upgrade advisory: this mxnet has been built against cuDNN lib version "
-                     <<  CUDNN_VERSION << ", which is older than the oldest version tested by CI ("
+                     << CUDNN_VERSION << ", which is older than the oldest version tested by CI ("
                      << MXNET_CI_OLDEST_CUDNN_VERSION << ").  "
                      << "Set MXNET_CUDNN_LIB_CHECKING=0 to quiet this warning.";
     }

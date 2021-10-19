@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file hawkes_ll.cu
  * \brief Log likelihood of a marked self-exciting Hawkes process
  * \author Caner Turkmen <turkmen.ac@gmail.com>
@@ -28,11 +27,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_contrib_hawkesll)
-.set_attr<FCompute>("FCompute<gpu>", HawkesLLForward<gpu>);
+NNVM_REGISTER_OP(_contrib_hawkesll).set_attr<FCompute>("FCompute<gpu>", HawkesLLForward<gpu>);
 
 NNVM_REGISTER_OP(_contrib_backward_hawkesll)
-.set_attr<FCompute>("FCompute<gpu>", HawkesLLBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", HawkesLLBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

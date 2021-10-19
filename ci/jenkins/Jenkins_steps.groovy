@@ -48,9 +48,21 @@ def python3_ut(docker_container_name) {
   }
 }
 
+def python3_ut_onnx(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_onnx', false)
+  }
+}
+
 def python3_ut_onednn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_onednn', false)
+  }
+}
+
+def python3_ut_array_api(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_array_api_standardization', false)
   }
 }
 
@@ -510,7 +522,7 @@ def compile_windows_cpu(lib_name) {
         ws('workspace/build-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU --vcvars_ver 14.28'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -524,7 +536,7 @@ def compile_windows_cpu_onednn(lib_name) {
         ws('workspace/build-cpu-onednn') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU_ONEDNN'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_ONEDNN --vcvars_ver 14.28'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -538,7 +550,7 @@ def compile_windows_cpu_onednn_mkl(lib_name) {
         ws('workspace/build-cpu-onednn-mkl') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU_ONEDNN_MKL'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_ONEDNN_MKL --vcvars_ver 14.28'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -552,7 +564,7 @@ def compile_windows_cpu_mkl(lib_name) {
         ws('workspace/build-cpu-mkl') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKL'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKL --vcvars_ver 14.28'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -566,7 +578,7 @@ def compile_windows_gpu(lib_name) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
               utils.init_git_win()
-              powershell 'py -3 ci/build_windows.py -f WIN_GPU'
+              powershell 'py -3 ci/build_windows.py -f WIN_GPU --vcvars_ver 14.28'
               stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -580,7 +592,7 @@ def compile_windows_gpu_onednn(lib_name) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_GPU_ONEDNN'
+            powershell 'py -3 ci/build_windows.py -f WIN_GPU_ONEDNN --vcvars_ver 14.28'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -659,6 +671,18 @@ def test_unix_python3_cpu(lib_name) {
     }]
 }
 
+def test_unix_python3_array_api(lib_name) {
+    return ['Python3: Array-API': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-cpu') {
+          utils.unpack_and_init(lib_name, mx_lib, true)
+          python3_ut_array_api('ubuntu_cpu')
+          utils.publish_test_coverage()
+        }
+      }
+    }]
+}
+
 def test_unix_python3_mkl_cpu(lib_name) {
     return ['Python3: MKL-CPU': {
       node(NODE_LINUX_CPU) {
@@ -718,6 +742,22 @@ def test_unix_python3_cpu_no_tvm_op(lib_name) {
           } finally {
             utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_no_tvm_op_unittest.xml')
             utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_no_tvm_op_quantization.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_onnx_cpu(lib_name) {
+    return ['Python3: ONNX-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-onnx-cpu') {
+          try {
+            utils.unpack_and_init(lib_name, mx_lib, true)
+            python3_ut_onnx('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('onnx_unittest.xml', 'tests_python3_onnx_cpu_unittest.xml')
           }
         }
       }
@@ -1048,11 +1088,11 @@ def should_pack_website() {
 // Call this function from Jenkins to generate just the Python API microsite artifacts.
 def docs_python(lib_name) {
     return ['Python Docs': {
-      node(NODE_LINUX_CPU) {
+      node(NODE_LINUX_GPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib, false)
-            utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
+            utils.unpack_and_init(lib_name, mx_lib_cython)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_python_docs', true)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
             }

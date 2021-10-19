@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_eigvals.cc
  * \brief CPU implementation placeholder of Eigvals Operator
  */
@@ -30,20 +29,19 @@ namespace op {
 // Inputs: A.
 // Outputs: Eig.
 bool EigvalsOpShape(const nnvm::NodeAttrs& attrs,
-                    mxnet::ShapeVector *in_attrs,
-                    mxnet::ShapeVector *out_attrs) {
+                    mxnet::ShapeVector* in_attrs,
+                    mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const mxnet::TShape& a_shape = (*in_attrs)[0];
+  const mxnet::TShape& a_shape   = (*in_attrs)[0];
   const mxnet::TShape& eig_shape = (*out_attrs)[0];
 
   if (shape_is_known(a_shape)) {
     // Forward shape inference.
     const int a_ndim = a_shape.ndim();
-    CHECK_GE(a_ndim, 2)
-      << "Array must be at least two-dimensional";
+    CHECK_GE(a_ndim, 2) << "Array must be at least two-dimensional";
     CHECK_EQ(a_shape[a_ndim - 2], a_shape[a_ndim - 1])
-      << "Input A's last two dimension must be equal";
+        << "Input A's last two dimension must be equal";
 
     // Calculate eig shape.
     std::vector<int> eig_shape_vec(a_ndim - 1, -1);
@@ -55,8 +53,7 @@ bool EigvalsOpShape(const nnvm::NodeAttrs& attrs,
   } else if (shape_is_known(eig_shape)) {
     // Backward shape inference.
     const int eig_ndim = eig_shape.ndim();
-    CHECK_GE(eig_ndim, 1)
-      << "Outputs W must be at least one-dimensional";
+    CHECK_GE(eig_ndim, 1) << "Outputs W must be at least one-dimensional";
     std::vector<int> a_shape_vec(eig_ndim + 1);
     for (int i = 0; i < eig_ndim; ++i) {
       a_shape_vec[i] = eig_shape[i];
@@ -75,8 +72,7 @@ inline bool EigvalsOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   int a_type = in_attrs->at(0);
   // unsupport float16
-  CHECK_NE(a_type, mshadow::kFloat16)
-    << "array type float16 is unsupported in linalg";
+  CHECK_NE(a_type, mshadow::kFloat16) << "array type float16 is unsupported in linalg";
   if (mshadow::kFloat32 == a_type) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   } else {
@@ -86,34 +82,36 @@ inline bool EigvalsOpType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_eigvals)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs){
-  return std::vector<std::string>{"A"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", EigvalsOpShape)
-.set_attr<nnvm::FInferType>("FInferType", EigvalsOpType)
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", EigvalsOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", EigvalsOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", EigvalsOpType)
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", EigvalsOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 DMLC_REGISTER_PARAMETER(EigvalshParam);
 
 NNVM_REGISTER_OP(_npi_eigvalsh)
-.set_attr_parser(mxnet::op::ParamParser<EigvalshParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs){
-  return std::vector<std::string>{"A"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", EigvalsOpShape)
-.set_attr<nnvm::FInferType>("FInferType", EigvalsOpType)
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", EigvalshOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix")
-.add_arguments(EigvalshParam::__FIELDS__());
+    .set_attr_parser(mxnet::op::ParamParser<EigvalshParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", EigvalsOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", EigvalsOpType)
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", EigvalshOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix")
+    .add_arguments(EigvalshParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

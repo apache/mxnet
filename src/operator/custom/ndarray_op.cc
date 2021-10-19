@@ -18,53 +18,53 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file ndarray_op.cc
  * \brief
  * \author Junyuan Xie
-*/
+ */
 #include "./ndarray_op-inl.h"
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 
 namespace mxnet {
 namespace op {
-template<>
+template <>
 Context NDArrayOp<cpu>::get_ctx() {
   return Context::CPU();
 }
 
-template<>
-Operator *CreateOp<cpu>(NDArrayOpParam param) {
+template <>
+Operator* CreateOp<cpu>(NDArrayOpParam param) {
   return new NDArrayOp<cpu>(param);
 }
 
 #if MXNET_USE_CUDA
-template<>
+template <>
 Context NDArrayOp<gpu>::get_ctx() {
   int dev_id;
   CHECK_EQ(cudaGetDevice(&dev_id), cudaSuccess);
   return Context::GPU(dev_id);
 }
 
-template<>
+template <>
 Operator* CreateOp<gpu>(NDArrayOpParam param) {
   return new NDArrayOp<gpu>(param);
 }
 #endif  // MXNET_USE_CUDA
 
-template<typename xpu>
-void NDArrayOp<xpu>::Forward(const OpContext &ctx,
-                   const std::vector<TBlob> &in_data,
-                   const std::vector<OpReqType> &req,
-                   const std::vector<TBlob> &out_data,
-                   const std::vector<TBlob> &aux_args) {
+template <typename xpu>
+void NDArrayOp<xpu>::Forward(const OpContext& ctx,
+                             const std::vector<TBlob>& in_data,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& out_data,
+                             const std::vector<TBlob>& aux_args) {
   using namespace mshadow;
   Context ndctx = get_ctx();
   std::vector<void*> ptrs;
   std::vector<Engine::VarHandle> ndvar;
   std::vector<int> tags;
-  for (auto& i : req) CHECK_NE(i, kAddTo);
+  for (auto& i : req)
+    CHECK_NE(i, kAddTo);
 
   for (auto& blob : in_data) {
     ptrs.push_back(reinterpret_cast<void*>(new NDArray(blob, ndctx.dev_id)));
@@ -90,23 +90,30 @@ void NDArrayOp<xpu>::Forward(const OpContext &ctx,
       [ndcpy, ctx](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         ctx.async_on_complete();
         on_complete();
-      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, "NDArrayOpForward");
+      },
+      ndctx,
+      ndvar,
+      {},
+      FnProperty::kNormal,
+      0,
+      "NDArrayOpForward");
 }
 
-template<typename xpu>
-void NDArrayOp<xpu>::Backward(const OpContext &ctx,
-                    const std::vector<TBlob> &out_grad,
-                    const std::vector<TBlob> &in_data,
-                    const std::vector<TBlob> &out_data,
-                    const std::vector<OpReqType> &req,
-                    const std::vector<TBlob> &in_grad,
-                    const std::vector<TBlob> &aux_args) {
+template <typename xpu>
+void NDArrayOp<xpu>::Backward(const OpContext& ctx,
+                              const std::vector<TBlob>& out_grad,
+                              const std::vector<TBlob>& in_data,
+                              const std::vector<TBlob>& out_data,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& in_grad,
+                              const std::vector<TBlob>& aux_args) {
   using namespace mshadow;
   Context ndctx = get_ctx();
   std::vector<void*> ptrs;
   std::vector<Engine::VarHandle> ndvar;
   std::vector<int> tags;
-  for (auto& i : req) CHECK_NE(i, kAddTo);
+  for (auto& i : req)
+    CHECK_NE(i, kAddTo);
 
   for (auto& blob : in_data) {
     ptrs.push_back(reinterpret_cast<void*>(new NDArray(blob, ndctx.dev_id)));
@@ -137,10 +144,16 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
 
   CHECK(param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward));
   Engine::Get()->PushAsync(
-      [ndcpy, ctx](RunContext rctx, Engine::CallbackOnComplete on_complete){
+      [ndcpy, ctx](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         ctx.async_on_complete();
         on_complete();
-      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, "NDArrayOpBackward");
+      },
+      ndctx,
+      ndvar,
+      {},
+      FnProperty::kNormal,
+      0,
+      "NDArrayOpBackward");
 }
 
 Operator* NDArrayOpProp::CreateOperator(Context ctx) const {
@@ -150,9 +163,10 @@ Operator* NDArrayOpProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(NDArrayOpParam);
 
 MXNET_REGISTER_OP_PROPERTY(_NDArray, NDArrayOpProp)
-.describe("Stub for implementing an operator implemented in native frontend language with ndarray.")
-.add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
-.add_arguments(NDArrayOpParam::__FIELDS__());
+    .describe(
+        "Stub for implementing an operator implemented in native frontend language with ndarray.")
+    .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
+    .add_arguments(NDArrayOpParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

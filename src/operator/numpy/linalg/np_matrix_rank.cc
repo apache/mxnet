@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_matrix_rank.cc
  * \brief CPU implementation of the matrix_rank Operator
  */
@@ -28,21 +27,22 @@ namespace mxnet {
 namespace op {
 
 inline bool MatrixRankNoneTolShape(const nnvm::NodeAttrs& attrs,
-                                   mxnet::ShapeVector *in_attrs,
-                                   mxnet::ShapeVector *out_attrs) {
+                                   mxnet::ShapeVector* in_attrs,
+                                   mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& a_shape = (*in_attrs)[0];
-  const int a_ndim = a_shape.ndim();
+  const int a_ndim             = a_shape.ndim();
 
   if (shape_is_known(a_shape)) {
-    CHECK_GT(a_shape.Size(), 0U)
-      << "Not support zero-size input array which has no identity";
+    CHECK_GT(a_shape.Size(), 0U) << "Not support zero-size input array which has no identity";
     if (a_ndim < 2) {
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, 0));
     } else {
       mxnet::TShape rank_shape(a_ndim - 2, 0);
-      for (int i = 0; i < a_ndim - 2; ++i) { rank_shape[i] = a_shape[i]; }
+      for (int i = 0; i < a_ndim - 2; ++i) {
+        rank_shape[i] = a_shape[i];
+      }
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, rank_shape);
     }
   }
@@ -56,10 +56,9 @@ inline bool MatrixRankNoneTolType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   int a_type = in_attrs->at(0);
 
-  CHECK_NE(a_type, mshadow::kFloat16)
-    << "array type float16 is unsupported in linalg.";
+  CHECK_NE(a_type, mshadow::kFloat16) << "array type float16 is unsupported in linalg.";
   CHECK(a_type == mshadow::kFloat32 || a_type == mshadow::kFloat64)
-    << "array type should be float32 or float64.";
+      << "array type should be float32 or float64.";
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
   return out_attrs->at(0) != -1;
 }
@@ -67,36 +66,37 @@ inline bool MatrixRankNoneTolType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(MatrixRankNoneTolParam);
 
 NNVM_REGISTER_OP(_npi_matrix_rank_none_tol)
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(mxnet::op::ParamParser<MatrixRankNoneTolParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs){
-  return std::vector<std::string>{"M"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", MatrixRankNoneTolShape)
-.set_attr<nnvm::FInferType>("FInferType", MatrixRankNoneTolType)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs){
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_attr<FCompute>("FCompute<cpu>", MatrixRankNoneTolForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("M", "NDArray-or-Symbol", "Tensor of matrix")
-.add_arguments(MatrixRankNoneTolParam::__FIELDS__());
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(mxnet::op::ParamParser<MatrixRankNoneTolParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"M"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", MatrixRankNoneTolShape)
+    .set_attr<nnvm::FInferType>("FInferType", MatrixRankNoneTolType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", MatrixRankNoneTolForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("M", "NDArray-or-Symbol", "Tensor of matrix")
+    .add_arguments(MatrixRankNoneTolParam::__FIELDS__());
 
 inline bool MatrixRankShape(const nnvm::NodeAttrs& attrs,
-                            mxnet::ShapeVector *in_attrs,
-                            mxnet::ShapeVector *out_attrs) {
+                            mxnet::ShapeVector* in_attrs,
+                            mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const mxnet::TShape& a_shape = (*in_attrs)[0];
+  const mxnet::TShape& a_shape   = (*in_attrs)[0];
   const mxnet::TShape& tol_shape = (*in_attrs)[1];
-  const int a_ndim = a_shape.ndim();
-  const int tol_ndim = tol_shape.ndim();
+  const int a_ndim               = a_shape.ndim();
+  const int tol_ndim             = tol_shape.ndim();
 
   if (shape_is_known(a_shape) && shape_is_known(tol_shape)) {
-    CHECK_GT(a_shape.Size(), 0U)
-      << "Not support zero-size input array which has no identity";
+    CHECK_GT(a_shape.Size(), 0U) << "Not support zero-size input array which has no identity";
     if (a_ndim < 2) {
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, 0));
     } else {
@@ -125,17 +125,15 @@ inline bool MatrixRankType(const nnvm::NodeAttrs& attrs,
                            std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  int a_type = in_attrs->at(0);
+  int a_type   = in_attrs->at(0);
   int tol_type = in_attrs->at(1);
 
-  CHECK_NE(a_type, mshadow::kFloat16)
-    << "array type float16 is unsupported in linalg.";
+  CHECK_NE(a_type, mshadow::kFloat16) << "array type float16 is unsupported in linalg.";
   CHECK(a_type == mshadow::kFloat32 || a_type == mshadow::kFloat64)
-    << "array type should be float32 or float64.";
+      << "array type should be float32 or float64.";
   CHECK(tol_type == mshadow::kFloat32 || tol_type == mshadow::kFloat64)
-    << "tol type should be float32 or float64.";
-  CHECK_EQ(a_type, tol_type)
-    << "array type and tol type should be the same.";
+      << "tol type should be float32 or float64.";
+  CHECK_EQ(a_type, tol_type) << "array type and tol type should be the same.";
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
   return out_attrs->at(0) != -1;
 }
@@ -143,23 +141,25 @@ inline bool MatrixRankType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(MatrixRankParam);
 
 NNVM_REGISTER_OP(_npi_matrix_rank)
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(mxnet::op::ParamParser<MatrixRankParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs){
-  return std::vector<std::string>{"M", "tol"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", MatrixRankShape)
-.set_attr<nnvm::FInferType>("FInferType", MatrixRankType)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs){
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_attr<FCompute>("FCompute<cpu>", MatrixRankForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("M", "NDArray-or-Symbol", "Tensor of matrix")
-.add_argument("tol", "NDArray-or-Symbol", "Tensor of matrix")
-.add_arguments(MatrixRankParam::__FIELDS__());
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(mxnet::op::ParamParser<MatrixRankParam>)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"M", "tol"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", MatrixRankShape)
+    .set_attr<nnvm::FInferType>("FInferType", MatrixRankType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", MatrixRankForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("M", "NDArray-or-Symbol", "Tensor of matrix")
+    .add_argument("tol", "NDArray-or-Symbol", "Tensor of matrix")
+    .add_arguments(MatrixRankParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

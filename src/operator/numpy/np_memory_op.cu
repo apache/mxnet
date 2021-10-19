@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_memory_op.cu
  */
 
@@ -28,7 +27,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_share_memory)
-.set_attr<FCompute>("FCompute<gpu>", NumpyShareMemoryCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyShareMemoryCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

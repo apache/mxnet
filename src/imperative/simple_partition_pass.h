@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019-2020 by Contributors
  * \file simple_partition_pass.h
  * \brief Simple pass for partitioning a graph.
  * \author Clement Fuji Tsang, Przemyslaw Tredak
@@ -43,14 +42,14 @@ namespace exec {
 
 namespace detail {
 
-using Interval = std::pair<int, int>;
+using Interval    = std::pair<int, int>;
 using IntervalVec = std::vector<Interval>;
 
 /* \brief Return the set that fully contains the other set, or nullptr
  *        if neither set is a subset of another.
  */
-const IntervalVec*  LargerSet(const IntervalVec* const first,
-                              const IntervalVec* const second) noexcept;
+const IntervalVec* LargerSet(const IntervalVec* const first,
+                             const IntervalVec* const second) noexcept;
 
 /* \brief Compute the sum of the 2 sets and store it in my_set.
  */
@@ -61,12 +60,12 @@ void MergeSets(const IntervalVec** const my_set,
 /* \brief Returns true if there is non-empty intersection
  *        between the 2 sets.
  */
-bool Intersect(const IntervalVec& checked_sets,
-               const IntervalVec& excluded_sets) noexcept;
+bool Intersect(const IntervalVec& checked_sets, const IntervalVec& excluded_sets) noexcept;
 
 /* \brief Add a single entry to the sets.
  */
-void AddSet(const IntervalVec** const sets, const int set_to_add,
+void AddSet(const IntervalVec** const sets,
+            const int set_to_add,
             std::vector<std::unique_ptr<const IntervalVec>>* const storage) noexcept;
 
 /* \brief Get the true mapping of the set (which could change
@@ -78,8 +77,7 @@ int GetSetMapping(const int set, std::vector<int>* const set_mapping) noexcept;
  *        (so either both on the FWD side or the BWD side).
  */
 inline bool IsSamePass(const int my_id, const int their_id, const int cutoff) noexcept {
-  return (my_id > cutoff && their_id > cutoff) ||
-         (my_id <= cutoff && their_id <= cutoff);
+  return (my_id > cutoff && their_id > cutoff) || (my_id <= cutoff && their_id <= cutoff);
 }
 
 /* \brief Check if adding a new node to the set changes the excluded set of the future
@@ -97,20 +95,19 @@ inline bool IsSamePass(const int my_id, const int their_id, const int cutoff) no
  * \param inverse_set_mapping inverse mapping of the set
  * \param storage memory storage
  */
-void CheckAndUpdateCombinedExcludedSets(const IntervalVec** const combined_excluded_sets_ptr,
-                                        const IntervalVec* const new_excluded_sets,
-                                        std::vector<const IntervalVec*>* const excluded_sets_ptr,
-                                        const int set_id,
-                                        const int first_node_in_set,
-                                        const size_t new_node_id,
-                                        const std::vector<int>& set_assignment,
-                                        std::vector<int>* const set_mapping_ptr,
-                                        const IntervalVec& inverse_set_mapping,
-                                        std::vector<std::unique_ptr<const IntervalVec>>* const
-                                          storage) noexcept;
+void CheckAndUpdateCombinedExcludedSets(
+    const IntervalVec** const combined_excluded_sets_ptr,
+    const IntervalVec* const new_excluded_sets,
+    std::vector<const IntervalVec*>* const excluded_sets_ptr,
+    const int set_id,
+    const int first_node_in_set,
+    const size_t new_node_id,
+    const std::vector<int>& set_assignment,
+    std::vector<int>* const set_mapping_ptr,
+    const IntervalVec& inverse_set_mapping,
+    std::vector<std::unique_ptr<const IntervalVec>>* const storage) noexcept;
 
 }  // namespace detail
-
 
 /* \brief Get all subsets of nodes, where:
  *  - graph constructed from nodes in each subset is a connected graph
@@ -131,13 +128,12 @@ void CheckAndUpdateCombinedExcludedSets(const IntervalVec** const combined_exclu
  *                                 need to be excluded).
  * \return tuple (subset assignment, number of found subsets)
  */
-template<typename FCompatible, typename FInputOnlyCompatible>
+template <typename FCompatible, typename FInputOnlyCompatible>
 std::tuple<std::vector<int>, int> GetCompatibleSubsets(
     const Graph& g,
     const size_t num_forward_outputs,
     FCompatible is_compatible,
     FInputOnlyCompatible is_input_only_compatible) {
-
   using namespace detail;
   const auto& idx = g.indexed_graph();
   std::vector<int> set_assignment(idx.num_nodes(), -1);
@@ -158,7 +154,7 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
 
   int num_sets = 0;
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
-    const auto& node = idx[i];
+    const auto& node       = idx[i];
     auto& my_excluded_sets = excluded_sets[i];
     for (const auto& input : node.inputs) {
       MergeSets(&my_excluded_sets, excluded_sets[input.node_id], &storage);
@@ -167,11 +163,10 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
       int my_set = -1;
       for (const auto& input : node.inputs) {
         int their_set = GetSetMapping(set_assignment[input.node_id], &set_mapping);
-        if (their_set != -1 &&
-            their_set != my_set &&
+        if (their_set != -1 && their_set != my_set &&
             IsSamePass(i, input.node_id, last_forward_node) &&
             (my_excluded_sets == nullptr ||
-            !Intersect(*inverse_set_mapping[their_set], *my_excluded_sets))) {
+             !Intersect(*inverse_set_mapping[their_set], *my_excluded_sets))) {
           if (my_set == -1) {
             my_set = their_set;
             CheckAndUpdateCombinedExcludedSets(&(combined_excluded_sets[their_set]),
@@ -185,12 +180,10 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
                                                *(inverse_set_mapping[their_set]),
                                                &storage);
           } else {
-            MergeSets(&inverse_set_mapping[my_set],
-                      inverse_set_mapping[their_set],
-                      &storage);
+            MergeSets(&inverse_set_mapping[my_set], inverse_set_mapping[their_set], &storage);
             set_mapping[their_set] = my_set;
-            first_node_in_set[my_set] = std::min(first_node_in_set[my_set],
-                                                 first_node_in_set[their_set]);
+            first_node_in_set[my_set] =
+                std::min(first_node_in_set[my_set], first_node_in_set[their_set]);
             CheckAndUpdateCombinedExcludedSets(&(combined_excluded_sets[their_set]),
                                                combined_excluded_sets[my_set],
                                                &excluded_sets,
@@ -208,9 +201,8 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
         set_mapping.emplace_back(num_sets);
         combined_excluded_sets.emplace_back(my_excluded_sets);
         first_node_in_set.emplace_back(i);
-        storage.emplace_back(std::make_unique<std::vector<Interval>>(
-                               1, std::make_pair(num_sets,
-                                                 num_sets)));
+        storage.emplace_back(
+            std::make_unique<std::vector<Interval>>(1, std::make_pair(num_sets, num_sets)));
         inverse_set_mapping.emplace_back(storage.back().get());
         my_set = num_sets++;
       }
@@ -222,14 +214,12 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
           AddSet(&my_excluded_sets, their_set, &storage);
         }
       }
-      if ((is_input_only_compatible != nullptr) &&
-          is_input_only_compatible(node.source)) {
+      if ((is_input_only_compatible != nullptr) && is_input_only_compatible(node.source)) {
         set_mapping.emplace_back(num_sets);
         combined_excluded_sets.emplace_back(my_excluded_sets);
         first_node_in_set.emplace_back(i);
-        storage.emplace_back(std::make_unique<std::vector<Interval>>(
-                               1, std::make_pair(num_sets,
-                                                 num_sets)));
+        storage.emplace_back(
+            std::make_unique<std::vector<Interval>>(1, std::make_pair(num_sets, num_sets)));
         inverse_set_mapping.emplace_back(storage.back().get());
         set_assignment[i] = num_sets++;
       }

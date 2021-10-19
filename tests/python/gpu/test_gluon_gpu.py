@@ -114,10 +114,15 @@ def test_lstmp():
     assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
+<<<<<<< HEAD
     layer_params_split = split_rnn_params(layer_params['rnn_param'].grad(),\
         'lstm', 1, input_size, hidden_size, False, projection_size=projection_size)
     for k, v in weights.items():
         layer_grad = layer_params_split['l0_' + k]
+=======
+    for k, _ in weights.items():
+        layer_grad = layer_params['l0_' + k].grad()
+>>>>>>> upstream/master
         cell_grad = cell_params[k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
         assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
@@ -447,7 +452,7 @@ def test_sync_batchnorm():
         return
     ndev = 2
     # check with unsync version
-    for i in range(10):
+    for _ in range(10):
         _check_batchnorm_result(mx.np.random.uniform(size=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
 

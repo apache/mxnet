@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file spatial_pool.h
  * \brief support for spatial pooling
  * \author Tianqi Chen

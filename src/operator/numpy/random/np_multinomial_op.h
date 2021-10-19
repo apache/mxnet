@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_multinomial_op.h
  * \brief Operator for sampling from multinomial distributions
  */
@@ -41,35 +40,36 @@ struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
   dmlc::optional<mxnet::Tuple<double>> pvals;
   dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyMultinomialParam) {
-    DMLC_DECLARE_FIELD(n)
-      .describe("Number of experiments.");
+    DMLC_DECLARE_FIELD(n).describe("Number of experiments.");
     DMLC_DECLARE_FIELD(pvals)
-      .set_default(dmlc::optional<mxnet::Tuple<double>>())
-      .describe("Probabilities of each of the p different outcomes. "
-      "These should sum to 1 (however, the last element is always assumed to "
-      "account for the remaining probability, as long as sum(pvals[:-1]) <= 1)"
-      "Note that this is for internal usage only. "
-      "This operator will only have either input mx.ndarray or this list of pvals");
+        .set_default(dmlc::optional<mxnet::Tuple<double>>())
+        .describe(
+            "Probabilities of each of the p different outcomes. "
+            "These should sum to 1 (however, the last element is always assumed to "
+            "account for the remaining probability, as long as sum(pvals[:-1]) <= 1)"
+            "Note that this is for internal usage only. "
+            "This operator will only have either input mx.ndarray or this list of pvals");
     DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
-      .describe("Output shape. If the given shape is, "
-      "e.g., (m, n, k), then m * n * k samples are drawn. "
-      "Default is None, in which case a single value is returned.");
+        .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
+        .describe(
+            "Output shape. If the given shape is, "
+            "e.g., (m, n, k), then m * n * k samples are drawn. "
+            "Default is None, in which case a single value is returned.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream n_s, pvals_s, size_s;
     n_s << n;
     pvals_s << pvals;
     size_s << size;
-    (*dict)["n"] = n_s.str();
+    (*dict)["n"]     = n_s.str();
     (*dict)["pvals"] = pvals_s.str();
-    (*dict)["size"] = size_s.str();
+    (*dict)["size"]  = size_s.str();
   }
 };
 
 inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
-                                     std::vector<TShape> *in_attrs,
-                                     std::vector<TShape> *out_attrs) {
+                                    std::vector<TShape>* in_attrs,
+                                    std::vector<TShape>* out_attrs) {
   const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -83,8 +83,7 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(in_attrs->size(), 1U);
     const TShape& ishape = (*in_attrs)[0];
     // check the input shape is only one dimension
-    CHECK_EQ(ishape.ndim(), 1U)
-      << "object too deep for desired array";
+    CHECK_EQ(ishape.ndim(), 1U) << "object too deep for desired array";
     pvals_length = ishape[0];
   }
   if (param.size.has_value()) {
@@ -95,12 +94,12 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   }
   oshape_vec.emplace_back(pvals_length);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
-  return out_attrs->at(0).ndim() != 0U;;
+  return out_attrs->at(0).ndim() != 0U;
 }
 
 inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
-                                    std::vector<int>* in_attrs,
-                                    std::vector<int>* out_attrs) {
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
   const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), (param.pvals.has_value()) ? 0U : 1U);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -110,22 +109,21 @@ inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_CUDA
-template<typename DType>
+template <typename DType>
 void CheckPvalGPU(const OpContext& ctx, DType* input, int prob_length);
 #endif
 
-template<typename DType>
+template <typename DType>
 void CheckPval(DType* input, int prob_length) {
   DType sum = DType(0.0);
   for (int i = 0; i < prob_length; ++i) {
     sum += input[i];
-    CHECK_LE(sum, 1.0 + 1e-12)
-      << "sum(pvals[:-1]) > 1.0";
+    CHECK_LE(sum, 1.0 + 1e-12) << "sum(pvals[:-1]) > 1.0";
   }
 }
 
 struct multinomial_kernel {
-  template<typename DType>
+  template <typename DType>
   MSHADOW_XINLINE static void Map(int i,
                                   const int num_exp,
                                   const int prob_length,
@@ -133,8 +131,8 @@ struct multinomial_kernel {
                                   double* uniform,
                                   int64_t* out) {
     for (int j = 0; j < num_exp; ++j) {
-      DType loc = static_cast<DType>(uniform[i * num_exp + j]);
-      DType acc = 0.0;
+      DType loc  = static_cast<DType>(uniform[i * num_exp + j]);
+      DType acc  = 0.0;
       bool found = false;
       for (int k = 0; k < prob_length; ++k) {
         acc += pvals[k];
@@ -151,28 +149,28 @@ struct multinomial_kernel {
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<TBlob>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(inputs.size(), (param.pvals.has_value()) ? 0U : 1U);
 
-  int prob_length = (param.pvals.has_value())
-    ? param.pvals.value().ndim() : inputs[0].shape_[0];
+  int prob_length = (param.pvals.has_value()) ? param.pvals.value().ndim() : inputs[0].shape_[0];
   // if intput is [] or size contains 0 dimension
-  if (prob_length == 0U || outputs[0].shape_.Size() == 0) return;
-  int num_output = outputs[0].Size() / prob_length;
-  int num_exp = param.n;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  Random<xpu, double> *prnd = ctx.requested[0].get_random<xpu, double>(s);
-  size_t temp_space_ = (param.pvals.has_value())
-                      ? num_output * param.n + prob_length : num_output * param.n;
+  if (prob_length == 0U || outputs[0].shape_.Size() == 0)
+    return;
+  int num_output            = outputs[0].Size() / prob_length;
+  int num_exp               = param.n;
+  Stream<xpu>* s            = ctx.get_stream<xpu>();
+  Random<xpu, double>* prnd = ctx.requested[0].get_random<xpu, double>(s);
+  size_t temp_space_ =
+      (param.pvals.has_value()) ? num_output * param.n + prob_length : num_output * param.n;
   Tensor<xpu, 1, double> temp_tensor =
       ctx.requested[1].get_space_typed<xpu, 1, double>(Shape1(temp_space_), s);
 
@@ -187,33 +185,40 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
     // check if sum of input(pvals) > 1.0
     double sum = 0.0;
     for (int i = 0; i < prob_length; ++i) {
-        sum += param.pvals.value()[i];
-        // copy the tuple to data for later kernel usage
-        pvals_[i] = param.pvals.value()[i];
-        CHECK_LE(sum, 1.0 + 1e-12)
-          << "sum(pvals[:-1]) > 1.0";
+      sum += param.pvals.value()[i];
+      // copy the tuple to data for later kernel usage
+      pvals_[i] = param.pvals.value()[i];
+      CHECK_LE(sum, 1.0 + 1e-12) << "sum(pvals[:-1]) > 1.0";
     }
     Kernel<multinomial_kernel, xpu>::Launch(
-      s, num_output, num_exp, prob_length, pvals_, temp_tensor.dptr_, outputs[0].dptr<int64_t>());
+        s, num_output, num_exp, prob_length, pvals_, temp_tensor.dptr_, outputs[0].dptr<int64_t>());
   } else {
 #if MXNET_USE_CUDA
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-       if (std::is_same<xpu, cpu>::value) {
-         CheckPval<DType>(inputs[0].dptr<DType>(), prob_length);
-       } else {
-         CheckPvalGPU<DType>(ctx, inputs[0].dptr<DType>(), prob_length);
-       }
-      Kernel<multinomial_kernel, xpu>::Launch(
-        s, num_output, num_exp, prob_length,
-        inputs[0].dptr<DType>(), temp_tensor.dptr_, outputs[0].dptr<int64_t>());
+      if (std::is_same<xpu, cpu>::value) {
+        CheckPval<DType>(inputs[0].dptr<DType>(), prob_length);
+      } else {
+        CheckPvalGPU<DType>(ctx, inputs[0].dptr<DType>(), prob_length);
+      }
+      Kernel<multinomial_kernel, xpu>::Launch(s,
+                                              num_output,
+                                              num_exp,
+                                              prob_length,
+                                              inputs[0].dptr<DType>(),
+                                              temp_tensor.dptr_,
+                                              outputs[0].dptr<int64_t>());
     });
 #else
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-        CheckPval<DType>(inputs[0].dptr<DType>(), prob_length);
-        Kernel<multinomial_kernel, xpu>::Launch(
-          s, num_output, num_exp, prob_length,
-          inputs[0].dptr<DType>(), temp_tensor.dptr_, outputs[0].dptr<int64_t>());
-      });
+      CheckPval<DType>(inputs[0].dptr<DType>(), prob_length);
+      Kernel<multinomial_kernel, xpu>::Launch(s,
+                                              num_output,
+                                              num_exp,
+                                              prob_length,
+                                              inputs[0].dptr<DType>(),
+                                              temp_tensor.dptr_,
+                                              outputs[0].dptr<int64_t>());
+    });
 #endif
   }
 }

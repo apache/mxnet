@@ -18,22 +18,19 @@
  */
 
 /*!
-* Copyright (c) 2015 by Contributors
-* \file diag_op.cu
-* \brief GPU Implementation of the diag operator
-* \author Istvan Fehervari
-*/
+ * \file diag_op.cu
+ * \brief GPU Implementation of the diag operator
+ * \author Istvan Fehervari
+ */
 
 #include "./diag_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(diag)
-.set_attr<FCompute>("FCompute<gpu>", DiagOpForward<gpu>);
+NNVM_REGISTER_OP(diag).set_attr<FCompute>("FCompute<gpu>", DiagOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_diag)
-.set_attr<FCompute>("FCompute<gpu>", DiagOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_diag).set_attr<FCompute>("FCompute<gpu>", DiagOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

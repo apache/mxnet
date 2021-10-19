@@ -18,25 +18,23 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file make_loss.cc
  * \brief special layer for propagating loss
-*/
+ */
 #include "./make_loss-inl.h"
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<cpu>(MakeLossParam param, int dtype) {
-  Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new MakeLossOp<cpu, DType>(param);
-  });
+template <>
+Operator* CreateOp<cpu>(MakeLossParam param, int dtype) {
+  Operator* op = nullptr;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new MakeLossOp<cpu, DType>(param); });
   return op;
 }
 
-Operator *MakeLossProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                                         std::vector<int> *in_type) const {
+Operator* MakeLossProp::CreateOperatorEx(Context ctx,
+                                         mxnet::ShapeVector* in_shape,
+                                         std::vector<int>* in_type) const {
   mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
@@ -47,7 +45,7 @@ Operator *MakeLossProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_sha
 DMLC_REGISTER_PARAMETER(MakeLossParam);
 
 MXNET_REGISTER_OP_PROPERTY(MakeLoss, MakeLossProp)
-.describe(R"code(Make your own loss function in network construction.
+    .describe(R"code(Make your own loss function in network construction.
 
 This operator accepts a customized loss function symbol as a terminal loss and
 the symbol should be an operator with no backward dependency.
@@ -69,8 +67,8 @@ so that the gradient of the loss will be rescaled in the backpropagation.
 .. note:: This operator should be used as a Symbol instead of NDArray.
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input array.")
-.add_arguments(MakeLossParam::__FIELDS__());
+    .add_argument("data", "NDArray-or-Symbol", "Input array.")
+    .add_arguments(MakeLossParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

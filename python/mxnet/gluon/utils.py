@@ -507,8 +507,27 @@ def _check_block_input_np_ndarrays(inputs):
 
 
 # pylint: disable=too-many-nested-blocks
-def split_rnn_params(param, mode, num_layers, input_size, hidden_size, bidirectional, projection_size=None):
-    """Split rnn layer parameter into weight and bias in different layer."""
+def split_rnn_params(param, mode, num_layers, input_size, hidden_size, bidirectional=False, projection_size=None):
+    """Split rnn layer parameter into weight and bias in different layer.
+
+    Parameters
+    ----------
+    param : ndarray
+        The parameter of rnn layer.
+    mode : str
+        Mode of rnn. Supported modes: rnn_relu, rnn_tanh, lstm, gru
+    num_layers : int, default 1
+        Number of recurrent layers.
+    input_size: int, default 0
+        The number of expected features in the input x.
+        If not specified, it will be inferred from input.
+    hidden_size: int
+        The number of features in the hidden state h.
+    bidirectional: bool, default False
+        If `True`, becomes a bidirectional RNN.
+    projection_size: int, default None
+        The number of features after projection.
+    """
     gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
     dir = 2 if bidirectional else 1
     param_dict = {}

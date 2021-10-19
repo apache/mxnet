@@ -33,7 +33,7 @@ Gluon provides State of the Art models for many of the standard tasks such as Cl
 
 To complete this tutorial, you need:
 
-- [Build MXNet from source](https://mxnet.apache.org/get_started/ubuntu_setup#build-mxnet-from-source) with Python(Gluon) and C++ Packages
+- [Build MXNet from source](https://mxnet.apache.org/get_started/build_from_source) with Python(Gluon) and C++ Packages
 - Learn the basics about Gluon with [A 60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/)
 
 
@@ -133,9 +133,9 @@ validation_transformer = transforms.Compose([
 ])
 
 # save mean and std NDArray values for inference
-mean_img = mx.nd.stack(*[mx.nd.full((224, 224), m) for m in mean])
-std_img = mx.nd.stack(*[mx.nd.full((224, 224), s) for s in std])
-mx.nd.save('mean_std_224.nd', {"mean_img": mean_img, "std_img": std_img})
+mean_img = mx.np.stack([mx.np.full((224, 224), m) for m in mean])
+std_img = mx.np.stack([mx.np.full((224, 224), s) for s in std])
+mx.npx.savez('mean_std_224.np', **{"mean_img": mean_img, "std_img": std_img})
 
 train_path = os.path.join(path, 'train')
 val_path = os.path.join(path, 'valid')
@@ -184,7 +184,7 @@ schedule = mx.lr_scheduler.MultiFactorScheduler(step=lr_steps, factor=lr_factor,
 
 # setup optimizer with learning rate scheduler, metric, and loss function
 sgd_optimizer = mx.optimizer.SGD(learning_rate=lr, lr_scheduler=schedule, momentum=momentum, wd=wd)
-metric = mx.metric.Accuracy()
+metric = mx.gluon.metric.Accuracy()
 softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 ```
 
@@ -196,7 +196,7 @@ Now let's define the test metrics and start fine-tuning.
 
 ```{.python .input}
 def test(net, val_data, ctx):
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
     for i, (data, label) in enumerate(val_data):
         data = gluon.utils.split_and_load(data, ctx_list=ctx, even_split=False)
         label = gluon.utils.split_and_load(label, ctx_list=ctx, even_split=False)
@@ -224,7 +224,7 @@ for epoch in range(1, epochs + 1):
             l.backward()
 
         trainer.step(batch_size)
-        train_loss += sum([l.mean().asscalar() for l in loss]) / len(loss)
+        train_loss += sum([l.mean().item() for l in loss]) / len(loss)
         metric.update(label, outputs)
 
     _, train_acc = metric.get()

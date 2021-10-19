@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file iter_normalize.h
  * \brief Iterator that subtracts mean and do a few augmentations.
  */
@@ -47,9 +46,7 @@ namespace io {
  */
 class ImageNormalizeIter : public IIterator<DataInst> {
  public:
-  explicit ImageNormalizeIter(IIterator<DataInst> *base)
-      : base_(base), meanfile_ready_(false) {
-  }
+  explicit ImageNormalizeIter(IIterator<DataInst>* base) : base_(base), meanfile_ready_(false) {}
 
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
@@ -58,8 +55,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     outimg_.set_pad(false);
     meanimg_.set_pad(false);
     if (param_.mean_img.length() != 0) {
-      std::unique_ptr<dmlc::Stream> fi(
-          dmlc::Stream::Create(param_.mean_img.c_str(), "r", true));
+      std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param_.mean_img.c_str(), "r", true));
       if (fi.get() == nullptr) {
         this->CreateMeanImg();
       } else {
@@ -74,8 +70,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
           std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param_.mean_img.c_str(), "r"));
           NDArray::Load(fi.get(), &data, &keys);
         }
-        CHECK_EQ(data.size(), 1U)
-            << "Invalid mean image file format";
+        CHECK_EQ(data.size(), 1U) << "Invalid mean image file format";
         data[0].WaitToRead();
         mshadow::Tensor<cpu, 3> src = data[0].data().get<cpu, 3, real_t>();
         meanimg_.Resize(src.shape_);
@@ -94,7 +89,8 @@ class ImageNormalizeIter : public IIterator<DataInst> {
   }
 
   virtual bool Next(void) {
-    if (!this->Next_()) return false;
+    if (!this->Next_())
+      return false;
     return true;
   }
 
@@ -118,13 +114,14 @@ class ImageNormalizeIter : public IIterator<DataInst> {
 
   /*! \brief internal next function, inlined for fater processing. */
   inline bool Next_(void) {
-    if (!base_->Next()) return false;
-    const DataInst &src = base_->Value();
+    if (!base_->Next())
+      return false;
+    const DataInst& src = base_->Value();
     this->SetOutImg(src);
     out_.data.resize(2);
-    out_.data[0] = outimg_;
-    out_.data[1] = src.data[1];
-    out_.index = src.index;
+    out_.data[0]    = outimg_;
+    out_.data[1]    = src.data[1];
+    out_.index      = src.index;
     out_.extra_data = src.extra_data;
     return true;
   }
@@ -132,7 +129,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
    * \brief Set the output image, after augmentation and normalization.
    * \param src The source image.
    */
-  inline void SetOutImg(const DataInst &src) {
+  inline void SetOutImg(const DataInst& src) {
     using namespace mshadow::expr;  // NOLINT(*)
 
     std::uniform_real_distribution<float> rand_uniform(0, 1);
@@ -150,59 +147,59 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     switch (data.shape_[0]) {
       case 4:
         if (meanfile_ready_ && flip) {
-          outimg_[3] = mirror((data[3] - meanimg_[3]) * contrast + illumination)
-            * param_.scale / param_.std_a;
+          outimg_[3] = mirror((data[3] - meanimg_[3]) * contrast + illumination) * param_.scale /
+                       param_.std_a;
         } else if (meanfile_ready_ && (!flip)) {
-          outimg_[3] = ((data[3] - meanimg_[3]) * contrast + illumination)
-            * param_.scale / param_.std_a;
+          outimg_[3] =
+              ((data[3] - meanimg_[3]) * contrast + illumination) * param_.scale / param_.std_a;
         } else if (!meanfile_ready_ && flip) {
-          outimg_[3] = mirror((data[3] - param_.mean_a) * contrast + illumination)
-            * param_.scale / param_.std_a;
+          outimg_[3] = mirror((data[3] - param_.mean_a) * contrast + illumination) * param_.scale /
+                       param_.std_a;
         } else {
-          outimg_[3] = ((data[3] - param_.mean_a) * contrast + illumination)
-            * param_.scale / param_.std_a;
+          outimg_[3] =
+              ((data[3] - param_.mean_a) * contrast + illumination) * param_.scale / param_.std_a;
         }
       case 3:
         if (meanfile_ready_ && flip) {
-          outimg_[2] = mirror((data[2] - meanimg_[2]) * contrast + illumination)
-            * param_.scale / param_.std_b;
+          outimg_[2] = mirror((data[2] - meanimg_[2]) * contrast + illumination) * param_.scale /
+                       param_.std_b;
         } else if (meanfile_ready_ && (!flip)) {
-          outimg_[2] = ((data[2] - meanimg_[2]) * contrast + illumination)
-            * param_.scale / param_.std_b;
+          outimg_[2] =
+              ((data[2] - meanimg_[2]) * contrast + illumination) * param_.scale / param_.std_b;
         } else if (!meanfile_ready_ && flip) {
-          outimg_[2] = mirror((data[2] - param_.mean_b) * contrast + illumination)
-            * param_.scale / param_.std_b;
+          outimg_[2] = mirror((data[2] - param_.mean_b) * contrast + illumination) * param_.scale /
+                       param_.std_b;
         } else {
-          outimg_[2] = ((data[2] - param_.mean_b) * contrast + illumination)
-            * param_.scale / param_.std_b;
+          outimg_[2] =
+              ((data[2] - param_.mean_b) * contrast + illumination) * param_.scale / param_.std_b;
         }
       case 2:
         if (meanfile_ready_ && flip) {
-          outimg_[1] = mirror((data[1] - meanimg_[1]) * contrast + illumination)
-            * param_.scale / param_.std_g;
+          outimg_[1] = mirror((data[1] - meanimg_[1]) * contrast + illumination) * param_.scale /
+                       param_.std_g;
         } else if (meanfile_ready_ && (!flip)) {
-          outimg_[1] = ((data[1] - meanimg_[1]) * contrast + illumination)
-            * param_.scale / param_.std_g;
+          outimg_[1] =
+              ((data[1] - meanimg_[1]) * contrast + illumination) * param_.scale / param_.std_g;
         } else if (!meanfile_ready_ && flip) {
-          outimg_[1] = mirror((data[1] - param_.mean_g) * contrast + illumination)
-            * param_.scale / param_.std_g;
+          outimg_[1] = mirror((data[1] - param_.mean_g) * contrast + illumination) * param_.scale /
+                       param_.std_g;
         } else {
-          outimg_[1] = ((data[1] - param_.mean_g) * contrast + illumination)
-            * param_.scale / param_.std_g;
+          outimg_[1] =
+              ((data[1] - param_.mean_g) * contrast + illumination) * param_.scale / param_.std_g;
         }
       case 1:
         if (meanfile_ready_ && flip) {
-          outimg_[0] = mirror((data[0] - meanimg_[0]) * contrast + illumination)
-            * param_.scale / param_.std_r;
+          outimg_[0] = mirror((data[0] - meanimg_[0]) * contrast + illumination) * param_.scale /
+                       param_.std_r;
         } else if (meanfile_ready_ && (!flip)) {
-          outimg_[0] = ((data[0] - meanimg_[0]) * contrast + illumination)
-            * param_.scale / param_.std_r;
+          outimg_[0] =
+              ((data[0] - meanimg_[0]) * contrast + illumination) * param_.scale / param_.std_r;
         } else if (!meanfile_ready_ && flip) {
-          outimg_[0] = mirror((data[0] - param_.mean_r) * contrast + illumination)
-            * param_.scale / param_.std_r;
+          outimg_[0] = mirror((data[0] - param_.mean_r) * contrast + illumination) * param_.scale /
+                       param_.std_r;
         } else {
-          outimg_[0] = ((data[0] - param_.mean_r) * contrast + illumination)
-            * param_.scale / param_.std_r;
+          outimg_[0] =
+              ((data[0] - param_.mean_r) * contrast + illumination) * param_.scale / param_.std_r;
         }
         break;
       default:
@@ -234,9 +231,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     TBlob tmp = meanimg_;
     {
       std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(param_.mean_img.c_str(), "w"));
-      NDArray::Save(fo.get(),
-                    {NDArray(tmp, 0)},
-                    {"mean_img"});
+      NDArray::Save(fo.get(), {NDArray(tmp, 0)}, {"mean_img"});
     }
     if (param_.verbose) {
       LOG(INFO) << "Save mean image to " << param_.mean_img << "..";
@@ -252,9 +247,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
  */
 class ImageDetNormalizeIter : public IIterator<DataInst> {
  public:
-  explicit ImageDetNormalizeIter(IIterator<DataInst> *base)
-      : base_(base), meanfile_ready_(false) {
-  }
+  explicit ImageDetNormalizeIter(IIterator<DataInst>* base) : base_(base), meanfile_ready_(false) {}
 
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
@@ -263,8 +256,7 @@ class ImageDetNormalizeIter : public IIterator<DataInst> {
     outimg_.set_pad(false);
     meanimg_.set_pad(false);
     if (param_.mean_img.length() != 0) {
-      std::unique_ptr<dmlc::Stream> fi(
-          dmlc::Stream::Create(param_.mean_img.c_str(), "r", true));
+      std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param_.mean_img.c_str(), "r", true));
       if (fi.get() == nullptr) {
         this->CreateMeanImg();
       } else {
@@ -279,8 +271,7 @@ class ImageDetNormalizeIter : public IIterator<DataInst> {
           std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param_.mean_img.c_str(), "r"));
           NDArray::Load(fi.get(), &data, &keys);
         }
-        CHECK_EQ(data.size(), 1)
-            << "Invalid mean image file format";
+        CHECK_EQ(data.size(), 1) << "Invalid mean image file format";
         data[0].WaitToRead();
         mshadow::Tensor<cpu, 3> src = data[0].data().get<cpu, 3, real_t>();
         meanimg_.Resize(src.shape_);
@@ -299,7 +290,8 @@ class ImageDetNormalizeIter : public IIterator<DataInst> {
   }
 
   virtual bool Next(void) {
-    if (!this->Next_()) return false;
+    if (!this->Next_())
+      return false;
     return true;
   }
 
@@ -323,13 +315,14 @@ class ImageDetNormalizeIter : public IIterator<DataInst> {
 
   /*! \brief internal next function, inlined for fater processing. */
   inline bool Next_(void) {
-    if (!base_->Next()) return false;
-    const DataInst &src = base_->Value();
+    if (!base_->Next())
+      return false;
+    const DataInst& src = base_->Value();
     this->SetOutImg(src);
     out_.data.resize(2);
-    out_.data[0] = outimg_;
-    out_.data[1] = src.data[1];
-    out_.index = src.index;
+    out_.data[0]    = outimg_;
+    out_.data[1]    = src.data[1];
+    out_.index      = src.index;
     out_.extra_data = src.extra_data;
     return true;
   }
@@ -337,14 +330,14 @@ class ImageDetNormalizeIter : public IIterator<DataInst> {
    * \brief Set the output image, after augmentation and normalization.
    * \param src The source image.
    */
-  inline void SetOutImg(const DataInst &src) {
+  inline void SetOutImg(const DataInst& src) {
     using namespace mshadow::expr;  // NOLINT(*)
     mshadow::Tensor<cpu, 3> data = src.data[0].get<cpu, 3, real_t>();
 
     outimg_.Resize(data.shape_);
 
-    if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
-        param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
+    if (param_.mean_r > 0.0f || param_.mean_g > 0.0f || param_.mean_b > 0.0f ||
+        param_.mean_a > 0.0f) {
       // subtract mean per channel
       data[0] -= param_.mean_r;
       if (data.shape_[0] >= 3) {
@@ -401,9 +394,7 @@ class ImageDetNormalizeIter : public IIterator<DataInst> {
     TBlob tmp = meanimg_;
     {
       std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(param_.mean_img.c_str(), "w"));
-      NDArray::Save(fo.get(),
-                    {NDArray(tmp, 0)},
-                    {"mean_img"});
+      NDArray::Save(fo.get(), {NDArray(tmp, 0)}, {"mean_img"});
     }
     if (param_.verbose) {
       LOG(INFO) << "Save mean image to " << param_.mean_img << "..";

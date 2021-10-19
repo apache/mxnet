@@ -35,7 +35,7 @@ When creating a block, you can simply do as follows:
 
 ```{.python .input}
 mydense = gluon.nn.Dense(100)
-print(mydense.name)
+print(mydense.__class__.__name__)
 ```
 
 When you create more Blocks of the same kind, they will be named with incrementing suffixes to avoid collision:
@@ -43,7 +43,7 @@ When you create more Blocks of the same kind, they will be named with incrementi
 
 ```{.python .input}
 dense1 = gluon.nn.Dense(100)
-print(dense1.name)
+print(dense1.__class__.__name__)
 ```
 
 ## Naming Parameters
@@ -62,7 +62,7 @@ When getting parameters within a Block, you should use the structure based name 
 
 
 ```{.python .input}
-print(dense0.collect_params())
+print(dense1.collect_params())
 ```
 
 ## Nested Blocks
@@ -79,14 +79,14 @@ class Model(gluon.HybridBlock):
         self.mydense = gluon.nn.Dense(20)
 
     def forward(self, x):
-        x = mx.nd.relu(self.dense0(x))
-        x = mx.nd.relu(self.dense1(x))
-        return mx.nd.relu(self.mydense(x))
+        x = mx.npx.relu(self.dense0(x))
+        x = mx.npx.relu(self.dense1(x))
+        return mx.npx.relu(self.mydense(x))
 
 model0 = Model()
 model0.initialize()
 model0.hybridize()
-model0(mx.nd.zeros((1, 20)))
+model0(mx.np.zeros((1, 20)))
 ```
 
 The same principle also applies to container blocks like Sequential. We can simply do as follows:
@@ -106,9 +106,10 @@ For `HybridBlock`, we use `save_parameters`/`load_parameters`, which uses model 
 
 
 ```{.python .input}
+model1 = Model()
 model0.save_parameters('model.params')
 model1.load_parameters('model.params')
-print(mx.nd.load('model.params').keys())
+print(mx.npx.load('model.params').keys())
 ```
 
 For `SymbolBlock.imports`, we use `export`, which uses parameter name `param.name`, to save parameters.
@@ -124,15 +125,15 @@ Sometimes you may want to load a pretrained model, and replace certain Blocks in
 
 For example, the alexnet in model zoo has 1000 output dimensions, but maybe you only have 100 classes in your application.
 
-To see how to do this, we first load a pretrained AlexNet.
+To see how to do this, we first load a pretrained ResNet.
 
 - In Gluon model zoo, all image classification models follow the format where the feature extraction layers are named `features` while the output layer is named `output`.
 - Note that the output layer is a dense block with 1000 dimension outputs.
 
 
 ```{.python .input}
-alexnet = gluon.model_zoo.vision.alexnet(pretrained=True)
-print(alexnet.output)
+resnet = gluon.model_zoo.vision.resnet50_v2()
+print(resnet.output)
 ```
 
 
@@ -140,6 +141,6 @@ To change the output to 100 dimension, we replace it with a new block.
 
 
 ```{.python .input}
-alexnet.output = gluon.nn.Dense(100)
-alexnet.output.initialize()
+resnet.output = gluon.nn.Dense(100)
+resnet.output.initialize()
 ```

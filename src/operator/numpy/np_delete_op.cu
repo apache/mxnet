@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_delete_op.cu
  * \brief GPU Implementation of numpy delete operations
  */
@@ -28,8 +27,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_delete)
-.set_attr<FComputeEx>("FComputeEx<gpu>", NumpyDeleteCompute<gpu>);
+NNVM_REGISTER_OP(_npi_delete).set_attr<FComputeEx>("FComputeEx<gpu>", NumpyDeleteCompute<gpu>);
 
 }
-}
+}  // namespace mxnet

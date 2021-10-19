@@ -90,7 +90,7 @@ npx.load('my_array')
 ```{.python .input}
 # Save a list of arrays
 b = np.array([4, 6, 8])
-npx.save('my_arrays', [a, b])  # FIXME, cannot be a tuple
+npx.savez('my_arrays', *[a, b])
 npx.load('my_arrays')
 ```
 

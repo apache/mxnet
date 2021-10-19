@@ -29,9 +29,7 @@ namespace mxnet {
 /*
  * Ufunc helper for unary operators
  */
-void UFuncHelper(runtime::MXNetArgs args,
-                 runtime::MXNetRetValue* ret,
-                 const nnvm::Op* fn_array);
+void UFuncHelper(runtime::MXNetArgs args, runtime::MXNetRetValue* ret, const nnvm::Op* fn_array);
 
 /*
  * Ufunc helper for binary operators

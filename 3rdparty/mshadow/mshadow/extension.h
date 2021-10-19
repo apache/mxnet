@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright by Contributors
  * \file extension.h
  * \brief some extension of expressions,
  *  used to support something beyond elementwise op

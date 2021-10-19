@@ -32,6 +32,7 @@ from ..io import DataDesc
 from ..context import cpu, Context
 from ..util import is_np_array
 
+
 def _quantize_params(qsym, params, min_max_dict):
     """Given a quantized symbol and a dict of params that have not been quantized,
     generate quantized params. Currently only supports quantizing the arg_params
@@ -85,6 +86,7 @@ def _quantize_params(qsym, params, min_max_dict):
             if output in min_max_dict:
                 quantized_params[name] = array_cls.array([min_max_dict[output][1]])
     return quantized_params
+
 
 def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
                      offline_params=None, quantized_dtype='int8', quantize_mode='smart',
@@ -291,6 +293,7 @@ class _LayerHistogramCollector(CalibrationCollector):
                 logger.debug(f"layer={name}, min_val={min_val}, max_val={max_val}, th={th}, divergence={divergence}")
         return th_dict
 
+
 class _LayerOutputMinMaxCollector(CalibrationCollector):
     """Saves layer output min and max values in a dict with layer names as keys.
     The collected min and max values will be directly used as thresholds for quantization.
@@ -319,11 +322,12 @@ class _LayerOutputMinMaxCollector(CalibrationCollector):
             self.logger.debug("Collecting layer %s min_range=%f, max_range=%f"
                               % (name, min_range, max_range))
 
+
 def _calibrate_quantized_sym(qsym, min_max_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,
     set the thresholds into the quantized symbol as the params of requantize operators.
     """
-    if min_max_dict  is None or len(min_max_dict) == 0:
+    if min_max_dict is None or len(min_max_dict) == 0:
         return qsym
     num_layer_outputs = len(min_max_dict)
     layer_output_names = []
@@ -361,8 +365,6 @@ def _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_
     if logger is not None:
         logger.info("Collected statistics from %d batches" % (num_batches))
     return num_batches
-
-
 
 
 def _generate_list_of_data_desc(data_shapes, data_types):
@@ -527,13 +529,13 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
 
     return qsym, qarg_params, aux_params
 
-def quantize_model_mkldnn(sym, arg_params, aux_params, data_names=('data',),
+def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_batches=None,
                           quantized_dtype='int8', quantize_mode='smart',
                           quantize_granularity='tensor-wise', logger=None):
     """User-level API for generating a fusion + quantized model from a FP32 model
-    w/ or w/o calibration with Intel MKL-DNN.
+    w/ or w/o calibration with oneDNN.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
 
@@ -552,9 +554,9 @@ def quantize_model_mkldnn(sym, arg_params, aux_params, data_names=('data',),
         raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
     if ctx.device_type != 'cpu':
         raise ValueError(
-            'quantize_model_mkldnn only support Intel cpu platform with MKL-DNN Backend')
+            'quantize_model_onednn only support Intel cpu platform with oneDNN Backend')
 
-    sym = sym.optimize_for(backend='MKLDNN_QUANTIZE')
+    sym = sym.optimize_for(backend='ONEDNN_QUANTIZE')
 
     qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                    data_names=data_names, ctx=ctx,
@@ -565,7 +567,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params, data_names=('data',),
                                                    quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
                                                    quantize_granularity=quantize_granularity, logger=logger)
 
-    qsym = qsym.optimize_for(backend='MKLDNN_QUANTIZE')
+    qsym = qsym.optimize_for(backend='ONEDNN_QUANTIZE')
 
     return qsym, qarg_params, aux_params
 
@@ -821,7 +823,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
 
     if ctx != mx.cpu():
         raise ValueError('Quantization currently supports only CPU context')
-    backend = 'MKLDNN_QUANTIZE'
+    backend = 'ONEDNN_QUANTIZE'
 
     network.hybridize(static_alloc=False, static_shape=False)
     data_types = None

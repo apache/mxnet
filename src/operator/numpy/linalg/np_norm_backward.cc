@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_norm_backward.cc
  * \brief CPU registration of np.linalg.norm
  */
@@ -29,15 +28,15 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_backward_npi_norm)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NumpyNormParam>)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_num_inputs(2 * 4 + 1)
-.set_attr<FCompute>("FCompute<cpu>", NumpyNormComputeBackward<cpu>);
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NumpyNormParam>)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_num_inputs(2 * 4 + 1)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyNormComputeBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

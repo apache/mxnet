@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_fill_diagonal_op.cu
  * \brief GPU implementation of numpy fill_diagonal operator
  */
@@ -29,7 +28,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_fill_diagonal)
-.set_attr<FCompute>("FCompute<gpu>", NumpyFillDiagonalForward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyFillDiagonalForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

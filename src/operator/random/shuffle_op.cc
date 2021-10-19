@@ -18,12 +18,11 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file shuffle_op.cc
  * \brief Operator to shuffle elements of an NDArray
  */
 #if ((__GNUC__ > 4 && !defined(__clang__major__)) || (__clang_major__ > 4 && __linux__)) && \
-  defined(_OPENMP) && !defined(__ANDROID__)
+    defined(_OPENMP) && !defined(__ANDROID__)
 #define USE_GNU_PARALLEL_SHUFFLE
 #endif
 
@@ -33,8 +32,8 @@
 #include <vector>
 #include <cstring>
 #ifdef USE_GNU_PARALLEL_SHUFFLE
-  #include <unistd.h>
-  #include <parallel/algorithm>
+#include <unistd.h>
+#include <parallel/algorithm>
 #endif
 #include "../elemwise_op_common.h"
 
@@ -43,38 +42,41 @@ namespace op {
 
 namespace {
 
-template<typename DType, typename Rand>
+template <typename DType, typename Rand>
 void Shuffle1D(DType* const out, const index_t size, Rand* const prnd) {
-  #ifdef USE_GNU_PARALLEL_SHUFFLE
-     /*
-      * See issue #15029: the data type of n needs to be compatible with
-      * the gcc library: https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B\
-      * -v3/include/parallel/random_shuffle.h#L384
-      */
-    auto rand_n = [prnd](uint32_t n) {
-      std::uniform_int_distribution<uint32_t> dist(0, n - 1);
-      return dist(*prnd);
-    };
-    __gnu_parallel::random_shuffle(out, out + size, rand_n);
-  #else
-    std::shuffle(out, out + size, *prnd);
-  #endif
+#ifdef USE_GNU_PARALLEL_SHUFFLE
+  /*
+   * See issue #15029: the data type of n needs to be compatible with
+   * the gcc library: https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B\
+   * -v3/include/parallel/random_shuffle.h#L384
+   */
+  auto rand_n = [prnd](uint32_t n) {
+    std::uniform_int_distribution<uint32_t> dist(0, n - 1);
+    return dist(*prnd);
+  };
+  __gnu_parallel::random_shuffle(out, out + size, rand_n);
+#else
+  std::shuffle(out, out + size, *prnd);
+#endif
 }
 
-template<typename DType, typename Rand>
-void ShuffleND(DType* const out, const index_t size, const index_t first_axis_len,
-                Rand* const prnd, const OpContext& ctx) {
+template <typename DType, typename Rand>
+void ShuffleND(DType* const out,
+               const index_t size,
+               const index_t first_axis_len,
+               Rand* const prnd,
+               const OpContext& ctx) {
   // Fisher-Yates shuffling
   using namespace mxnet_op;
   const index_t stride = size / first_axis_len;
-  auto rand_n = [prnd](index_t n) {
+  auto rand_n          = [prnd](index_t n) {
     std::uniform_int_distribution<index_t> dist(0, n - 1);
     return dist(*prnd);
   };
   CHECK_GT(first_axis_len, 0U);
   const size_t stride_bytes = sizeof(DType) * stride;
   Tensor<cpu, 1, char> buf =
-    ctx.requested[1].get_space_typed<cpu, 1, char>(Shape1(stride_bytes), ctx.get_stream<cpu>());
+      ctx.requested[1].get_space_typed<cpu, 1, char>(Shape1(stride_bytes), ctx.get_stream<cpu>());
   for (index_t i = first_axis_len - 1; i > 0; --i) {
     const index_t j = rand_n(i + 1);
     if (i != j) {
@@ -103,11 +105,11 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
   }
   CHECK_NE(req[0], kAddTo) << "Shuffle does not support AddTo";
   const mxnet::TShape& input_shape = inputs[0].shape_;
-  const index_t size = inputs[0].Size();
-  const index_t first_axis_len = input_shape[0];
-  Stream<cpu> *s = ctx.get_stream<cpu>();
+  const index_t size               = inputs[0].Size();
+  const index_t first_axis_len     = input_shape[0];
+  Stream<cpu>* s                   = ctx.get_stream<cpu>();
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    Tensor<cpu, 1, DType> in = inputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
+    Tensor<cpu, 1, DType> in  = inputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     Tensor<cpu, 1, DType> out = outputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     auto& prnd = ctx.requested[0].get_random<cpu, index_t>(ctx.get_stream<cpu>())->GetRndEngine();
     if (req[0] != kWriteInplace) {
@@ -121,34 +123,34 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
   });
 }
 
-
 // No parameter is declared.
 // No backward computation is registered. Shuffling is not differentiable.
 
 NNVM_REGISTER_OP(_shuffle)
-.add_alias("shuffle")
-.add_alias("_npi_shuffle")
-.describe(R"code(Randomly shuffle the elements.
+    .add_alias("shuffle")
+    .add_alias("_npi_shuffle")
+    .describe(R"code(Randomly shuffle the elements.
 
 This shuffles the array along the first axis.
 The order of the elements in each subarray does not change.
 For example, if a 2D array is given, the order of the rows randomly changes,
 but the order of the elements in each row does not change.
 )code")
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const nnvm::NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kRandom, ResourceRequest::kTempSpace};
-  })
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int>>{{0, 0}};
-  })
-.set_attr<FCompute>("FCompute<cpu>", ShuffleForwardCPU)
-.add_argument("data", "NDArray-or-Symbol", "Data to be shuffled.");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const nnvm::NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kRandom,
+                                                                      ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", ShuffleForwardCPU)
+    .add_argument("data", "NDArray-or-Symbol", "Data to be shuffled.");
 
 }  // namespace op
 }  // namespace mxnet

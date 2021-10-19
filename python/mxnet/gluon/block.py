@@ -1033,8 +1033,8 @@ class HybridBlock(Block):
 
     References
     ----------
-        `Hybrid - Faster training and easy deployment
-        <https://mxnet.io/tutorials/gluon/hybrid.html>`_
+        `Hybridize - A Hybrid of Imperative and Symbolic Programming
+        <https://mxnet.apache.org/versions/master/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html>`_
     """
     def __init__(self):
         super(HybridBlock, self).__init__()
@@ -1808,8 +1808,7 @@ class SymbolBlock(HybridBlock):
 
         for hook in self._forward_hooks.values():
             hook(self, [x] + args, out)
-        if _mx_npx.is_np_array():
-            _check_all_np_ndarrays(out)
+
         return out
 
     def forward(self, x, *args):

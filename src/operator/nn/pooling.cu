@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file pooling.cu
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng
-*/
+ */
 #include <vector>
 #include "./pooling-inl.h"
 #if MXNET_USE_CUDNN == 1
@@ -33,8 +32,8 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_CUDNN == 1
-template<typename DType>
-static CuDNNPoolingOp<DType> &GetCuDNNPoolingOp(const PoolingParam &param) {
+template <typename DType>
+static CuDNNPoolingOp<DType>& GetCuDNNPoolingOp(const PoolingParam& param) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local CuDNNPoolingOp<DType> op;
 #else
@@ -45,7 +44,7 @@ static CuDNNPoolingOp<DType> &GetCuDNNPoolingOp(const PoolingParam &param) {
 }
 #endif
 
-template<>
+template <>
 void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<TBlob>& inputs,
@@ -67,10 +66,8 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
 #endif  // MXNET_USE_CUDNN
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    if (pool_enum::kMaxPooling == param.pool_type
-        || pool_enum::kAvgPooling == param.pool_type
-        || pool_enum::kSumPooling == param.pool_type
-        || pool_enum::kLpPooling == param.pool_type) {
+    if (pool_enum::kMaxPooling == param.pool_type || pool_enum::kAvgPooling == param.pool_type ||
+        pool_enum::kSumPooling == param.pool_type || pool_enum::kLpPooling == param.pool_type) {
       PoolingOp<gpu, DType> op;
       op.Init(param);
       op.Forward(ctx, inputs[0], req[0], outputs[0]);
@@ -80,7 +77,7 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<>
+template <>
 void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
                              const std::vector<TBlob>& inputs,
@@ -91,14 +88,14 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   off_t ograd_idx, in_data_idx, out_data_idx;
-  // When MKLDNN is enabled, the input data may contains arrays for workspace.
+  // When DNNL is enabled, the input data may contains arrays for workspace.
   if (GetNumBackInputs(param) == 5) {
-    ograd_idx = 0;
-    in_data_idx = 2;
+    ograd_idx    = 0;
+    in_data_idx  = 2;
     out_data_idx = 3;
   } else {
-    ograd_idx = 0;
-    in_data_idx = 1;
+    ograd_idx    = 0;
+    in_data_idx  = 1;
     out_data_idx = 2;
   }
 
@@ -106,35 +103,30 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   if (!param.cudnn_off) {
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       if (CuDNNPoolingOp<DType>::Supports(param, inputs[in_data_idx])) {
-          GetCuDNNPoolingOp<DType>(param).Backward(ctx, inputs[ograd_idx],
-                                                   inputs[in_data_idx], inputs[out_data_idx],
-                                                   req[0], outputs[0]);
-          return;
+        GetCuDNNPoolingOp<DType>(param).Backward(
+            ctx, inputs[ograd_idx], inputs[in_data_idx], inputs[out_data_idx], req[0], outputs[0]);
+        return;
       }
     });
   }
 #endif  // MXNET_USE_CUDNN
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    if (pool_enum::kMaxPooling == param.pool_type
-        || pool_enum::kAvgPooling == param.pool_type
-        || pool_enum::kSumPooling == param.pool_type
-        || pool_enum::kLpPooling == param.pool_type) {
+    if (pool_enum::kMaxPooling == param.pool_type || pool_enum::kAvgPooling == param.pool_type ||
+        pool_enum::kSumPooling == param.pool_type || pool_enum::kLpPooling == param.pool_type) {
       PoolingOp<gpu, DType> op;
       op.Init(param);
-      op.Backward(ctx, inputs[ograd_idx], inputs[in_data_idx],
-                  inputs[out_data_idx], req[0], outputs[0]);
+      op.Backward(
+          ctx, inputs[ograd_idx], inputs[in_data_idx], inputs[out_data_idx], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }
   });
 }
 
-NNVM_REGISTER_OP(Pooling)
-.set_attr<FCompute>("FCompute<gpu>", PoolingCompute<gpu>);
+NNVM_REGISTER_OP(Pooling).set_attr<FCompute>("FCompute<gpu>", PoolingCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_Pooling)
-.set_attr<FCompute>("FCompute<gpu>", PoolingGradCompute<gpu>);
+NNVM_REGISTER_OP(_backward_Pooling).set_attr<FCompute>("FCompute<gpu>", PoolingGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

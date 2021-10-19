@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file eliminate_common_expr.cc
  * \brief Eliminate common expressions in the graph
  * \author Przemyslaw Tredak
@@ -37,10 +36,10 @@ namespace exec {
 
 namespace {
 
-using nnvm::Node;
-using nnvm::ObjectPtr;
 using nnvm::Graph;
 using nnvm::IndexedGraph;
+using nnvm::Node;
+using nnvm::ObjectPtr;
 
 // NodeInput holds the sufficient subset of NodeEntry fields for Node-input equality tests
 using NodeInput = std::pair<const Node*, uint32_t>;
@@ -61,15 +60,19 @@ std::vector<NodeInput> ConvertInputs(const std::vector<nnvm::NodeEntry>& inputs)
  * \brief Determine if two Nodes have equal function such that one Node can be eliminated.
  */
 bool NodeEqual(const Node* n, const Node* m) {
-  if (n->is_variable() || m->is_variable()) return false;
-  if (n->op() != m->op()) return false;
+  if (n->is_variable() || m->is_variable())
+    return false;
+  if (n->op() != m->op())
+    return false;
   // Nodes with different attributes are considered not identical,
   // though this may reject Node pairs that are in fact functionally the same.
-  if (n->attrs.dict != m->attrs.dict) return false;
+  if (n->attrs.dict != m->attrs.dict)
+    return false;
 
   // Ops that mutate inputs cannot be optimized out
   static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
-  if (fmutate_inputs.get(n->op(), nullptr) != nullptr) return false;
+  if (fmutate_inputs.get(n->op(), nullptr) != nullptr)
+    return false;
 
   // Stateful ops cannot be be equal to each other
   static auto& fstateful = Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -86,9 +89,9 @@ bool NodeEqual(const Node* n, const Node* m) {
   // Ops that require resource could ask for
   // random resource, so need to be explicitly marked
   // to be eligible
-  static auto& resource_request = Op::GetAttr<FResourceRequest>("FResourceRequest");
+  static auto& resource_request    = Op::GetAttr<FResourceRequest>("FResourceRequest");
   static auto& resource_request_ex = Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
-  const auto fresource_request = resource_request.get(n->op(), nullptr);
+  const auto fresource_request     = resource_request.get(n->op(), nullptr);
   if (fresource_request != nullptr) {
     const auto& requests = fresource_request(n->attrs);
     for (const auto& req : requests) {
@@ -97,7 +100,8 @@ bool NodeEqual(const Node* n, const Node* m) {
       }
     }
   }
-  if (resource_request_ex.get(n->op(), nullptr) != nullptr) return false;
+  if (resource_request_ex.get(n->op(), nullptr) != nullptr)
+    return false;
 
   return true;
 }
@@ -115,17 +119,18 @@ std::vector<std::pair<ObjectPtr, ObjectPtr> > GetCommonNodes(const Graph& g) {
   });
   // Now check for identical node ops within the node groups (having identical inputs)
   for (const auto& pair : grouped_nodes) {
-    auto &node_group = pair.second;  // Group of nodes that share the same vector of inputs
+    auto& node_group = pair.second;  // Group of nodes that share the same vector of inputs
     if (node_group.size() > 1) {
       std::unordered_set<size_t> visited;
       for (size_t i = 0; i < node_group.size(); ++i) {
-        if (visited.count(i)) continue;
+        if (visited.count(i))
+          continue;
         for (size_t j = i + 1; j < node_group.size(); ++j) {
           // If the two Nodes have equal function, then one Node (called the 'replaced') can
           // be eliminated in favor of the other Node (the 'src').
           if (NodeEqual(node_group[i]->get(), node_group[j]->get())) {
             visited.insert(j);
-            ObjectPtr src = *node_group[i];
+            ObjectPtr src      = *node_group[i];
             ObjectPtr replaced = *node_group[j];
             ret.emplace_back(src, replaced);
           }
@@ -141,20 +146,20 @@ std::vector<std::pair<ObjectPtr, ObjectPtr> > GetCommonNodes(const Graph& g) {
  */
 void EliminateCommonNodes(Graph* g,
                           const std::vector<std::pair<ObjectPtr, ObjectPtr> >& common_nodes) {
-  for (const auto &p : common_nodes) {
-    std::vector <ObjectPtr> nodes_to_change;
-    const ObjectPtr &src = p.first;
-    const ObjectPtr &replaced = p.second;
+  for (const auto& p : common_nodes) {
+    std::vector<ObjectPtr> nodes_to_change;
+    const ObjectPtr& src      = p.first;
+    const ObjectPtr& replaced = p.second;
     // Create a `nodes_to_change` list containing the Nodes that refer to the `replaced` Node
     // that is targeted for elimination.
-    DFSVisit(g->outputs, [replaced, &nodes_to_change](const ObjectPtr &n) {
-      for (const auto &dep : n->control_deps) {
+    DFSVisit(g->outputs, [replaced, &nodes_to_change](const ObjectPtr& n) {
+      for (const auto& dep : n->control_deps) {
         if (dep == replaced) {
           nodes_to_change.push_back(n);
           return;
         }
       }
-      for (const auto &inp : n->inputs) {
+      for (const auto& inp : n->inputs) {
         if (inp.node == replaced) {
           nodes_to_change.push_back(n);
           return;
@@ -164,13 +169,13 @@ void EliminateCommonNodes(Graph* g,
 
     // Change references to the `replaced` Node within the `nodes_to_change` list to be
     // references to the equivalent `src` Node.
-    for (auto &n : nodes_to_change) {
-      for (auto &dep : n->control_deps) {
+    for (auto& n : nodes_to_change) {
+      for (auto& dep : n->control_deps) {
         if (dep == replaced) {
           dep = src;
         }
       }
-      for (auto &inp : n->inputs) {
+      for (auto& inp : n->inputs) {
         if (inp.node == replaced) {
           inp.node = src;
         }
@@ -178,7 +183,7 @@ void EliminateCommonNodes(Graph* g,
     }
 
     // Add `replaced` Node control dependencies to those of the `src` Node.
-    for (const auto &n : replaced->control_deps) {
+    for (const auto& n : replaced->control_deps) {
       src->control_deps.push_back(n);
     }
 
@@ -193,7 +198,7 @@ void EliminateCommonNodes(Graph* g,
   // insert Copy nodes as appropriate
   const Op* copy_op = Op::Get("_copy");
   nnvm::NodeEntryMap<size_t> unique_outputs;
-  for (auto & output : g->outputs) {
+  for (auto& output : g->outputs) {
     auto kv = unique_outputs.find(output);
     if (kv == unique_outputs.end()) {
       unique_outputs.emplace(output, 0);
@@ -202,7 +207,7 @@ void EliminateCommonNodes(Graph* g,
       std::ostringstream os;
       os << kv->first.node->attrs.name << "_" << kv->second << "_copy";
       kv->second++;
-      copy_node->attrs.op = copy_op;
+      copy_node->attrs.op   = copy_op;
       copy_node->attrs.name = os.str();
       copy_node->inputs.emplace_back(kv->first);
       output = nnvm::NodeEntry{copy_node, 0, 0};

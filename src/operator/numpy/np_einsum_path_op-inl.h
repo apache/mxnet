@@ -1,26 +1,7 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
-/*
  * Copyright (c) 2005-2019, NumPy Developers.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -95,8 +76,7 @@ struct Step {
   Tuple<int> left_pos, right_pos;
 };
 
-inline size_t _compute_size_by_dict(const std::string& indices,
-                                    const dim_t idx_dict[]) {
+inline size_t _compute_size_by_dict(const std::string& indices, const dim_t idx_dict[]) {
   size_t ret = 1;
   for (const char& c : indices) {
     ret *= idx_dict[static_cast<int>(c)];
@@ -104,8 +84,7 @@ inline size_t _compute_size_by_dict(const std::string& indices,
   return ret;
 }
 
-inline size_t _compute_size_by_dict(const std::bitset<MAXAXIS>& indices,
-                                    const dim_t idx_dict[]) {
+inline size_t _compute_size_by_dict(const std::bitset<MAXAXIS>& indices, const dim_t idx_dict[]) {
   size_t ret = 1;
   for (int i = 0; i < MAXAXIS; ++i) {
     if (indices[i]) {
@@ -120,7 +99,7 @@ inline int64_t _flop_count(const std::string& idx_contraction,
                            int num_terms,
                            const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
-  int op_factor = std::max(1, num_terms - 1);
+  int op_factor       = std::max(1, num_terms - 1);
   if (inner) {
     ++op_factor;
   }
@@ -132,7 +111,7 @@ inline int64_t _flop_count(const std::bitset<MAXAXIS>& idx_contraction,
                            int num_terms,
                            const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
-  int op_factor = std::max(1, num_terms - 1);
+  int op_factor       = std::max(1, num_terms - 1);
   if (inner) {
     ++op_factor;
   }
@@ -153,7 +132,7 @@ inline Contraction _find_contraction(const std::vector<int>& positions,
       idx_remain |= input_sets[i];
     }
   }
-  ret.new_result = idx_remain & ret.idx_contract;
+  ret.new_result  = idx_remain & ret.idx_contract;
   ret.idx_removed = (ret.idx_contract & ~ret.new_result);
   ret.remaining.push_back(ret.new_result);
 
@@ -184,8 +163,8 @@ inline int _parse_possible_contraction(const std::vector<int>& positions,
   }
   int64_t remove_size = static_cast<int64_t>(old_sizes) - static_cast<int64_t>(new_size);
 
-  int64_t cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
-                             positions.size(), idx_dict);
+  int64_t cost =
+      _flop_count(contract.idx_contract, contract.idx_removed.any(), positions.size(), idx_dict);
   ret->cost[0] = -remove_size;
   ret->cost[1] = cost;
 
@@ -195,13 +174,12 @@ inline int _parse_possible_contraction(const std::vector<int>& positions,
   }
 
   // Add contraction to possible choices
-  ret->positions = positions;
+  ret->positions      = positions;
   ret->new_input_sets = contract.remaining;
   return 0;
 }
 
-inline void _update_other_results(std::vector<Alternative>* results,
-                                  const Alternative& best) {
+inline void _update_other_results(std::vector<Alternative>* results, const Alternative& best) {
   const std::vector<int>& best_con = best.positions;
   int bx = best_con[0], by = best_con[1];
   size_t size = results->size();
@@ -216,12 +194,11 @@ inline void _update_other_results(std::vector<Alternative>* results,
     }
 
     // Update the input_sets
-    CHECK_GT(by, bx)
-      << "by must be greater than bx";
-    results->at(i).new_input_sets.erase(results->at(i).new_input_sets.begin() +
-                                        by - static_cast<int>(by > x) - static_cast<int>(by > y));
-    results->at(i).new_input_sets.erase(results->at(i).new_input_sets.begin() +
-                                        bx - static_cast<int>(bx > x) - static_cast<int>(bx > y));
+    CHECK_GT(by, bx) << "by must be greater than bx";
+    results->at(i).new_input_sets.erase(results->at(i).new_input_sets.begin() + by -
+                                        static_cast<int>(by > x) - static_cast<int>(by > y));
+    results->at(i).new_input_sets.erase(results->at(i).new_input_sets.begin() + bx -
+                                        static_cast<int>(bx > x) - static_cast<int>(bx > y));
     results->at(i).new_input_sets.push_back(best.new_input_sets.back());
 
     // Update the position indices
@@ -234,7 +211,7 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
                                                    const std::bitset<MAXAXIS>& output_set,
                                                    const dim_t idx_dict[],
                                                    size_t memory_limit) {
-  int isize = static_cast<int>(input_sets->size());
+  int isize         = static_cast<int>(input_sets->size());
   int iteration_num = isize;
   // Handle trivial cases that leaked through
   if (isize == 1) {
@@ -249,8 +226,8 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
     range[i] = i;
   }
   Contraction contract = _find_contraction(range, *input_sets, output_set);
-  int64_t naive_cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
-                                   isize, idx_dict);
+  int64_t naive_cost =
+      _flop_count(contract.idx_contract, contract.idx_removed.any(), isize, idx_dict);
 
   // Initially iterate over all pairs
   std::vector<Alternative> known_contractions;
@@ -283,20 +260,20 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
       for (int x = 0; x < isize - 1; ++x) {
         int y = isize - 1;
         if (!((input_sets->at(x) & input_sets->at(y)).any())) {
-            continue;
-          }
-          Alternative alternative;
-          int result = _parse_possible_contraction(std::vector<int>{x, y},
-                                                   *input_sets,
-                                                   output_set,
-                                                   idx_dict,
-                                                   memory_limit,
-                                                   path_cost,
-                                                   naive_cost,
-                                                   &alternative);
-          if (result != -1) {
-            known_contractions.push_back(alternative);
-          }
+          continue;
+        }
+        Alternative alternative;
+        int result = _parse_possible_contraction(std::vector<int>{x, y},
+                                                 *input_sets,
+                                                 output_set,
+                                                 idx_dict,
+                                                 memory_limit,
+                                                 path_cost,
+                                                 naive_cost,
+                                                 &alternative);
+        if (result != -1) {
+          known_contractions.push_back(alternative);
+        }
       }
     }
 
@@ -339,13 +316,12 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
       if (idx == -1) {
         best_cost[0] = x.cost[0];
         best_cost[1] = x.cost[1];
-        idx = i;
+        idx          = i;
       } else if (x.cost[0] < best_cost[0] ||
-                 (x.cost[0] == best_cost[0] &&
-                  x.cost[1] < best_cost[1])) {
+                 (x.cost[0] == best_cost[0] && x.cost[1] < best_cost[1])) {
         best_cost[0] = x.cost[0];
         best_cost[1] = x.cost[1];
-        idx = i;
+        idx          = i;
       }
     }
     best = known_contractions[idx];
@@ -356,7 +332,7 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
     // Next iteration only compute contractions with the new tensor
     // All other contractions have been accounted for
     input_sets = &best.new_input_sets;
-    isize = static_cast<int>(input_sets->size());
+    isize      = static_cast<int>(input_sets->size());
 
     // Update path and total cost
     ret.push_back(best.positions);
@@ -378,7 +354,7 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
     return false;
   }
 
-  const std::string& input_left = inputs[0];
+  const std::string& input_left  = inputs[0];
   const std::string& input_right = inputs[1];
 
   if (input_left.size() == 0 || input_right.size() == 0) {
@@ -412,9 +388,9 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
   for (const char& c : input_right) {
     set_right.set(c);
   }
-  std::bitset<MAXAXIS> keep_left = set_left & ~idx_removed;
+  std::bitset<MAXAXIS> keep_left  = set_left & ~idx_removed;
   std::bitset<MAXAXIS> keep_right = set_right & ~idx_removed;
-  size_t rs = idx_removed.count();
+  size_t rs                       = idx_removed.count();
 
   // At this point we are a DOT, GEMV, or GEMM operation
 
@@ -431,30 +407,22 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
   // Handle the 4 possible (aligned) GEMV or GEMM cases
 
   // GEMM or GEMV no transpose
-  if (std::equal(input_left.end() - rs,
-                 input_left.end(),
-                 input_right.begin())) {
+  if (std::equal(input_left.end() - rs, input_left.end(), input_right.begin())) {
     return true;
   }
 
   // GEMM or GEMV transpose both
-  if (std::equal(input_left.begin(),
-                 input_left.begin() + rs,
-                 input_right.end() - rs)) {
+  if (std::equal(input_left.begin(), input_left.begin() + rs, input_right.end() - rs)) {
     return true;
   }
 
   // GEMM or GEMV transpose right
-  if (std::equal(input_left.end() - rs,
-                 input_left.end(),
-                 input_right.end() - rs)) {
+  if (std::equal(input_left.end() - rs, input_left.end(), input_right.end() - rs)) {
     return true;
   }
 
   // GEMM or GEMV transpose left
-  if (std::equal(input_left.begin(),
-                 input_left.begin() + rs,
-                 input_right.begin())) {
+  if (std::equal(input_left.begin(), input_left.begin() + rs, input_right.begin())) {
     return true;
   }
 
@@ -468,14 +436,14 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
 }
 
 #if MXNET_USE_CUTENSOR == 1
-inline bool check_cutensor_indices(const std::string &indices,
+inline bool check_cutensor_indices(const std::string& indices,
                                    const TShape& shape,
-                                   std::unordered_map<char, int> *count,
-                                   std::unordered_map<char, int> *countAll,
-                                   std::unordered_map<char, dim_t> *extents) {
+                                   std::unordered_map<char, int>* count,
+                                   std::unordered_map<char, int>* countAll,
+                                   std::unordered_map<char, dim_t>* extents) {
   for (int i = 0; i < indices.size(); i++) {
     const char c = indices[i];
-    auto pos = count->find(c);
+    auto pos     = count->find(c);
     if (pos != count->end()) {
       // don't allow duplicated incides inside of the same tensor
       return false;
@@ -499,7 +467,7 @@ inline bool check_cutensor_indices(const std::string &indices,
       }
     } else {
       (*countAll)[c] = 1;
-      (*extents)[c] = shape[i];
+      (*extents)[c]  = shape[i];
     }
   }
   return true;
@@ -512,7 +480,7 @@ inline bool _can_cutensor(const std::vector<std::string>& inputs,
   if (inputs.size() != 2) {
     return false;
   }
-  const std::string& input_left = inputs[0];
+  const std::string& input_left  = inputs[0];
   const std::string& input_right = inputs[1];
   if (input_left.size() == 0 || input_right.size() == 0) {
     return false;
@@ -534,9 +502,8 @@ inline bool _can_cutensor(const std::vector<std::string>& inputs,
 }
 #endif
 
-inline int _count_substring(const std::string& str,
-                            const std::string& sub) {
-  int count = 0;
+inline int _count_substring(const std::string& str, const std::string& sub) {
+  int count                  = 0;
   std::string::size_type pos = 0;
   while ((pos = str.find(sub, pos)) != std::string::npos) {
     ++count;
@@ -563,9 +530,8 @@ inline std::string set2str(const std::bitset<MAXAXIS>& set) {
   return ret;
 }
 
-inline std::vector<std::string> split(const std::string& str,
-                                      const std::string& sub) {
-  std::string::size_type pos = 0;
+inline std::vector<std::string> split(const std::string& str, const std::string& sub) {
+  std::string::size_type pos   = 0;
   std::string::size_type start = 0;
   std::vector<std::string> ret;
   while ((pos = str.find(sub, start)) != std::string::npos) {
@@ -576,18 +542,15 @@ inline std::vector<std::string> split(const std::string& str,
   return ret;
 }
 
-inline std::vector<std::string> _parse_einsum_input(
-  std::string subscripts,
-  const std::vector<TBlob>& operands) {
-  const std::string einsum_symbols =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+inline std::vector<std::string> _parse_einsum_input(std::string subscripts,
+                                                    const std::vector<TBlob>& operands) {
+  const std::string einsum_symbols = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   std::bitset<MAXAXIS> einsum_symbols_set;
   for (const char& c : einsum_symbols) {
     einsum_symbols_set.set(c);
   }
 
-  CHECK_NE(operands.size(), 0U)
-    << "No input operands";
+  CHECK_NE(operands.size(), 0U) << "No input operands";
 
   auto end_pos = std::remove(subscripts.begin(), subscripts.end(), ' ');
   subscripts.erase(end_pos, subscripts.end());
@@ -597,33 +560,28 @@ inline std::vector<std::string> _parse_einsum_input(
     if (c == '.' || c == ',' || c == '-' || c == '>') {
       continue;
     }
-    CHECK(einsum_symbols_set.test(c))
-      << "Character " << c
-      << " is not a valid symbol.";
+    CHECK(einsum_symbols_set.test(c)) << "Character " << c << " is not a valid symbol.";
   }
 
   // Check for proper "->"
-  if (subscripts.find('-') != std::string::npos ||
-      subscripts.find('>') != std::string::npos) {
+  if (subscripts.find('-') != std::string::npos || subscripts.find('>') != std::string::npos) {
     bool invalid = (std::count(subscripts.begin(), subscripts.end(), '-') > 1 ||
                     std::count(subscripts.begin(), subscripts.end(), '>') > 1);
     CHECK(!invalid && _count_substring(subscripts, "->") == 1)
-      << "Subscripts can only contain one '->'.";
+        << "Subscripts can only contain one '->'.";
   }
 
   // Parse ellipses
   if (subscripts.find('.') != std::string::npos) {
     std::string used = subscripts;
-    used.erase(std::remove_if(used.begin(),
-                              used.end(),
-                              [](const char& c){return c == '.' ||
-                                                       c == ',' ||
-                                                       c == '-' ||
-                                                       c == '>';}),
-               used.end());
+    used.erase(
+        std::remove_if(used.begin(),
+                       used.end(),
+                       [](const char& c) { return c == '.' || c == ',' || c == '-' || c == '>'; }),
+        used.end());
 
     std::bitset<MAXAXIS> used_set = str2set(used);
-    std::string ellipse_inds = "";
+    std::string ellipse_inds      = "";
     for (const char& c : einsum_symbols) {
       if (!used_set.test(static_cast<int>(c))) {
         ellipse_inds.append(1, c);
@@ -636,24 +594,22 @@ inline std::vector<std::string> _parse_einsum_input(
 
     if (subscripts.find("->") != std::string::npos) {
       std::vector<std::string> tmp = split(subscripts, "->");
-      input_tmp = tmp[0];
-      output_sub = tmp[1];
-      split_subscripts = split(input_tmp, ",");
-      out_sub = true;
+      input_tmp                    = tmp[0];
+      output_sub                   = tmp[1];
+      split_subscripts             = split(input_tmp, ",");
+      out_sub                      = true;
     } else {
       split_subscripts = split(subscripts, ",");
-      out_sub = false;
+      out_sub          = false;
     }
 
     size_t size_split_subscripts = split_subscripts.size();
-    subscripts = "";
+    subscripts                   = "";
     for (size_t i = 0; i < size_split_subscripts; ++i) {
       const std::string& sub = split_subscripts[i];
       if (sub.find('.') != std::string::npos) {
-        CHECK_EQ(std::count(sub.begin(), sub.end(), '.'), 3)
-          << "Invalid Ellipses";
-        CHECK_EQ(_count_substring(sub, "..."), 1)
-          << "Invalid Ellipses";
+        CHECK_EQ(std::count(sub.begin(), sub.end(), '.'), 3) << "Invalid Ellipses";
+        CHECK_EQ(_count_substring(sub, "..."), 1) << "Invalid Ellipses";
 
         // Take into account numerical values
         int ellipse_count = 0;
@@ -668,8 +624,7 @@ inline std::vector<std::string> _parse_einsum_input(
           longest = ellipse_count;
         }
 
-        CHECK_GE(ellipse_count, 0)
-          << "Ellipses lengths do not match.";
+        CHECK_GE(ellipse_count, 0) << "Ellipses lengths do not match.";
         if (ellipse_count == 0) {
           split_subscripts[i].erase(sub.find("..."), 3);
         } else {
@@ -703,9 +658,7 @@ inline std::vector<std::string> _parse_einsum_input(
         if (c == ',') {
           continue;
         }
-        CHECK(einsum_symbols_set.test(c))
-          << "Character " << c
-          << " is not a valid symbol.";
+        CHECK(einsum_symbols_set.test(c)) << "Character " << c << " is not a valid symbol.";
         if ((i == 0 || tmp_subscripts[i - 1] != c) &&
             (i == len_tmp_subscripts - 1 || tmp_subscripts[i + 1] != c) &&
             !out_ellipse_set.test(c)) {
@@ -725,16 +678,14 @@ inline std::vector<std::string> _parse_einsum_input(
     ret[1] = "";
     // Build output subscripts
     std::string tmp_subscripts = subscripts;
-    size_t len_tmp_subscripts = tmp_subscripts.length();
+    size_t len_tmp_subscripts  = tmp_subscripts.length();
     std::sort(tmp_subscripts.begin(), tmp_subscripts.end());
     for (size_t i = 0; i < len_tmp_subscripts; ++i) {
       const char& c = tmp_subscripts[i];
       if (c == ',') {
         continue;
       }
-      CHECK(einsum_symbols_set.test(c))
-        << "Character " << c
-        << " is not a valid symbol.";
+      CHECK(einsum_symbols_set.test(c)) << "Character " << c << " is not a valid symbol.";
       if ((i == 0 || tmp_subscripts[i - 1] != c) &&
           (i == len_tmp_subscripts - 1 || tmp_subscripts[i + 1] != c)) {
         ret[1].append(1, c);
@@ -746,14 +697,13 @@ inline std::vector<std::string> _parse_einsum_input(
   std::bitset<MAXAXIS> input_subscripts_set = str2set(ret[0]);
   for (const char& c : ret[1]) {
     CHECK(input_subscripts_set.test(c))
-      << "Output character " << c
-      << " did not appear in the input";
+        << "Output character " << c << " did not appear in the input";
   }
 
   // Make sure number operands is equivalent to the number of terms
   CHECK_EQ(std::count(ret[0].begin(), ret[0].end(), ',') + 1, operands.size())
-    << "Number of einsum subscripts must be equal to the "
-    << "number of operands.";
+      << "Number of einsum subscripts must be equal to the "
+      << "number of operands.";
 
   return ret;
 }
@@ -779,13 +729,13 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
 
   // Build a few useful list and sets
   std::vector<std::string> input_list = split(parsed_subscripts[0], ",");
-  int isize = static_cast<int>(input_list.size());
+  int isize                           = static_cast<int>(input_list.size());
   SetVector input_sets;
   for (int i = 0; i < isize; ++i) {
     input_sets.push_back(str2set(input_list[i]));
   }
   std::bitset<MAXAXIS> output_set = str2set(parsed_subscripts[1]);
-  std::bitset<MAXAXIS> indices = str2set(parsed_subscripts[0]);
+  std::bitset<MAXAXIS> indices    = str2set(parsed_subscripts[0]);
   indices.set(',', false);
 
   // Get length of each unique dimension and ensure all dimensions are correct
@@ -794,14 +744,13 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
   memset(dimension_dict, -1, sizeof(dimension_dict));
   for (int i = 0; i < isize; ++i) {
     const std::string& term = input_list[i];
-    const TShape& sh = operands[i].shape_;
+    const TShape& sh        = operands[i].shape_;
     CHECK_EQ(sh.ndim(), term.length())
-      << "Einstein sum subscript " << input_list[i]
-      << " does not contain the "
-      << "correct number of indices for operand " << i << ".";
+        << "Einstein sum subscript " << input_list[i] << " does not contain the "
+        << "correct number of indices for operand " << i << ".";
     size_t len_term = term.length();
     for (size_t j = 0; j < len_term; ++j) {
-      dim_t dim = sh[j];
+      dim_t dim     = sh[j];
       const char& c = term[j];
       // Build out broadcast indices
       if (dim == 1) {
@@ -814,11 +763,9 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
           dimension_dict[static_cast<int>(c)] = dim;
         }
         CHECK(dim == 1 || dim == dimension_dict[static_cast<int>(c)])
-          << "Size of label '" << c
-          << "' for operand  " << i
-          << " (" << dimension_dict[static_cast<int>(c)]
-          << ") does not match previous terms ("
-          << dim << ").";
+            << "Size of label '" << c << "' for operand  " << i << " ("
+            << dimension_dict[static_cast<int>(c)] << ") does not match previous terms (" << dim
+            << ").";
       } else {
         dimension_dict[static_cast<int>(c)] = dim;
       }
@@ -830,11 +777,11 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
   size_t max_size = 0, memory_arg;
   for (int i = 0; i < isize; ++i) {
     size_list[i] = _compute_size_by_dict(input_list[i], dimension_dict);
-    max_size = std::max(max_size, size_list[i]);
+    max_size     = std::max(max_size, size_list[i]);
   }
   size_list[isize] = _compute_size_by_dict(parsed_subscripts[1], dimension_dict);
-  max_size = std::max(max_size, size_list[isize]);
-  memory_arg = max_size;
+  max_size         = std::max(max_size, size_list[isize]);
+  memory_arg       = max_size;
 
   // Compute naive cost
   // This isn't quite right, need to look into exactly how einsum does this
@@ -843,7 +790,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     sum_len_input_sets += x.count();
   }
   bool inner_product = (sum_len_input_sets > indices.count());
-  int naive_cost = _flop_count(indices, inner_product, isize, dimension_dict);
+  int naive_cost     = _flop_count(indices, inner_product, isize, dimension_dict);
 
   // Compute the path
   std::vector<std::vector<int> > path;
@@ -870,17 +817,15 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     std::sort(contract_inds.begin(), contract_inds.end(), std::greater<int>());
 
     Contraction contract = _find_contraction(contract_inds, input_sets, output_set);
-    input_sets = contract.remaining;
+    input_sets           = contract.remaining;
 
-    int64_t cost = _flop_count(contract.idx_contract,
-                           contract.idx_removed.any(),
-                           contract_inds.size(),
-                           dimension_dict);
+    int64_t cost = _flop_count(
+        contract.idx_contract, contract.idx_removed.any(), contract_inds.size(), dimension_dict);
     opt_cost += cost;
     cost_list.push_back(cost);
     scale_list.push_back(contract.idx_contract.count());
     size_list.push_back(_compute_size_by_dict(contract.new_result, dimension_dict));
-    max_i = std::max(max_i, size_list.back());
+    max_i     = std::max(max_i, size_list.back());
     max_scale = std::max(max_scale, scale_list.back());
 
     std::bitset<MAXAXIS> bcast;
@@ -909,17 +854,17 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
       idx_result = parsed_subscripts[1];
     } else {
       idx_result = set2str(contract.new_result);
-      std::sort(idx_result.begin(), idx_result.end(),
-                [&dimension_dict](const char& a, const char& b) -> bool {
-                  return dimension_dict[static_cast<int>(a)] <
-                         dimension_dict[static_cast<int>(b)] ||
-                         (dimension_dict[static_cast<int>(a)] ==
-                         dimension_dict[static_cast<int>(b)] &&
-                         a < b);
-                });
+      std::sort(
+          idx_result.begin(),
+          idx_result.end(),
+          [&dimension_dict](const char& a, const char& b) -> bool {
+            return dimension_dict[static_cast<int>(a)] < dimension_dict[static_cast<int>(b)] ||
+                   (dimension_dict[static_cast<int>(a)] == dimension_dict[static_cast<int>(b)] &&
+                    a < b);
+          });
     }
     int len_idx_result = static_cast<int>(idx_result.length());
-    ret[i].oshape = TShape(len_idx_result, -1);
+    ret[i].oshape      = TShape(len_idx_result, -1);
     for (int j = 0; j < len_idx_result; ++j) {
       ret[i].oshape[j] = dimension_dict[static_cast<int>(idx_result[j])];
     }
@@ -943,21 +888,21 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
 #endif
 
     if (do_blas) {
-      CHECK_EQ(tmp_inputs.size(), 2U)
-        << "BLAS accepts exactly 2 inputs";
+      CHECK_EQ(tmp_inputs.size(), 2U) << "BLAS accepts exactly 2 inputs";
       std::string tensor_result = tmp_inputs[0] + tmp_inputs[1];
       tensor_result.erase(std::remove_if(tensor_result.begin(),
                                          tensor_result.end(),
                                          [&](const char& c) {
-                                           return contract.idx_removed.test(static_cast<int>(c));}),
+                                           return contract.idx_removed.test(static_cast<int>(c));
+                                         }),
                           tensor_result.end());
 
       // Find indices to contract over
       std::vector<int> left_pos, right_pos;
       left_pos.reserve(MAXAXIS);
       right_pos.reserve(MAXAXIS);
-      int tmp[MAXAXIS] = {0};
-      int length_left_input = static_cast<int>(tmp_inputs[0].length());
+      int tmp[MAXAXIS]       = {0};
+      int length_left_input  = static_cast<int>(tmp_inputs[0].length());
       int length_right_input = static_cast<int>(tmp_inputs[1].length());
       for (int j = 0; j < length_right_input; ++j) {
         if (contract.idx_removed.test(static_cast<int>(tmp_inputs[1][j]))) {
@@ -971,14 +916,14 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
         }
       }
       // Calculate left_pos and right_pos
-      ret[i].left_pos = Tuple<int>(left_pos);
+      ret[i].left_pos  = Tuple<int>(left_pos);
       ret[i].right_pos = Tuple<int>(right_pos);
       // Calculate do_einsum
       ret[i].do_einsum = (tensor_result != idx_result);
       // Calculate tshape
       CHECK_EQ(static_cast<int>(tensor_result.length()), len_idx_result)
-        << "tensordot produces dim " << tensor_result.length()
-        << ", while einsum produces dim " << len_idx_result << ".";
+          << "tensordot produces dim " << tensor_result.length() << ", while einsum produces dim "
+          << len_idx_result << ".";
       ret[i].tshape = TShape(len_idx_result, -1);
       for (int j = 0; j < len_idx_result; ++j) {
         ret[i].tshape[j] = dimension_dict[static_cast<int>(tensor_result[j])];
@@ -998,9 +943,9 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     }
     ret[i].einsum_str += "->" + idx_result;
     ret[i].contract_inds = contract_inds;
-    ret[i].idx_removed = contract.idx_removed;
-    ret[i].input_list = input_list;
-    ret[i].do_blas = do_blas;
+    ret[i].idx_removed   = contract.idx_removed;
+    ret[i].input_list    = input_list;
+    ret[i].do_blas       = do_blas;
   }
 
   if (ret_path == nullptr || ret_string_repr == nullptr) {
@@ -1009,12 +954,12 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
 
   // Return the path along with a nice string representation
   std::string overall_contraction = parsed_subscripts[0] + "->" + parsed_subscripts[1];
-  std::string header[3] = {"scaling", "current", "remaining"};
+  std::string header[3]           = {"scaling", "current", "remaining"};
 
   double speedup = 1.0 * naive_cost / (1.0 * opt_cost);
   std::ostringstream ss;
   ss << "  Complete contraction:  " << overall_contraction << std::endl;
-  ss << "         Naive scaling:  " <<  indices.count() << std::endl;
+  ss << "         Naive scaling:  " << indices.count() << std::endl;
   ss << "     Optimized scaling:  " << max_scale << std::endl;
   ss.precision(3);
   ss << "      Naive FLOP count:  " << std::scientific << naive_cost << std::endl;
@@ -1043,7 +988,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     ss << std::setw(40) << remaining_str;
   }
   *ret_string_repr = ss.str();
-  *ret_path = path;
+  *ret_path        = path;
   return ret;
 }
 

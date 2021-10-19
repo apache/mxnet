@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_broadcast_reduce_op_index.cu
  * \brief GPU Implementation of broadcast and reduce functions based on index.
  */
@@ -28,10 +27,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_argmax)
-.set_attr<FCompute>("FCompute<gpu>", NumpyArgMinMaxRTCCompute{"red::argmax{}"});
+    .set_attr<FCompute>("FCompute<gpu>", NumpyArgMinMaxRTCCompute{"red::argmax{}"});
 
 NNVM_REGISTER_OP(_npi_argmin)
-.set_attr<FCompute>("FCompute<gpu>", NumpyArgMinMaxRTCCompute{"red::argmin{}"});
+    .set_attr<FCompute>("FCompute<gpu>", NumpyArgMinMaxRTCCompute{"red::argmin{}"});
 
 }  // namespace op
 }  // namespace mxnet

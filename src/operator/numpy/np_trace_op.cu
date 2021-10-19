@@ -26,11 +26,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_trace)
-.set_attr<FCompute>("FCompute<gpu>", NumpyTraceOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_trace).set_attr<FCompute>("FCompute<gpu>", NumpyTraceOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_trace)
-.set_attr<FCompute>("FCompute<gpu>", NumpyTraceOpBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyTraceOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
