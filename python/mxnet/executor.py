@@ -34,7 +34,7 @@ class Executor:
     >>> c = 2 * a + b
     >>> texec = c._bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
     """
-    def __init__(self, sym, ctx, args, args_grad, grad_req, aux_states static_alloc=False):
+    def __init__(self, sym, ctx, args, args_grad, grad_req, aux_states, static_alloc=False):
         self.outputs = None
         self._input_names = sym.list_inputs()
         self._aux_names = sym.list_auxiliary_states()
