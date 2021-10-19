@@ -652,6 +652,7 @@ static bool SgDNNLAvoidFCQuantizeInput(const NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_sg_onednn_fully_connected)
+    .add_alias("_sg_mkldnn_fully_connected")
     .describe(R"code(_sg_onednn_fully_connected)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) {
       auto const& full_param = nnvm::get<DNNLFCFullParam>(attrs.parsed);
