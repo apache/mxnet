@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cpu_device_storage.h
  * \brief CPU storage implementation.
  */
@@ -51,9 +50,9 @@ class CPUDeviceStorage {
    * \brief Alignment of allocation.
    */
 #if MXNET_USE_ONEDNN == 1 || MXNET_USE_INTGEMM == 1
-  // MKLDNN requires special alignment. 64 is used by the MKLDNN library in
+  // DNNL requires special alignment. 64 is used by the DNNL library in
   // memory allocation.
-  static constexpr size_t alignment_ = kMKLDNNAlign;
+  static constexpr size_t alignment_ = kDNNLAlign;
 #else
   static constexpr size_t alignment_ = 16;
 #endif

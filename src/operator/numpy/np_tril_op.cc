@@ -18,11 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_tril_op.cc
  * \brief CPU implementation of numpy tril operator
  */
-
 #include "./np_tril_op-inl.h"
 
 namespace mxnet {

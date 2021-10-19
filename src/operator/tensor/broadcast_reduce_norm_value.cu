@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_norm_value.cu
  * \brief GPU Implementation of broadcast and reduce norm functions based on value.
  */

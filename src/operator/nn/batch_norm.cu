@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file batch_norm.cu
  * \brief CUDA Batch Normalization code
  * \author Chris Olivier, Bing Xu, Da Zheng
@@ -40,7 +39,7 @@
 #define ADDTO_BETA_FLAG       (1 << 8)
 
 #if MXNET_USE_CUDNN == 1
-#include "./cudnn/cudnn_batch_norm-inl.h"
+#include "./cudnn/cudnn_batch_norm.h"
 #endif
 
 #include "../../../include/mxnet/tensor_blob.h"
@@ -936,11 +935,6 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu>* s,
       (flags & IS_TRAINING_FLAG) != 0 && (flags & USE_GLOBAL_STATS_FLAG) == 0;
 
   if (is_train_and_not_global_stats) {
-#ifdef NDEBUG
-    constexpr bool SMALLER_THREADS = false;
-#else
-    constexpr bool SMALLER_THREADS = true;
-#endif
     dim3 blocks(gradOutput.ChannelCount());
     dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize()));
     BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, batchnorm::BNTensor3<DType>>
@@ -1105,19 +1099,6 @@ void BatchNormBackwardImpl(mshadow::Stream<gpu>* stream,
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_DoBackward_gpu);
 }
 
-#if MXNET_USE_CUDNN == 1
-template <typename DType>
-static CuDNNBatchNormOp<DType>& GetCuDNNOp(const BatchNormParam& param) {
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local CuDNNBatchNormOp<DType> op;
-#else
-  static MX_THREAD_LOCAL CuDNNBatchNormOp<DType> op;
-#endif
-  op.Init(param);
-  return op;
-}
-#endif
-
 template <>
 void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
@@ -1133,9 +1114,9 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1
-  if (!param.use_global_stats && !param.cudnn_off) {
-    MSHADOW_REAL_TYPE_SWITCH(
-        dtype, DType, { GetCuDNNOp<DType>(param).Forward(ctx, in_data, req, outputs, aux_states); })
+  if (!param.use_global_stats && !param.cudnn_off &&
+      CudnnBatchNormSupports(param, inputs[batchnorm::kData])) {
+    CudnnBatchNormForward(param, ctx, inputs, req, outputs);
   } else {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
       BatchNormForward<gpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
@@ -1161,9 +1142,9 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1
-  if (!param.use_global_stats && !param.cudnn_off) {
-    MSHADOW_REAL_TYPE_SWITCH(
-        dtype, DType, { GetCuDNNOp<DType>(param).Backward(ctx, inputs, req, outputs); })
+  if (!param.use_global_stats && !param.cudnn_off &&
+      CudnnBatchNormSupports(param, inputs[3 + batchnorm::kData])) {
+    CudnnBatchNormBackward(param, ctx, inputs, req, outputs);
   } else {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
       BatchNormBackward<gpu, DType, AccReal>(ctx, param, inputs, req, outputs);

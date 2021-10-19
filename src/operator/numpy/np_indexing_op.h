@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file np_indexing_op.h
  * \brief Function definition of numpy indexing operator
  */

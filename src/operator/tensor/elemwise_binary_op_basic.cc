@@ -18,19 +18,18 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_op_basic.cc
  * \brief CPU Implementation of basic elementwise binary broadcast operators
  */
-#include "./elemwise_unary_op.h"
+#include "../nn/dnnl/dnnl_base-inl.h"
+#include "../nn/dnnl/dnnl_ops-inl.h"
 #include "./elemwise_binary_op-inl.h"
-#include "../nn/mkldnn/mkldnn_ops-inl.h"
-#include "../nn/mkldnn/mkldnn_base-inl.h"
+#include "./elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNSum(const NDArray& input) {
+bool SupportDNNLSum(const NDArray& input) {
   int ndim = input.shape().ndim();
   return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
          (ndim >= 1 && ndim <= 4) && input.storage_type() == kDefaultStorage;
@@ -44,8 +43,8 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_ONEDNN == 1
-  if (SupportMKLDNNSum(inputs[0]) && SupportMKLDNNSum(inputs[1])) {
-    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLSum(inputs[0]) && SupportDNNLSum(inputs[1])) {
+    DNNLRun(DNNLSumForward, attrs, ctx, inputs, req, outputs);
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage &&
              inputs[1].storage_type() == kDefaultStorage) {
@@ -67,7 +66,7 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = ElemwiseBinaryOp::PreferDenseStorageType<true, true, true>(
       attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 #if MXNET_USE_ONEDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+  if (dev_mask == mshadow::cpu::kDevMask && !DNNLEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
   } else if (dev_mask == mshadow::cpu::kDevMask &&
              common::ContainsOnlyStorage(*in_attrs, kDefaultStorage) &&
@@ -82,7 +81,7 @@ MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
     .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
     .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::plus>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
 #endif
     .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseAddEx)
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
@@ -124,9 +123,9 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 2U);
 #if MXNET_USE_ONEDNN == 1
-  if (inputs[0].IsMKLDNNData()) {
-    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
-    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[1], outputs[1]);
+  if (inputs[0].IsDNNLData()) {
+    DNNLRun(DNNLCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNLRun(DNNLCopy, attrs, ctx, inputs[0], req[1], outputs[1]);
     return;
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(
@@ -153,7 +152,7 @@ static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = ElemwiseStorageType<1, 2, true, true, true>(
       attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 #if MXNET_USE_ONEDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+  if (dev_mask == mshadow::cpu::kDevMask && !DNNLEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
   } else if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
@@ -175,7 +174,7 @@ NNVM_REGISTER_OP(_backward_add)
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
 #endif
     .set_attr<FCompute>(
         "FCompute<cpu>",

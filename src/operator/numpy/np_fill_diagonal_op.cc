@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_fill_diagonal_op.cc
  * \brief CPU implementation of numpy fill_diagonal operator
  */

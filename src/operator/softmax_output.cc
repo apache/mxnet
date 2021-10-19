@@ -18,15 +18,14 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_output.cc
  * \brief
  * \author Bing Xu, Zhang Rong A
  */
 #include "./softmax_output-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./nn/mkldnn/mkldnn_ops-inl.h"
-#include "./nn/mkldnn/mkldnn_base-inl.h"
+#include "./nn/dnnl/dnnl_base-inl.h"
+#include "./nn/dnnl/dnnl_ops-inl.h"
 #endif
 namespace mxnet {
 namespace op {
@@ -144,7 +143,7 @@ inline static bool SoftmaxOutputStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -154,10 +153,10 @@ void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   const SoftmaxOutputParam& param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
-  if (SupportMKLDNN(inputs[0]) && !ctx.is_train && SupportMKLDNNSoftmaxOutput(param)) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNSoftmaxOutputForward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNL(inputs[0]) && !ctx.is_train && SupportDNNLSoftmaxOutput(param)) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLSoftmaxOutputForward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -246,7 +245,7 @@ NNVM_REGISTER_OP(SoftmaxOutput)
     .set_attr_parser(ParamParser<SoftmaxOutputParam>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", SoftmaxOutputStorageType)
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxOutputComputeExCPU)
 #endif
     .set_attr<nnvm::FListInputNames>("FListInputNames",

@@ -22,9 +22,10 @@
  * \brief CPU Implementation of elementwise unary function.
  */
 #include <mxnet/base.h>
-#include "elemwise_unary_op.h"
+
+#include "../nn/dnnl/dnnl_ops-inl.h"
 #include "./elemwise_binary_op-inl.h"
-#include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -311,8 +312,8 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_ONEDNN == 1
   const auto in_stype  = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
-  if (inputs[0].IsMKLDNNData()) {
-    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (inputs[0].IsDNNLData()) {
+    DNNLRun(DNNLCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else if (in_stype == kDefaultStorage && out_stype == kDefaultStorage) {
     if (req[0] != kNullOp && req[0] != kWriteInplace)
@@ -354,7 +355,7 @@ MXNET_OPERATOR_REGISTER_UNARY(_copy)
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
 #endif  // MXNET_USE_ONEDNN == 1
     .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
                                       [](const NodeAttrs& attrs) {
@@ -374,7 +375,7 @@ NNVM_REGISTER_OP(_backward_copy)
     .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", CopyEx)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

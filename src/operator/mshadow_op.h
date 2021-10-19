@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file mshadow_op.h
  * \brief
  * \author Bing Xu
@@ -36,6 +35,17 @@
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
+#endif
+
+#define MXNET_HAS_GCD_LCM() 0
+#if __cplusplus >= 201703L
+#ifdef __has_gcd_lcm
+#if __has_gcd_lcm(<numeric>)
+#include <numeric>
+#undef MXNET_HAS_GCD_LCM
+#define MXNET_HAS_GCD_LCM() 1
+#endif
+#endif
 #endif
 
 namespace mxnet {
@@ -1809,6 +1819,9 @@ struct gcd : public mxnet_op::tunable {
   template <typename DType>
   MSHADOW_XINLINE static typename enable_if<is_integral<DType>::value, DType>::type Map(DType a,
                                                                                         DType b) {
+#if MXNET_HAS_GCD_LCM()
+    return std::gcd(a, b);
+#else
     // minus cases.
     if (a < 0) {
       a = -a;
@@ -1840,6 +1853,7 @@ struct gcd : public mxnet_op::tunable {
       c = b;
     }
     return c;
+#endif
   }
 
   template <typename DType>
@@ -1854,6 +1868,9 @@ struct lcm : public mxnet_op::tunable {
   template <typename DType>
   MSHADOW_XINLINE static typename enable_if<is_integral<DType>::value, DType>::type Map(DType a,
                                                                                         DType b) {
+#if MXNET_HAS_GCD_LCM()
+    return std::lcm(a, b);
+#else
     // minus cases.
     if (a < 0) {
       a = -a;
@@ -1883,6 +1900,7 @@ struct lcm : public mxnet_op::tunable {
       c = tmp_a / b * tmp_b;
     }
     return c;
+#endif
   }
   template <typename DType>
   MSHADOW_XINLINE static typename enable_if<!is_integral<DType>::value, DType>::type Map(DType a,

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file pooling.cu
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng
@@ -89,7 +88,7 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   off_t ograd_idx, in_data_idx, out_data_idx;
-  // When MKLDNN is enabled, the input data may contains arrays for workspace.
+  // When DNNL is enabled, the input data may contains arrays for workspace.
   if (GetNumBackInputs(param) == 5) {
     ograd_idx    = 0;
     in_data_idx  = 2;

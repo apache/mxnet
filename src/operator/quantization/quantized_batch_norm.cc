@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_batch_norm.cc
  * \brief
  * \author Yixin Bao
@@ -26,7 +25,7 @@
 #include <mxnet/op_attr_types.h>
 #include "../nn/batch_norm-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/mkldnn/mkldnn_batch_norm-inl.h"
+#include "../nn/dnnl/dnnl_batch_norm-inl.h"
 #endif
 
 namespace mxnet {
@@ -71,7 +70,7 @@ bool QuantizedBatchNormType(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_ONEDNN == 1
   CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
-      << "QuantizedBatchNorm with MKLDNN backend only supports int8/uint8 input, while "
+      << "QuantizedBatchNorm with DNNL backend only supports int8/uint8 input, while "
       << in_type->at(0) << " is given.";
 #else
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);

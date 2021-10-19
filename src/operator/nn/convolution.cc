@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file convolution.cc
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng
@@ -28,8 +27,8 @@
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_base-inl.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_ops-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
@@ -55,10 +54,10 @@ static void ConvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
-  if (SupportMKLDNNConv(params, inputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNConvolutionForward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLConv(params, inputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLConvolutionForward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -70,10 +69,10 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
-  if (SupportMKLDNNConv(params, inputs[0])) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNConvolutionBackward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLConv(params, inputs[0])) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLConvolutionBackward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -320,7 +319,7 @@ inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
@@ -334,7 +333,7 @@ inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), out_expected);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -508,7 +507,7 @@ There are other options to tune the performance.
 #endif
     .set_attr<FCompute>("FCompute<cpu>", ConvolutionCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionComputeExCPU)
 #endif
     .set_attr<nnvm::FGradient>("FGradient", ConvolutionGrad{"_backward_Convolution"})
@@ -541,7 +540,7 @@ NNVM_REGISTER_OP(_backward_Convolution)
                                 })
     .set_attr_parser(ConvolutionParamParser)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionGradComputeExCPU)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", ConvolutionGradCompute<cpu>);

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file random_generator.cu
  * \brief gpu implements for parallel random number generator.
  */

@@ -36,13 +36,12 @@ WORKDIR /work/deps
 SHELL ["/bin/bash", "-c"]
 RUN export DEBIAN_FRONTEND=noninteractive && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
+    apt-get clean && \
     apt-get update && \
     apt-get install -y wget software-properties-common && \
-    if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
-        wget -qO - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB | apt-key add -; \
-        apt-add-repository "deb https://apt.repos.intel.com/mkl all main"; \
-        INTEL_MKL="-2020.0-088"; \
-    fi && \
+    wget -qO - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB -O - | apt-key add -; \
+    add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"; \
+    INTEL_MKL="-2021.3.0"; \
     apt-get update && \
     apt-get install -y \
         ## Utilities
@@ -58,13 +57,15 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libprotobuf-dev \
         default-jdk \
         clang-6.0 \
+        clang-format \
         python-yaml \
         clang-10 \
         clang-tidy-10 \
         g++ \
         g++-7 \
         g++-8 \
-        intel-mkl${INTEL_MKL} \
+        intel-oneapi-mkl${INTEL_MKL} \
+        intel-oneapi-mkl-devel${INTEL_MKL} \
         libomp-dev \
         ## Dependencies
         libgomp1 \

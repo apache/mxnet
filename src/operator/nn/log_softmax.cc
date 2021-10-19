@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file log_softmax.cc
  * \brief CPU Implementation of log_softmax
  */
@@ -27,8 +26,8 @@
 #include "../tensor/elemwise_binary_op.h"
 #include "../operator_common.h"
 #if MXNET_USE_ONEDNN == 1
-#include "mkldnn/mkldnn_base-inl.h"
-#include "mkldnn/mkldnn_ops-inl.h"
+#include "dnnl/dnnl_base-inl.h"
+#include "dnnl/dnnl_ops-inl.h"
 #endif
 
 namespace mxnet {
@@ -43,11 +42,11 @@ static void LogSoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (inputs[0].shape().Size() == 0U)
     return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  if (SupportMKLDNNLogSoftmax(param, inputs[0], outputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNLogSoftmaxForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportDNNLLogSoftmax(param, inputs[0], outputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLLogSoftmaxForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     auto fn = SoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>;
-    MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(SoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>, attrs, ctx, inputs, req, outputs);
@@ -61,11 +60,11 @@ static void LogSoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (inputs[0].shape().Size() == 0U)
     return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  if (SupportMKLDNNLogSoftmax(param, inputs[1], outputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNLogSoftmaxBackward, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLLogSoftmax(param, inputs[1], outputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLLogSoftmaxBackward, attrs, ctx, inputs, req, outputs);
     auto fn = SoftmaxGradCompute<cpu, op::mshadow_op::left, mxnet_op::log_softmax_bwd>;
-    MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(SoftmaxGradCompute<cpu, op::mshadow_op::left, mxnet_op::log_softmax_bwd>,
@@ -84,7 +83,7 @@ inline static bool LogSoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool LogSoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
@@ -101,7 +100,7 @@ inline static bool LogSoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
 
   CHECK_EQ(in_attrs->size(), num_inputs);
   CHECK_EQ(out_attrs->size(), 1U);
-  return MKLDNNStorageType(attrs, dev_mask, support, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, support, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -130,7 +129,7 @@ Examples::
                                      })
     .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", LogSoftmaxComputeExCPU)
     .set_attr<FInferStorageType>("FInferStorageType", LogSoftmaxStorageType)
 #endif
@@ -156,7 +155,7 @@ NNVM_REGISTER_OP(_backward_log_softmax)
     .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
     .set_attr_parser(ParamParser<SoftmaxParam>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", LogSoftmaxGradComputeExCPU)
     .set_attr<FInferStorageType>("FInferStorageType", LogSoftmaxGradStorageType)
 #endif

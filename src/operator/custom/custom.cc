@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file custom.cc
  * \brief
  * \author Junyuan Xie

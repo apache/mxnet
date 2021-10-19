@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_fully_connected.cc
  * \brief
  * \author Ziheng Jiang, Jun Wu
@@ -27,8 +26,8 @@
 #include "quantization_utils.h"
 #include "../nn/fully_connected-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/mkldnn/mkldnn_fully_connected-inl.h"
-#include "mkldnn/mkldnn_quantized_ops-inl.h"
+#include "../nn/dnnl/dnnl_fully_connected-inl.h"
+#include "dnnl/dnnl_quantized_ops-inl.h"
 #endif
 
 namespace mxnet {
@@ -126,7 +125,7 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 3U);
 
 #if MXNET_USE_ONEDNN == 1
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 #else
   *dispatch_mode = DispatchMode::kFCompute;
 
@@ -309,7 +308,7 @@ void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs& attrs,
                                          const std::vector<NDArray>& in_data,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& out_data) {
-  MKLDNNQuantizedFullyConnectedForward(attrs, ctx, in_data, req, out_data);
+  DNNLQuantizedFullyConnectedForward(attrs, ctx, in_data, req, out_data);
 }
 #endif
 
@@ -362,7 +361,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
     .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
     .set_attr<FCompute>("FCompute<cpu>", QuantizedFullyConnectedForwardCPU)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", QuantizedFullyConnectedForwardExCPU)
 #endif
     .set_attr<FResourceRequest>("FResourceRequest",

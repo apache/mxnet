@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
@@ -546,7 +545,7 @@ class OpSignature {
    */
 
 #if MXNET_USE_ONEDNN == 1
-  void AddSign(const mkldnn::memory& mem) {
+  void AddSign(const dnnl::memory& mem) {
     auto desc = mem.get_desc();
     hash      = hash * 2 + desc.data.format_kind;
     eles.push_back(desc.data.format_kind);
@@ -557,7 +556,7 @@ class OpSignature {
       eles.push_back(desc.data.dims[i]);
     }
     switch (desc.data.format_kind) {
-      case mkldnn_blocked:
+      case dnnl_blocked:
         hash = hash * 2 + desc.data.ndims;
         eles.push_back(desc.data.ndims);
         for (int i = 0; i < desc.data.ndims; i++) {
@@ -573,11 +572,11 @@ class OpSignature {
           eles.push_back(desc.data.format_desc.blocking.inner_idxs[i]);
         }
         break;
-      case mkldnn_format_kind_wino:
+      case dnnl_format_kind_wino:
         hash = hash * 2 + desc.data.format_desc.wino_desc.wino_format;
         eles.push_back(desc.data.format_desc.wino_desc.wino_format);
         break;
-      case mkldnn_format_kind_rnn_packed:
+      case dnnl_format_kind_rnn_packed:
         hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.format;
         eles.push_back(desc.data.format_desc.rnn_packed_desc.format);
         hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.n_parts;
@@ -614,8 +613,8 @@ class OpSignature {
 
   void AddSign(const NDArray& arr) {
 #if MXNET_USE_ONEDNN == 1
-    if (arr.IsMKLDNNData()) {
-      AddSign(*(arr.GetMKLDNNData()));
+    if (arr.IsDNNLData()) {
+      AddSign(*(arr.GetDNNLData()));
     } else {
 #endif
       hash = hash * 2 + arr.dtype();

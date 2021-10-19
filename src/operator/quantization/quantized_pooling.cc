@@ -18,13 +18,12 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_pooling.cc
  */
 #include <mxnet/op_attr_types.h>
 #include "../nn/pooling-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/mkldnn/mkldnn_pooling-inl.h"
+#include "../nn/dnnl/dnnl_pooling-inl.h"
 #endif
 
 namespace mxnet {
@@ -45,12 +44,12 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_ONEDNN == 1
   CHECK(data_ndims == 4U || data_ndims == 5U)
-      << "MKL-DNN QuantizedPoolingOp only supports 4D/5D layout yet, input should be 4D in"
+      << "DNNL QuantizedPoolingOp only supports 4D/5D layout yet, input should be 4D in"
       << "(batch, channel, y, x) or 5D in (batch, channel, d, y, x)";
   CHECK(layout == mshadow::kNCHW || layout == mshadow::kNCDHW)
-      << "MKL-DNN QuantizedPoolingOp only supports NCHW/NCDHW layout for now, saw " << layout;
+      << "DNNL QuantizedPoolingOp only supports NCHW/NCDHW layout for now, saw " << layout;
   CHECK(kernel_ndims == 2U || kernel_ndims == 3U)
-      << "MKL-DNN QuantizedPoolingOp only supports 2D/3D pooling for now, saw" << kernel_ndims;
+      << "DNNL QuantizedPoolingOp only supports 2D/3D pooling for now, saw" << kernel_ndims;
 #else
   CHECK_EQ(data_ndims, 4U) << "quantized_pooling: Input data should be 4D in "
                            << "(batch, channel, y, x)";
@@ -163,7 +162,7 @@ inline static bool QuantizedPoolingStorageType(const nnvm::NodeAttrs& attrs,
   *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_ONEDNN == 1
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportDNNLPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
 #else

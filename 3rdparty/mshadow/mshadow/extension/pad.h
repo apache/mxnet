@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file pad.h
  * \brief support for pad
  * \author Tianqi Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file lrn.cc
  * \brief
  * \author Bing Xu, Patric Zhao (patric.zhao@intel.com)
@@ -27,8 +26,8 @@
 #include "./lrn-inl.h"
 #include "../operator_common.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_lrn-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_lrn-inl.h"
 #endif
 
 namespace mxnet {
@@ -90,7 +89,7 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int>* out_attrs) {
   CHECK(!in_attrs->empty());
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -100,7 +99,7 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int>* out_attrs) {
   CHECK(!in_attrs->empty());
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 void LRNComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -108,13 +107,13 @@ void LRNComputeExCPU(const nnvm::NodeAttrs& attrs,
                      const std::vector<NDArray>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportDNNL(inputs[0])) {
     // We only need to test one output array.
-    MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
-    MKLDNNRun(MKLDNNLRNForward, attrs, ctx, inputs[0], req[0], outputs[0]);
-    MKLDNN_OPCHECK_RUN(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
+    DNNLRun(DNNLLRNForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNL_OPCHECK_RUN(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
     // Copy outputs[1] from opcheck reference as backward check needs it.
-    MKLDNN_OPCHECK_COPY_RESULT(outputs, std::vector<size_t>{1});
+    DNNL_OPCHECK_COPY_RESULT(outputs, std::vector<size_t>{1});
     return;
   }
   FallBackCompute(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -125,10 +124,10 @@ void LRNGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNN(inputs[0])) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNLRNBackward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNL(inputs[0])) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLLRNBackward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -174,7 +173,7 @@ number of kernels in the layer.
                                       })
     .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
 #endif
     .set_attr<nnvm::FGradient>("FGradient", LRNGrad{"_backward_LRN"})
@@ -190,10 +189,10 @@ NNVM_REGISTER_OP(_backward_LRN)
 #endif
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
-    // Native compute requires norm while MKLDNN does not so cannot be compared in debug mode
-    .set_attr<bool>("TExcludeMKLDNNDebug", true)
+    // Native compute requires norm while DNNL does not so cannot be compared in debug mode
+    .set_attr<bool>("TExcludeDNNLDebug", true)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);
 

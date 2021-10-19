@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file c_api.cc
  * \brief C API of mxnet
  */
@@ -77,6 +76,11 @@
 #if SUPPORT_FTZ_DMZ && !defined(_MSC_VER)
 #include <x86intrin.h>
 #endif
+
+#if MXNET_USE_CUDA
+#include <cuda_profiler_api.h>
+#endif
+#include "../common/cuda/nvtx.h"
 
 using namespace mxnet;
 
@@ -159,7 +163,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<size_t> in_verIDs, out_verIDs;
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
-  std::vector<NDArray> conv_mkl;  // converted NDArrays from MKLDNN format
+  std::vector<NDArray> conv_mkl;  // converted NDArrays from DNNL format
 
   // Extra data for sparse inputs and outputs.
   std::vector<int> in_stypes(inputs.size(), 0), out_stypes(outputs.size(), 0);
@@ -172,9 +176,9 @@ void CustomFComputeDispatcher(const std::string op_name,
   for (size_t i = 0; i < inputs.size(); i++) {
     NDArray const* in_nd = &(inputs[i]);
 #if MXNET_USE_ONEDNN == 1
-    // reorder data if in MKLDNN format
-    if (in_nd->IsMKLDNNData()) {
-      // convert from MKLDNN
+    // reorder data if in DNNL format
+    if (in_nd->IsDNNLData()) {
+      // convert from DNNL
       conv_mkl.push_back(in_nd->Reorder2Default());
       in_nd = &(conv_mkl.back());
     }
@@ -1638,8 +1642,8 @@ void registerPasses(void* lib,
           const NDArray& in_arg = *(in_args_ptr[i]);
 
 #if MXNET_USE_ONEDNN == 1
-          // reorder data if in MKLDNN format
-          if (in_arg.IsMKLDNNData()) {
+          // reorder data if in DNNL format
+          if (in_arg.IsDNNLData()) {
             in_arg.Reorder2DefaultAsync();
             in_arg.WaitToRead();
           }
@@ -1664,8 +1668,8 @@ void registerPasses(void* lib,
           const auto& in_aux = *(in_aux_ptr[i]);
 
 #if MXNET_USE_ONEDNN == 1
-          // reorder data if in MKLDNN format
-          if (in_aux.IsMKLDNNData()) {
+          // reorder data if in DNNL format
+          if (in_aux.IsDNNLData()) {
             in_aux.Reorder2DefaultAsync();
             in_aux.WaitToRead();
           }
@@ -2553,7 +2557,7 @@ int MXNDArrayGetData(NDArrayHandle handle, void** out_pdata) {
   API_BEGIN();
   NDArray* arr = static_cast<NDArray*>(handle);
 #if MXNET_USE_ONEDNN == 1
-  if (arr->IsMKLDNNData()) {
+  if (arr->IsDNNLData()) {
     arr->Reorder2DefaultAsync();
     arr->WaitToRead();
   }
@@ -3938,4 +3942,44 @@ int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
   ret                = new NDArray(*src_array);
   *out               = ret;
   API_END_HANDLE_ERROR(delete ret);
+}
+
+int MXNVTXRangePush(const char * name, mx_uint color) {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  mxnet::common::cuda::nvtx::gpuRangeStart(color, name);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have NVTX support.";
+#endif
+  API_END();
+}
+
+int MXNVTXRangePop() {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  mxnet::common::cuda::nvtx::gpuRangeStop();
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have NVTX support.";
+#endif
+  API_END();
+}
+
+int MXCUDAProfilerStart() {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  cudaProfilerStart();
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have CUDA profiler support.";
+#endif
+  API_END();
+}
+
+int MXCUDAProfilerStop() {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NVTX
+  cudaProfilerStop();
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have CUDA Profiler support.";
+#endif
+  API_END();
 }

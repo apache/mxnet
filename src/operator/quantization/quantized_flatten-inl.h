@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantized_flatten-inl.h
  * \brief implementation of quantized flatten operation
  */

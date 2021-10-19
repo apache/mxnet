@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file stream_gpu-inl.h
  * \brief implementation of GPU code
  * \author Bing Xu, Tianqi Chen

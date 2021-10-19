@@ -18,14 +18,13 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantize.cc
  * \brief
  */
 
 #include "./quantize_v2-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_quantize_v2-inl.h"
+#include "./dnnl/dnnl_quantize_v2-inl.h"
 #endif
 
 namespace mxnet {
@@ -58,7 +57,7 @@ static OpStatePtr CreateQuantizeV2State(const nnvm::NodeAttrs& attrs,
     state = OpStatePtr::Create<QuantizeV2Operator<gpu>>(attrs);
   } else {
 #if MXNET_USE_ONEDNN == 1
-    state = OpStatePtr::Create<SgMKLDNNQuantizeOperator>(attrs);
+    state = OpStatePtr::Create<SgDNNLQuantizeOperator>(attrs);
 #else
     state = OpStatePtr::Create<QuantizeV2Operator<cpu>>(attrs);
 #endif
@@ -109,8 +108,8 @@ If min_calib_range isn't presented, the output type will be int8.
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
     .set_attr<FCreateOpState>("FCreateOpState", CreateQuantizeV2State)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
-    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNQuantizeForward)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgDNNLQuantizeForward)
 #endif
     .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", QuantizeV2Forward<cpu>)
     .set_attr<nnvm::FInplaceOption>("FInplaceOption",

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file utils.h
  * \brief Basic utilility functions.
  */
@@ -50,7 +49,7 @@
 
 #include "../operator/mxnet_op.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../operator/nn/dnnl/dnnl_base-inl.h"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
@@ -514,11 +513,11 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
 #if MXNET_USE_ONEDNN == 1
-  if (!MKLDNNEnvSet())
+  if (!DNNLEnvSet())
     common::LogOnce(
         "MXNET_ONEDNN_ENABLED flag is off. "
         "You can re-enable by setting MXNET_ONEDNN_ENABLED=1");
-  if (GetMKLDNNCacheSize() != -1)
+  if (GetDNNLCacheSize() != -1)
     common::LogOnce(
         "MXNET_ONEDNN_CACHE_NUM is set."
         "Should only be set if "

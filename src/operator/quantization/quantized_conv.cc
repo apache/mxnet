@@ -18,14 +18,13 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_conv.cc
  * \brief
  * \author Ziheng Jiang, Jun Wu
  */
 #include "../nn/convolution-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/dnnl/dnnl_ops-inl.h"
 #endif
 
 namespace mxnet {
@@ -42,7 +41,7 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   if (param.layout.has_value()) {
 #if MXNET_USE_ONEDNN == 1
     CHECK(param.layout.value() == mshadow::kNCHW || param.layout.value() == mshadow::kNCDHW)
-        << "mkldnn quantized_conv now supports NCHW or NCDHW for now";
+        << "dnnl quantized_conv now supports NCHW or NCDHW for now";
 #else
     CHECK_EQ(param.layout.value(), mshadow::kNCHW) << "quantized_conv only supports NCHW for now";
 #endif
@@ -56,9 +55,9 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_ONEDNN == 1
   CHECK(kernel_ndims == 2U || kernel_ndims == 3U)
-      << "mkldnn quantized_conv only supports 2d or 3d kernel for now";
+      << "dnnl quantized_conv only supports 2d or 3d kernel for now";
   CHECK(data_ndims == 4U || data_ndims == 5U)
-      << "mkldnn quantized_conv only supports 4d or 5d layout for now";
+      << "dnnl quantized_conv only supports 4d or 5d layout for now";
 #else
   CHECK_EQ(kernel_ndims, 2U) << "quantized_conv only supports 2D convolution for now";
   CHECK(param.dilate.ndim() == 0U || param.dilate.Size() == 1U)

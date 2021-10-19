@@ -18,15 +18,15 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cc
  * \brief CPU implementation of elementwise sum operator
  */
 #include "./elemwise_sum.h"
-#include "../../ndarray/ndarray_function.h"
-#include "../nn/mkldnn/mkldnn_ops-inl.h"
-#include "../nn/mkldnn/mkldnn_base-inl.h"
+
 #include "../../common/utils.h"
+#include "../../ndarray/ndarray_function.h"
+#include "../nn/dnnl/dnnl_base-inl.h"
+#include "../nn/dnnl/dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -92,9 +92,9 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_ONEDNN == 1
-static inline bool IsMKLDNNData(const std::vector<NDArray>& arrs) {
+static inline bool IsDNNLData(const std::vector<NDArray>& arrs) {
   for (auto& arr : arrs) {
-    if (!arr.IsMKLDNNData())
+    if (!arr.IsDNNLData())
       return false;
   }
   return true;
@@ -112,8 +112,8 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp)
     return;
 #if MXNET_USE_ONEDNN == 1
-  if (IsMKLDNNData(inputs)) {
-    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
+  if (IsDNNLData(inputs)) {
+    DNNLRun(DNNLSumForward, attrs, ctx, inputs, req, outputs);
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
   }
@@ -182,7 +182,7 @@ The storage type of ``add_n`` output depends on storage types of inputs
                                 })
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
 #endif
     .set_attr<mxnet::FInferShape>("FInferShape", ElementWiseSumShape)
     .set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)

@@ -6918,16 +6918,16 @@ def test_np_linalg_eigvals():
 @use_np
 def test_np_linalg_eigvalsh():
     class TestEigvalsh(HybridBlock):
-        def __init__(self, UPLO):
+        def __init__(self, upper):
             super(TestEigvalsh, self).__init__()
-            self._UPLO = UPLO
+            self._upper = upper
 
         def forward(self, a):
-            return np.linalg.eigvalsh(a, UPLO=self._UPLO)
+            return np.linalg.eigvalsh(a, upper=self._upper)
 
-    def check_eigvalsh(w, a_np, UPLO):
+    def check_eigvalsh(w, a_np, upper):
         try:
-            w_expected = onp.linalg.eigvalsh(a_np, UPLO)
+            w_expected = onp.linalg.eigvalsh(a_np, upper)
         except Exception as e:
             print("a:", a_np)
             print("a shape:", a_np.shape)
@@ -6936,7 +6936,7 @@ def test_np_linalg_eigvalsh():
             assert w.shape == w_expected.shape
             assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
 
-    def new_matrix_from_sym_matrix_nd(sym_a, UPLO):
+    def new_matrix_from_sym_matrix_nd(sym_a, upper):
         shape = sym_a.shape
         if 0 in shape:
             return sym_a
@@ -6945,7 +6945,7 @@ def test_np_linalg_eigvalsh():
         for idx in range(n):
             for i in range(shape[-2]):
                 for j in range(shape[-1]):
-                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                    if ((upper == True and i > j) or (upper == False and i < j)):
                         a[idx][i][j] = onp.random.uniform(-10., 10.)
         return a.reshape(shape)
 
@@ -6964,12 +6964,12 @@ def test_np_linalg_eigvalsh():
         (2, 3, 4, 4)
     ]
     dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
-    UPLOs = ['L', 'U']
+    uppers = [True, False]
     for hybridize in [True, False]:
-        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+        for shape, dtype, upper in itertools.product(shapes, dtypes, uppers):
             rtol = 1e-2 if dtype == 'float32' else 1e-3
             atol = 1e-4 if dtype == 'float32' else 1e-5
-            test_eigvalsh = TestEigvalsh(UPLO)
+            test_eigvalsh = TestEigvalsh(upper)
             if hybridize:
                 test_eigvalsh.hybridize()
             if 0 in shape:
@@ -6980,15 +6980,15 @@ def test_np_linalg_eigvalsh():
                     a_np = onp.array([onp.diag(onp.random.randint(1, 10, size=shape[-1])) for i in range(n)], dtype=dtype).reshape(shape)
                 else:
                     a_np = new_sym_matrix_with_real_eigvals_nd(shape)
-                    a_np = new_matrix_from_sym_matrix_nd(a_np, UPLO)
+                    a_np = new_matrix_from_sym_matrix_nd(a_np, upper)
             a = np.array(a_np, dtype=dtype)
             # check eigvalsh validity
             mx_out = test_eigvalsh(a)
-            check_eigvalsh(mx_out, a.asnumpy(), UPLO)
+            check_eigvalsh(mx_out, a.asnumpy(), upper)
 
             # check imperative once again
             mx_out = test_eigvalsh(a)
-            check_eigvalsh(mx_out, a.asnumpy(), UPLO)
+            check_eigvalsh(mx_out, a.asnumpy(), upper)
 
 
 @use_np
@@ -7073,16 +7073,16 @@ def test_np_linalg_eig():
 @use_np
 def test_np_linalg_eigh():
     class TestEigh(HybridBlock):
-        def __init__(self, UPLO):
+        def __init__(self, upper):
             super(TestEigh, self).__init__()
-            self._UPLO = UPLO
+            self.upper = uppers
 
         def forward(self, a):
-            return np.linalg.eigh(a, UPLO=self._UPLO)
+            return np.linalg.eigh(a, upper=self.upper)
 
-    def check_eigh(w, v, a_np, UPLO):
+    def check_eigh(w, v, a_np, upper):
         try:
-            w_expected, v_expected = onp.linalg.eigh(a_np, UPLO)
+            w_expected, v_expected = onp.linalg.eigh(a_np, upper)
         except Exception as e:
             print("a:", a_np)
             print("a shape:", a_np.shape)
@@ -7093,7 +7093,7 @@ def test_np_linalg_eigh():
             # check eigenvalues.
             assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
             # check eigenvectors.
-            w_shape, v_shape, a_sym_np = get_sym_matrix_nd(a_np, UPLO)
+            w_shape, v_shape, a_sym_np = get_sym_matrix_nd(a_np, upper)
             w_np = w.asnumpy()
             v_np = v.asnumpy()
             if 0 not in a_np.shape:
@@ -7104,7 +7104,7 @@ def test_np_linalg_eigh():
                     for j in range(w_shape[1]):
                         assert_almost_equal(onp.dot(a_sym_np[i], v_np[i][:, j]), w_np[i][j] * v_np[i][:, j], rtol=rtol, atol=atol)
 
-    def get_sym_matrix_nd(a_np, UPLO):
+    def get_sym_matrix_nd(a_np, upper):
         a_res_np = a_np
         shape = a_np.shape
         if 0 not in a_np.shape:
@@ -7115,13 +7115,13 @@ def test_np_linalg_eigh():
             for idx in range(n):
                 for i in range(nrow):
                     for j in range(ncol):
-                        if ((UPLO == 'L' and i < j) or (UPLO == 'U' and i > j)):
+                        if ((upper == False and i < j) or (upper == True and i > j)):
                             a_res_np[idx][i][j] = a_np[idx][j][i]
             return (n, nrow), (n, nrow, ncol), a_res_np.reshape(shape)
         else :
             return (0, 0), (0, 0, 0), a_res_np.reshape(shape)
 
-    def new_matrix_from_sym_matrix_nd(sym_a, UPLO):
+    def new_matrix_from_sym_matrix_nd(sym_a, upper):
         shape = sym_a.shape
         if 0 in shape:
             return sym_a
@@ -7130,7 +7130,7 @@ def test_np_linalg_eigh():
         for idx in range(n):
             for i in range(shape[-2]):
                 for j in range(shape[-1]):
-                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                    if ((upper == True and i > j) or (upper == False and i < j)):
                         a[idx][i][j] = onp.random.uniform(-10., 10.)
         return a.reshape(shape)
 
@@ -7148,12 +7148,12 @@ def test_np_linalg_eigh():
         (2, 3, 4, 4)
     ]
     dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
-    UPLOs = ['L', 'U']
+    uppers = [True, False]
     for hybridize in [True, False]:
-        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+        for shape, dtype, upper in itertools.product(shapes, dtypes, uppers):
             rtol = 1e-2 if dtype == 'float32' else 1e-3
             atol = 1e-4 if dtype == 'float32' else 1e-5
-            test_eigh = TestEigh(UPLO)
+            test_eigh = TestEigh(upper)
             if hybridize:
                 test_eigh.hybridize()
             if 0 in shape:
@@ -7164,15 +7164,15 @@ def test_np_linalg_eigh():
                     a_np = onp.array([onp.diag(onp.random.randint(1, 10, size=shape[-1])) for i in range(n)], dtype=dtype).reshape(shape)
                 else:
                     a_np = new_sym_matrix_with_real_eigvals_nd(shape)
-                    a_np = new_matrix_from_sym_matrix_nd(a_np, UPLO)
+                    a_np = new_matrix_from_sym_matrix_nd(a_np, upper)
             a = np.array(a_np, dtype=dtype)
             # check eigh validity
             w, v = test_eigh(a)
-            check_eigh(w, v, a.asnumpy(), UPLO)
+            check_eigh(w, v, a.asnumpy(), upper)
 
             # check imperative once again
             w, v = test_eigh(a)
-            check_eigh(w, v, a.asnumpy(), UPLO)
+            check_eigh(w, v, a.asnumpy(), upper)
 
 
 @use_np
@@ -10832,3 +10832,76 @@ def test_slice_like():
             xx[:] = 0.0
             xx[idx] = x.asnumpy()[idx]
             assert_allclose(x1.grad.asnumpy(), np.zeros_like(x1.grad).asnumpy())
+
+
+@use_np
+@pytest.mark.parametrize('shape,num_filter,num_group,kernel,pad', [
+    ((1, 4, 15), 16, 2, (2,), (0,)),
+    ((8, 4, 16), 16, 1, (3,), (1,)),
+
+    ((1, 4, 15, 16), 16, 2, (2, 2), (0, 0)),
+    ((8, 4, 16, 16), 16, 1, (3, 3), (1, 1)),
+
+    ((1, 4, 3, 15, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
+    ((8, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
+def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
+    if len(kernel) == 3 and mx.current_context().device_type == 'gpu':
+        pytest.skip('Skipping deconvoluition 3D tests for GPU')
+
+    class TestConv(mx.gluon.HybridBlock):
+        def __init__(self, w):
+            super().__init__()
+            self.weight = w
+
+        def forward(self, x, *args):
+            return npx.convolution(x, self.weight.data(x.ctx), no_bias=True, kernel=kernel,
+                                   pad=pad, num_filter=self.weight.shape[0], num_group=num_group)
+
+    class TestDeconv(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.weight = mx.gluon.Parameter('weight', shape=(shape[1], int(num_filter/num_group), 
+                                                              *kernel))
+            self.bias = mx.gluon.Parameter('bias', shape=num_filter)
+
+        def forward(self, x, *args):
+            return npx.deconvolution(x, self.weight.data(x.ctx), self.bias.data(x.ctx), kernel,
+                                     pad=pad, num_filter=num_filter, num_group=num_group)
+    
+    deconvNet = TestDeconv()
+    deconvNet.initialize()
+
+    # test imperative
+    deconvData = np.random.uniform(0, 1, size=shape)
+    npx_out_imp = deconvNet(deconvData)
+
+    # test symbolic
+    deconvNet.hybridize()
+    deconvNet(deconvData)
+    npx_out_sym = deconvNet(deconvData)
+    assert_almost_equal(npx_out_imp, npx_out_sym)
+
+    # compare outputs with reference tensors generated using convolution
+    convNet = TestConv(deconvNet.weight)
+    convNet.initialize()
+    convData = np.random.uniform(0, 1, size=npx_out_imp.shape)
+    convData.attach_grad()
+    with mx.autograd.record():
+        convOut = convNet(convData)
+        y = np.reshape(convOut, -1)
+        y = np.sum(y)
+    y.backward()
+    
+    deconvData = np.ones_like(convOut)  # gradient of convOut
+    deconvBias = np.repeat(deconvNet.bias.data(), int(np.prod(np.array(convData.grad.shape[2:])).item()))
+    deconvRefOut = np.copy(convData.grad) + deconvBias.reshape((convData.grad.shape[1:]))
+    deconvData.attach_grad()
+    with mx.autograd.record():
+        deconvOut = deconvNet(deconvData)
+    deconvOut.backward()
+
+    convData = np.ones_like(deconvOut)
+    deconvRefGrad = convNet(convData)
+
+    assert_almost_equal(deconvOut, deconvRefOut)
+    assert_almost_equal(deconvData.grad, deconvRefGrad)

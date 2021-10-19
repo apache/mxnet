@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_window_op.cu
  * \brief CPU Implementation of unary op hanning, hamming, blackman window.
  */

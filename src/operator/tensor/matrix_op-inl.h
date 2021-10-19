@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file matrix_op-inl.h
  * \brief Function definition of matrix related operators
  */
@@ -677,8 +676,8 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(in_attrs->at(0)) && shape_is_known(out_attrs->at(0));
 }
 
-// Currently MKLDNN only supports step = 1 or step has no value
-inline bool SupportMKLDNNSlice(const SliceParam& param) {
+// Currently DNNL only supports step = 1 or step has no value
+inline bool SupportDNNLSlice(const SliceParam& param) {
   if (param.step.ndim() == 0U)
     return true;
   for (int i = 0; i < param.step.ndim(); ++i) {
@@ -711,7 +710,7 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 
   if (in_stype == kDefaultStorage) {
 #if MXNET_USE_ONEDNN == 1
-    if (dev_mask == Context::kCPU && MKLDNNEnvSet() && SupportMKLDNNSlice(param)) {
+    if (dev_mask == Context::kCPU && DNNLEnvSet() && SupportDNNLSlice(param)) {
       dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, dispatch_ex);
     }
 #endif

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_broadcast_op_logic.cc
  * \brief CPU Implementation of elementwise binary broadcast logical operators.
  */

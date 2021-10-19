@@ -49,7 +49,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file layer_norm.cc
  * \brief Implements Ba et. al, Layer Normalization (https://arxiv.org/abs/1607.06450).
  */
@@ -58,8 +57,8 @@
 #include <nnvm/op_attr_types.h>
 #include "../elemwise_op_common.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_base-inl.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_ops-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 #if MSHADOW_USE_MKL == 1
@@ -424,7 +423,7 @@ static bool LayerNormInferStorageType(const nnvm::NodeAttrs& attrs,
                                       std::vector<int>* out_attrs) {
   CHECK(!in_attrs->empty());
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 static void LayerNormComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -433,10 +432,10 @@ static void LayerNormComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
-  if (SupportMKLDNNLayerNorm(param, inputs)) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNLayerNormForward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(LayerNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLLayerNorm(param, inputs)) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLLayerNormForward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(LayerNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   } else {
     FallBackCompute(LayerNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -449,10 +448,10 @@ static void LayerNormGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
-  if (SupportMKLDNNLayerNorm(param, inputs)) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNLayerNormBackward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(LayerNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLLayerNorm(param, inputs)) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLLayerNormBackward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(LayerNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   } else {
     FallBackCompute(LayerNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -509,7 +508,7 @@ axis to be the last item in the input shape.
     .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 3>)
     .set_attr<FCompute>("FCompute<cpu>", LayerNormCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FInferStorageType>("FInferStorageType", LayerNormInferStorageType)
     .set_attr<FComputeEx>("FComputeEx<cpu>", LayerNormComputeExCPU)
 #endif
@@ -524,8 +523,8 @@ axis to be the last item in the input shape.
           heads.emplace_back(n, 2, 0);    // std
 #if MXNET_USE_ONEDNN == 1
           heads.push_back(
-              n->inputs[2]);  // beta - needed for MKLDNN backward propagation;
-                              // added at the end in case of fallback to non MKLDNN version
+              n->inputs[2]);  // beta - needed for DNNL backward propagation;
+                              // added at the end in case of fallback to non DNNL version
 #endif
           return MakeGradNode("_backward_LayerNorm", n, heads, n->attrs.dict);
         })
@@ -555,7 +554,7 @@ NNVM_REGISTER_OP(_backward_LayerNorm)
     .set_attr<FCompute>("FCompute<cpu>", LayerNormGradCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", LayerNormInferStorageType)
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", LayerNormGradComputeExCPU)
 #endif
     .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {

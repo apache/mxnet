@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file pooling-inl.h
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng, Hao Jin
@@ -259,7 +258,7 @@ namespace mxnet {
 namespace op {
 
 /*
- * When MKLDNN is enabled, we might want 2 outputs instead of one inputs, which
+ * When DNNL is enabled, we might want 2 outputs instead of one inputs, which
  * also changes the number of inputs for backward.
  */
 int GetNumOutputs(const PoolingParam& param);
@@ -483,7 +482,7 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
         << "You need to set the kernel size if global pooling is not used";
   }
   off_t ograd_idx, in_data_idx, out_data_idx;
-  // When MKLDNN is enabled, the input data may contains arrays for workspace.
+  // When DNNL is enabled, the input data may contains arrays for workspace.
   if (GetNumBackInputs(param) == 5) {
     ograd_idx    = 0;
     in_data_idx  = 2;

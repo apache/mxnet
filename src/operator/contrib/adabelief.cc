@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2021 by Contributors
  * \file adabelief.cc
  * \brief Optimizer operators
  * \author khaotik

@@ -18,16 +18,21 @@
 # under the License.
 
 if [ $# -lt 1 ]; then
-    >&2 echo "Usage: build.sh <VARIANT>"
+    >&2 echo "Usage: build.sh <VARIANT> <BLAS>"
 fi
 
 export CURDIR=$PWD
 export DEPS_PATH=$PWD/staticdeps
 export VARIANT=$(echo $1 | tr '[:upper:]' '[:lower:]')
 export PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
+export BLAS=$(echo $2 | tr '[:upper:]' '[:lower:]')
 
 if [[ $VARIANT == darwin* ]]; then
     export VARIANT="darwin"
+fi
+
+if [[ ! $BLAS ]]; then
+    export BLAS="open"
 fi
 
 NUM_PROC=1

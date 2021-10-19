@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file leaky_relu.cc
  * \brief
  * \author Bing Xu

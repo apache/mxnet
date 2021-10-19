@@ -18,18 +18,17 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file fully_connected.cc
  * \brief fully connect operator
  */
+#include "./dnnl/dnnl_base-inl.h"
+#include "./dnnl/dnnl_ops-inl.h"
 #include "./fully_connected-inl.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNFC(const NDArray& input) {
+bool SupportDNNLFC(const NDArray& input) {
   int ndim = input.shape().ndim();
   return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
          (ndim >= 1 && ndim <= 4) && input.storage_type() == kDefaultStorage;
@@ -98,10 +97,10 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_ONEDNN == 1
   if (common::ContainsOnlyStorage(inputs, kDefaultStorage) &&
       common::ContainsOnlyStorage(outputs, kDefaultStorage)) {
-    if (SupportMKLDNNFC(inputs[0])) {
-      MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNFCForward, attrs, ctx, inputs, req, outputs);
-      MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    if (SupportDNNLFC(inputs[0])) {
+      DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+      DNNLRun(DNNLFCForward, attrs, ctx, inputs, req, outputs);
+      DNNL_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
     } else {
       FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
     }
@@ -111,7 +110,7 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
     std::vector<NDArray> temp_ndarrays;
     std::vector<TBlob> in_blobs;
     for (const NDArray& in : inputs) {
-      // if ndarray is in default storage and MKLDNN is available,
+      // if ndarray is in default storage and DNNL is available,
       // need to make sure cpu layout data is used, instead of MKL layout
       if (in.storage_type() == kDefaultStorage) {
         temp_ndarrays.push_back(in.Reorder2Default());
@@ -146,10 +145,10 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNFC(inputs[0])) {
-    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNRun(MKLDNNFCBackward, attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (SupportDNNLFC(inputs[0])) {
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLFCBackward, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -209,7 +208,7 @@ static bool FCStorageType(const nnvm::NodeAttrs& attrs,
         out_attrs, mxnet::kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
   }
 #if MXNET_USE_ONEDNN == 1
-  if (!MKLDNNEnvSet())
+  if (!DNNLEnvSet())
     *dispatch_mode = DispatchMode::kFComputeFallback;
 #endif
 
@@ -241,7 +240,7 @@ static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
         out_attrs, mxnet::kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
   }
 #if MXNET_USE_ONEDNN == 1
-  if (!MKLDNNEnvSet())
+  if (!DNNLEnvSet())
     *dispatch_mode = DispatchMode::kFComputeFallback;
 #endif
   return dispatched;
@@ -305,7 +304,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
                                         return std::vector<std::string>{"output"};
                                       })
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -342,7 +341,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
     .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
     .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
+    .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradComputeExCPU)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);

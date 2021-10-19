@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file requantize-inl.h
  * \brief implementation of quantize operation
  */

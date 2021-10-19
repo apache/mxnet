@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_tril_op.cu
  * \brief GPU implementation of numpy tri operator
  */

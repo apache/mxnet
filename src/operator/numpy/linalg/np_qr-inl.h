@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_qr-inl.h
  * \brief Function definition of the QR Operator.
  */
