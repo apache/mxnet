@@ -202,7 +202,7 @@ conv_layer.initialize()
 
 data = np.random.normal(size=shape)
 o = conv_layer(data)
-o.wait_to_read()
+print(o)
 ```
 
 More detailed debugging and profiling information can be logged by setting the environment variable 'DNNL_VERBOSE':
@@ -250,7 +250,7 @@ from mxnet import np
 coeff = np.array([[7, 0], [5, 2]])
 y = np.array([14, 18])
 x = np.linalg.solve(coeff, y)
-x.wait_to_read()
+print(x)
 ```
 
 You can get the verbose log output from mkl library by setting environment variable:
@@ -287,16 +287,16 @@ net.add(nn.Activation('relu'))
 net.initialize()
 print("=" * 5, " Not optimized ", "=" * 5)
 o = net(data)
-o.wait_to_read()
+print(o)
 
 net.optimize_for(data, backend='ONEDNN')
 print("=" * 5, " Optimized ", "=" * 5)
 o = net(data)
-o.wait_to_read()
+print(o)
 
 ```
 
-Above code snippet should produce following output:
+Above code snippet should produce similar output to the following one (printed tensors are omitted) :
 ```
 ===== Not optimized =====
 [15:05:43] ../src/storage/storage.cc:202: Using Pooled (Naive) StorageManager for CPU
