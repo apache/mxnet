@@ -50,7 +50,7 @@ batch_size   = 64
 z_dim        = 100
 n_continuous = 2
 n_categories = 10
-ctx = mx.gpu() if mx.device.num_gpus() else mx.cpu()
+device = mx.gpu() if mx.device.num_gpus() else mx.cpu()
 ```
 
 Some functions to load and normalize images.
@@ -197,11 +197,11 @@ Initialize Generator and Discriminator and define correspoing trainer function.
 ```{.python .input}
 generator = Generator()
 generator.hybridize()
-generator.initialize(mx.init.Normal(0.002), ctx=ctx)
+generator.initialize(mx.init.Normal(0.002), device=device)
 
 discriminator = Discriminator()
 discriminator.hybridize()
-discriminator.initialize(mx.init.Normal(0.002), ctx=ctx)
+discriminator.initialize(mx.init.Normal(0.002), device=device)
 
 lr   = 0.0001
 beta = 0.5
@@ -215,8 +215,8 @@ Create vectors with real (=1) and fake labels (=0).
 
 
 ```{.python .input}
-real_label = np.ones((batch_size,), ctx=ctx)
-fake_label = np.zeros((batch_size,),ctx=ctx)
+real_label = np.ones((batch_size,), device=device)
+fake_label = np.zeros((batch_size,),device=device)
 ```
 
 Load a pretrained model.
@@ -224,8 +224,8 @@ Load a pretrained model.
 
 ```{.python .input}
 if os.path.isfile('infogan_d_latest.params') and os.path.isfile('infogan_g_latest.params'):
-    discriminator.load_parameters('infogan_d_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
-    generator.load_parameters('infogan_g_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
+    discriminator.load_parameters('infogan_d_latest.params', device=device, allow_missing=True, ignore_extra=True)
+    generator.load_parameters('infogan_g_latest.params', device=device, allow_missing=True, ignore_extra=True)
 ```
 There are 2 differences between InfoGAN and DCGAN: the extra latent code and the Q network to estimate the code.
 The latent code is part of the Generator input and it contains mutliple variables (continuous, categorical) that can represent different distributions. In order to make sure that the Generator uses the latent code, mutual information is introduced into the GAN loss term. Mutual information measures how much X is known given Y or vice versa. It is defined as:
@@ -255,10 +255,10 @@ This function samples `c`, `z`, and concatenates them to create the generator in
 def create_generator_input():
 
     #create random noise
-    z      = np.random.normal(0, 1, size=(batch_size, z_dim), ctx=ctx)
-    label  = np.array(onp.random.randint(n_categories, size=batch_size)).as_in_context(ctx)
-    c1     = npx.one_hot(label, depth=n_categories).as_in_context(ctx)
-    c2     = np.random.uniform(-1, 1, size=(batch_size, n_continuous)).as_in_context(ctx)
+    z      = np.random.normal(0, 1, size=(batch_size, z_dim), device=device)
+    label  = np.array(onp.random.randint(n_categories, size=batch_size)).to_device(device)
+    c1     = npx.one_hot(label, depth=n_categories).to_device(device)
+    c2     = np.random.uniform(-1, 1, size=(batch_size, n_continuous)).to_device(device)
 
     # concatenate random noise with c which will be the input of the generator
     return np.concatenate([z, c1, c2], axis=1), label, c2
@@ -279,13 +279,13 @@ for epoch in range(epochs):
     print("Epoch", epoch)
     starttime = time.time()
 
-    d_error_epoch = np.zeros((1,), ctx=ctx)
-    g_error_epoch = np.zeros((1,), ctx=ctx)
+    d_error_epoch = np.zeros((1,), device=device)
+    g_error_epoch = np.zeros((1,), device=device)
 
     for idx, data in enumerate(train_dataloader):
 
         #get real data and generator input
-        real_data = data.as_in_context(ctx)
+        real_data = data.to_device(device)
         g_input, label, c2 = create_generator_input()
 
 
@@ -342,7 +342,7 @@ Load the trained discriminator and retrieve one of its last layers.
 
 ```{.python .input}
 discriminator = Discriminator()
-discriminator.load_parameters("infogan_d_latest.params", ctx=ctx, ignore_extra=True)
+discriminator.load_parameters("infogan_d_latest.params", device=device, ignore_extra=True)
 
 discriminator = discriminator.D[:11]
 print (discriminator)
@@ -375,18 +375,18 @@ Take some images from the test data, obtain its feature vector from `discriminat
 ```{.python .input}
 feature_size = 8192
 
-features = np.zeros((len(test_images), feature_size), ctx=ctx)
+features = np.zeros((len(test_images), feature_size), device=device)
 
 for idx, image in enumerate(test_images):
 
-    feature = discriminator(np.array(image, ctx=ctx))
+    feature = discriminator(np.array(image, device=device))
     feature = feature.reshape(feature_size,)
-    features[idx,:] = feature.copyto(ctx)
+    features[idx,:] = feature.copyto(device)
 
 
 for image in test_images[:100]:
 
-    feature = discriminator(np.array(image, ctx=ctx))
+    feature = discriminator(np.array(image, device=device))
     feature = feature.reshape((feature_size,))
     image   = image.reshape((3,64,64))
 

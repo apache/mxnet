@@ -48,8 +48,8 @@ lr = 0.001
 wd = 0.0005
 momentum = 0.9
 
-# training contexts
-ctx = [mx.gpu(0)]
+# training devices
+device = [mx.gpu(0)]
 
 # set up logger
 logging.basicConfig()
@@ -70,9 +70,9 @@ class SyntheticDataLoader(object):
         shape = (batch_size, 3, data_shape, data_shape)
         cls_targets_shape = (batch_size, 6132)
         box_targets_shape = (batch_size, 6132, 4)
-        self.data = mx.np.random.uniform(-1, 1, size=shape, ctx=mx.cpu_pinned())
-        self.cls_targets = mx.np.random.uniform(0, 1, size=cls_targets_shape, ctx=mx.cpu_pinned())
-        self.box_targets = mx.np.random.uniform(0, 1, size=box_targets_shape, ctx=mx.cpu_pinned())
+        self.data = mx.np.random.uniform(-1, 1, size=shape, device=mx.cpu_pinned())
+        self.cls_targets = mx.np.random.uniform(0, 1, size=cls_targets_shape, device=mx.cpu_pinned())
+        self.box_targets = mx.np.random.uniform(0, 1, size=box_targets_shape, device=mx.cpu_pinned())
     
     def next(self):
         if self.counter >= self.epoch_size:
@@ -98,7 +98,7 @@ def get_network():
         warnings.simplefilter("ignore")
         net = get_model(net_name, pretrained_base=True, norm_layer=gluon.nn.BatchNorm)
         net.initialize()
-        net.reset_ctx(ctx)
+        net.reset_device(device)
 
     return net
 ```
@@ -136,9 +136,9 @@ for epoch in range(1):
 
     for i, batch in enumerate(train_data):
         batch_size = batch[0].shape[0]
-        data = gluon.utils.split_and_load(batch[0], ctx_list=ctx, batch_axis=0)
-        cls_targets = gluon.utils.split_and_load(batch[1], ctx_list=ctx, batch_axis=0)
-        box_targets = gluon.utils.split_and_load(batch[2], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch[0], ctx_list=device, batch_axis=0)
+        cls_targets = gluon.utils.split_and_load(batch[1], ctx_list=device, batch_axis=0)
+        box_targets = gluon.utils.split_and_load(batch[2], ctx_list=device, batch_axis=0)
         with autograd.record():
             cls_preds = []
             box_preds = []
@@ -223,9 +223,9 @@ for epoch in range(1):
 
     for i, batch in enumerate(train_data):
         batch_size = batch[0].shape[0]
-        data = gluon.utils.split_and_load(batch[0], ctx_list=ctx, batch_axis=0)
-        cls_targets = gluon.utils.split_and_load(batch[1], ctx_list=ctx, batch_axis=0)
-        box_targets = gluon.utils.split_and_load(batch[2], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch[0], ctx_list=device, batch_axis=0)
+        cls_targets = gluon.utils.split_and_load(batch[1], ctx_list=device, batch_axis=0)
+        box_targets = gluon.utils.split_and_load(batch[2], ctx_list=device, batch_axis=0)
         with autograd.record():
             cls_preds = []
             box_preds = []
@@ -272,7 +272,7 @@ with mx.Context(mx.gpu(0)):
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("ignore")
         model = get_model("resnet50_v1")
-        model.initialize(ctx=mx.current_device())
+        model.initialize(device=mx.current_device())
         model.hybridize()
         model(mx.np.zeros((1, 3, 224, 224)))
         converted_model = amp.convert_hybrid_block(model)

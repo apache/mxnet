@@ -136,7 +136,7 @@ def _assert_raise_cuxx_version_not_satisfied(min_version, cfg):
             cuxx_off = os.getenv(cfg['TEST_OFF_ENV_VAR']) == 'true'
             cuxx_env_version = os.getenv(cfg['VERSION_ENV_VAR'], None if cuxx_off else cfg['DEFAULT_VERSION'])
             cuxx_test_disabled = cuxx_off or less_than(cuxx_env_version, min_version)
-            if not cuxx_test_disabled or mx.device.current_device.device_type == 'cpu':
+            if not cuxx_test_disabled or mx.device.current_device().device_type == 'cpu':
                 orig_test(*args, **kwargs)
             else:
                 pytest.raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)

@@ -71,18 +71,18 @@ And we are done. You can test the installation now by importing mxnet from pytho
 
 ## Running a pre-trained ResNet-50 model on Jetson
 
-We are now ready to run a pre-trained model and run inference on a Jetson module. In this tutorial we are using ResNet-50 model trained on Imagenet dataset. We run the following classification script with either cpu/gpu context using python3.
+We are now ready to run a pre-trained model and run inference on a Jetson module. In this tutorial we are using ResNet-50 model trained on Imagenet dataset. We run the following classification script with either cpu/gpu device using python3.
 
 ```{.python .input}
 from mxnet import gluon
 import mxnet as mx
 
-# set context
+# set device
 gpus = mx.test_utils.list_gpus()
-ctx =  mx.gpu() if gpus else mx.cpu()
+device =  mx.gpu() if gpus else mx.cpu()
 
 # load pre-trained model
-net = gluon.model_zoo.vision.resnet50_v1(pretrained=True, ctx=ctx)
+net = gluon.model_zoo.vision.resnet50_v1(pretrained=True, device=device)
 net.hybridize(static_alloc=True, static_shape=True)
 
 # load labels
@@ -99,7 +99,7 @@ img = mx.image.color_normalize(img.astype(dtype='float32')/255,
                                std=mx.np.array([0.229, 0.224, 0.225])) # normalize
 img = img.transpose((2, 0, 1)) # channel first
 img = mx.np.expand_dims(img, axis=0) # batchify
-img = img.to_device(ctx)
+img = img.to_device(device)
 
 prob = mx.npx.softmax(net(img)) # predict and normalize output
 idx = mx.npx.topk(prob, k=5)[0] # get top 5 result
