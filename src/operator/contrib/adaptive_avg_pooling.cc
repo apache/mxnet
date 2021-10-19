@@ -26,6 +26,7 @@
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
 #include "adaptive_avg_pooling-inl.h"
+#include "../nn/mkldnn/mkldnn_pooling-inl.h"
 
 #define START_IND(a, b, c) static_cast<int>(std::floor(static_cast<float>(a * c) / b))
 #define END_IND(a, b, c) static_cast<int>(std::ceil(static_cast<float>((a + 1) * c) / b))
@@ -240,12 +241,12 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs &attrs,
   */
   if (SupportMKLDNN(inputs[0]) &&
       SupportMKLDNNAveragePooling(inputs[0], outputs[0])) {
-    const AdaptiveAvgPoolParam &param =
-        nnvm::get<AdaptiveAvgPoolParam>(attrs.parsed);
+    const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed); 
+        
     const NDArray *workspace = nullptr;
     MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
-    MKLDNNAdaptivePoolingCompute(ctx, param, inputs[0], req[0], outputs[0],
-                                 workspace);
+    MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, true);
+    MKLDNN_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(AdaptiveAvgPoolOpForward<cpu>, attrs, ctx, inputs, req,
@@ -283,8 +284,6 @@ inline static bool AdaptivePoolingStorageType(const nnvm::NodeAttrs &attrs,
 }
 
 
-DMLC_REGISTER_PARAMETER(AdaptiveAvgPoolParam);
-
 NNVM_REGISTER_OP(_contrib_AdaptiveAvgPooling2D)
 .describe(R"code(
 Applies a 2D adaptive average pooling over a 4D input with the shape of (NCHW).
@@ -297,7 +296,7 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
   (N x C x height x width) for any input (NCHW).
 
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
+.set_attr_parser(ParamParser<PoolingParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", AdaptiveAvgPoolOpInferShape)
@@ -310,10 +309,10 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
 .set_attr<FComputeEx>("FComputeEx<cpu>",  AdaptiveAvgPoolComputeExCPU)
 #endif
 .add_argument("data", "NDArray-or-Symbol", "Input data")
-.add_arguments(AdaptiveAvgPoolParam::__FIELDS__());
+.add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
-.set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
+.set_attr_parser(ParamParser<PoolingParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)

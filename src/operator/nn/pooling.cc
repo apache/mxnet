@@ -268,7 +268,8 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
 }
 
 #if MXNET_USE_MKLDNN == 1
-void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, 
+                         const OpContext &ctx,
                          const std::vector<NDArray> &inputs,
                          const std::vector<OpReqType> &req,
                          const std::vector<NDArray> &outputs) {
@@ -287,7 +288,7 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       workspace = &outputs[1];
     }
     MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
-    MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
+    MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, false);
     MKLDNN_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

@@ -54,6 +54,8 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   dmlc::optional<int> p_value;
   dmlc::optional<bool> count_include_pad;
   dmlc::optional<int> layout;
+  dmlc::optional<mxnet::Tuple<int>> output_size;
+
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape(0, 0))  // add default value here
     .enforce_nonzero()
@@ -104,6 +106,9 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .set_default(dmlc::optional<int>())
     .describe("Set layout for input and output. Empty for\n    "
               "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
+
+    DMLC_DECLARE_FIELD(output_size).set_default(dmlc::optional<mxnet::Tuple<int>>())
+    .describe("Only used for Adaptive Pooling.");
   }
 
   bool operator==(const PoolingParam& other) const {
@@ -116,7 +121,8 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->cudnn_off          == other.cudnn_off &&
            this->p_value            == other.p_value &&
            this->count_include_pad  == other.count_include_pad &&
-           this->layout             == other.layout;
+           this->layout             == other.layout &&
+           this->output_size        == other.output_size;
   }
 
   // Extract layout from param, or supply default layout based on provided input dimension.
