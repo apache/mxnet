@@ -253,7 +253,7 @@ x = np.linalg.solve(coeff, y)
 x.wait_to_read()
 ```
 
-You can open the `MKL_VERBOSE` flag by setting environment variable:
+You can get the verbose log output from mkl library by setting environment variable:
 ```
 export MKL_VERBOSE=1
 ```
