@@ -63,8 +63,8 @@ DNNLBatchDotFwd& DNNLBatchDotFwd::GetCached(const DNNLDotParam& param,
 }
 
 dnnl::primitive_attr GetQuantizationAttributes(const DNNLDotParam& param,
-                                                 const std::vector<NDArray>& inputs,
-                                                 const std::vector<NDArray>& outputs) {
+                                               const std::vector<NDArray>& inputs,
+                                               const std::vector<NDArray>& outputs) {
   dnnl::primitive_attr attr;
   float out_scale_ = 1.f;
   float lhs_scale_ = GetQuantizeScale(inputs[DotIn::lhs].dtype(),

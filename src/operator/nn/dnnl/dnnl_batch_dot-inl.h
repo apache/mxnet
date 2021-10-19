@@ -41,7 +41,6 @@ namespace op {
 enum DotIn { lhs = 0, rhs, lhs_min, lhs_max, rhs_min, rhs_max };
 enum DotOut { out = 0, out_min, out_max };
 
-
 struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
   bool transpose_a;
   bool transpose_b;
@@ -49,7 +48,7 @@ struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  bool enable_float_output;  // min float value calculated from calibration dataset
+  bool enable_float_output;               // min float value calculated from calibration dataset
   DMLC_DECLARE_PARAMETER(DNNLDotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
         .describe("If true then transpose the first input before dot.")
@@ -57,7 +56,7 @@ struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
     DMLC_DECLARE_FIELD(transpose_b)
         .describe("If true then transpose the second input before dot.")
         .set_default(false);
-      DMLC_DECLARE_FIELD(quantized).set_default(false).describe("enable quantization");
+    DMLC_DECLARE_FIELD(quantized).set_default(false).describe("enable quantization");
     DMLC_DECLARE_FIELD(min_calib_range)
         .set_default(dmlc::optional<float>())
         .describe(
@@ -110,13 +109,13 @@ class DNNLBatchDotFwd {
 
 template <bool subgraph = true>
 void DNNLBatchDotForward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<NDArray>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<NDArray>& outputs) {
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs) {
   DNNLDotParam dnnl_param;
   if (!subgraph) {
-    const DotParam& param    = nnvm::get<DotParam>(attrs.parsed);
+    const DotParam& param  = nnvm::get<DotParam>(attrs.parsed);
     dnnl_param.transpose_a = param.transpose_a;
     dnnl_param.transpose_b = param.transpose_b;
     dnnl_param.quantized   = false;

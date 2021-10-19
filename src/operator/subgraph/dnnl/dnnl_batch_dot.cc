@@ -39,8 +39,8 @@ namespace mxnet {
 namespace op {
 
 bool DNNLBatchDotShape(const nnvm::NodeAttrs& attrs,
-                         mxnet::ShapeVector* in_shapes,
-                         mxnet::ShapeVector* out_shapes) {
+                       mxnet::ShapeVector* in_shapes,
+                       mxnet::ShapeVector* out_shapes) {
   const DNNLDotParam& param = nnvm::get<DNNLDotParam>(attrs.parsed);
   mxnet::ShapeVector base_in_shapes;
   mxnet::ShapeVector base_out_shapes;
@@ -70,9 +70,9 @@ bool DNNLBatchDotShape(const nnvm::NodeAttrs& attrs,
 }
 
 bool DNNLBatchDotType(const nnvm::NodeAttrs& attrs,
-                        std::vector<int>* in_types,
-                        std::vector<int>* out_types) {
-  const DNNLDotParam& param  = nnvm::get<DNNLDotParam>(attrs.parsed);
+                      std::vector<int>* in_types,
+                      std::vector<int>* out_types) {
+  const DNNLDotParam& param    = nnvm::get<DNNLDotParam>(attrs.parsed);
   const size_t base_num_inputs = 2;
   if (param.quantized) {
     CHECK(in_types->at(DotIn::lhs) == mshadow::kInt8 || in_types->at(DotIn::lhs) == mshadow::kUint8)
@@ -107,10 +107,10 @@ bool DNNLBatchDotType(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool DNNLBatchDotStorageType(const nnvm::NodeAttrs& attrs,
-                                             const int dev_mask,
-                                             DispatchMode* dispatch_mode,
-                                             std::vector<int>* in_attrs,
-                                             std::vector<int>* out_attrs) {
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int>* in_attrs,
+                                           std::vector<int>* out_attrs) {
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
@@ -157,10 +157,10 @@ NNVM_REGISTER_OP(_sg_dnnl_batch_dot)
                             [](const NodeAttrs& attrs) { return QuantizeType::kMust; })
     .set_attr<FQuantizedOp>("FQuantizedOp",
                             [](const NodeAttrs& attrs) {
-                              nnvm::ObjectPtr node        = nnvm::Node::Create();
-                              node->attrs.op              = Op::Get("_sg_dnnl_batch_dot");
-                              node->attrs.name            = "quantized_" + attrs.name;
-                              node->attrs.dict            = attrs.dict;
+                              nnvm::ObjectPtr node          = nnvm::Node::Create();
+                              node->attrs.op                = Op::Get("_sg_dnnl_batch_dot");
+                              node->attrs.name              = "quantized_" + attrs.name;
+                              node->attrs.dict              = attrs.dict;
                               node->attrs.dict["quantized"] = "True";
 
                               if (node->op()->attr_parser != nullptr) {

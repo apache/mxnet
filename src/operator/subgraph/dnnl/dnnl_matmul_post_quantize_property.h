@@ -183,8 +183,8 @@ class SgDNNLMatmulPostQuantizeProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgDNNLMatmulPostQuantizeSelector>(disable_fuse_all,
-                                                                            disable_float_output);
+    auto selector =
+        std::make_shared<SgDNNLMatmulPostQuantizeSelector>(disable_fuse_all, disable_float_output);
     return selector;
   }
 

@@ -1516,15 +1516,15 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename ParamType>
+template <typename ParamType>
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector* in_attrs,
                           mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  mxnet::TShape& lshape = (*in_attrs)[0];
-  mxnet::TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape  = (*in_attrs)[0];
+  mxnet::TShape& rshape  = (*in_attrs)[1];
   // return false if lhs and rhs both have fully unknown shape
   if (!ndim_is_known(lshape) || !ndim_is_known(rshape))
     return false;
