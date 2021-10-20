@@ -53,7 +53,7 @@ Features
 * Lightweight, memory-efficient, and portable to smart devices through native cross-compilation support on ARM, and through ecosystem projects such as [TVM](https://tvm.ai), [TensorRT](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html), [OpenVINO](https://software.intel.com/content/www/us/en/develop/tools/openvino-toolkit.html).
 * Scales up to multi GPUs and distributed setting with auto parallelism through [ps-lite](https://github.com/dmlc/ps-lite), [Horovod](https://github.com/horovod/horovod), and [BytePS](https://github.com/bytedance/byteps).
 * Extensible backend that supports full customization, allowing integration with custom accelerator libraries and in-house hardware without the need to maintain a fork.
-* Support for [Python](https://mxnet.apache.org/api/python), [Java](https://mxnet.apache.org/api/java), [C++](https://mxnet.apache.org/api/cpp), [R](https://mxnet.apache.org/api/r), [Scala](https://mxnet.apache.org/api/scala), [Clojure](https://mxnet.apache.org/api/clojure), [Go](https://github.com/jdeng/gomxnet/), [Javascript](https://github.com/dmlc/mxnet.js/), [Perl](https://mxnet.apache.org/api/perl), and [Julia](https://mxnet.apache.org/api/julia).
+* Support for [Python](https://mxnet.apache.org/api/python), [Java](https://mxnet.apache.org/api/java), [C++](https://mxnet.apache.org/api/cpp), [Clojure](https://mxnet.apache.org/api/clojure), [Go](https://github.com/jdeng/gomxnet/), and [Javascript](https://github.com/dmlc/mxnet.js/).
 * Cloud-friendly and directly compatible with AWS and Azure.
 
 Contents
