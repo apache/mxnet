@@ -24,7 +24,6 @@ from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 from mxnet.util import use_np
 import math
-from subgraph_common import check_fusion, check_neg_fusion, DATA_SHAPE
 
 @use_np
 @pytest.mark.parametrize('batch_size', [1, 32])
@@ -68,13 +67,12 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
   net.hybridize()
   ref_out = net(in_data, mask)
 
-  fused_net.optimize_for(in_data, mask, backend="DNNL")
+  fused_net.optimize_for(in_data, mask, backend="ONEDNN")
   out = fused_net(in_data, mask)
   mx.nd.waitall()
 
   for i in range(len(out)):
     assert_almost_equal(out[i].asnumpy(), ref_out[i].asnumpy())
-
 
   calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=1)
   qnet = mx.contrib.quant.quantize_net(net, quantized_dtype='auto',

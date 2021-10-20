@@ -135,16 +135,24 @@ void DNNLBatchDotFwd::Execute(const OpContext& ctx,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
   auto engine = mxnet::CpuEngine::Get()->get_engine();
-  auto lhs    = dnnl::memory(
-      fwd_pd->src_desc(), engine, reinterpret_cast<void*>(inputs[DotIn::lhs].data().dptr_));
-  auto rhs = dnnl::memory(
-      fwd_pd->weights_desc(), engine, reinterpret_cast<void*>(inputs[DotIn::rhs].data().dptr_));
+  auto lhs    = inputs[DotIn::lhs];
+  auto rhs    = inputs[DotIn::rhs];
+  // Created primitive descriptor assumes that both inputs are in default format
+  if (lhs.IsDNNLData())
+    lhs = lhs.Reorder2Default();
+  if (rhs.IsDNNLData())
+    rhs = rhs.Reorder2Default();
+
+  auto lhs_mem =
+      dnnl::memory(fwd_pd->src_desc(), engine, reinterpret_cast<void*>(lhs.data().dptr_));
+  auto rhs_mem =
+      dnnl::memory(fwd_pd->weights_desc(), engine, reinterpret_cast<void*>(rhs.data().dptr_));
   dnnl_output_t out_mem = CreateDNNLMem(
       outputs[DotOut::out], fwd_pd->dst_desc(), req[DotOut::out], &inputs[DotIn::lhs]);
 
   dnnl_args_map_t args = {
-      {DNNL_ARG_SRC, lhs},
-      {DNNL_ARG_WEIGHTS, rhs},
+      {DNNL_ARG_SRC, lhs_mem},
+      {DNNL_ARG_WEIGHTS, rhs_mem},
       {DNNL_ARG_DST, *out_mem.second},
   };
 
