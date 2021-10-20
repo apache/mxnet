@@ -858,7 +858,7 @@ unittest_array_api_standardization() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
-        array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+        array_api_tests/test_signatures.py::test_elementwise_function_two_arg_bool_type_promotion
     popd
 }
 
