@@ -12743,7 +12743,7 @@ def diagonal(a, offset=0, axis1=0, axis2=1):
     array([1])
 
     >>> a = np.arange(8).reshape(2,2,2)
-    >>>a
+    >>> a
     array([[[0, 1],
             [2, 3]],
             [[4, 5],
