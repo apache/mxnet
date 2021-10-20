@@ -759,16 +759,16 @@ elseif(MSVC)
             PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
       else()
         target_compile_options(
-          mxnet_${arch} 
+          mxnet 
           PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
       endif()
     endif(USE_SPLIT_ARCH_DLL)

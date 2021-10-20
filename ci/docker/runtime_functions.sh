@@ -718,7 +718,8 @@ sanity_cpp() {
 }
 
 sanity_clang() {
-    set -ex
+    set -e
+    set +x
     # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
     BASE_SHA="${GITHUB_PR_BASE_SHA}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
@@ -741,14 +742,14 @@ sanity_clang() {
         git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
         exit 0
     fi
-    
+
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    echo "| clang-format failures found! Run: "
-    echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
+    echo "| Clang-format failures found! Run: "
+    echo "|    tools/lint/clang_format_ci.sh ${BASE_SHA} "
     echo "| to fix this error. "
-    echo "| For more info, see: "
+    echo "| For more info, see: https://mxnet.apache.org/versions/master/community/clang_format_guide"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    
+
     echo "$GIT_DIFFERENCE"
     git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
     exit 1
@@ -766,7 +767,7 @@ sanity_python() {
 # $1 -> mxnet_variant: The variant of the libmxnet.so library
 cd_unittest_ubuntu() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     export PYTHONPATH=./python/
     export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -924,7 +925,7 @@ unittest_cpp() {
 
 unittest_centos7_cpu() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     cd /work/mxnet
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
@@ -936,7 +937,7 @@ unittest_centos7_cpu() {
 
 unittest_centos7_gpu() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=100
@@ -1367,7 +1368,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
@@ -1392,7 +1393,7 @@ cd_package_pypi() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
@@ -1403,7 +1404,7 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
 
     # install mxnet wheel package
     pip3 install --user ./wheel_build/dist/*.whl
@@ -1437,7 +1438,7 @@ build_static_python_cpu() {
     pushd .
     export mxnet_variant=cpu
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
@@ -1449,7 +1450,7 @@ build_static_python_cu102() {
     pushd .
     export mxnet_variant=cu102
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh

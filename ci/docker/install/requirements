@@ -30,7 +30,7 @@ onnxruntime==1.7.0
 protobuf==3.14.0
 scipy==1.4.1
 tabulate==0.7.5
-Cython==0.29.7
+Cython==0.29.24
 
 # Development dependencies
 cpplint==1.3.0
@@ -51,7 +51,6 @@ decorator==4.4.0
 # Used in examples
 boto3==1.9.229
 h5py==2.10.0
-Pillow<6
 
 # Array API Standardization requirements
 hypothesis==6.14.0
