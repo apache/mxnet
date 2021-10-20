@@ -752,6 +752,7 @@ sanity_clang() {
 
     echo "$GIT_DIFFERENCE"
     git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
+    exit 1
 }
 
 sanity_python() {
