@@ -273,16 +273,16 @@ if(USE_ONEDNN)
   endif()
 
   function(load_onednn)
-    set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
-    set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
+    set(DNNL_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+    set(DNNL_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
     set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
     set(DNNL_ENABLE_PRIMITIVE_CACHE ON CACHE INTERNAL "" FORCE)
 
     if(NOT USE_OPENMP)
-      set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
+      set(DNNL_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
     endif()
 
     set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/onednn")
@@ -759,16 +759,16 @@ elseif(MSVC)
             PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
       else()
         target_compile_options(
-          mxnet_${arch} 
+          mxnet 
           PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
       endif()
     endif(USE_SPLIT_ARCH_DLL)

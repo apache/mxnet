@@ -39,8 +39,8 @@ def init_kv_with_str(stype='default', kv_type='local'):
     return kv
 
 # 1. Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
-# 2. Test seed 1155716252 (module seed 1032824746) resulted in py3-mkldnn-gpu have error
-# src/operator/nn/mkldnn/mkldnn_base.cc:567: Check failed: similar
+# 2. Test seed 1155716252 (module seed 1032824746) resulted in py3-dnnl-gpu have error
+# src/operator/nn/dnnl/dnnl_base.cc:567: Check failed: similar
 # Both of them are not reproducible, so this test is back on random seeds.
 @pytest.mark.skipif(mx.context.num_gpus() < 2, reason="test_rsp_push_pull needs more than 1 GPU")
 @pytest.mark.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14189")

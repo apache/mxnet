@@ -6970,16 +6970,16 @@ def test_np_linalg_eigvals():
 @use_np
 def test_np_linalg_eigvalsh():
     class TestEigvalsh(HybridBlock):
-        def __init__(self, UPLO):
+        def __init__(self, upper):
             super(TestEigvalsh, self).__init__()
-            self._UPLO = UPLO
+            self._upper = upper
 
         def forward(self, a):
-            return np.linalg.eigvalsh(a, UPLO=self._UPLO)
+            return np.linalg.eigvalsh(a, upper=self._upper)
 
-    def check_eigvalsh(w, a_np, UPLO):
+    def check_eigvalsh(w, a_np, upper):
         try:
-            w_expected = onp.linalg.eigvalsh(a_np, UPLO)
+            w_expected = onp.linalg.eigvalsh(a_np, upper)
         except Exception as e:
             print("a:", a_np)
             print("a shape:", a_np.shape)
@@ -6988,7 +6988,7 @@ def test_np_linalg_eigvalsh():
             assert w.shape == w_expected.shape
             assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
 
-    def new_matrix_from_sym_matrix_nd(sym_a, UPLO):
+    def new_matrix_from_sym_matrix_nd(sym_a, upper):
         shape = sym_a.shape
         if 0 in shape:
             return sym_a
@@ -6997,7 +6997,7 @@ def test_np_linalg_eigvalsh():
         for idx in range(n):
             for i in range(shape[-2]):
                 for j in range(shape[-1]):
-                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                    if ((upper == True and i > j) or (upper == False and i < j)):
                         a[idx][i][j] = onp.random.uniform(-10., 10.)
         return a.reshape(shape)
 
@@ -7016,12 +7016,12 @@ def test_np_linalg_eigvalsh():
         (2, 3, 4, 4)
     ]
     dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
-    UPLOs = ['L', 'U']
+    uppers = [True, False]
     for hybridize in [True, False]:
-        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+        for shape, dtype, upper in itertools.product(shapes, dtypes, uppers):
             rtol = 1e-2 if dtype == 'float32' else 1e-3
             atol = 1e-4 if dtype == 'float32' else 1e-5
-            test_eigvalsh = TestEigvalsh(UPLO)
+            test_eigvalsh = TestEigvalsh(upper)
             if hybridize:
                 test_eigvalsh.hybridize()
             if 0 in shape:
@@ -7032,15 +7032,15 @@ def test_np_linalg_eigvalsh():
                     a_np = onp.array([onp.diag(onp.random.randint(1, 10, size=shape[-1])) for i in range(n)], dtype=dtype).reshape(shape)
                 else:
                     a_np = new_sym_matrix_with_real_eigvals_nd(shape)
-                    a_np = new_matrix_from_sym_matrix_nd(a_np, UPLO)
+                    a_np = new_matrix_from_sym_matrix_nd(a_np, upper)
             a = np.array(a_np, dtype=dtype)
             # check eigvalsh validity
             mx_out = test_eigvalsh(a)
-            check_eigvalsh(mx_out, a.asnumpy(), UPLO)
+            check_eigvalsh(mx_out, a.asnumpy(), upper)
 
             # check imperative once again
             mx_out = test_eigvalsh(a)
-            check_eigvalsh(mx_out, a.asnumpy(), UPLO)
+            check_eigvalsh(mx_out, a.asnumpy(), upper)
 
 
 @use_np
@@ -7125,16 +7125,16 @@ def test_np_linalg_eig():
 @use_np
 def test_np_linalg_eigh():
     class TestEigh(HybridBlock):
-        def __init__(self, UPLO):
+        def __init__(self, upper):
             super(TestEigh, self).__init__()
-            self._UPLO = UPLO
+            self.upper = uppers
 
         def forward(self, a):
-            return np.linalg.eigh(a, UPLO=self._UPLO)
+            return np.linalg.eigh(a, upper=self.upper)
 
-    def check_eigh(w, v, a_np, UPLO):
+    def check_eigh(w, v, a_np, upper):
         try:
-            w_expected, v_expected = onp.linalg.eigh(a_np, UPLO)
+            w_expected, v_expected = onp.linalg.eigh(a_np, upper)
         except Exception as e:
             print("a:", a_np)
             print("a shape:", a_np.shape)
@@ -7145,7 +7145,7 @@ def test_np_linalg_eigh():
             # check eigenvalues.
             assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
             # check eigenvectors.
-            w_shape, v_shape, a_sym_np = get_sym_matrix_nd(a_np, UPLO)
+            w_shape, v_shape, a_sym_np = get_sym_matrix_nd(a_np, upper)
             w_np = w.asnumpy()
             v_np = v.asnumpy()
             if 0 not in a_np.shape:
@@ -7156,7 +7156,7 @@ def test_np_linalg_eigh():
                     for j in range(w_shape[1]):
                         assert_almost_equal(onp.dot(a_sym_np[i], v_np[i][:, j]), w_np[i][j] * v_np[i][:, j], rtol=rtol, atol=atol)
 
-    def get_sym_matrix_nd(a_np, UPLO):
+    def get_sym_matrix_nd(a_np, upper):
         a_res_np = a_np
         shape = a_np.shape
         if 0 not in a_np.shape:
@@ -7167,13 +7167,13 @@ def test_np_linalg_eigh():
             for idx in range(n):
                 for i in range(nrow):
                     for j in range(ncol):
-                        if ((UPLO == 'L' and i < j) or (UPLO == 'U' and i > j)):
+                        if ((upper == False and i < j) or (upper == True and i > j)):
                             a_res_np[idx][i][j] = a_np[idx][j][i]
             return (n, nrow), (n, nrow, ncol), a_res_np.reshape(shape)
         else :
             return (0, 0), (0, 0, 0), a_res_np.reshape(shape)
 
-    def new_matrix_from_sym_matrix_nd(sym_a, UPLO):
+    def new_matrix_from_sym_matrix_nd(sym_a, upper):
         shape = sym_a.shape
         if 0 in shape:
             return sym_a
@@ -7182,7 +7182,7 @@ def test_np_linalg_eigh():
         for idx in range(n):
             for i in range(shape[-2]):
                 for j in range(shape[-1]):
-                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                    if ((upper == True and i > j) or (upper == False and i < j)):
                         a[idx][i][j] = onp.random.uniform(-10., 10.)
         return a.reshape(shape)
 
@@ -7200,12 +7200,12 @@ def test_np_linalg_eigh():
         (2, 3, 4, 4)
     ]
     dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
-    UPLOs = ['L', 'U']
+    uppers = [True, False]
     for hybridize in [True, False]:
-        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+        for shape, dtype, upper in itertools.product(shapes, dtypes, uppers):
             rtol = 1e-2 if dtype == 'float32' else 1e-3
             atol = 1e-4 if dtype == 'float32' else 1e-5
-            test_eigh = TestEigh(UPLO)
+            test_eigh = TestEigh(upper)
             if hybridize:
                 test_eigh.hybridize()
             if 0 in shape:
@@ -7216,15 +7216,15 @@ def test_np_linalg_eigh():
                     a_np = onp.array([onp.diag(onp.random.randint(1, 10, size=shape[-1])) for i in range(n)], dtype=dtype).reshape(shape)
                 else:
                     a_np = new_sym_matrix_with_real_eigvals_nd(shape)
-                    a_np = new_matrix_from_sym_matrix_nd(a_np, UPLO)
+                    a_np = new_matrix_from_sym_matrix_nd(a_np, upper)
             a = np.array(a_np, dtype=dtype)
             # check eigh validity
             w, v = test_eigh(a)
-            check_eigh(w, v, a.asnumpy(), UPLO)
+            check_eigh(w, v, a.asnumpy(), upper)
 
             # check imperative once again
             w, v = test_eigh(a)
-            check_eigh(w, v, a.asnumpy(), UPLO)
+            check_eigh(w, v, a.asnumpy(), upper)
 
 
 @use_np

@@ -23,7 +23,7 @@
  */
 #include "./dequantize-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./mkldnn/mkldnn_dequantize-inl.h"
+#include "./dnnl/dnnl_dequantize-inl.h"
 #endif
 
 namespace mxnet {
@@ -54,7 +54,7 @@ static OpStatePtr CreateDequantizeState(const nnvm::NodeAttrs& attrs,
     state = OpStatePtr::Create<DequantizeOperator<gpu>>(attrs);
   } else {
 #if MXNET_USE_ONEDNN == 1
-    state = OpStatePtr::Create<SgMKLDNNDequantizeOperator>(attrs);
+    state = OpStatePtr::Create<SgDNNLDequantizeOperator>(attrs);
 #else
     state = OpStatePtr::Create<DequantizeOperator<cpu>>(attrs);
 #endif
@@ -95,8 +95,8 @@ by keep zero centered for the quantized value:
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
     .set_attr<FCreateOpState>("FCreateOpState", CreateDequantizeState)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true)
-    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNDequantizeForward)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgDNNLDequantizeForward)
 #endif
     .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DequantizeForward<cpu>)
     .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `uint8`")

@@ -529,14 +529,13 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
 
     return qsym, qarg_params, aux_params
 
-
-def quantize_model_mkldnn(sym, arg_params, aux_params, data_names=('data',),
+def quantize_model_onednn(sym, arg_params, aux_params, data_names=('data',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_batches=None,
                           quantized_dtype='int8', quantize_mode='smart',
                           quantize_granularity='tensor-wise', logger=None):
     """User-level API for generating a fusion + quantized model from a FP32 model
-    w/ or w/o calibration with Intel MKL-DNN.
+    w/ or w/o calibration with oneDNN.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
 
@@ -555,9 +554,9 @@ def quantize_model_mkldnn(sym, arg_params, aux_params, data_names=('data',),
         raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
     if ctx.device_type != 'cpu':
         raise ValueError(
-            'quantize_model_mkldnn only support Intel cpu platform with MKL-DNN Backend')
+            'quantize_model_onednn only support Intel cpu platform with oneDNN Backend')
 
-    sym = sym.optimize_for(backend='MKLDNN_QUANTIZE')
+    sym = sym.optimize_for(backend='ONEDNN_QUANTIZE')
 
     qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                    data_names=data_names, ctx=ctx,
@@ -568,7 +567,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params, data_names=('data',),
                                                    quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
                                                    quantize_granularity=quantize_granularity, logger=logger)
 
-    qsym = qsym.optimize_for(backend='MKLDNN_QUANTIZE')
+    qsym = qsym.optimize_for(backend='ONEDNN_QUANTIZE')
 
     return qsym, qarg_params, aux_params
 
@@ -824,7 +823,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
 
     if ctx != mx.cpu():
         raise ValueError('Quantization currently supports only CPU context')
-    backend = 'MKLDNN_QUANTIZE'
+    backend = 'ONEDNN_QUANTIZE'
 
     network.hybridize(static_alloc=False, static_shape=False)
     data_types = None
