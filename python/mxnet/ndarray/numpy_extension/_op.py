@@ -1128,6 +1128,7 @@ def embedding(data, weight, input_dim=None, output_dim=None, dtype="float32", sp
     """
     assert input_dim > 0, "Vocabulary size of the input indices should be greater than 0."
     assert output_dim > 0, "Dimension of the embedding vectors should greater than 0."
+    assert not sparse_grad, "Currently row sparse gradient is not supported in npx.embedding"
     return _api_internal.embedding(data, weight, input_dim, output_dim, dtype, sparse_grad)
 
 

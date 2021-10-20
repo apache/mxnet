@@ -234,7 +234,8 @@ struct rtrue_divide : public mxnet_op::tunable {
 /***** floor_divide ******/
 
 struct floor_divide : public mxnet_op::tunable {
-  template <typename DType>
+  template <typename DType,
+            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(a / b));
     if ((c * b != a) && ((a < 0) != (b < 0))) {
@@ -243,10 +244,15 @@ struct floor_divide : public mxnet_op::tunable {
       return c;
     }
   }
+
+  MSHADOW_XINLINE static bool Map(bool a, bool b) {
+    return static_cast<bool>(::floor(a / b));
+  }
 };
 
 struct rfloor_divide : public mxnet_op::tunable {
-  template <typename DType>
+  template <typename DType,
+            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(b / a));
     if ((c * a != b) && ((a < 0) != (b < 0))) {
@@ -254,6 +260,10 @@ struct rfloor_divide : public mxnet_op::tunable {
     } else {
       return c;
     }
+  }
+
+  MSHADOW_XINLINE static bool Map(bool a, bool b) {
+    return static_cast<bool>(::floor(b / a));
   }
 };
 

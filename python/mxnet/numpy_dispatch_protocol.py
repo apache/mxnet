@@ -253,6 +253,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     # 'ldexp',
     'subtract',
     'multiply',
+    'floor_divide',
     'true_divide',
     'negative',
     'power',

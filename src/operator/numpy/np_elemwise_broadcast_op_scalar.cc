@@ -61,5 +61,13 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rpower_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rpower>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_rpower_scalar"});
 
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_floor_divide_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::floor_divide>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rfloor_divide_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::rfloor_divide>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 }  // namespace op
 }  // namespace mxnet
