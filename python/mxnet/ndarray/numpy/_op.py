@@ -50,7 +50,8 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
+           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal',
+           'positive']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3559,6 +3560,40 @@ def negative(x, out=None, **kwargs):
     -1
     """
     return _pure_unary_func_helper(x, _api_internal.negative, _np.negative, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_unary_func
+def positive(x, out=None, **kwargs):
+    r"""
+    Computes the numerical positive of each element `x_i` (i.e.,`y_i = +x_i`)
+    of the input array x .
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Returned array or scalar: y = +x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    Equivalent to `x.copy()`, but only defined for types that support arithmetic.
+
+    Examples
+    --------
+    >>> x1 = np.array(([1., -1.]))
+    >>> np.positive(x1)
+    array([ 1., -1.])
+    >>> +x1
+    array([ 1., -1.])
+    """
+    if out is x:
+        return x
+    return _pure_unary_func_helper(x, _api_internal.copy, _np.positive, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
