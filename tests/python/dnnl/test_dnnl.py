@@ -44,17 +44,22 @@ def test_dnnl_ndarray_slice():
     # trigger computation on ndarray slice
     assert_almost_equal(y[0].asnumpy()[0, 0, 0], np.array(0.056331709))
 
+
+# In python3.8, functions are only pickable if they are defined in
+# the top-level of a module
+# https://docs.python.org/3/library/pickle.html#what-can-be-pickled-and-unpickled
+class Dummy(gluon.data.Dataset):
+    def __len__(self):
+        return 2
+    def __getitem__(self, key):
+        return key, np.ones((3, 224, 224)), np.ones((10, ))
+
 @use_np
 @pytest.mark.seed(1234)
 def test_dnnl_engine_threading():
     net = gluon.nn.HybridSequential()
     net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
     net.initialize(ctx=mx.cpu())
-    class Dummy(gluon.data.Dataset):
-        def __len__(self):
-            return 2
-        def __getitem__(self, key):
-            return key, np.ones((3, 224, 224)), np.ones((10, ))
 
     loader = gluon.data.DataLoader(Dummy(), batch_size=2, num_workers=1)
 

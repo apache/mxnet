@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+numpy>=1.17,<1.20.0
 jupyter
 Jinja2==2.11.3
 sphinx==2.4.0
