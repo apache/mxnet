@@ -28,7 +28,7 @@ apt-get install -y \
     wget
 
 mkdir /opt/binutils_install && mkdir /opt/binutils && cd /opt/binutils
-wget -nv https://ftp.gnu.org/gnu/binutils/binutils-2.27.tar.gz
+wget -nv http://mirrors.kernel.org/gnu/binutils/binutils-2.27.tar.gz
 tar -xvf binutils-2.27.tar.gz && cd binutils-2.27
 ./configure --prefix=/opt/binutils_other --exec-prefix=/opt/binutils_install
 make -j$(nproc)
