@@ -272,7 +272,7 @@ struct mixed_floor_divide {
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
     mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
     mshadow::half::half_t c      = static_cast<mshadow::half::half_t>(::floor(a_half / b));
-    if ((c * b != a_half) && ((a < 0) != (b < 0))) {
+    if ((c * b != a_half) && ((a_half < 0) != (b < 0))) {
       return mshadow::half::half_t(c - 1);
     } else {
       return c;
@@ -286,7 +286,7 @@ struct mixed_floor_divide {
   MSHADOW_XINLINE static float Map(DType a, float b) {
     float a_float = static_cast<float>(a);
     float c       = ::floorf(a_float / b);
-    if ((c * b != a_float) && ((a < 0) != (b < 0))) {
+    if ((c * b != a_float) && ((a_float < 0) != (b < 0))) {
       return c - 1.0f;
     } else {
       return c;
@@ -301,7 +301,7 @@ struct mixed_floor_divide {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     double a_double = static_cast<double>(a);
     double c        = ::floor(a_double / b);
-    if ((c * b != a_double) && ((a < 0) != (b < 0))) {
+    if ((c * b != a_double) && ((a_double < 0) != (b < 0))) {
       return c - 1.0;
     } else {
       return c;
@@ -314,7 +314,7 @@ struct mixed_rfloor_divide {
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
     mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
     mshadow::half::half_t c      = static_cast<mshadow::half::half_t>(::floor(b / a_half));
-    if ((c * a_half != b) && ((a < 0) != (b < 0))) {
+    if ((c * a_half != b) && ((a_half < 0) != (b < 0))) {
       return mshadow::half::half_t(c - 1);
     } else {
       return c;
@@ -328,7 +328,7 @@ struct mixed_rfloor_divide {
   MSHADOW_XINLINE static float Map(DType a, float b) {
     float a_float = static_cast<float>(a);
     float c       = ::floorf(b / a_float);
-    if ((c * a_float != b) && ((a < 0) != (b < 0))) {
+    if ((c * a_float != b) && ((a_float < 0) != (b < 0))) {
       return c - 1.0f;
     } else {
       return c;
@@ -343,7 +343,7 @@ struct mixed_rfloor_divide {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     double a_double = static_cast<double>(a);
     double c        = ::floor(b / a_double);
-    if ((c * a_double != b) && ((a < 0) != (b < 0))) {
+    if ((c * a_double != b) && ((a_double < 0) != (b < 0))) {
       return c - 1.0;
     } else {
       return c;
