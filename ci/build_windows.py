@@ -151,6 +151,8 @@ CMAKE_FLAGS = {
 
 def windows_build(args):
     logging.info("Using vcvars environment:\n{}".format(args.vcvars))
+    if args.vcvars_ver:
+        logging.info("Using vcvars version:\n{}".format(args.vcvars_ver))
 
     path = args.output
 
@@ -171,13 +173,22 @@ def windows_build(args):
             env = os.environ.copy()
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
-            cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
-                                                         CMAKE_FLAGS[args.flavour],
-                                                         mxnet_root)
+            if not args.vcvars_ver:
+                cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
+                                                             CMAKE_FLAGS[args.flavour],
+                                                             mxnet_root)
+            else:
+                cmd = "\"{}\" -vcvars_ver={} && cmake -GNinja {} {}".format(args.vcvars,
+                                                                            args.vcvars_ver,
+                                                                            CMAKE_FLAGS[args.flavour],
+                                                                            mxnet_root)
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True, env=env)
 
-            cmd = "\"{}\" && ninja".format(args.vcvars)
+            if not args.vcvars_ver:
+                cmd = "\"{}\" && ninja".format(args.vcvars)
+            else:
+                cmd = "\"{}\" -vcvars_ver={} && ninja".format(args.vcvars, args.vcvars_ver)
             logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
@@ -258,6 +269,12 @@ def main():
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
         default=KNOWN_VCVARS['VS 2019'],
+        type=str)
+
+    parser.add_argument("--vcvars_ver",
+        help="Optionally specifies the Visual Studio compiler toolset to use.\
+            By default, the environment is set to use the current Visual Studio compiler toolset.",
+        default=None,
         type=str)
 
     parser.add_argument("--arch",
