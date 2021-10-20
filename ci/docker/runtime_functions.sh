@@ -740,19 +740,17 @@ sanity_clang() {
     GIT_DIFFERENCE=$(git diff)
     if [[ -z $GIT_DIFFERENCE ]]; then
         git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
-        exit 0
+    else
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        echo "| Clang-format failures found! Run: "
+        echo "|    tools/lint/clang_format_ci.sh ${BASE_SHA} "
+        echo "| to fix this error. "
+        echo "| For more info, see: https://mxnet.apache.org/versions/master/community/clang_format_guide"
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+        echo "$GIT_DIFFERENCE"
+        git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
     fi
-
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    echo "| Clang-format failures found! Run: "
-    echo "|    tools/lint/clang_format_ci.sh ${BASE_SHA} "
-    echo "| to fix this error. "
-    echo "| For more info, see: https://mxnet.apache.org/versions/master/community/clang_format_guide"
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-    echo "$GIT_DIFFERENCE"
-    git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
-    exit 1
 }
 
 sanity_python() {
