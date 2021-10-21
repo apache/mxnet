@@ -226,7 +226,7 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
       pooling_fwds;
 #endif
 
-  bool with_workspace = is_train && (MKLDNNRequireWorkspace(param) || !use_adaptive);
+  const bool with_workspace = is_train && (MKLDNNRequireWorkspace(param) || !use_adaptive);
   MKLDNNPoolingSignature key(param);
   key.AddSign(is_train);
   key.AddSign(with_workspace);
