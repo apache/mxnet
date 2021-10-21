@@ -22,7 +22,7 @@
  * \brief GPU Implementation of floor_divide operator.
  */
 
-#include "./np_floor_divide-inl.h"
+#include "./np_elemwise_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
