@@ -1327,7 +1327,9 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: disable= invalid-name, undefined-variable
     def mT(self):
         """Same as self.transpose(). This always returns a copy of self."""
-        return self.transpose()
+        if self.ndim < 2:
+            raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+        return _mx_nd_np.swapaxes(self, -1, -2)
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
