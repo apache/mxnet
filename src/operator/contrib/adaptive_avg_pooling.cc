@@ -26,7 +26,9 @@
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
 #include "adaptive_avg_pooling-inl.h"
+#if MXNET_USE_MKLDNN == 1
 #include "../nn/mkldnn/mkldnn_pooling-inl.h"
+#endif  // MXNET_USE_MKLDNN
 
 #define START_IND(a, b, c) static_cast<int>(std::floor(static_cast<float>(a * c) / b))
 #define END_IND(a, b, c) static_cast<int>(std::ceil(static_cast<float>((a + 1) * c) / b))
