@@ -84,7 +84,7 @@ def matrix_transpose(a):
     -----
     `matrix_transpose` is new in array API spec:
     https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-transpose-x
-    instead of an official NumPy operator. Unlike transpose, it only transposes the last two axes. 
+    instead of an official NumPy operator. Unlike transpose, it only transposes the last two axes.
 
     Parameters
     ----------
