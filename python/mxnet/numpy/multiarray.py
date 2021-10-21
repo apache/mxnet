@@ -412,6 +412,28 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                 return mx_np_func(*new_args, **new_kwargs)
 
 
+    def __array_namespace__(self, api_version=None):
+        """
+        Returns an object that has all the array API functions on it. 
+
+        Notes 
+        ----- 
+        This is a standard API in 
+        https://data-apis.org/array-api/latest/API_specification/array_object.html#array-namespace-self-api-version-none.
+
+        Parameters
+        ----------
+        self : ndarray
+            The indexing key.
+        api_version : Optional, string
+            string representing the version of the array API specification to be returned, in `YYYY.MM` form.
+            If it is None, it should return the namespace corresponding to latest version of the array API specification.
+        """
+        if api_version is not None and not api_version.startswith("2021."):
+            raise ValueError(f"Unrecognized array API version: {api_version!r}")
+        return self.__module__
+
+
     def _get_np_basic_indexing(self, key):
         """
         This function indexes ``self`` with a tuple of `slice` objects only.
@@ -1254,6 +1276,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             raise ValueError("The truth value of an ndarray with multiple elements is ambiguous.")
 
     __nonzero__ = __bool__
+
+    def __index__(self):
+        if self.ndim == 0 and _np.issubdtype(self.dtype, _np.integer):
+            return self.item()
+        raise TypeError('only integer scalar arrays can be converted to a scalar index')
 
     def __float__(self):
         num_elements = self.size
