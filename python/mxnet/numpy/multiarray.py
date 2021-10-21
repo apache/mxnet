@@ -414,11 +414,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     def __array_namespace__(self, api_version=None):
         """
-        Returns an object that has all the array API functions on it. 
+        Returns an object that has all the array API functions on it.
 
-        Notes 
-        ----- 
-        This is a standard API in 
+        Notes
+        -----
+        This is a standard API in
         https://data-apis.org/array-api/latest/API_specification/array_object.html#array-namespace-self-api-version-none.
 
         Parameters
@@ -427,7 +427,8 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             The indexing key.
         api_version : Optional, string
             string representing the version of the array API specification to be returned, in `YYYY.MM` form.
-            If it is None, it should return the namespace corresponding to latest version of the array API specification.
+            If it is None, it should return the namespace corresponding to latest version of the array API
+            specification.
         """
         if api_version is not None and not api_version.startswith("2021."):
             raise ValueError(f"Unrecognized array API version: {api_version!r}")
