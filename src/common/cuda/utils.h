@@ -652,7 +652,7 @@ static_assert(CUDNN_PATCHLEVEL < 100 && CUDNN_MINOR < 10,
       LOG(s) << "cuDNN: " << cudnnGetErrorString(unclash_cxx_e); \
   }
 
-#define CUDNN_CALL(f) CUDNN_CALL_S(f, FATAL)
+#define CUDNN_CALL(f)          CUDNN_CALL_S(f, FATAL)
 #define CUDNN_CALL_NONFATAL(f) CUDNN_CALL_S(f, WARNING)
 
 #define CUTENSOR_CALL(func)                                                            \

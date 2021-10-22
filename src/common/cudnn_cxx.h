@@ -35,8 +35,8 @@
 #include <memory>
 
 #if !defined(__CUDACC__)  // Can be removed when CUDA 10 support is dropped.
-#include <optional>  // NOLINT(build/include_order)
-#endif  // !defined(__CUDACC__)
+#include <optional>       // NOLINT(build/include_order)
+#endif                    // !defined(__CUDACC__)
 
 #include <string>
 #include <unordered_set>
@@ -64,7 +64,9 @@ struct WeakDescriptor {
   cudnnBackendDescriptor_t desc = nullptr;
 
   explicit WeakDescriptor(const Descriptor& other) : desc(other.get()) {}
-  cudnnBackendDescriptor_t get() const { return desc; }
+  cudnnBackendDescriptor_t get() const {
+    return desc;
+  }
 };
 
 template <typename T>
@@ -150,7 +152,8 @@ struct AttrType<cudnnBackendKnobType_t> {
 
 void SetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name, const Descriptor& val);
 void SetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name, const WeakDescriptor& val);
-void SetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name,
+void SetAttr(const Descriptor& desc,
+             cudnnBackendAttributeName_t name,
              const std::vector<Descriptor>& val);
 
 template <typename T>
@@ -164,7 +167,8 @@ void SetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name, const std
 }
 
 template <typename T, size_t N>
-void SetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name,
+void SetAttr(const Descriptor& desc,
+             cudnnBackendAttributeName_t name,
              const std::array<T, N>& val) {
   CUDNN_CALL(cudnnBackendSetAttribute(desc.get(), name, AttrType<T>::type, val.size(), &val[0]));
 }
@@ -210,29 +214,33 @@ std::vector<T> GetAllAttrs(const Descriptor& desc, cudnnBackendAttributeName_t n
   int64_t count = 0;
   CUDNN_CALL(cudnnBackendGetAttribute(desc.get(), name, AttrType<T>::type, 0, &count, nullptr));
   std::vector<T> ret(count);
-  CUDNN_CALL(cudnnBackendGetAttribute(desc.get(), name, AttrType<T>::type, ret.size(), &count,
-                                      ret.data()));
+  CUDNN_CALL(cudnnBackendGetAttribute(
+      desc.get(), name, AttrType<T>::type, ret.size(), &count, ret.data()));
   return ret;
 }
 
 template <typename T>
-std::vector<T> GetSomeAttrs(size_t max_n, const Descriptor& desc,
+std::vector<T> GetSomeAttrs(size_t max_n,
+                            const Descriptor& desc,
                             cudnnBackendAttributeName_t name) {
   int64_t count = 0;
   std::vector<T> ret(max_n);
-  CUDNN_CALL(cudnnBackendGetAttribute(desc.get(), name, AttrType<T>::type, ret.size(), &count,
-                                      ret.data()));
+  CUDNN_CALL(cudnnBackendGetAttribute(
+      desc.get(), name, AttrType<T>::type, ret.size(), &count, ret.data()));
   ret.resize(count);
   return ret;
 }
 
-Descriptor GetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name,
+Descriptor GetAttr(const Descriptor& desc,
+                   cudnnBackendAttributeName_t name,
                    cudnnBackendDescriptorType_t type);
 
-std::vector<Descriptor> GetAllAttrs(const Descriptor& desc, cudnnBackendAttributeName_t name,
+std::vector<Descriptor> GetAllAttrs(const Descriptor& desc,
+                                    cudnnBackendAttributeName_t name,
                                     cudnnBackendDescriptorType_t type);
 
-std::vector<Descriptor> GetSomeAttrs(size_t max_n, const Descriptor& desc,
+std::vector<Descriptor> GetSomeAttrs(size_t max_n,
+                                     const Descriptor& desc,
                                      cudnnBackendAttributeName_t name,
                                      cudnnBackendDescriptorType_t type);
 
@@ -243,15 +251,18 @@ std::vector<int64_t> PackedStrides(const std::vector<size_t>& order,
 // Given an engine config's `notes`, return whether that config is compatible, i.e. does
 // the config have all of the required notes and none of the notes that are being excluded.
 template <typename Note>
-inline bool IsCompatible(const std::vector<Note>& notes, const std::vector<Note>& require_notes,
+inline bool IsCompatible(const std::vector<Note>& notes,
+                         const std::vector<Note>& require_notes,
                          const std::vector<Note>& exclude_notes) {
   for (auto rn : require_notes) {
     auto it = std::find(notes.begin(), notes.end(), rn);
-    if (it == notes.end()) return false;
+    if (it == notes.end())
+      return false;
   }
   for (auto en : exclude_notes) {
     auto it = std::find(notes.begin(), notes.end(), en);
-    if (it != notes.end()) return false;
+    if (it != notes.end())
+      return false;
   }
   return true;
 }
@@ -259,8 +270,10 @@ inline bool IsCompatible(const std::vector<Note>& notes, const std::vector<Note>
 // Execution plans are returned in the order of cuDNN heurstics, i.e. from best to worst.
 // - max_workspace is an out parameter - the maximum workspace requirement among returned plans,
 //   may be nullptr if not needed.
-std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode, cudnnHandle_t handle,
-                                 const Descriptor& op_graph, size_t workspace_limit,
+std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode,
+                                 cudnnHandle_t handle,
+                                 const Descriptor& op_graph,
+                                 size_t workspace_limit,
                                  size_t* max_workspace,
                                  const std::unordered_set<int64_t>& excl_engines,
                                  const std::vector<cudnnBackendNumericalNote_t>& req_numeric,
@@ -291,8 +304,10 @@ struct FindResult {
 };
 
 // Executes and times the plans. The results are returned in the order from best to worst.
-std::vector<FindResult> FindTopPlans(std::vector<Descriptor>&& plans, size_t max_results,
-                                     cudnnHandle_t handle, const Descriptor& var_pack,
+std::vector<FindResult> FindTopPlans(std::vector<Descriptor>&& plans,
+                                     size_t max_results,
+                                     cudnnHandle_t handle,
+                                     const Descriptor& var_pack,
                                      Sampler sampler);
 #endif  // !defined(__CUDACC__)
 

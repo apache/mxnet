@@ -22,7 +22,7 @@
  * \file convolution.cu
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng
-*/
+ */
 
 #include "./convolution-inl.h"
 #include <vector>
@@ -44,7 +44,7 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
                              const std::vector<OpReqType>& req,
                              const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
-  int dtype = inputs[conv::kData].type_flag_;
+  int dtype                     = inputs[conv::kData].type_flag_;
   CHECK_EQ(req.size(), 1);
   CHECK_EQ(req[conv::kOut], kWriteTo);
 
@@ -52,9 +52,9 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
   STATIC_ASSERT_CUDNN_VERSION_GE(8000);
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     cudnn::ConvParam conv_param(param, false);
-    bool ok =
-        !param.cudnn_off && cudnn::Exec<cudnn::Conv>(ctx, conv_param, inputs[conv::kData],
-                                                     inputs[conv::kWeight], outputs[conv::kOut]);
+    bool ok = !param.cudnn_off &&
+              cudnn::Exec<cudnn::Conv>(
+                  ctx, conv_param, inputs[conv::kData], inputs[conv::kWeight], outputs[conv::kOut]);
     if (ok && !param.no_bias) {
       CHECK_EQ(inputs[conv::kBias].shape_.ndim(), 1);
       auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
@@ -76,8 +76,7 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
     }
   })
 #else
-  if (param.layout.value() != kNCW &&
-      param.layout.value() != kNCHW &&
+  if (param.layout.value() != kNCW && param.layout.value() != kNCHW &&
       param.layout.value() != kNCDHW) {
     // Need CuDNN > 5.0 for layout support. use MXNet implementation
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
@@ -88,12 +87,9 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  if (param.num_filter == param.num_group &&
-      param.layout.value() == mshadow::kNCHW &&
-      param.num_filter == inputs[conv::kData].shape_[1] &&
-      param.kernel.ndim() == 2 &&
-      param.dilate == mshadow::Shape2(1, 1) &&
-      dtype == mshadow::kFloat32) {
+  if (param.num_filter == param.num_group && param.layout.value() == mshadow::kNCHW &&
+      param.num_filter == inputs[conv::kData].shape_[1] && param.kernel.ndim() == 2 &&
+      param.dilate == mshadow::Shape2(1, 1) && dtype == mshadow::kFloat32) {
     mxnet::ShapeVector in_shape(inputs.size());
     mxnet::ShapeVector out_shape(1, outputs[0].shape_);
     for (size_t i = 0; i < in_shape.size(); i++)
@@ -120,26 +116,27 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                  const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
-  const TBlob &out_grad = inputs[0];
-  const std::vector<TBlob> &in_grad = outputs;
-  int dtype = out_grad.type_flag_;
+  const TBlob& out_grad             = inputs[0];
+  const std::vector<TBlob>& in_grad = outputs;
+  int dtype                         = out_grad.type_flag_;
   CHECK_EQ(req.size(), param.no_bias ? 2 : 3);
   CHECK_NE(req[conv::kData], kWriteInplace);
   CHECK_NE(req[conv::kWeight], kWriteInplace);
-  if (!param.no_bias) CHECK_NE(req[conv::kBias], kWriteInplace);
+  if (!param.no_bias)
+    CHECK_NE(req[conv::kBias], kWriteInplace);
 
 #if MXNET_USE_CUDNN == 1
   STATIC_ASSERT_CUDNN_VERSION_GE(8000);
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     cudnn::ConvParam conv_param(param, req[conv::kData] == kAddTo);
-    bool ok = !param.cudnn_off;
-    ok = ok && (req[conv::kData] == kNullOp ||
-                cudnn::Exec<cudnn::ConvDgrad>(ctx, conv_param, inputs[1 + conv::kWeight], inputs[0],
-                                              outputs[conv::kData]));
+    bool ok           = !param.cudnn_off;
+    ok                = ok && (req[conv::kData] == kNullOp ||
+                cudnn::Exec<cudnn::ConvDgrad>(
+                    ctx, conv_param, inputs[1 + conv::kWeight], inputs[0], outputs[conv::kData]));
     conv_param.add_to = req[conv::kWeight] == kAddTo;
-    ok = ok && (req[conv::kWeight] == kNullOp ||
-                cudnn::Exec<cudnn::ConvWgrad>(ctx, conv_param, inputs[1 + conv::kData], inputs[0],
-                                              outputs[conv::kWeight]));
+    ok                = ok && (req[conv::kWeight] == kNullOp ||
+                cudnn::Exec<cudnn::ConvWgrad>(
+                    ctx, conv_param, inputs[1 + conv::kData], inputs[0], outputs[conv::kWeight]));
     if (ok && !param.no_bias && req[conv::kBias] != kNullOp) {
       auto li = cudnn::GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
       if (li.channel_last) {
@@ -150,8 +147,8 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
         TShape axes{static_cast<int>(li.ChannelIdx())};
         TShape small =
             ReduceAxesShapeImpl(inputs[0].shape_, dmlc::optional<mxnet::TShape>(axes), true, true);
-        ReduceAxesRTCComputeImpl(ctx, {inputs[0]}, {req[conv::kBias]}, {outputs[conv::kBias]},
-                                 small, "red::sum{}");
+        ReduceAxesRTCComputeImpl(
+            ctx, {inputs[0]}, {req[conv::kBias]}, {outputs[conv::kBias]}, small, "red::sum{}");
       }
     }
     if (!ok) {
@@ -163,8 +160,7 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     }
   })
 #else
-  if (param.layout.value() != kNCW &&
-      param.layout.value() != kNCHW &&
+  if (param.layout.value() != kNCW && param.layout.value() != kNCHW &&
       param.layout.value() != kNCDHW) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       ConvolutionOp<gpu, DType> op;
@@ -174,12 +170,9 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  if (param.num_filter == param.num_group &&
-      param.layout.value() == mshadow::kNCHW &&
-      param.num_filter == in_data[conv::kData].shape_[1] &&
-      param.kernel.ndim() == 2 &&
-      param.dilate == mshadow::Shape2(1, 1) &&
-      dtype == mshadow::kFloat32) {
+  if (param.num_filter == param.num_group && param.layout.value() == mshadow::kNCHW &&
+      param.num_filter == in_data[conv::kData].shape_[1] && param.kernel.ndim() == 2 &&
+      param.dilate == mshadow::Shape2(1, 1) && dtype == mshadow::kFloat32) {
     // The first element stores out grad.
     mxnet::ShapeVector in_shape(in_data.size());
     mxnet::ShapeVector out_shape(1, out_grad.shape_);
@@ -199,12 +192,10 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 #endif  // MXNET_USE_CUDNN
 }
 
-NNVM_REGISTER_OP(Convolution)
-.set_attr<FCompute>("FCompute<gpu>", ConvolutionCompute<gpu>);
+NNVM_REGISTER_OP(Convolution).set_attr<FCompute>("FCompute<gpu>", ConvolutionCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_Convolution)
-.set_attr<FCompute>("FCompute<gpu>", ConvolutionGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", ConvolutionGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-

@@ -62,15 +62,17 @@ namespace std {
 
 template <>
 struct hash<std::tuple<>> {
-  size_t operator()(const std::tuple<>&) const { return 0; }
+  size_t operator()(const std::tuple<>&) const {
+    return 0;
+  }
 };
 
 template <typename... Ts>
 struct hash<std::tuple<Ts...>> {
   size_t operator()(const std::tuple<Ts...>& t) const {
     size_t ret = 0;
-    ret = dmlc::HashCombine(ret, std::get<0>(t));
-    ret = dmlc::HashCombine(ret, mxnet::tuple_util::Tail(t));
+    ret        = dmlc::HashCombine(ret, std::get<0>(t));
+    ret        = dmlc::HashCombine(ret, mxnet::tuple_util::Tail(t));
     return ret;
   }
 };
@@ -115,10 +117,11 @@ bool Exec(const OpContext& ctx, const typename Op::Param& param, Args&&... args)
   auto it = op_map.find(key);
   if (it == op_map.end()) {
     auto op = Op::Make(ctx, param, std::forward<Args>(args)...);
-    it = op_map.emplace(key, std::move(op)).first;
+    it      = op_map.emplace(key, std::move(op)).first;
   }
   lk.unlock();
-  if (!it->second) return false;
+  if (!it->second)
+    return false;
   Op::Exec(it->second, ctx, std::forward<Args>(args)...);
   return true;
 }
@@ -147,16 +150,33 @@ struct Conv {
   enum UIDs { ID_X = 1, ID_W, ID_Y };
 
   static auto MakeKey(const Param& p, const TBlob& x, const TBlob& w, const TBlob& y) {
-    return std::make_tuple(p.kernel, p.stride, p.dilate, p.pad, p.num_filter, p.num_group,
-                           p.workspace, p.layout, p.add_to, x.shape_, x.type_flag_, w.shape_,
-                           w.type_flag_, y.shape_);
+    return std::make_tuple(p.kernel,
+                           p.stride,
+                           p.dilate,
+                           p.pad,
+                           p.num_filter,
+                           p.num_group,
+                           p.workspace,
+                           p.layout,
+                           p.add_to,
+                           x.shape_,
+                           x.type_flag_,
+                           w.shape_,
+                           w.type_flag_,
+                           y.shape_);
   }
 
-  static cudnn_cxx::Descriptor Make(const OpContext& ctx, const Param& param, const TBlob& x,
-                                    const TBlob& w, const TBlob& y);
+  static cudnn_cxx::Descriptor Make(const OpContext& ctx,
+                                    const Param& param,
+                                    const TBlob& x,
+                                    const TBlob& w,
+                                    const TBlob& y);
 
-  static void Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& x,
-                   const TBlob& w, const TBlob& y);
+  static void Exec(const cudnn_cxx::Descriptor& plan,
+                   const OpContext& ctx,
+                   const TBlob& x,
+                   const TBlob& w,
+                   const TBlob& y);
 };
 
 struct ConvDgrad {
@@ -164,16 +184,33 @@ struct ConvDgrad {
   enum UIDs { ID_W = 1, ID_DY, ID_DX };
 
   static auto MakeKey(const Param& p, const TBlob& w, const TBlob& dy, const TBlob& dx) {
-    return std::make_tuple(p.kernel, p.stride, p.dilate, p.pad, p.num_filter, p.num_group,
-                           p.workspace, p.layout, p.add_to, w.shape_, w.type_flag_, dy.shape_,
-                           dy.type_flag_, dx.shape_);
+    return std::make_tuple(p.kernel,
+                           p.stride,
+                           p.dilate,
+                           p.pad,
+                           p.num_filter,
+                           p.num_group,
+                           p.workspace,
+                           p.layout,
+                           p.add_to,
+                           w.shape_,
+                           w.type_flag_,
+                           dy.shape_,
+                           dy.type_flag_,
+                           dx.shape_);
   }
 
-  static cudnn_cxx::Descriptor Make(const OpContext& ctx, const Param& param, const TBlob& w,
-                                    const TBlob& dy, const TBlob& dx);
+  static cudnn_cxx::Descriptor Make(const OpContext& ctx,
+                                    const Param& param,
+                                    const TBlob& w,
+                                    const TBlob& dy,
+                                    const TBlob& dx);
 
-  static void Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& w,
-                   const TBlob& dy, const TBlob& dx);
+  static void Exec(const cudnn_cxx::Descriptor& plan,
+                   const OpContext& ctx,
+                   const TBlob& w,
+                   const TBlob& dy,
+                   const TBlob& dx);
 };
 
 struct ConvWgrad {
@@ -181,16 +218,33 @@ struct ConvWgrad {
   enum UIDs { ID_X = 1, ID_DY, ID_DW };
 
   static auto MakeKey(const Param& p, const TBlob& x, const TBlob& dy, const TBlob& dw) {
-    return std::make_tuple(p.kernel, p.stride, p.dilate, p.pad, p.num_filter, p.num_group,
-                           p.workspace, p.layout, p.add_to, x.shape_, x.type_flag_, dy.shape_,
-                           dy.type_flag_, dw.shape_);
+    return std::make_tuple(p.kernel,
+                           p.stride,
+                           p.dilate,
+                           p.pad,
+                           p.num_filter,
+                           p.num_group,
+                           p.workspace,
+                           p.layout,
+                           p.add_to,
+                           x.shape_,
+                           x.type_flag_,
+                           dy.shape_,
+                           dy.type_flag_,
+                           dw.shape_);
   }
 
-  static cudnn_cxx::Descriptor Make(const OpContext& ctx, const Param& param, const TBlob& x,
-                                    const TBlob& dy, const TBlob& dw);
+  static cudnn_cxx::Descriptor Make(const OpContext& ctx,
+                                    const Param& param,
+                                    const TBlob& x,
+                                    const TBlob& dy,
+                                    const TBlob& dw);
 
-  static void Exec(const cudnn_cxx::Descriptor& plan, const OpContext& ctx, const TBlob& x,
-                   const TBlob& dy, const TBlob& dw);
+  static void Exec(const cudnn_cxx::Descriptor& plan,
+                   const OpContext& ctx,
+                   const TBlob& x,
+                   const TBlob& dy,
+                   const TBlob& dw);
 };
 
 }  // namespace cudnn

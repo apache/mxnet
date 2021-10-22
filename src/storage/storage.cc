@@ -90,7 +90,7 @@ StorageManager* CreateStorageManager(const Context& ctx,
   return ptr;
 }
 
-void StorageImpl::Alloc(Storage::Handle *handle, bool failsafe) {
+void StorageImpl::Alloc(Storage::Handle* handle, bool failsafe) {
   // Set dptr to nullptr when handle size is 0.
   if (handle->size == 0) {
     handle->dptr = nullptr;

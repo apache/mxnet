@@ -171,7 +171,7 @@ class PooledStorageManager : public StorageManager, public BucketingStrategy, pu
   std::unique_ptr<ContextHelper> contextHelper_;
 };
 
-template<typename BucketingStrategy, typename StoringMethod>
+template <typename BucketingStrategy, typename StoringMethod>
 void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Handle* handle,
                                                                    bool failsafe) {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
@@ -197,9 +197,9 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
         // should not grow.
         // Clear sticky cuda mem alloc error
         cudaGetLastError();
-        ret = nullptr;
+        ret       = nullptr;
         roundSize = 0;
-        e = cudaSuccess;
+        e         = cudaSuccess;
       }
 #endif
       if (e) {
