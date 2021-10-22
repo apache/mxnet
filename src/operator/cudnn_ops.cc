@@ -534,6 +534,7 @@ Descriptor SelectPlan(const OpContext& ctx,
   if (plans.empty()) {
     std::vector<int64_t> ixs(n_fallbacks);
     std::iota(ixs.begin(), ixs.end(), 0);
+#if CUDNN_VERSION >= 8200
     plans = MakeFallbackPlans(ixs,
                               s->dnn_handle_,
                               op_graph,
@@ -541,13 +542,19 @@ Descriptor SelectPlan(const OpContext& ctx,
                               &workspace_size,
                               excl_engines,
                               RequireNumerics(),
-                              ExcludeNumerics()
-#if CUDNN_VERSION >= 8200
-                                  ,
+                              ExcludeNumerics(),
                               {},
-                              {}
+                              {});
+#else
+    plans = MakeFallbackPlans(ixs,
+                              s->dnn_handle_,
+                              op_graph,
+                              workspace_limit,
+                              &workspace_size,
+                              excl_engines,
+                              RequireNumerics(),
+                              ExcludeNumerics());
 #endif  // CUDNN_VERSION >= 8200
-    );
     workspace = AllocWorkspace(&plans, &workspace_size);
     CHECK(!plans.empty());
     LOG(WARNING) << "Using fallback engine(s) for " << make_op_str();
