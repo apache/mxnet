@@ -2175,41 +2175,43 @@ def test_np_reshape():
 
 
 @use_np
-def test_np_argsort():
+@pytest.mark.parametrize('descending', [True, False])
+@pytest.mark.parametrize('shape', [
+    (),
+    (2, 3),
+    (1, 0, 2),
+])
+def test_np_argsort(descending, shape):
     class TestArgsort(HybridBlock):
-        def __init__(self, axis):
+        def __init__(self, axis, descending):
             super(TestArgsort, self).__init__()
             self._axis = axis
+            self._descending = descending
 
         def forward(self, x):
-            return np.argsort(x, axis=self._axis)
+            return np.argsort(x, axis=self._axis, descending=self._descending)
 
-    shapes = [
-        (),
-        (2, 3),
-        (1, 0, 2),
-    ]
-
-    for shape in shapes:
-        data = np.random.uniform(size=shape)
-        np_data = data.asnumpy()
-
-        for axis in [None] + [i for i in range(-len(shape), len(shape))]:
+    data = np.random.uniform(size=shape)
+    np_data = data.asnumpy()
+    for axis in [None] + [i for i in range(-len(shape), len(shape))]:
+        if descending:
+            np_out = onp.argsort(-np_data, axis)
+        else:
             np_out = onp.argsort(np_data, axis)
 
-            test_argsort = TestArgsort(axis)
-            for hybrid in [False, True]:
-                if hybrid:
-                    test_argsort.hybridize()
-                mx_out = test_argsort(data)
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
-
-            mx_out = np.argsort(data, axis)
+        test_argsort = TestArgsort(axis, descending)
+        for hybrid in [False, True]:
+            if hybrid:
+                test_argsort.hybridize()
+            mx_out = test_argsort(data)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+        mx_out = np.argsort(data, axis, descending)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
 @use_np
-@pytest.mark.parametrize('kind', ['quicksort', 'mergesort', 'heapsort'])
+@pytest.mark.parametrize('descending', [True, False])
 @pytest.mark.parametrize('shape', [
     (),
     (1,),
@@ -2231,32 +2233,35 @@ def test_np_argsort():
 ])
 @pytest.mark.parametrize('dtype', [np.int8, np.uint8, np.int32, np.int64, np.float32, np.float64])
 @pytest.mark.parametrize('hybridize', [True, False])
-def test_np_sort(kind, shape, dtype, hybridize):
+def test_np_sort(shape, dtype, hybridize, descending):
     class TestSort(HybridBlock):
-        def __init__(self, axis, kind):
+        def __init__(self, axis, descending):
             super(TestSort, self).__init__()
             self._axis = axis
-            self._kind = kind
+            self._descending = descending
 
-        def forward(self, x, *args, **kwargs):
-            return np.sort(x, self._axis, self._kind)
+        def forward(self, x):
+            return np.sort(x, self._axis, descending=self._descending)
 
     a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
     axis_list = list(range(len(shape)))
     axis_list.append(None)
     axis_list.append(-1)
     for axis in axis_list:
-        test = TestSort(axis, kind)
+        test = TestSort(axis, descending)
         if hybridize:
             test.hybridize()
         if axis == -1 and len(shape)==0:
             continue
         ret = test(a)
-        expected_ret = onp.sort(a.asnumpy(), axis, kind)
+        if descending:
+            expected_ret = -onp.sort(-a.asnumpy(), axis)
+        else:
+            expected_ret = onp.sort(a.asnumpy(), axis)
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
         # check imperative again
-        ret = np.sort(a, axis, kind)
+        ret = np.sort(a, axis=axis, descending=descending)
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
 
@@ -6068,18 +6073,36 @@ def test_np_linalg_qr():
 
 
 @use_np
-def test_np_linalg_cholesky():
+@pytest.mark.parametrize('shape', [
+    (0, 0),
+    (1, 1),
+    (5, 5),
+    (6, 6),
+    (10, 10),
+    (6, 6, 6),
+    (1, 0, 0),
+    (0, 1, 1),
+    (2, 3, 4, 4),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('upper', [True, False])
+@pytest.mark.parametrize('hybridize', [True, False])
+def test_np_linalg_cholesky(shape, dtype, upper, hybridize):
     class TestCholesky(HybridBlock):
-        def __init__(self):
+        def __init__(self, upper=False):
             super(TestCholesky, self).__init__()
+            self._upper = upper
 
         def forward(self, data):
-            return np.linalg.cholesky(data)
+            return np.linalg.cholesky(data, upper=self._upper)
 
-    def get_grad(L):
+    def get_grad(L, upper):
         # shape of m is [batch, n, n]
         if 0 in L.shape:
             return L
+        
+        if upper:
+            L = onp.swapaxes(L, -1, -2)
 
         def copyltu(m):
             eye = onp.array([onp.eye(m.shape[-1]) for i in range(m.shape[0])])
@@ -6098,11 +6121,14 @@ def test_np_linalg_cholesky():
         dA = 0.5 * onp.matmul(onp.matmul(L_inv_T, copyltu(onp.matmul(L_T, dL))), L_inv)
         return dA.reshape(shape)
 
-    def check_cholesky(L, data_np):
+    def check_cholesky(L, data_np, upper):
         assert L.shape == data_np.shape
         # catch error if numpy throws rank < 2
         try:
-            L_expected = onp.linalg.cholesky(data_np)
+            if upper:
+                L_expected = onp.swapaxes(onp.linalg.cholesky(data_np), -1, -2)
+            else:
+                L_expected = onp.linalg.cholesky(data_np)
         except Exception as e:
             print(data_np)
             print(data_np.shape)
@@ -6127,64 +6153,52 @@ def test_np_linalg_cholesky():
         n = int(onp.prod(shape[:-2])) if len(shape) > 2 else 1
         return onp.array([newSymmetricPositiveDefineMatrix_2D(shape[-2:], ran, max_cond) for i in range(n)]).reshape(shape)
 
-    shapes = [
-        (0, 0),
-        (1, 1),
-        (5, 5),
-        (6, 6),
-        (10, 10),
-        (6, 6, 6),
-        (1, 0, 0),
-        (0, 1, 1),
-        (2, 3, 4, 4),
-    ]
-    dtypes = ['float32', 'float64']
-    for hybridize, dtype, shape in itertools.product([True, False], dtypes, shapes):
-        rtol = 1e-3
-        atol = 1e-5
-        if dtype == 'float32':
-            rtol = 1e-2
-            atol = 1e-4
 
-        test_cholesky = TestCholesky()
-        if hybridize:
-            test_cholesky.hybridize()
+    rtol = 1e-3
+    atol = 1e-5
+    if dtype == 'float32':
+        rtol = 1e-2
+        atol = 1e-4
 
-        # Numerical issue:
-        # When backpropagating through Cholesky decomposition, we need to compute the inverse
-        # of L according to dA = 0.5 * L**(-T) * copyLTU(L**T * dL) * L**(-1) where A = LL^T.
-        # The inverse is calculated by "trsm" method in CBLAS. When the data type is float32,
-        # this causes numerical instability. It happens when the matrix is ill-conditioned.
-        # In this example, the issue occurs frequently if the symmetric positive definite input
-        # matrix A is constructed by A = LL^T + \epsilon * I. A proper way of testing such
-        # operators involving numerically unstable operations is to use well-conditioned random
-        # matrices as input. Here we test Cholesky decomposition for FP32 and FP64 separately.
-        # See rocBLAS:
-        # https://github.com/ROCmSoftwarePlatform/rocBLAS/wiki/9.Numerical-Stability-in-TRSM
+    test_cholesky = TestCholesky(upper)
+    if hybridize:
+        test_cholesky.hybridize()
 
-        # generate symmetric PD matrices
-        if 0 in shape:
-            data_np = np.ones(shape)
-        else:
-            data_np = newSymmetricPositiveDefineMatrix_nD(shape)
+    # Numerical issue:
+    # When backpropagating through Cholesky decomposition, we need to compute the inverse
+    # of L according to dA = 0.5 * L**(-T) * copyLTU(L**T * dL) * L**(-1) where A = LL^T.
+    # The inverse is calculated by "trsm" method in CBLAS. When the data type is float32,
+    # this causes numerical instability. It happens when the matrix is ill-conditioned.
+    # In this example, the issue occurs frequently if the symmetric positive definite input
+    # matrix A is constructed by A = LL^T + \epsilon * I. A proper way of testing such
+    # operators involving numerically unstable operations is to use well-conditioned random
+    # matrices as input. Here we test Cholesky decomposition for FP32 and FP64 separately.
+    # See rocBLAS:
+    # https://github.com/ROCmSoftwarePlatform/rocBLAS/wiki/9.Numerical-Stability-in-TRSM
 
-        # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
-        # instability since the ground-truth gradient is computed using FP64 data.
-        data = np.array(data_np, dtype=dtype)
-        data.attach_grad()
-        with mx.autograd.record():
-            L = test_cholesky(data)
+    # generate symmetric PD matrices
+    if 0 in shape:
+        data_np = np.ones(shape)
+    else:
+        data_np = newSymmetricPositiveDefineMatrix_nD(shape)
 
-        # check cholesky validity
-        check_cholesky(L, data_np)
-        # check backward. backward does not support empty input
-        if 0 not in L.shape:
-            mx.autograd.backward(L)
-            backward_expected = get_grad(L.asnumpy())
-            assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
-        # check imperative once again
-        L = np.linalg.cholesky(data)
-        check_cholesky(L, data_np)
+    # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
+    # instability since the ground-truth gradient is computed using FP64 data.
+    data = np.array(data_np, dtype=dtype)
+    data.attach_grad()
+    with mx.autograd.record():
+        L = test_cholesky(data)
+
+    # check cholesky validity
+    check_cholesky(L, data_np, upper)
+    # check backward. backward does not support empty input
+    if 0 not in L.shape:
+        mx.autograd.backward(L)
+        backward_expected = get_grad(L.asnumpy(), upper)
+        assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+    # check imperative once again
+    L = np.linalg.cholesky(data, upper=upper)
+    check_cholesky(L, data_np, upper)
 
 
 @use_np
