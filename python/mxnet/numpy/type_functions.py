@@ -17,11 +17,11 @@
 
 """Type functions for the numpy module."""
 
+from typing import NamedTuple
 
 import numpy as onp
-from typing import NamedTuple
-from multiarray import ndarray
-from utils import _type_promotion_table
+from .multiarray import ndarray
+from .utils import _type_promotion_table
 
 
 __all__ = ['can_cast', 'finfo', 'iinfo', 'result_type']
@@ -68,9 +68,9 @@ def finfo(dtype):
     """
     Machine limits for floating-point data types.
 
-    Notes 
-    ----- 
-    `finfo` is a standard API in 
+    Notes
+    -----
+    `finfo` is a standard API in
     https://data-apis.org/array-api/latest/API_specification/data_type_functions.html#finfo-type
     instead of an official NumPy operator.
 
@@ -104,9 +104,9 @@ def iinfo(dtype):
     """
     Machine limits for floating-point data types.
 
-    Notes 
-    ----- 
-    `iinfo` is a standard API in 
+    Notes
+    -----
+    `iinfo` is a standard API in
     https://data-apis.org/array-api/latest/API_specification/data_type_functions.html#iinfo-type
     instead of an official NumPy operator.
 
@@ -134,7 +134,7 @@ def _get_dtype(array_or_dtype):
     """Utility function for result_type"""
     if isinstance(array_or_dtype, (ndarray, onp.ndarray)):
         return array_or_dtype.dtype
-    elif isinstance(d, onp.dtype):
+    elif isinstance(array_or_dtype, onp.dtype):
         return array_or_dtype
     else:
         raise ValueError("Inputs of result_type must be ndarrays or dtypes")
@@ -144,9 +144,9 @@ def result_type(*arrays_and_dtypes):
     """
     Returns the dtype that results from applying the type promotion rules to the arguments.
 
-    Notes 
-    ----- 
-    `result_type` is a standard API in 
+    Notes
+    -----
+    `result_type` is a standard API in
     https://data-apis.org/array-api/latest/API_specification/data_type_functions.html#result-type-arrays-and-dtypes
     instead of an official NumPy operator.
 
@@ -160,9 +160,7 @@ def result_type(*arrays_and_dtypes):
     out : dtype
         the dtype resulting from an operation involving the input arrays and dtypes.
     """
-    if len(arrays_and_dtypes) == 0:
-        raise ValueError("at least one array or dtype is required")
-    else:
+    if len(arrays_and_dtypes) > 0:
         ret = _get_dtype(arrays_and_dtypes[0])
         for d in arrays_and_dtypes[1:]:
             dd = _get_dtype(arrays_and_dtypes[d])
@@ -173,4 +171,4 @@ def result_type(*arrays_and_dtypes):
             else:
                 raise TypeError("Unknown type promotion between {} and {}".format(ret, dd))
         return ret
-
+    raise ValueError("at least one array or dtype is required")
