@@ -1551,7 +1551,7 @@ def any(a, axis=None, out=None, keepdims=False):
 
 
 @set_module('mxnet.ndarray.numpy')
-def argsort(a, axis=-1, descending=False, kind=None, order=None):
+def argsort(a, axis=-1, descending=False, stable=True):
     """
     Returns the indices that sort an array `x` along a specified axis.
 
