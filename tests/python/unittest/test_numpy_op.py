@@ -4460,50 +4460,58 @@ def test_np_argmin_argmax():
     ops = ['argmin', 'argmax']
 
     class TestArgExtreme(HybridBlock):
-        def __init__(self, op_name, axis=None):
+        def __init__(self, op_name, axis=None, keepdims=False):
             super(TestArgExtreme, self).__init__()
             self._op_name = op_name
             self._axis = axis
+            self.keepdims = keepdims
 
         def forward(self, x):
-            return getattr(x, self._op_name)(self._axis)
+            return getattr(x, self._op_name)(self._axis, keepdims=self.keepdims)
 
     for op_name in ops:
-        for shape, axis, throw_exception in workloads:
-            for dtype in dtypes:
-                a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
-                if throw_exception:
-                    # Cannot use assert_exception because sometimes the main thread
-                    # proceeds to `assert False` before the exception is thrown
-                    # in the worker thread. Have to use mx.nd.waitall() here
-                    # to block the main thread.
-                    try:
-                        getattr(np, op_name)(a, axis)
-                        mx.nd.waitall()
-                        assert False
-                    except mx.MXNetError:
-                        pass
-                else:
-                    mx_ret = getattr(np, op_name)(a, axis=axis)
-                    np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
-                    assert mx_ret.dtype == np_ret.dtype
-                    assert same(mx_ret.asnumpy(), np_ret)
-
-                for hybridize in [False, True]:
-                    net = TestArgExtreme(op_name, axis)
-                    if hybridize:
-                        net.hybridize()
+        for keepdims in (True, False):
+            for shape, axis, throw_exception in workloads:
+                for dtype in dtypes:
+                    a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
                     if throw_exception:
+                        # Cannot use assert_exception because sometimes the main thread
+                        # proceeds to `assert False` before the exception is thrown
+                        # in the worker thread. Have to use mx.nd.waitall() here
+                        # to block the main thread.
                         try:
-                            net(a)
+                            getattr(np, op_name)(a, axis)
                             mx.nd.waitall()
                             assert False
                         except mx.MXNetError:
                             pass
                     else:
-                        mx_ret = net(a)
+                        mx_ret = getattr(np, op_name)(a, axis=axis, keepdims=keepdims)
+                        np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
                         assert mx_ret.dtype == np_ret.dtype
-                        assert same(mx_ret.asnumpy(), np_ret)
+                        if keepdims:
+                            assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
+                        else:
+                            assert same(mx_ret.asnumpy(), np_ret)
+
+                    for hybridize in [False, True]:
+                        net = TestArgExtreme(op_name, axis, keepdims)
+                        if hybridize:
+                            net.hybridize()
+                        if throw_exception:
+                            try:
+                                net(a)
+                                mx.nd.waitall()
+                                assert False
+                            except mx.MXNetError:
+                                pass
+                        else:
+                            mx_ret = net(a)
+                            assert mx_ret.dtype == np_ret.dtype
+                            if keepdims:
+                                assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
+                            else:
+                                assert same(mx_ret.asnumpy(), np_ret)
 
 
 @use_np
