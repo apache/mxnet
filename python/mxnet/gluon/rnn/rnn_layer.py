@@ -23,7 +23,7 @@
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import np, npx, context
+from ... import np, npx, context, initializer
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
 from ...util import use_np
@@ -50,11 +50,6 @@ class _RNNLayer(HybridBlock):
         self._dropout = dropout
         self._dir = 2 if bidirectional else 1
         self._input_size = input_size
-        self._i2h_weight_initializer = i2h_weight_initializer
-        self._h2h_weight_initializer = h2h_weight_initializer
-        self._i2h_bias_initializer = i2h_bias_initializer
-        self._h2h_bias_initializer = h2h_bias_initializer
-        self._h2r_weight_initializer = h2r_weight_initializer
         self._lstm_state_clip_min = lstm_state_clip_min
         self._lstm_state_clip_max = lstm_state_clip_max
         self._lstm_state_clip_nan = lstm_state_clip_nan
@@ -64,48 +59,17 @@ class _RNNLayer(HybridBlock):
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
-        ng, ni, nh = self._gates, input_size, hidden_size
-        if not projection_size:
-            for i in range(num_layers):
-                for j in ['l', 'r'][:self._dir]:
-                    self._register_param('{}{}_i2h_weight'.format(j, i),
-                                         shape=(ng*nh, ni),
-                                         init=i2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_weight'.format(j, i),
-                                         shape=(ng*nh, nh),
-                                         init=h2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_i2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=i2h_bias_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=h2h_bias_initializer, dtype=dtype)
-                ni = nh * self._dir
-        else:
-            ps = self._projection_size
-            for i in range(num_layers):
-                for j in ['l', 'r'][:self._dir]:
-                    self._register_param('{}{}_i2h_weight'.format(j, i),
-                                         shape=(ng*nh, ni),
-                                         init=i2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_weight'.format(j, i),
-                                         shape=(ng*nh, ps),
-                                         init=h2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_i2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=i2h_bias_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=h2h_bias_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2r_weight'.format(j, i),
-                                         shape=(ps, nh),
-                                         init=h2r_weight_initializer, dtype=dtype)
-                ni = ps * self._dir
+        param_initializer = initializer.RNNFused(
+            mode, num_layers, hidden_size,
+            bidirectional, projection_size,
+            i2h_weight_initializer=i2h_weight_initializer,
+            h2h_weight_initializer=h2h_weight_initializer,
+            i2h_bias_initializer=i2h_bias_initializer,
+            h2h_bias_initializer=h2h_bias_initializer,
+            h2r_weight_initializer=h2r_weight_initializer)
 
-    def _register_param(self, name, shape, init, dtype):
-        p = Parameter(name, shape=shape, init=init, allow_deferred_init=True, dtype=dtype)
-        setattr(self, name, p)
-        return p
+        self.rnn_param = Parameter('rnn_param', shape=(-1,), init=param_initializer,
+                                   allow_deferred_init=True, dtype=dtype)
 
     def __repr__(self):
         s = '{name}({mapping}, {_layout}'
@@ -116,8 +80,7 @@ class _RNNLayer(HybridBlock):
         if self._dir == 2:
             s += ', bidirectional'
         s += ')'
-        shape = self.l0_i2h_weight.shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // self._gates)
+        mapping = '{0} -> {1}'.format(self._input_size if self._input_size else None, self._hidden_size)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -196,37 +159,26 @@ class _RNNLayer(HybridBlock):
     def infer_shape(self, inputs, *args):
         assert inputs.ndim == 3, \
             "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]"
-        if not self._projection_size:
-            step = self._hidden_size
-        else:
-            step = self._projection_size
-        ni = inputs.shape[2]
-        for i in range(self._num_layers):
-            for j in ['l', 'r'][:self._dir]:
-                name = '{}{}_i2h_weight'.format(j, i)
-                getattr(self, name).shape = (self._gates*self._hidden_size, ni)
-            ni = step * self._dir
+        self._input_size = inputs.shape[2]
+        ng, ni, nh = self._gates, inputs.shape[2], self._hidden_size
+
+        size = nh * self._dir * ng
+        size1 = (ni + nh + 2) * size  # first layer size
+        size2 = (nh * self._dir + nh + 2) * size  # second layer size
+        if self._projection_size:
+            size1 = (ni + self._projection_size + 2) * size  # first layer size
+            size2 = (self._projection_size * self._dir + \
+                self._projection_size + 2) * size  # second layer size
+        param_size = size1 + (self._num_layers - 1) * size2
+        if self._projection_size:
+            param_size += self._projection_size * nh * self._num_layers * self._dir
+        self.rnn_param.shape = (param_size, )
 
     def _forward_kernel(self, inputs, states, sequence_length):
         """ forward using CUDNN or CPU kenrel"""
         ctx = inputs.ctx
         if self._layout == 'NTC':
             inputs = np.swapaxes(inputs, 0, 1)
-        if self._projection_size is None:
-            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(ctx).reshape(-1)
-                      for t in ['weight', 'bias']
-                      for l in range(self._num_layers)
-                      for d in ['l', 'r'][:self._dir]
-                      for g in ['i2h', 'h2h'])
-        else:
-            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(ctx).reshape(-1)
-                      for t in ['weight', 'bias']
-                      for l in range(self._num_layers)
-                      for d in ['l', 'r'][:self._dir]
-                      for g in ['i2h', 'h2h', 'h2r']
-                      if g != 'h2r' or t != 'bias')
-
-        params = np.concatenate(params, axis=0)
 
         if self._use_sequence_length:
             rnn_args = states + [sequence_length]
@@ -238,7 +190,8 @@ class _RNNLayer(HybridBlock):
             new_args = args.as_in_ctx(ctx)
             rnn_args_ctx.append(new_args)
 
-        rnn = npx.rnn(inputs, params, *rnn_args_ctx, use_sequence_length=self._use_sequence_length,
+        rnn = npx.rnn(inputs, self.rnn_param.data().as_in_ctx(ctx), *rnn_args_ctx,
+                      use_sequence_length=self._use_sequence_length,
                       state_size=self._hidden_size, projection_size=self._projection_size,
                       num_layers=self._num_layers, bidirectional=self._dir == 2,
                       p=self._dropout, state_outputs=True, mode=self._mode,
