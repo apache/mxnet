@@ -2818,6 +2818,7 @@ def test_np_unary_funcs():
         'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
         'logical_not' : (None, -1.0, 1.0),
         'negative' : (lambda x: -1. * onp.ones(x.shape), -1.0, 1.0),
+        'positive' : (lambda x: onp.ones(x.shape), -1.0, 1.0),
         'reciprocal' : (lambda x: -1. / (x ** 2), 0.01, 1.0),
         'sign' : (None, -1.0, 1.0),
         'square' : (lambda x: 2.0 * x, -1.0, 1.0),

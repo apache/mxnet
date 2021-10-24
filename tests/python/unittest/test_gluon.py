@@ -1362,7 +1362,7 @@ def test_save_load(tmpdir):
                 x = self.encoders[i](x)
             return x
     net = Network()
-    net.initialize(mx.init.Xavier(), device=mx.cpu())
+    net.initialize(mx.init.Uniform(), device=mx.cpu())
     net.hybridize()
     x = onp.random.rand(32, 10, 10)
     x = mx.np.array(x).as_in_context(mx.cpu())

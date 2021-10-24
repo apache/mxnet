@@ -81,7 +81,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
+           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal', 'positive',
            'asarray', 'from_dlpack']
 
 __all__ += fallback.__all__
@@ -1116,7 +1116,12 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return multiply(self, other)
 
     def __neg__(self):
+        """x.__neg__() <=> -x"""
         return negative(self)
+
+    def __pos__(self):
+        """x.__pos__() <=> +x"""
+        return positive(self)
 
     @wrap_mxnp_np_ufunc
     def __imul__(self, other):
@@ -5089,6 +5094,38 @@ def negative(x, out=None, **kwargs):
     -1
     """
     return _mx_nd_np.negative(x, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def positive(x, out=None, **kwargs):
+    r"""
+    Computes the numerical positive of each element `x_i` (i.e.,`y_i = +x_i`)
+    of the input array x .
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Returned array or scalar: y = +x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    Equivalent to `x.copy()`, but only defined for types that support arithmetic.
+
+    Examples
+    --------
+    >>> x1 = np.array(([1., -1.]))
+    >>> np.positive(x1)
+    array([ 1., -1.])
+    >>> +x1
+    array([ 1., -1.])
+    """
+    return _mx_nd_np.positive(x, out=out)
 
 
 @set_module('mxnet.numpy')

@@ -711,3 +711,122 @@ class LSTMBias(Initializer):
         # gate of the 4 LSTM gates, we modify the according values.
         num_hidden = int(arr.shape[0] / 4)
         arr[num_hidden:2*num_hidden] = self.forget_bias
+
+
+@register
+class RNNFused(Initializer):
+    """Initialize RNN fused parameter with bias part initialized to 0.0 and
+    weight initialized with random values uniformly sampled from a given range.
+
+    Parameters
+    ----------
+    mode : {'gru', 'lstm', 'rnn_relu', 'rnn_tanh'}, required
+        the type of RNN to compute
+    num_layers : int (non-negative), required
+        number of stacked layers
+    state_size : int (non-negative), required
+        size of the state for each layer
+    bidirectional : boolean, optional, default=0
+        whether to use bidirectional recurrent layers
+    projection_size : int or None, optional, default='None'
+        size of project size
+    scale : float, optional
+        The bound on the range of the generated random values for weights.
+        Values are generated from the range [-`scale`, `scale`].
+        Default scale is 0.07.
+    """
+    def __init__(self, mode, num_layers, state_size, bidirectional=False,
+                 projection_size=None, i2h_weight_initializer=None,
+                 h2h_weight_initializer=None, i2h_bias_initializer=None,
+                 h2h_bias_initializer=None, h2r_weight_initializer=None):
+        super(RNNFused, self).__init__(mode=mode, num_layers=num_layers,
+                                       state_size=state_size,
+                                       bidirectional=bidirectional,
+                                       projection_size=projection_size,
+                                       i2h_weight_initializer=i2h_weight_initializer,
+                                       h2h_weight_initializer=h2h_weight_initializer,
+                                       i2h_bias_initializer=i2h_bias_initializer,
+                                       h2h_bias_initializer=h2h_bias_initializer,
+                                       h2r_weight_initializer=h2r_weight_initializer)
+        self.gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
+        self.num_layers = num_layers
+        self.num_hidden = state_size
+        self.dir = 2 if bidirectional else 1
+        self.projection_size = projection_size
+        self._i2h_weight_initializer = i2h_weight_initializer
+        self._h2h_weight_initializer = h2h_weight_initializer
+        self._i2h_bias_initializer = i2h_bias_initializer
+        self._h2h_bias_initializer = h2h_bias_initializer
+        self._h2r_weight_initializer = h2r_weight_initializer
+
+    # pylint: disable=too-many-nested-blocks
+    def _init_weight(self, name, arr):
+        arr_len = arr.shape[0]
+        size = self.num_hidden * self.dir * self.gates
+        if not self.projection_size:
+            # second layer size
+            size2 = (self.num_hidden * self.dir + self.num_hidden + 2) * size
+            input_size = (arr_len - (self.num_layers - 1) * size2) // \
+                size - 2 - self.num_hidden
+        else:
+            # second layer size
+            size2 = (self.projection_size * self.dir + self.projection_size + 2) * size
+            size_projection = self.projection_size * self.num_hidden * self.num_layers * self.dir
+            input_size = (arr_len - size_projection - (self.num_layers - 1) * size2) // \
+                size - 2 - self.projection_size
+        begin = 0
+        if not self.projection_size:
+            for param in ['weight', 'bias']:
+                for layer_num in range(self.num_layers):
+                    for _ in range(self.dir):
+                        for connect in ['i2h', 'h2h']:
+                            num_inputs = input_size
+                            if layer_num != 0:
+                                num_inputs = self.num_hidden * self.dir
+                            if connect == 'h2h':
+                                num_inputs = self.num_hidden
+                            shape0 = self.gates * self.num_hidden
+                            if param == 'weight':
+                                cur_len = shape0 * num_inputs
+                            else:
+                                cur_len = shape0
+                            self._init_util(param, connect, arr[begin:begin+cur_len])
+                            begin += cur_len
+        else:
+            for param in ['weight', 'bias']:
+                for layer_num in range(self.num_layers):
+                    for _ in range(self.dir):
+                        for connect in ['i2h', 'h2h', 'h2r']:
+                            if connect != 'h2r' or param != 'bias':
+                                if connect == 'h2r':
+                                    cur_len = self.projection_size * self.num_hidden
+                                else:
+                                    num_inputs = input_size
+                                    if layer_num != 0:
+                                        num_inputs = self.projection_size * self.dir
+                                    if connect == 'h2h':
+                                        num_inputs = self.projection_size
+                                    shape0 = self.gates * self.num_hidden
+                                    if param == 'weight':
+                                        cur_len = shape0 * num_inputs
+                                    else:
+                                        cur_len = shape0
+                                self._init_util(param, connect, arr[begin:begin+cur_len])
+                                begin += cur_len
+
+    def _init_util(self, param, connect, arr):
+        name = "_{}_{}_initializer".format(connect, param)
+        init = getattr(self, name)
+        create(init)(InitDesc(name, {'__init__': init}), arr)
+
+    def set_initializer(self, init):
+        self._i2h_weight_initializer = \
+            init if not self._i2h_weight_initializer else 'uniform'
+        self._h2h_weight_initializer = \
+            init if not self._h2h_weight_initializer else 'uniform'
+        self._i2h_bias_initializer = \
+            init if not self._i2h_bias_initializer else 'zero'
+        self._h2h_bias_initializer = \
+            init if not self._i2h_bias_initializer else 'zero'
+        self._h2r_weight_initializer = \
+            init if not self._h2r_weight_initializer else 'uniform'
