@@ -179,7 +179,7 @@ void MKLDNNPoolingCompute(const OpContext& ctx,
                           const OpReqType req,
                           const NDArray& out_data,
                           const NDArray* workspace,
-                          const bool use_adaptive);
+                          const bool use_adaptive_pooling);
 
 void MKLDNNPoolingGradCompute(const OpContext& ctx,
                               const PoolingParam& param,
@@ -192,7 +192,7 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                                 const bool is_train,
                                 const NDArray& data,
                                 const NDArray& output,
-                                const bool use_adaptive);
+                                const bool use_adaptive_pooling);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1
