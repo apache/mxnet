@@ -767,7 +767,7 @@ class Block:
         params = self.collect_params()
         for i in params.values():
             i.reset_device(device)
-    
+
     def reset_ctx(self, ctx):
         """This function has been deprecated. Please refer to ``Block.reset_device``."""
         warnings.warn('Block.reset_ctx has been renamed to'

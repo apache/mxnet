@@ -149,7 +149,7 @@ class Estimator(object):
         warnings.warn('Estimator._check_context has been renamed to'
                       ' Estimator._check_devices', DeprecationWarning)
         return self._check_devices(context)
-    
+
     def _check_devices(self, devices):
         # infer available devices
         gpus = num_gpus()
@@ -239,8 +239,8 @@ class Estimator(object):
     def _get_data_and_label(self, batch, device, batch_axis=0):
         data = batch[0]
         label = batch[1]
-        data = split_and_load(data, device_list=device, batch_axis=batch_axis)
-        label = split_and_load(label, device_list=device, batch_axis=batch_axis)
+        data = split_and_load(data, device, batch_axis=batch_axis)
+        label = split_and_load(label, device, batch_axis=batch_axis)
         return data, label
 
     def _add_default_training_metrics(self):

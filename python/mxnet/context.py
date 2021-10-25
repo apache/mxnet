@@ -16,17 +16,17 @@
 # under the License.
 """Context management API of mxnet."""
 from warnings import warn
-from .device import Device, _current, cpu, gpu, cpu_pinned
+from .device import Device, _current, cpu, gpu, cpu_pinned  # pylint: disable=unused-import
 
 
 def Context(*args, **kwargs):
     """This class has been deprecated. Please refer to ``device.Device``."""
     warn('Directly use Context class to construct a device will be deprecated. '
-        'Please use Device class instead. ', DeprecationWarning)
+         'Please use Device class instead. ', DeprecationWarning)
     return Device(*args, **kwargs)
 
 def current_context():
     """This function has been deprecated. Please refer to ``device.current_device``."""
     warn('Directly use current_context to get current device will be deprecated. '
-        'Please use current_device method instead. ', DeprecationWarning)
+         'Please use current_device method instead. ', DeprecationWarning)
     return _current.get()

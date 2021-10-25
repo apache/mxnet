@@ -67,7 +67,7 @@ class EmptyLike(operator.CustomOp):
                                 subok=self._subok)
         else:
             out = np.empty_like(in_data[0].asnumpy())
-        self.assign(out_data[0], req[0], _mx_np.array(out, ctx=in_data[0].device))
+        self.assign(out_data[0], req[0], _mx_np.array(out, device=in_data[0].device))
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         raise NotImplementedError('Operator empty_like does not support gradient computation')
@@ -108,7 +108,7 @@ class Resize(operator.CustomOp):
 
     def forward(self, is_train, req, in_data, out_data, aux):
         out = np.resize(in_data[0].asnumpy(), self._new_shape)
-        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out.dtype, ctx=out_data[0].device))
+        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out.dtype, device=out_data[0].device))
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         raise NotImplementedError('Operator resize does not support gradient computation')
@@ -141,7 +141,7 @@ class Unravel_index(operator.CustomOp):
 
     def forward(self, is_train, req, in_data, out_data, aux):
         out = np.unravel_index(in_data[0].asnumpy(), self._shape)
-        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out[0].dtype, ctx=out_data[0].device))
+        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out[0].dtype, device=out_data[0].device))
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         raise NotImplementedError('Operator Unravel_index does not support gradient computation')
@@ -181,7 +181,7 @@ class MultivariateNormal(operator.CustomOp):
         else:
             scale = _mx_np.linalg.cholesky(cov)
         #set context
-        noise = _mx_np.random.normal(size=out_data[0].shape, dtype=loc.dtype, ctx=loc.device)
+        noise = _mx_np.random.normal(size=out_data[0].shape, dtype=loc.dtype, device=loc.device)
         out = loc + _mx_np.einsum('...jk,...j->...k', scale, noise)
         self.assign(out_data[0], req[0], out)
 
