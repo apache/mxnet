@@ -17,7 +17,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from common import *
+from python.mxnet import gluon
+from python.mxnet.test_utils import assert_almost_equal
+from tests.nightly.model_backwards_compatibility_check.common import *
 
 def test_lenet_gluon_load_params_api():
     model_name = 'lenet_gluon_save_params_api'
