@@ -719,7 +719,7 @@ def wrap_sort_functions(func):
             kind = kwargs.pop('kind', None)
             order = kwargs.pop('order', None)
             if kind is not None:
-                kwargs['stable'] = True if kind == 'stable' else False
+                kwargs['stable'] = kind == 'stable'
             if order is not None:
                 raise NotImplementedError("order not supported here")
         return func(*args, **kwargs)

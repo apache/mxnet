@@ -2195,7 +2195,7 @@ def test_np_argsort(descending, shape):
     np_data = data.asnumpy()
     for axis in [None] + [i for i in range(-len(shape), len(shape))]:
         if descending:
-            np_out = onp.argsort(-np_data, axis)
+            np_out = onp.argsort(-1 * np_data, axis)
         else:
             np_out = onp.argsort(np_data, axis)
 
@@ -2255,7 +2255,7 @@ def test_np_sort(shape, dtype, hybridize, descending):
             continue
         ret = test(a)
         if descending:
-            expected_ret = -onp.sort(-a.asnumpy(), axis)
+            expected_ret = -onp.sort(-1 * a.asnumpy(), axis)
         else:
             expected_ret = onp.sort(a.asnumpy(), axis)
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)

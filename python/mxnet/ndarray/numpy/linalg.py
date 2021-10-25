@@ -454,11 +454,11 @@ def cholesky(a, upper=False):
     r"""
     Cholesky decomposition.
 
-    Notes 
-    ----- 
-    `upper` param is requested by API standardization in 
+    Notes
+    -----
+    `upper` param is requested by API standardization in
     https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-cholesky-x-upper-false
-    instead of parameter in official NumPy operator. 
+    instead of parameter in official NumPy operator.
 
     Return the Cholesky decomposition, `L * L.T`, of the square matrix `a`,
     where `L` is lower-triangular and .T is the transpose operator. `a` must be

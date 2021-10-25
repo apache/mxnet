@@ -1878,13 +1878,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pick')
 
-    def sort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
+    def sort(self, axis=-1, descending=False, stable=True):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sort`.
 
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        raise sort(self, axis=axis, kind=kind, order=order)
+        return sort(self, axis=axis, descending=descending, stable=stable)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -1894,13 +1894,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute topk')
 
-    def argsort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
+    def argsort(self, axis=-1, descending=False, stable=True):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        return argsort(self, axis=axis, kind=kind, order=order)
+        return argsort(self, axis=axis, descending=descending, stable=stable)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -5762,11 +5762,11 @@ def argsort(a, axis=-1, descending=False, stable=True):
     """
     Returns the indices that sort an array `x` along a specified axis.
 
-    Notes 
-    ----- 
-    `argsort` is a standard API in 
+    Notes
+    -----
+    `argsort` is a standard API in
     https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#argsort-x-axis-1-descending-false-stable-true
-    instead of an official NumPy operator. 
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -5843,11 +5843,11 @@ def sort(a, axis=-1, descending=False, stable=True):
     """
     Return a sorted copy of an array.
 
-    Notes 
-    ----- 
-    `sort` is a standard API in 
+    Notes
+    -----
+    `sort` is a standard API in
     https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#sort-x-axis-1-descending-false-stable-true
-    instead of an official NumPy operator. 
+    instead of an official NumPy operator.
 
     Parameters
     ----------

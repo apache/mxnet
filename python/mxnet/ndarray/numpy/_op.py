@@ -1555,11 +1555,11 @@ def argsort(a, axis=-1, descending=False, stable=True):
     """
     Returns the indices that sort an array `x` along a specified axis.
 
-    Notes 
-    ----- 
-    `argsort` is a standard API in 
+    Notes
+    -----
+    `argsort` is a standard API in
     https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#argsort-x-axis-1-descending-false-stable-true
-    instead of an official NumPy operator. 
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -1633,11 +1633,11 @@ def sort(a, axis=-1, descending=False, stable=True):
     """
     Return a sorted copy of an array.
 
-    Notes 
-    ----- 
-    `sort` is a standard API in 
+    Notes
+    -----
+    `sort` is a standard API in
     https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#sort-x-axis-1-descending-false-stable-true
-    instead of an official NumPy operator. 
+    instead of an official NumPy operator.
 
     Parameters
     ----------
