@@ -7786,7 +7786,7 @@ def argmax(a, axis=None, out=None, keepdims=False):
 
     .. note::
        ``keepdims`` param is part of request in data-api-standard
-       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false`_,
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
        which is not the parameter in official NumPy
 
        In case of multiple occurrences of the maximum values, the indices
@@ -7864,7 +7864,7 @@ def argmin(a, axis=None, out=None, keepdims=False):
 
     .. note::
        ``keepdims`` param is part of request in data-api-standard
-       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false`_,
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
        which is not the parameter in official NumPy
 
        In case of multiple occurrences of the minimum values, the indices
