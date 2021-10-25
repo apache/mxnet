@@ -108,7 +108,7 @@ void MKLDNNPoolingFwd::Execute(const NDArray& in_data,
   }
 }
 
-mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam& param) {
+mkldnn::algorithm GetMKLDNNPoolingAlgorithm(const PoolingParam& param) {
   switch (param.pool_type) {
     case pool_enum::kMaxPooling:
       return mkldnn::algorithm::pooling_max;
@@ -202,7 +202,7 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& p
 
   InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
-  const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
+  const mkldnn::algorithm alg = GetMKLDNNPoolingAlgorithm(param);
   mkldnn::prop_kind kind      = mkldnn::prop_kind::forward_scoring;
   if (is_train && alg != mkldnn::algorithm::pooling_avg) {
     kind = mkldnn::prop_kind::forward_training;
@@ -257,7 +257,7 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
       InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r); 
     }
 
-    const mkldnn::algorithm alg = use_adaptive_pooling ? mkldnn::algorithm::pooling_avg : GetMKLDNNPoolAlgo(param);
+    const mkldnn::algorithm alg = use_adaptive_pooling ? mkldnn::algorithm::pooling_avg : GetMKLDNNPoolingAlgorithm(param);
 
     MKLDNNPoolingFwd fwd(
         data, output, kernel, strides, pad_l, pad_r, alg, with_workspace, is_train);
@@ -307,4 +307,72 @@ MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    auto input
+    auto input_mem = static_cast<const mkldnn::memory*>(in_data.GetMKLDNNData());
+    const mkldnn::memory::desc data_md = input_mem->get_desc();
+
+    auto dst_dims = mkldnn::memory::dims(out_grad.shape().begin(), out_grad.shape().end());
+    auto any      = mkldnn::memory::format_tag::any;
+    auto dst_md   = mkldnn::memory::desc(dst_dims, get_data_type(data_md), any);
+
+    // fwd hint
+    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md);
+
+    // creat bwd desc
+    auto diff_src_dims = mkldnn::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
+    auto diff_src_md   = mkldnn::memory::desc(diff_src_dims, get_data_type(data_md), any);
+    auto cpu_engine    = CpuEngine::Get()->get_engine();
+    auto alg           = GetMKLDNNPoolingAlgorithm(param);
+
+    const int kernel_ndims = param.kernel.ndim();
+    mkldnn::memory::dims kernel(kernel_ndims);
+    mkldnn::memory::dims strides(kernel_ndims);
+    mkldnn::memory::dims pad_l(kernel_ndims);
+    mkldnn::memory::dims pad_r(kernel_ndims);
+
+    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+
+    // use dst_md as diff_dst_md with any format
+    auto bwd_desc =
+        mkldnn::pooling_backward::desc(alg, diff_src_md, dst_md, strides, kernel, pad_l, pad_r);
+    auto pdesc = mkldnn::pooling_backward::primitive_desc(bwd_desc, cpu_engine, fwd_pd);
+
+    MKLDNNPoolingBwd bwd(pdesc, with_workspace);
+    it = AddToCache(&pooling_bwds, key, bwd);
+  }
+  return it->second;
+}
+
+void MKLDNNPoolingGradCompute(const OpContext& ctx,
+                              const PoolingParam& param,
+                              const NDArray& out_grad,
+                              const NDArray& in_data,
+                              const NDArray* workspace,
+                              const OpReqType req,
+                              const NDArray& in_grad) {
+  if (req == kNullOp) {
+    return;
+  }
+
+  TmpMemMgr::Get()->Init(ctx.requested[0]);
+
+  auto& bwd              = GetPoolingBwd(param, in_data, in_grad, out_grad);
+  auto bwd_diff_dst_desc = bwd.pd.diff_dst_desc();
+  auto diff_dst_mem =
+      static_cast<const mkldnn::memory*>(out_grad.GetMKLDNNDataReorder(&bwd_diff_dst_desc));
+  auto diff_src_mem      = CreateMKLDNNMem(in_grad, bwd.pd.diff_src_desc(), req);
+  mkldnn_args_map_t args = {
+      {MKLDNN_ARG_DIFF_DST, *diff_dst_mem},
+      {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second},
+  };
+  if (MKLDNNRequireWorkspace(param) && workspace != nullptr) {
+    args[MKLDNN_ARG_WORKSPACE] = *(static_cast<const mkldnn::memory*>(workspace->GetMKLDNNData()));
+  }
+
+  MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);
+  CommitOutput(in_grad, diff_src_mem);
+  MKLDNNStream::Get()->Submit();
+}
+
+}  // namespace op
+}  // namespace mxnet
+#endif  // MXNET_USE_MKLDNN == 1
