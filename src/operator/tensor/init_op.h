@@ -695,7 +695,8 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
 }
 
 struct linspace_fwd {
-  template <typename DType>
+  template <typename DType,
+            typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i,
                                   double start,
                                   double stop,
@@ -703,6 +704,17 @@ struct linspace_fwd {
                                   int req,
                                   DType* out) {
     KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
+  }
+
+  template <typename DType,
+            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  double start,
+                                  double stop,
+                                  double step,
+                                  int req,
+                                  DType* out) {
+    KERNEL_ASSIGN(out[i], req, static_cast<DType>(std::floor(start + step * i)));
   }
 };
 
