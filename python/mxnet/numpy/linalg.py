@@ -671,7 +671,9 @@ def vector_norm(x, ord=None, axis=None, keepdims=False):
     elif isinstance(axis, tuple):
         rest = tuple(i for i in range(x.ndim) if i not in axis)
         newshape = axis + rest
-        x = _mx_nd_np.transpose(x, newshape).reshape((reduce(lambda a, b: a * b, [x.shape[a] for a in axis]), *[x.shape[i] for i in rest]))
+        x = _mx_nd_np.transpose(x, newshape).\
+            reshape((reduce(lambda a, b: a * b, [x.shape[a] for a in axis]),\
+                     *[x.shape[i] for i in rest]))
         axis = 0
     return _mx_nd_np.linalg.norm(x, axis=axis, keepdims=keepdims, ord=ord)
 
