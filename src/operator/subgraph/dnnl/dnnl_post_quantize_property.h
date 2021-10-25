@@ -20,12 +20,15 @@
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "../../nn/dnnl/dnnl_convolution-inl.h"
+#include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
+#include "../../tensor/elemwise_binary_op-inl.h"
 #include "../common.h"
 #include "dnnl_conv-inl.h"
 #include "dnnl_subgraph_base-inl.h"
@@ -33,97 +36,144 @@
 namespace mxnet {
 namespace op {
 
-class SgDNNLPostQuantizeSelector : public SubgraphSelector {
+const std::set<std::string> support_req_fusion_op = {"_contrib_quantized_elemwise_add",
+                                                     "_contrib_quantized_elemwise_mul",
+                                                     "_contrib_quantized_npi_add",
+                                                     "_sg_onednn_conv",
+                                                     "_sg_onednn_fully_connected",
+                                                     "_sg_onednn_selfatt_qk",
+                                                     "_sg_onednn_selfatt_valatt",
+                                                     "_sg_onednn_batch_dot"};
+
+class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
     kFail = 0,
     kStart,
+    kRequantize,
     kSuccess,
   };
 
  private:
+  bool disable_fuse_all;
+  bool disable_float_output;
   SelectStatus status;
-  std::vector<const nnvm::Node*> matched_list;
+  std::vector<const BiDirectedNode*> matched_list;
   std::set<std::string> support_requantize_fusion_op_name;
 
  public:
-  SgDNNLPostQuantizeSelector() {
-    support_requantize_fusion_op_name.insert("_sg_onednn_conv");
-    support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
-    support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
+  explicit SgDNNLPostQuantizeSelector(const bool dis_fuse_all, const bool dis_float_output)
+      : disable_fuse_all(dis_fuse_all), disable_float_output(dis_float_output) {
+    support_requantize_fusion_op_name = support_req_fusion_op;
   }
 
-  bool Select(const nnvm::Node& n) override {
-    if (n.op() && support_requantize_fusion_op_name.count(n.op()->name)) {
-      if (n.op() == Op::Get("_sg_onednn_conv")) {
-        auto const& param = nnvm::get<DNNLConvFusionParam>(n.attrs.parsed);
-        if (param.full_conv_param.dnnl_param.quantized) {
-          status = kStart;
-          matched_list.clear();
-          matched_list.push_back(&n);
-          return true;
-        }
-      } else if (n.op()->name == "_contrib_quantized_elemwise_add" ||
-                 n.op()->name == "_contrib_quantized_npi_add") {
-        status = kStart;
-        matched_list.clear();
-        matched_list.push_back(&n);
-        return true;
-      }
+  bool Select(const BiDirectedNode& n) override {
+    const nnvm::Node* raw_node = n.node;
+    if ((!disable_fuse_all) && raw_node->op() &&
+        support_requantize_fusion_op_name.count(raw_node->op()->name)) {
+      status = kStart;
+      matched_list.clear();
+      matched_list.push_back(&n);
+      return true;
     }
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+  bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& new_node) override {
     return false;
   }
 
-  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
-    if (status == kFail || status == kSuccess || new_node.is_variable())
+  bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& new_node) override {
+    const nnvm::Node* raw_node     = n.node;
+    const nnvm::Node* raw_new_node = new_node.node;
+    if (status == kFail || status == kSuccess || raw_new_node->is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
-      status = kFail;
+      if (std::find(matched_list.begin(), matched_list.end(), &n) != matched_list.end()) {
+        while (matched_list.back() != &n) {
+          matched_list.pop_back();
+        }
+      }
+      status = kSuccess;
       return false;
     }
-    if (new_node.op()->name == "_contrib_requantize") {
-      auto const& param = nnvm::get<RequantizeParam>(new_node.attrs.parsed);
-      if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-        matched_list.push_back(&new_node);
+
+    switch (status) {
+      case kStart:
+        if (raw_new_node->op() == Op::Get("_contrib_requantize")) {
+          auto const& param = nnvm::get<RequantizeParam>(raw_new_node->attrs.parsed);
+          if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+            matched_list.push_back(&new_node);
+            status = kRequantize;
+            if (raw_node->op() == Op::Get("_sg_onednn_conv")) {
+              status = kSuccess;
+            }
+            return true;
+          }
+        }
+      case kRequantize:
+        if (!disable_float_output && raw_new_node->op() == Op::Get("_contrib_dequantize")) {
+          CHECK(raw_node->op() == Op::Get("_contrib_requantize"));
+          if (n.outputs.size() > 1) {
+            // check if requantize have other outputs than dequantize
+            // if it has we can't fuse dequantize
+            for (auto kv : n.outputs) {
+              const auto& node = kv.first;
+              if (node->op() != Op::Get("_contrib_dequantize")) {
+                status = kSuccess;
+                return false;
+              }
+            }
+          }
+          matched_list.push_back(&new_node);
+          status = kSuccess;
+          return true;
+        }
+      default:
         status = kSuccess;
-        return true;
-      } else {
-        status = kFail;
-      }
+        return false;
     }
-    return false;
   }
 
-  std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
-    if (status != kSuccess) {
-      return std::vector<nnvm::Node*>(0);
+  std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
+    if (status != kSuccess || (matched_list.size() <= 1)) {
+      return std::vector<BiDirectedNode*>(0);
     } else {
-      return candidates;
+      std::vector<BiDirectedNode*> ret;
+      for (auto i : matched_list) {
+        auto non_const_i = const_cast<BiDirectedNode*>(i);
+        if (std::find(candidates.begin(), candidates.end(), non_const_i) != candidates.end()) {
+          ret.push_back(non_const_i);
+        }
+      }
+      return ret;
     }
   }
 
   void Reset() override {
     CHECK_GE(matched_list.size(), 1);
-    auto new_selector = SgDNNLPostQuantizeSelector();
+    auto new_selector = SgDNNLPostQuantizeSelector(disable_fuse_all, disable_float_output);
     new_selector.Select(*matched_list[0]);
     *this = new_selector;
   }
 };
 
 class SgDNNLPostQuantizeProperty : public SubgraphProperty {
+ private:
+  bool disable_fuse_all;
+  bool disable_float_output;
+  std::set<std::string> support_requantize_fusion_op_name;
+
  public:
   SgDNNLPostQuantizeProperty() {
-    support_requantize_fusion_op_name.insert("_sg_onednn_conv");
-    support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
-    support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
+    disable_fuse_all                  = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_ALL", false);
+    disable_float_output              = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FLOAT_OUTPUT", false);
+    support_requantize_fusion_op_name = support_req_fusion_op;
   }
+
   static SubgraphPropertyPtr Create() {
     static const std::string& name = "oneDNN post-quantization optimization pass";
     auto property                  = std::make_shared<SgDNNLPostQuantizeProperty>();
@@ -131,35 +181,48 @@ class SgDNNLPostQuantizeProperty : public SubgraphProperty {
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
+
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
     nnvm::ObjectPtr fuse_node       = nullptr;
     nnvm::ObjectPtr requantize_node = nullptr;
+    nnvm::ObjectPtr dequantize_node = nullptr;
+
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
         return;
-      auto& op_name = node->op()->name;
-      if (support_requantize_fusion_op_name.count(op_name)) {
+      if (node->op() && support_requantize_fusion_op_name.count(node->op()->name)) {
         fuse_node = node;
-      } else if (op_name == "_contrib_requantize") {
+      } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;
+      } else if (node->op() == Op::Get("_contrib_dequantize")) {
+        dequantize_node = node;
       }
     });
+
     CHECK_NOTNULL(fuse_node);
     CHECK_NOTNULL(requantize_node);
     auto const& requantize_param = nnvm::get<RequantizeParam>(requantize_node->attrs.parsed);
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
-    fuse_node->attrs.dict["min_calib_range"] =
-        std::to_string(requantize_param.min_calib_range.value());
-    fuse_node->attrs.dict["max_calib_range"] =
-        std::to_string(requantize_param.max_calib_range.value());
+
+    // When only fused quantized operator and requantize, set min/max_cablib_range,
+    // When fused quantized operator + requantize + dequantize, set dequantize flag to true.
+    if (dequantize_node != nullptr) {
+      fuse_node->attrs.dict["enable_float_output"] = "True";
+    } else {
+      fuse_node->attrs.dict["min_calib_range"] =
+          std::to_string(requantize_param.min_calib_range.value());
+      fuse_node->attrs.dict["max_calib_range"] =
+          std::to_string(requantize_param.max_calib_range.value());
+    }
     fuse_node->op()->attr_parser(&(fuse_node->attrs));
     return fuse_node;
   }
 
-  SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgDNNLPostQuantizeSelector>();
+  SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const override {
+    auto selector =
+        std::make_shared<SgDNNLPostQuantizeSelector>(disable_fuse_all, disable_float_output);
     return selector;
   }
 
@@ -170,10 +233,8 @@ class SgDNNLPostQuantizeProperty : public SubgraphProperty {
       *entry_ptr     = nnvm::NodeEntry{n, entry_ptr->index, 0};
     }
   }
-
- private:
-  std::set<std::string> support_requantize_fusion_op_name;
 };
+
 }  // namespace op
 }  // namespace mxnet
 
