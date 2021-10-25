@@ -75,7 +75,6 @@ fallbacks = [
     'nansum',
     'nanvar',
     'ndim',
-    'npv',
     'packbits',
     'partition',
     'piecewise',
