@@ -7785,7 +7785,7 @@ def argmax(a, axis=None, out=None, keepdims=False):
         with the dimension along `axis` removed.
 
     .. note::
-       ``keepdims`` param is part of request `in data-api-standard
+       ``keepdims`` param is part of request in data-api-standard
        <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false`_,
        which is not the parameter in official NumPy
 
@@ -7863,7 +7863,7 @@ def argmin(a, axis=None, out=None, keepdims=False):
         with the dimension along `axis` removed.
 
     .. note::
-       ``keepdims`` param is part of request `in data-api-standard
+       ``keepdims`` param is part of request in data-api-standard
        <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false`_,
        which is not the parameter in official NumPy
 
