@@ -5824,6 +5824,250 @@ def test_np_linalg_norm():
 
 
 @use_np
+@pytest.mark.parametrize('shape,ord,axis', [
+    ((2, 3, 4), 1, (2, 1)),
+    ((2, 3, 4), 2, (1, 2)),
+    ((2, 3, 4), None, None),
+    ((3,), None, None),
+    ((2, 3), 2, 1),
+    ((2, 3, 4), 1, 1),
+    ((2, 3, 4), -1, 2),
+    ((2, 3, 4), 2, 1),
+    ((2, 3, 4), 4, 1),
+    ((2, 3, 0, 4), -2, 1),
+    ((2, 3, 4, 5), 2, (2, 3)),
+    ((2, 3), -1, None),
+    ((2, 3, 4), 'inf', 1),
+    ((2, 3, 4), '-inf', (1, 0)),
+    ((2, 3), None, (0, 1)),
+    ((3, 2, 3), None, (1, 2)),
+    ((2, 3), None, None),
+    ((2, 3, 4), None, (0, 2)),
+    ((2, 3, 4), -3.2, 2),
+    ((2, 3, 4), -1, (0, 1)),
+    ((2, 3, 4), 'inf', (0, 2)),
+    ((2, 3, 4), '-inf', (0, 2)),
+    ((4, 4, 4, 4), -2, (0, 2)),
+    ((2, 3, 8, 4), -2, (1, 2, 3)),
+    ((2, 3, 4, 5, 7), 2, (2, 3, 1)),
+])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('itype', [np.float32, np.float64])
+@pytest.mark.parametrize('keepdims', [True, False])
+def test_np_linalg_vector_norm(shape, ord, axis, hybridize, itype, keepdims):
+    class TestLinalgVectNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgVectNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def forward(self, x):
+            return np.linalg.vector_norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    def spectral_norm_grad(data):
+        with mx.autograd.record():
+            UT, S, V = np.linalg.svd(data)
+            norm = np.max(np.abs(S), axis=-1)
+        norm.backward()
+        return data.grad.asnumpy()
+    
+    def onp_vector_norm(a, axis=None, keepdims=False, ord=2):
+        if axis is None:
+            a = a.flatten()
+            axis = 0
+        elif isinstance(axis, tuple):
+            # Note: The axis argument supports any number of axes, whereas norm()
+            # only supports a single axis for vector norm.
+            rest = tuple(i for i in range(a.ndim) if i not in axis)
+            newshape = axis + rest
+            a = onp.transpose(a, newshape).reshape((onp.prod([a.shape[i] for i in axis]), *[a.shape[i] for i in rest]))
+            axis = 0
+        return onp.linalg.norm(a, axis=axis, keepdims=keepdims, ord=ord)
+
+    # numpy is flaky under float16, also gesvd does not support fp16
+    net = TestLinalgVectNorm(ord, axis, keepdims)
+    rtol = 1e-2
+    atol = 1e-2
+    if hybridize:
+        net.hybridize()
+    a = mx.np.random.uniform(-10.0, 10.0, size=shape, dtype=itype)
+    a.attach_grad()
+    with mx.autograd.record():
+        mx_ret = net(a)
+    if ord == 'inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp_vector_norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+
+    assert np_ret.shape == mx_ret.shape
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+    mx_ret.backward()
+
+    grad_axis = axis
+    if axis is None and len(shape) >= 2 and ord is not None:
+        grad_axis = (len(shape) - 2, len(shape) - 1)
+    elif axis is None and ord is None:
+        grad_axis = tuple([i for i in range(len(shape))])
+    elif axis is None:
+        grad_axis = len(shape) - 1
+
+    if not keepdims and isinstance(grad_axis, tuple):
+        if len(grad_axis) == 2 and grad_axis[0] > grad_axis[1] and grad_axis[0] > len(np_ret.shape):
+            grad_axis = (grad_axis[1], grad_axis[0])
+        for i in grad_axis:
+            np_ret = onp.expand_dims(np_ret, axis=i)
+    elif not keepdims:
+        np_ret = onp.expand_dims(np_ret, axis=grad_axis)
+
+    if ord == 4:
+        backward_expected = onp.sign(a.asnumpy()) * onp.power(onp.abs(a.asnumpy()) / np_ret, ord - 1)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    if ord == 2 and not isinstance(grad_axis, tuple):
+        backward_expected = onp.divide(a.asnumpy(), np_ret)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+    elif ord == 2 and isinstance(grad_axis, tuple):
+        backward_expected = spectral_norm_grad(a)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    assert a.grad.shape == a.shape
+
+    # Test imperative once again
+    if ord == 'inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp_vector_norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+    mx_ret = np.linalg.vector_norm(a, ord=ord, axis=axis, keepdims=keepdims)
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+
+@use_np
+@pytest.mark.parametrize('shape,ord,axis', [
+    ((2, 3, 4), 1, (2, 1)),
+    ((2, 3, 4), 2, (1, 2)),
+    ((2, 3, 4), None, None),
+    ((3,), None, None),
+    ((2, 3), 2, 1),
+    ((2, 3, 4), 1, 1),
+    ((2, 3, 4), -1, 2),
+    ((2, 3, 4), 2, 1),
+    ((2, 3, 4), 4, 1),
+    ((2, 3, 0, 4), -2, 1),
+    ((2, 3, 4, 5), 2, (2, 3)),
+    ((2, 3), -1, None),
+    ((2, 3, 4), 'inf', 1),
+    ((2, 3, 4), '-inf', (1, 0)),
+    ((2, 3), None, (0, 1)),
+    ((3, 2, 3), None, (1, 2)),
+    ((2, 3), None, None),
+    ((2, 3, 4), 'fro', (0, 2)),
+    ((2, 0, 4), 'fro', (0, 2)),
+    ((2, 3, 4), None, (0, 2)),
+    ((2, 3, 4), -3.2, 2),
+    ((2, 3, 4), -1, (0, 1)),
+    ((2, 3, 4), 'inf', (0, 2)),
+    ((2, 3, 4), '-inf', (0, 2)),
+    ((4, 4, 4, 4), -2, (0, 2)),
+    ((2, 3, 4), 'nuc', (0, 2)),
+    ((2, 2), 'nuc', None),
+])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('itype', [np.float32, np.float64])
+@pytest.mark.parametrize('keepdims', [True, False])
+def test_np_linalg_matrix_norm(shape, ord, axis, hybridize, itype, keepdims):
+    class TestLinalgMatNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgMatNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def forward(self, x):
+            return np.linalg.matrix_norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    def spectral_norm_grad(data):
+        with mx.autograd.record():
+            UT, S, V = np.linalg.svd(data)
+            norm = np.max(np.abs(S), axis=-1)
+        norm.backward()
+        return data.grad.asnumpy()
+
+    # numpy is flaky under float16, also gesvd does not support fp16
+    net = TestLinalgMatNorm(ord, axis, keepdims)
+    rtol = 1e-2
+    atol = 1e-2
+    if hybridize:
+        net.hybridize()
+    a = mx.np.random.uniform(-10.0, 10.0, size=shape, dtype=itype)
+    if not isinstance(axis, tuple) or not len(axis) == 2:
+        assertRaises(ValueError, np.linalg.matrix_norm, a, ord, axis, keepdims)
+        return
+    a.attach_grad()
+    with mx.autograd.record():
+        mx_ret = net(a)
+    if ord == 'inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+
+    assert np_ret.shape == mx_ret.shape
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+    mx_ret.backward()
+
+    grad_axis = axis
+    if axis is None and len(shape) >= 2 and ord is not None:
+        grad_axis = (len(shape) - 2, len(shape) - 1)
+    elif axis is None and ord is None:
+        grad_axis = tuple([i for i in range(len(shape))])
+    elif axis is None:
+        grad_axis = len(shape) - 1
+
+    if not keepdims and isinstance(grad_axis, tuple):
+        if len(grad_axis) == 2 and grad_axis[0] > grad_axis[1] and grad_axis[0] > len(np_ret.shape):
+            grad_axis = (grad_axis[1], grad_axis[0])
+        for i in grad_axis:
+            np_ret = onp.expand_dims(np_ret, axis=i)
+    elif not keepdims:
+        np_ret = onp.expand_dims(np_ret, axis=grad_axis)
+
+    if ord == 4:
+        backward_expected = onp.sign(a.asnumpy()) * onp.power(onp.abs(a.asnumpy()) / np_ret, ord - 1)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    if ord == 2 and not isinstance(grad_axis, tuple):
+        backward_expected = onp.divide(a.asnumpy(), np_ret)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+    elif ord == 2 and isinstance(grad_axis, tuple):
+        backward_expected = spectral_norm_grad(a)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    if ord == 'fro':
+        backward_expected = onp.divide(a.asnumpy(), np_ret)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    assert a.grad.shape == a.shape
+
+    # Test imperative once again
+    if ord == 'inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+    mx_ret = np.linalg.matrix_norm(a, ord=ord, axis=axis, keepdims=keepdims)
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+
+@use_np
 @pytest.mark.parametrize('shape', [
     (3, 3),
     (3, 5),
