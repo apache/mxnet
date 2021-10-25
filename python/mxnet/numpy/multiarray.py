@@ -3454,6 +3454,7 @@ def true_divide(x1, x2, out=None):
 @wrap_np_binary_func
 def floor_divide(x1, x2, out=None):
     """Return the largest integer smaller or equal to the division of the inputs.
+
     It is equivalent to the Python // operator and pairs with the Python % (remainder),
     function so that a = a % b + b * (a // b) up to roundoff.
 
@@ -3481,7 +3482,7 @@ def floor_divide(x1, x2, out=None):
        * If both inputs are of floating number types, the output is the more precise type.
        * If only one of the inputs is floating number type, the result is that type.
        * If both inputs are of integer types (including boolean), the output is the more
-       precise type
+         precise type
 
     Examples
     --------
