@@ -2571,11 +2571,6 @@ def _add_workload_min_scalar_type():
     OpArgMngr.add_workload('min_scalar_type', a)
 
 
-def _add_workload_mirr():
-    val = np.array([-4500, -800, 800, 800, 600, 600, 800, 800, 700, 3000])
-    OpArgMngr.add_workload('mirr', val, 0.08, 0.055)
-
-
 def _add_workload_modf():
     a = np.array([0, 3.5])
     b = -0.5
@@ -3189,7 +3184,6 @@ def _prepare_workloads():
     _add_workload_ix_()
     _add_workload_lexsort()
     _add_workload_min_scalar_type()
-    _add_workload_mirr()
     _add_workload_modf()
     _add_workload_msort()
     _add_workload_nanargmax()

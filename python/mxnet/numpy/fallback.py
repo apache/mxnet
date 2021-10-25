@@ -58,7 +58,6 @@ fallbacks = [
     'ix_',
     'lexsort',
     'min_scalar_type',
-    'mirr',
     'modf',
     'msort',
     'nanargmax',
