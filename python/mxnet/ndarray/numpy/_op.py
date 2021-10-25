@@ -1200,6 +1200,7 @@ def floor_divide(x1, x2, out=None):
        * If only one of the inputs is floating number type, the result is that type.
        * If both inputs are of integer types (including boolean), the output is the more
        precise type
+
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.floor_divide(x1, x2, out=out)
