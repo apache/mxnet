@@ -2714,6 +2714,10 @@ def _add_workload_ndim():
     OpArgMngr.add_workload('ndim', b)
 
 
+def _add_workload_npv():
+    rate, cashflows = 0.281, np.array([-100, 39, 59, 55, 20])
+    OpArgMngr.add_workload('npv', rate, cashflows)
+
 
 def _add_workload_partition():
     a = np.array([3, 4, 2, 1])
@@ -3202,6 +3206,7 @@ def _prepare_workloads():
     _add_workload_nansum()
     _add_workload_nanvar()
     _add_workload_ndim()
+    _add_workload_npv()
     _add_workload_packbits()
     _add_workload_pad()
     _add_workload_partition()
