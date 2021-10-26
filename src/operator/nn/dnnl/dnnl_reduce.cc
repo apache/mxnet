@@ -94,6 +94,7 @@ bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
     auto axes    = CanonicalizeAndSortAxes(input, param, param.axis.value());
     int last_dim = *(axes.end() - 1);
     if (last_dim != input.shape().ndim() - 1) {
+      // oneDNN not optimized case
       return false;
     } else {
       for (int i = 0; i < axes.ndim(); i++) {
@@ -113,7 +114,7 @@ bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
   return param_supported &&
          (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
          (output.dtype() == mshadow::kFloat32 || output.dtype() == mshadow::kBfloat16) &&
-         in_ndim >= 1 && out_size > 0 && in_size > 0;
+         in_ndim >= 1 && out_size > 0 && in_size > 1;
 }
 
 void DNNLReduceForwardImpl(const NumpyReduceAxesParam& param,
