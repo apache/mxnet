@@ -1603,7 +1603,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def argmax(self: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] = None) -> ndarray:  # pylint: disable=arguments-differ
         """Return indices of the maximum values along the given axis.
         Refer to `mxnet.numpy.argmax` for full documentation."""
-        return argmax(self, axis, out)
+        return argmax(self, axis=axis, out=out)
 
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
@@ -1753,7 +1753,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        return repeat(self, repeats=repeats, axis=axis)
+        return repeat(self, repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -1944,7 +1944,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def argmin(self, axis=None, out=None):  # pylint: disable=arguments-differ
         """Return indices of the minium values along the given axis.
         Refer to `mxnet.numpy.argmin` for full documentation."""
-        return argmin(self, axis, out)
+        return argmin(self, axis=axis, out=out)
 
     def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
         """Return an array whose values are limited to [min, max].
@@ -6054,9 +6054,9 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
 @set_module('mxnet.numpy')
 def eye(N: int,
         M: Optional[int] = None,
+        k: Optional[int] = 0,
         /,
         *,
-        k: Optional[int] = 0,
         dtype: Optional[Union[dtype, str]] = float,
         **kwargs,
 ) -> ndarray:
@@ -6203,8 +6203,8 @@ def logspace(
         start: Union[int, float],
         stop: Union[int, float],
         /,
-        *,
         num: Optional[int] = 50,
+        *,
         endpoint: Optional[bool] = True,
         base: Optional[float] = 10.0,
         dtype: Optional[Union[dtype, str]] = None,
@@ -9220,7 +9220,7 @@ def flipud(m: Union[...], /) -> Union[...]:
     >>> np.flipud(np.array([1,2]))
     array([2., 1.])
     """
-    return flip(m, 0)
+    return flip(m, axis=0)
 
 
 @set_module('mxnet.numpy')
@@ -9269,7 +9269,7 @@ def fliplr(m: Union[...], /) -> ndarray:
     >>> np.all(np.fliplr(A) == A[:,::-1,...])
     array(True)
     """
-    return flip(m, 1)
+    return flip(m, axis=1)
 
 
 @set_module('mxnet.numpy')
@@ -9776,7 +9776,7 @@ def vdot(a: ndarray, b: ndarray, /) -> ndarray:
     >>> 1*4 + 4*1 + 5*2 + 6*2
     30
     """
-    return tensordot(a.flatten(), b.flatten(), 1)
+    return tensordot(a.flatten(), b.flatten(), axes = 1)
 
 
 @set_module('mxnet.numpy')
@@ -9842,7 +9842,7 @@ def inner(a: ndarray, b: ndarray, /) -> ndarray:
     array([[ 14.,  38.,  62.],
            [ 86., 110., 134.]])
     """
-    return tensordot(a, b, [-1, -1])
+    return tensordot(a, b, axes = [-1, -1])
 
 
 @set_module('mxnet.numpy')
@@ -9895,7 +9895,7 @@ def outer(a: ndarray, b: ndarray, /) -> ndarray:
            [-2., -1.,  0.,  1.,  2.],
            [-2., -1.,  0.,  1.,  2.]])
     """
-    return tensordot(a.flatten(), b.flatten(), 0)
+    return tensordot(a.flatten(), b.flatten(), axes = 0)
 
 
 @set_module('mxnet.numpy')
