@@ -221,7 +221,7 @@ dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::bl
 dnnl_verbose,exec,cpu,convolution,brgconv:avx512_core,forward_inference,src_f32::blocked:acdb:f0 wei_f32::blocked:Acdb32a:f0 bia_f32::blocked:a:f0 dst_f32::blocked:acdb:f0,,alg:convolution_direct,mb32_ic32oc32_ih256oh256kh3sh1dh0ph1_iw256ow256kw3sw1dw0pw1,10.5898
 ```
 
-You can find step-by-step guidance to do profiling for oneDNN primitives in [Profiling oneDNN Operators](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html#Profiling-oneDNN-Operators).
+You can find step-by-step guidance to do profiling for oneDNN primitives in [Profiling oneDNN Operators](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html#Profiling-MKLDNN-Operators).
 
 <h2 id="5">Enable MKL BLAS</h2>
 
