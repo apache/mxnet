@@ -85,7 +85,7 @@ void DNNLReduceForward(const nnvm::NodeAttrs& attrs,
                        const OpReqType& req,
                        const NDArray& out_data) {
   const ParamType& org_param = nnvm::get<ParamType>(attrs.parsed);
-  auto param = ConvertParamsToNumpy<ParamType>(org_param, in_data, out_data);
+  auto param                 = ConvertParamsToNumpy<ParamType>(org_param, in_data, out_data);
   DNNLReduceForwardImpl(param, ctx, in_data, req, out_data, reduction_alg);
 }
 
@@ -97,8 +97,8 @@ template <class T>
 bool SupportDNNLReduce(const nnvm::NodeAttrs& attrs,
                        const NDArray& in_data,
                        const NDArray& out_data) {
-  const T& org_param         = nnvm::get<T>(attrs.parsed);
-  auto param = ConvertParamsToNumpy<T>(org_param, in_data, out_data);
+  const T& org_param = nnvm::get<T>(attrs.parsed);
+  auto param         = ConvertParamsToNumpy<T>(org_param, in_data, out_data);
   return SupportDNNLReduceImpl(param, in_data, out_data);
 }
 
