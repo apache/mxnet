@@ -34,8 +34,6 @@ namespace op {
 
 class SgDNNLBatchDotSelector : public SubgraphSelector {
  public:
-  explicit SgDNNLBatchDotSelector() {}
-
   bool Select(const nnvm::Node& n) override {
     return n.op() && n.op()->name == "batch_dot";
   }
@@ -51,8 +49,6 @@ class SgDNNLBatchDotSelector : public SubgraphSelector {
 
 class SgDNNLBatchDotProperty : public SubgraphProperty {
  public:
-  SgDNNLBatchDotProperty() {}
-
   static SubgraphPropertyPtr Create() {
     static const std::string& name = "DNNL Batch Dot optimization pass";
     auto property                  = std::make_shared<SgDNNLBatchDotProperty>();
