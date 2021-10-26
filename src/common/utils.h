@@ -504,7 +504,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   std::ostringstream os;
   const char* warning =
       "\n WARNING:\n"
-      " Execution of the operator above will fallback to the generic implementation "
+      "Execution of the operator above will fallback to the generic implementation "
 #if MXNET_USE_ONEDNN == 1
       "(not utilizing kernels from oneDNN library) "
 #endif
