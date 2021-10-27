@@ -234,9 +234,10 @@ struct rtrue_divide : public mxnet_op::tunable {
 /***** floor_divide ******/
 
 struct floor_divide : public mxnet_op::tunable {
-  template <typename DType,
-            typename std::enable_if<!std::is_same<DType, bool>::value &&
-                                    std::is_integral<DType>::value, int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_same<DType, bool>::value && std::is_integral<DType>::value,
+                              int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(a / b));
     if ((c * a != b) && ((a < 0) != (b < 0))) {
@@ -250,9 +251,10 @@ struct floor_divide : public mxnet_op::tunable {
     return static_cast<bool>(::floor(a / b));
   }
 
-  template <typename DType,
-            typename std::enable_if<!std::is_integral<DType>::value &&
-                                    !std::is_same<DType, float>::value, int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_integral<DType>::value && !std::is_same<DType, float>::value,
+                              int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return ::floor(a / b);
   }
@@ -263,9 +265,10 @@ struct floor_divide : public mxnet_op::tunable {
 };
 
 struct rfloor_divide : public mxnet_op::tunable {
-  template <typename DType,
-            typename std::enable_if<!std::is_same<DType, bool>::value &&
-                                    std::is_integral<DType>::value, int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_same<DType, bool>::value && std::is_integral<DType>::value,
+                              int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(b / a));
     if ((c * a != b) && ((a < 0) != (b < 0))) {
@@ -279,9 +282,10 @@ struct rfloor_divide : public mxnet_op::tunable {
     return static_cast<bool>(::floor(b / a));
   }
 
-  template <typename DType,
-            typename std::enable_if<!std::is_integral<DType>::value &&
-                                    !std::is_same<DType, float>::value, int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_integral<DType>::value && !std::is_same<DType, float>::value,
+                              int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return ::floor(b / a);
   }
