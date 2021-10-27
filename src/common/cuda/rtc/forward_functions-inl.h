@@ -262,22 +262,32 @@ rsub(const DType a, const DType2 b) {
 template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
 floor_divide(const DType a, const DType2 b) {
-  mixed_type<DType, DType2> c = ::floor(a / b);
-  if ((c * b != a) && (a < 0) != (b < 0)) {
-    return mixed_type<DType, DType2>(c - 1);
+  if (type_util::is_integral<DType>::value &&
+      type_util::is_integral<DType2>::value) {
+    mixed_type<DType, DType2> c = ::floor(a / b);
+    if ((c * b != a) && (a < 0) != (b < 0)) {
+      return mixed_type<DType, DType2>(c - 1);
+    } else {
+      return c;
+    }
   } else {
-    return c;
+    return ::floor(a / b);
   }
 }
 
 template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
 rfloor_divide(const DType a, const DType2 b) {
-  mixed_type<DType, DType2> c = ::floor(b / a);
-  if ((c * a != b) && (a < 0) != (b < 0)) {
-    return mixed_type<DType, DType2>(c - 1);
+  if (type_util::is_integral<DType>::value &&
+      type_util::is_integral<DType2>::value) {
+    mixed_type<DType, DType2> c = ::floor(b / a);
+    if ((c * a != b) && (a < 0) != (b < 0)) {
+      return mixed_type<DType, DType2>(c - 1);
+    } else {
+      return c;
+    }
   } else {
-    return c;
+    return ::floor(b / a);
   }
 }
 
