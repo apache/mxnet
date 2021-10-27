@@ -64,12 +64,19 @@ jobs:
           python -m pip install --user -e python
 
       - name: Link Check
-        uses: nick-invision/retry@v2
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_on: timeout
-          comand: |
+        run: |
+          for run in {1..3}
+          do
             cd docs/python_docs/python
             make clean
-            make linkcheck EVAL=0
+            timeout 10 make linkcheck EVAL=0
+            if [[ $? -eq 0 ]]
+            then
+              break
+            else
+              if [[ run -eq 3 ]]
+              then
+                exit 1
+              fi
+            fi
+          done
