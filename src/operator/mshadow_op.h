@@ -235,10 +235,11 @@ struct rtrue_divide : public mxnet_op::tunable {
 
 struct floor_divide : public mxnet_op::tunable {
   template <typename DType,
-            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+            typename std::enable_if<!std::is_same<DType, bool>::value &&
+                                    std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(a / b));
-    if ((c * b != a) && ((a < 0) != (b < 0))) {
+    if ((c * a != b) && ((a < 0) != (b < 0))) {
       return DType(c - 1);
     } else {
       return c;
@@ -248,11 +249,23 @@ struct floor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static bool Map(bool a, bool b) {
     return static_cast<bool>(::floor(a / b));
   }
+
+  template <typename DType,
+            typename std::enable_if<!std::is_integral<DType>::value &&
+                                    !std::is_same<DType, float>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return ::floor(a / b);
+  }
+
+  MSHADOW_XINLINE static float Map(float a, float b) {
+    return ::floorf(a / b);
+  }
 };
 
 struct rfloor_divide : public mxnet_op::tunable {
   template <typename DType,
-            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+            typename std::enable_if<!std::is_same<DType, bool>::value &&
+                                    std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType c = static_cast<DType>(::floor(b / a));
     if ((c * a != b) && ((a < 0) != (b < 0))) {
@@ -265,18 +278,23 @@ struct rfloor_divide : public mxnet_op::tunable {
   MSHADOW_XINLINE static bool Map(bool a, bool b) {
     return static_cast<bool>(::floor(b / a));
   }
+
+  template <typename DType,
+            typename std::enable_if<!std::is_integral<DType>::value &&
+                                    !std::is_same<DType, float>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return ::floor(b / a);
+  }
+
+  MSHADOW_XINLINE static float Map(float a, float b) {
+    return ::floorf(b / a);
+  }
 };
 
 struct mixed_floor_divide {
   template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
-    mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
-    mshadow::half::half_t c      = static_cast<mshadow::half::half_t>(::floor(a_half / b));
-    if ((c * b != a_half) && ((a_half < 0) != (b < 0))) {
-      return mshadow::half::half_t(c - 1);
-    } else {
-      return c;
-    }
+    return ::floor(a / static_cast<mshadow::half::half_t>(b));
   }
 
   template <typename DType,
@@ -284,13 +302,7 @@ struct mixed_floor_divide {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
-    float a_float = static_cast<float>(a);
-    float c       = ::floorf(a_float / b);
-    if ((c * b != a_float) && ((a_float < 0) != (b < 0))) {
-      return c - 1.0f;
-    } else {
-      return c;
-    }
+    return ::floorf(a / static_cast<float>(b));
   }
 
   template <typename DType,
@@ -299,26 +311,14 @@ struct mixed_floor_divide {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
-    double a_double = static_cast<double>(a);
-    double c        = ::floor(a_double / b);
-    if ((c * b != a_double) && ((a_double < 0) != (b < 0))) {
-      return c - 1.0;
-    } else {
-      return c;
-    }
+    return ::floor(a / static_cast<double>(b));
   }
 };
 
 struct mixed_rfloor_divide {
   template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
-    mshadow::half::half_t a_half = static_cast<mshadow::half::half_t>(a);
-    mshadow::half::half_t c      = static_cast<mshadow::half::half_t>(::floor(b / a_half));
-    if ((c * a_half != b) && ((a_half < 0) != (b < 0))) {
-      return mshadow::half::half_t(c - 1);
-    } else {
-      return c;
-    }
+    return ::floor(b / static_cast<mshadow::half::half_t>(a));
   }
 
   template <typename DType,
@@ -326,13 +326,7 @@ struct mixed_rfloor_divide {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
-    float a_float = static_cast<float>(a);
-    float c       = ::floorf(b / a_float);
-    if ((c * a_float != b) && ((a_float < 0) != (b < 0))) {
-      return c - 1.0f;
-    } else {
-      return c;
-    }
+    return ::floorf(b / static_cast<float>(a));
   }
 
   template <typename DType,
@@ -341,13 +335,7 @@ struct mixed_rfloor_divide {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
-    double a_double = static_cast<double>(a);
-    double c        = ::floor(b / a_double);
-    if ((c * a_double != b) && ((a_double < 0) != (b < 0))) {
-      return c - 1.0;
-    } else {
-      return c;
-    }
+    return ::floor(b / static_cast<double>(a));
   }
 };
 
@@ -845,6 +833,13 @@ MXNET_BINARY_MATH_OP(ldexp_rgrad, math::id(a) * math::pow(2.0f, b) * math::log(2
 MXNET_BINARY_MATH_OP(rldexp, math::id(b) * math::pow(2.0f, a));  // swap a and b if a is scalar.
 
 MXNET_BINARY_MATH_OP(rldexp_grad, math::id(b) * math::pow(2.0f, a) * math::log(2.0f));
+
+/*! \brief used for generate element of logaddexp */
+MXNET_BINARY_MATH_OP(logaddexp, math::log(math::exp(a) + math::exp(b)));
+
+MXNET_BINARY_MATH_OP(logaddexp_grad, math::exp(a) / (math::exp(a) + math::exp(b)));
+
+MXNET_BINARY_MATH_OP(logaddexp_rgrad, math::exp(b) / (math::exp(a) + math::exp(b)));
 
 /*! \brief used for generate element of round */
 MXNET_SIMPLE_UNARY_MATH_OP(round);

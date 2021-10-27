@@ -489,6 +489,8 @@ FP32_FUNCS = [
     '_npi_expm1',
     '_npi_ldexp',
     '_npi_ldexp_scalar',
+    '_npi_logaddexp',
+    '_npi_logaddexp_scalar',
     '_npi_log',
     '_npi_log10',
     '_npi_log1p',
