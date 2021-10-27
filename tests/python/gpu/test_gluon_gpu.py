@@ -97,9 +97,15 @@ def test_lstmp():
     lstm_cell.initialize(ctx=ctx)
     layer_params = lstm_layer.collect_params()
     cell_params = lstm_cell.collect_params()
+    params = (weights['{}_{}'.format(g, t)].reshape(-1)
+              for t in ['weight', 'bias']
+              for g in ['i2h', 'h2h', 'h2r']
+              if g != 'h2r' or t != 'bias')
+
+    net_params_concat = mx.np.concatenate(params)
+    layer_params['rnn_param'].set_data(net_params_concat)
     for k, v in weights.items():
-        layer_params['l0_' + k].set_data(v.copy())
-        cell_params[k].set_data(v.copy())
+        cell_params[k].set_data(v)
     with autograd.record():
         layer_output = lstm_layer(lstm_input.copy())
         cell_output = lstm_cell.unroll(seq_len, lstm_input.copy(), layout='TNC',
@@ -108,8 +114,10 @@ def test_lstmp():
     assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
+    layer_params_split = split_rnn_params(layer_params['rnn_param'].grad(),\
+        'lstm', 1, input_size, hidden_size, False, projection_size=projection_size)
     for k, _ in weights.items():
-        layer_grad = layer_params['l0_' + k].grad()
+        layer_grad = layer_params_split['l0_' + k]
         cell_grad = cell_params[k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
         assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
@@ -196,6 +204,39 @@ def check_layer_bidirectional(size, in_size, proj_size):
         weights['{}0_h2h_bias'.format(
             d)] = mx.np.random.uniform(size=(size * 4,))
 
+    if proj_size:
+        params = (weights['{}0_{}_{}'.format(d, g, t)].reshape(-1)
+                    for t in ['weight', 'bias']
+                    for d in ['l', 'r']
+                    for g in ['i2h', 'h2h', 'h2r']
+                    if g != 'h2r' or t != 'bias')
+    else:
+        params = (weights['{}0_{}_{}'.format(d, g, t)].reshape(-1)
+                  for t in ['weight', 'bias']
+                  for d in ['l', 'r']
+                  for g in ['i2h', 'h2h'])
+
+    net_params_concat = mx.np.concatenate(params)
+    if proj_size:
+        params_left = (weights['l0_{}_{}'.format(g, t)].reshape(-1)
+                       for t in ['weight', 'bias']
+                       for g in ['i2h', 'h2h', 'h2r']
+                       if g != 'h2r' or t != 'bias')
+    else:
+        params_left = (weights['l0_{}_{}'.format(g, t)].reshape(-1)
+                       for t in ['weight', 'bias']
+                       for g in ['i2h', 'h2h'])
+    if proj_size:
+        params_right = (weights['r0_{}_{}'.format(g, t)].reshape(-1)
+                        for t in ['weight', 'bias']
+                        for g in ['i2h', 'h2h', 'h2r']
+                        if g != 'h2r' or t != 'bias')
+    else:
+        params_right = (weights['r0_{}_{}'.format(g, t)].reshape(-1)
+                        for t in ['weight', 'bias']
+                        for g in ['i2h', 'h2h'])
+    net_ref_left_params = mx.np.concatenate(params_left)
+    net_ref_right_params = mx.np.concatenate(params_right)
     net = gluon.rnn.LSTM(size, projection_size=proj_size,
                          bidirectional=True)
     ref_net = RefBiLSTM(size, proj_size)
@@ -203,10 +244,9 @@ def check_layer_bidirectional(size, in_size, proj_size):
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
-    for k in weights:
-        net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace(
-            'r0', '_lstm_bwd.l0')].set_data(weights[k])
+    net_params['rnn_param'].set_data(net_params_concat)
+    ref_net_params['_lstm_fwd.rnn_param'].set_data(net_ref_left_params)
+    ref_net_params['_lstm_bwd.rnn_param'].set_data(net_ref_right_params)
 
     data = mx.np.random.uniform(size=(11, 10, in_size))
     mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
@@ -214,12 +254,7 @@ def check_layer_bidirectional(size, in_size, proj_size):
 
 
 def check_layer_bidirectional_varseqlen(size, in_size):
-    weights = {}
-    for d in ['l', 'r']:
-        weights['{}0_i2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, in_size))
-        weights['{}0_h2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, size))
-        weights['{}0_i2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
-        weights['{}0_h2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
+    weight = mx.np.random.uniform(size=(784,))
 
     net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True)
     ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False)
@@ -227,9 +262,8 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
-    for k in weights:
-        net_params[k].set_data(weights[k])
-        ref_net_params[k].set_data(weights[k])
+    net_params['rnn_param'].set_data(weight)
+    ref_net_params['rnn_param'].set_data(weight)
 
     batch_size = 10
     num_timesteps = 11
@@ -269,11 +303,10 @@ def check_layer_bidirectional_varseqlen(size, in_size):
 
     ref_net_params = ref_net.collect_params()
 
-    for k in weights:
-        net_grad = net_params[k].grad()
-        ref_net_grad = ref_net_params[k].grad()
-        assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
-                            rtol=1e-2, atol=1e-6)
+    net_grad = net_params['rnn_param'].grad()
+    ref_net_grad = ref_net_params['rnn_param'].grad()
+    assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
+                        rtol=1e-2, atol=1e-6)
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')

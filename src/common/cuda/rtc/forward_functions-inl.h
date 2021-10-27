@@ -653,6 +653,16 @@ rldexp(const DType a, const DType2 b) {
   return ldexp(b, a);
 }
 
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+logaddexp(const DType a, const DType2 b) {
+  if (type_util::has_double_or_integral<DType, DType2>::value) {
+    return ::log(::exp(static_cast<double>(a)) + ::exp(static_cast<double>(b)));
+  } else {
+    return ::log(::expf(static_cast<float>(a)) + ::expf(static_cast<float>(b)));
+  }
+}
+
 #undef DEFINE_BINARY_MATH_FUNC
 
 template <typename DType, typename DType2>
