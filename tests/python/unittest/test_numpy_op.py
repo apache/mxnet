@@ -29,6 +29,7 @@ import scipy.stats as ss
 import scipy.special as scipy_special
 import pytest
 import mxnet.ndarray.numpy._internal as _npi
+from functools import reduce
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -5881,7 +5882,7 @@ def test_np_linalg_vector_norm(shape, ord, axis, hybridize, itype, keepdims):
             # only supports a single axis for vector norm.
             rest = tuple(i for i in range(a.ndim) if i not in axis)
             newshape = axis + rest
-            a = onp.transpose(a, newshape).reshape((onp.prod([a.shape[i] for i in axis]), *[a.shape[i] for i in rest]))
+            a = onp.transpose(a, newshape).reshape((reduce(lambda x, y: x * y, [a.shape[x] for x in axis]), *[a.shape[i] for i in rest]))
             axis = 0
         return onp.linalg.norm(a, axis=axis, keepdims=keepdims, ord=ord)
 
