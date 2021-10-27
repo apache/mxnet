@@ -3113,6 +3113,8 @@ def test_np_binary_funcs():
         'hypot': (-1, 1, [lambda y, x1, x2: x1 / y],
                          [lambda y, x1, x2: x2 / y]),
         'ldexp': (-3, 3, [None], None, [[onp.int32]]),
+        'logaddexp': (-10, 10, [lambda y, x1, x2: onp.exp(x1) / (onp.exp(x1) + onp.exp(x2))],
+                               [lambda y, x1, x2: onp.exp(x2) / (onp.exp(x1) + onp.exp(x2))])
     }
     if is_op_runnable():
         funcs['logical_and'] = (-100, 100, [None], None, [[onp.float32, onp.float64]])
