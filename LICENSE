@@ -270,10 +270,12 @@
     3-clause BSD license
     =======================================================================================
 
+    3rdparty/mkldnn/cmake/FindACL.cmake
+    3rdparty/mkldnn/cmake/FindBLAS.cmake
+    3rdparty/mkldnn/cmake/FindOpenCL.cmake
+    3rdparty/mkldnn/src/common/ittnotify
     3rdparty/mkldnn/src/cpu/x64/xbyak
     3rdparty/mkldnn/tests/gtests/gtest
-    3rdparty/mkldnn/cmake/FindOpenCL.cmake (Copy of the License available at licenses/BSD3-cmake)
-    3rdparty/mkldnn/src/cpu/x64/jit_utils/jitprofiling/
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
     3rdparty/ctc_include/contrib/moderngpu
     3rdparty/nvidia_cub
