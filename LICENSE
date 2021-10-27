@@ -297,7 +297,6 @@
     3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
     include/dmlc/concurrentqueue.h (symlink to 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h)
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake  (Copy of the License available at licenses/BSD2)
-    3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
     3rdparty/tvm/3rdparty/picojson/picojson.h
     example/ssd/dataset/pycocotools/coco.py
 
