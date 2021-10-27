@@ -308,7 +308,7 @@
     3rdparty/openmp
 
     =======================================================================================
-    Caffe Licensing Model
+    BSD-2 with Caffe Copyright Notice and Disclaimer
     =======================================================================================
 
     src/operator/nn/pool.h
