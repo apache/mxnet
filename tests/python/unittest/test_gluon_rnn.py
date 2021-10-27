@@ -21,6 +21,7 @@ import numpy as _np
 import copy
 from functools import partial
 from numpy.testing import assert_allclose
+from mxnet.gluon.utils import split_rnn_params
 import pytest
 from mxnet.test_utils import almost_equal, assert_almost_equal, default_context
 from common import assert_raises_cudnn_not_satisfied, retry
@@ -99,10 +100,15 @@ def test_lstmp():
         fused_layer_params = fused_layer.collect_params()
         stack_layer_params = stack_layer.collect_params()
 
-        for name, value in fused_layer_params.items():
-            w = mx.np.random.uniform(size=value.shape)
-            value.set_data(w.copy())
-            stack_layer_params[name[1:].replace('_', '.', 1)].set_data(w.copy())
+        fused_weight_shape = fused_layer_params['rnn_param'].shape
+        print(fused_weight_shape)
+        w = mx.np.zeros(shape=fused_weight_shape)
+        fused_layer_params['rnn_param'].set_data(w)
+        fused_layer_params_split = split_rnn_params(w, 'lstm', num_layers, input_size,\
+            hidden_size, False, projection_size=projection_size)
+
+        for name, value in fused_layer_params_split.items():
+            stack_layer_params[name[1:].replace('_', '.', 1)].set_data(value)
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -135,11 +141,15 @@ def test_lstmp():
         fused_layer_params = fused_layer.collect_params()
         stack_layer_params = stack_layer.collect_params()
 
-        for name, value in fused_layer_params.items():
-            w = mx.np.random.uniform(size=value.shape)
-            value.set_data(w.copy())
+        fused_weight_shape = fused_layer_params['rnn_param'].shape
+        w = mx.np.zeros(shape=fused_weight_shape)
+        fused_layer_params['rnn_param'].set_data(w)
+        fused_layer_params_split = split_rnn_params(w, 'lstm', num_layers, input_size,\
+            hidden_size, True, projection_size=projection_size)
+
+        for name, value in fused_layer_params_split.items():
             cur = name.split("_")[0]
-            stack_layer_params["{}.{}_cell.{}".format(cur[1:], name[0], name[len(cur)+1:])].set_data(w.copy())
+            stack_layer_params["{}.{}_cell.{}".format(cur[1:], name[0], name[len(cur)+1:])].set_data(value)
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -346,15 +356,28 @@ def test_layer_bidirectional():
         weights['{}0_i2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
         weights['{}0_h2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
 
+    params = (weights['{}0_{}_{}'.format(d, g, t)].reshape(-1)
+              for t in ['weight', 'bias']
+              for d in ['l', 'r']
+              for g in ['i2h', 'h2h'])
+    net_params_concat = mx.np.concatenate(params)
+    params_left = (weights['l0_{}_{}'.format(g, t)].reshape(-1)
+                   for t in ['weight', 'bias']
+                   for g in ['i2h', 'h2h'])
+    params_right = (weights['r0_{}_{}'.format(g, t)].reshape(-1)
+                    for t in ['weight', 'bias']
+                    for g in ['i2h', 'h2h'])
+    net_ref_left_params = mx.np.concatenate(params_left)
+    net_ref_right_params = mx.np.concatenate(params_right)
     net = gluon.rnn.LSTM(size, bidirectional=True)
     ref_net = RefBiLSTM(size)
     net.initialize()
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
-    for k in weights:
-        net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace('r0', '_lstm_bwd.l0')].set_data(weights[k])
+    net_params['rnn_param'].set_data(net_params_concat)
+    ref_net_params['_lstm_fwd.rnn_param'].set_data(net_ref_left_params)
+    ref_net_params['_lstm_bwd.rnn_param'].set_data(net_ref_right_params)
 
     data = mx.np.random.uniform(size=(11, 10, in_size))
     assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy(), rtol=1e-04, atol=1e-02)
@@ -656,7 +679,7 @@ def test_rnn_layers_fp16():
     run_rnn_layers('float16', 'float32', mx.gpu())
 
 
-def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
+def check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
     x = mx.np.random.normal(size=(1, 5, input_size))
     fused_begin_state = fused_layer.begin_state(1)
     stack_states = stack_layer.begin_state(batch_size=1)
@@ -666,16 +689,25 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
     stack_layer.initialize()
     stack_layer_params = stack_layer.collect_params()
 
-    for name, value in fused_layer_params.items():
-        if 'weight' in name:
-            w = mx.np.zeros(shape=value.shape)
-        else:
-            w = mx.np.random.normal(size=value.shape)
-        value.set_data(w.copy())
+    fused_weight_shape = fused_layer_params['rnn_param'].shape
+    w = mx.np.zeros(shape=fused_weight_shape)
+    fused_layer_params_split = split_rnn_params(w, mode, num_layers, input_size, hidden_size, bidirectional)
+    for name, value in fused_layer_params_split.items():
+        if 'bias' in name:
+            fused_layer_params_split[name] = mx.np.random.normal(size=value.shape)
+    _dir = 2 if bidirectional else 1
+    params = (fused_layer_params_split['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+              for t in ['weight', 'bias']
+              for l in range(num_layers)
+              for d in ['l', 'r'][:_dir]
+              for g in ['i2h', 'h2h'])
+    fused_params = mx.np.concatenate(params)
+    fused_layer_params['rnn_param'].set_data(fused_params)
+    for name, value in fused_layer_params_split.items():
         cur = name.split('_')[0]
         num = cur[1:]
         stack_name = ('{}.{}_cell.'.format(num, name[0]) if bidirectional else num + '.' ) + name[len(cur)+1:]
-        stack_layer_params[stack_name].set_data(w.copy())
+        stack_layer_params[stack_name].set_data(value)
 
     fx = x.copy()
     sx = x.copy()
@@ -686,7 +718,8 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
         l = loss(fused_out, y).mean()
     l.backward()
     mx.npx.waitall()
-    fused_grads = dict([(name, p.grad()) for name, p in fused_layer.collect_params().items()])
+    fused_grads = split_rnn_params(fused_layer.collect_params()['rnn_param'].data().grad,\
+        mode, num_layers, input_size, hidden_size, bidirectional)
     fused_input_grad = fx.grad.asnumpy()
 
     sx.attach_grad()
@@ -741,7 +774,7 @@ def check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, num_layers, 
     for _ in range(num_layers):
         stack_layer.add(stack_op(hidden_size))
     stack_layer.initialize()
-    check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size)
+    check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size)
 
 
 def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, loss):
@@ -755,7 +788,7 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, l
         stack_layer.add(gluon.rnn.BidirectionalCell(stack_op(hidden_size),
                                                     stack_op(hidden_size)))
     stack_layer.initialize()
-    check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
+    check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size, bidirectional=True)
 
 
 @mx.util.use_np
@@ -851,7 +884,7 @@ def test_layer_fill_shape():
     layer.hybridize()
     check_rnn_layer_forward(layer, mx.np.ones((3, 2, 7)))
     print(layer)
-    assert layer.l0_i2h_weight.shape[1] == 7, layer.l0_i2h_weight.shape[1]
+    assert layer.rnn_param.shape[0] == 760
 
 
 @pytest.mark.serial

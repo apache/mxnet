@@ -649,7 +649,7 @@ def _add_workload_linalg_tensorsolve():
                 I = _np.eye(shape[-1]).reshape(shape)
                 v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
                 v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
-                v_T = _np.swapaxes(v, -1, -2)
+                v_T = v.mT
                 U = I - 2 * _np.matmul(v, v_T)
                 a = _np.matmul(U, D)
                 if (_np.linalg.cond(a, 2) < 4):
@@ -1539,6 +1539,13 @@ def _add_workload_ldexp():
     OpArgMngr.add_workload('ldexp', np.array(2., np.float64), np.array(3, np.int64))
     OpArgMngr.add_workload('ldexp', np.array(2., np.float64), np.array(9223372036854775807, np.int64))
     OpArgMngr.add_workload('ldexp', np.array(2., np.float64), np.array(-9223372036854775808, np.int64))
+
+
+def _add_workload_logaddexp(array_pool):
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('logaddexp', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], array_pool['1x1x0'])
 
 
 def _add_workload_subtract(array_pool):
@@ -3082,6 +3089,7 @@ def _prepare_workloads():
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
     _add_workload_ldexp()
+    _add_workload_logaddexp(array_pool)
     _add_workload_subtract(array_pool)
     _add_workload_multiply(array_pool)
     _add_workload_power(array_pool)
