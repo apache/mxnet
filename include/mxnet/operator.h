@@ -357,6 +357,17 @@ class OperatorProperty {
     return std::vector<std::pair<int, void*> >();
   }
   /*!
+   * \brief Get if the forward inplace option is an identity.
+   * This function enables inplace optimization even when input reference count
+   * is greater than one.
+   *
+   * \return list of bool indicating whether corresponding pair from ForwardInplaceOption
+   *         is an identity.
+   */
+  virtual std::vector<bool> ForwardInplaceIdentity() const {
+    return std::vector<bool>();
+  }
+  /*!
    * \brief Get possible backward inplace options.
    *  This function enables optimization to reuse memory of inputs in output.
    *  Only override when necessary, by default in-place is disabled.
@@ -388,6 +399,17 @@ class OperatorProperty {
       const std::vector<int> &out_data,
       const std::vector<void*> &in_grad) const {
     return std::vector<std::pair<int, void*> >();
+  }
+  /*!
+   * \brief Get if the backward inplace option is an identity.
+   * This function enables inplace optimization even when input reference count
+   * is greater than one.
+   *
+   * \return list of bool indicating whether corresponding pair from BackwardInplaceOption
+   *         is an identity.
+   */
+  virtual std::vector<bool> BackwardInplaceIdentity() const {
+    return std::vector<bool>();
   }
   /*!
    * \brief Get Backward Input Dependency for generic types of data.
