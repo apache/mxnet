@@ -282,6 +282,9 @@
     3rdparty/googletest/googletest
     cmake/upstream/FindCUDAToolkit.cmake
     cmake/upstream/select_compute_arch.cmake
+    python/mxnet/onnx/mx2onnx/_export_onnx.py
+    python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py
+    python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py
     src/operator/contrib/erfinv-inl.h
     src/operator/numpy/np_einsum_op-inl.h
     src/operator/numpy/np_einsum_path_op-inl.h
@@ -323,14 +326,6 @@
 
     3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
     include/dmlc/blockingconcurrentqueue.h (symlink to 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h)
-
-    =======================================================================================
-    Apache-2.0 license + 3-clause BSD license
-    =======================================================================================
-
-    python/mxnet/onnx/mx2onnx/_export_onnx.py
-    python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py
-    python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py
 
     =======================================================================================
     Apache-2.0 license + MIT License
