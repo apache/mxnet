@@ -64,6 +64,10 @@ jobs:
           python -m pip install --user -e python
 
       - name: Link Check
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
         run: |
           cd docs/python_docs/python
           make clean
