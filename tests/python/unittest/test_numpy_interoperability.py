@@ -649,7 +649,7 @@ def _add_workload_linalg_tensorsolve():
                 I = _np.eye(shape[-1]).reshape(shape)
                 v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
                 v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
-                v_T = v.mT
+                v_T = _np.swapaxes(v, -1, -2)
                 U = I - 2 * _np.matmul(v, v_T)
                 a = _np.matmul(U, D)
                 if (_np.linalg.cond(a, 2) < 4):
