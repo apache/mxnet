@@ -64,8 +64,10 @@ jobs:
           python -m pip install --user -e python
 
       - name: Link Check
+        env:
+          MAX_RETRY: 3
         run: |
-          for run in {1..3}
+          for run in {1..$MAX_RETRY}
           do
             cd docs/python_docs/python
             make clean
@@ -74,7 +76,7 @@ jobs:
             then
               break
             else
-              if [[ run -eq 3 ]]
+              if [[ run -eq $MAX_RETRY ]]
               then
                 exit 1
               fi
