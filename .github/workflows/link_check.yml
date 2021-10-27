@@ -68,8 +68,8 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
-        run: |
-          cd docs/python_docs/python
-          make clean
-          make linkcheck EVAL=0
-        shell: bash
+          retry_on: timeout
+          comand: |
+            cd docs/python_docs/python
+            make clean
+            make linkcheck EVAL=0
