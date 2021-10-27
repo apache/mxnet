@@ -703,8 +703,15 @@ sanity_check() {
     set -ex
     sanity_clang
     sanity_license
+    sanity_cmakelint
     sanity_python
     sanity_cpp
+}
+
+sanity_cmakelint() {
+    set -exu
+    
+    git ls-files -z -- bootstrap '*.cmake' '*.cmake.in' '*CMakeLists.txt' | grep -E -z -v '^(3rdparty)' | xargs -0 cmakelint --config=.cmakelintrc --quiet
 }
 
 sanity_license() {
