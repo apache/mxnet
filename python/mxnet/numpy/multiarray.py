@@ -11803,7 +11803,6 @@ def nan_to_num(
         nan: Optional[Union[int, float]] = 0.0,
         posinf: Optional[Union[int, float]] = None,
         neginf: Optional[Union[int, float]] = None,
-        /,
         **kwargs
 ) -> ndarray:
     """
