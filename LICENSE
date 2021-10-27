@@ -338,7 +338,6 @@
     =======================================================================================
 
     3rdparty/intgemm/test/3rd_party/catch.hpp  (Copy of the License available at licenses/BOOST1_0)
-    3rdparty/mkldnn/src/common/primitive_hashing.hpp
     cmake/Modules/FindJeMalloc.cmake
 
     =======================================================================================
