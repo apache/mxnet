@@ -6857,6 +6857,7 @@ def test_np_linalg_matrix_transpose(shape):
     data_mx = np.array(data_np, dtype=data_np.dtype)
     if data_mx.ndim < 2:
         assertRaises(ValueError, np.linalg.matrix_transpose, data_mx)
+        return
     ret_np = onp.swapaxes(data_np, -1, -2)
     ret_mx = np.linalg.matrix_transpose(data_mx)
     assert same(ret_mx.asnumpy(), ret_np)

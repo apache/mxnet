@@ -2571,7 +2571,7 @@ def new_matrix_with_real_eigvals_2d(n):
         I = np.eye(shape[-1]).reshape(shape)
         v = np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
         v = v / np.linalg.norm(v, axis=-2, keepdims=True)
-        v_T = v.mT
+        v_T = np.swapaxes(v, -1, -2)
         U = I - 2 * np.matmul(v, v_T)
         q = np.matmul(U, D)
         if (np.linalg.cond(q, 2) < 3):
