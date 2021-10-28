@@ -220,25 +220,24 @@
 
     3rdparty/ctc_include
     3rdparty/dlpack
-    include/dlpack (header symlinks to 3rdparty/dlpack/include/dlpack)
     3rdparty/dmlc-core
-    include/dmlc (header symlinks to 3rdparty/dmlc-core/include/dmlc)
-    3rdparty/mshadow
-    include/mshadow (header symlinks to 3rdparty/mshadow/mshadow)
-    3rdparty/tvm
-    3rdparty/tvm/3rdparty/dmlc-core
-    3rdparty/tvm/3rdparty/dlpack
-    include/nnvm (header symlinks to 3rdparty/tvm/nnvm/include/nnvm)
-    3rdparty/ps-lite
-    3rdparty/mkldnn
-    include/mkldnn (header symlinks to 3rdparty/mkldnn)
     3rdparty/googletest/googlemock/scripts/generator
+    3rdparty/mshadow
+    3rdparty/mkldnn
+    3rdparty/mkldnn/doc/assets/mathjax
+    3rdparty/mkldnn/tests/benchdnn
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark
     3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py
-    3rdparty/mkldnn/tests/benchdnn (Copy of the License available at top of current file)
-    src/operator/special_functions-inl.h Cephes Library Functions (Copy of the License available at top of current file)
-    3rdparty/mkldnn/doc/assets/mathjax (Copy of the License available at top of current file)
-    3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc (Copy of the License available at top of current file)
+    3rdparty/ps-lite
+    3rdparty/tvm
+    3rdparty/tvm/3rdparty/dlpack
+    3rdparty/tvm/3rdparty/dmlc-core
+    3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc
+    include/dlpack (header symlinks to 3rdparty/dlpack/include/dlpack)
+    include/dmlc (header symlinks to 3rdparty/dmlc-core/include/dmlc)
+    include/mkldnn (header symlinks to 3rdparty/mkldnn)
+    include/mshadow (header symlinks to 3rdparty/mshadow/mshadow)
+    include/nnvm (header symlinks to 3rdparty/tvm/nnvm/include/nnvm)
     src/operator/contrib/deformable_convolution-inl.h
     src/operator/contrib/deformable_convolution.cc
     src/operator/contrib/deformable_convolution.cu
@@ -251,6 +250,7 @@
     src/operator/contrib/psroi_pooling.cc
     src/operator/contrib/psroi_pooling.cu
     src/operator/nn/mkldnn/mkldnn_base-inl.h
+    src/operator/special_functions-inl.h
 
     =======================================================================================
     MIT license
