@@ -52,6 +52,9 @@ header:
     # files licensed under bsd 3-clause
     - 'cmake/upstream/FindCUDAToolkit.cmake'
     - 'cmake/upstream/select_compute_arch.cmake'
+    - 'python/mxnet/onnx/mx2onnx/_export_onnx.py'
+    - 'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py'
+    - 'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py'
     - 'src/operator/contrib/erfinv-inl.h'
     - 'src/operator/numpy/np_einsum_op-inl.h'
     - 'src/operator/numpy/np_einsum_op.cc'
