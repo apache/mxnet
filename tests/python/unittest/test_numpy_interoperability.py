@@ -1594,6 +1594,7 @@ def _add_workload_floor_divide(array_pool):
     OpArgMngr.add_workload('floor_divide', np.array([-1, -2, -3], np.float32), 1.9999)
     OpArgMngr.add_workload('floor_divide', np.array([1000, -200, -3], np.int64), 3)
     OpArgMngr.add_workload('floor_divide', np.array([1, -2, -3, 4, -5], np.int32), 2.0001)
+    OpArgMngr.add_workload('floor_divide', np.array([1, -50, -0.2, 40000, 0], np.float64), -7)
 
 
 def _add_workload_remainder():
