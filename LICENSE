@@ -256,12 +256,12 @@
     MIT license
     =======================================================================================
 
-    example/gluon/tree_lstm
-    3rdparty/tvm/3rdparty/cma
+    3rdparty/intgemm
     3rdparty/onnx-tensorrt
     3rdparty/onnx-tensorrt/third_party/onnx
-    3rdparty/intgemm
+    3rdparty/tvm/3rdparty/cma
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
+    example/gluon/tree_lstm
     src/operator/contrib/modulated_deformable_convolution-inl.h
     src/operator/contrib/modulated_deformable_convolution.cc
     src/operator/contrib/modulated_deformable_convolution.cu
@@ -298,7 +298,7 @@
 
     3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
     include/dmlc/concurrentqueue.h (symlink to 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h)
-    3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake  (Copy of the License available at licenses/BSD2)
+    3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake
     3rdparty/tvm/3rdparty/picojson/picojson.h
     example/ssd/dataset/pycocotools/coco.py
 
@@ -338,7 +338,7 @@
     Boost Software License, Version 1.0
     =======================================================================================
 
-    3rdparty/intgemm/test/3rd_party/catch.hpp  (Copy of the License available at licenses/BOOST1_0)
+    3rdparty/intgemm/test/3rd_party/catch.hpp
     cmake/Modules/FindJeMalloc.cmake
 
     =======================================================================================
