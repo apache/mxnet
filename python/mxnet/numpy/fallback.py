@@ -87,7 +87,6 @@ fallbacks = [
     'positive',
     'promote_types',
     'ptp',
-    'rate',
     'real',
     'result_type',
     'roots',
