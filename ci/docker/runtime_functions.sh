@@ -740,7 +740,7 @@ sanity_clang() {
     GIT_DIFFERENCE=$(git diff)
     if [[ -z $GIT_DIFFERENCE ]]; then
         git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
-        exit 0
+        return
     fi
 
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

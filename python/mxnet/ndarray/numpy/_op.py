@@ -50,7 +50,8 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
+           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal',
+           'positive', 'logaddexp']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3563,6 +3564,40 @@ def negative(x, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 @wrap_np_unary_func
+def positive(x, out=None, **kwargs):
+    r"""
+    Computes the numerical positive of each element `x_i` (i.e.,`y_i = +x_i`)
+    of the input array x .
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Returned array or scalar: y = +x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    Equivalent to `x.copy()`, but only defined for types that support arithmetic.
+
+    Examples
+    --------
+    >>> x1 = np.array(([1., -1.]))
+    >>> np.positive(x1)
+    array([ 1., -1.])
+    >>> +x1
+    array([ 1., -1.])
+    """
+    if out is x:
+        return x
+    return _pure_unary_func_helper(x, _api_internal.copy, _np.positive, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_unary_func
 def fix(x, out=None, **kwargs):
     r"""
     Round an array of floats element-wise to nearest integer towards zero.
@@ -6877,6 +6912,48 @@ def ldexp(x1, x2, out=None, **kwargs):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.ldexp(x1, x2, out=out)
     return _api_internal.ldexp(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def logaddexp(x1, x2, out=None, **kwargs):
+    """
+    Logarithm of the sum of exponentiations of the inputs.
+
+    Calculates log(exp(x1) + exp(x2)). This function is useful in statistics where
+    the calculated probabilities of events may be so small as to exceed the range of
+    normal floating point numbers. In such cases the logarithm of the calculate
+    probability is stored. This function allows adding probabilities stored
+    in such a fashion.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Array of multipliers.
+    x2 : ndarray or scalar, int
+        Array of twos exponents.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Logarithm of exp(x1) + exp(x2). This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    --------
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> prob12 = np.logaddexp(prob1, prob2)
+    >>> prob12
+    -113.87649168120691
+    >>> np.exp(prob12)
+    3.5000000000000057e-50
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.logaddexp(x1, x2, out=out)
+    return _api_internal.logaddexp(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
