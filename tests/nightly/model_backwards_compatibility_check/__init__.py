@@ -15,19 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-numpy>=1.17,<1.20.0
-jupyter
-Jinja2==2.11.3
-sphinx==2.4.0
-matplotlib
-notebook
-nbconvert==5.6.1
-jupyter-client<=6.1.12
-nbsphinx==0.4.3
-recommonmark==0.6.0
-notedown==1.5.1
-pypandoc==1.4
-breathe==4.13.1
-mock==3.0.5
-awscli==1.16.266
-autodocsumm==0.1.12
+# coding: utf-8
+
+from .common import *

@@ -2818,6 +2818,7 @@ def test_np_unary_funcs():
         'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
         'logical_not' : (None, -1.0, 1.0),
         'negative' : (lambda x: -1. * onp.ones(x.shape), -1.0, 1.0),
+        'positive' : (lambda x: onp.ones(x.shape), -1.0, 1.0),
         'reciprocal' : (lambda x: -1. / (x ** 2), 0.01, 1.0),
         'sign' : (None, -1.0, 1.0),
         'square' : (lambda x: 2.0 * x, -1.0, 1.0),
@@ -3112,6 +3113,8 @@ def test_np_binary_funcs():
         'hypot': (-1, 1, [lambda y, x1, x2: x1 / y],
                          [lambda y, x1, x2: x2 / y]),
         'ldexp': (-3, 3, [None], None, [[onp.int32]]),
+        'logaddexp': (-10, 10, [lambda y, x1, x2: onp.exp(x1) / (onp.exp(x1) + onp.exp(x2))],
+                               [lambda y, x1, x2: onp.exp(x2) / (onp.exp(x1) + onp.exp(x2))])
     }
     if is_op_runnable():
         funcs['logical_and'] = (-100, 100, [None], None, [[onp.float32, onp.float64]])
