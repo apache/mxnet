@@ -3114,6 +3114,8 @@ def test_np_binary_funcs():
         'hypot': (-1, 1, [lambda y, x1, x2: x1 / y],
                          [lambda y, x1, x2: x2 / y]),
         'ldexp': (-3, 3, [None], None, [[onp.int32]]),
+        'logaddexp': (-10, 10, [lambda y, x1, x2: onp.exp(x1) / (onp.exp(x1) + onp.exp(x2))],
+                               [lambda y, x1, x2: onp.exp(x2) / (onp.exp(x1) + onp.exp(x2))])
     }
     if is_op_runnable():
         funcs['logical_and'] = (-100, 100, [None], None, [[onp.float32, onp.float64]])
@@ -6166,6 +6168,51 @@ def test_np_linalg_svd(shape, dtype, hybridize):
     L = ret[1].asnumpy()
     V = ret[2].asnumpy()
     check_svd(UT, L, V, data_np)
+
+
+@use_np
+@pytest.mark.parametrize('shape', [
+    (3, 3),
+    (3, 5),
+    (4, 4),
+    (4, 5),
+    (5, 5),
+    (5, 6),
+    (6, 6),
+    (0, 1),
+    (6, 5, 6),
+    (2, 3, 3, 4),
+    (4, 2, 1, 2),
+    (0, 5, 3, 3),
+    (5, 0, 3, 3),
+    (3, 3, 0, 0),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_linalg_svdvals(shape, dtype, hybridize):
+    class TestSVD(HybridBlock):
+        def __init__(self):
+            super(TestSVD, self).__init__()
+
+        def forward(self, data):
+            return np.linalg.svdvals(data)
+
+    rtol = atol = 0.01
+    test_svd = TestSVD()
+    if hybridize:
+        test_svd.hybridize()
+    data_np = onp.random.uniform(-10.0, 10.0, shape)
+    data_np = onp.array(data_np, dtype=dtype)
+    data = np.array(data_np, dtype=dtype)
+    if effective_dtype(data) == onp.dtype(np.float16):
+        pytest.skip()
+    mx_out = test_svd(data)
+    np_out = onp.linalg.svd(data, compute_uv=False)
+    # check svdvals validity
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+    # Test imperative once again
+    mx_out = np.linalg.svdvals(data)
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 @use_np
