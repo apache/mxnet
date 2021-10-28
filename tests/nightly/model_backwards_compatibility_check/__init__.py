@@ -15,27 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
----
-Language: Cpp
-BasedOnStyle: Google
-ColumnLimit: 100
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: false
-AlignConsecutiveMacros: true
-DerivePointerAlignment: false
-SortIncludes: true
-MaxEmptyLinesToKeep: 1
-PointerAlignment: Left
-AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortBlocksOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterReturnType: None
-AlwaysBreakBeforeMultilineStrings: true
-AlwaysBreakTemplateDeclarations: true
-BinPackArguments: false
-BinPackParameters: false
-SortIncludes: false
-BreakBeforeTernaryOperators: false
+# coding: utf-8
+
+from .common import *

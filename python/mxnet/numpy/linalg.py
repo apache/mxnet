@@ -24,7 +24,7 @@ from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
-           'tensordot', 'trace', 'matrix_transpose', 'vecdot']
+           'tensordot', 'trace', 'matrix_transpose', 'vecdot', 'svdvals']
 __all__ += fallback_linalg.__all__
 
 
@@ -709,6 +709,31 @@ def svd(a):
     array(0.)
     """
     return _mx_nd_np.linalg.svd(a)
+
+
+def svdvals(a):
+    r"""
+    Computes the singular values of a matrix (or a stack of matrices) `x`.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        A real array with ``a.ndim >= 2`` and ``M <= N``.
+
+    Returns
+    -------
+    out : (..., M) ndarray
+        Vector(s) with the singular values, within each vector sorted in
+        descending order. The first ``a.ndim - 2`` dimensions have the same
+        size as those of the input `a`.
+
+    .. note::
+       `svdvals` is a standard api in
+       https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-svdvals-x
+       instead of an official NumPy operator.
+    """
+    _, s, _ = _mx_nd_np.linalg.svd(a)
+    return s
 
 
 def cholesky(a, upper=False):

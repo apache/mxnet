@@ -463,6 +463,20 @@ rldexp_grad(const DType val,
 }
 
 template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+logaddexp_grad(const DType val,
+           const DType2 val2) {
+  return op::exp(val) / (op::exp(val) + op::exp(val2));
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+logaddexp_rgrad(const DType val,
+           const DType2 val2) {
+  return op::exp(val2) / (op::exp(val) + op::exp(val2));
+}
+
+template <typename DType, typename DType2>
 __device__ inline DType smooth_l1_grad(const DType val, const DType2 scalar) {
   auto bsq = scalar * scalar;
   auto ibsq = 1.0f / bsq;
