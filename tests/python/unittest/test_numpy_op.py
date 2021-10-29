@@ -4458,7 +4458,8 @@ def test_np_delete():
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'bool', 'int32'])
 @pytest.mark.parametrize('op_name', ['argmin', 'argmax'])
 @pytest.mark.parametrize('keepdims', [True, False])
-def test_np_argmin_argmax(shape, axis, throw_exception, dtype, op_name, keepdims):
+@pytest.mark.parametrize('hybridize', [True, False])
+def test_np_argmin_argmax(shape, axis, throw_exception, dtype, op_name, keepdims, hybridize):
     class TestArgExtreme(HybridBlock):
         def __init__(self, op_name, axis=None, keepdims=False):
             super(TestArgExtreme, self).__init__()
@@ -4471,50 +4472,32 @@ def test_np_argmin_argmax(shape, axis, throw_exception, dtype, op_name, keepdims
 
     a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
     if throw_exception:
-        # Cannot use assert_exception because sometimes the main thread
-        # proceeds to `assert False` before the exception is thrown
-        # in the worker thread. Have to use mx.nd.waitall() here
-        # to block the main thread.
-        try:
+        with pytest.raises(MXNetError):
             getattr(np, op_name)(a, axis)
-            mx.nd.waitall()
-            assert False
-        except mx.MXNetError:
-            pass
+            mx.npx.waitall()
     else:
         mx_ret = getattr(np, op_name)(a, axis=axis, keepdims=keepdims)
         np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
         assert mx_ret.dtype == np_ret.dtype
         if keepdims:
-            # if shape == ():
-            #     assert mx_ret.shape == shape
-            # # elif not axis:
-            # #     assert mx_ret.size == 0
-            # else:
-            #     print(mx_ret.shape, np_ret.shape, shape, axis)
             assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
-            # assert same(mx_ret.asnumpy(), np_ret.reshape((mx_ret.shape)))
         else:
             assert same(mx_ret.asnumpy(), np_ret)
 
-    for hybridize in [False, True]:
-        net = TestArgExtreme(op_name, axis, keepdims)
-        if hybridize:
-            net.hybridize()
-        if throw_exception:
-            try:
-                net(a)
-                mx.nd.waitall()
-                assert False
-            except mx.MXNetError:
-                pass
+    net = TestArgExtreme(op_name, axis, keepdims)
+    if hybridize:
+        net.hybridize()
+    if throw_exception:
+        with pytest.raises(MXNetError):
+            getattr(np, op_name)(a, axis)
+            mx.npx.waitall()
+    else:
+        mx_ret = net(a)
+        assert mx_ret.dtype == np_ret.dtype
+        if keepdims:
+            assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
         else:
-            mx_ret = net(a)
-            assert mx_ret.dtype == np_ret.dtype
-            if keepdims:
-                assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
-            else:
-                assert same(mx_ret.asnumpy(), np_ret)
+            assert same(mx_ret.asnumpy(), np_ret)
 
 
 @use_np
