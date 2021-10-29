@@ -305,7 +305,7 @@ Before you can calculate the accuracy of your model, the metric (accuracy)
 should be instantiated before the training loop
 
 ```{.python .input}
-from mxnet.gluon.metric import Accuracy
+from mxnet.metric import Accuracy
 
 acc = Accuracy()
 ```
@@ -345,7 +345,7 @@ preds = np.array([0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0])
 Next, define the custom metric class `precision` and instantiate it
 
 ```{.python .input}
-from mxnet.gluon.metric import EvalMetric
+from mxnet.metric import EvalMetric
 
 class precision(EvalMetric):
     def __init__(self):
