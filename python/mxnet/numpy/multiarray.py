@@ -2438,7 +2438,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """Remove single-dimensional entries from the shape of a."""
         return squeeze(self, axis=axis)
 
-    def broadcast_to(self: ndarray, /, shape:  Tuple[int, ...]) -> ndarray:  # pylint: disable=redefined-outer-name
+    def broadcast_to(self: ndarray, /, shape: Tuple[int, ...]) -> ndarray:  # pylint: disable=redefined-outer-name
         return _mx_nd_np.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
@@ -4885,7 +4885,7 @@ def log1p(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def degrees(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def degrees(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Convert angles from radians to degrees.
 
@@ -4935,7 +4935,7 @@ def degrees(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarra
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def rad2deg(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def rad2deg(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""Convert angles from radians to degrees.
 
     Parameters
@@ -4971,7 +4971,7 @@ def rad2deg(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarra
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def radians(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def radians(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Convert angles from degrees to radians.
 
@@ -5011,7 +5011,7 @@ def radians(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarra
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def deg2rad(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def deg2rad(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     Convert angles from degrees to radians.
 
@@ -5047,7 +5047,7 @@ def deg2rad(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarra
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def reciprocal(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def reciprocal(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""Return the reciprocal of the argument, element-wise.
     Calculates ``1/x``.
 
@@ -5165,7 +5165,7 @@ def negative(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarr
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def fix(x: ndarray, / ,*, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def fix(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Round an array of floats element-wise to nearest integer towards zero.
     The rounded values are returned as floats.
@@ -6797,7 +6797,7 @@ def tril_indices(n: int, k: Optional[int] = 0, m: Optional[int] = None) -> Tuple
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def triu(m: ndarray, /, *, k: int=0) -> ndarray:
+def triu(m: ndarray, /, *, k: int = 0) -> ndarray:
     r"""
     Upper triangle of an array.
 
@@ -7215,7 +7215,7 @@ def concat(seq: Tuple[Union[...]], /, *, axis: Optional[int] = 0, out: Optional[
 
 @set_module('mxnet.numpy')
 def concatenate(
-        seq:  Union[Tuple[ndarray, ...], List[ndarray]], /, *, axis: Optional[int] = 0, out: Optional[ndarray] = None
+        seq: Union[Tuple[ndarray, ...], List[ndarray]], /, *, axis: Optional[int] = 0, out: Optional[ndarray] = None
 ) -> ndarray:
     """Join a sequence of arrays along an existing axis.
 
@@ -7570,7 +7570,7 @@ def dstack(arrays: Tuple[ndarray, ...], /) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def maximum(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray]=None, **kwargs):
+def maximum(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs):
     """
     Returns element-wise maximum of the input arrays with broadcasting.
 
@@ -8068,7 +8068,7 @@ def amax(
         a: ndarray,
         /,
         *,
-        axis: Optional[int]=None,
+        axis: Optional[int] = None,
         out: Optional[ndarray] = None,
         keepdims: bool = False
 ) -> ndarray:
@@ -8142,7 +8142,7 @@ def amin(
         *,
         axis: Optional[int] = None,
         out: Optional[ndarray] = None,
-        keepdims: bool=False
+        keepdims: bool = False
 ) -> ndarray:
     """
     Return the minimum of an array or minimum along an axis.
@@ -8709,7 +8709,7 @@ def copysign(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kw
 
 
 @set_module('mxnet.numpy')
-def ravel(x: ndarray, /, *, order: Optional[str]='C') -> ndarray:
+def ravel(x: ndarray, /, *, order: Optional[str] = 'C') -> ndarray:
     r"""
     ravel(x)
 
@@ -8755,7 +8755,7 @@ def ravel(x: ndarray, /, *, order: Optional[str]='C') -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def unravel_index(indices: Union[...], shape: Tuple[int, ...], /, *, order: str='C') -> ndarray: # pylint: disable=redefined-outer-name
+def unravel_index(indices: Union[...], shape: Tuple[int, ...], /, *, order: str = 'C') -> ndarray: # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
 
@@ -9331,7 +9331,7 @@ def around(
 
 
 @set_module('mxnet.numpy')
-def round(x: ndarray, /, *, decimals: int=0, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def round(x: ndarray, /, *, decimals: int = 0, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     round(a, decimals=0, out=None)
     Round an array to the given number of decimals.
@@ -9344,7 +9344,7 @@ def round(x: ndarray, /, *, decimals: int=0, out: Optional[ndarray] = None, **kw
 
 
 @set_module('mxnet.numpy')
-def round_(x:ndarray, /, *, decimals: Optional[int] = 0, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def round_(x: ndarray, /, *, decimals: Optional[int] = 0, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     r"""
     round_(a, decimals=0, out=None)
     Round an array to the given number of decimals.
@@ -9776,7 +9776,7 @@ def vdot(a: ndarray, b: ndarray, /) -> ndarray:
     >>> 1*4 + 4*1 + 5*2 + 6*2
     30
     """
-    return tensordot(a.flatten(), b.flatten(), axes = 1)
+    return tensordot(a.flatten(), b.flatten(), axes=1)
 
 
 @set_module('mxnet.numpy')
@@ -9842,7 +9842,7 @@ def inner(a: ndarray, b: ndarray, /) -> ndarray:
     array([[ 14.,  38.,  62.],
            [ 86., 110., 134.]])
     """
-    return tensordot(a, b, axes = [-1, -1])
+    return tensordot(a, b, axes=[-1, -1])
 
 
 @set_module('mxnet.numpy')
@@ -9895,7 +9895,7 @@ def outer(a: ndarray, b: ndarray, /) -> ndarray:
            [-2., -1.,  0.,  1.,  2.],
            [-2., -1.,  0.,  1.,  2.]])
     """
-    return tensordot(a.flatten(), b.flatten(), axes = 0)
+    return tensordot(a.flatten(), b.flatten(), axes=0)
 
 
 @set_module('mxnet.numpy')
@@ -10435,7 +10435,7 @@ def roll(
 
 
 @set_module('mxnet.numpy')
-def rot90(m :ndarray, k: int = 1, axes: Tuple[int, ...] = (0, 1), /) -> ndarray:
+def rot90(m: ndarray, k: int = 1, axes: Tuple[int, ...] = (0, 1), /) -> ndarray:
     """
     Rotate an array by 90 degrees in the plane specified by axes.
     Rotation direction is from the first towards the second axis.
@@ -10804,7 +10804,7 @@ def einsum(*operands, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def insert(arr: ndarray, obj: Union[slice, int, ndarray], values: ndarray, /, *, axis: Optional[int]=None) -> ndarray:
+def insert(arr: ndarray, obj: Union[slice, int, ndarray], values: ndarray, /, *, axis: Optional[int] = None) -> ndarray:
     r"""Insert values along the given axis before the given indices.
 
     Parameters
@@ -11113,7 +11113,7 @@ def quantile(
         out: Optional[ndarray] = None,
         overwrite_input: Optional[ndarray] = None,
         interpolation: Optional[str] = 'linear',
-        keepdims: bool=False
+        keepdims: bool = False
 ) -> ndarray: # pylint: disable=too-many-arguments
     """Compute the q-th quantile of the data along the specified axis.
     New in version 1.15.0.
@@ -12201,7 +12201,7 @@ def isfinite(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarr
 
 
 @set_module('mxnet.numpy')
-def where(condition: ndarray, x: ndarray=None, y: ndarray=None, /) -> ndarray:
+def where(condition: ndarray, x: ndarray = None, y: ndarray = None, /) -> ndarray:
     """where(condition, [x, y])
     Return elements chosen from `x` or `y` depending on `condition`.
 
@@ -12496,7 +12496,7 @@ def atleast_3d(*arys):
 def pad(
         x: ndarray,
         pad_width: Union[Tuple[int, ...], int] = None,
-        mode: Optional[str]="constant",
+        mode: Optional[str] = "constant",
         **kwargs: any
 ) -> ndarray: # pylint: disable=too-many-arguments
     # pylint: disable=too-many-return-statements

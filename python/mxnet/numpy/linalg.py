@@ -18,12 +18,12 @@
 """Namespace for ops used in imperative programming."""
 
 
+from typing import Optional, Tuple, Union
 from .multiarray import ndarray
 from ..ndarray import numpy as _mx_nd_np
 from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg
-from typing import Optional, Tuple, Union
 
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
@@ -384,7 +384,7 @@ def outer(a: ndarray, b: ndarray, /) -> ndarray:
     return _mx_nd_np.tensordot(a.flatten(), b.flatten(), 0)
 
 
-def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] =None) -> ndarray:
+def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] = None) -> ndarray:
     r"""
     Return the dot product of two vectors.
     Note that `vecdot` handles multidimensional arrays differently than `dot`:
@@ -437,7 +437,7 @@ def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] =None) -> ndarray:
     return _mx_nd_np.tensordot(a.flatten(), b.flatten(), axis)
 
 
-def lstsq(a: ndarray, b: ndarray, / ,*, rcond: Optional[float]='warn') -> Tuple[ndarray, ndarray, int, ndarray]:
+def lstsq(a: ndarray, b: ndarray, / , *, rcond: Optional[float] = 'warn') -> Tuple[ndarray, ndarray, int, ndarray]:
     r"""
     Return the least-squares solution to a linear matrix equation.
 
@@ -509,7 +509,7 @@ def lstsq(a: ndarray, b: ndarray, / ,*, rcond: Optional[float]='warn') -> Tuple[
 
 
 def pinv(
-        a:ndarray,
+        a: ndarray,
         /,
         *,
         rcond: Optional[Union[float, ndarray]] = 1e-15,
