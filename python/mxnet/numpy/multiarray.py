@@ -31,6 +31,8 @@ except ImportError:
 from array import array as native_array
 import functools
 import ctypes
+import sys
+import datetime
 import warnings
 import numpy as _np
 from .. import _deferred_compute as dc
@@ -430,9 +432,14 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             If it is None, it should return the namespace corresponding to latest version of the array API
             specification.
         """
-        if api_version is not None and not api_version.startswith("2021."):
-            raise ValueError(f"Unrecognized array API version: {api_version!r}")
-        return self.__module__
+        if api_version is not None:
+            try:
+                date = datetime.datetime.strptime(api_version, '%Y.%m')
+                if date.year != 2021:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(f"Unrecognized array API version: {api_version!r}")
+        return sys.modules[self.__module__]
 
 
     def _get_np_basic_indexing(self, key):
