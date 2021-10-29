@@ -51,7 +51,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
            'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal',
-           'positive', 'logaddexp']
+           'positive', 'logaddexp', 'floor_divide']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1166,6 +1166,45 @@ def true_divide(x1, x2, out=None):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.true_divide(x1, x2, out=out)
     return _api_internal.true_divide(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def floor_divide(x1, x2, out=None):
+    """Return the largest integer smaller or equal to the division of the inputs.
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+
+    .. note::
+
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
+
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+       precise type
+
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.floor_divide(x1, x2, out=out)
+    return _api_internal.floor_divide(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
