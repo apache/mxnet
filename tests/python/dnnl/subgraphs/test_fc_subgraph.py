@@ -200,3 +200,26 @@ def test_fc_int8_and_fp32_outputs(data_shape, flatten):
   attrs = {'fc': {}}
   net = MultiOutputFC()
   check_fusion(net, data_shape, attrs, check_quantization=flatten)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('identity_node', ['dropout', 'copy'])#DATA_SHAPE)
+def test_fc_identity_eltwise(identity_node):
+  class FCIdentityEltwise(nn.HybridBlock):
+    def __init__(self, identity_node, **kwargs):
+      super(FCIdentityEltwise, self).__init__(**kwargs)
+      self.fc = nn.Dense(units=64, use_bias=False, weight_initializer=None, flatten=True)
+      self.identity_node = identity_node
+    def forward(self, x):
+      fc_out = self.fc(x)
+      if self.identity_node == 'copy':
+        fc_out = mx.np.copy(fc_out)
+      else:
+        fc_out = mx.npx.dropout(fc_out)
+      out = mx.npx.activation(fc_out, act_type='relu')
+      return out
+
+  data_shape = (64, 4, 10, 10)
+  attrs = {'fc': {'with_eltwise': 'true'}}
+  net = FCIdentityEltwise(identity_node)
+  check_fusion(net, data_shape, attrs, check_quantization=False)
