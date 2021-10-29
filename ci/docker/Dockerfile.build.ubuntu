@@ -57,7 +57,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libprotobuf-dev \
         default-jdk \
         clang-6.0 \
-        clang-format \
+        clang-format-11 \
         python-yaml \
         clang-10 \
         clang-tidy-10 \
