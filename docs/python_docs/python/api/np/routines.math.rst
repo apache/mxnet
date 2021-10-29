@@ -157,6 +157,7 @@ Arithmetic operations
    fmod
    modf
    divmod
+   floor_divide
 
 
 Miscellaneous

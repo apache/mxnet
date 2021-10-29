@@ -3070,6 +3070,8 @@ def test_np_binary_funcs():
                                 [lambda y, x1, x2: onp.broadcast_to(x1, y.shape)]),
         'divide': (0.1, 1.0, [lambda y, x1, x2: onp.ones(y.shape) / x2],
                    [lambda y, x1, x2: -x1 / (x2 * x2)]),
+        'floor_divide': (0.1, 1.0, [lambda y, x1, x2: onp.zeros(y.shape)],
+                 [lambda y, x1, x2: onp.zeros(y.shape)]),
         'mod': (1.0, 10.0,
                 [lambda y, x1, x2: onp.ones(y.shape),
                  lambda y, x1, x2: onp.zeros(y.shape)],
