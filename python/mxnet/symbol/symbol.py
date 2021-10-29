@@ -1327,7 +1327,7 @@ class Symbol(SymbolBase):
         >>> c = 2 * a + b
         >>> d = mx.sym.FullyConnected(data=c, num_hidden=10)
         >>> d.debug_str()
-        >>> print d.debug_str()
+        >>> print(d.debug_str())
         Symbol Outputs:
 	        output[0]=fullyconnected0(0)
         Variable:a

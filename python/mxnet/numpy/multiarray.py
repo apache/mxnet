@@ -4124,8 +4124,9 @@ def cbrt(x, out=None, **kwargs):
 
     Examples
     ----------
-    >>> np.cbrt([1,8,27])
-    array([ 1.,  2.,  3.])
+    >>> x = np.array([1,8,27])
+    >>> np.cbrt(x)
+    array([1., 2., 3.], dtype=float32)
     """
     return _mx_nd_np.cbrt(x, out=out, **kwargs)
 
@@ -7911,8 +7912,8 @@ def argmin(a, axis=None, out=None):
 
     Specify ``out`` ndarray:
 
-    >>> a = np.arange(6).reshape(2,3) + 10
-    >>> b = np.zeros((2,))
+    >>> a = np.arange(6, dtype=np.int64).reshape(2,3) + 10
+    >>> b = np.zeros((2,), dtype=np.int64)
     >>> np.argmin(a, axis=1, out=b)
     array([0., 0.])
     >>> b
@@ -9661,15 +9662,16 @@ def inner(a, b):
     --------
     Ordinary inner product for vectors:
 
-    >>> a = np.array([1,2,3])
-    >>> b = np.array([0,1,0])
+    >>> a = np.array([1,2,3], "float")
+    >>> b = np.array([0,1,0], "float")
     >>> np.inner(a, b)
     array(2.)
 
     A multidimensional example:
 
-    >>> a = np.arange(24).reshape((2,3,4))
-    >>> b = np.arange(4)
+    >>> import mxnet.numpy as np
+    >>> a = np.arange(24, dtype=np.float).reshape((2,3,4))
+    >>> b = np.arange(4, dtype=np.float)
     >>> np.inner(a, b)
     array([[ 14.,  38.,  62.],
            [ 86., 110., 134.]])
@@ -11252,11 +11254,11 @@ def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=to
 
     Examples
     --------
-    >>> xp = [1, 2, 3]
-    >>> fp = [3, 2, 0]
+    >>> xp = np.array([1, 2, 3])
+    >>> fp = np.array([3, 2, 0])
     >>> np.interp(2.5, xp, fp)
     1.0
-    >>> np.interp([0, 1, 1.5, 2.72, 3.14], xp, fp)
+    >>> np.interp(np.array([0, 1, 1.5, 2.72, 3.14]), xp, fp)
     array([ 3. ,  3. ,  2.5 ,  0.56,  0. ])
     >>> UNDEF = -99.0
     >>> np.interp(3.14, xp, fp, right=UNDEF)

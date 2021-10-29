@@ -483,7 +483,7 @@ def lstsq(a, b, rcond='warn'):
 
     Examples
     --------
-    >>> x = np.array([0, 1, 2, 3])
+    >>> x = np.array([0.0, 1.0, 2.0, 3.0])
     >>> y = np.array([-1, 0.2, 0.9, 2.1])
     >>> A = np.vstack([x, np.ones(len(x))]).T
     >>> A

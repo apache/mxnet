@@ -2806,6 +2806,7 @@ fixed-size items.
 
         Examples
         --------
+        >>> from mxnet import nd
         >>> x = nd.ones((2, 2, 2))
         >>> assigned = nd.zeros((1, 1, 2))
         >>> y = x.slice_assign(assigned, (0, 0, None), (1, 1, None), (None, None, None))
@@ -3036,18 +3037,18 @@ def indexing_key_expand_implicit_axes(key, shape):
     Examples
     --------
     >>> shape = (3, 4, 5)
-    >>> indexing_key_expand_implicit_axes(np.s_[2, 1, 1], shape)
+    >>> mx.nd.indexing_key_expand_implicit_axes(np.s_[2, 1, 1], shape)
     (2, 1, 1)
-    >>> indexing_key_expand_implicit_axes(np.s_[0], shape)
+    >>> mx.nd.indexing_key_expand_implicit_axes(np.s_[0], shape)
     (0, slice(None, None, None), slice(None, None, None))
-    >>> indexing_key_expand_implicit_axes(np.s_[0, ...], shape)  # equivalent
+    >>> mx.nd.indexing_key_expand_implicit_axes(np.s_[0, ...], shape)  # equivalent
     (0, slice(None, None, None), slice(None, None, None))
-    >>> indexing_key_expand_implicit_axes(np.s_[:2, None, 0, ...], shape)
+    >>> mx.nd.indexing_key_expand_implicit_axes(np.s_[:2, None, 0, ...], shape)
     (slice(None, 2, None), None, 0, slice(None, None, None))
     >>> bool_array = np.array([[True, False, True, False],
-                               [False, True, False, True],
-                               [True, False, True, False]], dtype=np.bool)
-    >>> indexing_key_expand_implicit_axes(np.s_[bool_array, None, 0:2], shape)
+    ...                        [False, True, False, True],
+    ...                        [True, False, True, False]], dtype=np.bool)
+    >>> mx.nd.indexing_key_expand_implicit_axes(np.s_[bool_array, None, 0:2], shape)
     (array([0, 0, 1, 1, 2, 2], dtype=int64), array([0, 2, 1, 3, 0, 2], dtype=int64), None, slice(None, 2, None))
     """
     if not isinstance(key, tuple):
