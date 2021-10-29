@@ -1434,7 +1434,7 @@ def test_save_load_empty(tmp_path):
     (1,),
     (1,2)
 ])
-@pytest.mark.parametrize('dtype', np._DTYPE_2_STR_.keys())
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'bool', 'int32'])
 def test_index_operator(shape, dtype):
     if len(shape) >= 1 or not _np.issubdtype(dtype, _np.integer):
         x = np.ones(shape=shape, dtype=dtype)
