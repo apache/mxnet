@@ -738,11 +738,11 @@ sanity_clang() {
     
     tools/lint/clang_format_ci.sh "${BASE_SHA}"
     GIT_DIFFERENCE=$(git diff)
+    clang-format-11 --version
     if [[ -z $GIT_DIFFERENCE ]]; then
         git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
         return
     fi
-    clang-format-11 --version
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "| Clang-format failures found! Run: "
     echo "|    tools/lint/clang_format_ci.sh ${BASE_SHA} "
