@@ -321,7 +321,7 @@ void BinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     if (req[0] == kNullOp)
       return;
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
         mshadow::Shape<NDim> oshape  = new_oshape.get<NDim>();
         mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());

@@ -61,6 +61,15 @@ MXNET_REGISTER_API("_npi.true_divide")
       UFuncHelper(args, ret, op, op_scalar, op_rscalar);
     });
 
+MXNET_REGISTER_API("_npi.floor_divide")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_floor_divide");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_floor_divide_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_rfloor_divide_scalar");
+      UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
+
 MXNET_REGISTER_API("_npi.mod").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op         = Op::Get("_npi_mod");
@@ -136,6 +145,14 @@ MXNET_REGISTER_API("_npi.bitwise_and")
       using namespace runtime;
       const nnvm::Op* op        = Op::Get("_npi_bitwise_and");
       const nnvm::Op* op_scalar = Op::Get("_npi_bitwise_and_scalar");
+      UFuncHelper(args, ret, op, op_scalar, nullptr);
+    });
+
+MXNET_REGISTER_API("_npi.logaddexp")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op        = Op::Get("_npi_logaddexp");
+      const nnvm::Op* op_scalar = Op::Get("_npi_logaddexp_scalar");
       UFuncHelper(args, ret, op, op_scalar, nullptr);
     });
 
