@@ -742,11 +742,12 @@ sanity_clang() {
         git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
         return
     fi
-
+    clang-format-11 --version
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "| Clang-format failures found! Run: "
     echo "|    tools/lint/clang_format_ci.sh ${BASE_SHA} "
     echo "| to fix this error. "
+    echo "| Clang-format minimum version: 11. "
     echo "| For more info, see: https://mxnet.apache.org/versions/master/community/clang_format_guide"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
