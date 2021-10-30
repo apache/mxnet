@@ -646,7 +646,6 @@ WIDEST_TYPE_CASTS = [
     '_mod',
     '_not_equal',
     '_npi_column_stack',
-    '_npi_concatenate',
     '_npi_copysign',
     '_npi_cross',
     '_npi_dot',

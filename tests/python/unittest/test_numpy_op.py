@@ -4039,7 +4039,7 @@ def test_np_concat():
 
     shapes = [(0, 0), (2, 3), (2, 1, 3)]
     hybridizes = [True, False]
-    axes = [0, 1, None]
+    axes = [0, 1, -1, None]
     grad_reqs = ['write', 'add', 'null']
     dtypes = [np.float32, np.float64, np.bool]
     combinations = itertools.product(shapes, hybridizes, axes, grad_reqs, dtypes)
