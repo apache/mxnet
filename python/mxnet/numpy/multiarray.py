@@ -81,7 +81,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
            'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
-           'positive', 'logaddexp', 'floor_divide']
+           'positive', 'logaddexp', 'floor_divide', 'permute_dims']
 
 __all__ += fallback.__all__
 
@@ -1333,7 +1333,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
         """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim != 2:
+            warnings.warn('x.T requires x to have 2 dimensions. '
+                          'Use x.mT to transpose stacks of matrices and '
+                          'permute_dims() to permute dimensions.')
         return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def mT(self):
+        """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim < 2:
+            raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+        return _mx_nd_np.swapaxes(self, -1, -2)
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
@@ -6442,6 +6455,46 @@ def transpose(a, axes=None):
            [1., 3.]])
     >>> x = np.ones((1, 2, 3))
     >>> np.transpose(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _mx_nd_np.transpose(a, axes)
+
+
+@set_module('mxnet.numpy')
+def permute_dims(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted.
+
+    Note
+    --------
+    `permute_dims` is a alias for `transpose`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#permute-dims-x-axes
+    instead of an official NumPy operator.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.permute_dims(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.permute_dims(x, (1, 0, 2)).shape
     (2, 1, 3)
     """
     return _mx_nd_np.transpose(a, axes)

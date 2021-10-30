@@ -2581,6 +2581,67 @@ def test_np_transpose_error():
 
 
 @use_np
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('dtype', [onp.float32, onp.float16, onp.int32])
+@pytest.mark.parametrize('data_shape,axes_workload', [
+    [(), [(), None]],
+    [(2,), [(0,), None]],
+    [(0, 2), [(0, 1), (1, 0)]],
+    [(5, 10), [(0, 1), (1, 0), None]],
+    [(8, 2, 3), [(2, 0, 1), (0, 2, 1), (0, 1, 2), (2, 1, 0), (-1, 1, 0), None]],
+    [(8, 2, 16), [(0, 2, 1), (2, 0, 1), (0, 1, 2), (2, 1, 0), (-1, -2, -3)]],
+    [(8, 3, 4, 8), [(0, 2, 3, 1), (1, 2, 3, 0), (0, 3, 2, 1)]],
+    [(8, 3, 2, 3, 8), [(0, 1, 3, 2, 4), (0, 1, 2, 3, 4), (4, 0, 1, 2, 3)]],
+    [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5), None]],
+    [(3, 4, 3, 4, 3, 2, 2), [(0, 1, 3, 2, 4, 5, 6),
+     (2, 3, 4, 1, 0, 5, 6), None]],
+    [(3, 4, 3, 4, 3, 2, 3, 2), [(0, 1, 3, 2, 4, 5, 7, 6),
+     (2, 3, 4, 1, 0, 5, 7, 6), None]],
+])
+@pytest.mark.parametrize('grad_req', ['write', 'add'])
+def test_np_permute_dims(data_shape, axes_workload, hybridize, dtype, grad_req):
+    def np_permute_dims_grad(out_shape, dtype, axes=None):
+        ograd = onp.ones(out_shape, dtype=dtype)
+        if axes is None or axes == ():
+            return onp.transpose(ograd, axes)
+        np_axes = onp.array(list(axes))
+        permute_dims_axes = onp.zeros_like(np_axes)
+        permute_dims_axes[np_axes] = onp.arange(len(np_axes))
+        return onp.transpose(ograd, tuple(list(permute_dims_axes)))
+
+    class TestPermuteDims(HybridBlock):
+        def __init__(self, axes=None):
+            super(TestPermuteDims, self).__init__()
+            self.axes = axes
+
+        def forward(self, a):
+            return np.permute_dims(a, self.axes)
+
+    for axes in axes_workload:
+        test_trans = TestPermuteDims(axes)
+        if hybridize:
+            test_trans.hybridize()
+        x = np.random.normal(0, 1, data_shape).astype(dtype)
+        x = x.astype(dtype)
+        x.attach_grad(grad_req=grad_req)
+        if grad_req == 'add':
+            x.grad[()] = np.random.normal(0, 1, x.grad.shape).astype(x.grad.dtype)
+            x_grad_np = x.grad.asnumpy()
+        np_out = onp.transpose(x.asnumpy(), axes)
+        with mx.autograd.record():
+            mx_out = test_trans(x)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        mx_out.backward()
+        np_backward = np_permute_dims_grad(np_out.shape, dtype, axes)
+        if grad_req == 'add':
+            assert_almost_equal(x.grad.asnumpy(), np_backward + x_grad_np,
+                                rtol=1e-3, atol=1e-5, use_broadcast=False)
+        else:
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@use_np
 def test_np_meshgrid():
     nx, ny = (4, 5)
     x = np.array(onp.linspace(0, 1, nx), dtype=np.float32)
@@ -6812,6 +6873,44 @@ def test_np_linalg_matrix_rank():
                     rank = test_matrix_rank(a, tol)
                     # check matrix_rank validity
                     check_matrix_rank(rank, a.asnumpy(), tol.asnumpy(), hermitian=False)
+
+
+@use_np
+@pytest.mark.parametrize('shape', [
+    (),
+    (1,),
+    (0, 1, 2),
+    (0, 1, 2),
+    (0, 1, 2),
+    (4, 5, 6, 7),
+    (4, 5, 6, 7),
+    (4, 5, 6, 7),
+])
+def test_np_linalg_matrix_transpose(shape):
+    class TestMatTranspose(HybridBlock):
+        def __init__(self):
+            super(TestMatTranspose, self).__init__()
+
+        def forward(self, x):
+            return np.linalg.matrix_transpose(x)
+
+    data_np = onp.random.uniform(size=shape)
+    data_mx = np.array(data_np, dtype=data_np.dtype)
+    if data_mx.ndim < 2:
+        assertRaises(ValueError, np.linalg.matrix_transpose, data_mx)
+        return
+    ret_np = onp.swapaxes(data_np, -1, -2)
+    ret_mx = np.linalg.matrix_transpose(data_mx)
+    assert same(ret_mx.asnumpy(), ret_np)
+
+    net = TestMatTranspose()
+    for hybrid in [False, True]:
+        if hybrid:
+            net.hybridize()
+        ret_mx = net(data_mx)
+        assert same(ret_mx.asnumpy(), ret_np)
+    
+    assert same(data_mx.mT.asnumpy(), ret_np)
 
 
 @use_np
