@@ -23,7 +23,7 @@ In MXNet Gluon, we can use [KLDivLoss](../../../../api/gluon/loss/index.rst#mxne
 
 As an example, let's compare a few categorical distributions (`dist_1`, `dist_2` and `dist_3`), each with 4 categories.
 
-```
+```{.python .input}
 from matplotlib import pyplot as plt
 import mxnet as mx
 import numpy as np
@@ -55,20 +55,20 @@ We often apply a [softmax](../../../../api/npx/generated/mxnet.npx.softmax.rst) 
 
 Since we're already working with distributions in this example, we don't need to apply the softmax and only need to apply [log](../../../../api/np/generated/mxnet.np.log.rst). And we'll create batch dimensions even though we're working with single distributions.
 
-```
+```{.python .input}
 def kl_divergence(dist_a, dist_b):
     # add batch dimension
-    pred_batch = mx.nd.array(dist_a).expand_dims(0)
-    target_batch = mx.nd.array(dist_b).expand_dims(0)
+    pred_batch = mx.np.expand_dims(mx.np.array(dist_a), axis=0)
+    target_batch = mx.np.expand_dims(mx.np.array(dist_b), axis=0)
     # log the distribution
-    pred_batch = pred_batch.log()
+    pred_batch = mx.np.log(pred_batch)
     # create loss (assuming we have a logged prediction distribution)
     loss_fn = mx.gluon.loss.KLDivLoss(from_logits=True)
     divergence = loss_fn(pred_batch, target_batch)
-    return divergence.asscalar()
+    return divergence.item()
 ```
 
-```
+```{.python .input}
 print("Distribution 1 compared with Distribution 2: {}".format(
         kl_divergence(dist_1, dist_2)))
 print("Distribution 1 compared with Distribution 3: {}".format(
@@ -83,24 +83,24 @@ As expected we see a smaller KL Divergence for distributions 1 & 2 than 1 & 3. A
 
 Alternatively, instead of manually applying the [log_softmax](../../../../api/npx/generated/mxnet.npx.log_softmax.rst) to our network outputs, we can leave that to the loss function. When setting `from_logits=False` on [KLDivLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.KLDivLoss), the [log_softmax](../../../../api/npx/generated/mxnet.npx.log_softmax.rst) is applied to the first argument passed to `loss_fn`. As an example, let's assume our network outputs us the values below (favorably chosen so that when we [softmax](../../../../api/npx/generated/mxnet.npx.softmax.rst) these values we get the same distribution parameters as `dist_1`).
 
-```
-output = mx.nd.array([0.39056206, 1.3068528, 0.39056206, -0.30258512])
+```{.python .input}
+output = mx.np.array([0.39056206, 1.3068528, 0.39056206, -0.30258512])
 ```
 
 We can pass this to our [KLDivLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.KLDivLoss) loss function (with `from_logits=False`) and get the same KL Divergence between `dist_1` and `dist_2` as before, because the [log_softmax](../../../../api/npx/generated/mxnet.npx.log_softmax.rst) is applied within the loss function.
 
-```
+```{.python .input}
 def kl_divergence_not_from_logits(dist_a, dist_b):
     # add batch dimension
-    pred_batch = mx.nd.array(dist_a).expand_dims(0)
-    target_batch = mx.nd.array(dist_b).expand_dims(0)
+    pred_batch = mx.np.expand_dims(mx.np.array(dist_a), axis=0)
+    target_batch = mx.np.expand_dims(mx.np.array(dist_b), axis=0)
     # create loss (assuming we have a logged prediction distribution)
     loss_fn = mx.gluon.loss.KLDivLoss(from_logits=False)
     divergence = loss_fn(pred_batch, target_batch)
-    return divergence.asscalar()
+    return divergence.item()
 ```
 
-```
+```{.python .input}
 print("Distribution 1 compared with Distribution 2: {}".format(
         kl_divergence_not_from_logits(output, dist_2)))
 ```
@@ -110,11 +110,11 @@ print("Distribution 1 compared with Distribution 2: {}".format(
 Occasionally, you might have issues with [KLDivLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.KLDivLoss). One common issue arises when the support of the distributions being compared are not the same. 'Support' here is referring to the values of the distribution which have a non-zero probability. Conveniently, all our examples above had the same support, but we might have a case where some categories have a probability of 0.
 
 
-```
+```{.python .input}
 dist_4 = np.array([0, 0.9, 0, 0.1])
 ```
 
-```
+```{.python .input}
 print("Distribution 4 compared with Distribution 1: {}".format(
         kl_divergence(dist_4, dist_1)))
 ```
@@ -125,12 +125,12 @@ We can see that the result is `nan`, which will obviously cause issues when calc
 
 One minor difference between the true definition of KL Divergence and the result from [KLDivLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.KLDivLoss) is how the aggregation of category contributions is performed. Although the true definition sums up these contributions, the default behaviour in MXNet Gluon is to average terms along the batch dimension. As a result, the [KLDivLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.KLDivLoss) output will be smaller than the true definition by a factor of the number of categories.
 
-```
+```{.python .input}
 true_divergence = (dist_2*(np.log(dist_2)-np.log(dist_1))).sum()
 print('true_divergence: {}'.format(true_divergence))
 ```
 
-```
+```{.python .input}
 num_categories = dist_1.shape[0]
 divergence = kl_divergence(dist_1, dist_2)
 print('divergence: {}'.format(divergence))

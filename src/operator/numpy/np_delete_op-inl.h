@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_delete_op-inl.h
  * \brief Function definition of delete operators
  */
@@ -55,21 +54,22 @@ struct NumpyDeleteParam : public dmlc::Parameter<NumpyDeleteParam> {
   dmlc::optional<int> axis;
   DMLC_DECLARE_PARAMETER(NumpyDeleteParam) {
     DMLC_DECLARE_FIELD(start)
-    .set_default(dmlc::optional<index_t>())
-    .describe("If 'obj' is slice, 'start' is one of it's arguments.");
+        .set_default(dmlc::optional<index_t>())
+        .describe("If 'obj' is slice, 'start' is one of it's arguments.");
     DMLC_DECLARE_FIELD(stop)
-    .set_default(dmlc::optional<index_t>())
-    .describe("If 'obj' is slice, 'stop' is one of it's arguments.");
+        .set_default(dmlc::optional<index_t>())
+        .describe("If 'obj' is slice, 'stop' is one of it's arguments.");
     DMLC_DECLARE_FIELD(step)
-    .set_default(dmlc::optional<index_t>())
-    .describe("If 'obj' is slice, 'step' is one of it's arguments.");
+        .set_default(dmlc::optional<index_t>())
+        .describe("If 'obj' is slice, 'step' is one of it's arguments.");
     DMLC_DECLARE_FIELD(int_ind)
-    .set_default(dmlc::optional<index_t>())
-    .describe("If 'obj' is int, 'int_ind' is the index before which"
-              "'values' is inserted");
+        .set_default(dmlc::optional<index_t>())
+        .describe(
+            "If 'obj' is int, 'int_ind' is the index before which"
+            "'values' is inserted");
     DMLC_DECLARE_FIELD(axis)
-    .set_default(dmlc::optional<int>())
-    .describe("Axis along which to insert `values`.");
+        .set_default(dmlc::optional<int>())
+        .describe("Axis along which to insert `values`.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream start_s, stop_s, step_s, int_ind_s, axis_s;
@@ -78,25 +78,25 @@ struct NumpyDeleteParam : public dmlc::Parameter<NumpyDeleteParam> {
     step_s << step;
     int_ind_s << int_ind;
     axis_s << axis;
-    (*dict)["start"] = start_s.str();
-    (*dict)["stop"] = stop_s.str();
-    (*dict)["step"] = step_s.str();
+    (*dict)["start"]   = start_s.str();
+    (*dict)["stop"]    = stop_s.str();
+    (*dict)["step"]    = step_s.str();
     (*dict)["int_ind"] = int_ind_s.str();
-    (*dict)["axis"] = axis_s.str();
+    (*dict)["axis"]    = axis_s.str();
   }
 };
 
 namespace delete_ {
 
-enum DeleteOpInputs {kArr, kObj};
-enum DeleteOpOutputs {kOut};
+enum DeleteOpInputs { kArr, kObj };
+enum DeleteOpOutputs { kOut };
 }  // namespace delete_
 
 struct SliceToIndices {
   /*!
    * \brief transfer slice to indices array
    */
-  template<typename IType>
+  template <typename IType>
   MSHADOW_XINLINE static void Map(index_t i, IType* indices, int start, int step) {
     indices[i] = start + i * step;
   }
@@ -105,12 +105,12 @@ struct SliceToIndices {
 struct IsDeleteCal {
   /*!
    * \brief indicate which indices need to be deleted in input
-   * \param N used to check indices legality 
+   * \param N used to check indices legality
    * \param is_delete if is_delete[i] == False, index i needn't to be deleted from output
    *                  if is_delete[i] == True, index i need to be deleted from output
    * \param indices the indices need to be deleted
    */
-  template<typename IType>
+  template <typename IType>
   MSHADOW_XINLINE static void Map(index_t i, int N, bool* is_delete, const IType* indices) {
     if ((indices[i] >= 0) && (indices[i] < N)) {
       is_delete[static_cast<index_t>(indices[i])] = true;
@@ -138,7 +138,7 @@ struct OutPosCal {
   }
 };
 
-template<int req, int ndim>
+template <int req, int ndim>
 struct DeleteKernel {
   /*!
    * \brief delete a sub-array from input along an axis according to 'is_delete'.
@@ -150,8 +150,9 @@ struct DeleteKernel {
    * \param out_stride - the stride of 'out_data'.
    * \param axis - delete sub-array along this axis
    */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out_data,
                                   const DType* in_arr,
                                   const bool* is_delete,
                                   const int64_t* out_pos,
@@ -161,7 +162,7 @@ struct DeleteKernel {
     // i -> position in in_arr's shape
     mshadow::Shape<ndim> arr_idx = mxnet_op::unravel(i, arrshape);
     if (!is_delete[arr_idx[axis]]) {
-      arr_idx[axis] = out_pos[arr_idx[axis]];
+      arr_idx[axis]    = out_pos[arr_idx[axis]];
       index_t dest_idx = mxnet_op::dot(arr_idx, out_stride);
       KERNEL_ASSIGN(out_data[dest_idx], req, in_arr[i]);
     }
@@ -182,7 +183,9 @@ inline void SliceIndices(const dmlc::optional<index_t>& pstart,
                          const dmlc::optional<index_t>& pstop,
                          const dmlc::optional<index_t>& pstep,
                          const index_t range,
-                         index_t* start, index_t* stop, index_t* step,
+                         index_t* start,
+                         index_t* stop,
+                         index_t* step,
                          size_t* tot) {
   *step = pstep.has_value() ? pstep.value() : 1;
   CHECK_NE(*step, 0) << "'step' can not equal to 0.";
@@ -209,28 +212,27 @@ inline void SliceIndices(const dmlc::optional<index_t>& pstart,
   }
 }
 
-template<typename xpu>
+template <typename xpu>
 void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
-                        const OpContext &ctx,
-                        const std::vector<NDArray> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<NDArray> &outputs) {
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
 
   const NumpyDeleteParam& param = nnvm::get<NumpyDeleteParam>(attrs.parsed);
-  CHECK_EQ(inputs.size(),
-          (param.step.has_value() || param.int_ind.has_value()) ? 1U : 2U);
+  CHECK_EQ(inputs.size(), (param.step.has_value() || param.int_ind.has_value()) ? 1U : 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
 
   int ndim = inputs[delete_::kArr].shape().ndim();
   int axis = param.axis.has_value() ? param.axis.value() : -1;
   NDArray arr;  // original array
 
   if (!param.axis.has_value()) {
-    arr = inputs[delete_::kArr].Reshape(Shape1(inputs[delete_::kArr].shape().Size()));
+    arr  = inputs[delete_::kArr].Reshape(Shape1(inputs[delete_::kArr].shape().Size()));
     ndim = 1;
     axis = -1;
   } else {
@@ -238,12 +240,12 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
   }
 
   if (ndim == 0) {
-    const_cast<NDArray &>(outputs[delete_::kOut]).Init(arr.shape());
+    const_cast<NDArray&>(outputs[delete_::kOut]).Init(arr.shape());
     mxnet_op::copy(s, outputs[delete_::kOut].data(), inputs[delete_::kArr].data());
     return;
   }
 
-  axis = CheckAxis(axis, ndim);
+  axis      = CheckAxis(axis, ndim);
   index_t N = (arr.shape())[axis];
   mxnet::TShape outshape(arr.shape());
   // if obj is slice, they're obj's arguments
@@ -254,76 +256,81 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
   index_t index = 0;
 
   if (param.step.has_value()) {  // obj is slice
-    SliceIndices(param.start, param.stop, param.step,
-                 N, &start, &stop, &step, &numtodel);
+    SliceIndices(param.start, param.stop, param.step, N, &start, &stop, &step, &numtodel);
     if (numtodel == 0) {
-      const_cast<NDArray &>(outputs[delete_::kOut]).Init(arr.shape());
+      const_cast<NDArray&>(outputs[delete_::kOut]).Init(arr.shape());
       mxnet_op::copy(s, outputs[delete_::kOut].data(), inputs[delete_::kArr].data());
       return;
     }
     outshape[axis] -= numtodel;
-    const_cast<NDArray &>(outputs[delete_::kOut]).Init(outshape);
+    const_cast<NDArray&>(outputs[delete_::kOut]).Init(outshape);
   } else if (param.int_ind.has_value()) {  // obj is scaler
     index = param.int_ind.value();
     CHECK((index >= -1 * N) && (index < N))
-      << "index " << index
-      << " is out of bounds for axis " << axis
-      << " with size " << N << "\n";
+        << "index " << index << " is out of bounds for axis " << axis << " with size " << N << "\n";
     index += ((index < 0) ? N : 0);
     numtodel = static_cast<size_t>(1);
     outshape[axis] -= 1;
-    const_cast<NDArray &>(outputs[delete_::kOut]).Init(outshape);
+    const_cast<NDArray&>(outputs[delete_::kOut]).Init(outshape);
   } else {  // obj is tensor
     numtodel = inputs[delete_::kObj].shape().Size();
   }
 
-  char* out_pos_ptr = nullptr;
-  char* indices_ptr = nullptr;
+  char* out_pos_ptr   = nullptr;
+  char* indices_ptr   = nullptr;
   char* is_delete_ptr = nullptr;
-  MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
-                      inputs[delete_::kObj].dtype() :
-                      mshadow::DataType<int64_t>::kFlag), IType, {
-    size_t temp_mem_size = sizeof(int64_t) * arr.shape()[axis] +
-                           sizeof(IType) * numtodel +
-                           sizeof(bool) * arr.shape()[axis];
-    Tensor<xpu, 1, char> temp_mem =
-      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-    out_pos_ptr = temp_mem.dptr_;
-    indices_ptr = out_pos_ptr + sizeof(int64_t) * arr.shape()[axis];
-    is_delete_ptr = indices_ptr + sizeof(IType) * numtodel;
-    if (param.step.has_value()) {  // obj is slice, transfer slice to tensor
-      Kernel<SliceToIndices, xpu>::Launch(
-        s, numtodel, reinterpret_cast<IType*>(indices_ptr), start, step);
-    } else if (param.int_ind.has_value()) {  // obj is scaler, copy it to tensor
-      Fill(s, TBlob(reinterpret_cast<IType*>(indices_ptr),
-           Shape1(numtodel), xpu::kDevMask), kWriteTo, index);
-    } else {  // obj is tensor, copy it to a unified tensor
-      mxnet_op::copy(s,
-        TBlob(reinterpret_cast<IType*>(indices_ptr), inputs[delete_::kObj].shape(),
-              inputs[delete_::kObj].data().dev_mask()),
-        inputs[delete_::kObj].data());
-    }
-    mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
-      s, arr.shape()[axis], reinterpret_cast<bool*>(is_delete_ptr));
-    // mark which position need to be deleted from input arr
-    Kernel<IsDeleteCal, xpu>::Launch(
-      s, numtodel, N, reinterpret_cast<bool*>(is_delete_ptr),
-      reinterpret_cast<IType*>(indices_ptr));
-    // calculate output data's original position in input arr
-    Kernel<OutPosCal, xpu>::Launch(
-      s, arr.shape()[axis], reinterpret_cast<int64_t*>(out_pos_ptr),
-      reinterpret_cast<bool*>(is_delete_ptr));
-  });
+  MSHADOW_TYPE_SWITCH(
+      ((inputs.size() == 2U) ?  // obj is tensor
+           inputs[delete_::kObj].dtype()
+                             : mshadow::DataType<int64_t>::kFlag),
+      IType,
+      {
+        size_t temp_mem_size = sizeof(int64_t) * arr.shape()[axis] + sizeof(IType) * numtodel +
+                               sizeof(bool) * arr.shape()[axis];
+        Tensor<xpu, 1, char> temp_mem =
+            ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
+        out_pos_ptr   = temp_mem.dptr_;
+        indices_ptr   = out_pos_ptr + sizeof(int64_t) * arr.shape()[axis];
+        is_delete_ptr = indices_ptr + sizeof(IType) * numtodel;
+        if (param.step.has_value()) {  // obj is slice, transfer slice to tensor
+          Kernel<SliceToIndices, xpu>::Launch(
+              s, numtodel, reinterpret_cast<IType*>(indices_ptr), start, step);
+        } else if (param.int_ind.has_value()) {  // obj is scaler, copy it to tensor
+          Fill(s,
+               TBlob(reinterpret_cast<IType*>(indices_ptr), Shape1(numtodel), xpu::kDevMask),
+               kWriteTo,
+               index);
+        } else {  // obj is tensor, copy it to a unified tensor
+          mxnet_op::copy(s,
+                         TBlob(reinterpret_cast<IType*>(indices_ptr),
+                               inputs[delete_::kObj].shape(),
+                               inputs[delete_::kObj].data().dev_mask()),
+                         inputs[delete_::kObj].data());
+        }
+        mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
+            s, arr.shape()[axis], reinterpret_cast<bool*>(is_delete_ptr));
+        // mark which position need to be deleted from input arr
+        Kernel<IsDeleteCal, xpu>::Launch(s,
+                                         numtodel,
+                                         N,
+                                         reinterpret_cast<bool*>(is_delete_ptr),
+                                         reinterpret_cast<IType*>(indices_ptr));
+        // calculate output data's original position in input arr
+        Kernel<OutPosCal, xpu>::Launch(s,
+                                       arr.shape()[axis],
+                                       reinterpret_cast<int64_t*>(out_pos_ptr),
+                                       reinterpret_cast<bool*>(is_delete_ptr));
+      });
 
   if (inputs.size() == 2U) {  // obj is tensor
-    // get total number of nonredundant indices
-    #ifdef __CUDACC__
-      thrust::device_ptr<bool>is_delete_dev(reinterpret_cast<bool*>(is_delete_ptr));
-      thrust::device_vector<bool>vec_is_delete(is_delete_dev, is_delete_dev + arr.shape()[axis]);
-    #else
-      std::vector<bool>vec_is_delete(reinterpret_cast<bool*>(is_delete_ptr),
-                                     reinterpret_cast<bool*>(is_delete_ptr) + arr.shape()[axis]);
-    #endif
+// get total number of nonredundant indices
+#ifdef __CUDACC__
+    thrust::device_ptr<bool> is_delete_dev(reinterpret_cast<bool*>(is_delete_ptr));
+    thrust::device_vector<bool> vec_is_delete(is_delete_dev, is_delete_dev + arr.shape()[axis]);
+#else
+    std::vector<bool> vec_is_delete(reinterpret_cast<bool*>(is_delete_ptr),
+                                    reinterpret_cast<bool*>(is_delete_ptr) + arr.shape()[axis]);
+#endif
     numtodel = 0;
     for (index_t i = 0; i < arr.shape()[axis]; ++i) {
       if (vec_is_delete[i]) {
@@ -331,28 +338,33 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
       }
     }
     outshape[axis] -= numtodel;
-    const_cast<NDArray &>(outputs[delete_::kOut]).Init(outshape);
+    const_cast<NDArray&>(outputs[delete_::kOut]).Init(outshape);
   }
 
   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
-                      inputs[delete_::kObj].dtype() :
-                      mshadow::DataType<int64_t>::kFlag), IType, {
-    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
-      MSHADOW_TYPE_SWITCH(outputs[delete_::kOut].dtype(), DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req[delete_::kOut], req_type, {
-          Kernel<DeleteKernel<req_type, ndim>, xpu>::Launch(
-            s, arr.shape().Size(),
-            outputs[delete_::kOut].data().dptr<DType>(),
-            arr.data().dptr<DType>(),
-            reinterpret_cast<bool*>(is_delete_ptr),
-            reinterpret_cast<int64_t*>(out_pos_ptr),
-            arr.shape().get<ndim>(),
-            out_strides, axis);
-        });
-      });
-    });
-  });
+                           inputs[delete_::kObj].dtype()
+                                             : mshadow::DataType<int64_t>::kFlag),
+                      IType,
+                      {
+                        MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+                          mshadow::Shape<ndim> out_strides =
+                              mxnet_op::calc_stride(outshape.get<ndim>());
+                          MSHADOW_TYPE_SWITCH(outputs[delete_::kOut].dtype(), DType, {
+                            MXNET_ASSIGN_REQ_SWITCH(req[delete_::kOut], req_type, {
+                              Kernel<DeleteKernel<req_type, ndim>, xpu>::Launch(
+                                  s,
+                                  arr.shape().Size(),
+                                  outputs[delete_::kOut].data().dptr<DType>(),
+                                  arr.data().dptr<DType>(),
+                                  reinterpret_cast<bool*>(is_delete_ptr),
+                                  reinterpret_cast<int64_t*>(out_pos_ptr),
+                                  arr.shape().get<ndim>(),
+                                  out_strides,
+                                  axis);
+                            });
+                          });
+                        });
+                      });
 }
 
 }  // namespace op

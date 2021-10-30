@@ -265,6 +265,9 @@ FP16_FP32_FUNCS = [
     '_npi_multinomial',
     '_npi_multiply',
     '_npi_multiply_scalar',
+    '_npi_floor_divide',
+    '_npi_floor_divide_scalar',
+    '_npi_rfloor_divide_scalar',
     '_npi_nan_to_num',
     '_npi_negative',
     '_npi_normal',
@@ -317,6 +320,9 @@ FP16_FP32_FUNCS = [
     '_npx_relu',
     '_npx_reshape',
     '_npx_sigmoid',
+    '_npx_cond',
+    '_npx_foreach',
+    '_npx_while_loop',
     '_onehot_encode',
     '_ones',
     '_plus_scalar',
@@ -398,6 +404,7 @@ FP16_FP32_FUNCS = [
     'log_sigmoid',
     'max',
     'min',
+    'mish',
     'mp_lamb_update_phase1',
     'mp_lamb_update_phase2',
     'mp_nag_mom_update',
@@ -455,11 +462,6 @@ FP16_FP32_FUNCS = [
     'zeros_like',
     ]
 
-if Features().is_enabled('CUDNN'):
-    FP16_FP32_FUNCS.extend([
-        'CuDNNBatchNorm',
-    ])
-
 # Functions that have to be cast to FP32 due to possible
 # overflows
 FP32_FUNCS = [
@@ -487,6 +489,8 @@ FP32_FUNCS = [
     '_npi_expm1',
     '_npi_ldexp',
     '_npi_ldexp_scalar',
+    '_npi_logaddexp',
+    '_npi_logaddexp_scalar',
     '_npi_log',
     '_npi_log10',
     '_npi_log1p',
@@ -612,8 +616,11 @@ FP32_FUNCS = [
 
 if Features().is_enabled('ONEDNN'):
     FP32_FUNCS.extend([
-        '_sg_mkldnn_conv',
-        '_sg_mkldnn_fully_connected',
+        '_sg_onednn_conv',
+        '_sg_onednn_fully_connected',
+        '_sg_onednn_selfatt_qk',
+        '_sg_onednn_selfatt_valatt',
+        '_sg_onednn_batch_dot'
     ])
 
 # Functions that have to be cast to FP32 only for
@@ -640,7 +647,6 @@ WIDEST_TYPE_CASTS = [
     '_mod',
     '_not_equal',
     '_npi_column_stack',
-    '_npi_concatenate',
     '_npi_copysign',
     '_npi_cross',
     '_npi_dot',

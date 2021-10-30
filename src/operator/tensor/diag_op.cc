@@ -18,11 +18,10 @@
  */
 
 /*!
-* Copyright (c) 2015 by Contributors
-* \file diag_op.cc
-* \brief CPU implementation of diag operator
-* \author Istvan Fehervari, Zhijingcheng Yu
-*/
+ * \file diag_op.cc
+ * \brief CPU implementation of diag operator
+ * \author Istvan Fehervari, Zhijingcheng Yu
+ */
 
 #include "./diag_op-inl.h"
 
@@ -32,7 +31,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(DiagParam);
 
 NNVM_REGISTER_OP(diag)
-.describe(R"code(Extracts a diagonal or constructs a diagonal array.
+    .describe(R"code(Extracts a diagonal or constructs a diagonal array.
 
 ``diag``'s behavior depends on the input array dimensions:
 
@@ -85,28 +84,26 @@ Examples::
                                  [5, 8]]
 
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<DiagParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", DiagOpShape)
-.set_attr<nnvm::FInferType>("FInferType", DiagOpType)
-.set_attr<FCompute>("FCompute<cpu>", DiagOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_diag"})
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(DiagParam::__FIELDS__());
-
+    .set_attr_parser(ParamParser<DiagParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", DiagOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", DiagOpType)
+    .set_attr<FCompute>("FCompute<cpu>", DiagOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_diag"})
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(DiagParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_diag)
-.set_attr_parser(ParamParser<DiagParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", DiagOpBackward<cpu>);
-
+    .set_attr_parser(ParamParser<DiagParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", DiagOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -18,31 +18,27 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file sequence_reverse.cc
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 #include "./sequence_reverse-inl.h"
 
 namespace mxnet {
 namespace op {
 template <>
-Operator *CreateOp<cpu>(SequenceReverseParam param, int dtype, int itype) {
-  Operator *op = nullptr;
+Operator* CreateOp<cpu>(SequenceReverseParam param, int dtype, int itype) {
+  Operator* op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceReverseOp<cpu, DType, IType>(param);
-        });
-    });
+    MSHADOW_TYPE_SWITCH(itype, IType, { op = new SequenceReverseOp<cpu, DType, IType>(param); });
+  });
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *SequenceReverseProp::CreateOperatorEx(
-    Context ctx, mxnet::ShapeVector *in_shape,
-    std::vector<int> *in_type) const {
-
+Operator* SequenceReverseProp::CreateOperatorEx(Context ctx,
+                                                mxnet::ShapeVector* in_shape,
+                                                std::vector<int>* in_type) const {
   if (in_type->size() >= 2 && (*in_type)[1] != -1) {
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);
   }
@@ -120,12 +116,16 @@ Example::
                       [  4.,   5.,   6.]]]
 
 )code" ADD_FILELINE)
-    .add_argument("data", "NDArray-or-Symbol",
+    .add_argument("data",
+                  "NDArray-or-Symbol",
                   "n-dimensional input array of the form [max_sequence_length,"
                   " batch_size, other dims] where n>2 ")
-    .add_argument("sequence_length", "NDArray-or-Symbol",
+    .add_argument("sequence_length",
+                  "NDArray-or-Symbol",
                   "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceReverseParam::__FIELDS__());
+
+NNVM_REGISTER_OP(SequenceReverse).add_alias("_npx_sequence_reverse");
 
 }  // namespace op
 }  // namespace mxnet

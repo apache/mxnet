@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file test_perf.h
  * \brief operator unit test utility functions
  * \author Chris Olivier

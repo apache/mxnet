@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file reset_arrays-inl.h
  * \brief setting all array element values to zeros
  * \author Moises Hernandez-Fernandez, Andrei Ivanov
@@ -36,14 +35,13 @@ namespace op {
 struct ResetArraysParam : public dmlc::Parameter<ResetArraysParam> {
   int num_arrays;
   DMLC_DECLARE_PARAMETER(ResetArraysParam) {
-    DMLC_DECLARE_FIELD(num_arrays)
-    .describe("number of input arrays.");
+    DMLC_DECLARE_FIELD(num_arrays).describe("number of input arrays.");
   }
 };
 
 inline bool ResetArraysShape(const NodeAttrs& attrs,
-                            std::vector<mxnet::TShape>* in_shape,
-                            std::vector<mxnet::TShape>* out_shape) {
+                             std::vector<mxnet::TShape>* in_shape,
+                             std::vector<mxnet::TShape>* out_shape) {
   const auto& param = dmlc::get<ResetArraysParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), param.num_arrays);
   for (auto s : *in_shape) {
@@ -55,8 +53,8 @@ inline bool ResetArraysShape(const NodeAttrs& attrs,
 }
 
 inline bool ResetArraysType(const NodeAttrs& attrs,
-                           std::vector<int>* in_type,
-                           std::vector<int>* out_type) {
+                            std::vector<int>* in_type,
+                            std::vector<int>* out_type) {
   const auto& param = dmlc::get<ResetArraysParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), param.num_arrays);
   for (size_t i = 0; i < in_type->size(); ++i) {
@@ -67,22 +65,23 @@ inline bool ResetArraysType(const NodeAttrs& attrs,
   return true;
 }
 
-template<typename xpu>
-void ResetMemory(void *pntr, size_t len, mshadow::Stream<xpu> *s);
+template <typename xpu>
+void ResetMemory(void* pntr, size_t len, mshadow::Stream<xpu>* s);
 
-template<typename xpu>
+template <typename xpu>
 void ResetArrays(const nnvm::NodeAttrs& attrs,
-                 const OpContext &ctx,
-                 const std::vector<TBlob> &inputs,
-                 const std::vector<OpReqType> &req,
-                 const std::vector<TBlob> &outputs) {
-  auto s = ctx.get_stream<xpu>();
+                 const OpContext& ctx,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<TBlob>& outputs) {
+  auto s            = ctx.get_stream<xpu>();
   const auto& param = nnvm::get<ResetArraysParam>(attrs.parsed);
   for (int i = 0; i < param.num_arrays; i++) {  // array index in inputs
     const size_t size = inputs[i].shape_.Size();
-    MSHADOW_REAL_TYPE_SWITCH(inputs[i].type_flag_, DType,
-      ResetMemory(inputs[i].FlatTo2D<xpu, DType>(s).dptr_, size * sizeof(DType), s);
-    )
+    MSHADOW_REAL_TYPE_SWITCH(
+        inputs[i].type_flag_,
+        DType,
+        ResetMemory(inputs[i].FlatTo2D<xpu, DType>(s).dptr_, size * sizeof(DType), s);)
   }
 }
 

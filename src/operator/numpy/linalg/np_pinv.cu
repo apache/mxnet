@@ -29,11 +29,10 @@ namespace op {
 
 #if MXNET_USE_CUSOLVER == 1
 
-NNVM_REGISTER_OP(_npi_pinv)
-.set_attr<FCompute>("FCompute<gpu>", PinvOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_pinv).set_attr<FCompute>("FCompute<gpu>", PinvOpForward<gpu>);
 
 NNVM_REGISTER_OP(_npi_pinv_scalar_rcond)
-.set_attr<FCompute>("FCompute<gpu>", PinvScalarRcondOpForward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", PinvScalarRcondOpForward<gpu>);
 
 #endif
 

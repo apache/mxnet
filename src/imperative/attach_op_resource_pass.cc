@@ -17,9 +17,7 @@
  * under the License.
  */
 
-
 /*!
- * Copyright (c) 2016 by Contributors
  * \file attach_op_resource_pass.cc
  * \brief Pass to attach resource to OpExecVector of the graph.
  */
@@ -30,35 +28,31 @@
 namespace mxnet {
 namespace exec {
 
-void AttachOpResources(
-    const Graph& g,
-    const OpExecVector& op_execs,
-    size_t start_nid,
-    size_t end_nid) {
-  static auto& fresource =
-      nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
-  static auto& fresource_ex =
-      nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
-  const auto& vctx = g.GetAttr<ContextVector>("context");
-  const auto& vdispatch = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  const auto& dev_masks = g.GetAttr<DevMaskVector>("dev_mask");
-  const auto& idx = g.indexed_graph();
+void AttachOpResources(const Graph& g,
+                       const OpExecVector& op_execs,
+                       size_t start_nid,
+                       size_t end_nid) {
+  static auto& fresource    = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+  static auto& fresource_ex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
+  const auto& vctx          = g.GetAttr<ContextVector>("context");
+  const auto& vdispatch     = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  const auto& dev_masks     = g.GetAttr<DevMaskVector>("dev_mask");
+  const auto& idx           = g.indexed_graph();
   // Use global resource pool for each executor for now.
   std::map<Context, Resource> cached_temp;
   // Resource allocation
   for (uint32_t nid = start_nid; nid < end_nid; ++nid) {
     const auto& inode = idx[nid];
-    if (inode.source->is_variable()) continue;
-    const Context &ctx = vctx[nid];
-    auto& requested = op_execs[nid]->op_ctx.requested;
+    if (inode.source->is_variable())
+      continue;
+    const Context& ctx = vctx[nid];
+    auto& requested    = op_execs[nid]->op_ctx.requested;
     requested.clear();
-    const auto op = inode.source->op();
-    const bool rsc_req = (fresource.count(op) != 0);
+    const auto op         = inode.source->op();
+    const bool rsc_req    = (fresource.count(op) != 0);
     const bool rsc_ex_req = (fresource_ex.count(op) != 0);
     if (rsc_req || rsc_ex_req) {
-      auto reqs = rsc_ex_req ? fresource_ex[op](inode.source->attrs,
-                                                dev_masks[nid],
-                                                vdispatch[nid])
+      auto reqs = rsc_ex_req ? fresource_ex[op](inode.source->attrs, dev_masks[nid], vdispatch[nid])
                              : fresource[op](inode.source->attrs);
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {

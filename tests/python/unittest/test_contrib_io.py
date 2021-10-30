@@ -21,6 +21,8 @@ from mxnet.gluon.data.dataloader import *
 from mxnet.contrib.io import *
 from mxnet.test_utils import *
 
+mx.npx.reset_np()
+
 def test_contrib_DataLoaderIter():
     def test_mnist_batches(batch_size, expected, last_batch='discard'):
         dataset = MNIST(train=False)
@@ -31,7 +33,7 @@ def test_contrib_DataLoaderIter():
         assert batch.label[0].shape == (batch_size,)
         count = 0
         test_iter.reset()
-        for batch in test_iter:
+        for _ in test_iter:
             count += 1
         assert count == expected, "expected {} batches, given {}".format(expected, count)
 

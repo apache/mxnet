@@ -47,7 +47,7 @@ backward_sigmoid(const DTypeGrad grad, const DType val) {
 template <typename DType, typename DTypeGrad>
 __device__ inline mixed_type<DTypeGrad, DType>
 backward_log_sigmoid(const DTypeGrad grad, const DType val) {
-  return grad * 1 / (1 + op::exp(val));
+  return grad * (1 - op::exp(val));
 }
 
 template <typename DType, typename DTypeGrad>
@@ -201,6 +201,14 @@ template <typename DType, typename DTypeGrad>
 __device__ inline mixed_type<DTypeGrad, DType>
 backward_arctanh(const DTypeGrad grad, const DType val) {
   return grad / (1 - val * val);
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline mixed_type<DTypeGrad, DType>
+backward_mish(const DTypeGrad grad, const DType val) {
+  const auto softrelu = op::softrelu(val);
+  const auto tanh_sr = op::tanh(softrelu);
+  return grad * (tanh_sr + val * sigmoid(val) * (1 - tanh_sr * tanh_sr));
 }
 
 template <typename DType, typename DTypeGrad>
@@ -452,6 +460,20 @@ rldexp_grad(const DType val,
             const DType2 val2) {
   using type = mixed_type<DType, DType2>;
   return val2 * op::power(static_cast<type>(2), val) * op::log(static_cast<type>(2));
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+logaddexp_grad(const DType val,
+           const DType2 val2) {
+  return op::exp(val) / (op::exp(val) + op::exp(val2));
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+logaddexp_rgrad(const DType val,
+           const DType2 val2) {
+  return op::exp(val2) / (op::exp(val) + op::exp(val2));
 }
 
 template <typename DType, typename DType2>

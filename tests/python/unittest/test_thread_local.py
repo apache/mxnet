@@ -153,7 +153,7 @@ def test_createblock():
     def f():
         net = mx.gluon.nn.Dense(2)
         net.initialize()
-        x = net(mx.nd.array([1, 2, 3]))
+        x = net(mx.np.array([1, 2, 3]))
         x.wait_to_read()
         status[0] = True
 
@@ -213,7 +213,7 @@ def test_np_array_scope():
 
 
 def test_np_global_shape():
-    set_np_shape(2)
+    prev_np_shape = set_np_shape(2)
     data = []
 
     def f():
@@ -229,4 +229,4 @@ def test_np_global_shape():
         assert_almost_equal(data[0].asnumpy(), np.ones(shape=()))
         assert_almost_equal(data[1].asnumpy(), np.ones(shape=(0, 1, 2)))
     finally:
-        set_np_shape(0)
+        set_np_shape(prev_np_shape)

@@ -26,87 +26,87 @@ namespace mxnet {
 namespace op {
 
 // Define an accumulator type AccType to permit float16-I/O lp pooling to avoid underflow.
-template<typename DType>
+template <typename DType>
 struct PoolingTypes {
   typedef DType AccType;
 };
 
-template<>
+template <>
 struct PoolingTypes<mshadow::half::half_t> {
   typedef float AccType;
 };
 
-template<typename DType, int p>
+template <typename DType, int p>
 struct a_pow_p {
   static MSHADOW_XINLINE DType Map(const DType a) {
     return mshadow_op::power::Map(a, DType(p));
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct a_pow_p<DType, 1> {
   static MSHADOW_XINLINE DType Map(const DType a) {
     return a;
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct a_pow_p<DType, 2> {
   static MSHADOW_XINLINE DType Map(const DType a) {
-    return a*a;
+    return a * a;
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct a_pow_p<DType, 3> {
   static MSHADOW_XINLINE DType Map(const DType a) {
-    return a*a*a;
+    return a * a * a;
   }
 };
 
-template<typename DType, int p>
+template <typename DType, int p>
 struct a_root_p {
   static MSHADOW_XINLINE DType Map(const DType a) {
     return mshadow_op::power::Map(a, DType(1.0 / p));
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct a_root_p<DType, 1> {
   static MSHADOW_XINLINE DType Map(const DType a) {
     return a;
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct a_root_p<DType, 2> {
   static MSHADOW_XINLINE DType Map(const DType a) {
     return mshadow_op::square_root::Map(a);
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct a_root_p<DType, 3> {
   static MSHADOW_XINLINE DType Map(const DType a) {
     return mshadow_op::cube_root::Map(a);
   }
 };
 
-template<typename DType, int p>
+template <typename DType, int p>
 struct lp_grad {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
     return grad * mshadow_op::power::Map(in_data / out_data, DType(p - 1));
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct lp_grad<DType, 1> {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
     return grad;
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct lp_grad<DType, 2> {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
     // Avoid inf, if out_data has underflowed to 0 for a non-zero input, or nan if grad is also 0.
@@ -114,7 +114,7 @@ struct lp_grad<DType, 2> {
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct lp_grad<DType, 3> {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
     // Avoid inf, if out_data has underflowed to 0 for a non-zero input, or nan if grad is also 0.
@@ -123,7 +123,7 @@ struct lp_grad<DType, 3> {
   }
 };
 
-}   // namespace op
-}   // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_NN_POOL_UTILS_H_

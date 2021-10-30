@@ -25,7 +25,7 @@ import itertools
 import numpy as _np
 import unittest
 import pytest
-from mxnet import np
+from mxnet import np, util
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
@@ -421,7 +421,7 @@ def _add_workload_swapaxes():
     # assertRaises(np.AxisError, np.swapaxes, -5, 0)
     for i in range(-4, 4):
         for j in range(-4, 4):
-            for k, src in enumerate((a, b)):
+            for src in (a, b):
                 OpArgMngr.add_workload('swapaxes', src, i, j)
 
 
@@ -448,7 +448,7 @@ def _add_workload_tile():
     shape = [(3,), (2, 3), (3, 4, 3), (3, 2, 3), (4, 3, 2, 4), (2, 2)]
     for s in shape:
         b = np.random.randint(0, 10, size=s)
-        for r in reps:
+        for _ in reps:
             # RuntimeError to be tracked
             # where s = (3, 4, 3), r = (2, 3, 2)
             # OpArgMngr.add_workload('tile', b, r)
@@ -1541,6 +1541,13 @@ def _add_workload_ldexp():
     OpArgMngr.add_workload('ldexp', np.array(2., np.float64), np.array(-9223372036854775808, np.int64))
 
 
+def _add_workload_logaddexp(array_pool):
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('logaddexp', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], array_pool['1x1x0'])
+
+
 def _add_workload_subtract(array_pool):
     OpArgMngr.add_workload('subtract', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('subtract', array_pool['4x1'], 2)
@@ -1577,6 +1584,17 @@ def _add_workload_fmod(array_pool):
     OpArgMngr.add_workload('fmod', array_pool['4x1'], 2)
     OpArgMngr.add_workload('fmod', 2, array_pool['4x1'])
     OpArgMngr.add_workload('fmod', array_pool['4x1'], array_pool['1x1x0'])
+
+
+def _add_workload_floor_divide(array_pool):
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('floor_divide', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], array_pool['1x1x0'])
+    OpArgMngr.add_workload('floor_divide', np.array([-1, -2, -3], np.float32), 1.9999)
+    OpArgMngr.add_workload('floor_divide', np.array([1000, -200, -3], np.int64), 3)
+    OpArgMngr.add_workload('floor_divide', np.array([1, -2, -3, 4, -5], np.int32), 2.0001)
+    OpArgMngr.add_workload('floor_divide', np.array([1, -50, -0.2, 40000, 0], np.float64), -7)
 
 
 def _add_workload_remainder():
@@ -3082,11 +3100,13 @@ def _prepare_workloads():
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
     _add_workload_ldexp()
+    _add_workload_logaddexp(array_pool)
     _add_workload_subtract(array_pool)
     _add_workload_multiply(array_pool)
     _add_workload_power(array_pool)
     _add_workload_mod(array_pool)
     _add_workload_fmod(array_pool)
+    _add_workload_floor_divide(array_pool)
     _add_workload_remainder()
     _add_workload_maximum(array_pool)
     _add_workload_fmax(array_pool)
@@ -3341,7 +3361,11 @@ def test_np_array_function_protocol():
 @with_array_ufunc_protocol
 @pytest.mark.serial
 def test_np_array_ufunc_protocol():
-    check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+    prev_state = util.set_flush_denorms(False)
+    try:
+        check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+    finally:
+        util.set_flush_denorms(prev_state)
 
 
 @use_np

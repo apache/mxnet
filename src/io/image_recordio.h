@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file image_recordio.h
  * \brief image recordio struct
  */
@@ -60,16 +59,15 @@ struct ImageRecordIO {
   /*! \brief header of image recordio */
   Header header;
   /*! \brief point to label */
-  float *label;
+  float* label;
   /*! \brief number of float labels */
   int num_label;
   /*! \brief pointer to data content */
-  uint8_t *content;
+  uint8_t* content;
   /*! \brief size of the content */
   size_t content_size;
   /*! \brief constructor */
-  ImageRecordIO(void)
-      : label(nullptr), num_label(0), content(nullptr), content_size(0) {
+  ImageRecordIO(void) : label(nullptr), num_label(0), content(nullptr), content_size(0) {
     memset(&header, 0, sizeof(header));
   }
   /*! \brief get image id from record */
@@ -81,26 +79,26 @@ struct ImageRecordIO {
    * \param buf the head of record
    * \param size the size of the entire record
    */
-  inline void Load(void *buf, size_t size) {
+  inline void Load(void* buf, size_t size) {
     CHECK(size >= sizeof(header));
     std::memcpy(&header, buf, sizeof(header));
-    content = reinterpret_cast<uint8_t*>(buf) + sizeof(header);
+    content      = reinterpret_cast<uint8_t*>(buf) + sizeof(header);
     content_size = size - sizeof(header);
     if (header.flag > 0) {
-      CHECK(content_size >= sizeof(float)*header.flag);
-      label = reinterpret_cast<float*>(content);
+      CHECK(content_size >= sizeof(float) * header.flag);
+      label     = reinterpret_cast<float*>(content);
       num_label = header.flag;
-      content = reinterpret_cast<uint8_t*>(label + header.flag);
-      content_size -= sizeof(float)*header.flag;
+      content   = reinterpret_cast<uint8_t*>(label + header.flag);
+      content_size -= sizeof(float) * header.flag;
     } else {
-      label = nullptr;
+      label     = nullptr;
       num_label = 0;
     }
   }
   /*!
    * \brief save the record header
    */
-  inline void SaveHeader(std::string *blob) const {
+  inline void SaveHeader(std::string* blob) const {
     blob->resize(sizeof(header));
     std::memcpy(dmlc::BeginPtr(*blob), &header, sizeof(header));
   }

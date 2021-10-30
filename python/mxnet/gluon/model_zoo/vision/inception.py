@@ -26,6 +26,7 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
+from ....util import use_np
 
 # Helpers
 def _make_basic_conv(**kwargs):
@@ -149,6 +150,7 @@ def make_aux(classes):
     return out
 
 # Net
+@use_np
 class Inception3(HybridBlock):
     r"""Inception v3 model from
     `"Rethinking the Inception Architecture for Computer Vision"
@@ -186,7 +188,7 @@ class Inception3(HybridBlock):
 
         self.output = nn.Dense(classes)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x

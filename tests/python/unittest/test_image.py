@@ -26,6 +26,7 @@ import tempfile
 import unittest
 import pytest
 
+mx.npx.reset_np()
 
 def _get_data(url, dirname):
     import os, tarfile
@@ -62,7 +63,7 @@ def _test_imageiter_last_batch(imageiter_list, assert_data_shape):
     # test last batch handle(discard)
     test_iter = imageiter_list[1]
     i = 0
-    for batch in test_iter:
+    for _ in test_iter:
         i += 1
     assert i == 5
     # test last_batch_handle(pad)
@@ -293,7 +294,7 @@ class TestImage(unittest.TestCase):
             resize=640, rand_crop=True, rand_resize=True, rand_mirror=True, mean=True,
             std=np.array([1.1, 1.03, 1.05]), brightness=0.1, contrast=0.1, saturation=0.1,
             hue=0.1, pca_noise=0.1, rand_gray=0.2, inter_method=10, path_root=self.IMAGES_DIR, shuffle=True)
-        for batch in test_iter:
+        for _ in test_iter:
             pass
 
     def test_image_detiter(self):
@@ -345,7 +346,7 @@ class TestImage(unittest.TestCase):
             pca_noise=0.1, hue=0.1, inter_method=10, min_object_covered=0.5,
             aspect_ratio_range=(0.2, 5), area_range=(0.1, 4.0), min_eject_coverage=0.5,
             max_attempts=50)
-        for batch in det_iter:
+        for _ in det_iter:
             pass
 
     def test_random_size_crop(self):

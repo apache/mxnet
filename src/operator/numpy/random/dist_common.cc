@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file dist_common.cc
  * \brief Function definition of common functions for distributions
  * \with two parameters.
@@ -30,12 +29,12 @@ namespace mxnet {
 namespace op {
 
 template <>
-void _copy<cpu>(mshadow::Stream<cpu> *s, float *dst, float *src) {
+void _copy<cpu>(mshadow::Stream<cpu>* s, float* dst, float* src) {
   *dst = *src;
 }
 
 template <>
-void _copy<cpu>(mshadow::Stream<cpu> *s, double *dst, double *src) {
+void _copy<cpu>(mshadow::Stream<cpu>* s, double* dst, double* src) {
   *dst = *src;
 }
 

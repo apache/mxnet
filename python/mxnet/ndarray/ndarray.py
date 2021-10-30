@@ -2267,6 +2267,14 @@ fixed-size items.
         """
         return op.softmin(self, *args, **kwargs)
 
+    def mish(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`mish`.
+
+        The arguments are the same as for :py:func:`mish`, with
+        this array as data.
+        """
+        return op.mish(self, *args, **kwargs)
+
     def squeeze(self, axis=None, inplace=False):
         """Remove dimensions with size 1 from this array without altering any data.
 
@@ -2876,6 +2884,11 @@ fixed-size items.
             1, ctypes.pointer(self.handle),
             ctypes.pointer(mx_uint(grad_req)),
             ctypes.pointer(grad.handle)))
+
+    def drop_grad(self):
+        """Free the memory of the marked ndarray."""
+        check_call(_LIB.MXAutogradDropGrads(
+            1, ctypes.pointer(self.handle)))
 
     @property
     def grad(self):

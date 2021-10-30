@@ -30,18 +30,20 @@ import os
 from ... import nn
 from ....context import cpu
 from ...block import HybridBlock
-from .... import base
+from .... import base, np
+from ....util import use_np
 
 
 # Helpers
+@use_np
 class RELU6(nn.HybridBlock):
     """Relu6 used in MobileNetV2."""
 
     def __init__(self, **kwargs):
         super(RELU6, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        return F.clip(x, 0, 6, name="relu6")
+    def forward(self, x):
+        return np.clip(x, 0, 6)
 
 
 # pylint: disable= too-many-arguments
@@ -59,6 +61,7 @@ def _add_conv_dw(out, dw_channels, channels, stride, relu6=False):
     _add_conv(out, channels=channels, relu6=relu6)
 
 
+@use_np
 class LinearBottleneck(nn.HybridBlock):
     r"""LinearBottleneck used in MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
@@ -87,14 +90,15 @@ class LinearBottleneck(nn.HybridBlock):
                   pad=1, num_group=in_channels * t, relu6=True)
         _add_conv(self.out, channels, active=False, relu6=True)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.out(x)
         if self.use_shortcut:
-            out = F.elemwise_add(out, x)
+            out = np.add(out, x)
         return out
 
 
 # Net
+@use_np
 class MobileNet(HybridBlock):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
@@ -126,12 +130,13 @@ class MobileNet(HybridBlock):
 
         self.output = nn.Dense(classes)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x
 
 
+@use_np
 class MobileNetV2(nn.HybridBlock):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
@@ -175,7 +180,7 @@ class MobileNetV2(nn.HybridBlock):
             nn.Flatten()
         )
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x

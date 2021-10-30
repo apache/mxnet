@@ -44,8 +44,8 @@ def score(symblock, data, ctx, max_num_examples, skip_num_batches, logger=None):
     for i, input_data in enumerate(data):
         if i < skip_num_batches:
             continue
-        x = input_data[0].as_in_context(ctx)
-        label = input_data[1].as_in_context(ctx)
+        x = input_data[0].as_in_ctx(ctx)
+        label = input_data[1].as_in_ctx(ctx)
         outputs = symblock.forward(x)
         for m in metrics:
             m.update(label, outputs)

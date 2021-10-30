@@ -46,32 +46,32 @@ def test_metrics():
 
 def test_ce():
     metric = mx.gluon.metric.create('ce')
-    pred = mx.nd.array([[0.2, 0.3, 0.5], [0.6, 0.1, 0.3]])
-    label = mx.nd.array([2, 1])
+    pred = mx.np.array([[0.2, 0.3, 0.5], [0.6, 0.1, 0.3]])
+    label = mx.np.array([2, 1])
     metric.update([label], [pred])
     _, loss = metric.get()
-    expected_loss = -(np.log(pred[0][2].asscalar()) + np.log(pred[1][1].asscalar())) / 2
-    assert loss == expected_loss
+    expected_loss = -(np.log(pred[0][2].item()) + np.log(pred[1][1].item())) / 2
+    np.testing.assert_almost_equal(loss, expected_loss)
     metric = mx.gluon.metric.create('ce', from_logits=True)
-    pred = mx.nd.log(pred)
+    pred = mx.np.log(pred)
     metric.update([label], [pred])
     _, loss = metric.get()
     np.testing.assert_almost_equal(loss, expected_loss)
 
 
 def test_acc():
-    pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
-    label = mx.nd.array([0, 1, 1])
+    pred = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
+    label = mx.np.array([0, 1, 1])
     metric = mx.gluon.metric.create('acc')
     metric.update([label], [pred])
     _, acc = metric.get()
-    expected_acc = (np.argmax(pred, axis=1) == label).sum().asscalar() / label.size
+    expected_acc = (np.argmax(pred, axis=1) == label).sum().item() / label.size
     np.testing.assert_almost_equal(acc, expected_acc)
 
 def test_acc_2d_label():
     # label maybe provided in 2d arrays in custom data iterator
-    pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6], [0.8, 0.2], [0.3, 0.5], [0.6, 0.4]])
-    label = mx.nd.array([[0, 1, 1], [1, 0, 1]])
+    pred = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6], [0.8, 0.2], [0.3, 0.5], [0.6, 0.4]])
+    label = mx.np.array([[0, 1, 1], [1, 0, 1]])
     metric = mx.gluon.metric.create('acc')
     metric.update([label], [pred])
     _, acc = metric.get()
@@ -80,7 +80,7 @@ def test_acc_2d_label():
     np.testing.assert_almost_equal(acc, expected_acc)
 
 def test_loss_update():
-    pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
+    pred = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
     metric1 = mx.gluon.metric.create('loss')
     metric2 = mx.gluon.metric.create('loss')
     metric1.update(None, [pred])
@@ -98,9 +98,9 @@ def test_binary_f1():
     assert np.isnan(microF1.get()[1])
 
     # check divide by zero
-    pred = mx.nd.array([[0.9, 0.1],
+    pred = mx.np.array([[0.9, 0.1],
                         [0.8, 0.2]])
-    label = mx.nd.array([0, 0])
+    label = mx.np.array([0, 0])
     macroF1.update([label], [pred])
     microF1.update([label], [pred])
     assert macroF1.get()[1] == 0.0
@@ -108,16 +108,16 @@ def test_binary_f1():
     macroF1.reset()
     microF1.reset()
 
-    pred11 = mx.nd.array([[0.1, 0.9],
+    pred11 = mx.np.array([[0.1, 0.9],
                           [0.5, 0.5]])
-    label11 = mx.nd.array([1, 0])
-    pred12 = mx.nd.array([[0.85, 0.15],
+    label11 = mx.np.array([1, 0])
+    pred12 = mx.np.array([[0.85, 0.15],
                           [1.0, 0.0]])
-    label12 = mx.nd.array([1, 0])
-    pred21 = mx.nd.array([[0.6, 0.4]])
-    label21 = mx.nd.array([0])
-    pred22 = mx.nd.array([[0.2, 0.8]])
-    label22 = mx.nd.array([1])
+    label12 = mx.np.array([1, 0])
+    pred21 = mx.np.array([[0.6, 0.4]])
+    label21 = mx.np.array([0])
+    pred22 = mx.np.array([[0.2, 0.8]])
+    label22 = mx.np.array([1])
 
     microF1.update([label11, label12], [pred11, pred12])
     macroF1.update([label11, label12], [pred11, pred12])
@@ -145,9 +145,9 @@ def test_multiclass_f1():
     assert np.isnan(microF1.get()[1])
 
     # check one class is zero
-    pred = mx.nd.array([[0.9, 0.1],
+    pred = mx.np.array([[0.9, 0.1],
                         [0.8, 0.2]])
-    label = mx.nd.array([0, 0])
+    label = mx.np.array([0, 0])
     macroF1.update([label], [pred])
     microF1.update([label], [pred])
     assert macroF1.get()[1] == 0.5 # one class is 1.0, the other is 0. (divided by 0)
@@ -156,10 +156,10 @@ def test_multiclass_f1():
     microF1.reset()
 
     # test case from sklearn, here pred is probabilistic distributions instead of predicted labels
-    pred11 = mx.nd.array([[1, 0, 0], [0, 1, 0]])
-    label11 = mx.nd.array([0, 2])
-    pred12 = mx.nd.array([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    label12 = mx.nd.array([1, 0, 0, 1])
+    pred11 = mx.np.array([[1, 0, 0], [0, 1, 0]])
+    label11 = mx.np.array([0, 2])
+    pred12 = mx.np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    label12 = mx.np.array([1, 0, 0, 1])
 
     microF1.update([label11, label12], [pred11, pred12])
     macroF1.update([label11, label12], [pred11, pred12])
@@ -183,9 +183,9 @@ def test_multilabel_f1():
     assert np.isnan(microF1.get()[1])
 
     # check one class is zero
-    pred = mx.nd.array([[0.9, 0.1],
+    pred = mx.np.array([[0.9, 0.1],
                         [0.8, 0.2]])
-    label = mx.nd.array([[1, 1], [1, 1]])
+    label = mx.np.array([[1, 1], [1, 1]])
     macroF1.update([label], [pred])
     microF1.update([label], [pred])
     assert macroF1.get()[1] == 0.5 # one class is 1.0, the other is 0. (divided by 0)
@@ -193,10 +193,10 @@ def test_multilabel_f1():
     macroF1.reset()
     microF1.reset()
 
-    pred11 = mx.nd.array([[0.9, 0.4, 0.3], [0.2, 0.7, 0.8]])
-    label11 = mx.nd.array([[1, 0, 1], [0, 0, 1]])
-    pred12 = mx.nd.array([[0.6, 0.6, 0.7]])
-    label12 = mx.nd.array([[0, 1, 1]])
+    pred11 = mx.np.array([[0.9, 0.4, 0.3], [0.2, 0.7, 0.8]])
+    label11 = mx.np.array([[1, 0, 1], [0, 0, 1]])
+    pred12 = mx.np.array([[0.6, 0.6, 0.7]])
+    label12 = mx.np.array([[0, 1, 1]])
 
     microF1.update([label11, label12], [pred11, pred12])
     macroF1.update([label11, label12], [pred11, pred12])
@@ -217,23 +217,23 @@ def test_mcc():
     assert np.isnan(microMCC.get()[1])
 
     # check divide by zero
-    pred = mx.nd.array([[0.9, 0.1],
+    pred = mx.np.array([[0.9, 0.1],
                         [0.8, 0.2]])
-    label = mx.nd.array([0, 0])
+    label = mx.np.array([0, 0])
     microMCC.update([label], [pred])
     assert microMCC.get()[1] == 0.0
     microMCC.reset()
 
-    pred11 = mx.nd.array([[0.1, 0.9],
+    pred11 = mx.np.array([[0.1, 0.9],
                         [0.5, 0.5]])
-    label11 = mx.nd.array([1, 0])
-    pred12 = mx.nd.array([[0.85, 0.15],
+    label11 = mx.np.array([1, 0])
+    pred12 = mx.np.array([[0.85, 0.15],
                         [1.0, 0.0]])
-    label12 = mx.nd.array([1, 0])
-    pred21 = mx.nd.array([[0.6, 0.4]])
-    label21 = mx.nd.array([0])
-    pred22 = mx.nd.array([[0.2, 0.8]])
-    label22 = mx.nd.array([1])
+    label12 = mx.np.array([1, 0])
+    pred21 = mx.np.array([[0.6, 0.4]])
+    label21 = mx.np.array([0])
+    pred22 = mx.np.array([[0.2, 0.8]])
+    label22 = mx.np.array([1])
     microMCC.update([label11, label12], [pred11, pred12])
     assert microMCC.num_inst == 4
     tp1 = 1; fp1 = 0; fn1 = 1; tn1=2
@@ -249,8 +249,8 @@ def test_mcc():
     np.testing.assert_almost_equal(microMCC.get()[1], mccT)
 
 def test_perplexity():
-    pred = mx.nd.array([[0.8, 0.2], [0.2, 0.8], [0, 1.]])
-    label = mx.nd.array([0, 1, 1])
+    pred = mx.np.array([[0.8, 0.2], [0.2, 0.8], [0, 1.]])
+    label = mx.np.array([0, 1, 1])
     p = pred.asnumpy()[np.arange(label.size), label.asnumpy().astype('int32')]
     perplexity_expected = np.exp(-np.log(p).sum()/label.size)
     metric = mx.gluon.metric.create('perplexity', axis=-1)
@@ -259,8 +259,8 @@ def test_perplexity():
     np.testing.assert_almost_equal(perplexity, perplexity_expected)
 
 def test_pearsonr():
-    pred1 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
-    label1 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
+    pred1 = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
+    label1 = mx.np.array([[1, 0], [0, 1], [0, 1]])
     pearsonr_expected_np = np.corrcoef(pred1.asnumpy().ravel(), label1.asnumpy().ravel())[0, 1]
     pearsonr_expected_scipy, _ = pearsonr(pred1.asnumpy().ravel(), label1.asnumpy().ravel())
     micro_pr = mx.gluon.metric.create('pearsonr')
@@ -272,11 +272,11 @@ def test_pearsonr():
     np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_np)
     np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_scipy)
 
-    pred2 = mx.nd.array([[1, 2], [3, 2], [4, 6]])
-    label2 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
+    pred2 = mx.np.array([[1, 2], [3, 2], [4, 6]])
+    label2 = mx.np.array([[1, 0], [0, 1], [0, 1]])
     # Note that pred12 = pred1 + pred2; label12 = label1 + label2
-    pred12 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6],[1, 2], [3, 2], [4, 6]])
-    label12 = mx.nd.array([[1, 0], [0, 1], [0, 1], [1, 0], [0, 1], [0, 1]])
+    pred12 = mx.np.array([[0.3, 0.7], [0, 1.], [0.4, 0.6],[1, 2], [3, 2], [4, 6]])
+    label12 = mx.np.array([[1, 0], [0, 1], [0, 1], [1, 0], [0, 1], [0, 1]])
 
     pearsonr_expected_np = np.corrcoef(pred12.asnumpy().ravel(), label12.asnumpy().ravel())[0, 1]
     pearsonr_expected_scipy, _ = pearsonr(pred12.asnumpy().ravel(), label12.asnumpy().ravel())
@@ -295,7 +295,7 @@ def cm_batch(cm):
         for j in range(n):
             labels += [ i ] * cm[i][j]
             preds += [ ident[j] ] * cm[i][j]
-    return ([ mx.nd.array(labels, dtype='int32') ], [ mx.nd.array(preds) ])
+    return ([ mx.np.array(labels, dtype='int32') ], [ mx.np.array(preds) ])
 
 def test_pcc():
     labels, preds = cm_batch([
@@ -374,7 +374,7 @@ def test_pcc():
 
 @xfail_when_nonstandard_decimal_separator
 def test_single_array_input():
-    pred = mx.nd.array([[1,2,3,4]])
+    pred = mx.np.array([[1,2,3,4]])
     label = pred + 0.1
 
     mse = mx.gluon.metric.create('mse')

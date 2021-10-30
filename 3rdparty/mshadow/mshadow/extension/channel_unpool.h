@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file channel_pool.h
  * \brief support for chpool
  * \author Tianqi Chen

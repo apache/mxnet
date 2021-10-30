@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file low_precision_pass.cc
  * \brief Return new graph with amp_cast and amp_multicast operators added wherever required
  */
@@ -32,63 +31,65 @@
 #include <functional>
 
 namespace mxnet {
-using nnvm::Symbol;
-using nnvm::Node;
-using nnvm::ObjectPtr;
-using nnvm::NodeEntry;
 using nnvm::Graph;
+using nnvm::Node;
+using nnvm::NodeEntry;
+using nnvm::ObjectPtr;
+using nnvm::Symbol;
 
 // create a node for operator : op_name with name : node_name
 static ObjectPtr CreateNode(std::string op_name, std::string node_name) {
-  ObjectPtr node = Node::Create();
+  ObjectPtr node   = Node::Create();
   node->attrs.name = node_name;
   if (op_name == "nullptr") {
     node->attrs.op = nullptr;
     // ugly workaround because VariableParam is not exposed
-    node->attrs.parsed = nnvm::Symbol::CreateVariable(node->attrs.name)
-                             .outputs[0]
-                             .node->attrs.parsed;
+    node->attrs.parsed =
+        nnvm::Symbol::CreateVariable(node->attrs.name).outputs[0].node->attrs.parsed;
   } else {
     node->attrs.op = Op::Get(op_name);
   }
   return node;
 }
 
-static ObjectPtr InsertNode(std::string op_name, std::string node_name, ObjectPtr current,
-                          NodeEntry previous) {
-    ObjectPtr node = CreateNode(op_name, node_name);
-    node->inputs.emplace_back(previous);
-    if (current) current->inputs.emplace_back(NodeEntry{node, 0, 0});
-    return node;
+static ObjectPtr InsertNode(std::string op_name,
+                            std::string node_name,
+                            ObjectPtr current,
+                            NodeEntry previous) {
+  ObjectPtr node = CreateNode(op_name, node_name);
+  node->inputs.emplace_back(previous);
+  if (current)
+    current->inputs.emplace_back(NodeEntry{node, 0, 0});
+  return node;
 }
 
 // get suffix for a node entry so that it can be used for amp_cast/amp_multicast node name
-static std::string GetSuffix(const nnvm::NodeEntry &node_entry,
-                             const std::unordered_map<Node*, ObjectPtr> &mirror_map) {
-  static const auto &flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
-  std::string suffix = "";
-  ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
+static std::string GetSuffix(const nnvm::NodeEntry& node_entry,
+                             const std::unordered_map<Node*, ObjectPtr>& mirror_map) {
+  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  std::string suffix               = "";
+  ObjectPtr mirror_node            = mirror_map.at(node_entry.node.get());
   if (mirror_node->op() != nullptr) {
-      auto list_output_names_func = flist_outputs.get(node_entry.node->op(), nullptr);
-      if (list_output_names_func != nullptr) {
-          std::vector<std::string> names = list_output_names_func(node_entry.node->attrs);
-          suffix = "_" + names[node_entry.index];
-      } else {
-          suffix = "_" + std::to_string(node_entry.index);
-      }
+    auto list_output_names_func = flist_outputs.get(node_entry.node->op(), nullptr);
+    if (list_output_names_func != nullptr) {
+      std::vector<std::string> names = list_output_names_func(node_entry.node->attrs);
+      suffix                         = "_" + names[node_entry.index];
+    } else {
+      suffix = "_" + std::to_string(node_entry.index);
+    }
   }
   return suffix;
 }
 
 // add amp_cast node between curr_node and input
-static void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
-                        const nnvm::NodeEntry &input, const std::string dtype,
-                        nnvm::NodeEntryMap<NodeEntry> *mirror_entry_map,
+static void AddCastNode(const nnvm::NodeEntry& e,
+                        const std::string& suffix,
+                        const nnvm::NodeEntry& input,
+                        const std::string dtype,
+                        nnvm::NodeEntryMap<NodeEntry>* mirror_entry_map,
                         ObjectPtr curr_node) {
   ObjectPtr cast_node =
-      InsertNode("amp_cast", e.node->attrs.name + suffix + "_amp_cast_" + dtype,
-                 curr_node, input);
+      InsertNode("amp_cast", e.node->attrs.name + suffix + "_amp_cast_" + dtype, curr_node, input);
   cast_node->attrs.dict["dtype"] = dtype;
   cast_node->op()->attr_parser(&(cast_node->attrs));
   (*mirror_entry_map)[e] = NodeEntry{std::move(cast_node), 0, e.version};
@@ -96,34 +97,33 @@ static void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
 }
 
 // add amp_multicast node between curr_node and inputs
-static void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
-                             const std::string &node_name,
-                             const std::unordered_map<Node *, ObjectPtr> &mirror_map,
+static void AddMultiCastNode(const std::vector<NodeEntry>& inputs,
+                             const std::string& node_name,
+                             const std::unordered_map<Node*, ObjectPtr>& mirror_map,
                              ObjectPtr curr_node) {
   ObjectPtr node =
-      CreateNode("amp_multicast",
-                 inputs[0].node->attrs.name + node_name + "_amp_multicast");
-  for (const auto &node_entry : inputs) {
+      CreateNode("amp_multicast", inputs[0].node->attrs.name + node_name + "_amp_multicast");
+  for (const auto& node_entry : inputs) {
     ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
-    NodeEntry mirror_entry = NodeEntry{std::move(mirror_node), node_entry.index,
-                                       node_entry.version};
+    NodeEntry mirror_entry =
+        NodeEntry{std::move(mirror_node), node_entry.index, node_entry.version};
     node->inputs.emplace_back(mirror_entry);
   }
   node->attrs.dict["num_outputs"] = std::to_string(inputs.size());
   node->op()->attr_parser(&(node->attrs));
   for (uint32_t i = 0; i < inputs.size(); ++i) {
-    const auto &e = inputs[i];
-    curr_node->inputs.emplace_back(
-        NodeEntry{node, static_cast<uint32_t>(i), e.version});
+    const auto& e = inputs[i];
+    curr_node->inputs.emplace_back(NodeEntry{node, static_cast<uint32_t>(i), e.version});
   }
   return;
 }
 
 static bool CheckConditionalFP32(
-    const std::unordered_map<
-        std::string, std::unordered_map<std::string, std::vector<std::string>>>
-        &conditional_fp32_ops,
-    const std::unordered_set<std::string> &excluded_syms, ObjectPtr node) {
+    const std::unordered_map<std::string,
+                             std::unordered_map<std::string, std::vector<std::string>>>&
+        conditional_fp32_ops,
+    const std::unordered_set<std::string>& excluded_syms,
+    ObjectPtr node) {
   if (node->is_variable() || (excluded_syms.count(node->attrs.name) > 0) ||
       conditional_fp32_ops.count(node->op()->name) == 0) {
     return false;
@@ -134,12 +134,12 @@ static bool CheckConditionalFP32(
       auto it_params = it->second;
       // For each param name, iterate through param values to check
       // if the provided param name is equal to any of the values
-      for (auto & it_param : it_params) {
+      for (auto& it_param : it_params) {
         auto param_key = node->attrs.dict.find(it_param.first);
         if (param_key != node->attrs.dict.end()) {
           auto it_param_vals = it_param.second;
-          if (std::find(it_param_vals.begin(), it_param_vals.end(),
-                        param_key->second) != it_param_vals.end()) {
+          if (std::find(it_param_vals.begin(), it_param_vals.end(), param_key->second) !=
+              it_param_vals.end()) {
             return true;
           }
         }
@@ -149,19 +149,16 @@ static bool CheckConditionalFP32(
   }
 }
 
-Graph ReducePrecision(Graph &&src) {
+Graph ReducePrecision(Graph&& src) {
   static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
-  static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
-  const auto target_dtype_ops =
-      src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
-  const auto fp32_ops =
-      src.GetAttr<std::unordered_set<std::string>>("fp32_ops");
-  const auto widest_dtype_ops =
-      src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
-  const auto target_dtype = src.GetAttr<int>("target_dtype");
-  const auto excluded_syms = src.GetAttr<std::unordered_set<std::string>>("excluded_syms");
-  const auto conditional_fp32_ops = src.GetAttr<std::unordered_map<
-      std::string, std::unordered_map<std::string, std::vector<std::string>>>>(
+  static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  const auto target_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
+  const auto fp32_ops         = src.GetAttr<std::unordered_set<std::string>>("fp32_ops");
+  const auto widest_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
+  const auto target_dtype     = src.GetAttr<int>("target_dtype");
+  const auto excluded_syms    = src.GetAttr<std::unordered_set<std::string>>("excluded_syms");
+  const auto conditional_fp32_ops = src.GetAttr<
+      std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>>>(
       "conditional_fp32_ops");
   const auto data_name_types = src.GetAttr<std::unordered_map<std::string, int>>("data_name_types");
   const auto cast_optional_params = src.GetAttr<int>("cast_optional_params");
@@ -177,12 +174,12 @@ Graph ReducePrecision(Graph &&src) {
   }
 
   // Additional data structures to share common cast node inputs among different nodes
-  std::unordered_map<Node *, ObjectPtr> mirror_map;
+  std::unordered_map<Node*, ObjectPtr> mirror_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_fp32_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_target_dtype_map;
 
   // Visit nodes in a topologically sorted order
-  DFSVisit(src.outputs, [&](const ObjectPtr &node) {
+  DFSVisit(src.outputs, [&](const ObjectPtr& node) {
     ObjectPtr new_node = Node::Create(*node);
     new_node->inputs.clear();
     std::vector<uint32_t> mutable_inputs;
@@ -203,11 +200,11 @@ Graph ReducePrecision(Graph &&src) {
         (excluded_syms.count(node->attrs.name) > 0)) {
       // Add output entry to fp32_map
       for (size_t i = 0; i < node->num_outputs(); ++i) {
-        const auto out_entry = NodeEntry(node, i, 0);
+        const auto out_entry       = NodeEntry(node, i, 0);
         mirror_fp32_map[out_entry] = NodeEntry(new_node, i, 0);
       }
       for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto &node_entry = node->inputs[i];
+        const auto& node_entry = node->inputs[i];
         if (mirror_fp32_map.count(node_entry)) {
           new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
         } else if (node_entry.node->is_variable()) {
@@ -215,9 +212,9 @@ Graph ReducePrecision(Graph &&src) {
           ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
           new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
         } else {
-          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
+          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-          std::string suffix = GetSuffix(node_entry, mirror_map);
+          std::string suffix     = GetSuffix(node_entry, mirror_map);
           AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map, new_node);
         }
       }
@@ -228,7 +225,7 @@ Graph ReducePrecision(Graph &&src) {
       if (infertype.count(node->op())) {
         // Try to infertype with target dtype. And add output entry to mirror_target_dtype_map or
         // mirror_fp32_map based on infered result.
-        in_types[0] = target_dtype;
+        in_types[0]             = target_dtype;
         bool infer_type_success = infertype[node->op()](node->attrs, &in_types, &out_types);
         CHECK(infer_type_success == true);
         for (size_t i = 0; i < node->num_outputs(); ++i) {
@@ -241,7 +238,7 @@ Graph ReducePrecision(Graph &&src) {
         }
       }
       for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto &node_entry = node->inputs[i];
+        const auto& node_entry = node->inputs[i];
         if (mirror_target_dtype_map.count(node_entry)) {
           new_node->inputs.emplace_back(mirror_target_dtype_map[node_entry]);
         } else if ((cast_optional_params && node_entry.node->is_variable() &&
@@ -255,7 +252,7 @@ Graph ReducePrecision(Graph &&src) {
           // 2. Mutable inputs.
           // 3. Even the input[0] is target dtype, some operations still require float32 for other
           //    inputs. For example, Batchnorm.
-          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
+          ObjectPtr mirror_node   = mirror_map.at(node_entry.node.get());
           const auto mirror_entry = NodeEntry(mirror_node, node_entry.index, node_entry.version);
           new_node->inputs.push_back(mirror_entry);
           if ((cast_optional_params && node_entry.node->is_variable())) {
@@ -263,28 +260,30 @@ Graph ReducePrecision(Graph &&src) {
             mirror_target_dtype_map[node_entry] = mirror_entry;
           }
         } else {
-          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
+          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-          std::string suffix = GetSuffix(node_entry, mirror_map);
-          AddCastNode(node_entry, suffix, mirror_entry, target_dtype_str, &mirror_target_dtype_map,
+          std::string suffix     = GetSuffix(node_entry, mirror_map);
+          AddCastNode(node_entry,
+                      suffix,
+                      mirror_entry,
+                      target_dtype_str,
+                      &mirror_target_dtype_map,
                       new_node);
         }
       }
-    } else if (!node->is_variable() &&
-               widest_dtype_ops.count(node->op()->name) > 0 &&
+    } else if (!node->is_variable() && widest_dtype_ops.count(node->op()->name) > 0 &&
                excluded_syms.count(node->attrs.name) == 0) {
       CHECK(node->inputs.size() > 0)
-          << "Please check the symbol. node name: " << node->attrs.name
-          << "op name " << node->op()->name << " has no inputs."
+          << "Please check the symbol. node name: " << node->attrs.name << "op name "
+          << node->op()->name << " has no inputs."
           << "It is likely that something went wrong during symbolic construction.";
       CHECK_EQ(mutable_inputs.size(), 0)
           << "can't handle the widest_dtype_ops with mutable inputs.";
-      int out_dtype = target_dtype;
+      int out_dtype           = target_dtype;
       bool have_unknown_dtype = false;
-      for (auto & input : node->inputs) {
+      for (auto& input : node->inputs) {
         // Try to infer output dtype based on input dtype
-        if (!mirror_target_dtype_map.count(input)
-            && !mirror_fp32_map.count(input)) {
+        if (!mirror_target_dtype_map.count(input) && !mirror_fp32_map.count(input)) {
           have_unknown_dtype = true;
           break;
         } else if (mirror_fp32_map.count(input)) {
@@ -293,7 +292,7 @@ Graph ReducePrecision(Graph &&src) {
       }
       if (have_unknown_dtype) {
         // We can't infer all dtype for inputs, so we need to add AddMultiCastNode here.
-        const auto &e = node->inputs[0];
+        const auto& e      = node->inputs[0];
         std::string suffix = GetSuffix(e, mirror_map);
         AddMultiCastNode(node->inputs, suffix, mirror_map, new_node);
       } else {
@@ -307,24 +306,28 @@ Graph ReducePrecision(Graph &&src) {
         }
         // we know all dtype from inputs, then we can use amp_cast instead.
         for (size_t i = 0; i < node->inputs.size(); ++i) {
-          const auto &node_entry = node->inputs[i];
+          const auto& node_entry = node->inputs[i];
           if (out_dtype == target_dtype) {
             if (mirror_target_dtype_map.count(node_entry)) {
               new_node->inputs.emplace_back(mirror_target_dtype_map[node_entry]);
             } else {
-              ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
+              ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
               NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-              std::string suffix = GetSuffix(node_entry, mirror_map);
-              AddCastNode(node_entry, suffix, mirror_entry, target_dtype_str,
-                          &mirror_target_dtype_map, new_node);
+              std::string suffix     = GetSuffix(node_entry, mirror_map);
+              AddCastNode(node_entry,
+                          suffix,
+                          mirror_entry,
+                          target_dtype_str,
+                          &mirror_target_dtype_map,
+                          new_node);
             }
           } else {
             if (mirror_fp32_map.count(node_entry)) {
               new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
             } else {
-              ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
+              ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
               NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-              std::string suffix = GetSuffix(node_entry, mirror_map);
+              std::string suffix     = GetSuffix(node_entry, mirror_map);
               AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map, new_node);
             }
           }
@@ -332,11 +335,11 @@ Graph ReducePrecision(Graph &&src) {
       }
     } else if (CheckConditionalFP32(conditional_fp32_ops, excluded_syms, node)) {
       for (size_t i = 0; i < node->num_outputs(); ++i) {
-        const auto out_entry = NodeEntry(node, i, 0);
+        const auto out_entry       = NodeEntry(node, i, 0);
         mirror_fp32_map[out_entry] = NodeEntry(new_node, i, 0);
       }
       for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto &node_entry = node->inputs[i];
+        const auto& node_entry = node->inputs[i];
         if (mirror_fp32_map.count(node_entry)) {
           new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
         } else if (std::find(mutable_inputs.begin(), mutable_inputs.end(), i) !=
@@ -345,9 +348,9 @@ Graph ReducePrecision(Graph &&src) {
           ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
           new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
         } else {
-          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
+          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-          std::string suffix = GetSuffix(node_entry, mirror_map);
+          std::string suffix     = GetSuffix(node_entry, mirror_map);
           AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map, new_node);
         }
       }
@@ -361,7 +364,7 @@ Graph ReducePrecision(Graph &&src) {
         std::vector<int> in_types(node->inputs.size(), -1);
         std::vector<int> out_types(node->num_outputs(), -1);
         if (infertype.count(node->op())) {
-          in_types[0] = in_type;
+          in_types[0]             = in_type;
           bool infer_type_success = infertype[node->op()](node->attrs, &in_types, &out_types);
           if (infer_type_success) {
             for (size_t i = 0; i < node->num_outputs(); ++i) {
@@ -384,13 +387,13 @@ Graph ReducePrecision(Graph &&src) {
   });
 
   std::vector<NodeEntry> outputs;
-  for (const auto &e : src.outputs) {
+  for (const auto& e : src.outputs) {
     if (mirror_fp32_map.count(e)) {
       outputs.emplace_back(mirror_fp32_map[e]);
     } else {
-      ObjectPtr mirror_node = mirror_map.at(e.node.get());
+      ObjectPtr mirror_node  = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
-      std::string suffix = GetSuffix(e, mirror_map);
+      std::string suffix     = GetSuffix(e, mirror_map);
       AddCastNode(e, suffix, mirror_entry, "float32", &mirror_fp32_map, nullptr);
       outputs.emplace_back(mirror_fp32_map[e]);
     }

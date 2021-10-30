@@ -26,7 +26,8 @@ from .transformed_distribution import TransformedDistribution
 from .exponential import Exponential
 from .constraint import Positive
 from ..transformation import PowerTransform, AffineTransform
-from .utils import getF, sample_n_shape_converter, gammaln
+from .utils import sample_n_shape_converter, gammaln
+from .... import np, npx
 
 
 class Weibull(TransformedDistribution):
@@ -38,9 +39,6 @@ class Weibull(TransformedDistribution):
         Concentration/shape parameter of the distribution.
     scale : Tensor or scalar, default 1
         scale parameter of the distribution.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
     has_grad = True
@@ -48,38 +46,32 @@ class Weibull(TransformedDistribution):
     arg_constraints = {'scale': Positive(),
                        'concentration': Positive()}
 
-    def __init__(self, concentration, scale=1.0, F=None, validate_args=None):
-        _F = F if F is not None else getF(scale, concentration)
+    def __init__(self, concentration, scale=1.0, validate_args=None):
         self.concentration = concentration
         self.scale = scale
-        base_dist = Exponential(F=_F)
+        base_dist = Exponential()
         super(Weibull, self).__init__(base_dist, [PowerTransform(1 / self.concentration),
                                                   AffineTransform(0, self.scale)])
 
     def sample(self, size=None):
-        F = self.F
-        return self.scale * F.np.random.weibull(self.concentration, size)
+        return self.scale * np.random.weibull(self.concentration, size)
 
     def sample_n(self, size=None):
-        F = self.F
-        return self.scale * F.np.random.weibull(self.concentration,
-                                                sample_n_shape_converter(size))
+        return self.scale * np.random.weibull(self.concentration,
+                                              sample_n_shape_converter(size))
 
     @property
     def mean(self):
-        F = self.F
-        return self.scale * F.np.exp(F.npx.gammaln(1 + 1 / self.concentration))
+        return self.scale * np.exp(npx.gammaln(1 + 1 / self.concentration))
 
     @property
     def variance(self):
-        F = self.F
-        exp = F.np.exp
-        lgamma = gammaln(F)
+        exp = np.exp
+        lgamma = gammaln()
         term1 = exp(lgamma(1 + 2 / self.concentration))
         term2 = exp(2 * lgamma(1 + 1 / self.concentration))
         return (self.scale ** 2) * (term1 - term2)
 
     def entropy(self):
-        F = self.F
         return (euler_gamma * (1 - 1 / self.concentration) +
-                F.np.log(self.scale / self.concentration) + 1)
+                np.log(self.scale / self.concentration) + 1)

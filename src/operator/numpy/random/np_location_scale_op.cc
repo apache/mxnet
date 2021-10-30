@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_location_scale_op.cc
  * \brief Operator for numpy sampling from location scale distributions.
  */
@@ -30,18 +29,22 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyLocationScaleParam);
 
 MXNET_OPERATOR_REGISTER_LOCATION_SCALE(_npi_logistic)
-.set_attr<FCompute>("FCompute<cpu>", NumpyLocationScaleForward<cpu,
-                    mxnet_op::logistic_two_scalar_kernel, mxnet_op::logistic_one_scalar_kernel,
-                    mxnet_op::logistic_kernel>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_logistic"});
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyLocationScaleForward<cpu,
+                                                  mxnet_op::logistic_two_scalar_kernel,
+                                                  mxnet_op::logistic_one_scalar_kernel,
+                                                  mxnet_op::logistic_kernel>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_logistic"});
 
 MXNET_OPERATOR_REGISTER_LOCATION_SCALE_BACKWARD(_backward_broadcast_logistic)
 
 MXNET_OPERATOR_REGISTER_LOCATION_SCALE(_npi_gumbel)
-.set_attr<FCompute>("FCompute<cpu>", NumpyLocationScaleForward<cpu,
-                    mxnet_op::gumbel_two_scalar_kernel, mxnet_op::gumbel_one_scalar_kernel,
-                    mxnet_op::gumbel_kernel>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_gumbel"});
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyLocationScaleForward<cpu,
+                                                  mxnet_op::gumbel_two_scalar_kernel,
+                                                  mxnet_op::gumbel_one_scalar_kernel,
+                                                  mxnet_op::gumbel_kernel>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_gumbel"});
 
 MXNET_OPERATOR_REGISTER_LOCATION_SCALE_BACKWARD(_backward_broadcast_gumbel)
 

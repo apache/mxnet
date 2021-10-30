@@ -49,7 +49,7 @@ download () {
     fi
 }
 
-if [[ ! $PLATFORM == 'darwin' ]]; then
+if [[ ! $PLATFORM == 'darwin' ]] && [[ ! $BLAS == 'mkl' ]]; then
     source ${DIR}/openblas.sh
 fi
 source $DIR/libz.sh
@@ -64,6 +64,15 @@ source $DIR/protobuf.sh
 source $DIR/cityhash.sh
 source $DIR/zmq.sh
 source $DIR/lz4.sh
+if [[ $BLAS == 'mkl' ]]; then
+    source ${DIR}/mkl.sh
+    source ${DIR}/numpy_mkl.sh
+    if [[ $PLATFORM == 'darwin' ]]; then
+        # export this path to find iomp5 needed by MKL according to Intel Link Line Advisor
+        export DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/oneapi/compiler/${INTEL_MKL}/mac/compiler
+    fi
+fi
+
 
 export LIBRARY_PATH=${LIBRARY_PATH}:$(dirname $(find $DEPS_PATH -type f -name 'libprotoc*' | grep protobuf | head -n 1)):$DEPS_PATH/lib:$DEPS_PATH/lib64
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(dirname $(find $DEPS_PATH -type f -name 'libprotoc*' | grep protobuf | head -n 1)):$DEPS_PATH/lib:$DEPS_PATH/lib64

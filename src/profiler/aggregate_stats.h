@@ -38,17 +38,13 @@ class AggregateStats {
     /*!
      * \brief Types that the console printer knows how to format
      */
-    enum StatType {
-      kDuration = 1,
-      kCounter = 2,
-      kOther = 4
-    };
+    enum StatType { kDuration = 1, kCounter = 2, kOther = 4 };
 
-    StatType  type_ = kOther;
-    size_t    total_count_ = 0;
-    uint64_t  total_aggregate_ = 0;
-    uint64_t  max_aggregate_ = 0;
-    uint64_t  min_aggregate_ = INT_MAX;
+    StatType type_            = kOther;
+    size_t total_count_       = 0;
+    uint64_t total_aggregate_ = 0;
+    uint64_t max_aggregate_   = 0;
+    uint64_t min_aggregate_   = INT_MAX;
   };
 
   /*!
@@ -73,9 +69,7 @@ class AggregateStats {
    */
   void clear();
   /* !\brief by which stat to sort */
-  enum class SortBy {
-    Total, Avg, Min, Max, Count
-  };
+  enum class SortBy { Total, Avg, Min, Max, Count };
 
  private:
   /*! \brief Should rarely collide, so most locks should occur only in user-space (futex) */

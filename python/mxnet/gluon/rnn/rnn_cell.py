@@ -26,7 +26,8 @@ __all__ = ['RecurrentCell', 'HybridRecurrentCell',
            'ModifierCell', 'ZoneoutCell', 'ResidualCell',
            'BidirectionalCell', 'VariationalDropoutCell', 'LSTMPCell']
 
-from ... import symbol, ndarray
+from ... import np, npx, context
+from ...util import use_np
 from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock
 from ..parameter import Parameter
@@ -41,14 +42,11 @@ def _cells_state_info(cells, batch_size):
 def _cells_begin_state(cells, **kwargs):
     return sum([c().begin_state(**kwargs) for c in cells], [])
 
-def _get_begin_state(cell, F, begin_state, inputs, batch_size):
+def _get_begin_state(cell, begin_state, inputs, batch_size):
     if begin_state is None:
-        if F is ndarray:
-            ctx = inputs.context if isinstance(inputs, tensor_types) else inputs[0].context
-            with ctx:
-                begin_state = cell.begin_state(func=F.zeros, batch_size=batch_size)
-        else:
-            begin_state = cell.begin_state(func=F.zeros, batch_size=batch_size)
+        ctx = inputs.context if isinstance(inputs, tensor_types) else inputs[0].context
+        with ctx:
+            begin_state = cell.begin_state(func=np.zeros, batch_size=batch_size)
     return begin_state
 
 def _format_sequence(length, inputs, layout, merge, in_layout=None):
@@ -60,69 +58,55 @@ def _format_sequence(length, inputs, layout, merge, in_layout=None):
     batch_axis = layout.find('N')
     batch_size = 0
     in_axis = in_layout.find('T') if in_layout is not None else axis
-    if isinstance(inputs, symbol.Symbol):
-        F = symbol
-        if merge is False:
-            assert len(inputs.list_outputs()) == 1, \
-                "unroll doesn't allow grouped symbol as input. Please convert " \
-                "to list with list(inputs) first or let unroll handle splitting."
-            inputs = list(symbol.split(inputs, axis=in_axis, num_outputs=length,
-                                       squeeze_axis=1))
-    elif isinstance(inputs, ndarray.NDArray):
-        F = ndarray
+    if isinstance(inputs, np.ndarray):
         batch_size = inputs.shape[batch_axis]
         if merge is False:
             assert length is None or length == inputs.shape[in_axis]
-            inputs = _as_list(ndarray.split(inputs, axis=in_axis,
-                                            num_outputs=inputs.shape[in_axis],
-                                            squeeze_axis=1))
+            inputs = _as_list(npx.slice_channel(inputs, axis=in_axis,
+                                                num_outputs=inputs.shape[in_axis],
+                                                squeeze_axis=1))
     else:
+        assert isinstance(inputs, (list, tuple)), \
+            "Only support MXNet numpy ndarray or list of MXNet numpy ndarrays as inputs"
         assert length is None or len(inputs) == length
-        if isinstance(inputs[0], symbol.Symbol):
-            F = symbol
-        else:
-            F = ndarray
-            batch_size = inputs[0].shape[0]
+        batch_size = inputs[0].shape[0]
         if merge is True:
-            inputs = F.stack(*inputs, axis=axis)
+            inputs = np.stack(inputs, axis=axis)
             in_axis = axis
 
-    if isinstance(inputs, tensor_types) and axis != in_axis:
-        inputs = F.swapaxes(inputs, dim1=axis, dim2=in_axis)
+    if isinstance(inputs, np.ndarray) and axis != in_axis:
+        inputs = np.swapaxes(inputs, axis, in_axis)
 
-    return inputs, axis, F, batch_size
+    return inputs, axis, batch_size
 
-def _mask_sequence_variable_length(F, data, length, valid_length, time_axis, merge):
+def _mask_sequence_variable_length(data, length, valid_length, time_axis, merge):
     assert valid_length is not None
     if not isinstance(data, tensor_types):
-        data = F.stack(*data, axis=time_axis)
-    outputs = F.SequenceMask(data, sequence_length=valid_length, use_sequence_length=True,
-                             axis=time_axis)
+        data = np.stack(data, axis=time_axis)
+    outputs = npx.sequence_mask(data, sequence_length=valid_length, use_sequence_length=True,
+                                axis=time_axis)
     if not merge:
-        outputs = _as_list(F.split(outputs, num_outputs=length, axis=time_axis,
-                                   squeeze_axis=True))
+        outputs = _as_list(npx.slice_channel(outputs, num_outputs=length, axis=time_axis,
+                                             squeeze_axis=True))
     return outputs
 
 def _reverse_sequences(sequences, unroll_step, valid_length=None):
-    if isinstance(sequences[0], symbol.Symbol):
-        F = symbol
-    else:
-        F = ndarray
-
     if valid_length is None:
         reversed_sequences = list(reversed(sequences))
     else:
-        reversed_sequences = F.SequenceReverse(F.stack(*sequences, axis=0),
-                                               sequence_length=valid_length,
-                                               use_sequence_length=True)
-        if unroll_step > 1 or F is symbol:
-            reversed_sequences = F.split(reversed_sequences, axis=0, num_outputs=unroll_step, squeeze_axis=True)
+        reversed_sequences = npx.sequence_reverse(np.stack(sequences, axis=0),
+                                                  sequence_length=valid_length,
+                                                  use_sequence_length=True)
+        if unroll_step > 1:
+            reversed_sequences = npx.slice_channel(reversed_sequences, axis=0,
+                                                   num_outputs=unroll_step, squeeze_axis=True)
         else:
             reversed_sequences = [reversed_sequences[0]]
 
     return reversed_sequences
 
 
+@use_np
 class RecurrentCell(Block):
     """Abstract base class for RNN cells
 
@@ -143,7 +127,7 @@ class RecurrentCell(Block):
         """shape and layout information of states"""
         raise NotImplementedError()
 
-    def begin_state(self, batch_size=0, func=ndarray.zeros, **kwargs):
+    def begin_state(self, batch_size=0, func=np.zeros, **kwargs):
         """Initial state for this cell.
 
         Parameters
@@ -174,13 +158,13 @@ class RecurrentCell(Block):
             "cell cannot be called directly. Call the modifier cell instead."
         states = []
         for info in self.state_info(batch_size):
-            self._init_counter += 1
             if info is not None:
                 info.update(kwargs)
             else:
                 info = kwargs
-            state = func(name='begin_state_%d'%(self._init_counter),
-                         **info)
+            state = func(shape=info.pop("shape", ()),
+                         ctx=info.pop("ctx", context.cpu()),
+                         dtype=info.pop("dtype", "float32"))
             states.append(state)
         return states
 
@@ -239,8 +223,8 @@ class RecurrentCell(Block):
         # pylint: disable=too-many-locals
         self.reset()
 
-        inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, False)
-        begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
+        inputs, axis, batch_size = _format_sequence(length, inputs, layout, False)
+        begin_state = _get_begin_state(self, begin_state, inputs, batch_size)
 
         states = begin_state
         outputs = []
@@ -251,29 +235,29 @@ class RecurrentCell(Block):
             if valid_length is not None:
                 all_states.append(states)
         if valid_length is not None:
-            states = [F.SequenceLast(F.stack(*ele_list, axis=0),
-                                     sequence_length=valid_length,
-                                     use_sequence_length=True,
-                                     axis=0)
+            states = [npx.sequence_last(np.stack(ele_list, axis=0),
+                                        sequence_length=valid_length,
+                                        use_sequence_length=True,
+                                        axis=0)
                       for ele_list in zip(*all_states)]
-            outputs = _mask_sequence_variable_length(F, outputs, length, valid_length, axis, True)
-        outputs, _, _, _ = _format_sequence(length, outputs, layout, merge_outputs)
+            outputs = _mask_sequence_variable_length(outputs, length, valid_length, axis, True)
+        outputs, _, _ = _format_sequence(length, outputs, layout, merge_outputs)
 
         return outputs, states
 
     #pylint: disable=no-self-use
-    def _get_activation(self, F, inputs, activation, **kwargs):
+    def _get_activation(self, inputs, activation, **kwargs):
         """Get activation function. Convert if is string"""
-        func = {'tanh': F.tanh,
-                'relu': F.relu,
-                'sigmoid': F.sigmoid,
-                'softsign': F.softsign}.get(activation)
+        func = {'tanh': np.tanh,
+                'relu': npx.relu,
+                'sigmoid': npx.sigmoid,
+                'softsign': npx.softsign}.get(activation)
         if func:
             return func(inputs, **kwargs)
         elif isinstance(activation, string_types):
-            return F.Activation(inputs, act_type=activation, **kwargs)
+            return npx.activation(inputs, act_type=activation, **kwargs)
         elif isinstance(activation, LeakyReLU):
-            return F.LeakyReLU(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
+            return npx.leaky_relu(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
         return activation(inputs, **kwargs)
 
     def forward(self, inputs, states):
@@ -306,16 +290,17 @@ class RecurrentCell(Block):
         self._counter += 1
         return super(RecurrentCell, self).forward(inputs, states)
 
-
+@use_np
 class HybridRecurrentCell(RecurrentCell, HybridBlock):
     """HybridRecurrentCell supports hybridize."""
     def __init__(self):
         super(HybridRecurrentCell, self).__init__()
 
-    def hybrid_forward(self, F, x, *args, **kwargs):
+    def forward(self, x, *args, **kwargs):
         raise NotImplementedError
 
 
+@use_np
 class RNNCell(HybridRecurrentCell):
     r"""Elman RNN recurrent neural network cell.
 
@@ -398,22 +383,33 @@ class RNNCell(HybridRecurrentCell):
                         mapping=mapping,
                         **self.__dict__)
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, i2h_bias, h2h_bias):
-        prefix = 't%d_'%self._counter
-        i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
-                               num_hidden=self._hidden_size,
-                               name=prefix+'i2h')
-        h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
-                               num_hidden=self._hidden_size,
-                               name=prefix+'h2h')
-        i2h_plus_h2h = F.elemwise_add(i2h, h2h, name=prefix+'plus0')
-        output = self._get_activation(F, i2h_plus_h2h, self._activation,
-                                      name=prefix+'out')
+    def forward(self, inputs, states):
+        ctx = inputs.ctx
+        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
+                                  bias=self.i2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size,
+                                  no_bias=False)
+        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
+                                  weight=self.h2h_weight.data(ctx),
+                                  bias=self.h2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size,
+                                  no_bias=False)
+        i2h_plus_h2h = i2h + h2h
+        output = self._get_activation(i2h_plus_h2h, self._activation)
 
         return output, [output]
 
+    def infer_shape(self, i, x, is_bidirect):
+        if i == 0:
+            self.i2h_weight.shape = (self._hidden_size, x.shape[x.ndim-1])
+        else:
+            nh = self._hidden_size
+            if is_bidirect:
+                nh *= 2
+            self.i2h_weight.shape = (self._hidden_size, nh)
 
+
+@use_np
 class LSTMCell(HybridRecurrentCell):
     r"""Long-Short Term Memory (LSTM) network cell.
 
@@ -509,33 +505,38 @@ class LSTMCell(HybridRecurrentCell):
                         mapping=mapping,
                         **self.__dict__)
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, i2h_bias, h2h_bias):
+    def forward(self, inputs, states):
         # pylint: disable=too-many-locals
-        prefix = 't%d_'%self._counter
-        i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
-                               num_hidden=self._hidden_size*4, name=prefix+'i2h')
-        h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
-                               num_hidden=self._hidden_size*4, name=prefix+'h2h')
-        gates = F.elemwise_add(i2h, h2h, name=prefix+'plus0')
-        slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
-        in_gate = self._get_activation(
-            F, slice_gates[0], self._recurrent_activation, name=prefix+'i')
-        forget_gate = self._get_activation(
-            F, slice_gates[1], self._recurrent_activation, name=prefix+'f')
-        in_transform = self._get_activation(
-            F, slice_gates[2], self._activation, name=prefix+'c')
-        out_gate = self._get_activation(
-            F, slice_gates[3], self._recurrent_activation, name=prefix+'o')
-        next_c = F.elemwise_add(F.elemwise_mul(forget_gate, states[1], name=prefix+'mul0'),
-                                F.elemwise_mul(in_gate, in_transform, name=prefix+'mul1'),
-                                name=prefix+'state')
-        next_h = F.elemwise_mul(out_gate, F.Activation(next_c, act_type=self._activation, name=prefix+'activation0'),
-                                name=prefix+'out')
+        ctx = inputs.ctx
+        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
+                                  bias=self.i2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size*4, no_bias=False)
+        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
+                                  weight=self.h2h_weight.data(ctx),
+                                  bias=self.h2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size*4, no_bias=False)
+        gates = i2h + h2h
+        slice_gates = npx.slice_channel(gates, num_outputs=4)
+        in_gate = self._get_activation(slice_gates[0], self._recurrent_activation)
+        forget_gate = self._get_activation(slice_gates[1], self._recurrent_activation)
+        in_transform = self._get_activation(slice_gates[2], self._activation)
+        out_gate = self._get_activation(slice_gates[3], self._recurrent_activation)
+        next_c = np.multiply(forget_gate, states[1].as_in_ctx(ctx)) + \
+                 np.multiply(in_gate, in_transform)
+        next_h = np.multiply(out_gate, npx.activation(next_c, act_type=self._activation))
 
         return next_h, [next_h, next_c]
 
+    def infer_shape(self, i, x, is_bidirect):
+        if i == 0:
+            self.i2h_weight.shape = (4*self._hidden_size, x.shape[x.ndim-1])
+        else:
+            nh = self._hidden_size
+            if is_bidirect:
+                nh *= 2
+            self.i2h_weight.shape = (4*self._hidden_size, nh)
 
+@use_np
 class GRUCell(HybridRecurrentCell):
     r"""Gated Rectified Unit (GRU) network cell.
     Note: this is an implementation of the cuDNN version of GRUs
@@ -627,51 +628,45 @@ class GRUCell(HybridRecurrentCell):
                         mapping=mapping,
                         **self.__dict__)
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, i2h_bias, h2h_bias):
+    def forward(self, inputs, states):
         # pylint: disable=too-many-locals
-        prefix = 't%d_'%self._counter
-        prev_state_h = states[0]
-        i2h = F.FullyConnected(data=inputs,
-                               weight=i2h_weight,
-                               bias=i2h_bias,
-                               num_hidden=self._hidden_size * 3,
-                               name=prefix+'i2h')
-        h2h = F.FullyConnected(data=prev_state_h,
-                               weight=h2h_weight,
-                               bias=h2h_bias,
-                               num_hidden=self._hidden_size * 3,
-                               name=prefix+'h2h')
+        ctx = inputs.ctx
+        prev_state_h = states[0].as_in_ctx(ctx)
+        i2h = npx.fully_connected(inputs,
+                                  weight=self.i2h_weight.data(ctx),
+                                  bias=self.i2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size * 3,
+                                  no_bias=False)
+        h2h = npx.fully_connected(prev_state_h,
+                                  weight=self.h2h_weight.data(ctx),
+                                  bias=self.h2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size * 3,
+                                  no_bias=False)
 
-        i2h_r, i2h_z, i2h = F.SliceChannel(i2h, num_outputs=3,
-                                           name=prefix+'i2h_slice')
-        h2h_r, h2h_z, h2h = F.SliceChannel(h2h, num_outputs=3,
-                                           name=prefix+'h2h_slice')
+        i2h_r, i2h_z, i2h = npx.slice_channel(i2h, num_outputs=3)
+        h2h_r, h2h_z, h2h = npx.slice_channel(h2h, num_outputs=3)
 
-        reset_gate = self._get_activation(F,
-                                          F.elemwise_add(i2h_r, h2h_r, name=prefix+'plus0'),
-                                          self._recurrent_activation,
-                                          name=prefix+'r_act')
-        update_gate = self._get_activation(F,
-                                           F.elemwise_add(i2h_z, h2h_z, name=prefix+'plus1'),
-                                           self._recurrent_activation,
-                                           name=prefix+'z_act')
-        next_h_tmp = self._get_activation(F,
-                                          F.elemwise_add(i2h,
-                                                         F.elemwise_mul(reset_gate, h2h, name=prefix+'mul0'),
-                                                         name=prefix+'plus2'),
-                                          self._activation,
-                                          name=prefix+'h_act')
-        ones = F.ones_like(update_gate, name=prefix+"ones_like0")
-        next_h = F.elemwise_add(F.elemwise_mul(F.elemwise_sub(ones, update_gate, name=prefix+'minus0'),
-                                               next_h_tmp,
-                                               name=prefix+'mul1'),
-                                F.elemwise_mul(update_gate, prev_state_h, name=prefix+'mul20'),
-                                name=prefix+'out')
+        reset_gate = self._get_activation(i2h_r + h2h_r,
+                                          self._recurrent_activation)
+        update_gate = self._get_activation(i2h_z + h2h_z,
+                                           self._recurrent_activation)
+        next_h_tmp = self._get_activation(i2h + np.multiply(reset_gate, h2h),
+                                          self._activation)
+        ones = np.ones(update_gate.shape)
+        next_h = np.multiply((ones - update_gate), next_h_tmp) + np.multiply(update_gate, prev_state_h)
 
         return next_h, [next_h]
 
+    def infer_shape(self, i, x, is_bidirect):
+        if i == 0:
+            self.i2h_weight.shape = (3*self._hidden_size, x.shape[x.ndim-1])
+        else:
+            nh = self._hidden_size
+            if is_bidirect:
+                nh *= 2
+            self.i2h_weight.shape = (3*self._hidden_size, nh)
 
+@use_np
 class SequentialRNNCell(RecurrentCell):
     """Sequentially stacking multiple RNN cells."""
     def __init__(self):
@@ -723,9 +718,9 @@ class SequentialRNNCell(RecurrentCell):
         # pylint: disable=too-many-locals
         self.reset()
 
-        inputs, _, F, batch_size = _format_sequence(length, inputs, layout, None)
+        inputs, _, batch_size = _format_sequence(length, inputs, layout, None)
         num_cells = len(self._children)
-        begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
+        begin_state = _get_begin_state(self, begin_state, inputs, batch_size)
 
         p = 0
         next_states = []
@@ -747,11 +742,16 @@ class SequentialRNNCell(RecurrentCell):
     def __len__(self):
         return len(self._children)
 
-    def hybrid_forward(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         # pylint: disable=missing-docstring
         raise NotImplementedError
 
+    def infer_shape(self, _, x, is_bidirect):
+        for i, child in enumerate(self._layers):
+            child.infer_shape(i, x, is_bidirect)
 
+
+@use_np
 class HybridSequentialRNNCell(HybridRecurrentCell):
     """Sequentially stacking multiple HybridRNN cells."""
     def __init__(self):
@@ -801,9 +801,9 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
                valid_length=None):
         self.reset()
 
-        inputs, _, F, batch_size = _format_sequence(length, inputs, layout, None)
+        inputs, _, batch_size = _format_sequence(length, inputs, layout, None)
         num_cells = len(self._children)
-        begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
+        begin_state = _get_begin_state(self, begin_state, inputs, batch_size)
 
         p = 0
         next_states = []
@@ -825,10 +825,16 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
     def __len__(self):
         return len(self._children)
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
         return self.__call__(inputs, states)
 
+    # pylint: disable=unused-argument
+    def infer_shape(self, _, x, is_bidirect):
+        for i, child in enumerate(self._layers):
+            child.infer_shape(i, x, False)
 
+
+@use_np
 class DropoutCell(HybridRecurrentCell):
     """Applies dropout on input.
 
@@ -866,24 +872,24 @@ class DropoutCell(HybridRecurrentCell):
     def _alias(self):
         return 'dropout'
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
         if self._rate > 0:
-            inputs = F.Dropout(data=inputs, p=self._rate, axes=self._axes,
-                               name='t%d_fwd'%self._counter)
+            inputs = npx.dropout(data=inputs, p=self._rate, axes=self._axes)
         return inputs, states
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
                valid_length=None):
         self.reset()
 
-        inputs, _, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
+        inputs, _, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, tensor_types):
-            return self.hybrid_forward(F, inputs, begin_state if begin_state else [])
+            return self.forward(inputs, begin_state if begin_state else [])
         return super(DropoutCell, self).unroll(
             length, inputs, begin_state=begin_state, layout=layout,
             merge_outputs=merge_outputs, valid_length=None)
 
 
+@use_np
 class ModifierCell(HybridRecurrentCell):
     """Base class for modifier cells. A modifier
     cell takes a base cell, apply modifications
@@ -907,7 +913,7 @@ class ModifierCell(HybridRecurrentCell):
     def state_info(self, batch_size=0):
         return self.base_cell.state_info(batch_size)
 
-    def begin_state(self, func=symbol.zeros, **kwargs):
+    def begin_state(self, func=np.zeros, **kwargs):
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -916,7 +922,7 @@ class ModifierCell(HybridRecurrentCell):
         self.base_cell._modified = True
         return begin
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
         raise NotImplementedError
 
     def __repr__(self):
@@ -925,6 +931,7 @@ class ModifierCell(HybridRecurrentCell):
                         **self.__dict__)
 
 
+@use_np
 class ZoneoutCell(ModifierCell):
     """Applies Zoneout on base cell."""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
@@ -951,25 +958,29 @@ class ZoneoutCell(ModifierCell):
         super(ZoneoutCell, self).reset()
         self._prev_output = None
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
+        ctx = inputs.ctx
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
-        mask = (lambda p, like: F.Dropout(F.ones_like(like), p=p))
+        mask = (lambda p, like: npx.dropout(np.ones(like.shape), p=p))
 
         prev_output = self._prev_output
         if prev_output is None:
-            prev_output = F.zeros_like(next_output)
+            prev_output = np.zeros(next_output.shape)
 
-        output = (F.where(mask(p_outputs, next_output), next_output, prev_output)
+        output = (np.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
-        states = ([F.where(mask(p_states, new_s), new_s, old_s) for new_s, old_s in
+        states = ([np.where(mask(p_states, new_s), new_s, old_s.as_in_ctx(ctx)) for new_s, old_s in
                    zip(next_states, states)] if p_states != 0. else next_states)
 
         self._prev_output = output
 
         return output, states
 
+    def infer_shape(self, i, x, is_bidirect):
+        self.base_cell.infer_shape(i, x, is_bidirect)
 
+@use_np
 class ResidualCell(ModifierCell):
     """
     Adds residual connection as described in Wu et al, 2016
@@ -981,9 +992,9 @@ class ResidualCell(ModifierCell):
         # pylint: disable=useless-super-delegation
         super(ResidualCell, self).__init__(base_cell)
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
         output, states = self.base_cell(inputs, states)
-        output = F.elemwise_add(output, inputs, name='t%d_fwd'%self._counter)
+        output = output + inputs
         return output, states
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
@@ -998,19 +1009,23 @@ class ResidualCell(ModifierCell):
 
         merge_outputs = isinstance(outputs, tensor_types) if merge_outputs is None else \
                         merge_outputs
-        inputs, axis, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
+        inputs, axis, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if valid_length is not None:
             # mask the padded inputs to zero
-            inputs = _mask_sequence_variable_length(F, inputs, length, valid_length, axis,
+            inputs = _mask_sequence_variable_length(inputs, length, valid_length, axis,
                                                     merge_outputs)
         if merge_outputs:
-            outputs = F.elemwise_add(outputs, inputs)
+            outputs = outputs + inputs
         else:
-            outputs = [F.elemwise_add(i, j) for i, j in zip(outputs, inputs)]
+            outputs = [i + j for i, j in zip(outputs, inputs)]
 
         return outputs, states
 
+    def infer_shape(self, i, x, is_bidirect):
+        self.base_cell.infer_shape(i, x, is_bidirect)
 
+
+@use_np
 class BidirectionalCell(HybridRecurrentCell):
     """Bidirectional RNN cell.
 
@@ -1049,9 +1064,9 @@ class BidirectionalCell(HybridRecurrentCell):
         # pylint: disable=too-many-locals
         self.reset()
 
-        inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, False)
+        inputs, axis, batch_size = _format_sequence(length, inputs, layout, False)
         reversed_inputs = list(_reverse_sequences(inputs, length, valid_length))
-        begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
+        begin_state = _get_begin_state(self, begin_state, inputs, batch_size)
 
         states = begin_state
         l_cell, r_cell = [c() for c in self._children.values()]
@@ -1068,25 +1083,30 @@ class BidirectionalCell(HybridRecurrentCell):
 
         if merge_outputs is None:
             merge_outputs = isinstance(l_outputs, tensor_types)
-            l_outputs, _, _, _ = _format_sequence(None, l_outputs, layout, merge_outputs)
-            reversed_r_outputs, _, _, _ = _format_sequence(None, reversed_r_outputs, layout,
-                                                           merge_outputs)
+            l_outputs, _, _ = _format_sequence(None, l_outputs, layout, merge_outputs)
+            reversed_r_outputs, _, _ = _format_sequence(None, reversed_r_outputs, layout,
+                                                        merge_outputs)
 
         if merge_outputs:
-            reversed_r_outputs = F.stack(*reversed_r_outputs, axis=axis)
-            outputs = F.concat(l_outputs, reversed_r_outputs, dim=2,
-                               name='out')
+            reversed_r_outputs = np.stack(reversed_r_outputs, axis=axis)
+            outputs = np.concatenate([l_outputs, reversed_r_outputs], axis=2)
 
         else:
-            outputs = [F.concat(l_o, r_o, dim=1, name='t%d'%(i))
+            outputs = [np.concatenate([l_o, r_o], axis=1)
                        for i, (l_o, r_o) in enumerate(zip(l_outputs, reversed_r_outputs))]
         if valid_length is not None:
-            outputs = _mask_sequence_variable_length(F, outputs, length, valid_length, axis,
+            outputs = _mask_sequence_variable_length(outputs, length, valid_length, axis,
                                                      merge_outputs)
         states = l_states + r_states
         return outputs, states
 
+    #pylint: disable=W0613
+    def infer_shape(self, i, x, is_bidirect):
+        l_cell, r_cell = [c() for c in self._children.values()]
+        l_cell.infer_shape(i, x, True)
+        r_cell.infer_shape(i, x, True)
 
+@use_np
 class VariationalDropoutCell(ModifierCell):
     """
     Applies Variational Dropout on base cell.
@@ -1136,36 +1156,37 @@ class VariationalDropoutCell(ModifierCell):
         self.drop_states_mask = None
         self.drop_outputs_mask = None
 
-    def _initialize_input_masks(self, F, inputs, states):
+    def _initialize_input_masks(self, inputs, states):
         if self.drop_states and self.drop_states_mask is None:
-            self.drop_states_mask = F.Dropout(F.ones_like(states[0]),
-                                              p=self.drop_states)
+            self.drop_states_mask = npx.dropout(np.ones(states[0].shape),
+                                                p=self.drop_states)
 
         if self.drop_inputs and self.drop_inputs_mask is None:
-            self.drop_inputs_mask = F.Dropout(F.ones_like(inputs),
-                                              p=self.drop_inputs)
+            self.drop_inputs_mask = npx.dropout(np.ones(inputs.shape),
+                                                p=self.drop_inputs)
 
-    def _initialize_output_mask(self, F, output):
+    def _initialize_output_mask(self, output):
         if self.drop_outputs and self.drop_outputs_mask is None:
-            self.drop_outputs_mask = F.Dropout(F.ones_like(output),
-                                               p=self.drop_outputs)
+            self.drop_outputs_mask = npx.dropout(np.ones(output.shape),
+                                                 p=self.drop_outputs)
 
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
+        ctx = inputs.ctx
         cell = self.base_cell
-        self._initialize_input_masks(F, inputs, states)
+        self._initialize_input_masks(inputs, states)
 
         if self.drop_states:
             states = list(states)
             # state dropout only needs to be applied on h, which is always the first state.
-            states[0] = states[0] * self.drop_states_mask
+            states[0] = states[0].as_in_ctx(ctx) * self.drop_states_mask
 
         if self.drop_inputs:
             inputs = inputs * self.drop_inputs_mask
 
         next_output, next_states = cell(inputs, states)
 
-        self._initialize_output_mask(F, next_output)
+        self._initialize_output_mask(next_output)
         if self.drop_outputs:
             next_output = next_output * self.drop_outputs_mask
 
@@ -1238,25 +1259,28 @@ class VariationalDropoutCell(ModifierCell):
 
         self.reset()
 
-        inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, True)
-        states = _get_begin_state(self, F, begin_state, inputs, batch_size)
+        inputs, axis, batch_size = _format_sequence(length, inputs, layout, True)
+        states = _get_begin_state(self, begin_state, inputs, batch_size)
 
         if self.drop_inputs:
-            inputs = F.Dropout(inputs, p=self.drop_inputs, axes=(axis,))
+            inputs = npx.dropout(inputs, p=self.drop_inputs, axes=(axis,))
 
         outputs, states = self.base_cell.unroll(length, inputs, states, layout, merge_outputs=True,
                                                 valid_length=valid_length)
         if self.drop_outputs:
-            outputs = F.Dropout(outputs, p=self.drop_outputs, axes=(axis,))
+            outputs = npx.dropout(outputs, p=self.drop_outputs, axes=(axis,))
         merge_outputs = isinstance(outputs, tensor_types) if merge_outputs is None else \
             merge_outputs
-        outputs, _, _, _ = _format_sequence(length, outputs, layout, merge_outputs)
+        outputs, _, _ = _format_sequence(length, outputs, layout, merge_outputs)
         if valid_length is not None:
-            outputs = _mask_sequence_variable_length(F, outputs, length, valid_length, axis,
+            outputs = _mask_sequence_variable_length(outputs, length, valid_length, axis,
                                                      merge_outputs)
         return outputs, states
 
+    def infer_shape(self, i, x, is_bidirect):
+        self.base_cell.infer_shape(i, x, is_bidirect)
 
+@use_np
 class LSTMPCell(HybridRecurrentCell):
     r"""Long-Short Term Memory Projected (LSTMP) network cell.
     (https://arxiv.org/abs/1402.1128)
@@ -1355,28 +1379,36 @@ class LSTMPCell(HybridRecurrentCell):
                         **self.__dict__)
 
     # pylint: disable= arguments-differ
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, h2r_weight, i2h_bias, h2h_bias):
-        prefix = 't%d_'%self._counter
-        i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
-                               num_hidden=self._hidden_size*4, name=prefix+'i2h')
-        h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
-                               num_hidden=self._hidden_size*4, name=prefix+'h2h')
+    def forward(self, inputs, states):
+        ctx = inputs.ctx
+        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
+                                  bias=self.i2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size*4, no_bias=False)
+        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
+                                  weight=self.h2h_weight.data(ctx),
+                                  bias=self.h2h_bias.data(ctx),
+                                  num_hidden=self._hidden_size*4, no_bias=False)
         gates = i2h + h2h
-        slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
-        in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
-        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
-        in_transform = F.Activation(slice_gates[2], act_type="tanh", name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
-        next_c = F.elemwise_add(forget_gate * states[1], in_gate * in_transform,
-                                name=prefix+'state')
-        hidden = F.elemwise_mul(out_gate, F.Activation(next_c, act_type="tanh"),
-                                name=prefix+'hidden')
-        next_r = F.FullyConnected(data=hidden, num_hidden=self._projection_size,
-                                  weight=h2r_weight, no_bias=True, name=prefix+'out')
+        slice_gates = npx.slice_channel(gates, num_outputs=4)
+        in_gate = npx.activation(slice_gates[0], act_type="sigmoid")
+        forget_gate = npx.activation(slice_gates[1], act_type="sigmoid")
+        in_transform = npx.activation(slice_gates[2], act_type="tanh")
+        out_gate = npx.activation(slice_gates[3], act_type="sigmoid")
+        next_c = forget_gate * states[1].as_in_ctx(ctx) + in_gate * in_transform
+        hidden = np.multiply(out_gate, npx.activation(next_c, act_type="tanh"))
+        next_r = npx.fully_connected(hidden, num_hidden=self._projection_size,
+                                     weight=self.h2r_weight.data(ctx), no_bias=True)
 
         return next_r, [next_r, next_c]
-    # pylint: enable= arguments-differ
+
+    def infer_shape(self, i, x, is_bidirect):
+        if i == 0:
+            self.i2h_weight.shape = (4*self._hidden_size, x.shape[x.ndim-1])
+        else:
+            nh = self._projection_size
+            if is_bidirect:
+                nh *= 2
+            self.i2h_weight.shape = (4*self._hidden_size, nh)
 
 
 def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
@@ -1428,10 +1460,10 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     >>> input_size = 5
     >>> cell = mx.gluon.rnn.LSTMCell(input_size)
     >>> cell.initialize(ctx=mx.cpu())
-    >>> rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
+    >>> rnn_data = mx.np.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
     >>> state_shape = (batch_size, input_size)
-    >>> states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]
-    >>> valid_length = mx.nd.array([2, 3])
+    >>> states = [mx.np.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]
+    >>> valid_length = mx.np.array([2, 3])
     >>> output, states = mx.gluon.rnn.rnn_cell.dynamic_unroll(cell, rnn_data, states,
     ...                                                       valid_length=valid_length,
     ...                                                       layout='TNC')
@@ -1446,48 +1478,57 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     """
 
     # Merge is always True, so we don't need length.
-    inputs, axis, F, _ = _format_sequence(0, inputs, layout, True)
+    inputs, axis, _ = _format_sequence(0, inputs, layout, True)
     if axis != 0:
         axes = list(range(len(layout)))
         tmp = axes[0]
         axes[0] = axes[axis]
         axes[axis] = tmp
-        inputs = F.transpose(inputs, axes=axes)
+        inputs = np.transpose(inputs, axes=axes)
     states = begin_state
 
     if drop_inputs:
-        inputs = F.Dropout(inputs, p=drop_inputs, axes=(axis,))
+        inputs = npx.dropout(inputs, p=drop_inputs, axes=(axis,))
 
     if valid_length is None:
-        def loop_body(inputs, states):
-            return cell(inputs, states)
+        outputs, states = npx.foreach(cell, inputs, states + [valid_length])
     else:
         zeros = []
         for s in states:
-            zeros.append(F.zeros_like(s))
+            zeros.append(np.zeros(s.shape))
         states = list(_as_list(states))
-        states.append(F.zeros((1)))
-        def loop_body(inputs, states):
-            cell_states = states[:-1]
-            iter_no = states[-1]
-            out, new_states = cell(inputs, cell_states)
-            for i, state in enumerate(cell_states):
-                new_states[i] = F.where(F.broadcast_greater(valid_length, iter_no),
-                                        new_states[i], state)
-            new_states.append(iter_no + 1)
-            return out, new_states
+        states.append(np.zeros((1)))
+        class loop_body(HybridBlock):
+            """Loop body for foreach operator"""
+            def __init__(self, cell):
+                super(loop_body, self).__init__()
+                self.cell = cell
 
-    outputs, states = F.contrib.foreach(loop_body, inputs, states)
+            def forward(self, inputs, states):
+                valid_len = states.pop()
+                cell_states = states[:-1]
+                iter_no = states[-1]
+                out, new_states = self.cell(inputs, cell_states)
+                for i, state in enumerate(cell_states):
+                    cond = npx.broadcast_greater(valid_len, iter_no)
+                    cond_broad = np.broadcast_to(cond, new_states[i].T.shape).T
+                    new_states[i] = np.where(cond_broad, new_states[i], state)
+                new_states.append(iter_no + 1)
+                new_states.append(valid_len)
+                return out, new_states
+        body = loop_body(cell)
+        outputs, states = npx.foreach(body, inputs, states + [valid_length])
+        states.pop()
     if drop_outputs:
-        outputs = F.Dropout(outputs, p=drop_outputs, axes=(axis,))
+        outputs = npx.dropout(outputs, p=drop_outputs, axes=(axis,))
     if valid_length is not None:
         if axis != 0:
-            outputs = F.transpose(outputs, axes)
-        outputs = F.SequenceMask(outputs, sequence_length=valid_length,
-                                 use_sequence_length=True, axis=axis)
+            outputs = np.transpose(outputs, axes)
+        outputs = npx.sequence_mask(outputs, sequence_length=valid_length,
+                                    use_sequence_length=True, axis=axis)
         # the last state is the iteration number. We don't need it.
         return outputs, states[:-1]
     else:
         if axis != 0:
-            outputs = F.transpose(outputs, axes)
+            outputs = np.transpose(outputs, axes)
         return outputs, states

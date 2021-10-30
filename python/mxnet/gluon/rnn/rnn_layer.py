@@ -23,12 +23,13 @@
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import ndarray, symbol
+from ... import np, npx, context, initializer
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
-from ...util import is_np_array
+from ...util import use_np
 
 
+@use_np
 class _RNNLayer(HybridBlock):
     """Implementation of recurrent layers."""
     def __init__(self, hidden_size, num_layers, layout,
@@ -49,11 +50,6 @@ class _RNNLayer(HybridBlock):
         self._dropout = dropout
         self._dir = 2 if bidirectional else 1
         self._input_size = input_size
-        self._i2h_weight_initializer = i2h_weight_initializer
-        self._h2h_weight_initializer = h2h_weight_initializer
-        self._i2h_bias_initializer = i2h_bias_initializer
-        self._h2h_bias_initializer = h2h_bias_initializer
-        self._h2r_weight_initializer = h2r_weight_initializer
         self._lstm_state_clip_min = lstm_state_clip_min
         self._lstm_state_clip_max = lstm_state_clip_max
         self._lstm_state_clip_nan = lstm_state_clip_nan
@@ -63,48 +59,17 @@ class _RNNLayer(HybridBlock):
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
-        ng, ni, nh = self._gates, input_size, hidden_size
-        if not projection_size:
-            for i in range(num_layers):
-                for j in ['l', 'r'][:self._dir]:
-                    self._register_param('{}{}_i2h_weight'.format(j, i),
-                                         shape=(ng*nh, ni),
-                                         init=i2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_weight'.format(j, i),
-                                         shape=(ng*nh, nh),
-                                         init=h2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_i2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=i2h_bias_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=h2h_bias_initializer, dtype=dtype)
-                ni = nh * self._dir
-        else:
-            np = self._projection_size
-            for i in range(num_layers):
-                for j in ['l', 'r'][:self._dir]:
-                    self._register_param('{}{}_i2h_weight'.format(j, i),
-                                         shape=(ng*nh, ni),
-                                         init=i2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_weight'.format(j, i),
-                                         shape=(ng*nh, np),
-                                         init=h2h_weight_initializer, dtype=dtype)
-                    self._register_param('{}{}_i2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=i2h_bias_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2h_bias'.format(j, i),
-                                         shape=(ng*nh,),
-                                         init=h2h_bias_initializer, dtype=dtype)
-                    self._register_param('{}{}_h2r_weight'.format(j, i),
-                                         shape=(np, nh),
-                                         init=h2r_weight_initializer, dtype=dtype)
-                ni = np * self._dir
+        param_initializer = initializer.RNNFused(
+            mode, num_layers, hidden_size,
+            bidirectional, projection_size,
+            i2h_weight_initializer=i2h_weight_initializer,
+            h2h_weight_initializer=h2h_weight_initializer,
+            i2h_bias_initializer=i2h_bias_initializer,
+            h2h_bias_initializer=h2h_bias_initializer,
+            h2r_weight_initializer=h2r_weight_initializer)
 
-    def _register_param(self, name, shape, init, dtype):
-        p = Parameter(name, shape=shape, init=init, allow_deferred_init=True, dtype=dtype)
-        setattr(self, name, p)
-        return p
+        self.rnn_param = Parameter('rnn_param', shape=(-1,), init=param_initializer,
+                                   allow_deferred_init=True, dtype=dtype)
 
     def __repr__(self):
         s = '{name}({mapping}, {_layout}'
@@ -115,8 +80,7 @@ class _RNNLayer(HybridBlock):
         if self._dir == 2:
             s += ', bidirectional'
         s += ')'
-        shape = self.l0_i2h_weight.shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // self._gates)
+        mapping = '{0} -> {1}'.format(self._input_size if self._input_size else None, self._hidden_size)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -128,7 +92,7 @@ class _RNNLayer(HybridBlock):
         super(_RNNLayer, self).cast(dtype)
         self._dtype = dtype
 
-    def begin_state(self, batch_size=0, func=ndarray.zeros, **kwargs):
+    def begin_state(self, batch_size=0, func=np.zeros, **kwargs):
         """Initial state for this cell.
 
         Parameters
@@ -155,25 +119,22 @@ class _RNNLayer(HybridBlock):
             Starting states for the first RNN step.
         """
         states = []
-        for i, info in enumerate(self.state_info(batch_size)):
+        for info in self.state_info(batch_size):
             if info is not None:
                 info.update(kwargs)
             else:
                 info = kwargs
-            state = func(name='h0_%d' % (i), **info)
-            if is_np_array():
-                state = state.as_np_ndarray()
+            state = func(shape=info.pop("shape", ()),
+                         ctx=info.pop("ctx", context.cpu()),
+                         dtype=info.pop("dtype", "float32"))
             states.append(state)
         return states
 
     def __call__(self, inputs, states=None, sequence_length=None, **kwargs):
         self.skip_states = states is None
         if states is None:
-            if isinstance(inputs, ndarray.NDArray):
-                batch_size = inputs.shape[self._layout.find('N')]
-                states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
-            else:
-                states = self.begin_state(0, func=symbol.zeros)
+            batch_size = inputs.shape[self._layout.find('N')]
+            states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
         if isinstance(states, tensor_types):
             states = [states]
 
@@ -182,57 +143,61 @@ class _RNNLayer(HybridBlock):
         else:
             return super(_RNNLayer, self).__call__(inputs, states, **kwargs)
 
-    def hybrid_forward(self, F, inputs, states, sequence_length=None, **kwargs):
-        if F is ndarray:
-            batch_size = inputs.shape[self._layout.find('N')]
+    def forward(self, inputs, states, sequence_length=None):
+        batch_size = inputs.shape[self._layout.find('N')]
 
-        if F is ndarray:
-            for state, info in zip(states, self.state_info(batch_size)):
-                if state.shape != info['shape']:
-                    raise ValueError(
-                        "Invalid recurrent state shape. Expecting %s, got %s."%(
-                            str(info['shape']), str(state.shape)))
-        out = self._forward_kernel(F, inputs, states, sequence_length, **kwargs)
+        for state, info in zip(states, self.state_info(batch_size)):
+            if state.shape != info['shape']:
+                raise ValueError(
+                    "Invalid recurrent state shape. Expecting %s, got %s."%(
+                        str(info['shape']), str(state.shape)))
+        out = self._forward_kernel(inputs, states, sequence_length)
 
         # out is (output, state)
         return out[0] if self.skip_states else out
 
-    def _forward_kernel(self, F, inputs, states, sequence_length, **kwargs):
-        """ forward using CUDNN or CPU kenrel"""
-        swapaxes = F.np.swapaxes if is_np_array() else F.swapaxes
-        if self._layout == 'NTC':
-            inputs = swapaxes(inputs, 0, 1)
-        if self._projection_size is None:
-            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
-                      for t in ['weight', 'bias']
-                      for l in range(self._num_layers)
-                      for d in ['l', 'r'][:self._dir]
-                      for g in ['i2h', 'h2h'])
-        else:
-            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
-                      for t in ['weight', 'bias']
-                      for l in range(self._num_layers)
-                      for d in ['l', 'r'][:self._dir]
-                      for g in ['i2h', 'h2h', 'h2r']
-                      if g != 'h2r' or t != 'bias')
+    def infer_shape(self, inputs, *args):
+        assert inputs.ndim == 3, \
+            "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]"
+        self._input_size = inputs.shape[2]
+        ng, ni, nh = self._gates, inputs.shape[2], self._hidden_size
 
-        rnn_param_concat = F.np._internal.rnn_param_concat if is_np_array()\
-            else F._internal._rnn_param_concat
-        params = rnn_param_concat(*params, dim=0)
+        size = nh * self._dir * ng
+        size1 = (ni + nh + 2) * size  # first layer size
+        size2 = (nh * self._dir + nh + 2) * size  # second layer size
+        if self._projection_size:
+            size1 = (ni + self._projection_size + 2) * size  # first layer size
+            size2 = (self._projection_size * self._dir + \
+                self._projection_size + 2) * size  # second layer size
+        param_size = size1 + (self._num_layers - 1) * size2
+        if self._projection_size:
+            param_size += self._projection_size * nh * self._num_layers * self._dir
+        self.rnn_param.shape = (param_size, )
+
+    def _forward_kernel(self, inputs, states, sequence_length):
+        """ forward using CUDNN or CPU kenrel"""
+        ctx = inputs.ctx
+        if self._layout == 'NTC':
+            inputs = np.swapaxes(inputs, 0, 1)
 
         if self._use_sequence_length:
             rnn_args = states + [sequence_length]
         else:
             rnn_args = states
 
-        rnn_fn = F.npx.rnn if is_np_array() else F.RNN
-        rnn = rnn_fn(inputs, params, *rnn_args, use_sequence_length=self._use_sequence_length,
-                     state_size=self._hidden_size, projection_size=self._projection_size,
-                     num_layers=self._num_layers, bidirectional=self._dir == 2,
-                     p=self._dropout, state_outputs=True, mode=self._mode,
-                     lstm_state_clip_min=self._lstm_state_clip_min,
-                     lstm_state_clip_max=self._lstm_state_clip_max,
-                     lstm_state_clip_nan=self._lstm_state_clip_nan)
+        rnn_args_ctx = []
+        for args in rnn_args:
+            new_args = args.as_in_ctx(ctx)
+            rnn_args_ctx.append(new_args)
+
+        rnn = npx.rnn(inputs, self.rnn_param.data().as_in_ctx(ctx), *rnn_args_ctx,
+                      use_sequence_length=self._use_sequence_length,
+                      state_size=self._hidden_size, projection_size=self._projection_size,
+                      num_layers=self._num_layers, bidirectional=self._dir == 2,
+                      p=self._dropout, state_outputs=True, mode=self._mode,
+                      lstm_state_clip_min=self._lstm_state_clip_min,
+                      lstm_state_clip_max=self._lstm_state_clip_max,
+                      lstm_state_clip_nan=self._lstm_state_clip_nan)
 
         if self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]
@@ -240,7 +205,7 @@ class _RNNLayer(HybridBlock):
             outputs, states = rnn[0], [rnn[1]]
 
         if self._layout == 'NTC':
-            outputs = swapaxes(outputs, 0, 1)
+            outputs = np.swapaxes(outputs, 0, 1)
 
         return outputs, states
 
@@ -314,11 +279,11 @@ class RNN(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.RNN(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> input = mx.np.random.uniform(size=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> h0 = mx.np.random.uniform(size=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, activation='relu',
@@ -429,12 +394,12 @@ class LSTM(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.LSTM(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> input = mx.np.random.uniform(size=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
-    >>> c0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> h0 = mx.np.random.uniform(size=(3, 3, 100))
+    >>> c0 = mx.np.random.uniform(size=(3, 3, 100))
     >>> output, hn = layer(input, [h0, c0])
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
@@ -539,11 +504,11 @@ class GRU(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.GRU(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> input = mx.np.random.uniform(size=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> h0 = mx.np.random.uniform(size=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',

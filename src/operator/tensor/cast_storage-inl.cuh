@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file cast_storage-inl.cuh
  * \brief GPU implementation of cast_storage op
  */

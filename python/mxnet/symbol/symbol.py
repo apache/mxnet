@@ -1793,7 +1793,7 @@ class Symbol(SymbolBase):
         return Executor(self, ctx, args, args_grad, grad_req, aux_states)
 
     def _bind(self, ctx, args, args_grad=None, grad_req='write',
-              aux_states=None):
+              aux_states=None, static_alloc=False):
         """Binds the current symbol to an executor and returns it.
 
         We first declare the computation and then bind to the data to run.
@@ -1856,6 +1856,9 @@ class Symbol(SymbolBase):
               `auxiliary_states` to the corresponding `NDArray`,
             - In either case, all the auxiliary states need to be provided.
 
+        static_alloc : bool, default False
+            Statically allocate memory to improve speed. Memory usage may increase.
+
         Returns
         -------
         executor : Executor
@@ -1874,7 +1877,7 @@ class Symbol(SymbolBase):
         gradient they interested in.
         """
         assert isinstance(grad_req, (str, dict))
-        return Executor(self, ctx, args, args_grad, grad_req, aux_states)
+        return Executor(self, ctx, args, args_grad, grad_req, aux_states, static_alloc)
 
     def gradient(self, wrt):
         """Gets the autodiff of current symbol.
@@ -2526,6 +2529,14 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.log_sigmoid(self, *args, **kwargs)
+
+    def mish(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`mish`.
+
+        The arguments are the same as for :py:func:`mish`, with
+        this array as data.
+        """
+        return op.mish(self, *args, **kwargs)
 
     def sqrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sqrt`.

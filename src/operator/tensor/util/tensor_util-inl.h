@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file tensor_util-inl.h
  * \brief commonly utilized tensor operator CPU kernels
  */
@@ -41,12 +40,10 @@ struct MarkRowFlgKernel {
    * \param row_flg  flag array for indices
    * \param row_idx  row index array storing indices of rows
    */
-  template<typename IType, typename DType>
-  MSHADOW_XINLINE static void Map(int tid,
-                                  DType* row_flg,
-                                  const IType* row_idx) {
+  template <typename IType, typename DType>
+  MSHADOW_XINLINE static void Map(int tid, DType* row_flg, const IType* row_idx) {
     nnvm::dim_t idx = static_cast<nnvm::dim_t>(row_idx[tid]);
-    row_flg[idx] = 1;
+    row_flg[idx]    = 1;
   }
 };
 
@@ -62,13 +59,13 @@ struct FillRspRowIdxKernel {
    * \param row_flg_sum  inclusive prefix sum array over 0/1 marked row flag array
    * \param num_rows     rsp tensor number of rows (shape)
    */
-  template<typename RType>
+  template <typename RType>
   MSHADOW_XINLINE static void Map(int tid,
                                   RType* row_idx,
                                   const nnvm::dim_t* row_flg_sum,
                                   const nnvm::dim_t num_rows) {
     if (tid < num_rows) {
-      nnvm::dim_t prev = (tid == 0) ? 0 : row_flg_sum[tid-1];
+      nnvm::dim_t prev = (tid == 0) ? 0 : row_flg_sum[tid - 1];
       if (row_flg_sum[tid] > prev) {
         row_idx[prev] = static_cast<RType>(tid);
       }
@@ -83,12 +80,11 @@ struct FillRspRowIdxKernel {
  * \param data the input row id in sorted order
  */
 struct MarkLookupTable {
-  template<typename IType, typename DType>
+  template <typename IType, typename DType>
   MSHADOW_XINLINE static void Map(int i, IType* out, const DType* data) {
     out[static_cast<nnvm::dim_t>(data[i])] = i;
   }
 };
-
 
 }  // namespace op
 }  // namespace mxnet

@@ -602,11 +602,11 @@ def test_dense_backward_flatten():
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():
-            y = net.forward(x)
+            y = net.forward(x.as_np_ndarray()).as_nd_ndarray()
             o_y = arange_shape_like(y)  # head gradient of y
             params = [p.data() for p in net.collect_params().values()]
-            w = params[0]
-            b = params[1]
+            w = params[0].as_nd_ndarray()
+            b = params[1].as_nd_ndarray()
             print("Checking y ({}) = x({}) * w^T({}) + b({})".format(y.shape, x.shape, w.shape, b.shape))
             x_grad = autograd.grad(heads=y, variables=x, head_grads=o_y,
                                    create_graph=True, retain_graph=True)[0]
@@ -645,11 +645,11 @@ def test_dense_backward_no_flatten():
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():
-            y = net.forward(x)
+            y = net.forward(x.as_np_ndarray()).as_nd_ndarray()
             o_y = arange_shape_like(y)  # head gradient of y
             params = [p.data() for p in net.collect_params().values()]
-            w = params[0]
-            b = params[1]
+            w = params[0].as_nd_ndarray()
+            b = params[1].as_nd_ndarray()
             print("Checking y ({}) = x({}) * w^T({}) + b({})".format(y.shape, x.shape, w.shape, b.shape))
             x_grad = autograd.grad(heads=y, variables=x, head_grads=o_y,
                                    create_graph=True, retain_graph=True)[0]

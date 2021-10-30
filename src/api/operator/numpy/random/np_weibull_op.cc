@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -29,44 +29,43 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npi.weibull")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_weibull");
-  op::NumpyWeibullParam param;
-  nnvm::NodeAttrs attrs;
-  attrs.op = op;
-  if (args[1].type_code() == kDLInt) {
-      param.size = Tuple<index_t>(1, args[1].operator int64_t());
-  } else if (args[1].type_code() == kNull) {
-      param.size = dmlc::nullopt;
-  } else {
-      param.size = Tuple<index_t>(args[1].operator ObjectRef());
-  }
-  if (args[2].type_code() != kNull) {
-    attrs.dict["ctx"] = args[2].operator std::string();
-  }
-  NDArray* out = args[3].operator mxnet::NDArray*();
-  NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  NDArray* inputs[1];
-  int num_inputs = 0;
-  if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {
-    param.a = args[0].operator double();
-    num_inputs = 0;
-  } else {
-    param.a = dmlc::nullopt;
-    inputs[0] = args[0].operator mxnet::NDArray*();
-    num_inputs = 1;
-  }
-  attrs.parsed = param;
-  SetAttrDict<op::NumpyWeibullParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs,
-                          &num_outputs, outputs);
-  if (out) {
-    *ret = PythonArg(3);
-  } else {
-    *ret = ndoutputs[0];
-  }
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_weibull");
+      op::NumpyWeibullParam param;
+      nnvm::NodeAttrs attrs;
+      attrs.op = op;
+      if (args[1].type_code() == kDLInt) {
+        param.size = Tuple<index_t>(1, args[1].operator int64_t());
+      } else if (args[1].type_code() == kNull) {
+        param.size = dmlc::nullopt;
+      } else {
+        param.size = Tuple<index_t>(args[1].operator ObjectRef());
+      }
+      if (args[2].type_code() != kNull) {
+        attrs.dict["ctx"] = args[2].operator std::string();
+      }
+      NDArray* out      = args[3].operator mxnet::NDArray*();
+      NDArray** outputs = out == nullptr ? nullptr : &out;
+      int num_outputs   = out != nullptr;
+      NDArray* inputs[1];
+      int num_inputs = 0;
+      if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {
+        param.a    = args[0].operator double();
+        num_inputs = 0;
+      } else {
+        param.a    = dmlc::nullopt;
+        inputs[0]  = args[0].operator mxnet::NDArray*();
+        num_inputs = 1;
+      }
+      attrs.parsed = param;
+      SetAttrDict<op::NumpyWeibullParam>(&attrs);
+      auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+      if (out) {
+        *ret = PythonArg(3);
+      } else {
+        *ret = ndoutputs[0];
+      }
+    });
 
 }  // namespace mxnet

@@ -375,7 +375,7 @@ DEFAULT_LABEL_SMCE_LARGE_TENSOR = [(2**32 + 1,)]
 
 # For NN operators
 DEFAULT_ACT_TYPE_LR = ['leaky', 'elu', 'selu', 'gelu']
-DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'log_sigmoid', 'softrelu', 'softsign', 'tanh']
+DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'log_sigmoid', 'mish', 'softrelu', 'softsign', 'tanh']
 DEFAULT_LABEL_SOFTMAX = [(1024, 1024), (10000, 1), (10000, 100)]
 
 DEFAULT_LABEL_SOFTMAX_LARGE_TENSOR = [(2**32, 1)]
@@ -780,4 +780,9 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "A", "B", "C", "r1", "r2", "rois", "lrs", "wds", "weights_sum_sq",
                           "grads_sum_sq", "mhs", "data1", "data2", "loc", "parameters", "state",
                           "state_cell"]
+
+PARAMS_OF_TYPE_NP_ARRAY = ["x1", "x2", "prototype", "object", "a", "b", "fill_value", "array", "x", "arr",
+                           "values", "ary", "seq", "arrays", "tup", "indices", "m", "ar", "q", "p", "condition",
+                           "arys", "v", "A", "xp", "fp", "data", "mask", "gamma", "beta", "running_mean",
+                           "running_var", "weight", "index", "lhs", "rhs"]
 

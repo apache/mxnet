@@ -31,11 +31,10 @@ namespace op {
 
 #if MXNET_USE_CUSOLVER == 1
 
-NNVM_REGISTER_OP(_npi_svd)
-.set_attr<FCompute>("FCompute<gpu>", NumpyLaGesvdForward<gpu, gesvd>);
+NNVM_REGISTER_OP(_npi_svd).set_attr<FCompute>("FCompute<gpu>", NumpyLaGesvdForward<gpu, gesvd>);
 
 NNVM_REGISTER_OP(_backward_npi_svd)
-.set_attr<FCompute>("FCompute<gpu>", NumpyLaGesvdBackward<gpu, gesvd_backward>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyLaGesvdBackward<gpu, gesvd_backward>);
 
 #endif
 

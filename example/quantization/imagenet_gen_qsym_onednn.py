@@ -39,6 +39,7 @@ def download_calib_dataset(dataset_url, calib_dataset, logger=None):
         logger.info('Downloading calibration dataset from %s to %s' % (dataset_url, calib_dataset))
     mx.test_utils.download(dataset_url, calib_dataset)
 
+
 def get_from_gluon(model_name, classes=1000, logger=None):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     model_path = os.path.join(dir_path, 'model')
@@ -48,11 +49,13 @@ def get_from_gluon(model_name, classes=1000, logger=None):
     prefix = os.path.join(model_path, model_name)
     return net, prefix
 
+
 def regex_find_excluded_symbols(patterns_dict, model_name):
     for key, value in patterns_dict.items():
         if re.search(key, model_name) is not None:
             return value
     return None
+
 
 def get_exclude_symbols(model_name, exclude_first_conv):
     """Grouped supported models at the time of commit:
@@ -95,6 +98,7 @@ def get_exclude_symbols(model_name, exclude_first_conv):
         excluded_sym_names += excluded_first_conv_sym_names
     return excluded_sym_names
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel oneDNN support')
     parser.add_argument('--model', type=str, default='resnet50_v1',
@@ -116,7 +120,7 @@ if __name__ == '__main__':
                         help='number of batches for calibration')
     parser.add_argument('--exclude-first-conv', action='store_true', default=False,
                         help='excluding quantizing the first conv layer since the'
-                             ' input data may have negative value which doesn\'t support at moment' )
+                             ' input data may have negative value which doesn\'t support at moment')
     parser.add_argument('--shuffle-dataset', action='store_true',
                         help='shuffle the calibration dataset')
     parser.add_argument('--calib-mode', type=str, default='entropy',
@@ -170,8 +174,7 @@ if __name__ == '__main__':
     dir_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.join(dir_path, 'model')
     if not os.path.exists(dir_path):
-        os.mkdir(dir_path) # without try catch block as we expect to finish
-                           # script if it fail
+        os.mkdir(dir_path)  # without try catch block as we expect to finish script if it fail
 
     # download model
     if not args.no_pretrained:
@@ -183,14 +186,13 @@ if __name__ == '__main__':
         rgb_std = '0.229,0.224,0.225'
         epoch = 0
         net.hybridize()
-        net(mx.nd.zeros(data_shape[0])) # dummy forward pass to build graph
+        net(mx.np.zeros(data_shape[0])) # dummy forward pass to build graph
         net.export(prefix) # save model
         net.hybridize(active=False) # disable hybridization - it will be handled in quantization API
     else:
         prefix = os.path.join(dir_path, args.model)
         epoch = args.epoch
         net = gluon.SymbolBlock.imports("{}-symbol.json".format(prefix), ['data'], "{}-0000.params".format(prefix))
-
 
     # get batch size
     batch_size = args.batch_size

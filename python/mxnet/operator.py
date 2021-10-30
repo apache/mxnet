@@ -824,7 +824,7 @@ def register(reg_name):
                         "entries in returned aux stypes, " \
                         "got %d."%(len(tensors[4]), len(ret[4]))
                     rstype = []
-                    for i, ret_list in enumerate(ret):
+                    for ret_list in ret:
                         rstype.extend(ret_list)
 
                     for i, stype in enumerate(rstype):

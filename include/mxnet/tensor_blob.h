@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor_blob.h
  * \brief TBlob class that holds common representation of
  *  arbirary dimension tensor, can be used to transformed
@@ -386,6 +385,10 @@ class TBlob {
       case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
       case mshadow::kInt64: return DLDataType{kDLInt, 64, 1};
       case mshadow::kBool: return DLDataType{kDLUInt, 1, 1};
+      case mshadow::kInt16: return DLDataType{kDLInt, 16, 1};
+      case mshadow::kUint16: return DLDataType{kDLUInt, 16, 1};
+      case mshadow::kUint32: return DLDataType{kDLUInt, 32, 1};
+      case mshadow::kUint64: return DLDataType{kDLUInt, 64, 1};
       default: {
         LOG(FATAL) << "Unknown type_flag=" << type_flag;
         return DLDataType();
@@ -413,11 +416,15 @@ class TBlob {
         switch (dldata_type.bits) {
           case 1: return mshadow::kBool;
           case 8: return mshadow::kUint8;
+          case 16: return mshadow::kUint16;
+          case 32: return mshadow::kUint32;
+          case 64: return mshadow::kUint64;
         }
         break;
       case kDLInt:
         switch (dldata_type.bits) {
           case 8: return mshadow::kInt8;
+          case 16: return mshadow::kInt16;
           case 32: return mshadow::kInt32;
           case 64: return mshadow::kInt64;
         }

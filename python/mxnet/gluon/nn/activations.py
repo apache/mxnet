@@ -20,12 +20,13 @@
 """Basic neural network layers."""
 __all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU', 'SiLU']
 
-from ... import initializer
+from ... import initializer, npx
 from ..block import HybridBlock
 from ..parameter import Parameter
-from ...util import is_np_array
+from ...util import use_np
 
 
+@use_np
 class Activation(HybridBlock):
     r"""Applies an activation function to input.
 
@@ -49,9 +50,8 @@ class Activation(HybridBlock):
     def _alias(self):
         return self._act_type
 
-    def hybrid_forward(self, F, x):
-        act = F.npx.activation if is_np_array() else F.Activation
-        return act(x, act_type=self._act_type, name='fwd')
+    def forward(self, x):
+        return npx.activation(x, act_type=self._act_type, name='fwd')
 
     def __repr__(self):
         s = '{name}({_act_type})'
@@ -59,6 +59,7 @@ class Activation(HybridBlock):
                         **self.__dict__)
 
 
+@use_np
 class LeakyReLU(HybridBlock):
     r"""Leaky version of a Rectified Linear Unit.
 
@@ -90,9 +91,8 @@ class LeakyReLU(HybridBlock):
         super(LeakyReLU, self).__init__(**kwargs)
         self._alpha = alpha
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
 
     def __repr__(self):
         s = '{name}({alpha})'
@@ -100,6 +100,7 @@ class LeakyReLU(HybridBlock):
                         alpha=self._alpha)
 
 
+@use_np
 class PReLU(HybridBlock):
     r"""Parametric leaky version of a Rectified Linear Unit.
     <https://arxiv.org/abs/1502.01852>`_ paper.
@@ -137,11 +138,12 @@ class PReLU(HybridBlock):
         super(PReLU, self).__init__(**kwargs)
         self.alpha = Parameter('alpha', shape=(in_channels,), init=alpha_initializer)
 
-    def hybrid_forward(self, F, x, alpha):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, gamma=alpha, act_type='prelu', name='fwd')
+    def forward(self, x):
+        ctx = x.ctx
+        return npx.leaky_relu(x, gamma=self.alpha.data(ctx), act_type='prelu', name='fwd')
 
 
+@use_np
 class ELU(HybridBlock):
     r"""
     Exponential Linear Unit (ELU)
@@ -166,11 +168,11 @@ class ELU(HybridBlock):
         super(ELU, self).__init__(**kwargs)
         self._alpha = alpha
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='elu', slope=self._alpha)
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='elu', slope=self._alpha)
 
 
+@use_np
 class SELU(HybridBlock):
     r"""
     Scaled Exponential Linear Unit (SELU)
@@ -187,11 +189,11 @@ class SELU(HybridBlock):
     def __init__(self, **kwargs):
         super(SELU, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='selu', name='fwd')
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='selu', name='fwd')
 
 
+@use_np
 class GELU(HybridBlock):
     r"""
     Gaussian Exponential Linear Unit (GELU)
@@ -208,11 +210,11 @@ class GELU(HybridBlock):
     def __init__(self, **kwargs):
         super(GELU, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='gelu', name='fwd')
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='gelu', name='fwd')
 
 
+@use_np
 class Swish(HybridBlock):
     r"""
     Swish Activation function (SiLU with a hyperparameter)
@@ -235,13 +237,11 @@ class Swish(HybridBlock):
         super(Swish, self).__init__(**kwargs)
         self._beta = beta
 
-    def hybrid_forward(self, F, x):
-        if is_np_array():
-            return x * F.npx.sigmoid(self._beta * x)
-        else:
-            return x * F.sigmoid(self._beta * x, name='fwd')
+    def forward(self, x):
+        return x * npx.sigmoid(self._beta * x)
 
 
+@use_np
 class SiLU(HybridBlock):
     r"""
     Sigmoid Linear Units
@@ -264,8 +264,5 @@ class SiLU(HybridBlock):
     def __init__(self, **kwargs):
         super(SiLU, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        if is_np_array():
-            return x * F.npx.sigmoid(x)
-        else:
-            return x * F.sigmoid(x, name='fwd')
+    def forward(self, x):
+        return x * npx.sigmoid(x)

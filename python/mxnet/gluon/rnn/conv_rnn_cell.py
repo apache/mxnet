@@ -28,6 +28,8 @@ from math import floor
 from ...base import numeric_types
 from .rnn_cell import HybridRecurrentCell
 from ..parameter import Parameter
+from ... import np, npx
+from ...util import use_np
 
 
 def _get_conv_out_size(dimensions, kernels, paddings, dilations):
@@ -35,6 +37,7 @@ def _get_conv_out_size(dimensions, kernels, paddings, dilations):
                  zip(dimensions, kernels, paddings, dilations))
 
 
+@use_np
 class _BaseConvRNNCell(HybridRecurrentCell):
     """Abstract base class for convolutional RNNs"""
     def __init__(self, input_shape, hidden_channels,
@@ -142,38 +145,45 @@ class _BaseConvRNNCell(HybridRecurrentCell):
     def _num_gates(self):
         return len(self._gate_names)
 
-    def _conv_forward(self, F, inputs, states,
-                      i2h_weight, h2h_weight, i2h_bias, h2h_bias,
-                      prefix):
-        i2h = F.Convolution(data=inputs,
-                            num_filter=self._hidden_channels*self._num_gates,
-                            kernel=self._i2h_kernel,
-                            stride=self._stride,
-                            pad=self._i2h_pad,
-                            dilate=self._i2h_dilate,
-                            weight=i2h_weight,
-                            bias=i2h_bias,
-                            layout=self._conv_layout,
-                            name=prefix+'i2h')
-        h2h = F.Convolution(data=states[0],
-                            num_filter=self._hidden_channels*self._num_gates,
-                            kernel=self._h2h_kernel,
-                            dilate=self._h2h_dilate,
-                            pad=self._h2h_pad,
-                            stride=self._stride,
-                            weight=h2h_weight,
-                            bias=h2h_bias,
-                            layout=self._conv_layout,
-                            name=prefix+'h2h')
+    def _conv_forward(self, inputs, states):
+        ctx = inputs.ctx
+        i2h = npx.convolution(data=inputs,
+                              num_filter=self._hidden_channels*self._num_gates,
+                              kernel=self._i2h_kernel,
+                              stride=self._stride,
+                              pad=self._i2h_pad,
+                              dilate=self._i2h_dilate,
+                              weight=self.i2h_weight.data(ctx),
+                              bias=self.i2h_bias.data(ctx),
+                              layout=self._conv_layout)
+        h2h = npx.convolution(data=states[0].as_in_ctx(ctx),
+                              num_filter=self._hidden_channels*self._num_gates,
+                              kernel=self._h2h_kernel,
+                              dilate=self._h2h_dilate,
+                              pad=self._h2h_pad,
+                              stride=self._stride,
+                              weight=self.h2h_weight.data(ctx),
+                              bias=self.h2h_bias.data(ctx),
+                              layout=self._conv_layout)
         return i2h, h2h
 
     def state_info(self, batch_size=0):
         raise NotImplementedError("_BaseConvRNNCell is abstract class for convolutional RNN")
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
         raise NotImplementedError("_BaseConvRNNCell is abstract class for convolutional RNN")
 
+    # pylint: disable=unused-argument
+    def infer_shape(self, i, x, is_bidirect):
+        channel_axis = self._conv_layout.find('C')
+        shape_c = x.shape[-len(self._i2h_kernel)-1:][channel_axis-1]
+        wshape = self.i2h_weight.shape
+        wshape_list = list(wshape)
+        wshape_list[self._conv_layout.find('C')] = shape_c
+        self.i2h_weight.shape = tuple(wshape_list)
 
+
+@use_np
 class _ConvRNNCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel, i2h_pad, i2h_dilate, h2h_dilate,
@@ -203,14 +213,9 @@ class _ConvRNNCell(_BaseConvRNNCell):
     def _gate_names(self):
         return ('',)
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, i2h_bias, h2h_bias):
-        prefix = 't%d_'%self._counter
-        i2h, h2h = self._conv_forward(F, inputs, states,
-                                      i2h_weight, h2h_weight, i2h_bias, h2h_bias,
-                                      prefix)
-        output = self._get_activation(F, i2h + h2h, self._activation,
-                                      name=prefix+'out')
+    def forward(self, inputs, states):
+        i2h, h2h = self._conv_forward(inputs, states)
+        output = self._get_activation(i2h + h2h, self._activation)
         return output, [output]
 
 
@@ -398,6 +403,7 @@ class Conv3DRNNCell(_ConvRNNCell):
                                             activation=activation)
 
 
+@use_np
 class _ConvLSTMCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -429,23 +435,16 @@ class _ConvLSTMCell(_BaseConvRNNCell):
     def _gate_names(self):
         return ['_i', '_f', '_c', '_o']
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, i2h_bias, h2h_bias):
-        prefix = 't%d_'%self._counter
-        i2h, h2h = self._conv_forward(F, inputs, states,
-                                      i2h_weight, h2h_weight, i2h_bias, h2h_bias,
-                                      prefix)
+    def forward(self, inputs, states):
+        i2h, h2h = self._conv_forward(inputs, states)
         gates = i2h + h2h
-        slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice',
-                                     axis=self._channel_axis)
-        in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
-        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
-        in_transform = self._get_activation(F, slice_gates[2], self._activation, name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
-        next_c = F.elemwise_add(forget_gate * states[1], in_gate * in_transform,
-                                name=prefix+'state')
-        next_h = F.elemwise_mul(out_gate, self._get_activation(F, next_c, self._activation),
-                                name=prefix+'out')
+        slice_gates = npx.slice_channel(gates, num_outputs=4, axis=self._channel_axis)
+        in_gate = npx.activation(slice_gates[0], act_type="sigmoid")
+        forget_gate = npx.activation(slice_gates[1], act_type="sigmoid")
+        in_transform = self._get_activation(slice_gates[2], self._activation)
+        out_gate = npx.activation(slice_gates[3], act_type="sigmoid")
+        next_c = forget_gate * states[1].as_in_ctx(inputs.ctx) + in_gate * in_transform
+        next_h = np.multiply(out_gate, self._get_activation(next_c, self._activation))
 
         return next_h, [next_h, next_c]
 
@@ -663,6 +662,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
                                              activation=activation)
 
 
+@use_np
 class _ConvGRUCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel, i2h_pad, i2h_dilate, h2h_dilate,
@@ -692,30 +692,21 @@ class _ConvGRUCell(_BaseConvRNNCell):
     def _gate_names(self):
         return ['_r', '_z', '_o']
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, i2h_bias, h2h_bias):
-        prefix = 't%d_'%self._counter
-        i2h, h2h = self._conv_forward(F, inputs, states,
-                                      i2h_weight, h2h_weight, i2h_bias, h2h_bias,
-                                      prefix)
+    def forward(self, inputs, states):
+        i2h, h2h = self._conv_forward(inputs, states)
 
-        i2h_r, i2h_z, i2h = F.SliceChannel(i2h, num_outputs=3,
-                                           name=prefix+'i2h_slice',
-                                           axis=self._channel_axis)
-        h2h_r, h2h_z, h2h = F.SliceChannel(h2h, num_outputs=3,
-                                           name=prefix+'h2h_slice',
-                                           axis=self._channel_axis)
+        i2h_r, i2h_z, i2h = npx.slice_channel(i2h, num_outputs=3,
+                                              axis=self._channel_axis)
+        h2h_r, h2h_z, h2h = npx.slice_channel(h2h, num_outputs=3,
+                                              axis=self._channel_axis)
 
-        reset_gate = F.Activation(i2h_r + h2h_r, act_type="sigmoid",
-                                  name=prefix+'r_act')
-        update_gate = F.Activation(i2h_z + h2h_z, act_type="sigmoid",
-                                   name=prefix+'z_act')
+        reset_gate = npx.activation(i2h_r + h2h_r, act_type="sigmoid")
+        update_gate = npx.activation(i2h_z + h2h_z, act_type="sigmoid")
 
-        next_h_tmp = self._get_activation(F, i2h + reset_gate * h2h, self._activation,
-                                          name=prefix+'h_act')
+        next_h_tmp = self._get_activation(i2h + reset_gate * h2h, self._activation)
 
-        next_h = F.elemwise_add((1. - update_gate) * next_h_tmp, update_gate * states[0],
-                                name=prefix+'out')
+        next_h = (1. - update_gate) * next_h_tmp + update_gate * \
+            states[0].as_in_ctx(inputs.ctx)
 
         return next_h, [next_h]
 

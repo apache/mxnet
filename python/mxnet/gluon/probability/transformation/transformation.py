@@ -26,7 +26,7 @@ __all__ = ["Transformation", "TransformBlock", "ComposeTransform", "ExpTransform
 import weakref
 from ..distributions.utils import _clip_prob, cached_property, sum_right_most
 from ...block import HybridBlock
-from .... import ndarray as nd
+from .... import np, npx
 
 
 class Transformation(object):
@@ -41,18 +41,9 @@ class Transformation(object):
     bijective = False
     event_dim = 0
 
-    def __init__(self, F=nd):
+    def __init__(self):
         self._inv = None
-        self._F = F
         super(Transformation, self).__init__()
-
-    @property
-    def F(self):
-        return self._F
-
-    @F.setter
-    def F(self, value):
-        self._F = value
 
     @property
     def sign(self):
@@ -142,15 +133,6 @@ class ComposeTransform(Transformation):
             x = t(x)
         return x
 
-    @property
-    def F(self):
-        return self._parts[0].F
-
-    @F.setter
-    def F(self, value):
-        for t in self._parts:
-            t.F = value
-
     # @cached_property is, in essence, @property with lazy evaluation.
     # pylint: disable=invalid-overridden-method
     @cached_property
@@ -177,7 +159,7 @@ class ComposeTransform(Transformation):
 
     def log_det_jacobian(self, x, y):
         if not self._parts:
-            return self.F.np.zeros_like(x)
+            return np.zeros_like(x)
         result = 0
         x_prime = None
         for t in self._parts[:-1]:
@@ -200,10 +182,10 @@ class ExpTransform(Transformation):
     sign = 1
 
     def _forward_compute(self, x):
-        return self.F.np.exp(x)
+        return np.exp(x)
 
     def _inverse_compute(self, y):
-        return self.F.np.log(y)
+        return np.log(y)
 
     def log_det_jacobian(self, x, y):
         return x
@@ -228,16 +210,13 @@ class AffineTransform(Transformation):
         return (y - self._loc) / self._scale
 
     def log_det_jacobian(self, x, y):
-        abs_fn = self.F.np.abs
-        log_fn = self.F.np.log
-        ones_fn = self.F.np.ones_like
         # element-wise abs(log(dy/dx))
-        value = ones_fn(x) * log_fn(abs_fn(self._scale))
+        value = np.ones_like(x) * np.log(np.abs(self._scale))
         return sum_right_most(value, self.event_dim)
 
     @property
     def sign(self):
-        return self.F.np.sign(self._scale)
+        return np.sign(self._scale)
 
 
 class PowerTransform(Transformation):
@@ -252,14 +231,14 @@ class PowerTransform(Transformation):
         self._exponent = exponent
 
     def _forward_compute(self, x):
-        return self.F.np.power(x, self._exponent)
+        return np.power(x, self._exponent)
 
     def _inverse_compute(self, y):
-        return self.F.np.power(y, 1 / self._exponent)
+        return np.power(y, 1 / self._exponent)
 
     def log_det_jacobian(self, x, y):
-        log_fn = self.F.np.log
-        abs_fn = self.F.np.abs
+        log_fn = np.log
+        abs_fn = np.abs
         return log_fn(abs_fn(self._exponent * y / x))
 
 
@@ -271,19 +250,14 @@ class SigmoidTransform(Transformation):
     sign = 1
 
     def _forward_compute(self, x):
-        F = self.F
-        return _clip_prob(F.npx.sigmoid(x), F)
+        return _clip_prob(npx.sigmoid(x))
 
     def _inverse_compute(self, y):
-        F = self.F
-        clipped_prob = _clip_prob(y, F)
-        return F.np.log(clipped_prob) - F.np.log1p(-clipped_prob)
+        clipped_prob = _clip_prob(y)
+        return np.log(clipped_prob) - np.log1p(-clipped_prob)
 
     def log_det_jacobian(self, x, y):
-        F = self.F
-        log = F.np.log
-        exp = F.np.exp
-        softplus_fn = lambda x: log(1 + exp(x))
+        softplus_fn = lambda x: np.log(1 + np.exp(x))
         return -softplus_fn(-x) - softplus_fn(x)
 
 
@@ -291,15 +265,15 @@ class SoftmaxTransform(Transformation):
     event_dim = 1
 
     def _forward_compute(self, x):
-        return self.F.npx.softmax(x, -1)
+        return npx.softmax(x, -1)
 
     def _inverse_compute(self, y):
-        return self.F.log(y)
+        return np.log(y)
 
 
 class AbsTransform(Transformation):
     def _forward_compute(self, x):
-        return self.F.np.abs(x)
+        return np.abs(x)
 
     def _inverse_compute(self, y):
         return y

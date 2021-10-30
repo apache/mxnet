@@ -37,9 +37,10 @@ from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
     8.1 relu
     8.2 sigmoid
     8.3 log_sigmoid
-    8.4 softrelu
-    8.5 softsign
-    8.6 tanh
+    8.4 mish
+    8.5 softrelu
+    8.6 softsign
+    8.7 tanh
 
 """
 

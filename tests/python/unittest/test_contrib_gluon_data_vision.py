@@ -49,6 +49,7 @@ def _generate_objects():
     return [2, 5] + label
 
 
+@use_np
 class TestImage(unittest.TestCase):
     IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
@@ -91,7 +92,7 @@ class TestImage(unittest.TestCase):
                         rand_crop=1, rand_gray=0.1, rand_mirror=True)
                 ]
                 for it in imageiter_list:
-                    for batch in it:
+                    for _ in it:
                         pass
 
     def test_image_bbox_iter(self):
@@ -140,6 +141,6 @@ class TestImage(unittest.TestCase):
             pca_noise=0.1, hue=0.1, inter_method=10,
             max_aspect_ratio=5, area_range=(0.1, 4.0),
             max_attempts=50)
-        for batch in det_iter:
+        for _ in det_iter:
             pass
-        mx.nd.waitall()
+        mx.npx.waitall()

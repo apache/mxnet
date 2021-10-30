@@ -23,7 +23,7 @@ __all__ = ['Multinomial']
 from numbers import Number
 from .distribution import Distribution
 from .one_hot_categorical import OneHotCategorical
-from .utils import getF, cached_property, logit2prob, prob2logit, gammaln
+from .utils import cached_property, logit2prob, prob2logit, gammaln
 from .constraint import Simplex, Real, IntegerInterval
 
 
@@ -40,17 +40,13 @@ class Multinomial(Distribution):
         unnormalized probability of each event.
     total_count : int
         number of trials.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
     arg_constraints = {'prob': Simplex(), 'logit': Real()}
 
     def __init__(self, num_events,
-                 prob=None, logit=None, total_count=1, F=None, validate_args=None):
-        _F = F if F is not None else getF(prob, logit)
+                 prob=None, logit=None, total_count=1, validate_args=None):
         if not isinstance(total_count, Number):
             raise ValueError("Expect `total_conut` to be scalar value")
         self.total_count = total_count
@@ -63,9 +59,9 @@ class Multinomial(Distribution):
         else:
             self.logit = logit
         self._categorical = OneHotCategorical(
-            num_events, prob, logit, F, validate_args)
+            num_events, prob, logit, validate_args)
         super(Multinomial, self).__init__(
-            F=_F, event_dim=1, validate_args=validate_args)
+            event_dim=1, validate_args=validate_args)
 
     @property
     def mean(self):
@@ -78,12 +74,12 @@ class Multinomial(Distribution):
     @cached_property
     def prob(self):
         # pylint: disable=method-hidden
-        return logit2prob(self.logit, False, self.F)
+        return logit2prob(self.logit, False)
 
     @cached_property
     def logit(self):
         # pylint: disable=method-hidden
-        return prob2logit(self.prob, False, self.F)
+        return prob2logit(self.prob, False)
 
     @property
     def support(self):
@@ -105,8 +101,7 @@ class Multinomial(Distribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
-        lgamma = gammaln(F)
+        lgamma = gammaln()
         log_factorial_n = lgamma(value.sum(-1) + 1)
         log_factorial_x = lgamma(value + 1).sum(-1)
         log_power = (self.logit * value).sum(-1)
@@ -114,12 +109,10 @@ class Multinomial(Distribution):
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
         new_instance._categorical = self._categorical.broadcast_to(batch_shape)
         new_instance.num_events = self.num_events
         new_instance.total_conut = self.total_count
-        super(Multinomial, new_instance).__init__(F=F,
-                                                  event_dim=self.event_dim,
+        super(Multinomial, new_instance).__init__(event_dim=self.event_dim,
                                                   validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance

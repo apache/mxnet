@@ -17,36 +17,36 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file sync_batch_norm.cc
  * \brief Synchronized BatchNorm modified from BatchNormV1
  * \author Hang Zhang
-*/
+ */
 
 #include "sync_batch_norm-inl.h"
 #include <nnvm/op_attr_types.h>
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<cpu>(SyncBatchNormParam param, int dtype) {
+template <>
+Operator* CreateOp<cpu>(SyncBatchNormParam param, int dtype) {
   return new SyncBatchNorm<cpu>(param);
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *SyncBatchNormProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-    std::vector<int> *in_type) const {
-    mxnet::ShapeVector out_shape, aux_shape;
-    std::vector<int> out_type, aux_type;
-    CHECK(InferType(in_type, &out_type, &aux_type));
-    CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-    DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+Operator* SyncBatchNormProp::CreateOperatorEx(Context ctx,
+                                              mxnet::ShapeVector* in_shape,
+                                              std::vector<int>* in_type) const {
+  mxnet::ShapeVector out_shape, aux_shape;
+  std::vector<int> out_type, aux_type;
+  CHECK(InferType(in_type, &out_type, &aux_type));
+  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(SyncBatchNormParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_SyncBatchNorm, SyncBatchNormProp)
-.describe(R"code(Batch normalization.
+    .describe(R"code(Batch normalization.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
 well as offset ``beta``.
@@ -95,23 +95,26 @@ Reference:
   .. [2] Hang Zhang, Kristin Dana, Jianping Shi, Zhongyue Zhang, Xiaogang Wang, \
     Ambrish Tyagi, and Amit Agrawal. "Context Encoding for Semantic Segmentation." *CVPR 2018*
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
-.add_argument("gamma", "NDArray-or-Symbol", "gamma array")
-.add_argument("beta", "NDArray-or-Symbol", "beta array")
-.add_argument("moving_mean", "NDArray-or-Symbol", "running mean of input")
-.add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
-.add_arguments(SyncBatchNormParam::__FIELDS__());
+    .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
+    .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
+    .add_argument("beta", "NDArray-or-Symbol", "beta array")
+    .add_argument("moving_mean", "NDArray-or-Symbol", "running mean of input")
+    .add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
+    .add_arguments(SyncBatchNormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_SyncBatchNorm)
-.set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
-      if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
-      if (index == 3) {
-        var->attrs.dict["__init__"] = "[\"zero\", {}]";
-      } else if (index == 4) {
-        var->attrs.dict["__init__"] = "[\"one\", {}]";
-      }
-    });
+    .add_alias("_npx_sync_batch_norm")
+    .set_attr<nnvm::FSetInputVarAttrOnCompose>(
+        "FSetInputVarAttrOnCompose",
+        [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
+          if (var->attrs.dict.find("__init__") != var->attrs.dict.end())
+            return;
+          if (index == 3) {
+            var->attrs.dict["__init__"] = "[\"zero\", {}]";
+          } else if (index == 4) {
+            var->attrs.dict["__init__"] = "[\"one\", {}]";
+          }
+        });
 
 }  // namespace op
 }  // namespace mxnet

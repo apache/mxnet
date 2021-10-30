@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file c_api.h
  * \brief C API of mxnet
  */
@@ -111,7 +110,7 @@ typedef const void *EngineFnPropertyHandle;
 typedef void *EngineVarHandle;
 
 /*! \brief Engine asynchronous operation */
-typedef void (*EngineAsyncFunc)(void*, void*, void*);
+typedef void (*EngineAsyncFunc)(void*, void*, void*, void*);
 /*! \brief Engine synchronous operation */
 typedef void (*EngineSyncFunc)(void*, void*);
 /*! \brief Callback to free the param for EngineAsyncFunc/EngineSyncFunc */
@@ -271,6 +270,17 @@ MXNET_DLL int MXRandomSeed(int seed);
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
+
+/*!
+ * \brief Change floating-point calculations when dealing with denormalized values.
+ * Currently this option is only supported in CPU backend.
+ * Flushing denormalized values to zero is enabled by default.
+ *
+ * \param value state of flush-to-zero and denormals-are-zero to set.
+ * \param prev_state state of flush-to-zero and denormals-are-zero before setting new state.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetFlushDenorms(bool value, bool* prev_state);
 
 /*!
  * \brief Notify the engine about a shutdown,
@@ -1264,6 +1274,14 @@ MXNET_DLL int MXAutogradMarkVariables(uint32_t num_var,
                                       uint32_t *reqs_array,
                                       NDArrayHandle *grad_handles);
 /*!
+ * \brief unmark nonleaf NDArrays to free the memory
+ * \param num_var number of variable NDArrays
+ * \param var_handles variable NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradDropGrads(uint32_t num_var,
+                                  NDArrayHandle *var_handles);
+/*!
  * \brief compute the gradient of outputs w.r.t variabels
  * \param num_output number of output NDArray
  * \param output_handles output NDArrays
@@ -1398,6 +1416,14 @@ MXNET_DLL int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays,
 MXNET_DLL int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles,
                                                 int num_outputs,
                                                 SymbolHandle *out);
+
+/*!
+ * \brief Clear the deferred compute info associated with the ndarrays.
+ * \param arrays ndarray handles of deferred compute outputs
+ * \param num number of ndarrays
+ * \return 0 when success, -1 otherwise
+ */
+MXNET_DLL int MXNDArrayClearDeferredCompute(NDArrayHandle *arrays, int num);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation
@@ -3133,6 +3159,29 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
  */
 MXNET_DLL int MXCheckDynamicShapeOp(SymbolHandle sym_handle,
                                     bool* has_dynamic_shape);
+
+/*!
+  * \brief Push a new NVTX range. Requires building with CUDA and NVTX.
+  * \param name Name of the range.
+  * \param color Color used to display the range in the visual profiling tools.
+  *              Encoded as 256*256*R + 256*G + B.
+  */
+MXNET_DLL int MXNVTXRangePush(const char * name, mx_uint color);
+
+/*!
+  * \brief End the NVTX range. Requires building with CUDA and NVTX.
+  */
+MXNET_DLL int MXNVTXRangePop();
+
+/*!
+  * \brief Start CUDA profiling session. Requires building with CUDA and NVTX.
+  */
+MXNET_DLL int MXCUDAProfilerStart();
+
+/*!
+  * \brief End CUDA profiling session. Requires building with CUDA and NVTX.
+  */
+MXNET_DLL int MXCUDAProfilerStop();
 
 #ifdef __cplusplus
 }

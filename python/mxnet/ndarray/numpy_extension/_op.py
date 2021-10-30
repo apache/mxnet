@@ -28,7 +28,7 @@ __all__ = ['softmax', 'log_softmax', 'masked_softmax', 'masked_log_softmax',
            'activation', 'batch_norm', 'fully_connected', 'pick', 'convolution',
            'deconvolution', 'pooling', 'dropout', 'one_hot', 'rnn', 'embedding',
            'topk', 'layer_norm', 'leaky_relu', 'batch_dot', 'broadcast_like',
-           'arange_like']
+           'arange_like', 'group_norm']
 
 
 # pylint: disable=too-many-arguments
@@ -217,6 +217,8 @@ def activation(data, act_type='relu', **kwargs):
 
     The following activation functions are supported:
 
+    - `log_sigmoid`: :math:`y = log(\frac{1}{1 + exp(-x)})`
+    - `mish`: :math:`y = x * tanh(log(1 + exp(x)))`
     - `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`
     - `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`
     - `tanh`: Hyperbolic tangent, :math:`y = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`
@@ -227,7 +229,7 @@ def activation(data, act_type='relu', **kwargs):
     ----------
     data : NDArray
         The input array.
-    act_type : {'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required
+    act_type : {'log_sigmoid', 'mish', 'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required
         Activation function to be applied.
 
     Returns
@@ -597,8 +599,8 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
     """
     assert data is not None and weight is not None and kernel is not None, \
            "Missing input data, weight or kernel"
-    assert num_filter > 1, "Number of output filters should be greater than 1"
-    assert workspace > 0, "Maximum temporary workspace should be greater than 0"
+    assert num_filter >= 1, "Number of output filters should be greater equal to 1."
+    assert workspace >= 0, "Maximum temporary workspace should be greater equal to 0."
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.convolution(data, weight, kernel, stride, dilate, pad,
@@ -615,9 +617,9 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
 @set_module('mxnet.ndarray.numpy_extension')
 def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, dilate=None,
                   pad=None, adj=None, target_shape=None, num_filter=1, num_group=1,
-                  workspace=512, no_bias=False, cudnn_tune=None,
+                  workspace=1024, no_bias=False, cudnn_tune=None,
                   cudnn_off=False, layout=None):
-    r"""Computes 1D or 2D transposed convolution (aka fractionally strided convolution) of
+    r"""Computes 1D, 2D or 3D transposed convolution (aka fractionally strided convolution) of
     the input tensor. This operation can be seen as the gradient of Convolution operation
     with respect to its input. Convolution usually reduces the size of the input.
     Transposed convolution works the other way, going from a smaller input
@@ -680,8 +682,8 @@ def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, d
     """
     assert data is not None and weight is not None and kernel is not None, \
            "Missing input data, weight or kernel"
-    assert num_filter > 1, "Number of output filters should be greater than 1"
-    assert workspace > 0, "Maximum temporary workspace should be greater than 0"
+    assert num_filter >= 1, "Number of output filters should be greater equal to 1."
+    assert workspace >= 0, "Maximum temporary workspace should be greater equal to 0."
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.deconvolution(data, weight, kernel, stride, dilate, pad,
@@ -1070,7 +1072,7 @@ def embedding(data, weight, input_dim=None, output_dim=None, dtype="float32", sp
         "row_sparse". Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
         and Adam. Note that by default lazy updates is turned on, which may perform differently
         from standard updates. For more details, please check the Optimization API at:
-        https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
+        https://mxnet.apache.org/versions/master/api/python/docs/api/optimizer/index.html
 
     Parameters
     ----------
@@ -1124,8 +1126,9 @@ def embedding(data, weight, input_dim=None, output_dim=None, dtype="float32", sp
            [[ 0.,  1.,  2.,  3.,  4.],
             [10., 11., 12., 13., 14.]]])
     """
-    assert input_dim > 1, "Vocabulary size of the input indices should be greater than 1."
-    assert output_dim > 1, "Dimension of the embedding vectors should greater than 1."
+    assert input_dim > 0, "Vocabulary size of the input indices should be greater than 0."
+    assert output_dim > 0, "Dimension of the embedding vectors should greater than 0."
+    assert not sparse_grad, "Currently row sparse gradient is not supported in npx.embedding"
     return _api_internal.embedding(data, weight, input_dim, output_dim, dtype, sparse_grad)
 
 
@@ -1441,3 +1444,49 @@ def arange_like(data, start=0.0, step=1.0, repeat=1, ctx=None, axis=None):
     array([0., 1., 2., 3.])
     """
     return _api_internal.arange_like(data, start, step, repeat, ctx, axis)
+
+
+# pylint: disable=too-many-arguments
+@set_module('mxnet.ndarray.numpy_extension')
+def group_norm(data, gamma, beta, num_groups=1, eps=1e-3, output_mean_var=False):
+    r"""Group normalization.
+
+    The input channels are separated into ``num_groups`` groups,
+    each containing ``num_channels / num_groups`` channels.
+    The mean and standard-deviation are calculated separately over the each group.
+
+    .. math::
+
+      data = data.reshape((N, num_groups, C // num_groups, ...))
+      out = \frac{data - mean(data, axis)}{\sqrt{var(data, axis) + \epsilon}} * gamma + beta
+
+    Both ``gamma`` and ``beta`` are learnable parameters.
+
+
+
+    Defined in ../src/operator/nn/group_norm.cc:L78
+
+    Parameters
+    ----------
+    data : NDArray
+        Input data
+    gamma : NDArray
+        gamma array
+    beta : NDArray
+        beta array
+    num_groups : int, optional, default='1'
+        Total number of groups.
+    eps : float, optional, default=9.99999975e-06
+        An `epsilon` parameter to prevent division by 0.
+    output_mean_var : boolean, optional, default=0
+        Output the mean and std calculated along the given axis.
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+    """
+    out = _api_internal.group_norm(data, gamma, beta, num_groups, eps, output_mean_var)
+    if isinstance(out, NDArrayBase):
+        return out
+    return list(out)

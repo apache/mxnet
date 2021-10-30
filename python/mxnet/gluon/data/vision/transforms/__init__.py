@@ -24,7 +24,8 @@ import random
 
 from ....block import Block, HybridBlock
 from ....nn import Sequential, HybridSequential
-from .....util import is_np_array
+from .....util import use_np
+from ..... import np, npx
 
 from . image import *
 from .image import _append_return
@@ -110,6 +111,7 @@ class HybridCompose(HybridSequential):
         self.hybridize()
 
 
+@use_np
 class Cast(HybridBlock):
     """Cast inputs to a specific data type
 
@@ -129,10 +131,8 @@ class Cast(HybridBlock):
         super(Cast, self).__init__()
         self._dtype = dtype
 
-    def hybrid_forward(self, F, *args):
-        if is_np_array():
-            F = F.npx
-        return tuple([F.cast(x, self._dtype) for x in args])
+    def forward(self, *args):
+        return tuple(x.astype(self._dtype) for x in args)
 
 
 class RandomApply(Sequential):
@@ -189,9 +189,6 @@ class HybridRandomApply(HybridSequential):
         self.transforms = transforms
         self.p = p
 
-    def hybrid_forward(self, F, x, *args):
-        if is_np_array():
-            cond = self.p < F.random.uniform(low=0, high=1, size=1)
-            return F.npx.cond(cond, x, self.transforms(x))
-        cond = self.p < F.random.uniform(low=0, high=1, shape=1)
-        return _append_return(F.contrib.cond(cond, x, self.transforms(x)), *args)
+    def forward(self, x, *args):
+        cond = lambda p: p < np.random.uniform(low=0, high=1, size=1)
+        return npx.cond(cond, x, self.transforms(x), self.p)

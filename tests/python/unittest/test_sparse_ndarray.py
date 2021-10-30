@@ -32,6 +32,7 @@ from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
 import pytest
 
+mx.npx.reset_np()
 
 def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)
@@ -56,7 +57,7 @@ def test_sparse_nd_elemwise_add():
     num_repeats = 3
     g = lambda x,y: x + y
     op = mx.nd.elemwise_add
-    for i in range(num_repeats):
+    for _ in range(num_repeats):
         shape = [rand_shape_2d()] * 2
         check_sparse_nd_elemwise_binary(shape, ['default'] * 2, op, g)
         check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
@@ -162,7 +163,7 @@ def test_sparse_nd_concat():
     nds = []
     zero_nds = []
     ncols = rnd.randint(2, 10)
-    for i in range(3):
+    for _ in range(3):
         shape = (rnd.randint(2, 10), ncols)
         A, _ = rand_sparse_ndarray(shape, 'csr')
         nds.append(A)
@@ -547,7 +548,7 @@ def test_sparse_nd_save_load(save_fn):
     densities = [0, 0.5]
     fname = 'tmp_list.npz'
     data_list1 = []
-    for i in range(num_data):
+    for _ in range(num_data):
         stype = stypes[np.random.randint(0, len(stypes))]
         shape = rand_shape_2d(dim0=40, dim1=40)
         density = densities[np.random.randint(0, len(densities))]

@@ -45,7 +45,7 @@ class StochasticBlock(HybridBlock):
     @staticmethod
     def collectLoss(func):
         """To accumulate loss during the forward phase, one could first decorate
-        hybrid_forward with `StochasticBlock.collectLoss,
+        forward with `StochasticBlock.collectLoss,
         and then collect the loss tensor `x` by calling self.add_loss(x).
         For example, in the following forward function,
         we generate samples from a Gaussian parameterized by `loc` and `scale` and
@@ -60,7 +60,7 @@ class StochasticBlock(HybridBlock):
         """
         @wraps(func)
         def inner(self, *args, **kwargs):
-            # Loss from hybrid_forward
+            # Loss from forward
             func_out = func(self, *args, **kwargs)
             collected_loss = self._losscache
             self._losscache = []

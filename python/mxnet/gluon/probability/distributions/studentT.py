@@ -24,7 +24,8 @@ from numpy import nan, inf, pi
 from .distribution import Distribution
 from .constraint import Real, Positive
 from .chi2 import Chi2
-from .utils import getF, gammaln, digamma, sample_n_shape_converter
+from .utils import gammaln, digamma, sample_n_shape_converter
+from .... import np
 
 
 class StudentT(Distribution):
@@ -38,56 +39,49 @@ class StudentT(Distribution):
         mean of the distribution.
     scale : Tensor or scalar, default 1
         scale of the distribution
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
     support = Real()
     arg_constraints = {'df': Positive(), 'loc': Real(), 'scale': Real()}
 
-    def __init__(self, df, loc=0.0, scale=1.0, F=None, validate_args=None):
-        _F = F if F is not None else getF(df, loc, scale)
+    def __init__(self, df, loc=0.0, scale=1.0, validate_args=None):
         self.df = df
         self.loc = loc
         self.scale = scale
         self._chi2 = Chi2(self.df)
         super(StudentT, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
-        new_instance.loc = F.np.broadcast_to(self.loc, batch_shape)
-        new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
-        new_instance.df = F.np.broadcast_to(self.df, batch_shape)
+        new_instance.loc = np.broadcast_to(self.loc, batch_shape)
+        new_instance.scale = np.broadcast_to(self.scale, batch_shape)
+        new_instance.df = np.broadcast_to(self.df, batch_shape)
         new_instance._chi2 = self._chi2.broadcast_to(batch_shape)
         super(StudentT, new_instance).__init__(
-            F=F, event_dim=0, validate_args=False)
+            event_dim=0, validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
 
     @property
     def mean(self):
         # mean is only defined for df > 1
-        m = self.F.np.where(self.df <= 1, nan, self.loc)
+        m = np.where(self.df <= 1, nan, self.loc)
         return m
 
     @property
     def variance(self):
-        F = self.F
         df = self.df
         v = self.scale ** 2 * self.df / (self.df - 2)
-        v = F.np.where(df <= 2, inf, v)
-        v = F.np.where(df <= 1, nan, v)
+        v = np.where(df <= 2, inf, v)
+        v = np.where(df <= 1, nan, v)
         return v
 
     def sample(self, size=None):
-        F = self.F
-        X = F.np.random.normal(size=size)
+        X = np.random.normal(size=size)
         Z = self._chi2.sample(size)
-        Y = X * F.np.sqrt(self.df / Z)
+        Y = X * np.sqrt(self.df / Z)
         return self.loc + Y * self.scale
 
     def sample_n(self, size=None):
@@ -96,21 +90,19 @@ class StudentT(Distribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
-        lgamma = gammaln(F)
+        lgamma = gammaln()
         df = self.df
         value = (value - self.loc) / self.scale
         return (
             lgamma((df + 1) / 2) - lgamma(df / 2) -
-            F.np.log(self.scale) - 0.5 * F.np.log(df * pi)
-            - 0.5 * (df + 1) * F.np.log1p(value ** 2 / df)
+            np.log(self.scale) - 0.5 * np.log(df * pi)
+            - 0.5 * (df + 1) * np.log1p(value ** 2 / df)
         )
 
     def entropy(self):
-        F = self.F
-        lgamma = gammaln(F)
-        dgamma = digamma(F)
-        log_fn = F.np.log
+        lgamma = gammaln()
+        dgamma = digamma()
+        log_fn = np.log
         lbeta = lgamma(0.5 * self.df) + lgamma(0.5) - \
             lgamma(0.5 * (self.df + 1))
         return (log_fn(self.scale) +

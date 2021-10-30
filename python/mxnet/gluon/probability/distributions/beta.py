@@ -22,7 +22,8 @@ __all__ = ['Beta']
 
 from .exp_family import ExponentialFamily
 from .constraint import UnitInterval, Positive
-from .utils import getF, sample_n_shape_converter, gammaln, digamma, _clip_prob
+from .utils import sample_n_shape_converter, gammaln, digamma, _clip_prob
+from .... import np
 
 
 class Beta(ExponentialFamily):
@@ -34,8 +35,6 @@ class Beta(ExponentialFamily):
        The first shape parameter
     beta : Tensor or scalar
         The second shape parameter
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
     """
     # pylint: disable=abstract-method
 
@@ -44,19 +43,17 @@ class Beta(ExponentialFamily):
     arg_constraints = {'alpha': Positive(),
                        'beta': Positive()}
 
-    def __init__(self, alpha, beta, F=None, validate_args=None):
-        _F = F if F is not None else getF(alpha, beta)
+    def __init__(self, alpha, beta, validate_args=None):
         self.alpha = alpha
         self.beta = beta
         super(Beta, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     def sample(self, size=None):
-        F = self.F
-        X = F.np.random.gamma(self.alpha, 1, size=size)
-        Y = F.np.random.gamma(self.beta, 1, size=size)
+        X = np.random.gamma(self.alpha, 1, size=size)
+        Y = np.random.gamma(self.beta, 1, size=size)
         out = X / (X + Y)
-        return _clip_prob(out, F)
+        return _clip_prob(out)
 
     def sample_n(self, size=None):
         return self.sample(sample_n_shape_converter(size))
@@ -77,19 +74,17 @@ class Beta(ExponentialFamily):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
-        lgamma = gammaln(F)
-        log = F.np.log
-        log1p = F.np.log1p
+        lgamma = gammaln()
+        log = np.log
+        log1p = np.log1p
         a = self.alpha
         b = self.beta
         lgamma_term = lgamma(a + b) - lgamma(a) - lgamma(b)
         return (a - 1) * log(value) + (b - 1) * log1p(-value) + lgamma_term
 
     def entropy(self):
-        F = self.F
-        lgamma = gammaln(F)
-        dgamma = digamma(F)
+        lgamma = gammaln()
+        dgamma = digamma()
         a = self.alpha
         b = self.beta
         lgamma_term = lgamma(a + b) - lgamma(a) - lgamma(b)
