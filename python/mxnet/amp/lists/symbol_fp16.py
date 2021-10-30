@@ -626,6 +626,7 @@ if Features().is_enabled('ONEDNN'):
         '_sg_onednn_fully_connected',
         '_sg_onednn_selfatt_qk',
         '_sg_onednn_selfatt_valatt',
+        '_sg_onednn_batch_dot'
     ])
 
 # Functions that have to be cast to FP32 only for
@@ -652,7 +653,6 @@ WIDEST_TYPE_CASTS = [
     '_mod',
     '_not_equal',
     '_npi_column_stack',
-    '_npi_concatenate',
     '_npi_copysign',
     '_npi_cross',
     '_npi_dot',

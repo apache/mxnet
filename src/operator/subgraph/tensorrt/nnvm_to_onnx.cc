@@ -669,13 +669,14 @@ void ConvertConcatenate(GraphProto* graph_proto,
   NodeProto* node_proto = graph_proto->add_node();
   node_proto->set_name(node_name);
   const auto& _param = nnvm::get<ConcatParam>(attrs.parsed);
+  const int param_dim = _param.dim.has_value() ? _param.dim.value() : 0;
   node_proto->set_op_type("Concat");
   node_proto->set_name(attrs.name);
   // axis
   AttributeProto* const axis = node_proto->add_attribute();
   axis->set_name("axis");
   axis->set_type(AttributeProto::INT);
-  axis->set_i(static_cast<int64_t>(_param.dim));
+  axis->set_i(static_cast<int64_t>(param_dim));
   DefaultConnectInputsOutputs(node_proto, inputs, ig, node_name);
 }
 

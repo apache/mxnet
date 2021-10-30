@@ -82,9 +82,9 @@ def matrix_transpose(a):
 
     Notes
     -----
-    `matrix_transpose` is an alias for `transpose`. It is a standard API in
+    `matrix_transpose` is new in array API spec:
     https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-transpose-x
-    instead of an official NumPy operator.
+    instead of an official NumPy operator. Unlike transpose, it only transposes the last two axes.
 
     Parameters
     ----------
@@ -103,14 +103,18 @@ def matrix_transpose(a):
     >>> x
     array([[0., 1.],
            [2., 3.]])
-    >>> np.transpose(x)
+    >>> np.linalg.matrix_transpose(x)
     array([[0., 2.],
            [1., 3.]])
     >>> x = np.ones((1, 2, 3))
-    >>> np.transpose(x, (1, 0, 2)).shape
-    (2, 1, 3)
+    >>> np.linalg.matrix_transpose(x)
+    array([[[1., 1.],
+            [1., 1.],
+            [1., 1.]]])
     """
-    return _mx_nd_np.transpose(a, axes=None)
+    if a.ndim < 2:
+        raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+    return _mx_nd_np.swapaxes(a, -1, -2)
 
 
 def trace(a, offset=0):
