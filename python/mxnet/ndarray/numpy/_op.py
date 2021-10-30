@@ -5412,7 +5412,7 @@ def tril_indices(n, k=0, m=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def argmax(a, axis=None, out=None):
+def argmax(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -5427,6 +5427,11 @@ def argmax(a, axis=None, out=None):
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -5436,6 +5441,10 @@ def argmax(a, axis=None, out=None):
 
     Notes
     -----
+    ``keepdims`` param is part of request in data-api-standard
+    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+    which is not the parameter in official NumPy
+
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
@@ -5477,11 +5486,11 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _api_internal.argmax(a, axis, False, out)
+    return _api_internal.argmax(a, axis, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
-def argmin(a, axis=None, out=None):
+def argmin(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -5495,6 +5504,11 @@ def argmin(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -5504,6 +5518,10 @@ def argmin(a, axis=None, out=None):
 
     Notes
     -----
+    ``keepdims`` param is part of request in data-api-standard
+    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+    which is not the parameter in official NumPy
+
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
@@ -5545,7 +5563,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _api_internal.argmin(a, axis, False, out)
+    return _api_internal.argmin(a, axis, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
