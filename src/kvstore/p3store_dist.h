@@ -79,7 +79,9 @@ class P3StoreDist : public KVStoreDist {
 
   void PushDefault(int key, const NDArray& send_buf, const PSKV& pskv, int priority) override {
     auto push_to_servers = [this, key, pskv, send_buf, priority](RunContext rctx,
+                                                                 Engine::CallbackOnStart on_start,
                                                                  Engine::CallbackOnComplete cb) {
+      on_start();
       const int dtype = send_buf.dtype();
       // convert to ps keys
       const size_t size = send_buf.shape().Size() * mshadow::mshadow_sizeof(dtype);
@@ -87,7 +89,6 @@ class P3StoreDist : public KVStoreDist {
       // do push. false means no delete
       ps::SArray<char> vals(data, size, false);
       int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
-
       size_t off   = 0;
       auto counter = new std::atomic<int>(pskv.keys.size());
       for (size_t idx = 0; idx < pskv.keys.size(); idx++) {
@@ -127,7 +128,9 @@ class P3StoreDist : public KVStoreDist {
     CHECK(gradient_compression_->get_type() == CompressionType::kNone)
         << "Gradient compression not supported in P3StoreDist.";
     auto pull_from_servers = [this, key, recv_buf, priority](RunContext rctx,
+                                                             Engine::CallbackOnStart on_start,
                                                              Engine::CallbackOnComplete cb) {
+      on_start();
       // convert to ps keys
       size_t size         = recv_buf.shape().Size();
       const int dtype     = recv_buf.dtype();
@@ -181,7 +184,9 @@ class P3StoreDist : public KVStoreDist {
     CHECK(gradient_compression_->get_type() == CompressionType::kNone)
         << "Compression not supported in P3StoreDist";
     auto pushpull = [this, key, comm_buf, priority](RunContext rctx,
+                                                    Engine::CallbackOnStart on_start,
                                                     Engine::CallbackOnComplete cb) {
+      on_start();
       size_t size         = comm_buf.shape().Size();
       const int dtype     = comm_buf.dtype();
       const int num_bytes = mshadow::mshadow_sizeof(dtype);
