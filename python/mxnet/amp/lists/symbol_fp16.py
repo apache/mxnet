@@ -265,6 +265,9 @@ FP16_FP32_FUNCS = [
     '_npi_multinomial',
     '_npi_multiply',
     '_npi_multiply_scalar',
+    '_npi_floor_divide',
+    '_npi_floor_divide_scalar',
+    '_npi_rfloor_divide_scalar',
     '_npi_nan_to_num',
     '_npi_negative',
     '_npi_normal',
@@ -486,6 +489,8 @@ FP32_FUNCS = [
     '_npi_expm1',
     '_npi_ldexp',
     '_npi_ldexp_scalar',
+    '_npi_logaddexp',
+    '_npi_logaddexp_scalar',
     '_npi_log',
     '_npi_log10',
     '_npi_log1p',
@@ -615,6 +620,7 @@ if Features().is_enabled('ONEDNN'):
         '_sg_onednn_fully_connected',
         '_sg_onednn_selfatt_qk',
         '_sg_onednn_selfatt_valatt',
+        '_sg_onednn_batch_dot'
     ])
 
 # Functions that have to be cast to FP32 only for
@@ -641,7 +647,6 @@ WIDEST_TYPE_CASTS = [
     '_mod',
     '_not_equal',
     '_npi_column_stack',
-    '_npi_concatenate',
     '_npi_copysign',
     '_npi_cross',
     '_npi_dot',

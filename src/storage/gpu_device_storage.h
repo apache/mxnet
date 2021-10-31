@@ -61,6 +61,14 @@ inline void GPUDeviceStorage::Free(Storage::Handle handle) {
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
+#if MXNET_USE_CUDA
+  for (auto ev : handle.sync_obj.events) {
+    auto valid_ev = ev.lock();
+    if (valid_ev) {
+      MSHADOW_CUDA_CALL(cudaEventSynchronize(*valid_ev));
+    }
+  }
+#endif
   CUDA_CALL(cudaFree(handle.dptr))
   profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
 }

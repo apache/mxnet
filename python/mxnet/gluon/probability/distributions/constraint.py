@@ -461,7 +461,7 @@ class PositiveDefinite(Constraint):
                   " positive definite matrices".format(value)
         eps = 1e-5
         condition = np.all(
-            np.abs(value - np.swapaxes(value, -1, -2)) < eps, axis=-1)
+            np.abs(value - value.mT) < eps, axis=-1)
         condition = condition & (np.linalg.eigvals(value) > 0)
         _value = constraint_check()(condition, err_msg) * value
         return _value

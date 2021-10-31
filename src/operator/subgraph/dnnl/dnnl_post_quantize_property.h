@@ -56,7 +56,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelector {
 
   bool Select(const nnvm::Node& n) override {
     if (n.op() && support_requantize_fusion_op_name.count(n.op()->name)) {
-      if (n.op()->name == "_sg_onednn_conv") {
+      if (n.op() == Op::Get("_sg_onednn_conv")) {
         auto const& param = nnvm::get<DNNLConvFusionParam>(n.attrs.parsed);
         if (param.full_conv_param.dnnl_param.quantized) {
           status = kStart;
