@@ -151,8 +151,6 @@ void GradientCompression::Quantize(const mxnet::NDArray& from,
             [from, to, residual, threshold](mxnet::RunContext ctx) {
               std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
               Quantize1BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-              // Wait GPU kernel to complete
-              ctx.get_stream<mshadow::gpu>()->Wait();
             },
             from.ctx(),
             {from.var()},
@@ -165,8 +163,6 @@ void GradientCompression::Quantize(const mxnet::NDArray& from,
             [from, to, residual, threshold](mxnet::RunContext ctx) {
               std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
               Quantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-              // Wait GPU kernel to complete
-              ctx.get_stream<mshadow::gpu>()->Wait();
             },
             from.ctx(),
             {from.var()},

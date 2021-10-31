@@ -261,6 +261,26 @@ rsub(const DType a, const DType2 b) {
 
 template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
+floor_divide(const DType a, const DType2 b) {
+  if (type_util::has_double_or_integral<DType, DType2>::value) {
+    return ::floor((double)a / (double)b);
+  } else {
+    return ::floorf((float)a / (float)b);
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+rfloor_divide(const DType a, const DType2 b) {
+  if (type_util::has_double_or_integral<DType, DType2>::value) {
+    return ::floor((double)b / (double)a);
+  } else {
+    return ::floorf((float)b / (float)a);
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
 mul(const DType a, const DType2 b) {
   return a * b;
 }

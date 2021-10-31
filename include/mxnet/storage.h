@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include "./base.h"
 
 namespace mxnet {
@@ -38,6 +39,17 @@ namespace mxnet {
  */
 class Storage {
  public:
+  /*!
+   * \brief Storage sync object.
+   */
+  struct SyncObj {
+#if MXNET_USE_CUDA
+    /*!
+     * \brief All the events from the engine variable.
+     */
+    std::vector<std::weak_ptr<cudaEvent_t>> events;
+#endif
+  };
   /*!
    * \brief Storage handle.
    */
@@ -64,6 +76,11 @@ class Storage {
      */
     std::string profiler_scope{MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR};
     std::string name{MXNET_STORAGE_DEFAULT_NAME_CSTR};
+    /*!
+     * \brief Used to pass events back and forth between the engine Var
+     * and the storage manager.
+     */
+    SyncObj sync_obj;
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.
@@ -137,7 +154,7 @@ class Storage {
    *
    * \return A shared pointer to Storage singleton.
    */
-  static std::shared_ptr<Storage> _GetSharedRef();
+  static const std::shared_ptr<Storage>& _GetSharedRef();
 
  private:
   std::mutex cpu_mutex_;

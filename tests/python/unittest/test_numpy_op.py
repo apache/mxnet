@@ -2581,6 +2581,67 @@ def test_np_transpose_error():
 
 
 @use_np
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('dtype', [onp.float32, onp.float16, onp.int32])
+@pytest.mark.parametrize('data_shape,axes_workload', [
+    [(), [(), None]],
+    [(2,), [(0,), None]],
+    [(0, 2), [(0, 1), (1, 0)]],
+    [(5, 10), [(0, 1), (1, 0), None]],
+    [(8, 2, 3), [(2, 0, 1), (0, 2, 1), (0, 1, 2), (2, 1, 0), (-1, 1, 0), None]],
+    [(8, 2, 16), [(0, 2, 1), (2, 0, 1), (0, 1, 2), (2, 1, 0), (-1, -2, -3)]],
+    [(8, 3, 4, 8), [(0, 2, 3, 1), (1, 2, 3, 0), (0, 3, 2, 1)]],
+    [(8, 3, 2, 3, 8), [(0, 1, 3, 2, 4), (0, 1, 2, 3, 4), (4, 0, 1, 2, 3)]],
+    [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5), None]],
+    [(3, 4, 3, 4, 3, 2, 2), [(0, 1, 3, 2, 4, 5, 6),
+     (2, 3, 4, 1, 0, 5, 6), None]],
+    [(3, 4, 3, 4, 3, 2, 3, 2), [(0, 1, 3, 2, 4, 5, 7, 6),
+     (2, 3, 4, 1, 0, 5, 7, 6), None]],
+])
+@pytest.mark.parametrize('grad_req', ['write', 'add'])
+def test_np_permute_dims(data_shape, axes_workload, hybridize, dtype, grad_req):
+    def np_permute_dims_grad(out_shape, dtype, axes=None):
+        ograd = onp.ones(out_shape, dtype=dtype)
+        if axes is None or axes == ():
+            return onp.transpose(ograd, axes)
+        np_axes = onp.array(list(axes))
+        permute_dims_axes = onp.zeros_like(np_axes)
+        permute_dims_axes[np_axes] = onp.arange(len(np_axes))
+        return onp.transpose(ograd, tuple(list(permute_dims_axes)))
+
+    class TestPermuteDims(HybridBlock):
+        def __init__(self, axes=None):
+            super(TestPermuteDims, self).__init__()
+            self.axes = axes
+
+        def forward(self, a):
+            return np.permute_dims(a, self.axes)
+
+    for axes in axes_workload:
+        test_trans = TestPermuteDims(axes)
+        if hybridize:
+            test_trans.hybridize()
+        x = np.random.normal(0, 1, data_shape).astype(dtype)
+        x = x.astype(dtype)
+        x.attach_grad(grad_req=grad_req)
+        if grad_req == 'add':
+            x.grad[()] = np.random.normal(0, 1, x.grad.shape).astype(x.grad.dtype)
+            x_grad_np = x.grad.asnumpy()
+        np_out = onp.transpose(x.asnumpy(), axes)
+        with mx.autograd.record():
+            mx_out = test_trans(x)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        mx_out.backward()
+        np_backward = np_permute_dims_grad(np_out.shape, dtype, axes)
+        if grad_req == 'add':
+            assert_almost_equal(x.grad.asnumpy(), np_backward + x_grad_np,
+                                rtol=1e-3, atol=1e-5, use_broadcast=False)
+        else:
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@use_np
 def test_np_meshgrid():
     nx, ny = (4, 5)
     x = np.array(onp.linspace(0, 1, nx), dtype=np.float32)
@@ -3070,6 +3131,8 @@ def test_np_binary_funcs():
                                 [lambda y, x1, x2: onp.broadcast_to(x1, y.shape)]),
         'divide': (0.1, 1.0, [lambda y, x1, x2: onp.ones(y.shape) / x2],
                    [lambda y, x1, x2: -x1 / (x2 * x2)]),
+        'floor_divide': (0.1, 1.0, [lambda y, x1, x2: onp.zeros(y.shape)],
+                 [lambda y, x1, x2: onp.zeros(y.shape)]),
         'mod': (1.0, 10.0,
                 [lambda y, x1, x2: onp.ones(y.shape),
                  lambda y, x1, x2: onp.zeros(y.shape)],
@@ -3976,7 +4039,7 @@ def test_np_concat():
 
     shapes = [(0, 0), (2, 3), (2, 1, 3)]
     hybridizes = [True, False]
-    axes = [0, 1, None]
+    axes = [0, 1, -1, None]
     grad_reqs = ['write', 'add', 'null']
     dtypes = [np.float32, np.float64, np.bool]
     combinations = itertools.product(shapes, hybridizes, axes, grad_reqs, dtypes)
@@ -4439,73 +4502,67 @@ def test_np_delete():
 
 
 @use_np
-def test_np_argmin_argmax():
-    workloads = [
-        ((), 0, False),
-        ((), -1, False),
-        ((), 1, True),
-        ((5, 3), None, False),
-        ((5, 3), -1, False),
-        ((5, 3), 1, False),
-        ((5, 3), 3, True),
-        ((5, 0, 3), 0, False),
-        ((5, 0, 3), -1, False),
-        ((5, 0, 3), None, True),
-        ((5, 0, 3), 1, True),
-        ((3, 5, 7), None, False),
-        ((3, 5, 7), 0, False),
-        ((3, 5, 7), 1, False),
-        ((3, 5, 7), 2, False),
-        ((3, 5, 7, 9, 11), -3, False),
-    ]
-    dtypes = ['float16', 'float32', 'float64', 'bool', 'int32']
-    ops = ['argmin', 'argmax']
-
+@pytest.mark.parametrize('shape,axis,throw_exception', [
+    ((), 0, False),
+    ((), -1, False),
+    ((), 1, True),
+    ((5, 3), None, False),
+    ((5, 3), -1, False),
+    ((5, 3), 1, False),
+    ((5, 3), 3, True),
+    ((5, 0, 3), 0, False),
+    ((5, 0, 3), -1, False),
+    ((5, 0, 3), None, True),
+    ((5, 0, 3), 1, True),
+    ((3, 5, 7), None, False),
+    ((3, 5, 7), 0, False),
+    ((3, 5, 7), 1, False),
+    ((3, 5, 7), 2, False),
+    ((3, 5, 7, 9, 11), -3, False),
+])
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'bool', 'int32'])
+@pytest.mark.parametrize('op_name', ['argmin', 'argmax'])
+@pytest.mark.parametrize('keepdims', [True, False])
+@pytest.mark.parametrize('hybridize', [True, False])
+def test_np_argmin_argmax(shape, axis, throw_exception, dtype, op_name, keepdims, hybridize):
     class TestArgExtreme(HybridBlock):
-        def __init__(self, op_name, axis=None):
+        def __init__(self, op_name, axis=None, keepdims=False):
             super(TestArgExtreme, self).__init__()
             self._op_name = op_name
             self._axis = axis
+            self.keepdims = keepdims
 
         def forward(self, x):
-            return getattr(x, self._op_name)(self._axis)
+            return getattr(x, self._op_name)(self._axis, keepdims=self.keepdims)
 
-    for op_name in ops:
-        for shape, axis, throw_exception in workloads:
-            for dtype in dtypes:
-                a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
-                if throw_exception:
-                    # Cannot use assert_exception because sometimes the main thread
-                    # proceeds to `assert False` before the exception is thrown
-                    # in the worker thread. Have to use mx.nd.waitall() here
-                    # to block the main thread.
-                    try:
-                        getattr(np, op_name)(a, axis)
-                        mx.nd.waitall()
-                        assert False
-                    except mx.MXNetError:
-                        pass
-                else:
-                    mx_ret = getattr(np, op_name)(a, axis=axis)
-                    np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
-                    assert mx_ret.dtype == np_ret.dtype
-                    assert same(mx_ret.asnumpy(), np_ret)
+    a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
+    if throw_exception:
+        with pytest.raises(MXNetError):
+            getattr(np, op_name)(a, axis)
+            mx.npx.waitall()
+    else:
+        mx_ret = getattr(np, op_name)(a, axis=axis, keepdims=keepdims)
+        np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
+        assert mx_ret.dtype == np_ret.dtype
+        if keepdims:
+            assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
+        else:
+            assert same(mx_ret.asnumpy(), np_ret)
 
-                for hybridize in [False, True]:
-                    net = TestArgExtreme(op_name, axis)
-                    if hybridize:
-                        net.hybridize()
-                    if throw_exception:
-                        try:
-                            net(a)
-                            mx.nd.waitall()
-                            assert False
-                        except mx.MXNetError:
-                            pass
-                    else:
-                        mx_ret = net(a)
-                        assert mx_ret.dtype == np_ret.dtype
-                        assert same(mx_ret.asnumpy(), np_ret)
+    net = TestArgExtreme(op_name, axis, keepdims)
+    if hybridize:
+        net.hybridize()
+    if throw_exception:
+        with pytest.raises(MXNetError):
+            getattr(np, op_name)(a, axis)
+            mx.npx.waitall()
+    else:
+        mx_ret = net(a)
+        assert mx_ret.dtype == np_ret.dtype
+        if keepdims:
+            assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
+        else:
+            assert same(mx_ret.asnumpy(), np_ret)
 
 
 @use_np
@@ -5931,6 +5988,51 @@ def test_np_linalg_svd(shape, dtype, hybridize):
 
 
 @use_np
+@pytest.mark.parametrize('shape', [
+    (3, 3),
+    (3, 5),
+    (4, 4),
+    (4, 5),
+    (5, 5),
+    (5, 6),
+    (6, 6),
+    (0, 1),
+    (6, 5, 6),
+    (2, 3, 3, 4),
+    (4, 2, 1, 2),
+    (0, 5, 3, 3),
+    (5, 0, 3, 3),
+    (3, 3, 0, 0),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_linalg_svdvals(shape, dtype, hybridize):
+    class TestSVD(HybridBlock):
+        def __init__(self):
+            super(TestSVD, self).__init__()
+
+        def forward(self, data):
+            return np.linalg.svdvals(data)
+
+    rtol = atol = 0.01
+    test_svd = TestSVD()
+    if hybridize:
+        test_svd.hybridize()
+    data_np = onp.random.uniform(-10.0, 10.0, shape)
+    data_np = onp.array(data_np, dtype=dtype)
+    data = np.array(data_np, dtype=dtype)
+    if effective_dtype(data) == onp.dtype(np.float16):
+        pytest.skip()
+    mx_out = test_svd(data)
+    np_out = onp.linalg.svd(data, compute_uv=False)
+    # check svdvals validity
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+    # Test imperative once again
+    mx_out = np.linalg.svdvals(data)
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@use_np
 def test_np_linalg_qr():
     class TestQR(HybridBlock):
         def __init__(self):
@@ -6771,6 +6873,44 @@ def test_np_linalg_matrix_rank():
                     rank = test_matrix_rank(a, tol)
                     # check matrix_rank validity
                     check_matrix_rank(rank, a.asnumpy(), tol.asnumpy(), hermitian=False)
+
+
+@use_np
+@pytest.mark.parametrize('shape', [
+    (),
+    (1,),
+    (0, 1, 2),
+    (0, 1, 2),
+    (0, 1, 2),
+    (4, 5, 6, 7),
+    (4, 5, 6, 7),
+    (4, 5, 6, 7),
+])
+def test_np_linalg_matrix_transpose(shape):
+    class TestMatTranspose(HybridBlock):
+        def __init__(self):
+            super(TestMatTranspose, self).__init__()
+
+        def forward(self, x):
+            return np.linalg.matrix_transpose(x)
+
+    data_np = onp.random.uniform(size=shape)
+    data_mx = np.array(data_np, dtype=data_np.dtype)
+    if data_mx.ndim < 2:
+        assertRaises(ValueError, np.linalg.matrix_transpose, data_mx)
+        return
+    ret_np = onp.swapaxes(data_np, -1, -2)
+    ret_mx = np.linalg.matrix_transpose(data_mx)
+    assert same(ret_mx.asnumpy(), ret_np)
+
+    net = TestMatTranspose()
+    for hybrid in [False, True]:
+        if hybrid:
+            net.hybridize()
+        ret_mx = net(data_mx)
+        assert same(ret_mx.asnumpy(), ret_np)
+    
+    assert same(data_mx.mT.asnumpy(), ret_np)
 
 
 @use_np

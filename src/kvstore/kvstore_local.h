@@ -493,7 +493,10 @@ class KVStoreLocal : public KVStore {
     // GPU requires temp resources
     bool is_gpu = out.ctx().dev_mask() == gpu::kDevMask;
     Engine::Get()->PushAsync(
-        [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        [=](RunContext rctx,
+            Engine::CallbackOnStart on_start,
+            Engine::CallbackOnComplete on_complete) {
+          on_start();
           // copy data.data() to out.data()
           out.CheckAndAlloc({mshadow::Shape1(num_elements)});
           TBlob out_data = out.data();
@@ -510,8 +513,6 @@ class KVStoreLocal : public KVStore {
               mshadow::Stream<gpu>* s = rctx.get_stream<gpu>();
               ndarray::Copy<gpu, gpu>(data_in_ctx.data(), &out_data, ctx, ctx, rctx);
               UniqueImpl(&workspace, s, out);
-              // wait for GPU operations to complete
-              s->Wait();
               break;
             }
 #endif

@@ -110,7 +110,7 @@ typedef const void *EngineFnPropertyHandle;
 typedef void *EngineVarHandle;
 
 /*! \brief Engine asynchronous operation */
-typedef void (*EngineAsyncFunc)(void*, void*, void*);
+typedef void (*EngineAsyncFunc)(void*, void*, void*, void*);
 /*! \brief Engine synchronous operation */
 typedef void (*EngineSyncFunc)(void*, void*);
 /*! \brief Callback to free the param for EngineAsyncFunc/EngineSyncFunc */

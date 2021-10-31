@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_MATMUL_POST_QUANTIZE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_MATMUL_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
@@ -31,7 +31,7 @@
 namespace mxnet {
 namespace op {
 
-class SgDNNLTransformerPostQuantizeSelector : public SubgraphSelector {
+class SgDNNLMatmulPostQuantizeSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
@@ -48,12 +48,13 @@ class SgDNNLTransformerPostQuantizeSelector : public SubgraphSelector {
   std::vector<const nnvm::Node*> matched_list;
 
  public:
-  explicit SgDNNLTransformerPostQuantizeSelector(const bool dis_all, const bool dis_float_output)
+  explicit SgDNNLMatmulPostQuantizeSelector(const bool dis_all, const bool dis_float_output)
       : disable_all(dis_all), disable_float_output(dis_float_output) {}
 
   bool Select(const nnvm::Node& n) override {
     if ((!disable_all) && (n.op() == Op::Get("_sg_onednn_selfatt_qk") ||
-                           n.op() == Op::Get("_sg_onednn_selfatt_valatt"))) {
+                           n.op() == Op::Get("_sg_onednn_selfatt_valatt") ||
+                           n.op() == Op::Get("_sg_onednn_batch_dot"))) {
       status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
@@ -121,22 +122,22 @@ class SgDNNLTransformerPostQuantizeSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list.size(), 1);
-    auto new_selector = SgDNNLTransformerPostQuantizeSelector(disable_all, disable_float_output);
+    auto new_selector = SgDNNLMatmulPostQuantizeSelector(disable_all, disable_float_output);
     new_selector.Select(*matched_list[0]);
     *this = new_selector;
   }
 };
 
-class SgDNNLTransformerPostQuantizeProperty : public SubgraphProperty {
+class SgDNNLMatmulPostQuantizeProperty : public SubgraphProperty {
  public:
-  SgDNNLTransformerPostQuantizeProperty() {
-    disable_fuse_all     = dmlc::GetEnv("MXNET_DISABLE_DNNL_QTRANSFORMER_FUSE_ALL", false);
-    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_DNNL_QTRANSFORMER_FLOAT_OUTPUT", false);
+  SgDNNLMatmulPostQuantizeProperty() {
+    disable_fuse_all     = dmlc::GetEnv("MXNET_DISABLE_DNNL_QMATMUL_FUSE_ALL", false);
+    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_DNNL_QMATMUL_FLOAT_OUTPUT", false);
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL Transformer post-quantization optimization pass";
-    auto property                  = std::make_shared<SgDNNLTransformerPostQuantizeProperty>();
+    static const std::string& name = "DNNL Matmul post-quantization optimization pass";
+    auto property                  = std::make_shared<SgDNNLMatmulPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
@@ -152,7 +153,8 @@ class SgDNNLTransformerPostQuantizeProperty : public SubgraphProperty {
       if (node->is_variable())
         return;
       if (node->op() == Op::Get("_sg_onednn_selfatt_qk") ||
-          node->op() == Op::Get("_sg_onednn_selfatt_valatt")) {
+          node->op() == Op::Get("_sg_onednn_selfatt_valatt") ||
+          node->op() == Op::Get("_sg_onednn_batch_dot")) {
         interleaved_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;
@@ -183,8 +185,8 @@ class SgDNNLTransformerPostQuantizeProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgDNNLTransformerPostQuantizeSelector>(disable_fuse_all,
-                                                                            disable_float_output);
+    auto selector =
+        std::make_shared<SgDNNLMatmulPostQuantizeSelector>(disable_fuse_all, disable_float_output);
     return selector;
   }
 
@@ -197,4 +199,4 @@ class SgDNNLTransformerPostQuantizeProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_MATMUL_POST_QUANTIZE_PROPERTY_H_

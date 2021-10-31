@@ -95,7 +95,7 @@ class RecordFileDataset final : public Dataset {
       const size_t size = read_buff.size();
       out = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
       TBlob dst = out.data();
-      RunContext rctx{Context::CPU(), nullptr, nullptr, false};
+      RunContext rctx{Context::CPU(), nullptr, nullptr};
       mxnet::ndarray::Copy<cpu, cpu>(TBlob(const_cast<void*>(reinterpret_cast<const void*>(buf)),
                                            out.shape(),
                                            cpu::kDevMask,
@@ -212,7 +212,7 @@ class ImageRecordFileDataset : public Dataset {
     size -= sizeof(header);
     s += sizeof(header);
     NDArray label = NDArray(Context::CPU(), mshadow::default_type_flag);
-    RunContext rctx{Context::CPU(), nullptr, nullptr, false};
+    RunContext rctx{Context::CPU(), nullptr, nullptr};
     if (header.flag > 0) {
       auto label_shape = header.flag <= 1 ? TShape(0, 1) : TShape({header.flag});
       label.ReshapeAndAlloc(label_shape);

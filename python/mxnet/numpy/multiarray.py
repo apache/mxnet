@@ -82,7 +82,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
            'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
-           'positive', 'logaddexp', 'asarray', 'from_dlpack']
+           'positive', 'logaddexp', 'floor_divide', 'permute_dims', 'asarray', 'from_dlpack']
 
 __all__ += fallback.__all__
 
@@ -1115,6 +1115,23 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__mul__(y) <=> x * y"""
         return multiply(self, other)
 
+    @wrap_mxnp_np_ufunc
+    def __floordiv__(self, other):
+        """x.__floordiv__(y) <=> x // y"""
+        return floor_divide(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __ifloordiv__(self, other):
+        """x.__ifloordiv__(y) <=> x //= y"""
+        if not self.writable:
+            raise ValueError('trying to divide from a readonly ndarray')
+        return floor_divide(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rfloordiv__(self, other):
+        """x.__rfloordiv__(y) <=> y // x"""
+        return floor_divide(other, self)
+
     def __neg__(self):
         """x.__neg__() <=> -x"""
         return negative(self)
@@ -1317,7 +1334,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
         """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim != 2:
+            warnings.warn('x.T requires x to have 2 dimensions. '
+                          'Use x.mT to transpose stacks of matrices and '
+                          'permute_dims() to permute dimensions.')
         return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def mT(self):
+        """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim < 2:
+            raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+        return _mx_nd_np.swapaxes(self, -1, -2)
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
@@ -1570,10 +1600,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
-    def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
+    def argmax(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return indices of the maximum values along the given axis.
         Refer to `mxnet.numpy.argmax` for full documentation."""
-        return argmax(self, axis, out)
+        return argmax(self, axis, out, keepdims)
 
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.to_device``."""
@@ -1925,10 +1955,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute argmax_channel')
 
-    def argmin(self, axis=None, out=None):  # pylint: disable=arguments-differ
+    def argmin(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return indices of the minium values along the given axis.
         Refer to `mxnet.numpy.argmin` for full documentation."""
-        return argmin(self, axis, out)
+        return argmin(self, axis, out, keepdims)
 
     def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
         """Return an array whose values are limited to [min, max].
@@ -3465,6 +3495,50 @@ def true_divide(x1, x2, out=None):
     array([0.  , 0.25, 0.5 , 0.75, 1.  ])
     """
     return _mx_nd_np.true_divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def floor_divide(x1, x2, out=None):
+    """Return the largest integer smaller or equal to the division of the inputs.
+
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+
+    .. note::
+
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
+
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+         precise type
+
+    Examples
+    --------
+    >>> np.floor_divide(7,3)
+    2
+    >>> np.floor_divide([1., 2., 3., 4.], 2.5)
+    array([ 0.,  0.,  1.,  1.])
+    """
+    return _mx_nd_np.floor_divide(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -6431,6 +6505,46 @@ def transpose(a, axes=None):
 
 
 @set_module('mxnet.numpy')
+def permute_dims(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted.
+
+    Note
+    --------
+    `permute_dims` is a alias for `transpose`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#permute-dims-x-axes
+    instead of an official NumPy operator.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.permute_dims(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.permute_dims(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _mx_nd_np.transpose(a, axes)
+
+
+@set_module('mxnet.numpy')
 def repeat(a, repeats, axis=None):
     """
     Repeat elements of an array.
@@ -7808,7 +7922,7 @@ def clip(a, a_min, a_max, out=None):
 
 
 @set_module('mxnet.numpy')
-def argmax(a, axis=None, out=None):
+def argmax(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -7822,6 +7936,11 @@ def argmax(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -7830,6 +7949,10 @@ def argmax(a, axis=None, out=None):
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the maximum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -7873,11 +7996,11 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _mx_nd_np.argmax(a, axis, out)
+    return _mx_nd_np.argmax(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
-def argmin(a, axis=None, out=None):
+def argmin(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the minimum values along an axis.
 
@@ -7891,6 +8014,11 @@ def argmin(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -7899,6 +8027,10 @@ def argmin(a, axis=None, out=None):
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the minimum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -7942,7 +8074,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _mx_nd_np.argmin(a, axis, out)
+    return _mx_nd_np.argmin(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
@@ -13032,39 +13164,28 @@ def asarray(obj, dtype=None, device=None, copy=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-@wrap_ctx_to_device_func
 def from_dlpack(x):
     """
     Returns a np.ndarray backed by a dlpack tensor.
 
     Parameters
     ----------
-    dlpack: an object with __dlpack__ method or PyCapsule (the pointer of DLManagedTensor)
+    dlpack : an object with __dlpack__ method or PyCapsule (the pointer of DLManagedTensor)
         input data
 
     Returns
     -------
-    np.ndarray
+    out : np.ndarray
         an ndarray backed by a dlpack tensor
 
     Examples
     --------
     >>> x = mx.np.ones((2,3))
-    >>> y = mx.npx.to_dlpack_for_read(x)
-    >>> type(y)
-    <class 'PyCapsule'>
-    >>> z = mx.npx.from_dlpack(y)
-    >>> type(z)
-    <class 'mxnet.numpy.ndarray'>
-    >>> z
+    >>> y = mx.np.from_dlpack(x)
+    >>> y
     array([[1., 1., 1.],
            [1., 1., 1.]])
-
-    >>> w = mx.npx.to_dlpack_for_write(x)
-    >>> type(w)
-    <class 'PyCapsule'>
-    >>> u = mx.npx.from_dlpack(w)
-    >>> u += 1
+    >>> y += 1
     >>> x
     array([[2., 2., 2.],
            [2., 2., 2.]])
