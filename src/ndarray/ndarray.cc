@@ -2486,21 +2486,25 @@ void NDArray::WaitToWrite() const {
 }
 
 void NDArray::StreamSync(int stream) const {
-  if (is_none()) return;
+  if (is_none())
+    return;
   Imperative::DCInfo::Compute(*this);
 #if MXNET_USE_CUDA
-    Engine::Get()->PushAsync(
-      [this, stream](RunContext ctx, Engine::CallbackOnStart on_start, Engine::CallbackOnComplete on_complete) {
+  Engine::Get()->PushAsync(
+      [this, stream](RunContext ctx,
+                     Engine::CallbackOnStart on_start,
+                     Engine::CallbackOnComplete on_complete) {
         on_start();
         cudaStream_t consumer = reinterpret_cast<cudaStream_t>(stream);
         std::unordered_map<cudaStream_t, engine::EventInfo> events_per_stream;
         auto& sync_obj = this->var()->sync_object;
         std::lock_guard<std::mutex> l(sync_obj.mutex);
         auto& reader_events = sync_obj.reader_events;
-        reader_events.erase(std::remove_if(reader_events.begin(),
-                                    reader_events.end(),
-                                    [&](const engine::EventInfo e_i) { return e_i.event.expired(); }),
-                    reader_events.end());
+        reader_events.erase(
+            std::remove_if(reader_events.begin(),
+                           reader_events.end(),
+                           [&](const engine::EventInfo e_i) { return e_i.event.expired(); }),
+            reader_events.end());
         for (auto& writer : sync_obj.writer_event) {
           if (writer.event.expired()) {
             sync_obj.writer_event.clear();
@@ -2531,10 +2535,12 @@ void NDArray::StreamSync(int stream) const {
           MSHADOW_CUDA_CALL(cudaStreamWaitEvent(consumer, *ev, 0));
         }
         on_complete();
-      }, this->ctx(), {this->var()}, {}
-    );
+      },
+      this->ctx(),
+      {this->var()},
+      {});
 #else
-    LOG(FATAL) << "GPU is not enabled";
+  LOG(FATAL) << "GPU is not enabled";
 #endif
 }
 

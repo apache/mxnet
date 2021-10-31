@@ -401,9 +401,9 @@ class NDArray {
    */
   void WaitToWrite() const;
   /*!
-   * \brief Synchronize the destination stream provided by consumer with the 
-   *    source stream that current NDArray lives on. 
-   * \param stream a pointer to the stream provided by consumer. 
+   * \brief Synchronize the destination stream provided by consumer with the
+   *    source stream that current NDArray lives on.
+   * \param stream a pointer to the stream provided by consumer.
    */
   void StreamSync(int stream) const;
   /*! \return the associated variable of the ndarray.*/

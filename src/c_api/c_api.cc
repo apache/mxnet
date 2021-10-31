@@ -3955,15 +3955,16 @@ int MXPushStreamDep(NDArrayHandle handle, int stream) {
 
 int MXGetCurrentStream(int device_id, int* stream) {
   API_BEGIN();
-  #if MXNET_USE_CUDA
-    RunContext rctx{Context::GPU(device_id), nullptr, nullptr, false};
-    mshadow::Stream<gpu>* cur_stream = rctx.get_stream<gpu>();
-    *stream = reinterpret_cast<int64_t>(mshadow::Stream<gpu>::GetStream(cur_stream));
-  #else
-    LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
-  #endif
+#if MXNET_USE_CUDA
+  RunContext rctx{Context::GPU(device_id), nullptr, nullptr, false};
+  mshadow::Stream<gpu>* cur_stream = rctx.get_stream<gpu>();
+  *stream = reinterpret_cast<int64_t>(mshadow::Stream<gpu>::GetStream(cur_stream));
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
+#endif
+}
 
-int MXNVTXRangePush(const char * name, mx_uint color) {
+int MXNVTXRangePush(const char* name, mx_uint color) {
   API_BEGIN();
 #if MXNET_USE_CUDA && MXNET_USE_NVTX
   mxnet::common::cuda::nvtx::gpuRangeStart(color, name);
