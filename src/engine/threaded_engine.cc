@@ -712,7 +712,7 @@ void ThreadedEngine::OnCompleteGPU(Engine* engine, void* sync_info, const dmlc::
 
   ThreadedOpr* threaded_opr    = static_cast<OprBlock*>(info->opr_block)->opr;
   auto* event_pool             = static_cast<CUDAEventPool*>(info->event_pool);
-  // NOLINT_NEXT_LINE(whitespace/operators)
+  // NOLINT_NEXT_LINE(whitespace/braces)
   auto [event, event_pool_idx] = event_pool->GetNextEvent();
   auto ev                      = event.lock();
   MSHADOW_CUDA_CALL(cudaEventRecord(*ev, worker_stream->stream_));
