@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file operator_util.cc
  *  Implementation of operator util.
  */
@@ -44,41 +43,34 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     std::lock_guard<std::mutex> lock(mutex_);
     std::string symbol_name(symbol_name_str);
     CHECK(op_reg_ == nullptr || symbol_name == symbol_name_)
-        << " operator " << this->name
-        << " need to call set_symbol_op_name "
-        << symbol_name << "before all other calls";
+        << " operator " << this->name << " need to call set_symbol_op_name " << symbol_name
+        << "before all other calls";
     symbol_name_ = symbol_name;
     return *this;
   }
 
-  TSelf& set_enable_scalar(
-      bool enable_scalar,
-      SimpleOpScalarOption type_mask) override {
+  TSelf& set_enable_scalar(bool enable_scalar, SimpleOpScalarOption type_mask) override {
     std::lock_guard<std::mutex> lock(mutex_);
-    enable_scalar_ = enable_scalar;
+    enable_scalar_    = enable_scalar;
     scalar_type_mask_ = type_mask;
-    CHECK(!enable_kwargs_ || !enable_scalar_)
-        << "Cannot have both kwargs and scalar arguments";
+    CHECK(!enable_kwargs_ || !enable_scalar_) << "Cannot have both kwargs and scalar arguments";
     return *this;
   }
 
   TSelf& set_enable_kwargs(bool enable_kwargs) override {
     std::lock_guard<std::mutex> lock(mutex_);
     enable_kwargs_ = enable_kwargs;
-    CHECK(!enable_kwargs_ || !enable_scalar_)
-        << "Cannot have both kwargs and scalar arguments";
+    CHECK(!enable_kwargs_ || !enable_scalar_) << "Cannot have both kwargs and scalar arguments";
     return *this;
   }
 
-  TSelf& set_resource_request(
-      const std::vector<ResourceRequest>& reqs) override {
+  TSelf& set_resource_request(const std::vector<ResourceRequest>& reqs) override {
     std::lock_guard<std::mutex> lock(mutex_);
     resource_requests_ = reqs;
     return *this;
   }
 
-  TSelf& set_resource_request(
-      ResourceRequest req) override {
+  TSelf& set_resource_request(ResourceRequest req) override {
     std::lock_guard<std::mutex> lock(mutex_);
     resource_requests_ = {req};
     return *this;
@@ -196,9 +188,10 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     return *this;
   }
 
-  TSelf& describe(const std::string &description) override {
+  TSelf& describe(const std::string& description) override {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (reg_counter_ != 1) return *this;
+    if (reg_counter_ != 1)
+      return *this;
     NDArrayReg().describe(description);
     if (register_symbolic_) {
       OpReg().describe(description);
@@ -206,9 +199,10 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     return *this;
   }
 
-  TSelf& add_arguments(const std::vector<dmlc::ParamFieldInfo> &args) override {
+  TSelf& add_arguments(const std::vector<dmlc::ParamFieldInfo>& args) override {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (reg_counter_ != 1) return *this;
+    if (reg_counter_ != 1)
+      return *this;
     NDArrayReg().add_arguments(args);
     if (register_symbolic_) {
       OpReg().add_arguments(args);
@@ -272,7 +266,7 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   // whether do inplace optimization of out_grad and in_grad0
   bool binary_backward_inplace_out_lhs_{false};
 
-  template<typename TFunction>
+  template <typename TFunction>
   inline void SetFunction(std::vector<TFunction>* vfunc,
                           int dev_mask,
                           TFunction func,
@@ -293,21 +287,21 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   // internal reference to operator registry
   OperatorPropertyReg* op_reg_{nullptr};
   // internal function to register NDArray function.
-  inline NDArrayFunctionReg &NDArrayReg() {
+  inline NDArrayFunctionReg& NDArrayReg() {
     if (ndarray_reg_ == nullptr) {
-      NDArrayFunctionReg &reg =
+      NDArrayFunctionReg& reg =
           ::dmlc::Registry<NDArrayFunctionReg>::Get()->__REGISTER__(this->name);
       ndarray_reg_ = &reg;
     }
     return *ndarray_reg_;
   }
   // internal function to register NDArray function.
-  inline OperatorPropertyReg &OpReg() {
+  inline OperatorPropertyReg& OpReg() {
     if (op_reg_ == nullptr) {
       if (symbol_name_.length() == 0) {
         symbol_name_ = this->name;
       }
-      OperatorPropertyReg &reg =
+      OperatorPropertyReg& reg =
           ::dmlc::Registry<OperatorPropertyReg>::Get()->__REGISTER__(symbol_name_);
       op_reg_ = &reg;
     }
@@ -329,10 +323,11 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
 
 SimpleOpRegEntry& SimpleOpRegistry::__REGISTER_OR_FIND__(char const* name_str) {
   std::string name(name_str);
-  if (fmap_.count(name) != 0) return *fmap_.at(name);
-  SimpleOpRegEntry *e = new SimpleOpRegEntryImpl();
-  e->name = name;
-  fmap_[name] = e;
+  if (fmap_.count(name) != 0)
+    return *fmap_.at(name);
+  SimpleOpRegEntry* e = new SimpleOpRegEntryImpl();
+  e->name             = name;
+  fmap_[name]         = e;
   return *e;
 }
 
@@ -348,12 +343,10 @@ SimpleOpRegistry::~SimpleOpRegistry() {
 }
 
 // base class
-struct SimpleOpScalarParam :
-      public dmlc::Parameter<SimpleOpScalarParam> {
+struct SimpleOpScalarParam : public dmlc::Parameter<SimpleOpScalarParam> {
   float scalar;
   DMLC_DECLARE_PARAMETER(SimpleOpScalarParam) {
-    DMLC_DECLARE_FIELD(scalar)
-        .describe("scalar value.");
+    DMLC_DECLARE_FIELD(scalar).describe("scalar value.");
   }
 };
 
@@ -373,15 +366,14 @@ class SimpleOpPropBase : public OperatorProperty {
       param.Init(kwargs);
       env.scalar = param.scalar;
     } else {
-      CHECK_EQ(kwargs.size(), 0)
-          << "Operator " << source->symbol_name_ << " donot accept any keyword arguments";
+      CHECK_EQ(kwargs.size(), 0) << "Operator " << source->symbol_name_
+                                 << " donot accept any keyword arguments";
     }
   }
 
   std::map<std::string, std::string> GetParams() const override {
     if (source->enable_kwargs_) {
-      return std::map<std::string, std::string>(
-          env.kwargs.begin(), env.kwargs.end());
+      return std::map<std::string, std::string>(env.kwargs.begin(), env.kwargs.end());
     } else if (source->enable_scalar_) {
       SimpleOpScalarParam param;
       param.scalar = env.scalar;
@@ -391,19 +383,17 @@ class SimpleOpPropBase : public OperatorProperty {
     }
   }
 
-  std::vector<ResourceRequest> ForwardResource(
-      const mxnet::ShapeVector &in_shape) const override {
+  std::vector<ResourceRequest> ForwardResource(const mxnet::ShapeVector& in_shape) const override {
     return source->resource_requests_;
   }
 
-  std::vector<ResourceRequest> BackwardResource(
-      const mxnet::ShapeVector &in_shape) const override {
+  std::vector<ResourceRequest> BackwardResource(const mxnet::ShapeVector& in_shape) const override {
     return source->resource_requests_;
   }
 
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
+  bool InferType(std::vector<int>* in_type,
+                 std::vector<int>* out_type,
+                 std::vector<int>* aux_type) const override {
     CHECK_LE(in_type->size(), this->ListArguments().size());
     int dtype = -1;
     // reduce dtype to a common one.
@@ -411,9 +401,8 @@ class SimpleOpPropBase : public OperatorProperty {
       if (dtype == -1) {
         dtype = i;
       } else {
-        CHECK(i == -1 ||
-            i == dtype) <<
-          "Non-uniform input data type. Expected " << dtype << "got " << i;
+        CHECK(i == -1 || i == dtype)
+            << "Non-uniform input data type. Expected " << dtype << "got " << i;
       }
     }
 
@@ -424,15 +413,18 @@ class SimpleOpPropBase : public OperatorProperty {
 
     int n_in = this->ListArguments().size();
     in_type->clear();
-    for (int i = 0; i < n_in; ++i) in_type->push_back(dtype);
+    for (int i = 0; i < n_in; ++i)
+      in_type->push_back(dtype);
 
     int n_out = this->ListOutputs().size();
     out_type->clear();
-    for (int i = 0; i < n_out; ++i) out_type->push_back(dtype);
+    for (int i = 0; i < n_out; ++i)
+      out_type->push_back(dtype);
 
     int n_aux = this->ListAuxiliaryStates().size();
     aux_type->clear();
-    for (int i = 0; i < n_aux; ++i) aux_type->push_back(dtype);
+    for (int i = 0; i < n_aux; ++i)
+      aux_type->push_back(dtype);
     return true;
   }
 
@@ -447,32 +439,31 @@ class SimpleOpPropBase : public OperatorProperty {
 void SimpleOpRegEntryImpl::RegisterSourceImperative() {
   CHECK_EQ(reg_counter_, 1);
   // The body to be registered
-  auto body = [this] (NDArray** used_vars,
-                      real_t* s,
-                      NDArray** mutate_vars,
-                      int num_params,
-                      char** param_keys,
-                      char** param_vals) {
+  auto body = [this](NDArray** used_vars,
+                     real_t* s,
+                     NDArray** mutate_vars,
+                     int num_params,
+                     char** param_keys,
+                     char** param_vals) {
     NDArray* out = mutate_vars[0];
     // setup env.
     EnvArguments env;
-    if (enable_scalar_) env.scalar = s[0];
+    if (enable_scalar_)
+      env.scalar = s[0];
     if (enable_kwargs_) {
       for (int i = 0; i < num_params; ++i) {
-        env.kwargs.emplace_back(std::make_pair(
-            std::string(param_keys[i]), std::string(param_vals[i])));
+        env.kwargs.emplace_back(
+            std::make_pair(std::string(param_keys[i]), std::string(param_vals[i])));
       }
     } else {
-      CHECK_EQ(num_params, 0)
-        << "operator " << this->name << " do not take keyword arguments";
+      CHECK_EQ(num_params, 0) << "operator " << this->name << " do not take keyword arguments";
     }
     // shape inference.
     CHECK(source_shape_ != nullptr);
     mxnet::TShape dshape = source_shape_(env);
     // check output shape.
     CHECK(!out->is_none());
-    CHECK(out->shape() == dshape) << "target shape mismatch "
-    << out->shape() << " vs. " << dshape;
+    CHECK(out->shape() == dshape) << "target shape mismatch " << out->shape() << " vs. " << dshape;
 
     // important: callback must always capture by value
     NDArray ret = *out;
@@ -485,38 +476,32 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
     // check if the function exist
     int dev_mask = ret.ctx().dev_mask();
     // error message
-    if (static_cast<size_t>(dev_mask) >= fsource_.size() ||
-        fsource_[dev_mask] == nullptr) {
+    if (static_cast<size_t>(dev_mask) >= fsource_.size() || fsource_[dev_mask] == nullptr) {
       if (dev_mask == gpu::kDevMask) {
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
       }
-      LOG(FATAL) << "Function " << this->name
-                 << "not registered for device " << dev_mask;
+      LOG(FATAL) << "Function " << this->name << "not registered for device " << dev_mask;
     }
     // invoke the function
     SourceFunction fun = fsource_[dev_mask];
-    OpReqType req = kWriteTo;
+    OpReqType req      = kWriteTo;
 
-    Engine::Get()->PushSync([ret, fun, dev_mask, req, env](RunContext ctx) {
-        TBlob tmp = ret.data();
-        (*fun)(env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-        if (dev_mask == gpu::kDevMask) {
-          ctx.get_stream<gpu>()->Wait();
-        }
-#endif
-      }, ret.ctx(), {}, write_vars,
-      FnProperty::kNormal, 0, "RegisterSourceImperative");
+    Engine::Get()->PushSync(
+        [ret, fun, dev_mask, req, env](RunContext ctx) {
+          TBlob tmp = ret.data();
+          (*fun)(env, &tmp, req, ctx);
+        },
+        ret.ctx(),
+        {},
+        write_vars,
+        FnProperty::kNormal,
+        0,
+        "RegisterSourceImperative");
   };
   // register the function.
-  NDArrayReg()
-      .set_body(body)
-      .set_num_use_vars(0)
-      .set_num_mutate_vars(1);
+  NDArrayReg().set_body(body).set_num_use_vars(0).set_num_mutate_vars(1);
   if (enable_scalar_) {
-      NDArrayReg()
-          .set_num_scalars(1)
-          .add_argument("scalar", "float", "scalar input to the function");
+    NDArrayReg().set_num_scalars(1).add_argument("scalar", "float", "scalar input to the function");
   }
 }
 
@@ -525,25 +510,26 @@ struct SimpleSourceOperator : public Operator {
   EnvArguments env;
   SourceFunction forward;
 
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_args) override {
-    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+  void Forward(const OpContext& ctx,
+               const std::vector<TBlob>& in_data,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& out_data,
+               const std::vector<TBlob>& aux_args) override {
+    if (ctx.requested.size() != 0)
+      env.resource = ctx.requested;
     CHECK_EQ(in_data.size(), 0);
     CHECK_EQ(out_data.size(), 1);
     TBlob out = out_data[0];
     (*forward)(env, &out, req[0], ctx.run_ctx);
   }
 
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<TBlob> &out_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad,
-                const std::vector<TBlob> &aux_args) override {
+  void Backward(const OpContext& ctx,
+                const std::vector<TBlob>& out_grad,
+                const std::vector<TBlob>& in_data,
+                const std::vector<TBlob>& out_data,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& in_grad,
+                const std::vector<TBlob>& aux_args) override {
     LOG(FATAL) << "no gradient can be done";
     // no nothing.
   }
@@ -551,11 +537,10 @@ struct SimpleSourceOperator : public Operator {
 
 class SimpleSourceOpProp : public SimpleOpPropBase {
  public:
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
-    CHECK_EQ(in_shape->size(), 0)
-        << in_shape->size();
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
+    CHECK_EQ(in_shape->size(), 0) << in_shape->size();
     CHECK(source->source_shape_ != nullptr);
     out_shape->clear();
     out_shape->push_back((*(source->source_shape_))(env));
@@ -563,19 +548,19 @@ class SimpleSourceOpProp : public SimpleOpPropBase {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new SimpleSourceOpProp();
+    auto ptr    = new SimpleSourceOpProp();
     ptr->source = source;
-    ptr->name = name;
-    ptr->env = env;
+    ptr->name   = name;
+    ptr->env    = env;
     return ptr;
   }
 
   Operator* CreateOperator(Context ctx) const override {
-    size_t dev_mask = ctx.dev_mask();
-    SimpleSourceOperator *op = new SimpleSourceOperator();
+    size_t dev_mask          = ctx.dev_mask();
+    SimpleSourceOperator* op = new SimpleSourceOperator();
     CHECK(dev_mask < source->fsource_.size() && source->fsource_[dev_mask] != nullptr);
     op->forward = source->fsource_[dev_mask];
-    op->env = this->env;
+    op->env     = this->env;
     return op;
   }
 
@@ -583,9 +568,9 @@ class SimpleSourceOpProp : public SimpleOpPropBase {
     return {};
   }
 
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
+  bool InferType(std::vector<int>* in_type,
+                 std::vector<int>* out_type,
+                 std::vector<int>* aux_type) const override {
     out_type->clear();
     out_type->push_back(mshadow::kFloat32);
     return true;
@@ -595,13 +580,12 @@ class SimpleSourceOpProp : public SimpleOpPropBase {
 void SimpleOpRegEntryImpl::RegisterSourceSymbolic() {
   // register the operator
   auto op_factory = [this]() {
-    SimpleSourceOpProp *prop = new SimpleSourceOpProp();
-    prop->name = this->symbol_name_;
-    prop->source = this;
+    SimpleSourceOpProp* prop = new SimpleSourceOpProp();
+    prop->name               = this->symbol_name_;
+    prop->source             = this;
     return prop;
   };
-  OpReg()
-      .set_body(op_factory);
+  OpReg().set_body(op_factory);
 }
 
 //-------------------------------------
@@ -610,25 +594,25 @@ void SimpleOpRegEntryImpl::RegisterSourceSymbolic() {
 void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
   CHECK_EQ(reg_counter_, 1);
   // The body to be registered
-  auto body = [this] (NDArray** used_vars,
-                      real_t* s,
-                      NDArray** mutate_vars,
-                      int num_params,
-                      char** param_keys,
-                      char** param_vals) {
+  auto body = [this](NDArray** used_vars,
+                     real_t* s,
+                     NDArray** mutate_vars,
+                     int num_params,
+                     char** param_keys,
+                     char** param_vals) {
     NDArray& src = *used_vars[0];
     NDArray* out = mutate_vars[0];
     // setup env.
     EnvArguments env;
-    if (enable_scalar_) env.scalar = s[0];
+    if (enable_scalar_)
+      env.scalar = s[0];
     if (enable_kwargs_) {
       for (int i = 0; i < num_params; ++i) {
-        env.kwargs.emplace_back(std::make_pair(
-            std::string(param_keys[i]), std::string(param_vals[i])));
+        env.kwargs.emplace_back(
+            std::make_pair(std::string(param_keys[i]), std::string(param_vals[i])));
       }
     } else {
-      CHECK_EQ(num_params, 0)
-        << "operator " << this->name << " do not take keyword arguments";
+      CHECK_EQ(num_params, 0) << "operator " << this->name << " do not take keyword arguments";
     }
     // shape inference.
     mxnet::TShape dshape;
@@ -643,8 +627,8 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
     } else {
       CHECK(out->ctx() == src.ctx()) << "target context mismatch";
       CHECK(out->dtype() == src.dtype()) << "target data type mismatch";
-      CHECK(out->shape() == dshape) << "target shape mismatch "
-      << out->shape() << " vs. " << dshape;
+      CHECK(out->shape() == dshape)
+          << "target shape mismatch " << out->shape() << " vs. " << dshape;
     }
     // important: callback must always capture by value
     NDArray ret = *out;
@@ -664,39 +648,35 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
     // check if the function exist
     int dev_mask = src.ctx().dev_mask();
     // error message
-    if (static_cast<size_t>(dev_mask) >= funary_.size() ||
-        funary_[dev_mask] == nullptr) {
+    if (static_cast<size_t>(dev_mask) >= funary_.size() || funary_[dev_mask] == nullptr) {
       if (dev_mask == gpu::kDevMask) {
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
       }
-      LOG(FATAL) << "Function " << this->name
-                 << "not registered for device " << dev_mask;
+      LOG(FATAL) << "Function " << this->name << "not registered for device " << dev_mask;
     }
     // invoke the function
     UnaryFunction fun = funary_[dev_mask];
-    OpReqType req = kWriteTo;
+    OpReqType req     = kWriteTo;
     if (src.var() == ret.var()) {
       req = kWriteInplace;
       CHECK(unary_forward_inplace_in_out_)
           << "inplace operation is not enabled for operator " << name;
     }
 
-    Engine::Get()->PushSync([src, ret, fun, dev_mask, req, env](RunContext ctx) {
-        TBlob tmp = ret.data();
-        (*fun)(src.data(), env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-        if (dev_mask == gpu::kDevMask) {
-          ctx.get_stream<gpu>()->Wait();
-        }
-#endif
-      }, src.ctx(), const_vars, write_vars,
-      FnProperty::kNormal, 0, "RegisterUnaryImperative");
+    Engine::Get()->PushSync(
+        [src, ret, fun, dev_mask, req, env](RunContext ctx) {
+          TBlob tmp = ret.data();
+          (*fun)(src.data(), env, &tmp, req, ctx);
+        },
+        src.ctx(),
+        const_vars,
+        write_vars,
+        FnProperty::kNormal,
+        0,
+        "RegisterUnaryImperative");
   };
   // register the function.
-  NDArrayReg()
-      .set_body(body)
-      .set_num_use_vars(1)
-      .set_num_mutate_vars(1);
+  NDArrayReg().set_body(body).set_num_use_vars(1).set_num_mutate_vars(1);
   if (enable_scalar_) {
     if (scalar_type_mask_ == kArrayBeforeScalar) {
       NDArrayReg()
@@ -713,8 +693,8 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
     }
   } else {
     NDArrayReg()
-      .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-      .add_argument("src", "NDArray-or-Symbol", "Source input to the function");
+        .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
+        .add_argument("src", "NDArray-or-Symbol", "Source input to the function");
   }
 }
 
@@ -726,39 +706,44 @@ struct SimpleUnaryOperator : public Operator {
   UnaryGradFunctionT1 backward1{nullptr};
   UnaryGradFunctionT2 backward2{nullptr};
 
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_args) override {
-    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+  void Forward(const OpContext& ctx,
+               const std::vector<TBlob>& in_data,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& out_data,
+               const std::vector<TBlob>& aux_args) override {
+    if (ctx.requested.size() != 0)
+      env.resource = ctx.requested;
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     TBlob out = out_data[0];
     (*forward)(in_data[0], env, &out, req[0], ctx.run_ctx);
   }
 
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<TBlob> &out_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad,
-                const std::vector<TBlob> &aux_args) override {
-    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+  void Backward(const OpContext& ctx,
+                const std::vector<TBlob>& out_grad,
+                const std::vector<TBlob>& in_data,
+                const std::vector<TBlob>& out_data,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& in_grad,
+                const std::vector<TBlob>& aux_args) override {
+    if (ctx.requested.size() != 0)
+      env.resource = ctx.requested;
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1);
-    OutputGrad ograd; ograd.data = out_grad[0];
+    OutputGrad ograd;
+    ograd.data  = out_grad[0];
     TBlob igrad = in_grad[0];
 
     if (backward0 != nullptr) {
       (*backward0)(ograd, env, &igrad, req[0], ctx.run_ctx);
     } else if (backward1 != nullptr) {
-      OutputValue out_value; out_value.data = out_data[0];
+      OutputValue out_value;
+      out_value.data = out_data[0];
       (*backward1)(ograd, out_value, env, &igrad, req[0], ctx.run_ctx);
     } else if (backward2 != nullptr) {
-      Input0 in0; in0.data = in_data[0];
+      Input0 in0;
+      in0.data = in_data[0];
       (*backward2)(ograd, in0, env, &igrad, req[0], ctx.run_ctx);
     } else {
       LOG(FATAL) << "Backward is not supported";
@@ -768,13 +753,14 @@ struct SimpleUnaryOperator : public Operator {
 
 class SimpleUnaryOpProp : public SimpleOpPropBase {
  public:
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
-    const mxnet::TShape &dshape = in_shape->at(0);
-    if (!shape_is_known(dshape)) return false;
+    const mxnet::TShape& dshape = in_shape->at(0);
+    if (!shape_is_known(dshape))
+      return false;
     out_shape->clear();
     if (source->unary_shape_ == nullptr) {
       out_shape->push_back(dshape);
@@ -785,18 +771,17 @@ class SimpleUnaryOpProp : public SimpleOpPropBase {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new SimpleUnaryOpProp();
+    auto ptr    = new SimpleUnaryOpProp();
     ptr->source = source;
-    ptr->name = name;
-    ptr->env = env;
+    ptr->name   = name;
+    ptr->env    = env;
     return ptr;
   }
 
   // decalre dependency and inplace optimization options
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(const std::vector<int>& out_grad,
+                                             const std::vector<int>& in_data,
+                                             const std::vector<int>& out_data) const override {
     if (source->funary_grad_t0_.size() != 0) {
       return {out_grad[0]};
     } else if (source->funary_grad_t1_.size() != 0) {
@@ -810,10 +795,10 @@ class SimpleUnaryOpProp : public SimpleOpPropBase {
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
+      const std::vector<int>& out_grad,
+      const std::vector<int>& in_data,
+      const std::vector<int>& out_data,
+      const std::vector<void*>& in_grad) const override {
     if (source->unary_backward_inplace_out_in_) {
       return {{out_grad[0], in_grad[0]}};
     } else {
@@ -822,8 +807,8 @@ class SimpleUnaryOpProp : public SimpleOpPropBase {
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
-    const std::vector<int> &in_data,
-    const std::vector<void*> &out_data) const override {
+      const std::vector<int>& in_data,
+      const std::vector<void*>& out_data) const override {
     if (source->unary_forward_inplace_in_out_) {
       return {{in_data[0], out_data[0]}};
     } else {
@@ -832,11 +817,11 @@ class SimpleUnaryOpProp : public SimpleOpPropBase {
   }
 
   Operator* CreateOperator(Context ctx) const override {
-    size_t dev_mask = ctx.dev_mask();
-    SimpleUnaryOperator *op = new SimpleUnaryOperator();
+    size_t dev_mask         = ctx.dev_mask();
+    SimpleUnaryOperator* op = new SimpleUnaryOperator();
     CHECK(dev_mask < source->funary_.size() && source->funary_[dev_mask] != nullptr);
     op->forward = source->funary_[dev_mask];
-    op->env = this->env;
+    op->env     = this->env;
     if (dev_mask < source->funary_grad_t0_.size()) {
       op->backward0 = source->funary_grad_t0_[dev_mask];
     }
@@ -853,9 +838,9 @@ class SimpleUnaryOpProp : public SimpleOpPropBase {
 void SimpleOpRegEntryImpl::RegisterUnarySymbolic() {
   // register the operator
   auto op_factory = [this]() {
-    SimpleUnaryOpProp *prop = new SimpleUnaryOpProp();
-    prop->name = this->symbol_name_;
-    prop->source = this;
+    SimpleUnaryOpProp* prop = new SimpleUnaryOpProp();
+    prop->name              = this->symbol_name_;
+    prop->source            = this;
     return prop;
   };
   OpReg()
@@ -869,26 +854,26 @@ void SimpleOpRegEntryImpl::RegisterUnarySymbolic() {
 void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
   CHECK_EQ(reg_counter_, 1);
   // The body to be registered
-  auto body = [this] (NDArray** used_vars,
-                      real_t* s,
-                      NDArray** mutate_vars,
-                      int num_params,
-                      char** param_keys,
-                      char** param_vals) {
+  auto body = [this](NDArray** used_vars,
+                     real_t* s,
+                     NDArray** mutate_vars,
+                     int num_params,
+                     char** param_keys,
+                     char** param_vals) {
     NDArray& lhs = *used_vars[0];
     NDArray& rhs = *used_vars[1];
     NDArray* out = mutate_vars[0];
     // setup env.
     EnvArguments env;
-    if (enable_scalar_) env.scalar = s[0];
+    if (enable_scalar_)
+      env.scalar = s[0];
     if (enable_kwargs_) {
       for (int i = 0; i < num_params; ++i) {
-        env.kwargs.emplace_back(std::make_pair(
-            std::string(param_keys[i]), std::string(param_vals[i])));
+        env.kwargs.emplace_back(
+            std::make_pair(std::string(param_keys[i]), std::string(param_vals[i])));
       }
     } else {
-      CHECK_EQ(num_params, 0)
-        << "operator " << this->name << " do not take keyword arguments";
+      CHECK_EQ(num_params, 0) << "operator " << this->name << " do not take keyword arguments";
     }
 
     // shape inference.
@@ -903,8 +888,8 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
     // no check if all of them are on cpu
     if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
       CHECK(lhs.ctx() == rhs.ctx())
-        << "operands context mismatch " << lhs.ctx().dev_type << " " << lhs.ctx().dev_id << \
-        " vs. " << rhs.ctx().dev_type << " " << rhs.ctx().dev_id;
+          << "operands context mismatch " << lhs.ctx().dev_type << " " << lhs.ctx().dev_id
+          << " vs. " << rhs.ctx().dev_type << " " << rhs.ctx().dev_id;
     }
     CHECK_EQ(lhs.dtype(), rhs.dtype()) << "operands type mismatch";
 
@@ -914,15 +899,17 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
     } else {
       CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
       CHECK(out->dtype() == lhs.dtype()) << "target data type mismatch";
-      CHECK(out->shape() == dshape) << "target shape mismatch "
-      << out->shape() << " vs. " << dshape;
+      CHECK(out->shape() == dshape)
+          << "target shape mismatch " << out->shape() << " vs. " << dshape;
     }
     // important: callback must always capture by value
     NDArray ret = *out;
     // get the const variables
     std::vector<Engine::VarHandle> const_vars;
-    if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
-    if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
+    if (lhs.var() != ret.var())
+      const_vars.push_back(lhs.var());
+    if (rhs.var() != ret.var())
+      const_vars.push_back(rhs.var());
 
     // request resources.
     std::vector<Engine::VarHandle> write_vars = {ret.var()};
@@ -934,17 +921,15 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
     // check if the function exist
     int dev_mask = lhs.ctx().dev_mask();
     // error message
-    if (static_cast<size_t>(dev_mask) >= fbinary_.size() ||
-        fbinary_[dev_mask] == nullptr) {
+    if (static_cast<size_t>(dev_mask) >= fbinary_.size() || fbinary_[dev_mask] == nullptr) {
       if (dev_mask == gpu::kDevMask) {
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
       }
-      LOG(FATAL) << "Function " << this->name
-                 << "not registered for device " << dev_mask;
+      LOG(FATAL) << "Function " << this->name << "not registered for device " << dev_mask;
     }
     // invoke the function
     BinaryFunction fun = fbinary_[dev_mask];
-    OpReqType req = kWriteTo;
+    OpReqType req      = kWriteTo;
     if (lhs.var() == ret.var()) {
       req = kWriteInplace;
       CHECK(binary_forward_inplace_lhs_out_)
@@ -952,25 +937,23 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
     }
     if (rhs.var() == ret.var()) {
       LOG(ERROR) << " operation " << this->name
-        << " warning, perform inplace operation with right operand, may not be supported";
+                 << " warning, perform inplace operation with right operand, may not be supported";
     }
 
-    Engine::Get()->PushSync([lhs, rhs, ret, fun, dev_mask, req, env](RunContext ctx) {
-        TBlob tmp = ret.data();
-        (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
-        #if MXNET_USE_CUDA
-        if (dev_mask == gpu::kDevMask) {
-          ctx.get_stream<gpu>()->Wait();
-        }
-        #endif
-      }, lhs.ctx(), const_vars, write_vars,
-      FnProperty::kNormal, 0, "RegisterBinaryImperative");
+    Engine::Get()->PushSync(
+        [lhs, rhs, ret, fun, dev_mask, req, env](RunContext ctx) {
+          TBlob tmp = ret.data();
+          (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
+        },
+        lhs.ctx(),
+        const_vars,
+        write_vars,
+        FnProperty::kNormal,
+        0,
+        "RegisterBinaryImperative");
   };
   // register the function.
-  NDArrayReg()
-      .set_body(body)
-      .set_num_use_vars(2)
-      .set_num_mutate_vars(1);
+  NDArrayReg().set_body(body).set_num_use_vars(2).set_num_mutate_vars(1);
   if (enable_scalar_) {
     if (scalar_type_mask_ == kArrayBeforeScalar) {
       NDArrayReg()
@@ -996,48 +979,50 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
   }
 }
 
-
 struct SimpleBinaryOperator : public Operator {
   EnvArguments env;
   BinaryFunction forward;
   BinaryGradFunctionT0 backward0{nullptr};
   BinaryGradFunctionT1 backward1{nullptr};
 
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_args) override {
-    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+  void Forward(const OpContext& ctx,
+               const std::vector<TBlob>& in_data,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& out_data,
+               const std::vector<TBlob>& aux_args) override {
+    if (ctx.requested.size() != 0)
+      env.resource = ctx.requested;
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     TBlob out = out_data[0];
     (*forward)(in_data[0], in_data[1], env, &out, req[0], ctx.run_ctx);
   }
 
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<TBlob> &out_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad,
-                const std::vector<TBlob> &aux_args) override {
-    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+  void Backward(const OpContext& ctx,
+                const std::vector<TBlob>& out_grad,
+                const std::vector<TBlob>& in_data,
+                const std::vector<TBlob>& out_data,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& in_grad,
+                const std::vector<TBlob>& aux_args) override {
+    if (ctx.requested.size() != 0)
+      env.resource = ctx.requested;
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == 2 && in_grad.size() == 2);
     CHECK_EQ(req.size(), 2);
-    OutputGrad ograd; ograd.data = out_grad[0];
+    OutputGrad ograd;
+    ograd.data  = out_grad[0];
     TBlob lgrad = in_grad[0];
     TBlob rgrad = in_grad[1];
 
     if (backward0 != nullptr) {
-      (*backward0)(ograd, env,
-                   &lgrad, &rgrad, req[0], req[1], ctx.run_ctx);
+      (*backward0)(ograd, env, &lgrad, &rgrad, req[0], req[1], ctx.run_ctx);
     } else if (backward1 != nullptr) {
-      Input0 in0; in0.data = in_data[0];
-      Input1 in1; in1.data = in_data[1];
-      (*backward1)(ograd, in0, in1, env,
-                   &lgrad, &rgrad, req[0], req[1], ctx.run_ctx);
+      Input0 in0;
+      in0.data = in_data[0];
+      Input1 in1;
+      in1.data = in_data[1];
+      (*backward1)(ograd, in0, in1, env, &lgrad, &rgrad, req[0], req[1], ctx.run_ctx);
     } else {
       LOG(FATAL) << "Backward is not supported";
     }
@@ -1046,9 +1031,9 @@ struct SimpleBinaryOperator : public Operator {
 
 class SimpleBinaryOpProp : public SimpleOpPropBase {
  public:
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[lhs, rhs]";
     const mxnet::TShape& lshape = in_shape->at(0);
@@ -1064,8 +1049,10 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
       }
       out_shape->push_back(lshape);
     } else {
-      if (lshape.ndim() == 0) return false;
-      if (rshape.ndim() == 0) return false;
+      if (lshape.ndim() == 0)
+        return false;
+      if (rshape.ndim() == 0)
+        return false;
       out_shape->push_back((*(source->binary_shape_))(lshape, rshape, env));
     }
     return true;
@@ -1076,18 +1063,17 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new SimpleBinaryOpProp();
+    auto ptr    = new SimpleBinaryOpProp();
     ptr->source = source;
-    ptr->name = name;
-    ptr->env = env;
+    ptr->name   = name;
+    ptr->env    = env;
     return ptr;
   }
 
   // decalre dependency and inplace optimization options
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(const std::vector<int>& out_grad,
+                                             const std::vector<int>& in_data,
+                                             const std::vector<int>& out_data) const override {
     if (source->fbinary_grad_t0_.size() != 0) {
       return {out_grad[0]};
     } else if (source->fbinary_grad_t1_.size() != 0) {
@@ -1099,10 +1085,10 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
+      const std::vector<int>& out_grad,
+      const std::vector<int>& in_data,
+      const std::vector<int>& out_data,
+      const std::vector<void*>& in_grad) const override {
     if (source->binary_backward_inplace_out_lhs_) {
       return {{out_grad[0], in_grad[0]}};
     } else {
@@ -1111,8 +1097,8 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
   }
 
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
-    const std::vector<int> &in_data,
-    const std::vector<void*> &out_data) const override {
+      const std::vector<int>& in_data,
+      const std::vector<void*>& out_data) const override {
     if (source->binary_forward_inplace_lhs_out_) {
       return {{in_data[0], out_data[0]}};
     } else {
@@ -1121,11 +1107,11 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
   }
 
   Operator* CreateOperator(Context ctx) const override {
-    size_t dev_mask = ctx.dev_mask();
-    SimpleBinaryOperator *op = new SimpleBinaryOperator();
+    size_t dev_mask          = ctx.dev_mask();
+    SimpleBinaryOperator* op = new SimpleBinaryOperator();
     CHECK(dev_mask < source->fbinary_.size() && source->fbinary_[dev_mask] != nullptr);
     op->forward = source->fbinary_[dev_mask];
-    op->env = this->env;
+    op->env     = this->env;
     if (dev_mask < source->fbinary_grad_t0_.size()) {
       op->backward0 = source->fbinary_grad_t0_[dev_mask];
     }
@@ -1139,9 +1125,9 @@ class SimpleBinaryOpProp : public SimpleOpPropBase {
 void SimpleOpRegEntryImpl::RegisterBinarySymbolic() {
   // register the operator
   auto op_factory = [this]() {
-    SimpleBinaryOpProp *prop = new SimpleBinaryOpProp();
-    prop->name = symbol_name_;
-    prop->source = this;
+    SimpleBinaryOpProp* prop = new SimpleBinaryOpProp();
+    prop->name               = symbol_name_;
+    prop->source             = this;
     return prop;
   };
   OpReg()

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file multi_lars.cu
  * \brief vectorized lars coefficient computed from sums of squared weights and grads
  * \author Clement Fuji Tsang
@@ -29,8 +28,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(multi_lars)
-.set_attr<FCompute>("FCompute<gpu>", MultiLARS<gpu>);
+NNVM_REGISTER_OP(multi_lars).set_attr<FCompute>("FCompute<gpu>", MultiLARS<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

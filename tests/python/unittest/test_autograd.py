@@ -243,7 +243,7 @@ def test_detach_updated_grad():
     assert x._fresh_grad == False
 
 
-def test_retain_grad():
+def test_retain_graph():
     x = mx.nd.ones((2, 2))
     dx = mx.nd.zeros((2, 2))
     mark_variables([x], [dx], grad_reqs='add')
@@ -387,7 +387,7 @@ def test_function1():
     with mx.autograd.record():
         X = mx.nd.zeros((3, 4))
         #X.attach_grad()  # uncommenting this line works
-        for i in range(5):
+        for _ in range(5):
             f = Foo()
             X = f(X)
         X.wait_to_read()
@@ -446,7 +446,7 @@ def test_np_function1():
     with mx.autograd.record():
         X = mx.np.zeros((3, 4))
         #X.attach_grad()  # uncommenting this line works
-        for i in range(5):
+        for _ in range(5):
             f = Foo()
             X = f(X)
         X.wait_to_read()
@@ -519,3 +519,68 @@ def test_gradient():
     dx.backward()
     assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
 
+def test_retain_grad_drop_grad():
+    x = nd.array([1,2,3,4])
+    x.attach_grad()
+    y = nd.array([5,6,7,8])
+    y.attach_grad()
+
+    with mx.autograd.record():
+        u = x * y
+        z = u * x
+
+    u.attach_grad()
+    z.attach_grad()
+    out_grad = nd.array([10, 10, 10, 10])
+    z.backward(out_grad, retain_graph=True)
+    
+    assert (u.grad == out_grad * x).asnumpy().all()
+    assert (z.grad == out_grad).asnumpy().all()
+    assert (x.grad == out_grad * 2 * x * y).asnumpy().all()
+    assert (y.grad == out_grad * x*x).asnumpy().all()
+
+    u.drop_grad()
+    z.drop_grad()
+    y.drop_grad()
+    out_grad = nd.array([0.1, 0.1, 0.1, 0.1])
+    z.backward(out_grad)
+
+    assert u.grad is None and z.grad is None and y.grad is None
+    assert (x.grad == out_grad * 2 * x * y).asnumpy().all()
+
+def test_retain_grad_drop_grad_gluon():
+    class CompBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.marked_var = None
+        def forward(self, a, b):
+            out1 = a*b
+            out2 = out1 * a
+            self.marked_var = out1
+            return out2
+    x = mx.np.array([1,2,3,4])
+    y = mx.np.array([5,6,7,8])
+    x.attach_grad()
+    y.attach_grad()
+    block2 = CompBlock()
+    block2.initialize()
+    # block2.hybridize()
+    with mx.autograd.record():
+        z = block2(x, y)
+    u = block2.marked_var
+    u.attach_grad()
+    z.attach_grad()
+    z.backward(retain_graph=True)
+
+    assert (u.grad == x).all()
+    assert (z.grad == mx.np.array([1,1,1,1])).all()
+    assert (x.grad == 2 * x * y).all()
+    assert (y.grad == x*x).all()
+
+    u.drop_grad()
+    z.drop_grad()
+    y.drop_grad()
+    z.backward()
+
+    assert u.grad is None and z.grad is None and y.grad is None
+    assert (x.grad == 2 * x * y).all()

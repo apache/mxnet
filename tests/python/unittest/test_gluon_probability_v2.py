@@ -77,7 +77,7 @@ def test_gluon_uniform():
         net = TestUniform("log_prob")
         if hybridize:
             net.hybridize()
-        for i in range(2):
+        for _ in range(2):
             mx_out = net(low, high, samples).asnumpy()
             np_out = ss.uniform(low.asnumpy(),
                                 (high - low).asnumpy()).logpdf(samples.asnumpy())
@@ -1632,8 +1632,7 @@ def test_gluon_mvn():
         Force the precision matrix to be symmetric.
         """
         precision = np.linalg.inv(cov)
-        precision_t = np.swapaxes(precision, -1, -2)
-        return (precision + precision_t) / 2
+        return (precision + precision.mT) / 2
 
     event_shapes = [3, 5]
     loc_shapes = [(), (2,), (4, 2)]
@@ -1653,8 +1652,7 @@ def test_gluon_mvn():
                 loc.attach_grad()
                 _s.attach_grad()
                 # Full covariance matrix
-                sigma = np.matmul(_s, np.swapaxes(
-                    _s, -1, -2)) + np.eye(event_shape)
+                sigma = np.matmul(_s, _s.mT) + np.eye(event_shape)
                 cov_param = cov_func[cov_type](sigma)
                 net = TestMVN('sample', cov_type)
                 if hybridize:
@@ -1678,8 +1676,7 @@ def test_gluon_mvn():
                 loc.attach_grad()
                 _s.attach_grad()
                 # Full covariance matrix
-                sigma = np.matmul(_s, np.swapaxes(
-                    _s, -1, -2)) + np.eye(event_shape)
+                sigma = np.matmul(_s, _s.mT) + np.eye(event_shape)
                 cov_param = cov_func[cov_type](sigma)
                 net = TestMVN('log_prob', cov_type)
                 if hybridize:
@@ -1709,8 +1706,7 @@ def test_gluon_mvn():
                 loc.attach_grad()
                 _s.attach_grad()
                 # Full covariance matrix
-                sigma = np.matmul(_s, np.swapaxes(
-                    _s, -1, -2)) + np.eye(event_shape)
+                sigma = np.matmul(_s, _s.mT) + np.eye(event_shape)
                 cov_param = cov_func[cov_type](sigma)
                 net = TestMVN('entropy', cov_type)
                 if hybridize:
@@ -2093,7 +2089,7 @@ def test_gluon_kl():
     for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
         loc = np.random.randn(*(loc_shape + (event_shape,)))
         _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
-        sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+        sigma = np.matmul(_s, _s.mT) + np.eye(event_shape)
         dist = mgp.MultivariateNormal(loc, cov=sigma)
         desired_shape = (loc + sigma[..., 0]).shape[:-1]
         _test_zero_kl(dist, desired_shape)

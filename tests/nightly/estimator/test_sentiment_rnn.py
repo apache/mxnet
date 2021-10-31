@@ -264,6 +264,7 @@ def test_estimator_gpu():
     num_hiddens, num_layers = 100, 2
     net = BiRNN(vocab, embed_size, num_hiddens, num_layers)
     net.initialize(mx.init.Xavier(), ctx=ctx)
+    net.hybridize()
 
     glove_embedding = text.embedding.create(
         'glove', pretrained_file_name='glove.6B.100d.txt', vocabulary=vocab)

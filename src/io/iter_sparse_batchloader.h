@@ -42,15 +42,14 @@ namespace io {
 /*! \brief create a batch iterator from single instance iterator */
 class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch> {
  public:
-  explicit SparseBatchLoader(SparseIIterator<DataInst> *base):
-      BatchLoader(base), sparse_base_(base) {
-  }
+  explicit SparseBatchLoader(SparseIIterator<DataInst>* base)
+      : BatchLoader(base), sparse_base_(base) {}
 
   virtual ~SparseBatchLoader(void) {}
 
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     BatchLoader::Init(kwargs);
-    data_stype_ = sparse_base_->GetStorageType(true);
+    data_stype_  = sparse_base_->GetStorageType(true);
     label_stype_ = sparse_base_->GetStorageType(false);
     if (param_.round_batch == 0) {
       LOG(FATAL) << "sparse batch loader doesn't support round_batch == false yet";
@@ -63,18 +62,21 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   virtual bool Next(void) {
     out_.num_batch_padd = 0;
-    out_.batch_size = param_.batch_size;
-    this->head_ = 0;
+    out_.batch_size     = param_.batch_size;
+    this->head_         = 0;
     // if overflown from previous round, directly return false, until before first is called
-    if (num_overflow_ != 0) return false;
+    if (num_overflow_ != 0)
+      return false;
     size_t top = 0;
     offsets_.clear();
     while (sparse_base_->Next()) {
       const DataInst& inst = sparse_base_->Value();
       // initialize the data buffer, only called once
-      if (data_.size() == 0) this->InitData(inst);
+      if (data_.size() == 0)
+        this->InitData(inst);
       // initialize the number of elements in each buffer, called once per batch
-      if (offsets_.size() == 0) offsets_.resize(inst.data.size(), 0);
+      if (offsets_.size() == 0)
+        offsets_.resize(inst.data.size(), 0);
       CopyData(inst, top);
       if (++top >= param_.batch_size) {
         SetOutputShape();
@@ -83,7 +85,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     }
     if (top != 0) {
       CHECK_NE(param_.round_batch, 0)
-        << "round_batch = False is not supported for sparse data iterator";
+          << "round_batch = False is not supported for sparse data iterator";
       num_overflow_ = 0;
       sparse_base_->BeforeFirst();
       for (; top < param_.batch_size; ++top, ++num_overflow_) {
@@ -100,7 +102,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     return false;
   }
 
-  virtual const TBlobBatch &Value(void) const {
+  virtual const TBlobBatch& Value(void) const {
     return BatchLoader::Value();
   }
 
@@ -120,7 +122,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
  private:
   /*! \brief base sparse iterator */
-  SparseIIterator<DataInst> *sparse_base_;
+  SparseIIterator<DataInst>* sparse_base_;
   /*! \brief data storage type */
   NDArrayStorageType data_stype_;
   /*! \brief data label type */
@@ -134,16 +136,15 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   // check whether ith position is the indptr tensor for a CSR tensor
   inline bool IsIndPtr(size_t i) {
-    auto data_num_aux = num_aux_data(data_stype_);
-    auto label_num_aux = num_aux_data(label_stype_);
+    auto data_num_aux        = num_aux_data(data_stype_);
+    auto label_num_aux       = num_aux_data(label_stype_);
     auto label_indptr_offset = data_num_aux + 1 + label_num_aux;
     // data indptr
     if (i == data_num_aux && data_stype_ == kCSRStorage) {
       return true;
     }
     // label indptr
-    if (i == label_indptr_offset && label_stype_ == kCSRStorage &&
-        data_stype_ == kCSRStorage) {
+    if (i == label_indptr_offset && label_stype_ == kCSRStorage && data_stype_ == kCSRStorage) {
       return true;
     }
     return false;
@@ -173,11 +174,11 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
       // shape for indptr
       if (IsIndPtr(i)) {
         buff_sizes[i] = param_.batch_size + 1;
-        indptr_[i] = true;
+        indptr_[i]    = true;
       } else {
         // estimated the size for the whole batch based on the first instance
         buff_sizes[i] = first_inst.data[i].Size() * param_.batch_size;
-        indptr_[i] = false;
+        indptr_[i]    = false;
       }
       dtypes_[i] = first_inst.data[i].type_flag_;
     }
@@ -195,8 +196,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
   /* \brief set the shape of the outputs based on actual shapes */
   inline void SetOutputShape() {
     for (size_t i = 0; i < out_.data.size(); i++) {
-      out_.data[i] = TBlob(data_[i].dptr_, mshadow::Shape1(offsets_[i]),
-                           Context::kCPU, dtypes_[i]);
+      out_.data[i] = TBlob(data_[i].dptr_, mshadow::Shape1(offsets_[i]), Context::kCPU, dtypes_[i]);
     }
   }
 
@@ -208,8 +208,8 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
       mshadow::Copy(temp.get<cpu, 1, DType>(), data_[i].get<cpu, 1, DType>().Slice(0, src_size));
       // increase the size of space exponentially
       size_t capacity = data_[i].Size();
-      capacity = capacity * 2 + 1;
-      data_[i] = TBlobContainer();
+      capacity        = capacity * 2 + 1;
+      data_[i]        = TBlobContainer();
       data_[i].resize(mshadow::Shape1(capacity), dtypes_[i]);
       // copy back
       mshadow::Copy(data_[i].get<cpu, 1, DType>().Slice(0, src_size), temp.get<cpu, 1, DType>());
@@ -218,7 +218,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   /* \brief copy the data instance to data buffer */
   void CopyData(const DataInst& inst, const size_t top) {
-    int64_t unit_size = 0;
+    int64_t unit_size    = 0;
     out_.inst_index[top] = inst.index;
     for (size_t i = 0; i < inst.data.size(); ++i) {
       if (!indptr_[i]) {
@@ -226,8 +226,8 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
         unit_size = inst.data[i].shape_.Size();
         MSHADOW_TYPE_SWITCH(data_[i].type_flag_, DType, {
           const size_t begin = offsets_[i];
-          const size_t end = offsets_[i] + unit_size;
-          size_t capacity = data_[i].Size();
+          const size_t end   = offsets_[i] + unit_size;
+          size_t capacity    = data_[i].Size();
           // resize the data buffer if estimated space is not sufficient
           while (capacity < end) {
             ResizeBuffer(begin, i);
@@ -241,9 +241,10 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
         // indptr placeholder
         auto indptr = data_[i].get<cpu, 1, int64_t>();
         // initialize the first indptr, which is always 0
-        if (top == 0) indptr[0] = 0;
+        if (top == 0)
+          indptr[0] = 0;
         indptr[top + 1] = indptr[top] + unit_size;
-        offsets_[i] = top + 2;
+        offsets_[i]     = top + 2;
       }
     }
   }

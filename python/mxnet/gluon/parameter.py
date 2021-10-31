@@ -351,7 +351,7 @@ class Parameter(object):
                 kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': context.cpu()}
                 if is_np_array():
                     if self._stype != 'default':
-                        raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                        raise ValueError("Currently stype {} is not supported in NumPy interface and Gluon2.0"
                                          .format(self._stype))
                     zeros_fn = _mx_np.zeros
                 else:
@@ -384,7 +384,7 @@ class Parameter(object):
 
         if is_np_array():
             if self._grad_stype != 'default':
-                raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                raise ValueError("Currently stype {} is not supported in NumPy interface and Gluon2.0"
                                  .format(self._grad_stype))
             self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx)
                           for i in self._data]
@@ -472,6 +472,9 @@ class Parameter(object):
             ctx = [context.current_context()]
         if isinstance(ctx, Context):
             ctx = [ctx]
+        if isinstance(self.init, initializer.RNNFused):
+            self.init.set_initializer(init if init else default_init)
+            init = default_init = self.init
         if init is None:
             init = default_init if self.init is None else self.init
         if not shape_is_known(self.shape):

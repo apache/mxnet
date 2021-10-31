@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_norm-.cc
  * \brief CPU registration of np.linalg.norm
  */
@@ -31,11 +30,12 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyNormParam);
 
 inline bool NumpyLpNormShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector *in_attrs,
-                             mxnet::ShapeVector *out_attrs) {
-  if (!shape_is_known((*in_attrs)[0])) return false;
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
+  if (!shape_is_known((*in_attrs)[0]))
+    return false;
   const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
-  const int ndim = (*in_attrs)[0].ndim();
+  const int ndim              = (*in_attrs)[0].ndim();
   if ((!param.axis.has_value() && param.flag != 0 && ndim > 2) ||
       (param.axis.has_value() && param.axis.value().ndim() > 2))
     LOG(FATAL) << "Improper number of dimensions to norm.";
@@ -55,28 +55,28 @@ inline bool NumpyLpNormShape(const nnvm::NodeAttrs& attrs,
   if (!param.keepdims && (*in_attrs)[0].ndim() == 1) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1));
   } else {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                       ReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims, false));
+    SHAPE_ASSIGN_CHECK(
+        *out_attrs, 0, ReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims, false));
   }
   return true;
 }
 
 inline bool NumpyMatrixNormShape(const nnvm::NodeAttrs& attrs,
-                                 mxnet::ShapeVector *in_attrs,
-                                 mxnet::ShapeVector *out_attrs) {
+                                 mxnet::ShapeVector* in_attrs,
+                                 mxnet::ShapeVector* out_attrs) {
   const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
-  const int ndim = (*in_attrs)[0].ndim();
-  auto shape = swapMatDims((*in_attrs)[0], param.axis.value());
+  const int ndim              = (*in_attrs)[0].ndim();
+  auto shape                  = swapMatDims((*in_attrs)[0], param.axis.value());
   if (param.axis.value().ndim() == 2) {
     int batch_dim = 1;
-    int row_dim = (*in_attrs)[0][param.axis.value()[0]];
-    int col_dim = (*in_attrs)[0][param.axis.value()[1]];
+    int row_dim   = (*in_attrs)[0][param.axis.value()[0]];
+    int col_dim   = (*in_attrs)[0][param.axis.value()[1]];
     TShape out_shape(ndim - (param.keepdims ? 0 : 2), 1);
     for (int i = 0; i < ndim - 2; ++i) {
       batch_dim *= shape[i];
     }
     if (param.keepdims) {
-      out_shape = (*in_attrs)[0];
+      out_shape                        = (*in_attrs)[0];
       out_shape[param.axis.value()[0]] = 1;
       out_shape[param.axis.value()[1]] = 1;
     } else {
@@ -87,20 +87,20 @@ inline bool NumpyMatrixNormShape(const nnvm::NodeAttrs& attrs,
     int svd_dim = row_dim < col_dim ? row_dim : col_dim;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
     if (param.ord == 2 || param.ord == -2) {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({ batch_dim, row_dim, row_dim }));  // UT
-      SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ batch_dim, svd_dim }));  // L
-      SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ batch_dim, row_dim, col_dim }));  // V
+      SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({batch_dim, row_dim, row_dim}));  // UT
+      SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({batch_dim, svd_dim}));           // L
+      SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({batch_dim, row_dim, col_dim}));  // V
     } else {
       TShape sum_shape = (*in_attrs)[0];
-      TShape mat_axis = param.axis.value();
-      int sum_dim = mat_axis[!(param.ord == 1 || param.ord == -1)];
+      TShape mat_axis  = param.axis.value();
+      int sum_dim      = mat_axis[!(param.ord == 1 || param.ord == -1)];
       TShape small(3, 1);
       sum_shape[sum_dim] = 1;
-      small[0] = sum_shape.ProdShape(0, sum_dim);
-      small[2] = sum_shape.ProdShape(sum_dim + 1, sum_shape.ndim());
-      SHAPE_ASSIGN_CHECK(*out_attrs, 1, small);  // sum
-      SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ 0, 0 }));  // L
-      SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ 0, 0, 0 }));  // V
+      small[0]           = sum_shape.ProdShape(0, sum_dim);
+      small[2]           = sum_shape.ProdShape(sum_dim + 1, sum_shape.ndim());
+      SHAPE_ASSIGN_CHECK(*out_attrs, 1, small);              // sum
+      SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({0, 0}));     // L
+      SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({0, 0, 0}));  // V
     }
   } else {
     LOG(FATAL) << "Invalid norm or ord arguments.";
@@ -108,10 +108,10 @@ inline bool NumpyMatrixNormShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline void assign_svd_empty(mxnet::ShapeVector *out_attrs) {
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({ 0, 0, 0 }));  // UT
-  SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ 0, 0 }));  // L
-  SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ 0, 0, 0 }));  // V
+inline void assign_svd_empty(mxnet::ShapeVector* out_attrs) {
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({0, 0, 0}));  // UT
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({0, 0}));     // L
+  SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({0, 0, 0}));  // V
 }
 
 bool NumpyNormType(const nnvm::NodeAttrs& attrs,
@@ -137,23 +137,23 @@ bool NumpyNormType(const nnvm::NodeAttrs& attrs,
 }
 
 bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
-                    mxnet::ShapeVector *in_attrs,
-                    mxnet::ShapeVector *out_attrs) {
+                    mxnet::ShapeVector* in_attrs,
+                    mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 4U);  // reduced, UT, S, V
   const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
   if (!param.axis.has_value()) {
     if (param.flag == -2) {
       int ndim = param.keepdims ? (*in_attrs)[0].ndim() : 0;
-      int sz = param.keepdims ? 1 : -1;
+      int sz   = param.keepdims ? 1 : -1;
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(ndim, sz));
       assign_svd_empty(out_attrs);
       return true;
     }
     if ((*in_attrs)[0].ndim() >= 2) {
       TShape axis(2, 0);
-      axis[0] = (*in_attrs)[0].ndim() - 2;
-      axis[1] = (*in_attrs)[0].ndim() - 1;
+      axis[0]                                 = (*in_attrs)[0].ndim() - 2;
+      axis[1]                                 = (*in_attrs)[0].ndim() - 1;
       const_cast<NumpyNormParam&>(param).axis = axis;
       return NumpyMatrixNormShape(attrs, in_attrs, out_attrs);
     } else {
@@ -165,9 +165,8 @@ bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
   } else {
     TShape axis(param.axis.value().ndim(), 0);
     for (int i = 0; i < param.axis.value().ndim(); ++i) {
-      axis[i] = param.axis.value()[i] < 0 ?
-                  (*in_attrs)[0].ndim() + param.axis.value()[i] :
-                  param.axis.value()[i];
+      axis[i] = param.axis.value()[i] < 0 ? (*in_attrs)[0].ndim() + param.axis.value()[i]
+                                          : param.axis.value()[i];
     }
     const_cast<NumpyNormParam&>(param).axis = axis;
     if (param.axis.value().ndim() == 2) {
@@ -179,7 +178,7 @@ bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
   }
 }
 
-TShape swapMatDims(const TShape &shape, const TShape &axis) {
+TShape swapMatDims(const TShape& shape, const TShape& axis) {
   TShape ret(shape.ndim(), 1);
   int i, j = 0;
   for (i = 0; i < shape.ndim(); ++i) {
@@ -188,11 +187,11 @@ TShape swapMatDims(const TShape &shape, const TShape &axis) {
     }
   }
   ret[j++] = shape[axis[0]];
-  ret[j] = shape[axis[1]];
+  ret[j]   = shape[axis[1]];
   return ret;
 }
 
-TShape inverseTranspose(const TShape &axes) {
+TShape inverseTranspose(const TShape& axes) {
   TShape ret(axes.ndim(), 1);
   for (int i = 0; i < axes.ndim(); ++i) {
     ret[axes[i]] = i;

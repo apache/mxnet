@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -29,23 +29,22 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npi.matmul")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  static const nnvm::Op* op = Op::Get("_npi_matmul");
-  nnvm::NodeAttrs attrs;
-  int num_inputs = 2;
-  NDArray* inputs[2] = {args[0].operator mxnet::NDArray*(),
-                        args[1].operator mxnet::NDArray*()};
-  attrs.op = op;
-  NDArray* out = args[2].operator mxnet::NDArray*();
-  NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  if (out) {
-    *ret = PythonArg(2);
-  } else {
-    *ret = ndoutputs[0];
-  }
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      static const nnvm::Op* op = Op::Get("_npi_matmul");
+      nnvm::NodeAttrs attrs;
+      int num_inputs     = 2;
+      NDArray* inputs[2] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
+      attrs.op           = op;
+      NDArray* out       = args[2].operator mxnet::NDArray*();
+      NDArray** outputs  = out == nullptr ? nullptr : &out;
+      int num_outputs    = out != nullptr;
+      auto ndoutputs     = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+      if (out) {
+        *ret = PythonArg(2);
+      } else {
+        *ret = ndoutputs[0];
+      }
+    });
 
 }  // namespace mxnet

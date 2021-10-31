@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_power_op.cu
  * \brief Operator for numpy sampling from power distributions
  */
@@ -28,8 +27,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_powerd)
-.set_attr<FCompute>("FCompute<gpu>", NumpyPowerForward<gpu>);
+NNVM_REGISTER_OP(_npi_powerd).set_attr<FCompute>("FCompute<gpu>", NumpyPowerForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

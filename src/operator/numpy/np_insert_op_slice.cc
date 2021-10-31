@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_slice.cc
  * \brief CPU Implementation of numpy insert operations
  */
@@ -29,8 +28,8 @@ namespace mxnet {
 namespace op {
 
 bool NumpyInsertSliceType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_type,
-                          std::vector<int> *out_type) {
+                          std::vector<int>* in_type,
+                          std::vector<int>* out_type) {
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), (param.val.has_value() ? 1 : 2));
   CHECK_EQ(out_type->size(), 1U);
@@ -40,16 +39,16 @@ bool NumpyInsertSliceType(const nnvm::NodeAttrs& attrs,
 }
 
 bool NumpyInsertSliceShape(const nnvm::NodeAttrs& attrs,
-                           mxnet::ShapeVector *in_shape,
-                           mxnet::ShapeVector *out_shape) {
+                           mxnet::ShapeVector* in_shape,
+                           mxnet::ShapeVector* out_shape) {
   using namespace mshadow;
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
-  const int arr_pos = 0;
-  const int val_pos = param.val.has_value() ? 0 : 1;
+  const int arr_pos             = 0;
+  const int val_pos             = param.val.has_value() ? 0 : 1;
   CHECK_EQ(in_shape->size(), (param.val.has_value() ? 1 : 2));
   mxnet::TShape scale_shape(0, 1);
-  mxnet::TShape &arrshape = (*in_shape)[arr_pos];
-  mxnet::TShape &valshape = param.val.has_value() ? scale_shape : (*in_shape)[val_pos];
+  mxnet::TShape& arrshape = (*in_shape)[arr_pos];
+  mxnet::TShape& valshape = param.val.has_value() ? scale_shape : (*in_shape)[val_pos];
 
   out_shape->clear();
 
@@ -57,26 +56,25 @@ bool NumpyInsertSliceShape(const nnvm::NodeAttrs& attrs,
   int axis = param.axis.has_value() ? param.axis.value() : 0;
   if (!(param.axis.has_value())) {
     arrshape = Shape1(arrshape.Size());
-    ndim = 1;
+    ndim     = 1;
   } else if (ndim == 0) {
     if (param.val.has_value()) {
       out_shape->push_back(scale_shape);
     } else {
-      CHECK_EQ(valshape.ndim(), 0)
-        << "'arr' is a 0-d array, 'values' can not assign to it. "
-        << "alueError: assignment to 0-d array.";
+      CHECK_EQ(valshape.ndim(), 0) << "'arr' is a 0-d array, 'values' can not assign to it. "
+                                   << "alueError: assignment to 0-d array.";
       out_shape->push_back(valshape);
     }
     return shape_is_known(out_shape[0]);
   } else {
     CHECK(axis >= -1 * arrshape.ndim() && axis < arrshape.ndim())
-      << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
+        << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
     axis += (axis < 0) ? arrshape.ndim() : 0;
   }
 
   index_t seq_cnt = -1;
-  index_t N = arrshape[axis];
-  index_t step = param.step.value();
+  index_t N       = arrshape[axis];
+  index_t step    = param.step.value();
   index_t stop, start;
   if (param.stop.has_value()) {
     stop = param.stop.value();
@@ -129,32 +127,34 @@ bool NumpyInsertSliceShape(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_insert_slice)
-.describe(R"code(Insert values along the given axis before the given indices.)code" ADD_FILELINE)
-.set_attr_parser(ParamParser<NumpyInsertParam>)
-.set_num_inputs([](const NodeAttrs& attrs) {
-    const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
-    return params.val.has_value() ? 1 : 2;
-})
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
-    if (params.val.has_value()) {
-      return std::vector<std::string>{"arr"};
-    } else {
-      return std::vector<std::string>{"arr", "values"};
-    }
-})
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyInsertSliceShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyInsertSliceType)
-.set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyInsertSliceCompute<cpu>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.add_argument("arr", "NDArray-or-Symbol", "Input ndarray")
-.add_argument("values", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(NumpyInsertParam::__FIELDS__());
+    .describe(
+        R"code(Insert values along the given axis before the given indices.)code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<NumpyInsertParam>)
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
+      return params.val.has_value() ? 1 : 2;
+    })
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       const NumpyInsertParam& params =
+                                           nnvm::get<NumpyInsertParam>(attrs.parsed);
+                                       if (params.val.has_value()) {
+                                         return std::vector<std::string>{"arr"};
+                                       } else {
+                                         return std::vector<std::string>{"arr", "values"};
+                                       }
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyInsertSliceShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyInsertSliceType)
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyInsertSliceCompute<cpu>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .add_argument("arr", "NDArray-or-Symbol", "Input ndarray")
+    .add_argument("values", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(NumpyInsertParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file engine_impl.h
  * \brief Internal implementation header of engine components.
  */
@@ -50,8 +49,7 @@ struct Opr {
 // implementation of the inline functions
 template <typename T>
 inline T* Var::Cast() {
-  static_assert(std::is_base_of<Var, T>::value,
-                "must inherit `mxnet::engine::Var`");
+  static_assert(std::is_base_of<Var, T>::value, "must inherit `mxnet::engine::Var`");
 #if ENGINE_DEBUG
   return dynamic_cast<T*>(this);
 #else
@@ -61,8 +59,7 @@ inline T* Var::Cast() {
 
 template <typename T>
 inline T* Opr::Cast() {
-  static_assert(std::is_base_of<Opr, T>::value,
-                "must inherit `mxnet::engine::Opr`");
+  static_assert(std::is_base_of<Opr, T>::value, "must inherit `mxnet::engine::Opr`");
 #if ENGINE_DEBUG
   return dynamic_cast<T*>(this);
 #else
@@ -75,12 +72,12 @@ static constexpr std::size_t kMaxNumGPUs = 16;
 
 // predeclare factory function for each type of engine
 /*! \return NaiveEngine instance */
-Engine *CreateNaiveEngine();
+Engine* CreateNaiveEngine();
 #if MXNET_PREDICT_ONLY == 0
 /*! \return ThreadedEnginePooled instance */
-Engine *CreateThreadedEnginePooled();
+Engine* CreateThreadedEnginePooled();
 /*! \return ThreadedEnginePerDevie instance */
-Engine *CreateThreadedEnginePerDevice();
+Engine* CreateThreadedEnginePerDevice();
 #endif
 }  // namespace engine
 }  // namespace mxnet

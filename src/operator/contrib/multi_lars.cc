@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file multi_lars.cc
  * \brief vectorized LARS coefficient computed from sums of squared weights and grads
  * \author Clement Fuji Tsang
@@ -33,24 +32,28 @@ namespace op {
 DMLC_REGISTER_PARAMETER(LARSParam);
 
 NNVM_REGISTER_OP(multi_lars)
-.describe(R"code(Compute the LARS coefficients of multiple weights and grads from their sums of square"
+    .describe(
+        R"code(Compute the LARS coefficients of multiple weights and grads from their sums of square"
 )code" ADD_FILELINE)
-.set_num_inputs(4)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LARSParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<4, 1, false, false, false>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const nnvm::NodeAttrs& attrs) {
-    std::vector<std::string> list_input_names = {"lrs", "weights_sum_sq", "grads_sum_sq", "wds"};
-    return list_input_names;
-  })
-.set_attr<FCompute>("FCompute<cpu>", MultiLARS<cpu>)
-.add_argument("lrs", "NDArray-or-Symbol", "Learning rates to scale by LARS coefficient")
-.add_argument("weights_sum_sq", "NDArray-or-Symbol", "sum of square of weights arrays")
-.add_argument("grads_sum_sq", "NDArray-or-Symbol", "sum of square of gradients arrays")
-.add_argument("wds", "NDArray-or-Symbol", "weight decays")
-.add_arguments(LARSParam::__FIELDS__());
+    .set_num_inputs(4)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LARSParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+    .set_attr<FInferStorageType>("FInferStorageType",
+                                 ElemwiseStorageType<4, 1, false, false, false>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const nnvm::NodeAttrs& attrs) {
+                                       std::vector<std::string> list_input_names = {
+                                           "lrs", "weights_sum_sq", "grads_sum_sq", "wds"};
+                                       return list_input_names;
+                                     })
+    .set_attr<FCompute>("FCompute<cpu>", MultiLARS<cpu>)
+    .add_argument("lrs", "NDArray-or-Symbol", "Learning rates to scale by LARS coefficient")
+    .add_argument("weights_sum_sq", "NDArray-or-Symbol", "sum of square of weights arrays")
+    .add_argument("grads_sum_sq", "NDArray-or-Symbol", "sum of square of gradients arrays")
+    .add_argument("wds", "NDArray-or-Symbol", "weight decays")
+    .add_arguments(LARSParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

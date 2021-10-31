@@ -100,7 +100,7 @@ def compute_expected_quantization(arr, curr_residual, threshold, quantize_func):
 def test_kvstore(kv_type, stype):
     print(kv_type)
     kv = mx.kv.create(kv_type)
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
+    kv.set_optimizer(mx.optimizer.create('test', learning_rate=-lr))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
 
@@ -130,7 +130,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
         raise RuntimeError("Unknown gradient compression type!")
     kv = mx.kv.create(kv_type)
     kv.set_gradient_compression({'type':compression, 'threshold':threshold})
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
+    kv.set_optimizer(mx.optimizer.create('test', learning_rate=-rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
     # init one key with 1s so we can check if it was compressed during init
@@ -150,7 +150,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
             assert_almost_equal(o.asnumpy(), exp)
 
     def pull_before_push(kv):
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             for j in range(len(keys)):
                 out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
                 kv.pull(keys[j], out=out)
@@ -209,7 +209,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
                 check_diff_to_scalar(o, curr_val)
     
     def push_zeros(kv):
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             for j in range(len(keys)):
                 kv.push(keys[j], [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)])
                 out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
@@ -249,7 +249,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
         return curval
 
     def check_neg(kv, neg, rate, curval):
-        for r in range(nrepeat):
+        for _ in range(nrepeat):
             curval = curval + rate*nworker*neg
             for j in range(len(keys)):
                 kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*neg for g in range(nworker)])
@@ -297,7 +297,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
 def test_group_kvstore(kv_type, stype):
     print(kv_type)
     kv = mx.kv.create(kv_type)
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
+    kv.set_optimizer(mx.optimizer.create('test', learning_rate=-lr))
     kv.init(keys, [mx.nd.zeros(s) for s in shapes])
     res = [np.zeros(s) for s in shapes]
     out = [[mx.nd.zeros(s, mx.gpu(g)) for g in range(nworker)] for s in shapes]

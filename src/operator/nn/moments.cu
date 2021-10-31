@@ -18,22 +18,19 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file moments.cu
  * \brief Moments operator
  * \author Hao Jin
-*/
+ */
 
 #include "./moments-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(moments)
-.set_attr<FCompute>("FCompute<gpu>", MomentsForward<gpu>);
+NNVM_REGISTER_OP(moments).set_attr<FCompute>("FCompute<gpu>", MomentsForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_moments)
-.set_attr<FCompute>("FCompute<gpu>", MomentsBackward<gpu>);
+NNVM_REGISTER_OP(_backward_moments).set_attr<FCompute>("FCompute<gpu>", MomentsBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

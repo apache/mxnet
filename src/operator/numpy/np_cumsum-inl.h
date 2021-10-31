@@ -42,21 +42,23 @@ struct CumsumParam : public dmlc::Parameter<CumsumParam> {
   dmlc::optional<int> dtype;
   DMLC_DECLARE_PARAMETER(CumsumParam) {
     DMLC_DECLARE_FIELD(axis)
-      .set_default(dmlc::optional<int>())
-      .describe("Axis along which the cumulative sum is computed."
-        " The default (None) is to compute the cumsum over the flattened array.");
+        .set_default(dmlc::optional<int>())
+        .describe(
+            "Axis along which the cumulative sum is computed."
+            " The default (None) is to compute the cumsum over the flattened array.");
     DMLC_DECLARE_FIELD(dtype)
-      .add_enum("float16", mshadow::kFloat16)
-      .add_enum("float32", mshadow::kFloat32)
-      .add_enum("float64", mshadow::kFloat64)
-      .add_enum("int8", mshadow::kInt8)
-      .add_enum("int32", mshadow::kInt32)
-      .add_enum("int64", mshadow::kInt64)
-      .set_default(dmlc::optional<int>())
-      .describe("Type of the returned array and of the accumulator in which the elements"
-                " are summed. If dtype is not specified, it defaults to the dtype of a,"
-                " unless a has an integer dtype with a precision less than that of the"
-                " default platform integer. In that case, the default platform integer is used.");
+        .add_enum("float16", mshadow::kFloat16)
+        .add_enum("float32", mshadow::kFloat32)
+        .add_enum("float64", mshadow::kFloat64)
+        .add_enum("int8", mshadow::kInt8)
+        .add_enum("int32", mshadow::kInt32)
+        .add_enum("int64", mshadow::kInt64)
+        .set_default(dmlc::optional<int>())
+        .describe(
+            "Type of the returned array and of the accumulator in which the elements"
+            " are summed. If dtype is not specified, it defaults to the dtype of a,"
+            " unless a has an integer dtype with a precision less than that of the"
+            " default platform integer. In that case, the default platform integer is used.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream axis_s, dtype_s;
@@ -72,24 +74,24 @@ struct CumsumParam : public dmlc::Parameter<CumsumParam> {
 };
 
 struct cumsum_forward {
-  template<typename IType, typename OType>
+  template <typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
-                                  OType *out,
-                                  const IType *in,
+                                  OType* out,
+                                  const IType* in,
                                   const index_t middle,
                                   const index_t trailing) {
     index_t left = i / trailing, right = i % trailing;
-    index_t offset = left * middle * trailing + right;
-    const IType *lane_in = in + offset;
-    OType *lane_out = out + offset;
-    lane_out[0] = OType(lane_in[0]);
+    index_t offset       = left * middle * trailing + right;
+    const IType* lane_in = in + offset;
+    OType* lane_out      = out + offset;
+    lane_out[0]          = OType(lane_in[0]);
     for (index_t j = 1; j < middle; ++j) {
       lane_out[j * trailing] = lane_out[(j - 1) * trailing] + OType(lane_in[j * trailing]);
     }
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void CumsumForwardImpl(const OpContext& ctx,
                        const TBlob& in,
                        const TBlob& out,
@@ -99,10 +101,11 @@ void CumsumForwardImpl(const OpContext& ctx,
 
   CHECK(!axis.has_value() ||
         ((axis.value() >= -out.shape_.ndim()) && axis.value() < out.shape_.ndim()))
-    << "axis value " << axis.value() << " out of range";
+      << "axis value " << axis.value() << " out of range";
 
   size_t middle = axis.has_value() ? out.shape_[axis.value()] : out.Size();
-  if (middle == 0 || out.Size() == 0) return;
+  if (middle == 0 || out.Size() == 0)
+    return;
   size_t trailing = 1;
   if (axis.has_value()) {
     for (index_t i = axis.value() + 1; i < out.shape_.ndim(); ++i) {
@@ -110,17 +113,16 @@ void CumsumForwardImpl(const OpContext& ctx,
     }
   }
 
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH_WITH_BOOL(in.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(out.type_flag_, OType, {
       Kernel<cumsum_forward, xpu>::Launch(
-        s, out.Size() / middle, out.dptr<OType>(),
-        in.dptr<IType>(), middle, trailing);
+          s, out.Size() / middle, out.dptr<OType>(), in.dptr<IType>(), middle, trailing);
     });
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 void CumsumForward(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
@@ -131,22 +133,22 @@ void CumsumForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const CumsumParam &param = nnvm::get<CumsumParam>(attrs.parsed);
+  const CumsumParam& param = nnvm::get<CumsumParam>(attrs.parsed);
 
   CumsumForwardImpl<xpu>(ctx, inputs[0], outputs[0], param.axis);
 }
 
 struct cumsum_backward {
-  template<typename IType, typename OType>
+  template <typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
-                                  IType *igrad,
-                                  const OType *ograd,
+                                  IType* igrad,
+                                  const OType* ograd,
                                   const index_t middle,
                                   const index_t trailing) {
     index_t left = i / trailing, right = i % trailing;
-    index_t offset = left * middle * trailing + right;
-    const OType *lane_ograd = ograd + offset;
-    IType *lane_igrad = igrad + offset;
+    index_t offset                      = left * middle * trailing + right;
+    const OType* lane_ograd             = ograd + offset;
+    IType* lane_igrad                   = igrad + offset;
     lane_igrad[(middle - 1) * trailing] = IType(lane_ograd[(middle - 1) * trailing]);
     for (index_t j = middle - 2; j >= 0; --j) {
       lane_igrad[j * trailing] = lane_igrad[(j + 1) * trailing] + IType(lane_ograd[j * trailing]);
@@ -154,7 +156,7 @@ struct cumsum_backward {
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void CumsumBackwardImpl(const OpContext& ctx,
                         const TBlob& ograd,
                         const TBlob& igrad,
@@ -162,24 +164,24 @@ void CumsumBackwardImpl(const OpContext& ctx,
   using namespace mshadow;
   using namespace mxnet_op;
   size_t middle = axis.has_value() ? igrad.shape_[axis.value()] : igrad.Size();
-  if (middle == 0 || igrad.Size() == 0) return;
+  if (middle == 0 || igrad.Size() == 0)
+    return;
   size_t trailing = 1;
   if (axis.has_value()) {
     for (index_t i = axis.value() + 1; i < igrad.shape_.ndim(); ++i) {
       trailing *= igrad.shape_[i];
     }
   }
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH_WITH_BOOL(igrad.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
       Kernel<cumsum_backward, xpu>::Launch(
-        s, igrad.Size() / middle, igrad.dptr<IType>(),
-        ograd.dptr<OType>(), middle, trailing);
+          s, igrad.Size() / middle, igrad.dptr<IType>(), ograd.dptr<OType>(), middle, trailing);
     });
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 void CumsumBackward(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
                     const std::vector<TBlob>& inputs,
@@ -190,7 +192,7 @@ void CumsumBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const CumsumParam &param = nnvm::get<CumsumParam>(attrs.parsed);
+  const CumsumParam& param = nnvm::get<CumsumParam>(attrs.parsed);
 
   CumsumBackwardImpl<xpu>(ctx, inputs[0], outputs[0], param.axis);
 }

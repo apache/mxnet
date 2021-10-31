@@ -79,7 +79,7 @@ def test_inference(model_name):
         gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))
 
     cpu_data = mx.np.array(data, ctx=mx.cpu())
-    for i in range(5):
+    for _ in range(5):
         # Run inference.
         with autograd.record(train_mode=False):
             cpu_out = cpu_model(cpu_data)
@@ -96,14 +96,14 @@ def get_nn_model(name):
     else:
         return get_model(name)
 
-# Seed 1521019752 produced a failure on the Py2 MKLDNN-GPU CI runner
+# Seed 1521019752 produced a failure on the Py2 DNNL-GPU CI runner
 # on 2/16/2018 that was not reproducible.  Problem could be timing related or
 # based on non-deterministic algo selection.
 @mx.util.use_np
 @pytest.mark.serial
 def test_training():
     # We use network models without dropout for testing.
-    # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
+    # TODO(zhengda) mobilenet can't pass this test even without DNNL.
     all_models = ['resnet18_v1', 'densenet121']
 
     batch_size = 10

@@ -45,12 +45,13 @@ from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
 from ..runtime import Features
 from ..context import Context
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
-                   is_np_default_dtype
+                   is_np_default_dtype, wrap_data_api_statical_func
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
-from ..dlpack import ndarray_from_numpy, ndarray_to_dlpack_for_write, DLDeviceType
+from ..dlpack import ndarray_from_numpy, ndarray_to_dlpack_for_write, DLDeviceType,\
+                     ndarray_from_dlpack
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -58,17 +59,17 @@ from . import fallback
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
-           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'power', 'bitwise_not',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'pow', 'power', 'bitwise_not',
            'delete', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
-           'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
-           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
-           'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
-           'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
-           'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero', 'tril_indices',
-           'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'amax', 'amin', 'max', 'min',
-           'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
+           'arctan2', 'atan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'bitwise_invert', 'invert',
+           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'asin', 'arccos', 'acos', 'arctan',
+           'atan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square',
+           'negative', 'histogram', 'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'asinh',
+           'arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
+           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit',
+           'dsplit', 'flatnonzero', 'tril_indices', 'concatenate', 'concat', 'stack', 'vstack', 'row_stack',
+           'column_stack', 'hstack', 'dstack', 'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin',
+           'amax', 'amin', 'max', 'min', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
            'logical_and', 'logical_or', 'logical_xor',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
@@ -80,7 +81,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal']
+           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
+           'positive', 'logaddexp', 'floor_divide', 'permute_dims', 'from_dlpack']
 
 __all__ += fallback.__all__
 
@@ -1056,6 +1058,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             raise ValueError('trying to add to a readonly ndarray')
         return add(self, other, out=self)
 
+    @wrap_mxnp_np_ufunc
+    def __radd__(self, other):
+        """x.__radd__(y) <=> y + x"""
+        return add(other, self)
+
     def __invert__(self):
         """x.__invert__() <=> ~x"""
         return invert(self)
@@ -1066,14 +1073,29 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return bitwise_and(self, other)
 
     @wrap_mxnp_np_ufunc
+    def __rand__(self, other):
+        """x.__rand__(y) <=> y & x"""
+        return bitwise_and(other, self)
+
+    @wrap_mxnp_np_ufunc
     def __or__(self, other):
         """x.__or__(y) <=> x | y"""
         return bitwise_or(self, other)
 
     @wrap_mxnp_np_ufunc
+    def __ror__(self, other):
+        """x.__ror__(y) <=> y | x"""
+        return bitwise_or(other, self)
+
+    @wrap_mxnp_np_ufunc
     def __xor__(self, other):
         """x.__xor__(y) <=> x ^ y"""
         return bitwise_xor(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __rxor__(self, other):
+        """x.__rxor__(y) <=> y ^ x"""
+        return bitwise_xor(other, self)
 
     @wrap_mxnp_np_ufunc
     def __iand__(self, other):
@@ -1132,8 +1154,30 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__mul__(y) <=> x * y"""
         return multiply(self, other)
 
+    @wrap_mxnp_np_ufunc
+    def __floordiv__(self, other):
+        """x.__floordiv__(y) <=> x // y"""
+        return floor_divide(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __ifloordiv__(self, other):
+        """x.__ifloordiv__(y) <=> x //= y"""
+        if not self.writable:
+            raise ValueError('trying to divide from a readonly ndarray')
+        return floor_divide(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rfloordiv__(self, other):
+        """x.__rfloordiv__(y) <=> y // x"""
+        return floor_divide(other, self)
+
     def __neg__(self):
+        """x.__neg__() <=> -x"""
         return negative(self)
+
+    def __pos__(self):
+        """x.__pos__() <=> +x"""
+        return positive(self)
 
     @wrap_mxnp_np_ufunc
     def __imul__(self, other):
@@ -1201,6 +1245,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
         return power(other, self)
+
+    @wrap_mxnp_np_ufunc
+    def __ipow__(self, other):
+        """x.__ipow__(y) <=> x **= y"""
+        return power(self, other, out=self)
 
     @wrap_mxnp_np_ufunc
     def __eq__(self, other):
@@ -1324,7 +1373,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
         """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim != 2:
+            warnings.warn('x.T requires x to have 2 dimensions. '
+                          'Use x.mT to transpose stacks of matrices and '
+                          'permute_dims() to permute dimensions.')
         return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def mT(self):
+        """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim < 2:
+            raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+        return _mx_nd_np.swapaxes(self, -1, -2)
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
@@ -1449,6 +1511,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             ctypes.pointer(mx_uint(grad_req)),
             ctypes.pointer(grad.handle)))
 
+    def drop_grad(self):
+        """Free the memory of the marked ndarray."""
+        check_call(_LIB.MXAutogradDropGrads(
+            1, ctypes.pointer(self.handle)))
+
     @property
     def grad(self):
         """Returns gradient buffer attached to this ndarray."""
@@ -1572,10 +1639,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
-    def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
+    def argmax(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return indices of the maximum values along the given axis.
         Refer to `mxnet.numpy.argmax` for full documentation."""
-        return argmax(self, axis, out)
+        return argmax(self, axis, out, keepdims)
 
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
@@ -1913,10 +1980,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute argmax_channel')
 
-    def argmin(self, axis=None, out=None):  # pylint: disable=arguments-differ
+    def argmin(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return indices of the minium values along the given axis.
         Refer to `mxnet.numpy.argmin` for full documentation."""
-        return argmin(self, axis, out)
+        return argmin(self, axis, out, keepdims)
 
     def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
         """Return an array whose values are limited to [min, max].
@@ -2055,13 +2122,16 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     # pylint: disable=too-many-arguments, arguments-differ
-    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
-        """Returns the standard deviation of the array elements along given axis."""
-        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
-    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+    @wrap_data_api_statical_func
+    def std(self, axis=None, dtype=None, out=None, correction=0, keepdims=False):
+        """Returns the standard deviation of the array elements along given axis."""
+        return std(self, axis=axis, dtype=dtype, correction=correction, keepdims=keepdims, out=out)
+
+    @wrap_data_api_statical_func
+    def var(self, axis=None, dtype=None, out=None, correction=0, keepdims=False):
         """Returns the variance of the array elements, along given axis."""
-        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
+        return var(self, axis=axis, dtype=dtype, out=out, correction=correction, keepdims=keepdims)
     # pylint: enable=too-many-arguments, arguments-differ
 
     def cumsum(self, axis=None, dtype=None, out=None):
@@ -3435,6 +3505,50 @@ def true_divide(x1, x2, out=None):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
+def floor_divide(x1, x2, out=None):
+    """Return the largest integer smaller or equal to the division of the inputs.
+
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+
+    .. note::
+
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
+
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+         precise type
+
+    Examples
+    --------
+    >>> np.floor_divide(7,3)
+    2
+    >>> np.floor_divide([1., 2., 3., 4.], 2.5)
+    array([ 0.,  0.,  1.,  1.])
+    """
+    return _mx_nd_np.floor_divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
 def mod(x1, x2, out=None, **kwargs):
     """
     Return element-wise remainder of division.
@@ -3631,6 +3745,7 @@ def remainder(x1, x2, out=None, **kwargs):
     return _mx_nd_np.remainder(x1, x2, out=out)
 
 
+
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
 def power(x1, x2, out=None, **kwargs):
@@ -3681,6 +3796,61 @@ def power(x1, x2, out=None, **kwargs):
     """
     return _mx_nd_np.power(x1, x2, out=out)
 
+pow = power
+pow.__doc_ = """
+    First array elements raised to powers from second array, element-wise.
+    
+    Notes 
+    ----- 
+    `pow` is an alias for `power`. It is a standard API in 
+    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#pow-x1-x2 
+    instead of an official NumPy operator. 
+    
+    >>> np.pow is np.power 
+    True 
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        The bases.
+
+    x2 : ndarray or scalar
+        The exponent.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The bases in x1 raised to the exponents in x2.
+        This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    --------
+    >>> x1 = np.arange(6)
+    >>> np.pow(x1, 3)
+    array([  0.,   1.,   8.,  27.,  64., 125.])
+
+    Raise the bases to different exponents.
+
+    >>> x2 = np.array([1.0, 2.0, 3.0, 3.0, 2.0, 1.0])
+    >>> np.pow(x1, x2)
+    array([ 0.,  1.,  8., 27., 16.,  5.])
+
+    The effect of broadcasting.
+
+    >>> x2 = np.array([[1, 2, 3, 3, 2, 1], [1, 2, 3, 3, 2, 1]])
+    >>> x2
+    array([[1., 2., 3., 3., 2., 1.],
+           [1., 2., 3., 3., 2., 1.]])
+
+    >>> np.pow(x1, x2)
+    array([[ 0.,  1.,  8., 27., 16.,  5.],
+           [ 0.,  1.,  8., 27., 16.,  5.]])
+    """
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
@@ -4264,6 +4434,66 @@ def arcsin(x, out=None, **kwargs):
     """
     return _mx_nd_np.arcsin(x, out=out, **kwargs)
 
+asin = arcsin
+asin.__doc__ = """
+    Inverse sine, element-wise.
+    
+    >>>np.asin is np.asin
+    True
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        `y`-coordinate on the unit circle.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    angle : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+        The inverse sine of each element in `x`, in radians and in the
+        closed interval ``[-pi/2, pi/2]``.
+
+    Examples
+    --------
+    >>> np.asin(1)     # pi/2
+    1.5707963267948966
+    >>> np.asin(-1)    # -pi/2
+    -1.5707963267948966
+    >>> np.asin(0)
+    0.0
+
+    .. note::
+       `asin` is a alias for `arcsin`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asin-x
+       instead of an official NumPy operator.
+       
+       `asin` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that :math:`sin(z) = x`.  The convention is to
+       return the angle `z` whose real part lies in [-pi/2, pi/2].
+       For real-valued input data types, *asin* always returns real output.
+       For each value that cannot be expressed as a real number or infinity,
+       it yields ``nan`` and sets the `invalid` floating point error flag.
+       The inverse sine is also known as `asin` or sin^{-1}.
+       The output `ndarray` has the same `ctx` as the input `ndarray`.
+       This function differs from the original `numpy.arcsin
+       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+       the following aspects:
+
+       * Only support ndarray or scalar now.
+       * `where` argument is not supported.
+       * Complex input is not supported.
+
+    References
+    ----------
+    Abramowitz, M. and Stegun, I. A., *Handbook of Mathematical Functions*,
+    10th printing, New York: Dover, 1964, pp. 79ff.
+    http://www.math.sfu.ca/~cbm/aands/
+    """
+
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -4303,6 +4533,47 @@ def arccos(x, out=None, **kwargs):
     """
     return _mx_nd_np.arccos(x, out=out, **kwargs)
 
+acos = arccos
+acos.__doc__ = """
+    Trigonometric inverse cosine, element-wise.
+    The inverse of cos so that, if y = cos(x), then x = acos(y).
+    
+    >>>np.acos is np.arccos
+    True
+
+    Parameters
+    ----------
+    x : ndarray
+        x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that
+        the inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+        A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    ----------
+    angle : ndarray
+        The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi].
+        This is a scalar if x is a scalar.
+
+    Notes
+    ----------
+    `acos` is a alias for `arccos`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acos-x
+    instead of an official NumPy operator.
+    
+    acos is a multivalued function: for each x there are infinitely many numbers z such that
+    cos(z) = x. The convention is to return the angle z whose real part lies in [0, pi].
+    For real-valued input data types, acos always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it yields nan and sets
+    the invalid floating point error flag.
+    The inverse cos is also known as acos or cos^-1.
+
+    Examples
+    ----------
+    >>> np.acos([1, -1])
+    array([ 0.        ,  3.14159265])
+    """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -4347,6 +4618,54 @@ def arctan(x, out=None, **kwargs):
     0.7853981633974483
     """
     return _mx_nd_np.arctan(x, out=out, **kwargs)
+
+atan = arctan
+atan.__doc__ = """
+    Trigonometric inverse tangent, element-wise.
+    The inverse of tan, so that if ``y = tan(x)`` then ``x = atan(y)``.
+    
+    >>>np.atan is np.arctan
+    True
+    
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Out has the same shape as `x`. It lies is in
+        ``[-pi/2, pi/2]`` (``atan(+/-inf)`` returns ``+/-pi/2``).
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    `atan` is a alias for `arctan`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan-x
+    instead of an official NumPy operator.
+    
+    `atan` is a multi-valued function: for each `x` there are infinitely
+    many numbers `z` such that tan(`z`) = `x`.  The convention is to return
+    the angle `z` whose real part lies in [-pi/2, pi/2].
+    For real-valued input data types, `atan` always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    For complex-valued input, we do not have support for them yet.
+    The inverse tangent is also known as `atan` or tan^{-1}.
+
+    Examples
+    --------
+    >>> x = np.array([0, 1])
+    >>> np.atan(x)
+    array([0.       , 0.7853982])
+    >>> np.pi/4
+    0.7853981633974483
+    """
 
 
 @set_module('mxnet.numpy')
@@ -4859,6 +5178,38 @@ def negative(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
+def positive(x, out=None, **kwargs):
+    r"""
+    Computes the numerical positive of each element `x_i` (i.e.,`y_i = +x_i`)
+    of the input array x .
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Returned array or scalar: y = +x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    Equivalent to `x.copy()`, but only defined for types that support arithmetic.
+
+    Examples
+    --------
+    >>> x1 = np.array(([1., -1.]))
+    >>> np.positive(x1)
+    array([ 1., -1.])
+    >>> +x1
+    array([ 1., -1.])
+    """
+    return _mx_nd_np.positive(x, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
 def fix(x, out=None, **kwargs):
     """
     Round an array of floats element-wise to nearest integer towards zero.
@@ -4991,6 +5342,59 @@ def floor(x, out=None, **kwargs):
     array(3.)
     """
     return _mx_nd_np.floor(x, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def bitwise_invert(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+
+    >>> x = np.bitwise_invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _mx_nd_np.bitwise_not(x, out=out, **kwargs)
+
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -5222,6 +5626,56 @@ def arcsinh(x, out=None, **kwargs):
     """
     return _mx_nd_np.arcsinh(x, out=out, **kwargs)
 
+asinh = arcsinh
+asinh.__doc__ = """
+    Inverse hyperbolic cosine, element-wise.
+    
+    >>>np.asinh is np.arcsinh
+    True
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    asinh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    .. note::
+       `asinh` is a alias for `arcsinh`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asinh-x
+       instead of an official NumPy operator.
+       
+       `asinh` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that `sinh(z) = x`.
+
+       For real-valued input data types, `asinh` always returns real output.
+       For each value that cannot be expressed as a real number or infinity, it
+       yields ``nan`` and sets the `invalid` floating point error flag.
+
+       This function differs from the original numpy.arcsinh in the following aspects:
+
+       * Do not support `where`, a parameter in numpy which indicates where to calculate.
+       * Do not support complex-valued input.
+       * Cannot cast type automatically. DType of `out` must be same as the expected one.
+       * Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+       * If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([3.2, 5.0])
+    >>> np.asinh(a)
+    array([1.8309381, 2.2924316])
+
+    >>> np.asinh(1)
+    0.0
+    """
+
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -5269,6 +5723,55 @@ def arccosh(x, out=None, **kwargs):
     """
     return _mx_nd_np.arccosh(x, out=out, **kwargs)
 
+acosh = arccosh
+acosh.__doc__ = """
+    Inverse hyperbolic cosine, element-wise.
+    
+    >>>np.acosh is np.arccosh
+    True
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    acosh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    .. note::
+       `acosh` is a alias for `arccosh`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acosh-x
+       instead of an official NumPy operator.
+       
+       `acosh` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that `cosh(z) = x`.
+
+       For real-valued input data types, `acosh` always returns real output.
+       For each value that cannot be expressed as a real number or infinity, it
+       yields ``nan`` and sets the `invalid` floating point error flag.
+
+       This function differs from the original numpy.arccosh in the following aspects:
+
+       * Do not support `where`, a parameter in numpy which indicates where to calculate.
+       * Do not support complex-valued input.
+       * Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+       * Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+       * If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([3.2, 5.0])
+    >>> np.acosh(a)
+    array([1.8309381, 2.2924316])
+
+    >>> np.acosh(1)
+    0.0
+    """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -5315,6 +5818,56 @@ def arctanh(x, out=None, **kwargs):
     0.0
     """
     return _mx_nd_np.arctanh(x, out=out, **kwargs)
+
+atanh = arctanh
+atanh.__doc__ = """
+    Inverse hyperbolic tangent, element-wise.
+
+    >>>np.atanh is np.arctanh
+    True
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    atanh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    .. note::
+       `atanh` is a alias for `arctanh`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atanh-x
+       instead of an official NumPy operator.
+    
+       `atanh` is a multivalued function: for each `x` there are infinitely
+       many numbers `z` such that `tanh(z) = x`.
+
+       For real-valued input data types, `atanh` always returns real output.
+       For each value that cannot be expressed as a real number or infinity, it
+       yields ``nan`` and sets the `invalid` floating point error flag.
+
+       This function differs from the original numpy.arctanh in the following aspects:
+
+       * Do not support `where`, a parameter in numpy which indicates where to calculate.
+       * Do not support complex-valued input.
+       * Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+       * Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+       * If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([0.0, -0.5])
+    >>> np.atanh(a)
+    array([0., -0.54930615])
+
+    >>> np.atanh(1)
+    0.0
+    """
 
 
 @set_module('mxnet.numpy')
@@ -5948,6 +6501,46 @@ def transpose(a, axes=None):
 
 
 @set_module('mxnet.numpy')
+def permute_dims(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted.
+
+    Note
+    --------
+    `permute_dims` is a alias for `transpose`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#permute-dims-x-axes
+    instead of an official NumPy operator.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.permute_dims(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.permute_dims(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _mx_nd_np.transpose(a, axes)
+
+
+@set_module('mxnet.numpy')
 def repeat(a, repeats, axis=None):
     """
     Repeat elements of an array.
@@ -6572,6 +7165,62 @@ def dsplit(ary, indices_or_sections):
     """
     return _mx_nd_np.dsplit(ary, indices_or_sections)
 
+@set_module('mxnet.numpy')
+def concat(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+
+    Note
+    --------
+    `concate` is a alias for `concatante`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#concat-arrays-axis-0
+    instead of an official NumPy operator.
+
+    See Also
+    --------
+    split : Split array into a list of multiple sub-arrays of equal size.
+    hsplit : Split array into multiple sub-arrays horizontally (column wise)
+    vsplit : Split array into multiple sub-arrays vertically (row wise)
+    dsplit : Split array into multiple sub-arrays along the 3rd axis (depth).
+    stack : Stack a sequence of arrays along a new axis.
+    hstack : Stack arrays in sequence horizontally (column wise)
+    vstack : Stack arrays in sequence vertically (row wise)
+    dstack : Stack arrays in sequence depth wise (along third dimension)
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> b = np.array([[5, 6]])
+    >>> np.concat((a, b), axis=0)
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+
+    >>> np.concat((a, b.T), axis=1)
+    array([[1., 2., 5.],
+           [3., 4., 6.]])
+
+    >>> np.concat((a, b), axis=None)
+    array([1., 2., 3., 4., 5., 6.])
+    """
+    return _mx_nd_np.concatenate(seq, axis=axis, out=out)
 
 @set_module('mxnet.numpy')
 def concatenate(seq, axis=0, out=None):
@@ -7264,7 +7913,7 @@ def clip(a, a_min, a_max, out=None):
 
 
 @set_module('mxnet.numpy')
-def argmax(a, axis=None, out=None):
+def argmax(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -7278,6 +7927,11 @@ def argmax(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -7286,6 +7940,10 @@ def argmax(a, axis=None, out=None):
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the maximum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -7329,11 +7987,11 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _mx_nd_np.argmax(a, axis, out)
+    return _mx_nd_np.argmax(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
-def argmin(a, axis=None, out=None):
+def argmin(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the minimum values along an axis.
 
@@ -7347,6 +8005,11 @@ def argmin(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -7355,6 +8018,10 @@ def argmin(a, axis=None, out=None):
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the minimum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -7398,7 +8065,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _mx_nd_np.argmin(a, axis, out)
+    return _mx_nd_np.argmin(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
@@ -7688,7 +8355,8 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+@wrap_data_api_statical_func
+def std(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the standard deviation along the specified axis.
     Returns the standard deviation, a measure of the spread of a distribution,
@@ -7713,10 +8381,10 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
         Alternative output array in which to place the result. It must have
         the same shape as the expected output but the type (of the calculated
         values) will be cast if necessary.
-    ddof : int, optional
+    correction : int, optional
         Means Delta Degrees of Freedom.  The divisor used in calculations
-        is ``N - ddof``, where ``N`` represents the number of elements.
-        By default `ddof` is zero.
+        is ``N - correction``, where ``N`` represents the number of elements.
+        By default `correction` is zero.
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left
         in the result as dimensions with size one. With this option,
@@ -7751,7 +8419,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> np.std(a, dtype=np.float64)
     array(0.45, dtype=float64)
     """
-    return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=correction, keepdims=keepdims, out=out)
 # pylint: enable=redefined-outer-name
 
 
@@ -7806,7 +8474,8 @@ def delete(arr, obj, axis=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+@wrap_data_api_statical_func
+def var(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
     Returns the variance of the array elements, a measure of the spread of a
@@ -7834,10 +8503,10 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
         Alternate output array in which to place the result.  It must have
         the same shape as the expected output, but the type is cast if
         necessary.
-    ddof : int, optional
+    correction : int, optional
         "Delta Degrees of Freedom": the divisor used in the calculation is
-        ``N - ddof``, where ``N`` represents the number of elements. By
-        default `ddof` is zero.
+        ``N - correction``, where ``N`` represents the number of elements. By
+        default `correction` is zero.
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left
         in the result as dimensions with size one. With this option,
@@ -7874,7 +8543,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
     0.2025
     """
-    return _mx_nd_np.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _mx_nd_np.var(a, axis=axis, dtype=dtype, ddof=correction, keepdims=keepdims, out=out)
 
 
 # pylint: disable=redefined-outer-name
@@ -8713,6 +9382,97 @@ def arctan2(x1, x2, out=None, **kwargs):
     """
     return _mx_nd_np.arctan2(x1, x2, out=out)
 
+atan2 = arctan2
+atan2.__doc__ = """
+    Element-wise arc tangent of ``x1/x2`` choosing the quadrant correctly.
+
+    The quadrant (i.e., branch) is chosen so that ``atan2(x1, x2)`` is
+    the signed angle in radians between the ray ending at the origin and
+    passing through the point (1,0), and the ray ending at the origin and
+    passing through the point (`x2`, `x1`).  (Note the role reversal: the
+    "`y`-coordinate" is the first function parameter, the "`x`-coordinate"
+    is the second.)  By IEEE convention, this function is defined for
+    `x2` = +/-0 and for either or both of `x1` and `x2` = +/-inf (see
+    Notes for specific values).
+
+    This function is not defined for complex-valued arguments; for the
+    so-called argument of complex values, use `angle`.
+    
+    >>>np.atan2 is np.arctan2
+    True
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        `y`-coordinates.
+    x2 : ndarray or scalar
+        `x`-coordinates. `x2` must be broadcastable to match the shape of
+        `x1` or vice versa.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Array of angles in radians, in the range ``[-pi, pi]``. This is a scalar if
+        `x1` and `x2` are scalars.
+
+    .. notes::
+       `atan2` is a alias for `arctan2`. It is a standard API in
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x1-x2
+       instead of an official NumPy operator.
+       
+       *atan2* is identical to the ``atan2`` function of the underlying
+       C library.  The following special values are defined in the C
+       standard: [1]_
+
+       +========+========+==================+
+       | `x1`   | `x2`   | `atan2(x1,x2)` |
+       +========+========+==================+
+       | +/- 0  | +0     | +/- 0            |
+       +========+========+==================+
+       | +/- 0  | -0     | +/- pi           |
+       +========+========+==================+
+       | > 0    | +/-inf | +0 / +pi         |
+       +========+========+==================+
+       | < 0    | +/-inf | -0 / -pi         |
+       +========+========+==================+
+       | +/-inf | +inf   | +/- (pi/4)       |
+       +========+========+==================+
+       | +/-inf | -inf   | +/- (3*pi/4)     |
+       +========+========+==================+
+
+       Note that +0 and -0 are distinct floating point numbers, as are +inf
+       and -inf.
+
+       This function differs from the original numpy.arange in the following aspects:
+
+       * Only support float16, float32 and float64.
+
+    References
+    ----------
+    .. [1] ISO/IEC standard 9899:1999, "Programming language C."
+
+    Examples
+    --------
+    Consider four points in different quadrants:
+
+    >>> x = np.array([-1, +1, +1, -1])
+    >>> y = np.array([-1, -1, +1, +1])
+    >>> np.atan2(y, x) * 180 / np.pi
+    array([-135.,  -45.,   45.,  135.])
+
+    Note the order of the parameters. `atan2` is defined also when `x2` = 0
+    and at several other special points, obtaining values in
+    the range ``[-pi, pi]``:
+
+    >>> x = np.array([1, -1])
+    >>> y = np.array([0, 0])
+    >>> np.atan2(x, y)
+    array([ 1.5707964, -1.5707964])
+    """
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
@@ -8915,6 +9675,46 @@ def ldexp(x1, x2, out=None, **kwargs):
     array([  5.,  10.,  20.,  40.])
     """
     return _mx_nd_np.ldexp(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logaddexp(x1, x2, out=None, **kwargs):
+    """
+    Logarithm of the sum of exponentiations of the inputs.
+
+    Calculates log(exp(x1) + exp(x2)). This function is useful in statistics where
+    the calculated probabilities of events may be so small as to exceed the range of
+    normal floating point numbers. In such cases the logarithm of the calculate
+    probability is stored. This function allows adding probabilities stored
+    in such a fashion.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Array of multipliers.
+    x2 : ndarray or scalar, int
+        Array of twos exponents.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Logarithm of exp(x1) + exp(x2). This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    --------
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> prob12 = np.logaddexp(prob1, prob2)
+    >>> prob12
+    -113.87649168120691
+    >>> np.exp(prob12)
+    3.5000000000000057e-50
+    """
+    return _mx_nd_np.logaddexp(x1, x2, out)
 
 
 @set_module('mxnet.numpy')
@@ -12272,4 +13072,35 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     array(-128, dtype=int8)
     """
     return _mx_nd_np.sum(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims, initial=initial, where=where)
+
+
+@set_module('mxnet.numpy')
+def from_dlpack(x):
+    """
+    Returns a np.ndarray backed by a dlpack tensor.
+
+    Parameters
+    ----------
+    dlpack : an object with __dlpack__ method or PyCapsule (the pointer of DLManagedTensor)
+        input data
+
+    Returns
+    -------
+    out : np.ndarray
+        an ndarray backed by a dlpack tensor
+
+    Examples
+    --------
+    >>> x = mx.np.ones((2,3))
+    >>> y = mx.np.from_dlpack(x)
+    >>> y
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
+    >>> y += 1
+    >>> x
+    array([[2., 2., 2.],
+           [2., 2., 2.]])
+    """
+    from_dlpack = ndarray_from_dlpack(ndarray)
+    return from_dlpack(x)
 # pylint: enable=redefined-outer-name, too-many-arguments

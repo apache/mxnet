@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file base.h
  * \brief configuration of MXNet as well as basic data structure.
  */
@@ -349,9 +348,9 @@ struct RunContext {
    */
   void *aux_stream;
   /*!
-   * \brief indicator of whether this execution is run in bulk mode
+   * \brief pointer to the cuda event pool used by the dependency engine
    */
-  bool is_bulk;
+  void* event_pool = nullptr;
   /*!
    * \brief get mshadow stream from Context
    * \return the mshadow stream
@@ -542,7 +541,7 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 
 
 #if MXNET_USE_ONEDNN == 1 || MXNET_USE_INTGEMM == 1
-constexpr size_t kMKLDNNAlign = 64;
+constexpr size_t kDNNLAlign = 64;
 #endif
 
 }  // namespace mxnet

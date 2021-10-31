@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file opencv_compatibility.h
  * \brief To be compatible with multiple versions of opencv
  */
@@ -45,12 +44,12 @@
 #define CV_RGB2BGR cv::COLOR_RGB2BGR
 #define CV_BGR2RGB cv::COLOR_BGR2RGB
 
-#define CV_INTER_LINEAR cv::INTER_LINEAR
+#define CV_INTER_LINEAR  cv::INTER_LINEAR
 #define CV_INTER_NEAREST cv::INTER_NEAREST
 
-#define CV_LOAD_IMAGE_COLOR cv::IMREAD_COLOR
+#define CV_LOAD_IMAGE_COLOR        cv::IMREAD_COLOR
 #define CV_IMWRITE_PNG_COMPRESSION cv::IMWRITE_PNG_COMPRESSION
-#define CV_IMWRITE_JPEG_QUALITY cv::IMWRITE_JPEG_QUALITY
+#define CV_IMWRITE_JPEG_QUALITY    cv::IMWRITE_JPEG_QUALITY
 
 #endif  // CV_VERSION_MAJOR >= 4
 

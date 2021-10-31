@@ -48,7 +48,6 @@ from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
 from test_subgraph_op import *
-from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_optimizer import test_adamW
 del test_custom_op_fork  #noqa
@@ -180,7 +179,7 @@ def check_fft(shape):
 def test_fft():
     nrepeat = 2
     maxdim = 10
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         for order in [2,4]:
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_fft(shape)
@@ -339,7 +338,7 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                     rescale_grad=0.95, momentum=momentum, out=mx_p_w)
 
     def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
-        for i, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
+        for _, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
             assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
     if dtype == 'float16':
         rtol = 1e-3
@@ -1788,7 +1787,7 @@ def test_autograd_save_memory():
     x.attach_grad()
 
     with mx.autograd.record():
-        for i in range(200):
+        for _ in range(200):
             x = x + 1
             x.wait_to_read()
     x.backward()
@@ -1848,7 +1847,7 @@ def test_cross_device_autograd():
 
     with mx.autograd.record():
         y = x
-        for i in range(3):
+        for _ in range(3):
             y = mx.nd.tanh(y)
         y.backward()
 
@@ -2115,78 +2114,6 @@ def test_bilinear_sampler_versions():
                 if req_dict['grid'] is 'write':
                     assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
 
-
-# isolated execution bulking test function to be invoked with different env var settings
-def _test_bulking_in_process(seed, time_per_iteration):
-    data_shape = (10,)
-    num_ops = 1000
-    num_iterations = 20
-
-    ctx = default_context()
-    # build symbol
-    X = mx.sym.Variable('X')
-    sym = mx.sym.flip(X, axis=0)
-    for _ in range(num_ops-1):
-        sym = mx.sym.flip(sym, axis=0)
-    x = mx.ndarray.zeros(data_shape)
-    dx = mx.ndarray.zeros(data_shape)
-    dy = mx.ndarray.ones(data_shape)
-    exe = sym._bind(ctx=ctx, args=[x], args_grad = {'X':dx})
-
-    # time a number of forward() and backward() executions after some warm-up iterations
-    warmups = 1
-    for i in range(num_iterations+warmups):
-        if i == warmups:
-            start = time.time()
-        exe.forward(is_train=True)
-        exe.backward(dy)
-        dx.wait_to_read()
-    time_per_iteration.value = (time.time() - start) / num_iterations
-
-
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
-def test_bulking_operator_gpu():
-    _test_bulking(_test_bulking_in_process)
-
-
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
-def test_bulking():
-    # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
-    test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
-    times = {}
-    times_str = ''
-    for seg_sizes in test_cases:
-        # Create shared variable to return measured time from test process
-        time_per_iteration = mp.Manager().Value('d', 0.0)
-        if not run_in_spawned_process(_test_bulking_in_process,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : str(seg_sizes[0]),
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : str(seg_sizes[1]),
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : str(seg_sizes[2])},
-                                      time_per_iteration):
-            # skip test since the python version can't run it properly.  Warning msg was logged.
-            return
-        times[seg_sizes] = time_per_iteration.value
-        times_str += \
-            '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
-            seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
-
-    fastest_non_bulked_time = min(times[(0,0,True)], times[(1,1,True)], times[(15,15,False)])
-    slowest_half_bulked_time = max(times[(0,15,True)], times[(15,0,True)])
-    fastest_half_bulked_time = min(times[(0,15,True)], times[(15,0,True)])
-    fully_bulked_time = times[(15,15,True)]
-
-    print(times_str)
-    # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
-    # slower than both half-bulked times[0,15,True] and times[15,0,True]
-    assert slowest_half_bulked_time < fastest_non_bulked_time, \
-        'A half-bulked exec time is slower than the non-bulked time by {} secs! {}' \
-            .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
-    # The fully bulked times[15,15,True] should be faster than both half-bulked runs
-    assert fully_bulked_time < fastest_half_bulked_time, \
-        'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
-            .format(fully_bulked_time - fastest_half_bulked_time, times_str)
-
-
 @pytest.mark.serial
 def test_allclose_function_gpu():
     allclose_function([mx.cpu(), mx.gpu(0)])
@@ -2224,7 +2151,7 @@ def math_square(shape, dtype, check_value):
 
 def run_math(op, shape, dtype="float32", check_value=True):
     run_num = 10
-    for i in range(run_num):
+    for _ in range(run_num):
         if op == 'log':
             math_log(shape=shape, dtype=dtype, check_value=check_value)
         elif op == 'erf':

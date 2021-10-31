@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2021 by Contributors
  * \file adabelief.cu
  * \brief Optimizer operators
  * \author khaotik
@@ -28,13 +27,13 @@
 namespace mxnet {
 namespace op {
 namespace adabelief {
-template<>
-void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float *pScalef) {
+template <>
+void GetScaleFloat<gpu>(mshadow::Stream<gpu>* s, const TBlob& scale_blob, float* pScalef) {
   MSHADOW_REAL_TYPE_SWITCH(scale_blob.type_flag_, DType, {
-    DType scale = 0;
+    DType scale         = 0;
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-    CUDA_CALL(cudaMemcpyAsync(&scale, scale_blob.dptr<DType>(), sizeof(DType),
-                              cudaMemcpyDeviceToHost, stream));
+    CUDA_CALL(cudaMemcpyAsync(
+        &scale, scale_blob.dptr<DType>(), sizeof(DType), cudaMemcpyDeviceToHost, stream));
     CUDA_CALL(cudaStreamSynchronize(stream));
     *pScalef = static_cast<float>(scale);
   })
@@ -42,16 +41,17 @@ void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float 
 }  // namespace adabelief
 
 NNVM_REGISTER_OP(_adabelief_update)
-.set_attr<FCompute>("FCompute<gpu>", adabelief::MPUpdate<gpu, adabelief::AdaBeliefUpdate<gpu>>);
+    .set_attr<FCompute>("FCompute<gpu>", adabelief::MPUpdate<gpu, adabelief::AdaBeliefUpdate<gpu>>);
 
 NNVM_REGISTER_OP(_mp_adabelief_update)
-.set_attr<FCompute>("FCompute<gpu>", adabelief::MPUpdate<gpu, adabelief::MPAdaBeliefUpdate<gpu>>);
+    .set_attr<FCompute>("FCompute<gpu>",
+                        adabelief::MPUpdate<gpu, adabelief::MPAdaBeliefUpdate<gpu>>);
 
 NNVM_REGISTER_OP(_multi_adabelief_update)
-.set_attr<FCompute>("FCompute<gpu>", adabelief::multiMPUpdate<gpu, false>);
+    .set_attr<FCompute>("FCompute<gpu>", adabelief::multiMPUpdate<gpu, false>);
 
 NNVM_REGISTER_OP(_multi_mp_adabelief_update)
-.set_attr<FCompute>("FCompute<gpu>", adabelief::multiMPUpdate<gpu, true>);
+    .set_attr<FCompute>("FCompute<gpu>", adabelief::multiMPUpdate<gpu, true>);
 
 }  // namespace op
 }  // namespace mxnet

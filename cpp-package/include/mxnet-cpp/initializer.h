@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file initializer.h
  * \brief random initializer
  * \author Zhang Chen

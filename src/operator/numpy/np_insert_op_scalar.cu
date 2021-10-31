@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_scalar.cu
  * \brief GPU Implementation of numpy insert operations (insert by int index)
  */
@@ -30,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_insert_scalar)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertScalarCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyInsertScalarCompute<gpu>);
 
 }
-}
+}  // namespace mxnet

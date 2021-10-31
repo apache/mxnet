@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2019 by Contributors
 * \file contrib.h
 * \brief utility function to enable some contrib features
 * \author Haohuan Wang

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file all_finite-inl.h
  * \brief operator for checking if a group of array is all finite
  * \author Clement Fuji Tsang
@@ -44,12 +43,10 @@
 namespace mxnet {
 namespace op {
 
-struct AllFiniteParam: public dmlc::Parameter<AllFiniteParam> {
+struct AllFiniteParam : public dmlc::Parameter<AllFiniteParam> {
   bool init_output;
   DMLC_DECLARE_PARAMETER(AllFiniteParam) {
-    DMLC_DECLARE_FIELD(init_output)
-    .set_default(true)
-    .describe("Initialize output to 1.");
+    DMLC_DECLARE_FIELD(init_output).set_default(true).describe("Initialize output to 1.");
   }
 };
 
@@ -57,32 +54,28 @@ struct MultiAllFiniteParam : public dmlc::Parameter<MultiAllFiniteParam> {
   int num_arrays;
   bool init_output;
   DMLC_DECLARE_PARAMETER(MultiAllFiniteParam) {
-    DMLC_DECLARE_FIELD(num_arrays)
-    .set_default(1)
-    .describe("Number of arrays.");
-    DMLC_DECLARE_FIELD(init_output)
-    .set_default(true)
-    .describe("Initialize output to 1.");
+    DMLC_DECLARE_FIELD(num_arrays).set_default(1).describe("Number of arrays.");
+    DMLC_DECLARE_FIELD(init_output).set_default(true).describe("Initialize output to 1.");
   }
 };
 
-template<typename DType>
+template <typename DType>
 struct MultiAllFiniteKernelParam {
   static const int N = 200;
   int count;
   size_t max_size;
   size_t sizes[N];
-  DType *arrays[N];
+  DType* arrays[N];
 };
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 MultiAllFiniteKernelParam<DType> FillMultiAllFiniteParam(const MultiAllFiniteParam& op_param,
-                                                         const OpContext &ctx,
-                                                         const std::vector<TBlob> &inputs) {
+                                                         const OpContext& ctx,
+                                                         const std::vector<TBlob>& inputs) {
   MultiAllFiniteKernelParam<DType> param;
   using namespace mxnet_op;
   Stream<xpu>* s = ctx.get_stream<xpu>();
-  param.count = op_param.num_arrays;
+  param.count    = op_param.num_arrays;
   param.max_size = 0;
   for (int i = 0; i < param.count; ++i) {
     param.sizes[i] = inputs[i].shape_.Size();

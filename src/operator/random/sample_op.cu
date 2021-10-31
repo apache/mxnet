@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file sample_op.cu
  * \brief GPU Implementation of sample op
  */
@@ -27,10 +26,10 @@
 namespace mxnet {
 namespace op {
 
-#define MXNET_OPERATOR_REGISTER_SAMPLE_GPU(name, ParamType)            \
-  NNVM_REGISTER_OP(name)                                               \
-  .set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, ParamType>)        \
-  .set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, ParamType>); \
+#define MXNET_OPERATOR_REGISTER_SAMPLE_GPU(name, ParamType)         \
+  NNVM_REGISTER_OP(name)                                            \
+      .set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, ParamType>) \
+      .set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, ParamType>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_uniform, SampleUniformParam)
 MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_normal, SampleNormalParam)

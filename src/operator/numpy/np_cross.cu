@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file np_bicount_op.cu
  * \brief GPU Implementation of numpy-compatible cross
  */
@@ -28,11 +27,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_cross)
-.set_attr<FCompute>("FCompute<gpu>", NumpyCrossForward<gpu>);
+NNVM_REGISTER_OP(_npi_cross).set_attr<FCompute>("FCompute<gpu>", NumpyCrossForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_cross)
-.set_attr<FCompute>("FCompute<gpu>", NumpyCrossBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_cross).set_attr<FCompute>("FCompute<gpu>", NumpyCrossBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

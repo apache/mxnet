@@ -39,18 +39,18 @@ namespace mxnet {
  * Given a computation graph, this function finds the input nodes of the graph
  * and create symbols for the input nodes. It returns the input symbols.
  */
-std::vector<nnvm::Symbol *> GetInputSymbols(const nnvm::Symbol &sym) {
+std::vector<nnvm::Symbol*> GetInputSymbols(const nnvm::Symbol& sym) {
   nnvm::Graph g;
-  std::vector<nnvm::Symbol *> input_syms;
-  g.outputs = sym.outputs;
+  std::vector<nnvm::Symbol*> input_syms;
+  g.outputs                     = sym.outputs;
   const nnvm::IndexedGraph& idx = g.indexed_graph();
   // Go through all nodes and return the ones representing variables.
   for (size_t i = 0; i < idx.num_nodes(); i++) {
-    const nnvm::Node &n = *idx[i].source;
-    for (const nnvm::NodeEntry &e : n.inputs) {
+    const nnvm::Node& n = *idx[i].source;
+    for (const nnvm::NodeEntry& e : n.inputs) {
       auto p = e.node;
       if (p->is_variable()) {
-        nnvm::Symbol *s = new nnvm::Symbol();
+        nnvm::Symbol* s = new nnvm::Symbol();
         s->outputs.push_back(e);
         input_syms.push_back(s);
       }
@@ -65,11 +65,12 @@ std::vector<nnvm::Symbol *> GetInputSymbols(const nnvm::Symbol &sym) {
  * subgraph. It returns the nodes that connect to the subgraph directly and
  * the names of the new variable nodes.
  */
-bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
-                    bool skip_var, std::vector<nnvm::NodeEntry> *orig_entries) {
+bool CutGraphInputs(const std::vector<nnvm::NodeEntry*>& input_entries,
+                    bool skip_var,
+                    std::vector<nnvm::NodeEntry>* orig_entries) {
   struct pred_entry {
     nnvm::NodeEntry e;
-    explicit pred_entry(nnvm::NodeEntry _e): e(std::move(_e)) {}
+    explicit pred_entry(nnvm::NodeEntry _e) : e(std::move(_e)) {}
     bool operator()(const nnvm::NodeEntry e1) {
       return e.node == e1.node && e.index == e1.index;
     }
@@ -83,8 +84,7 @@ bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
     if (input_entry->node->is_variable() && skip_var)
       continue;
 
-    auto it = std::find_if(orig_entries->begin(), orig_entries->end(),
-                           pred_entry(*input_entry));
+    auto it    = std::find_if(orig_entries->begin(), orig_entries->end(), pred_entry(*input_entry));
     bool exist = (it != orig_entries->end());
     orig_entries->push_back(*input_entry);
     nnvm::ObjectPtr n;

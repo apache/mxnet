@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -19,7 +19,8 @@
 
 /*!
  * \file np_elemwise_broadcast_logic_op.cc
- * \brief Implementation of the API of functions in src/operator/numpy/np_elemwise_broadcast_logic_op.cc
+ * \brief Implementation of the API of functions in
+ * src/operator/numpy/np_elemwise_broadcast_logic_op.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
@@ -28,27 +29,27 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.equal")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.equal").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_equal");
+  const nnvm::Op* op        = Op::Get("_npi_equal");
   const nnvm::Op* op_scalar = Op::Get("_npi_equal_scalar");
   UFuncHelper(args, ret, op, op_scalar, nullptr);
 });
 
 MXNET_REGISTER_API("_npi.not_equal")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_not_equal");
-  const nnvm::Op* op_scalar = Op::Get("_npi_not_equal_scalar");
-  UFuncHelper(args, ret, op, op_scalar, nullptr);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op        = Op::Get("_npi_not_equal");
+      const nnvm::Op* op_scalar = Op::Get("_npi_not_equal_scalar");
+      UFuncHelper(args, ret, op, op_scalar, nullptr);
+    });
 
-void SetUFuncHelper(runtime::MXNetArgs args, runtime::MXNetRetValue* ret,
-                     const nnvm::Op* op, const nnvm::Op* op_scalar,
-                     const nnvm::Op* op_rscalar) {
-  if (args[0].type_code() == kNDArrayHandle &&
-      args[1].type_code() == kNDArrayHandle) {
+void SetUFuncHelper(runtime::MXNetArgs args,
+                    runtime::MXNetRetValue* ret,
+                    const nnvm::Op* op,
+                    const nnvm::Op* op_scalar,
+                    const nnvm::Op* op_rscalar) {
+  if (args[0].type_code() == kNDArrayHandle && args[1].type_code() == kNDArrayHandle) {
     UFuncHelper(args, ret, op, nullptr, nullptr);
   } else if (args[0].type_code() == kNDArrayHandle) {
     UFuncHelper(args, ret, nullptr, op_scalar, nullptr);
@@ -58,39 +59,38 @@ void SetUFuncHelper(runtime::MXNetArgs args, runtime::MXNetRetValue* ret,
 }
 
 MXNET_REGISTER_API("_npi.greater")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_greater");
-  const nnvm::Op* op_scalar = Op::Get("_npi_greater_scalar");
-  const nnvm::Op* op_rscalar = Op::Get("_npi_less_scalar");
-  SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_greater");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_greater_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_less_scalar");
+      SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
 
-MXNET_REGISTER_API("_npi.less")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.less").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_less");
-  const nnvm::Op* op_scalar = Op::Get("_npi_less_scalar");
+  const nnvm::Op* op         = Op::Get("_npi_less");
+  const nnvm::Op* op_scalar  = Op::Get("_npi_less_scalar");
   const nnvm::Op* op_rscalar = Op::Get("_npi_greater_scalar");
   SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
 });
 
 MXNET_REGISTER_API("_npi.greater_equal")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_greater_equal");
-  const nnvm::Op* op_scalar = Op::Get("_npi_greater_equal_scalar");
-  const nnvm::Op* op_rscalar = Op::Get("_npi_less_equal_scalar");
-  SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_greater_equal");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_greater_equal_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_less_equal_scalar");
+      SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
 
 MXNET_REGISTER_API("_npi.less_equal")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_less_equal");
-  const nnvm::Op* op_scalar = Op::Get("_npi_less_equal_scalar");
-  const nnvm::Op* op_rscalar = Op::Get("_npi_greater_equal_scalar");
-  SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_less_equal");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_less_equal_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_greater_equal_scalar");
+      SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
 
 }  // namespace mxnet

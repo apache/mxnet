@@ -90,6 +90,7 @@ option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
 cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
 option(BUILD_EXTENSION_PATH "Path to extension to build" "")
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
+option(COLORIZE_OUTPUT "Colorize output during compilation" ON)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
@@ -176,6 +177,18 @@ add_definitions(-DDMLC_USE_CXX11)
 add_definitions(-DDMLC_STRICT_CXX11)
 add_definitions(-DDMLC_USE_CXX14)
 add_definitions(-DMSHADOW_IN_CXX11)
+
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  if(${COLORIZE_OUTPUT})
+    string(APPEND CMAKE_CXX_FLAGS " -fcolor-diagnostics")
+  endif()
+endif()
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+  if(${COLORIZE_OUTPUT})
+    string(APPEND CMAKE_CXX_FLAGS " -fdiagnostics-color=always")
+  endif()
+endif()
+
 if(MSVC)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -273,16 +286,16 @@ if(USE_ONEDNN)
   endif()
 
   function(load_onednn)
-    set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
-    set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
+    set(DNNL_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+    set(DNNL_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
     set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
     set(DNNL_ENABLE_PRIMITIVE_CACHE ON CACHE INTERNAL "" FORCE)
 
     if(NOT USE_OPENMP)
-      set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
+      set(DNNL_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
     endif()
 
     set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/onednn")
@@ -759,16 +772,16 @@ elseif(MSVC)
             PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
       else()
         target_compile_options(
-          mxnet_${arch} 
+          mxnet 
           PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
       endif()
     endif(USE_SPLIT_ARCH_DLL)
@@ -865,6 +878,11 @@ if(USE_TVM_OP)
   BuildTVMOP()
   find_package(Python3 REQUIRED)
   set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")
+  if(UNIX AND NOT APPLE)
+    set(LD_LIBRARY_PATH "LD_LIBRARY_PATH")
+  elseif(APPLE)
+    set(LD_LIBRARY_PATH "DYLD_LIBRARY_PATH")
+  endif()
   if(USE_CUDA)
     set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "\"${CUDA_ARCH_FLAGS}\"")
   endif()
@@ -872,7 +890,7 @@ if(USE_TVM_OP)
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env
     PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
-    LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
+    ${LD_LIBRARY_PATH}=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{${LD_LIBRARY_PATH}}
     ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
   )
 endif()

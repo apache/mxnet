@@ -324,7 +324,7 @@ build_ubuntu_cpu_openblas() {
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
-    ninja
+    ninja -j$(($(nproc)/2))
 }
 
 build_ubuntu_cpu_mkl() {
@@ -643,7 +643,7 @@ build_ubuntu_gpu() {
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
-    ninja
+    ninja -j$(($(nproc)/2))
 }
 
 build_ubuntu_gpu_debug() {
@@ -701,9 +701,17 @@ build_ubuntu_gpu_large_tensor() {
 
 sanity_check() {
     set -ex
+    sanity_clang
     sanity_license
-    sanity_python
+    sanity_tutorial
+    sanity_python_prospector
     sanity_cpp
+}
+
+sanity_tutorial() {
+    set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
 
 sanity_license() {
@@ -716,11 +724,57 @@ sanity_cpp() {
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests --exclude_path src/operator/contrib/ctc_include include/onednn
 }
 
-sanity_python() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=100
-    python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
-    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
+sanity_python_prospector() {
+    set -e
+    set +x
+
+    # Run Prospector
+    python3 -m prospector --profile prospector.yaml | tee prospector-output.txt
+    error_cnt=$(awk '/Messages Found:/{print $NF}' prospector-output.txt)
+    if [ $error_cnt -ne 0 ]; then
+        echo 'Please fix the above Prospector warnings.'
+        rm -rf prospector-output.txt
+        exit 1
+    fi
+    rm -rf prospector-output.txt
+}
+
+sanity_clang() {
+    set -e
+    set +x
+    # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
+    BASE_SHA="${GITHUB_PR_BASE_SHA}"
+    GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
+    GITHUB_BASE_REF="${GITHUB_PR_BASE_REF}"
+
+    if [ "${BASE_SHA}" == "" ]; then
+        BASE_SHA=`git show-ref --hash refs/remotes/origin/master`
+        if [ "${GITHUB_RUN_ID}" == "" ] || [ "${GITHUB_BASE_REF}" == "" ]; then
+             GITHUB_RUN_ID=`(git log --pretty=format:'%h' -n 1)`
+             GITHUB_BASE_REF="master"
+        fi
+    fi
+
+    git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
+    git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
+    
+    tools/lint/clang_format_ci.sh "${BASE_SHA}"
+    GIT_DIFFERENCE=$(git diff)
+    if [[ -z $GIT_DIFFERENCE ]]; then
+        git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
+        return
+    fi
+
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "| Clang-format failures found! Run: "
+    echo "|    tools/lint/clang_format_ci.sh ${BASE_SHA} "
+    echo "| to fix this error. "
+    echo "| For more info, see: https://mxnet.apache.org/versions/master/community/clang_format_guide"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+    echo "$GIT_DIFFERENCE"
+    git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
+    exit 1
 }
 
 # Tests libmxnet
@@ -728,7 +782,7 @@ sanity_python() {
 # $1 -> mxnet_variant: The variant of the libmxnet.so library
 cd_unittest_ubuntu() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     export PYTHONPATH=./python/
     export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -763,7 +817,7 @@ cd_unittest_ubuntu() {
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
-        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/mkl
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/dnnl
     fi
 }
 
@@ -803,7 +857,24 @@ unittest_ubuntu_python3_cpu_onednn() {
     MXNET_ENGINE_TYPE=NaiveEngine \
                      OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
+    pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/dnnl
+}
+
+unittest_array_api_standardization() {
+    set -ex
+    python3 -m pip install -e /work/mxnet/python --user
+    cd ..
+    git clone https://github.com/data-apis/array-api-tests.git
+    pushd /work/array-api-tests
+    git checkout c1dba80a196a03f880d2e0a998a272fb3867b720
+    export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
+    # OverflowError: Python int too large to convert to C long
+    # when cython is enabled
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+    popd
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -869,7 +940,7 @@ unittest_cpp() {
 
 unittest_centos7_cpu() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     cd /work/mxnet
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
@@ -881,7 +952,7 @@ unittest_centos7_cpu() {
 
 unittest_centos7_gpu() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=100
@@ -1188,7 +1259,12 @@ build_docs() {
     mkdir -p $python_doc_folder && tar -xzf python-artifacts.tgz --directory $python_doc_folder
     mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api
 
-     # check if .htaccess file exists
+    # check if .asf.yaml file exists
+    if [ ! -f "html/.asf.yaml" ]; then
+        echo "html/.asf.yaml file does not exist. Exiting 1"
+        exit 1
+    fi
+    # check if .htaccess file exists
     if [ ! -f "html/.htaccess" ]; then
         echo "html/.htaccess file does not exist. Exiting 1"
         exit 1
@@ -1307,7 +1383,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
@@ -1332,7 +1408,7 @@ cd_package_pypi() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
@@ -1343,7 +1419,7 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
 
     # install mxnet wheel package
     pip3 install --user ./wheel_build/dist/*.whl
@@ -1377,7 +1453,7 @@ build_static_python_cpu() {
     pushd .
     export mxnet_variant=cpu
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
@@ -1389,7 +1465,7 @@ build_static_python_cu102() {
     pushd .
     export mxnet_variant=cu102
     source /opt/rh/devtoolset-8/enable
-    source /opt/rh/rh-python36/enable
+    source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh

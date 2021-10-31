@@ -126,7 +126,7 @@ def test_sdml_loss():
     model.initialize(mx.init.Xavier(), ctx=mx.current_context())
     trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate' : 0.1})
 
-    for i in range(EPOCHS): # Training loop
+    for _ in range(EPOCHS): # Training loop
         data_iter.reset()
         for iter_batch in data_iter:
             batch = [datum.as_in_context(mx.current_context()) for datum in iter_batch.data]

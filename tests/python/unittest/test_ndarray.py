@@ -175,7 +175,7 @@ def test_ndarray_elementwise():
     maxdim = 4
     all_type = [np.float32, np.float64, np.float16, np.uint8, np.int8, np.int32, np.int64]
     real_type = [np.float32, np.float64, np.float16]
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         for dim in range(1, maxdim):
             check_with_uniform(lambda x, y: x + y, 2, dim, type_list=all_type)
             check_with_uniform(lambda x, y: x - y, 2, dim, type_list=all_type)
@@ -295,7 +295,7 @@ def test_ndarray_choose():
     npy = np.arange(np.prod(shape)).reshape(shape)
     arr = mx.nd.array(npy)
     nrepeat = 3
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         indices = np.random.randint(shape[1], size=shape[0])
         assert same(npy[np.arange(shape[0]), indices],
                     mx.nd.choose_element_0index(arr, mx.nd.array(indices)).asnumpy())
@@ -307,7 +307,7 @@ def test_ndarray_fill():
     arr = mx.nd.array(npy)
     new_npy = npy.copy()
     nrepeat = 3
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         indices = np.random.randint(shape[1], size=shape[0])
         val = np.random.randint(shape[1], size=shape[0])
         new_npy[:] = npy
@@ -321,7 +321,7 @@ def test_ndarray_onehot():
     npy = np.arange(np.prod(shape)).reshape(shape)
     arr = mx.nd.array(npy)
     nrepeat = 3
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         indices = np.random.randint(shape[1], size=shape[0])
         npy[:] = 0.0
         npy[np.arange(shape[0]), indices] = 1.0
@@ -374,10 +374,10 @@ def test_ndarray_pickle():
 def test_ndarray_saveload(save_fn):
     nrepeat = 10
     fname = 'tmp_list'
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         data = []
         # test save/load as list
-        for i in range(10):
+        for _ in range(10):
             data.append(random_ndarray(np.random.randint(1, 5)))
         if save_fn is mx.nd.save:
             save_fn(fname, data)
@@ -437,7 +437,7 @@ def test_ndarray_load_fortran_order(tmp_path):
 
 def test_ndarray_legacy_load():
     data = []
-    for i in range(6):
+    for _ in range(6):
         data.append(mx.nd.arange(128))
     path = os.path.dirname(os.path.realpath(__file__))
     legacy_data = mx.nd.load(os.path.join(path, 'legacy_ndarray.v0'))
@@ -452,7 +452,7 @@ def test_buffer_load():
         for repeat in range(nrepeat):
             # test load_buffer as list
             data = []
-            for i in range(10):
+            for _ in range(10):
                 data.append(random_ndarray(np.random.randint(1, 5)))
             fname = os.path.join(tmpdir, 'list_{0}.param'.format(repeat))
             mx.nd.save(fname, data)
@@ -616,7 +616,7 @@ def test_reduce():
         dtypes = [(np.float16, 1),
                   (np.float32, 4),
                   (np.double, 6)]
-        for i in range(sample_num):
+        for _ in range(sample_num):
             dtype, decimal = random.choice(dtypes)
             ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 11, size=ndim)
@@ -857,7 +857,7 @@ def test_moveaxis():
 
 
 def test_arange():
-    for i in range(5):
+    for _ in range(5):
         start = np.random.rand() * 10
         stop = start + np.random.rand() * 100
         step = np.random.rand() * 4
@@ -873,7 +873,7 @@ def test_arange():
 
 
 def test_linspace():
-    for i in range(5):
+    for _ in range(5):
         start = np.random.rand() * 100
         stop = np.random.rand() * 100
         num = np.random.randint(20)
@@ -1791,7 +1791,7 @@ def test_ndarray_cpu_shared_ctx():
 
 @pytest.mark.serial
 def test_dlpack():
-    for dtype in [np.float32, np.int32]:
+    for _ in [np.float32, np.int32]:
         for shape in [(3, 4, 5, 6), (2, 10), (15,)]:
             a = mx.nd.random.uniform(shape = shape)
             a_np = a.copy()

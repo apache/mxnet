@@ -27,45 +27,41 @@ namespace mxnet {
 namespace op {
 
 // exp
-NNVM_REGISTER_OP(exp)
-.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"exp"});
+NNVM_REGISTER_OP(exp).set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"exp"});
 
 // log
-NNVM_REGISTER_OP(log)
-.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log"});
+NNVM_REGISTER_OP(log).set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log"});
 
 // log10
-NNVM_REGISTER_OP(log10)
-.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log10"});
+NNVM_REGISTER_OP(log10).set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log10"});
 
 // log2
-NNVM_REGISTER_OP(log2)
-.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log2"});
+NNVM_REGISTER_OP(log2).set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log2"});
 
 NNVM_REGISTER_OP(_backward_log)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log"});
 
 NNVM_REGISTER_OP(_backward_log10)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log10"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log10"});
 
 NNVM_REGISTER_OP(_backward_log2)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log2"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log2"});
 
 // log1p
 NNVM_REGISTER_OP(log1p)
-.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log1p"})
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"log1p"});
+    .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log1p"})
+    .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"log1p"});
 
 NNVM_REGISTER_OP(_backward_log1p)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log1p"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log1p"});
 
 // expm1
 NNVM_REGISTER_OP(expm1)
-.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"expm1"})
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"expm1"});
+    .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"expm1"})
+    .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"expm1"});
 
 NNVM_REGISTER_OP(_backward_expm1)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_expm1"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_expm1"});
 
 }  // namespace op
 }  // namespace mxnet

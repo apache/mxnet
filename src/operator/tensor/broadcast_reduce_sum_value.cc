@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_sum_value.cc
  * \brief CPU Implementation of broadcast and reduce sum (and related) functions based on value.
  */
@@ -29,8 +28,8 @@ namespace op {
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
 MXNET_ADD_SPARSE_OP_ALIAS(sum)
-.add_alias("sum_axis")
-.describe(R"code(Computes the sum of array elements over given axes.
+    .add_alias("sum_axis")
+    .describe(R"code(Computes the sum of array elements over given axes.
 
 .. Note::
 
@@ -65,52 +64,53 @@ Example::
   [ 3.  4.  5.]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum>)
-.set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sum"});
+    .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum>)
+    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sum"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
-.set_num_inputs(1)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
+    .set_num_inputs(1)
+    .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(mean)
 MXNET_ADD_SPARSE_OP_ALIAS(mean)
-.describe(get_reduce_axes_description("mean", __LINE__))
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum, true>)
-.set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mean"});
+    .describe(get_reduce_axes_description("mean", __LINE__))
+    .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum, true>)
+    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mean"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_mean)
-.set_num_inputs(1)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu, true>);
+    .set_num_inputs(1)
+    .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu, true>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(nansum)
-.describe(R"code(Computes the sum of array elements over given axes treating Not a Numbers (``NaN``) as zero.
+    .describe(
+        R"code(Computes the sum of array elements over given axes treating Not a Numbers (``NaN``) as zero.
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nansum>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nansum" });
+    .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nansum>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_nansum"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)
-.set_num_inputs(3)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nansum_grad>);
+    .set_num_inputs(3)
+    .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nansum_grad>);
 
 }  // namespace op
 }  // namespace mxnet
