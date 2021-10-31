@@ -306,6 +306,7 @@ nnvm::ObjectPtr SgDNNLSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
 }
 
 NNVM_REGISTER_OP(_sg_onednn_selfatt_qk)
+    .add_alias("_sg_mkldnn_selfatt_qk")
     .describe(R"code(_sg_onednn_selfatt_qk)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
@@ -700,6 +701,7 @@ void DNNLSelfAttValAttOp::Forward(const OpContext& ctx,
 }
 
 NNVM_REGISTER_OP(_sg_onednn_selfatt_valatt)
+    .add_alias("_sg_mkldnn_selfatt_valatt")
     .describe(R"code(_sg_onednn_selfatt_valatt)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
