@@ -2181,7 +2181,8 @@ def test_np_reshape():
     (2, 3),
     (1, 0, 2),
 ])
-def test_np_argsort(descending, shape):
+@pytest.mark.parametrize('hybrid', [False, True])
+def test_np_argsort(descending, shape, hybrid):
     class TestArgsort(HybridBlock):
         def __init__(self, axis, descending):
             super(TestArgsort, self).__init__()
@@ -2200,11 +2201,11 @@ def test_np_argsort(descending, shape):
             np_out = onp.argsort(np_data, axis)
 
         test_argsort = TestArgsort(axis, descending)
-        for hybrid in [False, True]:
-            if hybrid:
-                test_argsort.hybridize()
-            mx_out = test_argsort(data)
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+        if hybrid:
+            test_argsort.hybridize()
+        mx_out = test_argsort(data)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
         mx_out = np.argsort(data, axis, descending)
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
