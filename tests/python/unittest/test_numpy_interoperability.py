@@ -1541,6 +1541,13 @@ def _add_workload_ldexp():
     OpArgMngr.add_workload('ldexp', np.array(2., np.float64), np.array(-9223372036854775808, np.int64))
 
 
+def _add_workload_logaddexp(array_pool):
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('logaddexp', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('logaddexp', array_pool['4x1'], array_pool['1x1x0'])
+
+
 def _add_workload_subtract(array_pool):
     OpArgMngr.add_workload('subtract', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('subtract', array_pool['4x1'], 2)
@@ -1577,6 +1584,17 @@ def _add_workload_fmod(array_pool):
     OpArgMngr.add_workload('fmod', array_pool['4x1'], 2)
     OpArgMngr.add_workload('fmod', 2, array_pool['4x1'])
     OpArgMngr.add_workload('fmod', array_pool['4x1'], array_pool['1x1x0'])
+
+
+def _add_workload_floor_divide(array_pool):
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('floor_divide', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], array_pool['1x1x0'])
+    OpArgMngr.add_workload('floor_divide', np.array([-1, -2, -3], np.float32), 1.9999)
+    OpArgMngr.add_workload('floor_divide', np.array([1000, -200, -3], np.int64), 3)
+    OpArgMngr.add_workload('floor_divide', np.array([1, -2, -3, 4, -5], np.int32), 2.0001)
+    OpArgMngr.add_workload('floor_divide', np.array([1, -50, -0.2, 40000, 0], np.float64), -7)
 
 
 def _add_workload_remainder():
@@ -3082,11 +3100,13 @@ def _prepare_workloads():
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
     _add_workload_ldexp()
+    _add_workload_logaddexp(array_pool)
     _add_workload_subtract(array_pool)
     _add_workload_multiply(array_pool)
     _add_workload_power(array_pool)
     _add_workload_mod(array_pool)
     _add_workload_fmod(array_pool)
+    _add_workload_floor_divide(array_pool)
     _add_workload_remainder()
     _add_workload_maximum(array_pool)
     _add_workload_fmax(array_pool)

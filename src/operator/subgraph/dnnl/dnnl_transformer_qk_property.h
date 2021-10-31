@@ -136,7 +136,7 @@ class SgDNNLTransformerQKSelector : public SubgraphSelector {
   }
 
   std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
-    if (status_ == kFail) {
+    if (status_ != kSuccess) {
       return std::vector<nnvm::Node*>(0);
     } else {
       std::vector<nnvm::Node*> ret;

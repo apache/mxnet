@@ -503,20 +503,24 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   std::ostringstream os;
   const char* warning =
-      "\nThe operator with default storage type will be dispatched "
-      "for execution. You're seeing this warning message because the operator above is unable "
-      "to process the given ndarrays with specified storage types, context and parameter. "
-      "Temporary dense ndarrays are generated in order to execute the operator. "
-      "This does not affect the correctness of the programme. "
-      "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
-      "0 to suppress this warning.";
+      "\n WARNING:\n"
+      "Execution of the operator above will fallback to the generic implementation "
+#if MXNET_USE_ONEDNN == 1
+      "(not utilizing kernels from oneDNN library) "
+#endif
+      "with default dense storage type. You are seeing this warning message because "
+#if MXNET_USE_ONEDNN == 1
+      "MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default "
+      "execution path by setting MXNET_ONEDNN_ENABLED back to 1, or "
+#endif
+      "the operator above is unable to process the given ndarrays with specified storage types, "
+      "context and/or parameter, in which case temporary dense ndarrays are generated in order to "
+      "execute the operator. The fallback does not affect the correctness of the programme. Using "
+      "default storage type performance degradation might be observed. \nYou can set environment "
+      "variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
 #if MXNET_USE_ONEDNN == 1
-  if (!DNNLEnvSet())
-    common::LogOnce(
-        "MXNET_ONEDNN_ENABLED flag is off. "
-        "You can re-enable by setting MXNET_ONEDNN_ENABLED=1");
   if (GetDNNLCacheSize() != -1)
     common::LogOnce(
         "MXNET_ONEDNN_CACHE_NUM is set."
