@@ -218,6 +218,37 @@ Examples::
 )code");
 }
 
+inline std::string binomial_desc() {
+  return std::string(R"code(Concurrent sampling from multiple
+binomial distributions with parameters *n* (number of trials) and *p* (success probability).
+
+The parameters of the distributions are provided as input arrays.
+Let *[s]* be the shape of the input arrays, *n* be the dimension of *[s]*, *[t]*
+be the shape specified as the parameter of the operator, and *m* be the dimension
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input arrays, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input values at index *i*. If the shape parameter of the
+operator is not set, then one sample will be drawn per distribution and the output array
+has the same shape as the input arrays.
+
+Samples will always be returned as a floating point data type.
+
+Examples::
+
+   n = [ 20, 49 ]
+   p = [ 0.4 , 0.77 ]
+
+   // Draw a single sample for each distribution
+   sample_binomial(n, p) = [ 5.,  36.]
+
+   // Draw a vector containing two samples for each distribution
+   sample_binomial(n, p, shape=(2)) = [[ 5.,  40.],
+                                       [ 11.,  35.]]
+)code");
+}
+
 inline std::string negative_binomial_desc() {
   return std::string(R"code(Concurrent sampling from multiple
 negative binomial distributions with parameters *k* (failure limit) and *p* (failure probability).
@@ -312,6 +343,13 @@ MXNET_OPERATOR_REGISTER_SAMPLING1(poisson,
                                   "Lambda (rate) parameters of the distributions.",
                                   poisson_desc)
     .add_alias("_npx_tensor_poisson");
+MXNET_OPERATOR_REGISTER_SAMPLING2(binomial,
+                                  BinomialSampler<cpu>,
+                                  "n",
+                                  "p",
+                                  "Number of experiments.",
+                                  "Success probabilities in each experiment.",
+                                  binomial_desc);
 MXNET_OPERATOR_REGISTER_SAMPLING2(negative_binomial,
                                   NegativeBinomialSampler<cpu>,
                                   "k",

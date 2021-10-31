@@ -318,6 +318,201 @@ struct PoissonSampler {
   }
 };
 
+MSHADOW_XINLINE double stirling_approximation(double k) {
+  static const double table[] = {0.08106146679532726,
+                                 0.04134069595540929,
+                                 0.02767792568499834,
+                                 0.02079067210376509,
+                                 0.01664469118982119,
+                                 0.01387612882307075,
+                                 0.01189670994589177,
+                                 0.01041126526197209,
+                                 0.009255462182712733,
+                                 0.008330563433362871};
+
+  if (k <= 9)
+    return table[static_cast<int>(k)];
+
+  return (1.0 / 12 - (1.0 / 360 - 1.0 / 1260 / ((k + 1) * (k + 1))) / (((k + 1) * (k + 1)))) /
+         (k + 1);
+}
+
+// The algorithm is explained in https://www.tandfonline.com/doi/abs/10.1080/00949659308811496
+template <typename xpu, typename IType, typename OType>
+MSHADOW_XINLINE OType _sample_binomial_btrd(IType N,
+                                            IType p,
+                                            typename RandGenerator<xpu, float>::Impl* gen) {
+  OType m   = floor((N + 1) * p);
+  OType r   = p / (1 - p);
+  OType nr  = (N + 1) * r;
+  OType npq = N * p * (1 - p);
+
+  OType b     = 1.15 + 2.53 * sqrt(npq);
+  OType a     = -0.0873 + 0.0248 * b + 0.01 * p;
+  OType c     = N * p + 0.5;
+  OType alpha = (2.83 + 5.1 / b) * sqrt(npq);
+
+  OType v_r      = 0.92 - 4.2 / b;
+  OType u_r__v_r = 0.86 * v_r;
+
+  while (true) {
+    OType v = gen->uniform();
+    if (v <= u_r__v_r) {
+      OType u = v / v_r - 0.43;
+
+      return floor((2 * a / (0.5 - abs(u)) + b) * u + c);
+    }
+
+    OType u;
+    if (v >= v_r) {
+      u = gen->uniform() - 0.5;
+    } else {
+      u           = v / v_r - 0.93;
+      OType sgn_u = ((0 < u) - (u < 0));
+      u           = sgn_u * 0.5 - u;
+
+      v = gen->uniform() * v_r;
+    }
+
+    OType us = 0.5 - abs(u);
+    OType k  = floor((2 * a / us + b) * u + c);
+    if (k < 0 || k > N) {
+      continue;
+    }
+
+    v = v * alpha / (a / (us * us) + b);
+
+    OType km = abs(k - m);
+    if (km <= 15) {
+      OType f = 1;
+      for (double i = m; i < k; ++i)
+        f = f * (nr / i - r);
+      for (double i = k; i < m; ++i)
+        v = v * (nr / i - r);
+
+      if (v <= f) {
+        return k;
+      }
+
+      continue;
+    }
+
+    v         = log(v);
+    OType rho = (km / npq) * (((km / 3 + 0.625) * km + 1.0 / 6) / npq + 0.5);
+    OType t   = -km * km / (2 * npq);
+    if (v < t - rho) {
+      return k;
+    }
+
+    if (v > t + rho) {
+      continue;
+    }
+
+    OType nm = N - m + 1;
+    OType h  = (m + 0.5) * log((m + 1) / (r * nm)) + stirling_approximation(m) +
+              stirling_approximation(N - m);
+
+    OType nk  = N - k + 1;
+    OType tmp = h + (N + 1) * log(nm / nk) + (k + 0.5) * log(nk * r / (k + 1)) -
+                stirling_approximation(k) - stirling_approximation(N - k);
+    if (v <= tmp) {
+      return k;
+    }
+  }
+}
+
+template <typename xpu, typename IType, typename OType>
+MSHADOW_XINLINE OType _sample_binomial_inversion(IType n,
+                                                 IType p,
+                                                 typename RandGenerator<xpu, float>::Impl* gen) {
+  OType N = static_cast<OType>(n);
+  OType q = static_cast<OType>(p);
+  if (q > 0.5)
+    q = 1 - q;
+
+  OType s = 1 - q;
+
+  OType A = 1;
+  OType B = q / s;
+  OType C = (N + 1) * B;
+  OType D = A;
+  OType X = 0;
+
+  OType U = gen->uniform();
+  OType V = U / pow(s, N);
+
+  do {
+    if (V <= A)
+      break;
+    X = X + 1;
+    D = D * (C / X - B);
+    A = A + D;
+  } while (X < N);
+
+  if (p > 0.5)
+    return N - X;
+
+  return X;
+}
+
+template <typename xpu, typename IType, typename OType>
+MSHADOW_XINLINE OType SampleBinomial(IType n,
+                                     IType p,
+                                     typename RandGenerator<xpu, float>::Impl* gen) {
+  // Generate one sample of the binomial distribution
+  if (p >= 1) {
+    return static_cast<OType>(n);
+  }
+
+  if (p <= 0.5) {
+    if (n * p >= 10.0) {
+      return _sample_binomial_btrd<xpu, IType, OType>(n, p, gen);
+    } else {
+      return _sample_binomial_inversion<xpu, IType, OType>(n, p, gen);
+    }
+  } else {
+    IType q = 1.0 - p;
+    if (n * q >= 10.0) {
+      return n - _sample_binomial_btrd<xpu, IType, OType>(n, q, gen);
+    } else {
+      return n - _sample_binomial_inversion<xpu, IType, OType>(n, q, gen);
+    }
+  }
+}
+
+template <typename xpu>
+struct SampleBinomialKernel {
+  template <typename IType, typename OType>
+  MSHADOW_XINLINE static void Map(index_t id,
+                                  RandGenerator<xpu, float> gen,
+                                  const index_t N,
+                                  const index_t step,
+                                  index_t nParm,
+                                  index_t nSample,
+                                  const IType* n,
+                                  const IType* p,
+                                  OType* out) {
+    RNG_KERNEL_LOOP(xpu, float, id, gen, N, step, {
+      index_t nBatch(1 + (nSample - 1) / nParm);
+      out[i] = SampleBinomial<xpu, IType, OType>(n[i / nBatch], p[i / nBatch], &genImpl);
+    });
+  }
+};
+
+template <typename xpu>
+struct BinomialSampler {
+  template <typename IType, typename OType>
+  MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& n,
+                                   const Tensor<xpu, 1, IType>& p,
+                                   const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType>* pgen,
+                                   Stream<xpu>* s) {
+    RandGenerator<xpu, float>* gen = reinterpret_cast<RandGenerator<xpu, float>*>(pgen);
+    LaunchRNG<SampleBinomialKernel<xpu>, xpu>(
+        s, gen, out.size(0), n.size(0), out.size(0), n.dptr_, p.dptr_, out.dptr_);
+  }
+};
+
 template <typename xpu>
 struct SampleNegativeBinomialKernel {
   template <typename IType, typename OType>

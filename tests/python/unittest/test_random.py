@@ -685,6 +685,24 @@ def test_poisson_generator():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
 @pytest.mark.serial
+def test_binomial_generator():
+    ctx = mx.context.current_context()
+    for dtype in ['float16', 'float32', 'float64']:
+        trials_num = 10000
+        success_prob = 0.25
+
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.binom.ppf(x, trials_num, success_prob), 10)
+        generator_mx = lambda x: mx.nd.random.binomial(trials_num, success_prob,
+                                                                shape=x, ctx=ctx, dtype=dtype).asnumpy()
+        nsamples = 1000
+        verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nsamples=nsamples)
+        generator_mx_same_seed = \
+            lambda x: np.concatenate(
+                [mx.nd.random.binomial(trials_num, success_prob, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
+                 for _ in range(10)])
+        verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nsamples=nsamples)
+
+@pytest.mark.serial
 def test_negative_binomial_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
