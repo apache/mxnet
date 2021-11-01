@@ -1348,7 +1348,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: disable= invalid-name, undefined-variable
     def T(self: ndarray) -> ndarray:
         """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim != 2:
+             warnings.warn('x.T requires x to have 2 dimensions. '
+                           'Use x.mT to transpose stacks of matrices and '
+                           'permute_dims() to permute dimensions.')
         return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def mT(self):
+        """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim < 2:
+            raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+        return _mx_nd_np.swapaxes(self, -1, -2)
     # pylint: enable= invalid-name, undefined-variable
 
     def all(
