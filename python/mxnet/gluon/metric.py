@@ -260,7 +260,7 @@ class CompositeEvalMetric(EvalMetric):
     >>> eval_metrics_2 = mx.gluon.metric.F1()
     >>> eval_metrics = mx.gluon.metric.CompositeEvalMetric()
     >>> for child_metric in [eval_metrics_1, eval_metrics_2]:
-    >>>     eval_metrics.add(child_metric)
+    ...     eval_metrics.add(child_metric)
     >>> eval_metrics.update(labels = labels, preds = predicts)
     >>> eval_metrics.get()
     (['accuracy', 'f1'], [0.6666666666666666, 0.8])
@@ -977,15 +977,15 @@ class MCC(EvalMetric):
     >>> true_positives = 10000
     >>> true_negatives = 1
     >>> predicts = [mx.np.array(
-        [[.3, .7]]*false_positives +
-        [[.7, .3]]*true_negatives +
-        [[.7, .3]]*false_negatives +
-        [[.3, .7]]*true_positives
-    )]
+    ...    [[.3, .7]]*false_positives +
+    ...    [[.7, .3]]*true_negatives +
+    ...    [[.7, .3]]*false_negatives +
+    ...    [[.3, .7]]*true_positives
+    ... )]
     >>> labels  = [mx.np.array(
-        [0.]*(false_positives + true_negatives) +
-        [1.]*(false_negatives + true_positives)
-    )]
+    ...    [0.]*(false_positives + true_negatives) +
+    ...    [1.]*(false_negatives + true_positives)
+    ... )]
     >>> f1 = mx.gluon.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
     >>> mcc = mx.gluon.metric.MCC()
@@ -1627,15 +1627,15 @@ class PCC(EvalMetric):
     >>> true_positives = 10000
     >>> true_negatives = 1
     >>> predicts = [mx.np.array(
-        [[.3, .7]]*false_positives +
-        [[.7, .3]]*true_negatives +
-        [[.7, .3]]*false_negatives +
-        [[.3, .7]]*true_positives
-    )]
+    ...    [[.3, .7]]*false_positives +
+    ...    [[.7, .3]]*true_negatives +
+    ...    [[.7, .3]]*false_negatives +
+    ...    [[.3, .7]]*true_positives
+    ... )]
     >>> labels  = [mx.np.array(
-        [0]*(false_positives + true_negatives) +
-        [1]*(false_negatives + true_positives)
-    )]
+    ...    [0]*(false_positives + true_negatives) +
+    ...    [1]*(false_negatives + true_positives)
+    ... )]
     >>> f1 = mx.gluon.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
     >>> pcc = mx.gluon.metric.PCC()

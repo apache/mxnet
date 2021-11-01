@@ -497,12 +497,12 @@ class NDArrayIter(DataIter):
     >>> labels = np.ones([10, 1])
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
     >>> for batch in dataiter:
-    ...     print batch.data[0].asnumpy()
+    ...     print(batch.data[0].asnumpy())
     ...     batch.data[0].shape
     ...
     [[[ 36.  37.]
       [ 38.  39.]]
-     [[ 16.  17.]
+     [[ 16.  17.]f
       [ 18.  19.]]
      [[ 12.  13.]
       [ 14.  15.]]]

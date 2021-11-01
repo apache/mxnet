@@ -11992,6 +11992,7 @@ def where(condition, x=None, y=None):
 
     The shapes of x, y, and the condition are broadcast together:
 
+    >>> import numpy as onp
     >>> x, y = onp.ogrid[:3, :4]
     >>> x = np.array(x)
     >>> y = np.array(y)
