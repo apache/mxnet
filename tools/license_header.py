@@ -195,11 +195,8 @@ def file_have_valid_license(fname):
     if (_lines_have_apache_license(lines) and (not _lines_have_multiple_license(lines))):
         return True
     elif _lines_have_multiple_license(lines):
-        if _file_listed_in_top_level_license(fname):
-            return True
-        else:
-            logging.error("File %s has multiple license", fname)
-            return False
+        logging.error("File %s has multiple licenses", fname)
+        return False
     else:
         if _file_listed_in_top_level_license(fname):
             return True
