@@ -85,7 +85,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal']
+           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal'
+           'positive', 'logaddexp', 'floor_divide', 'permute_dims']
 
 __all__ += fallback.__all__
 
@@ -1130,8 +1131,28 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__mul__(y) <=> x * y"""
         return multiply(self, other)
 
+    @wrap_mxnp_np_ufunc
+    def __floordiv__(self: ndarray, other: ndarray, /) -> ndarray:
+        """x.__floordiv__(y) <=> x // y"""
+        return floor_divide(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __ifloordiv__(self: ndarray, other: ndarray, /) -> ndarray:
+        """x.__ifloordiv__(y) <=> x //= y"""
+        if not self.writable:
+            raise ValueError('trying to divide from a readonly ndarray')
+        return floor_divide(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rfloordiv__(self: ndarray, other: ndarray, /) -> ndarray:
+        """x.__rfloordiv__(y) <=> y // x"""
+        return floor_divide(other, self)
+
     def __neg__(self: ndarray, /):
         return negative(self)
+
+    def __pos__(self: ndarray, /):
+        return positive(self)
 
     @wrap_mxnp_np_ufunc
     def __imul__(self: ndarray, other: Union[int, float, ndarray], /) -> ndarray:
@@ -3539,6 +3560,43 @@ def true_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
+def floor_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
+    """Return the largest integer smaller or equal to the division of the inputs.
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    .. note::
+        This operator now supports automatic type promotion. The resulting type will be determined
+        according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), the output is the more
+          precise type
+    Examples
+    --------
+    >>> np.floor_divide(7,3)
+    2
+    >>> np.floor_divide([1., 2., 3., 4.], 2.5)
+    array([ 0.,  0.,  1.,  1.])
+    """
+    return _mx_nd_np.floor_divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
 def mod(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Return element-wise remainder of division.
@@ -5168,6 +5226,34 @@ def negative(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarr
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
+def positive(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs: any) -> ndarray:
+    r"""
+    Computes the numerical positive of each element `x_i` (i.e.,`y_i = +x_i`)
+    of the input array x .
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    Returns
+    -------
+    y : ndarray or scalar
+        Returned array or scalar: y = +x. This is a scalar if x is a scalar.
+    Notes
+    -----
+    Equivalent to `x.copy()`, but only defined for types that support arithmetic.
+    Examples
+    --------
+    >>> x1 = np.array(([1., -1.]))
+    >>> np.positive(x1)
+    array([ 1., -1.])
+    >>> +x1
+    array([ 1., -1.])
+    """
+    return _mx_nd_np.positive(x, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
 def fix(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Round an array of floats element-wise to nearest integer towards zero.
@@ -6502,6 +6588,41 @@ def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int, ...]]] = No
            [1., 3.]])
     >>> x = np.ones((1, 2, 3))
     >>> np.transpose(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _mx_nd_np.transpose(a, axes)
+
+
+def permute_dims(a, axes=None):
+    """
+    Permute the dimensions of an array.
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted.
+    Note
+    --------
+    `permute_dims` is a alias for `transpose`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#permute-dims-x-axes
+    instead of an official NumPy operator.
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.permute_dims(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.permute_dims(x, (1, 0, 2)).shape
     (2, 1, 3)
     """
     return _mx_nd_np.transpose(a, axes)
@@ -9739,6 +9860,42 @@ def ldexp(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwarg
     array([  5.,  10.,  20.,  40.])
     """
     return _mx_nd_np.ldexp(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logaddexp(x1, x2, out=None, **kwargs):
+    """
+    Logarithm of the sum of exponentiations of the inputs.
+    Calculates log(exp(x1) + exp(x2)). This function is useful in statistics where
+    the calculated probabilities of events may be so small as to exceed the range of
+    normal floating point numbers. In such cases the logarithm of the calculate
+    probability is stored. This function allows adding probabilities stored
+    in such a fashion.
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Array of multipliers.
+    x2 : ndarray or scalar, int
+        Array of twos exponents.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray or scalar
+        Logarithm of exp(x1) + exp(x2). This is a scalar if both x1 and x2 are scalars.
+    Examples
+    --------
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> prob12 = np.logaddexp(prob1, prob2)
+    >>> prob12
+    -113.87649168120691
+    >>> np.exp(prob12)
+    3.5000000000000057e-50
+    """
+    return _mx_nd_np.logaddexp(x1, x2, out)
 
 
 @set_module('mxnet.numpy')
