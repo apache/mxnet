@@ -971,6 +971,14 @@ integrationtest_ubuntu_cpp_package_gpu() {
     cpp-package/tests/ci_test.sh
 }
 
+test_python3_data_interchange_gpu() {
+    set -ex
+    python3 -m pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 \
+        -f https://download.pytorch.org/whl/cu113/torch_stable.html
+    MXNET_ENGINE_TYPE=ThreadedEngineAsync \
+        python3 -m pytest --durations=50 tests/python/array-api/test_data_interchange.py
+}
+
 integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/

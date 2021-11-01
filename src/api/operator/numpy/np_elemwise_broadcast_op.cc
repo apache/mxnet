@@ -189,4 +189,22 @@ MXNET_REGISTER_API("_npi.ldexp").set_body([](runtime::MXNetArgs args, runtime::M
   UFuncHelper(args, ret, op, op_scalar, op_rscalar);
 });
 
+MXNET_REGISTER_API("_npi.bitwise_left_shift")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_bitwise_left_shift");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_bitwise_left_shift_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_rbitwise_left_shift_scalar");
+      UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
+
+MXNET_REGISTER_API("_npi.bitwise_right_shift")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_bitwise_right_shift");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_bitwise_right_shift_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_rbitwise_right_shift_scalar");
+      UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
+
 }  // namespace mxnet

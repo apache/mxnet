@@ -2537,7 +2537,7 @@ void NDArray::StreamSync(int stream) const {
         on_complete();
       },
       this->ctx(),
-      {this->var()},
+      {},
       {});
 #else
   LOG(FATAL) << "GPU is not enabled";
