@@ -31,6 +31,8 @@ except ImportError:
 from array import array as native_array
 import functools
 import ctypes
+import sys
+import datetime
 import warnings
 import numpy as _np
 from .. import _deferred_compute as dc
@@ -82,7 +84,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
            'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
-           'positive', 'logaddexp', 'floor_divide', 'permute_dims', 'asarray', 'from_dlpack']
+           'positive', 'logaddexp', 'floor_divide', 'permute_dims', 'bitwise_left_shift', 'bitwise_right_shift',
+           'asarray', 'from_dlpack']
 
 __all__ += fallback.__all__
 
@@ -412,6 +415,34 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                                            zero_copy=func_name in {'may_share_memory', 'shares_memory'})
                 new_kwargs = {k: _as_mx_np_array(v, cur_device) for k, v in kwargs.items()}
                 return mx_np_func(*new_args, **new_kwargs)
+
+
+    def __array_namespace__(self, api_version=None):
+        """
+        Returns an object that has all the array API functions on it.
+
+        Notes
+        -----
+        This is a standard API in
+        https://data-apis.org/array-api/latest/API_specification/array_object.html#array-namespace-self-api-version-none.
+
+        Parameters
+        ----------
+        self : ndarray
+            The indexing key.
+        api_version : Optional, string
+            string representing the version of the array API specification to be returned, in `YYYY.MM` form.
+            If it is None, it should return the namespace corresponding to latest version of the array API
+            specification.
+        """
+        if api_version is not None:
+            try:
+                date = datetime.datetime.strptime(api_version, '%Y.%m')
+                if date.year != 2021:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(f"Unrecognized array API version: {api_version!r}")
+        return sys.modules[self.__module__]
 
 
     def _get_np_basic_indexing(self, key):
@@ -1059,6 +1090,16 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return bitwise_xor(other, self)
 
     @wrap_mxnp_np_ufunc
+    def __lshift__(self, other):
+        """x.__lshift__(y) <=> x << y"""
+        return bitwise_left_shift(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __rshift__(self, other):
+        """x.__rshift__(y) <=> x >> y"""
+        return bitwise_right_shift(self, other)
+
+    @wrap_mxnp_np_ufunc
     def __iand__(self, other):
         """x.__iand__(y) <=> x &= y"""
         return bitwise_and(self, other, out=self)
@@ -1072,6 +1113,26 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __ixor__(self, other):
         """x.__ixor__(y) <=> x ^= y"""
         return bitwise_xor(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __ilshift__(self, other):
+        """x.__ilshift__(y) <=> x <<= y"""
+        return bitwise_left_shift(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __irshift__(self, other):
+        """x.__irshift__(y) <=> x >>= y"""
+        return bitwise_right_shift(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rlshift__(self, other):
+        """x.__rlshift__(y) <=> y << x"""
+        return bitwise_left_shift(other, self)
+
+    @wrap_mxnp_np_ufunc
+    def __rrshift__(self, other):
+        """x.__rrshift__(y) <=> y >> x"""
+        return bitwise_right_shift(other, self)
 
     def __round__(self, n=0):
         """x.__round__(n)"""
@@ -1273,6 +1334,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             raise ValueError("The truth value of an ndarray with multiple elements is ambiguous.")
 
     __nonzero__ = __bool__
+
+    def __index__(self):
+        if self.ndim == 0 and _np.issubdtype(self.dtype, _np.integer):
+            return self.item()
+        raise TypeError('only integer scalar arrays can be converted to a scalar index')
 
     def __float__(self):
         num_elements = self.size
@@ -13100,6 +13166,78 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
 # pylint: enable=redefined-outer-name, too-many-arguments
 
 
+@set_module('mxnet.numpy')
+def bitwise_left_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the left. Bits are shifted to the left by
+    appending x2 0s at the right of x1. Since the internal representation of numbers
+    is in binary format, this operation is equivalent to ``x1 * 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x2 : ndarray or scalar
+        Number of zeros to append to x1. Has to be non-negative. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.left_shift(5, 2)
+    20
+    >>> np.binary_repr(20)
+    '10100'
+    """
+    return _mx_nd_np.bitwise_left_shift(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+def bitwise_right_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the right. Bits are shifted to the right by
+    x2. Because the internal representation of numbers is in binary format,
+    this operation is equivalent to ``x1 / 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x1 : ndarray or scalar
+        Number of bits to remove at the right of x1. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(10)
+    '1010'
+    >>> np.right_shift(10, 1)
+    5
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.right_shift(10, np.array([1,2,3]))
+    array([5, 2, 1])
+    """
+    return _mx_nd_np.bitwise_right_shift(x1, x2, out)
+
+
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_ctx_to_device_func
@@ -13125,9 +13263,6 @@ def asarray(obj, dtype=None, device=None, copy=None):
         and raises ValueError in case that would be necessary.
         If None, reuses existing memory buffer if possible, copies otherwise. Default: None .
 
-    Returns
-    -------
-    out : ndarray
         An array containing the data from obj.
 
     Examples

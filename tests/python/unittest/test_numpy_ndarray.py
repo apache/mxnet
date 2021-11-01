@@ -21,6 +21,7 @@ from __future__ import division
 import itertools
 import os
 import pytest
+import operator
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
@@ -1426,3 +1427,34 @@ def test_mixed_array_types_share_memory():
 def test_save_load_empty(tmp_path):
     mx.npx.savez(str(tmp_path / 'params.npz'))
     mx.npx.load(str(tmp_path / 'params.npz'))
+
+@use_np
+@pytest.mark.parametrize('shape', [
+    (),
+    (1,),
+    (1,2)
+])
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'bool', 'int32'])
+def test_index_operator(shape, dtype):
+    if len(shape) >= 1 or not _np.issubdtype(dtype, _np.integer):
+        x = np.ones(shape=shape, dtype=dtype)
+        pytest.raises(TypeError, operator.index, x)
+    else:
+        assert operator.index(np.ones(shape=shape, dtype=dtype)) == \
+            operator.index(_np.ones(shape=shape, dtype=dtype))
+
+
+@pytest.mark.parametrize('api_version, raise_exception', [
+    (None, False),
+    ('2021.10', False),
+    ('2020.09', True),
+    ('2021.24', True),
+])
+def test_array_namespace(api_version, raise_exception):
+    x = np.array([1, 2, 3], dtype="float64")
+    if raise_exception:
+        pytest.raises(ValueError, x.__array_namespace__, api_version)
+    else:
+        xp = x.__array_namespace__(api_version)
+        y = xp.array([1, 2, 3], dtype="float64")
+        assert same(x, y)

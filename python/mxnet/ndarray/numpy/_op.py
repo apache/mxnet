@@ -51,7 +51,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
            'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal',
-           'positive', 'logaddexp', 'floor_divide']
+           'positive', 'logaddexp', 'floor_divide', 'bitwise_left_shift', 'bitwise_right_shift']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -10036,3 +10036,81 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
         raise ValueError("only where=None or where=True cases are supported for now")
     return _api_internal.sum(a, axis, dtype, keepdims, initial, out)
 # pylint:enable=redefined-outer-name, too-many-arguments
+
+
+@set_module('mxnet.ndarray.numpy')
+def bitwise_left_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the left. Bits are shifted to the left by
+    appending x2 0s at the right of x1. Since the internal representation of numbers
+    is in binary format, this operation is equivalent to ``x1 * 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x2 : ndarray or scalar
+        Number of zeros to append to x1. Has to be non-negative. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.left_shift(5, 2)
+    20
+    >>> np.binary_repr(20)
+    '10100'
+    >>> np.left_shift(5, np.array([1,2,3]))
+    array([10, 20, 40])
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.left_shift(x1, x2, out=out)
+    return _api_internal.bitwise_left_shift(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def bitwise_right_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the right. Bits are shifted to the right by
+    x2. Because the internal representation of numbers is in binary format,
+    this operation is equivalent to ``x1 / 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x1 : ndarray or scalar
+        Number of bits to remove at the right of x1. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(10)
+    '1010'
+    >>> np.right_shift(10, 1)
+    5
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.right_shift(10, np.array([1,2,3]))
+    array([5, 2, 1])
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.right_shift(x1, x2, out=out)
+    return _api_internal.bitwise_right_shift(x1, x2, out)
