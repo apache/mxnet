@@ -108,7 +108,7 @@ class Categorical(Distribution):
         if self._validate_args:
             self._validate_samples(value)
         logit = self.logit
-        indices = np.expand_dims(value, -1).astype('int')
+        indices = np.expand_dims(value, axis=-1).astype('int')
         expanded_logit = logit * np.ones_like(logit + indices)
         return npx.pick(expanded_logit, indices).squeeze()
 

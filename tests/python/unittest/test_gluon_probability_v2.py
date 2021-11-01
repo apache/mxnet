@@ -1438,7 +1438,7 @@ def test_gluon_categorical():
             assert mx_out.shape == desired_shape
             # Check value
             log_pmf, indices = np.broadcast_arrays(
-                np.log(prob), np.expand_dims(samples, -1))
+                np.log(prob), np.expand_dims(samples, axis=-1))
             if indices.ndim >= 1:
                 indices = indices[..., :1]
             expect_log_prob = _np.take_along_axis(

@@ -22,6 +22,9 @@
 
 
 from __future__ import annotations
+
+import numpy
+
 try:
     from __builtin__ import all as py_all
     from __builtin__ import slice as py_slice
@@ -574,7 +577,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __getitem__(
             self: ndarray,
             key: Union[
-                int, slice, ellipsis, Tuple[Union[int, slice, ellipsis], ...], ndarray
+                int, slice, List, ndarray, Tuple[Union[int, slice, List, ndarray], ...]
             ],
             /
     ) -> ndarray:
@@ -851,7 +854,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: disable=inconsistent-return-statements
     def __setitem__(self: ndarray,
                     key: Union[
-                        int, slice, ellipsis, Tuple[Union[int, slice, ellipsis], ...], ndarray
+                        int, slice, List, ndarray, Tuple[Union[int, slice, List, ndarray], ...]
                     ],
                     value: Union[int, float, bool, ndarray],
                     /,
@@ -2529,7 +2532,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 def empty(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = float,
+        dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
@@ -2585,7 +2588,7 @@ def array(
         object: Union[...],
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         ctx: Optional[Context] = None
 ) -> ndarray:
     """
@@ -2702,7 +2705,7 @@ def shape(a) -> Tuple[int, ...]:
 def zeros(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
@@ -2751,7 +2754,7 @@ def zeros(
 def ones(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
@@ -3082,7 +3085,7 @@ def any(
 
 
 @set_module('mxnet.numpy')
-def identity(n: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
+def identity(n: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
     """
     Return the identity array.
 
@@ -6057,7 +6060,7 @@ def eye(N: int,
         k: Optional[int] = 0,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = float,
+        dtype: Optional[Union[dtype, str]] = "float",
         **kwargs,
 ) -> ndarray:
     """
@@ -6108,7 +6111,7 @@ def linspace(
         *,
         endpoint: Optional[bool] = True,
         retstep: Optional[bool] = False,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         axis: Optional[int] = 0,
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=too-many-arguments
@@ -6207,7 +6210,7 @@ def logspace(
         *,
         endpoint: Optional[bool] = True,
         base: Optional[float] = 10.0,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         axis: Optional[int] = 0,
         ctx: Optional[Context] = None
 ) -> ndarray:
@@ -6589,7 +6592,7 @@ def tri(N: ndarray,
         k: Optional[int] = 0,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         ctx: Optional[Context] = None) -> ndarray:    # pylint: disable=redefined-outer-name
     r"""
     An array with ones at and below the given diagonal and zeros elsewhere.
@@ -6828,7 +6831,7 @@ def arange(
         stop: Optional[Union[int, float]] = None,
         step: Union[int, float] = 1,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         ctx: Optional[Context] = None,
 ) -> ndarray:
     """Return evenly spaced values within a given interval.
@@ -8312,7 +8315,7 @@ def mean(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         out: Optional[ndarray] = None,
         keepdims: bool = False
 ) -> ndarray:  # pylint: disable=arguments-differ
@@ -8386,7 +8389,7 @@ def std(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         out: Optional[ndarray] = None,
         correction: Optional[int] = 0,
         keepdims: bool = False
@@ -8514,7 +8517,7 @@ def var(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         out: Optional[ndarray] = None,
         correction: Optional[int] = 0,
         keepdims: bool = None
@@ -8595,7 +8598,7 @@ def indices(
         dimensions: Tuple[int, ...],
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         ctx: Optional[Context] = None
 ) -> ndarray:
     """Return an array representing the indices of a grid.
@@ -8867,7 +8870,7 @@ def diag_indices_from(arr: ndarray, /) -> Tuple[ndarray, ...]:
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hanning(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
+def hanning(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -8948,7 +8951,7 @@ def hanning(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Option
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hamming(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
+def hamming(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -9027,7 +9030,7 @@ def hamming(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Option
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def blackman(M: int, /, *, dtype: Optional[Union[dtype, str]] = None, ctx: Optional[Context] = None) -> ndarray:
+def blackman(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three
@@ -11518,7 +11521,7 @@ def full_like(
         /,
         fill_value: Union[int, float],
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
         out: Optional[ndarray] = None,
@@ -11582,7 +11585,7 @@ def zeros_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
         out: Optional[ndarray] = None,
@@ -11648,7 +11651,7 @@ def ones_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
         out: Optional[ndarray] = None,
@@ -12604,7 +12607,7 @@ def prod(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         out: Optional[ndarray] = None,
         keepdims: bool = False,
         initial: Optional[int] = None
@@ -12754,7 +12757,7 @@ def cumsum(
         /,
         *,
         axis: Optional[int] = None,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         out: Optional[ndarray] = None
 ) -> ndarray:
     """
@@ -13121,7 +13124,7 @@ def sum(
         /,
         *,
         axis: Optional[int] = None,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = "float",
         out: Optional[ndarray] = None,
         keepdims: Optional[bool] = None,
         initial: Optional[int] = None,

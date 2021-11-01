@@ -948,8 +948,8 @@ class SDMLLoss(Loss):
         """
         # expanding x1 form [batch_size, dim] to [batch_size, 1, dim]
         # and x2 to [1, batch_size, dim]
-        x1_ = np.expand_dims(x1, 1)
-        x2_ = np.expand_dims(x2, 0)
+        x1_ = np.expand_dims(x1, axis=1)
+        x2_ = np.expand_dims(x2, axis=0)
         # pointwise squared differences
         squared_diffs = (x1_ - x2_)**2
         # sum of squared differences distance
