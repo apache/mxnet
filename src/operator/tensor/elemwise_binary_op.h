@@ -477,7 +477,7 @@ class ElemwiseBinaryOp : public OpBase {
       LOG(FATAL) << "Operator " << attrs.op->name << " does not support boolean type";
     }
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
         const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size()) +
                              DataType<DType>::kLanes - 1) /
                             DataType<DType>::kLanes;
