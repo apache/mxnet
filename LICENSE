@@ -264,6 +264,7 @@
     src/operator/contrib/modulated_deformable_convolution-inl.h
     src/operator/contrib/modulated_deformable_convolution.cc
     src/operator/contrib/modulated_deformable_convolution.cu
+    src/operator/nn/layer_norm_cpu.h
 
     =======================================================================================
     3-clause BSD license
@@ -326,12 +327,6 @@
 
     3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
     include/dmlc/blockingconcurrentqueue.h (symlink to 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h)
-
-    =======================================================================================
-    Apache-2.0 license + MIT License
-    =======================================================================================
-
-    src/operator/nn/layer_norm.cc (function LayerNormCPUKernel is adapated from MIT-licensed code)
 
     =======================================================================================
     Boost Software License, Version 1.0
