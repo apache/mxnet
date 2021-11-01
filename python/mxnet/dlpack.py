@@ -43,15 +43,15 @@ def _dlpack_deleter(pycapsule):
 _c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
 
 class DLDeviceType(enum.IntEnum):
-    kDLCPU = 1,
-    kDLGPU = 2,
-    kDLCPUPinned = 3,
-    kDLOpenCL = 4,
-    kDLVulkan = 7,
-    kDLMetal = 8,
-    kDLVPI = 9,
-    kDLROCM = 10,
-    kDLExtDev = 12,
+    DLCPU = 1,
+    DLGPU = 2,
+    DLCPUPINNED = 3,
+    DLOPENCL = 4,
+    DLVULKAN = 7,
+    DLMETAL = 8,
+    DLVPI = 9,
+    DLROCM = 10,
+    DLEXTDEV = 12,
 
 
 class DLContext(ctypes.Structure):

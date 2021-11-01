@@ -434,10 +434,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         if stream is not None:
             if type(stream) is not int:
                 raise TypeError('The input stream must be int or None')
-            elif self.ctx.device_type != "gpu":
+            if self.ctx.device_type != "gpu":
                 raise ValueError('Stream {} is not supported in current device {}'\
                     .format(stream, self.ctx.device_type))
-            elif stream != -1:
+            if stream != -1:
                 check_call(_LIB.MXPushStreamDep(self.handle, ctypes.c_int64(stream)))
         to_dlpack_write = ndarray_to_dlpack_for_write()
         return to_dlpack_write(self)
@@ -445,9 +445,9 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     def __dlpack_device__(self):
         """Returns device type and device ID in DLPack format"""
-        devtype_map = {'cpu': DLDeviceType.kDLCPU,
-                       'gpu': DLDeviceType.kDLGPU,
-                       'cpu_pinned': DLDeviceType.kDLCPUPinned}
+        devtype_map = {'cpu': DLDeviceType.DLCPU,
+                       'gpu': DLDeviceType.DLGPU,
+                       'cpu_pinned': DLDeviceType.DLCPUPINNED}
         if self.ctx.device_type not in devtype_map:
             raise ValueError('Unkown device type {} for DLPack'.format(self.ctx.device_type))
         return (devtype_map(self.ctx.device_type), self.ctx.device_id)

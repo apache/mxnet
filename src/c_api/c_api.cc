@@ -3962,6 +3962,7 @@ int MXGetCurrentStream(int device_id, int* stream) {
 #else
   LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
+  API_END();
 }
 
 int MXNVTXRangePush(const char* name, mx_uint color) {
