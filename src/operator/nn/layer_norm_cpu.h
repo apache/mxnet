@@ -1,3 +1,4 @@
+/*
  * Copyright (c) 2016 Marcin Junczys-Dowmunt, the University of Edinburgh, Adam
  * Mickiewicz University
  * 
@@ -28,6 +29,8 @@
  *
  */
 
+#ifndef MXNET_OPERATOR_NN_LAYER_NORM_CPU_H_
+#define MXNET_OPERATOR_NN_LAYER_NORM_CPU_H_
 
 namespace mxnet {
 namespace op {
@@ -103,3 +106,4 @@ void LayerNormCPUKernel(size_t width,
 
 }  // namespace op
 }  // namespace mxnet
+#endif  // MXNET_OPERATOR_NN_LAYER_NORM_CPU_H_
