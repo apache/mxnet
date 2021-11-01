@@ -213,7 +213,7 @@ void BinaryBroadcastIntCompute(const nnvm::NodeAttrs& attrs,
     if (req[0] == kNullOp)
       return;
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-    MXNET_INT_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MXNET_INT_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
         mshadow::Shape<NDim> oshape  = new_oshape.get<NDim>();
         mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
