@@ -553,7 +553,7 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    sudo ln -s /usr/bin/python3 /usr/bin/python
+    ln -s /usr/bin/python3 /usr/bin/python
     export DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")
     cmake -DCMAKE_CXX_FLAGS=-I${DPYTHON_INCLUDE_DIR} -DBUILD_SHARED_LIBS=ON ..
     make -j$(nproc)
