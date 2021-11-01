@@ -136,7 +136,7 @@ for obj_name in fallbacks:
                 '.. [3] https://metacpan.org/pod/distribution/Math-Cephes/lib/Math/Cephes.pod \
                     #i0:-Modified-Bessel-function-of-order-zero')
         elif obj_name in {'cumprod', 'nancumsum', 'nanmax', 'nanmin', 'nanprod', 'nanstd', 'nansum', 'nanvar'}:
-            new_fn_doc = new_fn_doc.replace('\n    :ref:`ufuncs-output-type`', '\n')
+            new_fn_doc = new_fn_doc.replace(':ref:`ufuncs-output-type`', 'https://numpy.org/doc/stable/reference/ufuncs.html#ufuncs-output-type')
         setattr(fallback_mod, obj_name, get_func(onp_obj, new_fn_doc))
     else:
         setattr(fallback_mod, obj_name, onp_obj)

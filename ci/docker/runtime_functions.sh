@@ -554,7 +554,7 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p build
     cd build
     export DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")
-    cmake -DCMAKE_CXX_FLAGS=-I${DPYTHON_INCLUDE_DIR} -DBUILD_SHARED_LIBS=ON -DPYTHON_INCLUDE_DIR=${DPYTHON_INCLUDE_DIR} ..
+    cmake -DCMAKE_CXX_FLAGS=-I${DPYTHON_INCLUDE_DIR} -DBUILD_SHARED_LIBS=ON -DPython3_EXECUTABLE=/usr/bin/python3 ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
