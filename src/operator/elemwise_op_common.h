@@ -44,7 +44,7 @@ namespace op {
  *         It infers output stypes the same as input stypes when input stypes are the same
  *  \tparam cpu_only whether fcompute_ex can only be dispatched on cpu context
  *  \tparam rsp whether row sparse stype is supported
- *  \tparam rsp whether csr stype is supported
+ *  \tparam csr whether compressed sparse row stype is supported
  */
 template <bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
@@ -93,7 +93,7 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
  *  \tparam n_in the number of outputs
  *  \tparam cpu_only whether fcompute_ex can only be dispatched on cpu context
  *  \tparam rsp whether row sparse stype is supported
- *  \tparam rsp whether csr stype is supported
+ *  \tparam csr whether compressed sparse row stype is supported
  */
 template <index_t n_in, index_t n_out, bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,

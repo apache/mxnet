@@ -26,6 +26,7 @@
 #if MXNET_USE_ONEDNN == 1
 #include "./../nn/dnnl/dnnl_base-inl.h"
 #include "./../nn/dnnl/dnnl_ops-inl.h"
+#include "./../nn/dnnl/dnnl_batch_dot-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
@@ -123,7 +124,7 @@ static void BatchDotComputeExCPU(const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& outputs) {
   if (SupportDNNLBatchDot(inputs, outputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLBatchDotForward, attrs, ctx, inputs, req, outputs);
+    DNNLRun(DNNLBatchDotForward<false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -163,7 +164,7 @@ which is computed by::
                                      [](const NodeAttrs& attrs) {
                                        return std::vector<std::string>{"lhs", "rhs"};
                                      })
-    .set_attr<mxnet::FInferShape>("FInferShape", BatchDotShape)
+    .set_attr<mxnet::FInferShape>("FInferShape", BatchDotShape<DotParam>)
     .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {

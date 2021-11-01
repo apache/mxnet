@@ -53,8 +53,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   static auto constexpr kCopyQueue     = kPriority;
   static auto constexpr kPriorityQueue = kPriority;
   static auto constexpr kWorkerQueue   = kFIFO;
+  static int constexpr kMaxStreams     = 256;
 
   ThreadedEnginePerDevice() noexcept(false) {
+#if MXNET_USE_CUDA
+    // Make sure that the pool is not destroyed before the engine
+    objpool_gpu_sync_ref_ = common::ObjectPool<GPUWorkerSyncInfo>::_GetSharedRef();
+    streams_.reserve(kMaxStreams);
+#endif
     this->Start();
   }
   ~ThreadedEnginePerDevice() noexcept(false) override {
@@ -76,6 +82,15 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     WaitForAll();
     StopNoWait();
   }
+
+#if MXNET_USE_CUDA
+  void WaitForAll() override {
+    ThreadedEngine::WaitForAll();
+    for (auto s : streams_) {
+      s->Wait();
+    }
+  }
+#endif
 
   void Start() override {
     if (is_worker_)
@@ -107,7 +122,10 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
 #endif
       }
-      this->ExecuteOprBlock(RunContext{ctx, nullptr, nullptr, false}, opr_block);
+      CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartStatic, opr_block);
+      CallbackOnComplete callback =
+          this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
+      this->ExecuteOprBlock(RunContext{ctx, nullptr, nullptr}, opr_block, on_start, callback);
     } else {
       if (ctx.dev_mask() == Context::kCPU) {
         // CPU execution.
@@ -238,6 +256,12 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   common::LazyAllocArray<ThreadWorkerBlock<kCopyQueue>> gpu_copy_workers_;
   // gpu priority workers
   common::LazyAllocArray<ThreadWorkerBlock<kPriorityQueue>> gpu_priority_workers_;
+#if MXNET_USE_CUDA
+  std::vector<mshadow::Stream<gpu>*> streams_;
+
+  std::unordered_map<int, std::unique_ptr<CUDAEventPool>> cuda_event_pool_per_worker_;
+#endif
+
   /*!
    * \brief GPU worker that performs operations on a certain device.
    * \param dev_id The device id of the worker.
@@ -265,9 +289,20 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         aux_stream = new GPUAuxStream(stream);
       }
     } while (false);
+    // register stream
+    streams_.push_back(stream);
+    CUDAEventPool* event_pool;
+    auto event_pool_it = cuda_event_pool_per_worker_.find(ctx.dev_id);
+    if (event_pool_it != cuda_event_pool_per_worker_.end()) {
+      event_pool = event_pool_it->second.get();
+    } else {
+      auto res =
+          cuda_event_pool_per_worker_.emplace(ctx.dev_id, std::make_unique<CUDAEventPool>(ctx));
+      event_pool = res.first->second.get();
+    }
     // execute task
     OprBlock* opr_block;
-    RunContext run_ctx{ctx, stream, aux_stream, false};
+    RunContext run_ctx{ctx, stream, aux_stream};
     auto* task_queue = &(block->task_queue);
 
     // Don't eat up omp threads for GPU jobs.  They're probably best used elsewhere,
@@ -284,7 +319,13 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       auto color = common::cuda::nvtx::nameToColor(nvtx_name, name_prefix_len);
       common::cuda::nvtx::gpuRangeStart(color, nvtx_name);
 #endif
-      this->ExecuteOprBlock(run_ctx, opr_block);
+      auto* info                  = ThreadedEngine::GPUWorkerSyncInfo::New();
+      info->opr_block             = opr_block;
+      info->stream                = stream;
+      info->event_pool            = event_pool;
+      CallbackOnStart on_start    = this->CreateOnStart(ThreadedEngine::OnStartGPU, info);
+      CallbackOnComplete callback = this->CreateCallback(ThreadedEngine::OnCompleteGPU, info);
+      this->ExecuteOprBlock(run_ctx, opr_block, on_start, callback);
 #if MXNET_USE_NVTX
       common::cuda::nvtx::gpuRangeStop();
 #endif
@@ -303,7 +344,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
                         const std::shared_ptr<dmlc::ManualEvent>& ready_event) {
     this->is_worker_ = true;
     auto* task_queue = &(block->task_queue);
-    RunContext run_ctx{ctx, nullptr, nullptr, false};
+    RunContext run_ctx{ctx, nullptr, nullptr};
 
     // execute task
     OprBlock* opr_block;
@@ -313,7 +354,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     OpenMP::Get()->on_start_worker_thread(true);
 
     while (task_queue->Pop(&opr_block)) {
-      this->ExecuteOprBlock(run_ctx, opr_block);
+#if MXNET_USE_CUDA
+      CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartCPU, opr_block);
+#else
+      CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartStatic, opr_block);
+#endif
+      CallbackOnComplete callback =
+          this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
+      this->ExecuteOprBlock(run_ctx, opr_block, on_start, callback);
     }
   }
 

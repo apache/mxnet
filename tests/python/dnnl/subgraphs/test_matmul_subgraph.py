@@ -67,13 +67,12 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
   net.hybridize()
   ref_out = net(in_data, mask)
 
-  fused_net.optimize_for(in_data, mask, backend="DNNL")
+  fused_net.optimize_for(in_data, mask, backend="ONEDNN")
   out = fused_net(in_data, mask)
   mx.nd.waitall()
 
   for i in range(len(out)):
     assert_almost_equal(out[i].asnumpy(), ref_out[i].asnumpy())
-
 
   calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=1)
   qnet = mx.contrib.quant.quantize_net(net, quantized_dtype='auto',
@@ -92,3 +91,51 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
       max_range = np.max(ref_out[i].asnumpy())
       atol = 0.1 * max(abs(min_range), abs(max_range))
       assert_almost_equal_with_err(qout[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+
+@use_np
+@pytest.mark.parametrize('batch_size', [1, 32])
+@pytest.mark.parametrize('seq_length', [124, 384])
+@pytest.mark.parametrize('units', [256, 768])
+@pytest.mark.parametrize('num_heads', [4, 8])
+def test_batch_dot(batch_size, seq_length, units, num_heads):
+  class BatchDotBlock(nn.HybridBlock):
+    def __init__(self, **kwargs):
+      super(BatchDotBlock, self).__init__(**kwargs)
+
+    def forward(self, lhs, rhs):
+      x = mx.npx.batch_dot(lhs, rhs)
+      return x
+
+  lhs_data = mx.np.random.uniform(low=-1, high=1, size=[batch_size, units, seq_length], dtype='float32')
+  rhs_data = mx.np.random.uniform(low=-1, high=1, size=[batch_size, seq_length, seq_length], dtype='float32')
+
+  net = BatchDotBlock()
+  net.initialize()
+  fused_net = net
+  net.hybridize()
+  ref_out = net(lhs_data, rhs_data)
+
+  fused_net.optimize_for(lhs_data, rhs_data, backend="ONEDNN")
+  out = fused_net(lhs_data, rhs_data)
+  mx.nd.waitall()
+
+  for i in range(len(out)):
+    assert_almost_equal(out[i].asnumpy(), ref_out[i].asnumpy())
+
+  calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(lhs_data, rhs_data), batch_size=1)
+  qnet = mx.contrib.quant.quantize_net(net, quantized_dtype='auto',
+                                            exclude_layers=None,
+                                            exclude_layers_match=None,
+                                            calib_data=calib_data,
+                                            calib_mode='naive',
+                                            num_calib_batches=1,
+                                            ctx=mx.cpu())
+
+  qout = qnet(lhs_data, rhs_data)
+  mx.nd.waitall()
+
+  for i in range(len(ref_out)):
+      min_range = np.min(ref_out[i].asnumpy())
+      max_range = np.max(ref_out[i].asnumpy())
+      atol = 0.1 * max(abs(min_range), abs(max_range))
+      assert_almost_equal_with_err(qout[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.1)

@@ -430,7 +430,10 @@ class KVStoreDistServer {
     // accumulate row_sparse gradients
     using namespace mshadow;
     Engine::Get()->PushAsync(
-        [to_merge, updateBuf, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+        [to_merge, updateBuf, out](RunContext ctx,
+                                   Engine::CallbackOnStart on_start,
+                                   Engine::CallbackOnComplete on_complete) {
+          on_start();
           op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
               {}, {}, {to_merge, updateBuf->merged}, {kWriteTo}, {out});
           on_complete();
@@ -518,7 +521,10 @@ class KVStoreDistServer {
       store_[master_key] = NDArray(kRowSparseStorage, dshape, Context(), true, type.dtype);
     }
     Engine::Get()->PushAsync(
-        [this, recved, stored, type](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+        [this, recved, stored, type](RunContext ctx,
+                                     Engine::CallbackOnStart on_start,
+                                     Engine::CallbackOnComplete on_complete) {
+          on_start();
           NDArray rsp = stored;
           stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
           mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();

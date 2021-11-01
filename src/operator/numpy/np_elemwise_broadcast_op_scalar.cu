@@ -51,5 +51,11 @@ NNVM_REGISTER_OP(_npi_power_scalar)
 NNVM_REGISTER_OP(_npi_rpower_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rpow"});
 
+NNVM_REGISTER_OP(_npi_floor_divide_scalar)
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"floor_divide"});
+
+NNVM_REGISTER_OP(_npi_rfloor_divide_scalar)
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rfloor_divide"});
+
 }  // namespace op
 }  // namespace mxnet
