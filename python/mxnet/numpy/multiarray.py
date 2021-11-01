@@ -6606,7 +6606,7 @@ def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int, ...]]] = No
     return _mx_nd_np.transpose(a, axes)
 
 
-def permute_dims(a, axes=None):
+def permute_dims(a: ndarray, /, *, axes: Optional[list[int]] = None) -> ndarray:
     """
     Permute the dimensions of an array.
     Parameters
