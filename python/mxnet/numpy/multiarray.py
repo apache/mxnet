@@ -31,6 +31,8 @@ except ImportError:
 from array import array as native_array
 import functools
 import ctypes
+import sys
+import datetime
 import warnings
 import numpy as _np
 from .. import _deferred_compute as dc
@@ -411,6 +413,34 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                                            zero_copy=func_name in {'may_share_memory', 'shares_memory'})
                 new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
                 return mx_np_func(*new_args, **new_kwargs)
+
+
+    def __array_namespace__(self, api_version=None):
+        """
+        Returns an object that has all the array API functions on it.
+
+        Notes
+        -----
+        This is a standard API in
+        https://data-apis.org/array-api/latest/API_specification/array_object.html#array-namespace-self-api-version-none.
+
+        Parameters
+        ----------
+        self : ndarray
+            The indexing key.
+        api_version : Optional, string
+            string representing the version of the array API specification to be returned, in `YYYY.MM` form.
+            If it is None, it should return the namespace corresponding to latest version of the array API
+            specification.
+        """
+        if api_version is not None:
+            try:
+                date = datetime.datetime.strptime(api_version, '%Y.%m')
+                if date.year != 2021:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(f"Unrecognized array API version: {api_version!r}")
+        return sys.modules[self.__module__]
 
 
     def _get_np_basic_indexing(self, key):
@@ -1302,6 +1332,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             raise ValueError("The truth value of an ndarray with multiple elements is ambiguous.")
 
     __nonzero__ = __bool__
+
+    def __index__(self):
+        if self.ndim == 0 and _np.issubdtype(self.dtype, _np.integer):
+            return self.item()
+        raise TypeError('only integer scalar arrays can be converted to a scalar index')
 
     def __float__(self):
         num_elements = self.size
