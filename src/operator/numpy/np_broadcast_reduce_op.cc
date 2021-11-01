@@ -66,7 +66,11 @@ void NumpyArgMinMaxRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
     axes = dmlc::optional<mxnet::Tuple<int>>(t);
   }
   TShape small;
-  small = NumpyReduceAxesShapeImpl(in.shape_, axes, true);
+  if (param.keepdims) {
+    small = outputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(in.shape_, axes, true);
+  }
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(in.shape_, small, &src_shape, &dst_shape);
   const TBlob in_data = in.reshape(src_shape);

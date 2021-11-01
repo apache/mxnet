@@ -47,10 +47,12 @@ enum ConcatOpOutputs { kOut };
 
 struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   int num_args;
-  int dim;
+  dmlc::optional<int> dim;
   DMLC_DECLARE_PARAMETER(ConcatParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1).describe("Number of inputs to be concated.");
-    DMLC_DECLARE_FIELD(dim).set_default(1).describe("the dimension to be concated.");
+    DMLC_DECLARE_FIELD(dim)
+        .set_default(dmlc::optional<int>(1))
+        .describe("the dimension to be concated.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream num_args_s, dim_s;
@@ -66,7 +68,7 @@ class ConcatOp {
  public:
   void Init(const ConcatParam& param) {
     this->size_      = param.num_args;
-    this->dimension_ = param.dim;
+    this->dimension_ = param.dim.has_value() ? param.dim.value() : 0;
   }
 
   void Forward(const OpContext& ctx,
@@ -140,10 +142,18 @@ void ConcatCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(inputs[concat_enum::kData0].type_flag_, DType, {
+  std::vector<TBlob> in_data(param.num_args);
+  for (int i = 0; i < param.num_args; i++) {
+    if (!param.dim.has_value()) {
+      in_data[i] = inputs[i].reshape(mxnet::TShape(1, inputs[i].shape_.Size()));
+    } else {
+      in_data[i] = inputs[i];
+    }
+  }
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(in_data[concat_enum::kData0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(param);
-    op.Forward(ctx, inputs, req, outputs);
+    op.Forward(ctx, in_data, req, outputs);
   });
 }
 
@@ -209,10 +219,18 @@ void ConcatGradCompute(const nnvm::NodeAttrs& attrs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(inputs[concat_enum::kOut].type_flag_, DType, {
+  std::vector<TBlob> out_data(param.num_args);
+  for (int i = 0; i < param.num_args; i++) {
+    if (!param.dim.has_value()) {
+      out_data[i] = outputs[i].reshape(mxnet::TShape(1, outputs[i].shape_.Size()));
+    } else {
+      out_data[i] = outputs[i];
+    }
+  }
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[concat_enum::kOut].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(param);
-    op.Backward(ctx, inputs[concat_enum::kOut], req, outputs);
+    op.Backward(ctx, inputs[concat_enum::kOut], req, out_data);
   });
 }
 
@@ -318,7 +336,7 @@ void ConcatCSRImpl(const nnvm::NodeAttrs& attrs,
   using namespace csr;
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   int num_args             = param.num_args;
-  int concat_dim           = param.dim;
+  int concat_dim           = param.dim.has_value() ? param.dim.value() : 0;
   CHECK_EQ(inputs.size(), num_args);
   CHECK_EQ(outputs.size(), 1);
   int axis = CheckAxis(concat_dim, inputs[0].shape().ndim());

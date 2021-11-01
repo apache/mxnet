@@ -374,12 +374,6 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: Int ```(default=4)```
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
-* MXNET_SUBGRAPH_BACKEND
-  - Values: String ```(default="ONEDNN")``` if oneDNN is available, otherwise ```(default="")```
-  - This variable controls the subgraph partitioning in MXNet.
-  - This variable is used to perform oneDNN FP32 operator fusion and quantization. Please refer to the [oneDNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
-  - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
-
 * MXNET_SAFE_ACCUMULATION
   - Values: Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than

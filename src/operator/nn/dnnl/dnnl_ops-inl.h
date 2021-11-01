@@ -159,6 +159,7 @@ void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<NDArray>& outputs);
 
 /* For batch dot */
+template <bool subgraph>
 void DNNLBatchDotForward(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<NDArray>& inputs,

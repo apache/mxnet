@@ -25,7 +25,9 @@
 #include <cstddef>
 #include <array>
 #include <string>
+#include <memory>
 #include <mutex>
+#include "./engine_impl.h"
 #include "../common/cuda/utils.h"
 
 namespace mxnet {
@@ -55,6 +57,7 @@ class StreamManager {
   std::array<std::array<GPUAuxStream*, kStreams>, kNumGpus> gpu_aux_streams_;
   std::array<mshadow::Stream<gpu>*, kNumGpus> gpu_io_streams_;
   std::array<int, kNumGpus> gpu_cnt_;
+  std::array<std::unique_ptr<CUDAEventPool>, kNumGpus> event_pools_;
 #endif  // MXNET_USE_CUDA
   DISALLOW_COPY_AND_ASSIGN(StreamManager);
 };  // class StreamManager
@@ -64,11 +67,12 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(Context const& ctx) 
   RunContext ret;
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
-      ret = RunContext{ctx, nullptr, nullptr, false};
+      ret = RunContext{ctx, nullptr, nullptr};
       break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
       std::size_t use_counter;
+      CUDAEventPool* event_pool;
       {
         std::lock_guard<std::mutex> lock{mutex_};
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
@@ -84,13 +88,17 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(Context const& ctx) 
           }
           counter = 0;
         }
+        if (event_pools_.at(ctx.dev_id) == nullptr) {
+          event_pools_[ctx.dev_id] = std::make_unique<CUDAEventPool>(ctx);
+        }
+        event_pool  = event_pools_.at(ctx.dev_id).get();
         use_counter = counter;
         counter     = (counter + 1) % kStreams;
       }
       ret = RunContext{ctx,
                        gpu_streams_.at(ctx.dev_id).at(use_counter),
                        gpu_aux_streams_.at(ctx.dev_id).at(use_counter),
-                       false};
+                       event_pool};
       break;
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
@@ -107,18 +115,23 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(Context const& ctx
   RunContext ret;
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
-      ret = RunContext{ctx, nullptr, nullptr, false};
+      ret = RunContext{ctx, nullptr, nullptr};
       break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
+      CUDAEventPool* event_pool;
       {
         std::lock_guard<std::mutex> lock{mutex_};
         if (gpu_io_streams_.at(ctx.dev_id) == nullptr) {
           mxnet::common::cuda::DeviceStore device_store(ctx.dev_id);
           gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(false, false, ctx.dev_id);
         }
+        if (event_pools_.at(ctx.dev_id) == nullptr) {
+          event_pools_[ctx.dev_id] = std::make_unique<CUDAEventPool>(ctx);
+        }
+        event_pool = event_pools_.at(ctx.dev_id).get();
       }
-      ret = RunContext{ctx, gpu_io_streams_.at(ctx.dev_id), nullptr, false};
+      ret = RunContext{ctx, gpu_io_streams_.at(ctx.dev_id), nullptr, event_pool};
       break;
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
@@ -147,6 +160,9 @@ void StreamManager<kNumGpus, kStreams>::Finalize() {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
+      if (event_pools_.at(i) != nullptr) {
+        event_pools_[i].reset();
+      }
       for (auto&& primary_stream : gpu_streams_.at(i)) {
         // Catch exception for CUDA driver shutdown
         MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(primary_stream));

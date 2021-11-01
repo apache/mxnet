@@ -353,7 +353,10 @@ class ThreadedEngine : public Engine {
    * \param run_ctx runtime context used to execute the function.
    * \param opr_block the opr_block to be executed and deleted.
    */
-  void ExecuteOprBlock(RunContext run_ctx, OprBlock* opr_block) {
+  void ExecuteOprBlock(RunContext run_ctx,
+                       OprBlock* opr_block,
+                       CallbackOnStart on_start,
+                       CallbackOnComplete callback) {
     ThreadedOpr* threaded_opr = opr_block->opr;
     if (opr_block->profiling && threaded_opr->opr_name.size()) {
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
@@ -365,7 +368,6 @@ class ThreadedEngine : public Engine {
           new profiler::ProfileOperator(threaded_opr->opr_name.c_str(), attrs.release()));
       opr_block->opr_profile->startForDevice(ctx.dev_type, ctx.dev_id);
     }
-    CallbackOnComplete callback = this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
     const bool debug_info       = (engine_info_ && debug_push_opr_ == opr_block);
     if (debug_info) {
       LOG(INFO) << "ExecuteOprBlock " << opr_block << "shutdown_phase=" << shutdown_phase_;
@@ -381,11 +383,13 @@ class ThreadedEngine : public Engine {
           if ((!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
                threaded_opr->prop == FnProperty::kNoSkip) ||
               threaded_opr->wait) {
-            threaded_opr->fn(run_ctx, callback);
+            threaded_opr->fn(run_ctx, on_start, callback);
           } else {
+            on_start();
             callback();
           }
         } catch (const std::exception& e) {
+          on_start();
           threaded_opr->opr_exception =
               std::make_shared<std::exception_ptr>(std::current_exception());
           callback();
@@ -408,6 +412,7 @@ class ThreadedEngine : public Engine {
         }
       }
     } else {
+      on_start();
       callback();
     }
   }
@@ -428,6 +433,22 @@ class ThreadedEngine : public Engine {
     bulk_status.functions->reserve(bulk_size);
     return bulk_size;
   }
+
+ protected:
+  static void OnStartStatic(Engine* engine, void* opr_block, const dmlc::Error* error);
+  static void OnCompleteStatic(Engine* engine, void* threaded_opr, const dmlc::Error* error);
+#if MXNET_USE_CUDA
+  static void OnStartCPU(Engine* engine, void* opr_block, const dmlc::Error* error);
+  static void OnStartGPU(Engine* engine, void* sync_info, const dmlc::Error* error);
+  static void OnCompleteGPU(Engine* engine, void* sync_info, const dmlc::Error* error);
+  struct GPUWorkerSyncInfo : public common::ObjectPoolAllocatable<GPUWorkerSyncInfo> {
+    void* opr_block{nullptr};
+    void* stream{nullptr};
+    void* event_pool{nullptr};
+  };
+
+  std::shared_ptr<common::ObjectPool<GPUWorkerSyncInfo>> objpool_gpu_sync_ref_;
+#endif
 
  private:
   /*! \brief structure for holding bulk execution status */
@@ -491,7 +512,6 @@ class ThreadedEngine : public Engine {
     }
   }
 
-  static void OnCompleteStatic(Engine* engine, void* threaded_opr, const dmlc::Error* error);
   /*!
    * \brief find exception in global_exception_refs and add it if missing
    * \param opr_exception the exception to be added to global_exception_refs
@@ -536,15 +556,10 @@ class ThreadedEngine : public Engine {
     DeduplicateVarHandle(&bulk_status.const_vars, &bulk_status.mutable_vars);
     auto functions = bulk_status.functions;
     this->PushAsync(
-        [functions](RunContext ctx, CallbackOnComplete on_complete) {
-          ctx.is_bulk = true;
+        [functions](RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
+          on_start();
           for (auto& fn : *functions) {
             fn(ctx);
-          }
-          ctx.is_bulk = false;
-          bool is_gpu = ctx.ctx.dev_mask() == gpu::kDevMask;
-          if (is_gpu) {
-            ctx.get_stream<gpu>()->Wait();
           }
           on_complete();
         },
@@ -554,7 +569,6 @@ class ThreadedEngine : public Engine {
         FnProperty::kNormal,
         0,
         "ImperativeBulk");
-
     bulk_status.functions.reset(new std::vector<SyncFn>());
     bulk_status.functions->reserve(bulk_status.bulk_size);
     bulk_status.const_vars.clear();

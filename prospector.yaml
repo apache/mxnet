@@ -1,0 +1,279 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+output-format: text
+
+strictness: medium
+test-warnings: true
+doc-warnings: false
+max-line-length: 120
+
+ignore-paths:
+    - .github
+    - 3rdparty
+    - benchmark
+    - cd
+    - ci
+    - cmake
+    - config
+    - contrib
+    - cpp-package
+    - docker
+    - docs
+    - example
+    - include
+    - licences
+    - plugin
+    - src
+    - tools
+    - build
+    # - python # enabled
+    # - tests  # enabled
+
+    
+pylint:
+    disable:
+        - consider-using-enumerate
+        - consider-using-with
+        - unspecified-encoding
+        - consider-using-f-string
+        - simplifiable-if-expression
+        - undefined-variable
+        - deprecated-method
+        - unused-import
+        - wrong-import-position
+        - bare-except
+        - import-outside-toplevel
+        - protected-access
+        - no-value-for-parameter
+        - unused-private-member
+        - import-error
+        - unused-wildcard-import
+        - arguments-differ
+        - logging-format-interpolation
+        - unused-variable
+        - logging-too-many-args
+        - pointless-string-statement
+        - useless-suppression
+        - trailing-newlines
+        - use-maxsplit-arg
+        - redefined-builtin
+        - singleton-comparison
+        - misplaced-comparison-constant
+        - unsubscriptable-object
+        - too-many-locals
+        - too-many-statements
+        - invalid-sequence-index
+        - chained-comparison
+        - pointless-statement
+        - unbalanced-tuple-unpacking
+        - no-else-return
+        - super-with-arguments
+        - use-list-literal
+        - logging-not-lazy
+        - unreachable
+        - too-many-arguments
+        - multiple-imports
+        - bad-indentation
+        - invalid-envvar-default
+        - unused-argument
+        - line-too-long
+        - no-self-use
+        - attribute-defined-outside-init
+        - bad-option-value
+        - global-statement
+        - fixme
+        - no-member
+        - no-name-in-module
+        - superfluous-parens
+        - useless-super-delegation
+        - len-as-condition
+        - invalid-unary-operand-type
+        - consider-using-dict-comprehension
+        - consider-using-set-comprehension
+        - try-except-raise
+        - useless-object-inheritance
+        - c-extension-no-member
+        - deprecated-lambda
+        - too-few-public-methods
+        - too-many-branches
+        - too-many-instance-attributes
+        - too-many-public-methods
+        - too-many-lines
+        - duplicate-code
+        - cyclic-import
+        - cell-var-from-loop
+        - raise-missing-from
+        - unnecessary-comprehension
+        - unidiomatic-typecheck
+        - consider-using-in
+        - unsupported-assignment-operation
+        - unnecessary-pass
+        - reimported
+        - unexpected-keyword-arg
+        - arguments-renamed
+        - consider-using-dict-items
+        - consider-iterating-dictionary
+        - undefined-loop-variable
+        - no-else-continue
+        - too-many-nested-blocks
+        - comparison-with-itself
+        - unnecessary-lambda
+        - too-many-function-args
+        - use-dict-literal
+        - redefined-argument-from-local
+        - function-redefined
+        - bad-staticmethod-argument
+        - consider-using-generator
+        - abstract-method
+        - relative-beyond-top-level
+        - use-a-generator
+        - no-else-break
+        - using-constant-test
+        - use-symbolic-message-instead
+        - bad-inline-option
+        - invalid-name
+        - consider-using-min-builtin
+        - consider-using-max-builtin
+        - trailing-comma-tuple
+        - inconsistent-return-statements
+        - global-variable-not-assigned
+        - literal-comparison
+        - expression-not-assigned
+        - used-before-assignment
+        - disallowed-name
+        - not-callable
+        - implicit-str-concat
+        - self-assigning-variable
+        - dangerous-default-value
+        - eval-used
+        - consider-using-from-import
+        - redundant-u-string-prefix
+    enable: 
+        - indexing-exception
+        - old-raise-syntax
+        - undefined-variable
+    
+    options:
+        # Good variable names which should always be accepted, separated by a comma
+        good-names: i,j,_,a,b,op,x,y,wd,lr,kv,k,v,s,p,h,c,m,n,X,t,g,f
+        # Bad variable names which should always be refused, separated by a comma
+        #bad-names:
+        # Colon-delimited sets of names that determine each other's naming style when
+        # the name regexes allow several styles.
+        #name-group:
+        # Include a hint for the correct naming format with invalid-name
+        include-naming-hint: no
+        # List of decorators that produce properties, such as abc.abstractproperty. Add
+        # to this list to register other decorators that produce valid properties.
+        property-classes: abc.abstractproperty
+        # Regular expression matching correct module names
+        module-rgx: (([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+        # Naming hint for module names
+        module-name-hint: (([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+        # Regular expression matching correct constant names
+        const-rgx: (([A-Z_][A-Z0-9_]*)|(__.*__))$
+        # Naming hint for constant names
+        const-name-hint: (([A-Z_][A-Z0-9_]*)|(__.*__))$
+        # Regular expression matching correct inline iteration names
+        inlinevar-rgx: "[A-Za-z_][A-Za-z0-9_]*$"
+        # Naming hint for inline iteration names
+        inlinevar-name-hint: "[A-Za-z_][A-Za-z0-9_]*$"
+        # Regular expression matching correct method names
+        method-rgx: "[a-z_][a-z0-9_]{2,30}$"
+        # Naming hint for method names
+        method-name-hint: "[a-z_][a-z0-9_]{2,30}$"
+        # Regular expression matching correct class attribute names
+        class-attribute-rgx: ([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+        # Naming hint for class attribute names
+        class-attribute-name-hint: ([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+        # Regular expression matching correct argument names
+        argument-rgx: "[a-z_][a-z0-9_]{2,30}$"
+        # Naming hint for argument names
+        argument-name-hint: "[a-z_][a-z0-9_]{2,30}$"
+        # Regular expression matching correct attribute names
+        attr-rgx: "[a-z_][a-z0-9_]{2,30}$"
+        # Naming hint for attribute names
+        attr-name-hint: "[a-z_][a-z0-9_]{2,30}$"
+        # Regular expression matching correct variable names
+        variable-rgx: "[a-z_][a-z0-9_]{2,30}$"
+        # Naming hint for variable names
+        variable-name-hint: "[a-z_][a-z0-9_]{2,30}$"
+        # Regular expression matching correct function names
+        function-rgx: "[a-z_][a-z0-9_]{2,30}$"
+        # Naming hint for function names
+        function-name-hint: "[a-z_][a-z0-9_]{2,30}$"
+        # Regular expression matching correct class names
+        class-rgx: "[A-Za-z_][a-zA-Z0-9]+$"
+        # Naming hint for class names
+        class-name-hint: "[A-Z_][a-zA-Z0-9]+$"
+        # Regular expression which should only match function or class names that do
+        # not require a docstring.
+        no-docstring-rgx: ^_
+        # Minimum line length for functions/classes that require docstrings, shorter
+        # ones are exempt.
+        docstring-min-length: 10
+
+mccabe:
+    disable:
+        - MC0001 # A statement is too complex 
+
+pep8:
+    disable:
+        # Descriptions and examples for each of the rules in Flake8 https://www.flake8rules.com/
+        - E305  # Expected 2 blank lines after end of function or class
+        - E306  # Expected 1 blank line before a nested definition
+        - E501  # Line too long (139 > 120 characters)
+        - E117  # Over-indented
+        - E722  # Do not use bare except, specify exception instead
+        - E741  # Do not use variables named 'I', 'O', or 'l'
+        - E712  # Comparison to true should be 'if cond is true:' or 'if cond:'
+        - W605  # Invalid escape sequence 'x'
+        - E704  # Multiple statements on one line (def)
+        - F811  # Redefinition of unused name from line N
+        - F632  # Use ==/!= to compare str, bytes, and int literals
+        - F821  # Undefined name name
+        - F524  # .format(...) missing argument
+        - E116  # Unexpected indentation (comment)
+        - E114  # Indentation is not a multiple of four (comment)
+        - N807  # Function name should not start and end with ‘__’
+        - E129  # Visually indented line with same indent as next logical line
+        - E131  # Continuation line unaligned for hanging indent
+        - E713  # Test for membership should be 'not in'
+        - E115  # Expected an indented block (comment)
+        - E714  # Test for object identity should be 'is not'
+        - E711  # Comparison to none should be 'if cond is none:'
+        - E101  # Indentation contains mixed spaces and tabs
+        - E721  # Do not compare types, use 'isinstance()'
+
+pyflakes:
+    disable:
+        # Descriptions and examples for each of the rules in Flake8 https://www.flake8rules.com/
+        - F401  # Module imported but unused 
+        - F405  # Name may be undefined, or defined from star imports: module
+        - F841  # Local variable name is assigned to but never used
+        - E713  # Test for membership should be 'not in'
+        - E114  # Indentation is not a multiple of four (comment)
+        - E116  # Unexpected indentation (comment)
+        - E711  # Comparison to none should be 'if cond is none:'
+        - E115  # Expected an indented block (comment)
+        - N807  # Function name should not start and end with ‘__’
+        - E101  # Indentation contains mixed spaces and tabs
+        - F811  # Redefinition of unused name from line N
+        - F632  # Use ==/!= to compare str, bytes, and int literals
+        - F821  # undefined name name
+        - F524  # .format(...) missing argument

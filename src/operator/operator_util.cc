@@ -490,11 +490,6 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
         [ret, fun, dev_mask, req, env](RunContext ctx) {
           TBlob tmp = ret.data();
           (*fun)(env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-          if (dev_mask == gpu::kDevMask) {
-            ctx.get_stream<gpu>()->Wait();
-          }
-#endif
         },
         ret.ctx(),
         {},
@@ -672,11 +667,6 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
         [src, ret, fun, dev_mask, req, env](RunContext ctx) {
           TBlob tmp = ret.data();
           (*fun)(src.data(), env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-          if (dev_mask == gpu::kDevMask) {
-            ctx.get_stream<gpu>()->Wait();
-          }
-#endif
         },
         src.ctx(),
         const_vars,
@@ -954,11 +944,6 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
         [lhs, rhs, ret, fun, dev_mask, req, env](RunContext ctx) {
           TBlob tmp = ret.data();
           (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-          if (dev_mask == gpu::kDevMask) {
-            ctx.get_stream<gpu>()->Wait();
-          }
-#endif
         },
         lhs.ctx(),
         const_vars,
