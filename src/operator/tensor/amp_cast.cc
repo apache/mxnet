@@ -28,7 +28,8 @@
 namespace mxnet {
 namespace op {
 
-static bool MCastChangeLayout(nnvm::NodeAttrs* attrs, mshadow::LayoutFlag targetLayout,
+static bool MCastChangeLayout(nnvm::NodeAttrs* attrs,
+                              mshadow::LayoutFlag targetLayout,
                               std::vector<alm::Transpose>* inpTransposes,
                               std::vector<alm::Transpose>* outTransposes) {
   auto n_inps = attrs->op->get_num_inputs(*attrs);

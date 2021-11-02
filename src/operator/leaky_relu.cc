@@ -146,12 +146,14 @@ inline static bool BackwardLeakyReLUStorageType(const nnvm::NodeAttrs& attrs,
 }
 #endif  // MXNET_USE_ONEDNN == 1
 
-static bool LRChangeLayout(nnvm::NodeAttrs* attrs, mshadow::LayoutFlag target_layout,
+static bool LRChangeLayout(nnvm::NodeAttrs* attrs,
+                           mshadow::LayoutFlag target_layout,
                            std::vector<alm::Transpose>* in_axes,
                            std::vector<alm::Transpose>* out_axes) {
   CHECK_EQ(target_layout, mshadow::kUNKNOWN);
   out_axes->assign(1, alm::FactorCommonTranspose(in_axes));
-  if (attrs->dict["act_type"] == "rrelu") out_axes->resize(2);
+  if (attrs->dict["act_type"] == "rrelu")
+    out_axes->resize(2);
   return false;
 }
 

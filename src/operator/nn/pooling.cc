@@ -271,15 +271,17 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-static bool PoolChangeLayout(nnvm::NodeAttrs* attrs, mshadow::LayoutFlag targetLayout,
-                             std::vector<alm::Transpose> *inpTransposes,
-                             std::vector<alm::Transpose> *outTransposes) {
+static bool PoolChangeLayout(nnvm::NodeAttrs* attrs,
+                             mshadow::LayoutFlag targetLayout,
+                             std::vector<alm::Transpose>* inpTransposes,
+                             std::vector<alm::Transpose>* outTransposes) {
   CHECK_EQ(targetLayout, mshadow::kUNKNOWN);
-  const auto &param = nnvm::get<PoolingParam>(attrs->parsed);
+  const auto& param = nnvm::get<PoolingParam>(attrs->parsed);
   CHECK(param.layout) << "Current layout of pooling should be known: " << attrs->name;
   auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
-  auto t = alm::FactorCommonTranspose(inpTransposes);
-  if (alm::IsIdentity(t)) return false;
+  auto t      = alm::FactorCommonTranspose(inpTransposes);
+  if (alm::IsIdentity(t))
+    return false;
   outTransposes->assign(1, t);
   attrs->dict["layout"] = mshadow::toString(alm::ApplyTranspose(layout, alm::Reverse(t)));
   return true;

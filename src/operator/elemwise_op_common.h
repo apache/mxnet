@@ -198,7 +198,8 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
       attrs, in_attrs, out_attrs, -1);
 }
 
-inline bool ElemwiseChangeLayout(nnvm::NodeAttrs* attrs, mshadow::LayoutFlag targetLayout,
+inline bool ElemwiseChangeLayout(nnvm::NodeAttrs* attrs,
+                                 mshadow::LayoutFlag targetLayout,
                                  std::vector<alm::Transpose>* inpTransposes,
                                  std::vector<alm::Transpose>* outTransposes) {
   CHECK_EQ(targetLayout, mshadow::kUNKNOWN);

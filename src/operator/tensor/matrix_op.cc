@@ -334,13 +334,14 @@ inline static bool TransposeStorageType(const nnvm::NodeAttrs& attrs,
 }
 #endif
 
-static bool TransposeChangeLayout(nnvm::NodeAttrs* attrs, mshadow::LayoutFlag target_layout,
+static bool TransposeChangeLayout(nnvm::NodeAttrs* attrs,
+                                  mshadow::LayoutFlag target_layout,
                                   std::vector<alm::Transpose>* in_axes,
                                   std::vector<alm::Transpose>* out_axes) {
   CHECK_EQ(target_layout, mshadow::kUNKNOWN);
   CHECK_EQ(in_axes->size(), 1);
   const auto& param = nnvm::get<TransposeParam>(attrs->parsed);
-  auto new_axes = alm::Compose(alm::FromTShape(param.axes), in_axes->at(0));
+  auto new_axes     = alm::Compose(alm::FromTShape(param.axes), in_axes->at(0));
   std::ostringstream ss;
   ss << mxnet::TShape(new_axes.begin(), new_axes.end());
   attrs->dict["axes"] = ss.str();

@@ -82,19 +82,22 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 #endif
 
-static bool ConvChangeLayout(nnvm::NodeAttrs* attrs, mshadow::LayoutFlag target_layout,
+static bool ConvChangeLayout(nnvm::NodeAttrs* attrs,
+                             mshadow::LayoutFlag target_layout,
                              std::vector<alm::Transpose>* in_axes,
                              std::vector<alm::Transpose>* out_axes) {
   const auto& param = nnvm::get<ConvolutionParam>(attrs->parsed);
   CHECK(param.layout) << "Current layout of convolution should be known: " << attrs->name;
   auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
-  auto t = target_layout != mshadow::kUNKNOWN
-               ? mshadow::getTranspAxes<size_t>(layout, target_layout)
-               : alm::FactorCommonTranspose(in_axes);
+  auto t      = target_layout != mshadow::kUNKNOWN ?
+               mshadow::getTranspAxes<size_t>(layout, target_layout) :
+               alm::FactorCommonTranspose(in_axes);
   out_axes->assign(1, alm::Reverse(t));
-  if (alm::IsIdentity(t)) return false;
+  if (alm::IsIdentity(t))
+    return false;
   if (target_layout != mshadow::kUNKNOWN) {
-    for (auto i : {0, 1}) in_axes->at(i) = alm::Compose(t, in_axes->at(i));
+    for (auto i : {0, 1})
+      in_axes->at(i) = alm::Compose(t, in_axes->at(i));
   } else {
     target_layout = alm::ApplyTranspose(layout, t);
   }

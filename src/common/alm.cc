@@ -40,8 +40,8 @@ namespace {
 
 nnvm::ObjectPtr CreateTransposeNode(const std::string& name, const alm::Transpose& axes) {
   nnvm::ObjectPtr newptr = nnvm::Node::Create();
-  newptr->attrs.op = nnvm::Op::Get("transpose");
-  newptr->attrs.name = name;
+  newptr->attrs.op       = nnvm::Op::Get("transpose");
+  newptr->attrs.name     = name;
   // set tranpose axes
   std::ostringstream ss;
   ss << mxnet::TShape(axes.begin(), axes.end());
@@ -69,10 +69,11 @@ std::unordered_map<std::string, mshadow::LayoutFlag> ConvertTargets(
 nnvm::Graph OptimizeLayout(nnvm::Graph&& g,
                            const std::unordered_map<std::string, std::string>& layout_targets) {
   std::unordered_map<std::string, mshadow::LayoutFlag> targets = ConvertTargets(layout_targets);
-  static const auto& op_map = Op::GetAttr<mxnet::alm::FChangeLayout>("FChangeLayout");
+  static const auto& op_map     = Op::GetAttr<mxnet::alm::FChangeLayout>("FChangeLayout");
   static const Op* transpose_op = Op::Get("transpose");
   std::unordered_set<nnvm::ObjectPtr> outputs;
-  for (auto& o : g.outputs) outputs.insert(o.node);
+  for (auto& o : g.outputs)
+    outputs.insert(o.node);
   nnvm::NodeEntryMap<alm::Transpose> changed;
   struct ToDelete {
     nnvm::ObjectPtr node;  // output of the transpose
@@ -97,23 +98,26 @@ nnvm::Graph OptimizeLayout(nnvm::Graph&& g,
             }
           }
           auto it = changed.find(node->inputs[i]);
-          if (it == changed.end()) continue;
+          if (it == changed.end())
+            continue;
           input_axes[i] = it->second;
         }
         auto fchange = op_map.get(node->op(), nullptr);
         if (fchange && outputs.count(node) == 0) {
-          auto it = targets.find(node->op()->name);
+          auto it            = targets.find(node->op()->name);
           auto target_layout = it != targets.end() ? it->second : mshadow::kUNKNOWN;
           std::vector<alm::Transpose> output_axes;
           if (fchange(&node->attrs, target_layout, &input_axes, &output_axes))
             node->op()->attr_parser(&node->attrs);
           for (size_t i = 0; i < output_axes.size(); ++i) {
-            if (IsIdentity(output_axes[i])) continue;
+            if (IsIdentity(output_axes[i]))
+              continue;
             changed.insert(std::make_pair(nnvm::NodeEntry(node, i, 0), output_axes[i]));
           }
         }
         for (size_t i = 0; i < input_axes.size(); ++i) {
-          if (IsIdentity(input_axes[i])) continue;
+          if (IsIdentity(input_axes[i]))
+            continue;
           to_add.push_back({node, i, input_axes[i]});
         }
       });
@@ -135,22 +139,27 @@ nnvm::Graph OptimizeLayout(nnvm::Graph&& g,
 
 Transpose Reverse(const Transpose& axes) {
   Transpose rev(axes.size());
-  for (size_t i = 0; i < rev.size(); i++) rev[axes[i]] = i;
+  for (size_t i = 0; i < rev.size(); i++)
+    rev[axes[i]] = i;
   return rev;
 }
 
 Transpose Compose(const Transpose& lhs, const Transpose& rhs) {
-  if (lhs.empty()) return rhs;
-  if (rhs.empty()) return lhs;
+  if (lhs.empty())
+    return rhs;
+  if (rhs.empty())
+    return lhs;
   CHECK_EQ(lhs.size(), rhs.size());
   Transpose ret(lhs.size());
-  for (auto i = 0; i < ret.size(); ++i) ret[i] = lhs[rhs[i]];
+  for (auto i = 0; i < ret.size(); ++i)
+    ret[i] = lhs[rhs[i]];
   return ret;
 }
 
 bool IsIdentity(const Transpose& t) {
   for (size_t i = 0; i < t.size(); ++i) {
-    if (t[i] != i) return false;
+    if (t[i] != i)
+      return false;
   }
   return true;
 }
@@ -163,7 +172,8 @@ mshadow::LayoutFlag ApplyTranspose(mshadow::LayoutFlag layout, const Transpose& 
 
 std::string ApplyTranspose(const std::string& layout, const Transpose& axes) {
   std::string ret(layout.size(), ' ');
-  for (size_t i = 0; i < ret.size(); i++) ret[i] = layout[axes[i]];
+  for (size_t i = 0; i < ret.size(); i++)
+    ret[i] = layout[axes[i]];
   return ret;
 }
 
@@ -176,13 +186,14 @@ Transpose FromTShape(const mxnet::TShape& s) {
 Transpose FactorCommonTranspose(std::vector<Transpose>* axes) {
   Transpose ret;
   for (auto& t : *axes) {
-    if (IsIdentity(t)) continue;
+    if (IsIdentity(t))
+      continue;
     if (IsIdentity(ret)) {
       std::swap(t, ret);
       continue;
     }
     auto rev = Reverse(ret);
-    t = Compose(t, rev);
+    t        = Compose(t, rev);
   }
   return ret;
 }

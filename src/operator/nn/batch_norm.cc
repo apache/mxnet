@@ -446,13 +446,15 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-static bool BNChangeLayout(nnvm::NodeAttrs *attrs, mshadow::LayoutFlag targetLayout,
-                           std::vector<alm::Transpose> *inpTransposes,
-                           std::vector<alm::Transpose> *outTransposes) {
+static bool BNChangeLayout(nnvm::NodeAttrs* attrs,
+                           mshadow::LayoutFlag targetLayout,
+                           std::vector<alm::Transpose>* inpTransposes,
+                           std::vector<alm::Transpose>* outTransposes) {
   CHECK_EQ(targetLayout, mshadow::kUNKNOWN);
   auto t = alm::FactorCommonTranspose(inpTransposes);
   outTransposes->assign(1, t);
-  if (alm::IsIdentity(t)) return false;
+  if (alm::IsIdentity(t))
+    return false;
   const auto& param = nnvm::get<BatchNormParam>(attrs->parsed);
   CHECK_LT(param.axis, t.size());
   attrs->dict["axis"] = std::to_string(t[param.axis]);

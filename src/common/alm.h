@@ -76,7 +76,7 @@ class ALMParams {
  private:
   ALMTargetsT targets_;
 
-  ALMParams() { }
+  ALMParams() {}
 };  // class ALM_params
 
 /*!
@@ -114,9 +114,10 @@ Transpose FromTShape(const mxnet::TShape& s);
  * \param out_axes (out) Outputs' transposes, required to convert to the original layouts.
  * \return true if attrs changed and params need to be reparsed.
  */
-using FChangeLayout =
-    std::function<bool(nnvm::NodeAttrs*, mshadow::LayoutFlag target_layout,
-                       std::vector<Transpose>* in_axes, std::vector<Transpose>* out_axes)>;
+using FChangeLayout = std::function<bool(nnvm::NodeAttrs*,
+                                         mshadow::LayoutFlag target_layout,
+                                         std::vector<Transpose>* in_axes,
+                                         std::vector<Transpose>* out_axes)>;
 
 /*!
  * \brief Factors out and returns a common transpose, or default-constructed Transpose if all
