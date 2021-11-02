@@ -13516,7 +13516,7 @@ def sum(
 
 
 @set_module('mxnet.numpy')
-def bitwise_left_shift(x1, x2, out=None):
+def bitwise_left_shift(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Shift the bits of and integer to the left. Bits are shifted to the left by
     appending x2 0s at the right of x1. Since the internal representation of numbers
@@ -13551,7 +13551,7 @@ def bitwise_left_shift(x1, x2, out=None):
 
 
 @set_module('mxnet.numpy')
-def bitwise_right_shift(x1, x2, out=None):
+def bitwise_right_shift(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Shift the bits of and integer to the right. Bits are shifted to the right by
     x2. Because the internal representation of numbers is in binary format,
