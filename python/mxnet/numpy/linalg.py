@@ -28,7 +28,7 @@ from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
-           'tensordot', 'trace', 'matrix_transpose', 'vecdot']
+           'tensordot', 'trace', 'matrix_transpose', 'vecdot', 'svdvals']
 __all__ += fallback_linalg.__all__
 
 
@@ -89,38 +89,29 @@ def matrix_rank(
 def matrix_transpose(a: ndarray, /) -> ndarray:
     r"""
     Transposes a matrix (or a stack of matrices) `a`.
-
     Notes
     -----
-    `matrix_transpose` is an alias for `transpose`. It is a standard API in
+    `matrix_transpose` is new in array API spec:
     https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-transpose-x
-    instead of an official NumPy operator.
-
+    instead of an official NumPy operator. Unlike transpose, it only transposes the last two axes.
     Parameters
     ----------
-    a : ndarray
-        Input array having shape (..., M, N) and whose innermost two dimensions form MxN matrices.
-
-    Returns
-    ----------
-    out : ndarray
-        An array containing the transpose for each matrix and having shape (..., N, M).
-        The returned array must have the same data type as `a`.
-
-    Examples
-    --------
-    >>> x = np.arange(4).reshape((2,2))
+@@ -103,21 +113,17 @@ def matrix_transpose(a):
     >>> x
     array([[0., 1.],
-           [2., 3.]])
-    >>> np.transpose(x)
+        [2., 3.]])
+    >>> np.linalg.matrix_transpose(x)
     array([[0., 2.],
-           [1., 3.]])
+        [1., 3.]])
     >>> x = np.ones((1, 2, 3))
-    >>> np.transpose(x, (1, 0, 2)).shape
-    (2, 1, 3)
+    >>> np.linalg.matrix_transpose(x)
+    array([[[1., 1.],
+            [1., 1.],
+            [1., 1.]]])
     """
-    return _mx_nd_np.transpose(a, axes=None)
+    if a.ndim < 2:
+        raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+    return _mx_nd_np.swapaxes(a, -1, -2)
 
 
 def trace(a: ndarray, /, *, offset: int = 0) -> ndarray:
@@ -724,6 +715,28 @@ def svd(a: ndarray, /) -> ndarray:
     array(0.)
     """
     return _mx_nd_np.linalg.svd(a)
+
+
+def svdvals(a: ndarray, /) -> ndarray:
+    r"""
+    Computes the singular values of a matrix (or a stack of matrices) `x`.
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        A real array with ``a.ndim >= 2`` and ``M <= N``.
+    Returns
+    -------
+    out : (..., M) ndarray
+        Vector(s) with the singular values, within each vector sorted in
+        descending order. The first ``a.ndim - 2`` dimensions have the same
+        size as those of the input `a`.
+    .. note::
+       `svdvals` is a standard api in
+       https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-svdvals-x
+       instead of an official NumPy operator.
+    """
+    _, s, _ = _mx_nd_np.linalg.svd(a)
+    return s
 
 
 def cholesky(a: ndarray, /) -> ndarray:

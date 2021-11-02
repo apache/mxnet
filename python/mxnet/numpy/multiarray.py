@@ -85,7 +85,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal'
+           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
            'positive', 'logaddexp', 'floor_divide', 'permute_dims']
 
 __all__ += fallback.__all__
@@ -1637,10 +1637,17 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def asscalar(self: ndarray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
-    def argmax(self: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] = None) -> ndarray:  # pylint: disable=arguments-differ
+    def argmax(
+            self: ndarray,
+            /,
+            *,
+            axis: Optional[int] = None,
+            out: Optional[ndarray] = None,
+            keepdims: bool = False
+    ) -> ndarray:  # pylint: disable=arguments-differ
         """Return indices of the maximum values along the given axis.
         Refer to `mxnet.numpy.argmax` for full documentation."""
-        return argmax(self, axis=axis, out=out)
+        return argmax(self, axis=axis, out=out, keepdims=keepdims)
 
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
@@ -1978,10 +1985,17 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute argmax_channel')
 
-    def argmin(self, axis=None, out=None):  # pylint: disable=arguments-differ
+    def argmin(
+            self: ndarray,
+            /,
+            *,
+            axis: Optional[int] = None,
+            out: Optional[ndarray] = None,
+            keepdims: bool = False
+    ) -> ndarray:  # pylint: disable=arguments-differ
         """Return indices of the minium values along the given axis.
         Refer to `mxnet.numpy.argmin` for full documentation."""
-        return argmin(self, axis=axis, out=out)
+        return argmin(self, axis=axis, out=out, keepdims=keepdims)
 
     def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
         """Return an array whose values are limited to [min, max].
@@ -3592,8 +3606,10 @@ def floor_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) 
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     .. note::
+
         This operator now supports automatic type promotion. The resulting type will be determined
         according to the following rules:
+
         * If both inputs are of floating number types, the output is the more precise type.
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is the more
@@ -6606,9 +6622,11 @@ def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int, ...]]] = No
     return _mx_nd_np.transpose(a, axes)
 
 
+@set_module('mxnet.numpy')
 def permute_dims(a: ndarray, /, *, axes: Optional[list[int]] = None) -> ndarray:
     """
     Permute the dimensions of an array.
+
     Parameters
     ----------
     a : ndarray
@@ -6616,15 +6634,18 @@ def permute_dims(a: ndarray, /, *, axes: Optional[list[int]] = None) -> ndarray:
     axes : list of ints, optional
         By default, reverse the dimensions,
         otherwise permute the axes according to the values given.
+
     Returns
     -------
     p : ndarray
         a with its axes permuted.
+
     Note
     --------
     `permute_dims` is a alias for `transpose`. It is a standard API in
     https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#permute-dims-x-axes
     instead of an official NumPy operator.
+
     Examples
     --------
     >>> x = np.arange(4).reshape((2,2))
@@ -8063,7 +8084,14 @@ def clip(a: ndarray, a_min: ndarray, a_max: ndarray, /, *, out: Optional[ndarray
 
 
 @set_module('mxnet.numpy')
-def argmax(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] = None) -> ndarray:
+def argmax(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int] = None,
+        out: Optional[ndarray] = None,
+        keepdims: bool = False
+) -> ndarray:
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -8077,6 +8105,11 @@ def argmax(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] 
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -8085,6 +8118,10 @@ def argmax(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] 
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the maximum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -8128,11 +8165,18 @@ def argmax(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] 
     >>> b
     array([2., 2.])
     """
-    return _mx_nd_np.argmax(a, axis, out)
+    return _mx_nd_np.argmax(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
-def argmin(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] = None) -> ndarray:
+def argmin(
+        a: ndarray,
+        /,
+        *,
+        axis: Optional[int] = None,
+        out: Optional[ndarray] = None,
+        keepdims: bool = False
+) -> ndarray:
     r"""
     Returns the indices of the minimum values along an axis.
 
@@ -8146,6 +8190,11 @@ def argmin(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] 
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -8154,6 +8203,10 @@ def argmin(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] 
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the minimum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -8197,7 +8250,7 @@ def argmin(a: ndarray, /, *, axis: Optional[int] = None, out: Optional[ndarray] 
     >>> b
     array([0., 0.])
     """
-    return _mx_nd_np.argmin(a, axis, out)
+    return _mx_nd_np.argmin(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
@@ -9619,7 +9672,7 @@ atan2.__doc__ = """
 
     .. notes::
        `atan2` is a alias for `arctan2`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x
+       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x1-x2
        instead of an official NumPy operator.
        
        *atan2* is identical to the ``atan2`` function of the underlying
@@ -9877,14 +9930,16 @@ def ldexp(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwarg
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def logaddexp(x1, x2, out=None, **kwargs):
+def logaddexp(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Logarithm of the sum of exponentiations of the inputs.
+
     Calculates log(exp(x1) + exp(x2)). This function is useful in statistics where
     the calculated probabilities of events may be so small as to exceed the range of
     normal floating point numbers. In such cases the logarithm of the calculate
     probability is stored. This function allows adding probabilities stored
     in such a fashion.
+
     Parameters
     ----------
     x1 : ndarray or scalar
@@ -9894,10 +9949,12 @@ def logaddexp(x1, x2, out=None, **kwargs):
     out : ndarray, optional
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
+
     Returns
     -------
     y : ndarray or scalar
         Logarithm of exp(x1) + exp(x2). This is a scalar if both x1 and x2 are scalars.
+
     Examples
     --------
     >>> prob1 = np.log(1e-50)
