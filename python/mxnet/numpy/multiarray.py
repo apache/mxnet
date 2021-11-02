@@ -2556,7 +2556,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             self: ndarray,
             /,
             shape: Tuple[int, ...]
-    ) -> ndarray:  # pylint: disable=redefined-outer-name, arguments-differ
+    ) -> ndarray:  # pylint: disable=redefined-outer-name, disable=arguments-differ
         return _mx_nd_np.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
@@ -2647,10 +2647,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 def empty(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
-) -> ndarray:  # pylint: disable=redefined-outer-name, undefined-variable
+) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
