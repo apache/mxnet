@@ -132,9 +132,17 @@ RUN cd /usr/local/src && \
     tar xf apache-rat-0.13-bin.tar.gz
 
 # Python & cmake
+# We need to remove NumPy from requirements for ubuntu18.04
+# because ubuntu18.04 has only python3.6, which is not supported 
+# for NumPy >= 1.20.0
 COPY install/requirements /work/
+SHELL ["/bin/bash", "-c"]
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install cmake==3.16.6 && \
+    export OS_RELEASE="$(cat /etc/os-release)" && \
+    if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
+        sed -i '/numpy/d' /work/requirements; \
+    fi && \
     python3 -m pip install -r /work/requirements
 
 ARG USER_ID=0
