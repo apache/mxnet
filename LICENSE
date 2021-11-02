@@ -225,6 +225,7 @@
     3rdparty/mkldnn
     3rdparty/mkldnn/doc/assets/mathjax
     3rdparty/mkldnn/tests/benchdnn
+    3rdparty/mkldnn/cmake/FindComputeCpp.cmake (see licenses/LICENSE.mkldnn.txt)
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark
     3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py
     3rdparty/ps-lite
@@ -256,6 +257,8 @@
     =======================================================================================
 
     3rdparty/intgemm
+    3rdparty/mkldnn/src/gpu/jit/ngen/npack/elf_structs.hpp (see licenses/LICENSE.mkldnn.txt)
+    3rdparty/mkldnn/src/gpu/jit/ngen/npack/hash.hpp (see licenses/LICENSE.mkldnn.txt)
     3rdparty/onnx-tensorrt
     3rdparty/onnx-tensorrt/third_party/onnx
     3rdparty/tvm/3rdparty/cma
@@ -273,7 +276,7 @@
     3rdparty/mkldnn/cmake/FindACL.cmake (see licenses/LICENSE.mkldnn.txt)
     3rdparty/mkldnn/cmake/FindBLAS.cmake (see licenses/LICENSE.mkldnn.txt)
     3rdparty/mkldnn/cmake/FindOpenCL.cmake (see licenses/LICENSE.mkldnn.txt)
-    3rdparty/mkldnn/src/common/ittnotify (see licenses/LICENSE.mkldnn.txt)
+    3rdparty/mkldnn/src/cpu/x64/jit_utils/jitprofiling (see licenses/LICENSE.mkldnn.txt)
     3rdparty/mkldnn/src/cpu/x64/xbyak (see licenses/LICENSE.mkldnn.txt)
     3rdparty/mkldnn/tests/gtests/gtest (see licenses/LICENSE.mkldnn.txt)
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
@@ -333,6 +336,7 @@
     =======================================================================================
 
     3rdparty/intgemm/test/3rd_party/catch.hpp
+    3rdparty/mkldnn/src/common/primitive_hashing.hpp (see licenses/LICENSE.mkldnn.txt)
     cmake/Modules/FindJeMalloc.cmake
 
     =======================================================================================
