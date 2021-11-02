@@ -112,10 +112,10 @@ def matrix_transpose(a: ndarray, /) -> ndarray:
     >>> x = np.arange(4).reshape((2,2))
     >>> x
     array([[0., 1.],
-          [2., 3.]])
+           [2., 3.]])
     >>> np.linalg.matrix_transpose(x)
     array([[0., 2.],
-          [1., 3.]])
+           [1., 3.]])
     >>> x = np.ones((1, 2, 3))
     >>> np.linalg.matrix_transpose(x)
     array([[[1., 1.],

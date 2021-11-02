@@ -22,9 +22,6 @@
 
 
 from __future__ import annotations
-
-import numpy
-
 try:
     from __builtin__ import all as py_all
     from __builtin__ import slice as py_slice
@@ -1414,9 +1411,9 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def T(self: ndarray) -> ndarray:
         """Same as self.transpose(). This always returns a copy of self."""
         if self.ndim != 2:
-             warnings.warn('x.T requires x to have 2 dimensions. '
-                           'Use x.mT to transpose stacks of matrices and '
-                           'permute_dims() to permute dimensions.')
+            warnings.warn('x.T requires x to have 2 dimensions. '
+                          'Use x.mT to transpose stacks of matrices and '
+                          'permute_dims() to permute dimensions.')
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
@@ -5326,17 +5323,21 @@ def positive(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs: any) -> 
     r"""
     Computes the numerical positive of each element `x_i` (i.e.,`y_i = +x_i`)
     of the input array x .
+
     Parameters
     ----------
     x : ndarray or scalar
         Input array.
+
     Returns
     -------
     y : ndarray or scalar
         Returned array or scalar: y = +x. This is a scalar if x is a scalar.
+
     Notes
     -----
     Equivalent to `x.copy()`, but only defined for types that support arithmetic.
+
     Examples
     --------
     >>> x1 = np.array(([1., -1.]))
