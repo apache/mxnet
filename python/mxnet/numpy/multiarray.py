@@ -2552,11 +2552,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """Remove single-dimensional entries from the shape of a."""
         return squeeze(self, axis=axis)
 
-    def broadcast_to(
+    def broadcast_to( # pylint:  disable=arguments-differ
             self: ndarray,
             /,
             shape: Tuple[int, ...]
-    ) -> ndarray:  # pylint: disable=redefined-outer-name, disable=arguments-differ
+    ) -> ndarray:  # pylint: disable=redefined-outer-name
         return _mx_nd_np.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
@@ -2703,9 +2703,9 @@ def array(
         object: Union[...],
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
         ctx: Optional[Context] = None
-) -> ndarray: # pylint: disable=undefined-variable
+) -> ndarray:
     """
     Create an array.
 
@@ -2820,10 +2820,10 @@ def shape(a) -> Tuple[int, ...]:
 def zeros(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
-) -> ndarray:  # pylint: disable=redefined-outer-name, disable=undefined-variable
+) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2869,10 +2869,10 @@ def zeros(
 def ones(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
-) -> ndarray:  # pylint: disable=redefined-outer-name, disable=undefined-variable
+) -> ndarray:  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2946,13 +2946,13 @@ def broadcast_to(array: ndarray, shape: Tuple[ndarray, ...]) -> ndarray:  # pyli
     return _mx_nd_np.broadcast_to(array, shape)
 
 
-# pylint: disable=too-many-arguments, redefined-outer-name
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def full(
         shape: Union[int, Tuple[int, ...]],
         fill_value: Union[int, float],
         *,
-        dtype: Optional[Union[str, dtype]] = None,
+        dtype: Optional[Union[str, dtype]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
         out: Optional[ndarray] = None,
@@ -3017,7 +3017,7 @@ def empty_like(
         prototype: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         subok: Optional[bool] = False,
         shape: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -3200,7 +3200,13 @@ def any(
 
 
 @set_module('mxnet.numpy')
-def identity(n: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
+def identity(
+        n: int,
+        /,
+        *,
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
+        ctx: Optional[Context] = None
+) -> ndarray:
     """
     Return the identity array.
 
@@ -6248,7 +6254,7 @@ def eye(N: int,
         k: Optional[int] = 0,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         **kwargs,
 ) -> ndarray:
     """
@@ -6299,7 +6305,7 @@ def linspace(
         *,
         endpoint: Optional[bool] = True,
         retstep: Optional[bool] = False,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         axis: Optional[int] = 0,
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=too-many-arguments
@@ -6398,7 +6404,7 @@ def logspace(
         *,
         endpoint: Optional[bool] = True,
         base: Optional[float] = 10.0,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         axis: Optional[int] = 0,
         ctx: Optional[Context] = None
 ) -> ndarray:
@@ -6820,7 +6826,7 @@ def tri(N: ndarray,
         k: Optional[int] = 0,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         ctx: Optional[Context] = None) -> ndarray:    # pylint: disable=redefined-outer-name
     r"""
     An array with ones at and below the given diagonal and zeros elsewhere.
@@ -7059,7 +7065,7 @@ def arange(
         stop: Optional[Union[int, float]] = None,
         step: Union[int, float] = 1,
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         ctx: Optional[Context] = None,
 ) -> ndarray:
     """Return evenly spaced values within a given interval.
@@ -8575,7 +8581,7 @@ def mean(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         out: Optional[ndarray] = None,
         keepdims: bool = False
 ) -> ndarray:  # pylint: disable=arguments-differ
@@ -8649,7 +8655,7 @@ def std(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         out: Optional[ndarray] = None,
         correction: Optional[int] = 0,
         keepdims: bool = False
@@ -8777,7 +8783,7 @@ def var(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         out: Optional[ndarray] = None,
         correction: Optional[int] = 0,
         keepdims: bool = None
@@ -8858,7 +8864,7 @@ def indices(
         dimensions: Tuple[int, ...],
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         ctx: Optional[Context] = None
 ) -> ndarray:
     """Return an array representing the indices of a grid.
@@ -9130,7 +9136,13 @@ def diag_indices_from(arr: ndarray, /) -> Tuple[ndarray, ...]:
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hanning(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
+def hanning(
+        M: int,
+        /,
+        *,
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
+        ctx: Optional[Context] = None
+) -> ndarray:
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -9211,7 +9223,13 @@ def hanning(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Opt
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hamming(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
+def hamming(
+        M: int,
+        /,
+        *,
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
+        ctx: Optional[Context] = None
+) -> ndarray:
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -9290,7 +9308,13 @@ def hamming(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Opt
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def blackman(M: int, /, *, dtype: Optional[Union[dtype, str]] = "float", ctx: Optional[Context] = None) -> ndarray:
+def blackman(
+        M: int,
+        /,
+        *,
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
+        ctx: Optional[Context] = None
+) -> ndarray:
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three
@@ -11821,7 +11845,7 @@ def full_like(
         /,
         fill_value: Union[int, float],
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
         out: Optional[ndarray] = None,
@@ -11885,7 +11909,7 @@ def zeros_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
         out: Optional[ndarray] = None,
@@ -11951,7 +11975,7 @@ def ones_like(
         a: ndarray,
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
         out: Optional[ndarray] = None,
@@ -12907,7 +12931,7 @@ def prod(
         /,
         *,
         axis: Optional[Union[int, Tuple[int, ...]]] = None,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         out: Optional[ndarray] = None,
         keepdims: bool = False,
         initial: Optional[int] = None
@@ -13057,7 +13081,7 @@ def cumsum(
         /,
         *,
         axis: Optional[int] = None,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         out: Optional[ndarray] = None
 ) -> ndarray:
     """
@@ -13424,7 +13448,7 @@ def sum(
         /,
         *,
         axis: Optional[int] = None,
-        dtype: Optional[Union[dtype, str]] = "float",
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         out: Optional[ndarray] = None,
         keepdims: Optional[bool] = None,
         initial: Optional[int] = None,
