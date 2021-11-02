@@ -3056,6 +3056,58 @@ def test_np_bitwise_not(func, low, high, ndim):
 
 
 @use_np
+@pytest.mark.parametrize('ndim', [2, 3, 4])
+@pytest.mark.parametrize('func,low,high', [
+    ('left_shift', -5, 5),
+    ('right_shift', -5, 5),
+])
+def test_np_bitwise_shift(func, low, high, ndim):
+    def check_unary_func(func, shape, low, high):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def forward(self, a, b, *args, **kwargs):
+                return getattr(np, self._func)(a, b)
+
+        np_func = getattr(onp, func)
+        mx_func = TestUnary("bitwise_" + func)
+        np_test_data1 = onp.random.randint(low, high, shape).astype(onp.int64)
+        np_test_data2 = onp.random.randint(low + 5, high + 5, shape).astype(onp.int64)
+        mx_test_data1 = mx.numpy.array(np_test_data1).astype(onp.int64)
+        mx_test_data2 = mx.numpy.array(np_test_data2).astype(onp.int64)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            np_out = np_func(np_test_data1, np_test_data2)
+            with mx.autograd.record():
+                y = mx_func(mx_test_data1, mx_test_data2)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            if np_out.dtype == np.bool_:
+                assert y.dtype == np.bool_
+
+        np_out = getattr(onp, func)(np_test_data1, np_test_data2)
+        mx_out = getattr(mx.np, "bitwise_" + func)(mx_test_data1, mx_test_data2)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, where=False)
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, subok=False)
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, dtype=onp.int8)
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, dtype="abcdefg")
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, casting='safe')
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, casting='mxnet')
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, order='C')
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, order='mxnet')
+
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        check_unary_func(func, shape, low, high)
+
+
+@use_np
 def test_np_binary_funcs():
     def check_binary_func(func, lshape, rshape, low, high, lgrads, rgrads=None, alltypes=None):
         class TestBinary(HybridBlock):
