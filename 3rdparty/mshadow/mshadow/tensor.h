@@ -399,7 +399,7 @@ inline Shape<5> ConvertLayout(const Shape<5>& src, int src_layout, int dst_layou
  */
 template <typename dim_t>
 inline std::vector<dim_t> getTranspAxes(const LayoutFlag src_layout, const LayoutFlag dst_layout) {
-  auto apply = [](const std::vector<dim_t> &v, const std::vector<dim_t> &op) {
+  auto apply = [](const std::vector<dim_t>& v, const std::vector<dim_t>& op) {
     CHECK_EQ(v.size(), op.size()) << "Layout ndims does not match";
     std::vector<dim_t> ret(v.size());
     for (size_t i = 0; i < v.size(); i++) {
