@@ -1396,7 +1396,7 @@ build_static_libmxnet() {
 # Tests CD PyPI packaging in CI
 ci_package_pypi() {
     set -ex
-    # copies onednn header files to 3rdparty/onednn/include/oneapi/dnnl/ as in CD
+    # copies oneDNN header files to 3rdparty/onednn/include/oneapi/dnnl/ as in CD
     mkdir -p 3rdparty/onednn/include/oneapi/dnnl
     cp include/onednn/oneapi/dnnl/dnnl_version.h 3rdparty/onednn/include/oneapi/dnnl/.
     cp include/onednn/oneapi/dnnl/dnnl_config.h 3rdparty/onednn/include/oneapi/dnnl/.

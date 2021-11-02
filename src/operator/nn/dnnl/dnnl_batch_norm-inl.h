@@ -223,7 +223,7 @@ void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
       workspace                = &outputs[3];
       auto engine              = CpuEngine::Get()->get_engine();
       if (workspace == nullptr) {
-        LOG(FATAL) << "DNNL BatchNorm: incorrect workspace input";
+        LOG(FATAL) << "oneDNN BatchNorm: incorrect workspace input";
       }
       auto ws = std::make_shared<dnnl::memory>(
           fwd.GetPd().workspace_desc(), engine, workspace->GetDNNLData()->get_data_handle());
@@ -257,7 +257,7 @@ void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
       }
     }
   } else {  // no input gamma and beta
-    LOG(FATAL) << "DNNL batch normalization: should not reach here ...";
+    LOG(FATAL) << "oneDNN batch normalization: should not reach here ...";
   }
 }
 
@@ -478,7 +478,7 @@ void DNNLBatchNormBackward(const nnvm::NodeAttrs& attrs,
       }
     }
   } else {
-    LOG(FATAL) << "DNNL batch normalization backward: should not reach here ...";
+    LOG(FATAL) << "oneDNN batch normalization backward: should not reach here ...";
   }
 }
 }  // namespace op

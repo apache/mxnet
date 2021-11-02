@@ -145,7 +145,7 @@ DNNLRnnFullParam DNNLRnnFullParamParser(const RNNParam& rnn_param,
 void DNNLRnnMemMgr::Init(dim_t size, const Context& ctx) {
   workspace_ = NDArray(TShape({size}), ctx, false, mshadow::kUint8);
   if (workspace_.data().dptr_ == nullptr)
-    LOG(FATAL) << "DNNL RNN operator memory allocation error.";
+    LOG(FATAL) << "oneDNN RNN operator memory allocation error.";
   curr_mem  = static_cast<char*>(workspace_.data().dptr_);
   mem_size  = size;
   curr_size = size;
@@ -1264,7 +1264,7 @@ void DNNLRnnOp::Backward(const OpContext& ctx,
   }
   // Fetch weights, src and dst from Forward layer
   if (bwd_vec_.size() != fwd_trn_vec_.size())
-    LOG(FATAL) << "DNNL RNN fusion error.";
+    LOG(FATAL) << "oneDNN RNN fusion error.";
   for (size_t lyr = 0; lyr < bwd_vec_.size(); ++lyr) {
     bwd_vec_.at(lyr).FetchDataWeightsMem(fwd_trn_vec_.at(lyr));
     bwd_vec_.at(lyr).SetWeightsGradsMem();

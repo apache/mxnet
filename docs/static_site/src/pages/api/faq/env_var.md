@@ -326,12 +326,12 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
 * MXNET_ONEDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
-  - Flag to enable or disable ONEDNN accelerator. On by default.
-  - Only applies to mxnet that has been compiled with ONEDNN (```pip install mxnet``` or built from source with ```USE_ONEDNN=1```)
+  - Flag to enable or disable oneDNN accelerator. On by default.
+  - Only applies to mxnet that has been compiled with oneDNN (```pip install mxnet``` or built from source with ```USE_ONEDNN=1```)
 
 * MXNET_ONEDNN_CACHE_NUM
   - Values: Int ```(default=-1)```
-  - Flag to set num of elements that ONEDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use ONEDNN and different input shape.
+  - Flag to set num of elements that oneDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use oneDNN and different input shape.
 
 * MXNET_ONEDNN_FORCE_FC_AB_FORMAT
   - Values: 0, 1 ```(default=0)```
@@ -399,7 +399,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
 * MXNET_USE_ONEDNN_RNN
   - Values: 0(false) or 1(true) ```(default=1)```
-  - This variable controls whether to use the ONEDNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The ONEDNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
+  - This variable controls whether to use the oneDNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The oneDNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
 
 * MXNET_FC_TRUE_FP16
   - Values: 0(false) or 1(true) ```(default=0)```

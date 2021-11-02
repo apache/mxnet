@@ -141,12 +141,12 @@ COMMANDS = OrderedDict([
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
-    ('[Docker] Python3 GPU+ONEDNN unittests',
+    ('[Docker] Python3 GPU+oneDNN unittests',
     [
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_onednn",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
-    ('[Docker] Python3 CPU Intel ONEDNN unittests',
+    ('[Docker] Python3 CPU oneDNN unittests',
     [
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_onednn",
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_python3_cpu",

@@ -158,7 +158,7 @@ void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
     });
     return;
   }
-  LOG(FATAL) << "BatchNormWithReLU operator only supports DNNL Backend.";
+  LOG(FATAL) << "BatchNormWithReLU operator only supports oneDNN Backend.";
 }
 
 void BatchNormWithReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -174,7 +174,7 @@ void BatchNormWithReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
     DNNLBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
     return;
   }
-  LOG(FATAL) << "BatchNormWithReLU operator only supports DNNL Backend.";
+  LOG(FATAL) << "BatchNormWithReLU operator only supports oneDNN Backend.";
 }
 #endif
 

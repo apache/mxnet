@@ -128,7 +128,7 @@ void SgDNNLQuantizeOperator::Forward(const OpContext& ctx,
       *outputs[1].data().dptr<float>() = -real_range;
       *outputs[2].data().dptr<float>() = real_range;
     } else {
-      LOG(FATAL) << "dnnl quantize op only supports int8 and uint8 as output type";
+      LOG(FATAL) << "oneDNN quantize op only supports int8 and uint8 as output type";
     }
 
     if (!initalized_) {

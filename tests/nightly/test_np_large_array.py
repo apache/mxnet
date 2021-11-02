@@ -2066,7 +2066,7 @@ def test_rnn_dim_check():
 
 
 @use_np
-@pytest.mark.skip(reason='runs without DNNL, wtih is not default behavior')
+@pytest.mark.skip(reason='runs without oneDNN, with is not default behavior')
 def test_rnn_vanilla():
     L_SEQ, BAT, L_INP, L_STA = 2**20, 4, 2**10, 2
     def batch_check(x, modes, params):

@@ -76,8 +76,8 @@ dnnl::memory* TmpMemMgr::Alloc(const dnnl::memory::desc& md) {
     // the space by itself. Thus, we just let it continue for estimating the maximum
     // required space size. It will be allocated at next call.
     if (this->curr_mem && dmlc::GetEnv("MXNET_ONEDNN_DEBUG", false)) {
-      LOG(WARNING) << "DNNL debug message: The rest of the temporary space is not "
-                   << "adequate for allocating " << md.get_size() << " bytes. Thus, DNNL "
+      LOG(WARNING) << "oneDNN debug message: The rest of the temporary space is not "
+                   << "adequate for allocating " << md.get_size() << " bytes. Thus, oneDNN "
                    << "allocate the space by itself.";
     }
     dnnl_mem_ptr ret(new dnnl::memory(md, CpuEngine::Get()->get_engine()));
@@ -331,7 +331,7 @@ dnnl_format_tag_t GetDefaultFormat(int num_dims) {
     case 6:
       return dnnl_abcdef;
     default:
-      LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for DNNL";
+      LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for oneDNN";
       return dnnl_format_tag_undef;
   }
 }

@@ -25,7 +25,7 @@ This package supports Linux and Windows platforms. You may also want to check:
 - [mxnet-cu110](https://pypi.python.org/pypi/mxnet-cu110/) with CUDA-11.0 support.
 - [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
 - [mxnet](https://pypi.python.org/pypi/mxnet/).
-- [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without ONEDNN.
+- [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without oneDNN.
 
 To download CUDA, check [CUDA download](https://developer.nvidia.com/cuda-downloads). For more instructions, check [CUDA Toolkit online documentation](http://docs.nvidia.com/cuda/index.html).
 

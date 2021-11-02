@@ -321,7 +321,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
       if (dnnl_param.with_act &&
           full_conv_param.act_param.alg == dnnl::algorithm::eltwise_bounded_relu) {
         if (dnnl_param.with_sum) {
-          LOG(ERROR) << "dnnl doesn't support conv + relu + sum fusion yet.";
+          LOG(ERROR) << "oneDNN doesn't support conv + relu + sum fusion yet.";
           full_conv_param.act_param.alpha *= output_scale;
         } else {
           // For conv+relu6 without sum, we don't need post_ops as output_scale can do the cut off.

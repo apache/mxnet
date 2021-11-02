@@ -26,7 +26,7 @@ MXNet Change Log
       * [CUDA Graphs](#cuda-graphs)
       * [CUDA 11 Support](#cuda-11-support)
       * [TensorRT](#tensorrt)
-      * [OneDNN](#onednn)
+      * [oneDNN](#onednn)
       * [IntGemm](#intgemm)
       * [Subgraph API](#subgraph-api)
       * [Extensions](#extensions)
@@ -308,7 +308,7 @@ MXNet Change Log
  - Add TRT verbose mode (#19100)
  - Backporting TensorRT-Gluon Partition API (and TensorRT 7 support) (#18916)
  - Backport TRT test update #19296 (#19298)
-#### OneDNN
+#### oneDNN
  - Upgrade to oneDNN v1.6.3 (#19153) (#19161)
  - Update oneDNN to official v1.6 release (#18867) (#18867)
  - Upgrade to oneDNN v1.6 (#18822)

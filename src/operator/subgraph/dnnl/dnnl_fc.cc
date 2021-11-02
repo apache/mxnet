@@ -56,7 +56,7 @@ class SgDNNLFCOp {
                 const std::vector<NDArray>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<NDArray>& outputs) {
-    LOG(FATAL) << "Not implemented: subgraph dnnl fully connected only supports "
+    LOG(FATAL) << "Not implemented: subgraph oneDNN fully connected only supports "
                   "inference computation.";
   }
 

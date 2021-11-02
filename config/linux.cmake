@@ -62,7 +62,7 @@ set(OPENCV_ROOT "" CACHE BOOL "OpenCV install path. Supports autodetection.")
 
 set(USE_OPENMP ON CACHE BOOL "Build with Openmp support")
 
-set(USE_ONEDNN ON CACHE BOOL "Build with ONEDNN support")
+set(USE_ONEDNN ON CACHE BOOL "Build with oneDNN support")
 
 set(USE_LAPACK ON CACHE BOOL "Build with lapack support")
 
