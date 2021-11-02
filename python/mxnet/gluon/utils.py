@@ -74,7 +74,7 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
                            (num_slice - extras) * [n_each_section])
     div_points = np.array(section_sizes).cumsum()
     if is_np_array():
-        slices = _mx_np.split(data, indices_or_sections=list(div_points[1: -1]), axis=batch_axis)
+        slices = _mx_np.split(data, list(div_points[1: -1]), axis=batch_axis)
     else:
         slices = []
         for i in range(num_slice):

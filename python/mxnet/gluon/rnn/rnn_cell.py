@@ -1523,12 +1523,12 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
         outputs = npx.dropout(outputs, p=drop_outputs, axes=(axis,))
     if valid_length is not None:
         if axis != 0:
-            outputs = np.transpose(outputs, axes)
+            outputs = np.transpose(outputs, axes=axes)
         outputs = npx.sequence_mask(outputs, sequence_length=valid_length,
                                     use_sequence_length=True, axis=axis)
         # the last state is the iteration number. We don't need it.
         return outputs, states[:-1]
     else:
         if axis != 0:
-            outputs = np.transpose(outputs, axes)
+            outputs = np.transpose(outputs, axes=axes)
         return outputs, states

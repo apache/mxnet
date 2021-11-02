@@ -71,8 +71,8 @@ class MultivariateNormal(Distribution):
         flip(inv(L.T)) = Cholesky(flip(P))
         L = flip(Cholesky(flip(P))).T
         """
-        L_flip_inv_T = np.linalg.cholesky(np.flip(P, (-1, -2)))
-        L = np.linalg.inv(np.flip(L_flip_inv_T, (-1, -2)).mT)
+        L_flip_inv_T = np.linalg.cholesky(np.flip(P, axis=(-1, -2)))
+        L = np.linalg.inv(np.flip(L_flip_inv_T, axis=(-1, -2)).mT)
         return L
 
     @cached_property

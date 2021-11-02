@@ -1998,7 +1998,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         The arguments are the same as for :py:func:`take`, with
         this array as data.
         """
-        return take(self, indices, axis, mode=mode)
+        return take(self, indices, axis=axis, mode=mode)
 
     def one_hot(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`one_hot`.
@@ -6291,7 +6291,7 @@ def eye(N: int,
            [0., 0., 1.],
            [0., 0., 0.]])
     """
-    return _mx_nd_np.eye(N, M, k, dtype, **kwargs)
+    return _mx_nd_np.eye(N, M, k, dtype, kwargs=kwargs)
 # pylint: enable=redefined-outer-name
 
 

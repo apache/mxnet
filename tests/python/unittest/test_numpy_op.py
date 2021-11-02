@@ -8055,7 +8055,13 @@ def test_np_unique():
                         assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
                 # Test imperative once again
-                mx_out = np.unique(x, *config[1:])
+                mx_out = np.unique(
+                    x,
+                    return_index=config[1],
+                    return_inverse=config[2],
+                    return_counts=config[3],
+                    axis=config[4]
+                )
                 np_out = onp.unique(x.asnumpy(), *config[1:])
                 if (len(mx_out)) == 1:
                     assert mx_out.shape == np_out.shape

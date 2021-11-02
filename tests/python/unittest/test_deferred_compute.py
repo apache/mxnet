@@ -167,8 +167,8 @@ def test_dc_numpy_tril():
     def f(a, *, nd):
         assert nd is mx.np
         a = nd.ones((2, 2))
-        b = nd.tril(a, 1)
-        c = nd.tril(a, -1)
+        b = nd.tril(a, k=1)
+        c = nd.tril(a, k=-1)
         return [b, c]
 
     for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
