@@ -231,6 +231,118 @@ struct rtrue_divide : public mxnet_op::tunable {
   }
 };
 
+/***** floor_divide ******/
+
+struct floor_divide : public mxnet_op::tunable {
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_same<DType, bool>::value && std::is_integral<DType>::value,
+                              int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    DType c = static_cast<DType>(::floor(a / b));
+    if ((c * a != b) && ((a < 0) != (b < 0))) {
+      return DType(c - 1);
+    } else {
+      return c;
+    }
+  }
+
+  MSHADOW_XINLINE static bool Map(bool a, bool b) {
+    return static_cast<bool>(::floor(a / b));
+  }
+
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_integral<DType>::value && !std::is_same<DType, float>::value,
+                              int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return ::floor(a / b);
+  }
+
+  MSHADOW_XINLINE static float Map(float a, float b) {
+    return ::floorf(a / b);
+  }
+};
+
+struct rfloor_divide : public mxnet_op::tunable {
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_same<DType, bool>::value && std::is_integral<DType>::value,
+                              int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    DType c = static_cast<DType>(::floor(b / a));
+    if ((c * a != b) && ((a < 0) != (b < 0))) {
+      return DType(c - 1);
+    } else {
+      return c;
+    }
+  }
+
+  MSHADOW_XINLINE static bool Map(bool a, bool b) {
+    return static_cast<bool>(::floor(b / a));
+  }
+
+  template <
+      typename DType,
+      typename std::enable_if<!std::is_integral<DType>::value && !std::is_same<DType, float>::value,
+                              int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return ::floor(b / a);
+  }
+
+  MSHADOW_XINLINE static float Map(float a, float b) {
+    return ::floorf(b / a);
+  }
+};
+
+struct mixed_floor_divide {
+  template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return ::floor(a / static_cast<mshadow::half::half_t>(b));
+  }
+
+  template <typename DType,
+            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_integral<DType>::value,
+                                    int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return ::floorf(a / static_cast<float>(b));
+  }
+
+  template <typename DType,
+            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, float>::value ||
+                                        std::is_integral<DType>::value,
+                                    int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return ::floor(a / static_cast<double>(b));
+  }
+};
+
+struct mixed_rfloor_divide {
+  template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return ::floor(b / static_cast<mshadow::half::half_t>(a));
+  }
+
+  template <typename DType,
+            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_integral<DType>::value,
+                                    int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return ::floorf(b / static_cast<float>(a));
+  }
+
+  template <typename DType,
+            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, float>::value ||
+                                        std::is_integral<DType>::value,
+                                    int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return ::floor(b / static_cast<double>(a));
+  }
+};
+
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
@@ -700,6 +812,44 @@ MXNET_BINARY_MATH_OP(bitwise_xor, static_cast<int64_t>(a) ^ static_cast<int64_t>
 
 MXNET_BINARY_MATH_OP(bitwise_or, static_cast<int64_t>(a) | static_cast<int64_t>(b));
 
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#pragma GCC diagnostic ignored "-Wbool-compare"
+#endif
+
+/*! \brief used for generate element of bitwise_left_shift */
+MXNET_BINARY_MATH_OP(bitwise_left_shift, static_cast<int64_t>(a) << static_cast<int64_t>(b));
+
+MXNET_BINARY_MATH_OP(bitwise_left_shift_grad, math::pow(2.0f, static_cast<int64_t>(b)));
+
+MXNET_BINARY_MATH_OP(bitwise_left_shift_rgrad,
+                     static_cast<int64_t>(a) * math::pow(2.0f, static_cast<int64_t>(b)) *
+                         math::log(2.0f));
+
+MXNET_BINARY_MATH_OP(rbitwise_left_shift, static_cast<int64_t>(b) << static_cast<int64_t>(a));
+
+MXNET_BINARY_MATH_OP(rbitwise_left_shift_grad,
+                     static_cast<int64_t>(b) * math::pow(2.0f, static_cast<int64_t>(a)) *
+                         math::log(2.0f));
+
+/*! \brief used for generate element of bitwise_right_shift */
+MXNET_BINARY_MATH_OP(bitwise_right_shift, static_cast<int64_t>(a) >> static_cast<int64_t>(b));
+
+MXNET_BINARY_MATH_OP(bitwise_right_shift_grad, math::pow(0.5f, static_cast<int64_t>(b)));
+
+MXNET_BINARY_MATH_OP(bitwise_right_shift_rgrad,
+                     static_cast<int64_t>(a) * math::pow(0.5f, static_cast<int64_t>(b)) *
+                         math::log(0.5f));
+
+MXNET_BINARY_MATH_OP(rbitwise_right_shift, static_cast<int64_t>(b) >> static_cast<int64_t>(a));
+
+MXNET_BINARY_MATH_OP(rbitwise_right_shift_grad,
+                     static_cast<int64_t>(b) * math::pow(0.5f, static_cast<int64_t>(a)) *
+                         math::log(0.5f));
+
+#pragma GCC diagnostic pop
+
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(square_root_grad, 0.5f / math::id(a));
@@ -725,6 +875,13 @@ MXNET_BINARY_MATH_OP(ldexp_rgrad, math::id(a) * math::pow(2.0f, b) * math::log(2
 MXNET_BINARY_MATH_OP(rldexp, math::id(b) * math::pow(2.0f, a));  // swap a and b if a is scalar.
 
 MXNET_BINARY_MATH_OP(rldexp_grad, math::id(b) * math::pow(2.0f, a) * math::log(2.0f));
+
+/*! \brief used for generate element of logaddexp */
+MXNET_BINARY_MATH_OP(logaddexp, math::log(math::exp(a) + math::exp(b)));
+
+MXNET_BINARY_MATH_OP(logaddexp_grad, math::exp(a) / (math::exp(a) + math::exp(b)));
+
+MXNET_BINARY_MATH_OP(logaddexp_rgrad, math::exp(b) / (math::exp(a) + math::exp(b)));
 
 /*! \brief used for generate element of round */
 MXNET_SIMPLE_UNARY_MATH_OP(round);

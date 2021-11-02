@@ -61,6 +61,15 @@ MXNET_REGISTER_API("_npi.true_divide")
       UFuncHelper(args, ret, op, op_scalar, op_rscalar);
     });
 
+MXNET_REGISTER_API("_npi.floor_divide")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_floor_divide");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_floor_divide_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_rfloor_divide_scalar");
+      UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
+
 MXNET_REGISTER_API("_npi.mod").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op         = Op::Get("_npi_mod");
@@ -139,6 +148,14 @@ MXNET_REGISTER_API("_npi.bitwise_and")
       UFuncHelper(args, ret, op, op_scalar, nullptr);
     });
 
+MXNET_REGISTER_API("_npi.logaddexp")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op        = Op::Get("_npi_logaddexp");
+      const nnvm::Op* op_scalar = Op::Get("_npi_logaddexp_scalar");
+      UFuncHelper(args, ret, op, op_scalar, nullptr);
+    });
+
 MXNET_REGISTER_API("_npi.copysign")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
@@ -171,5 +188,23 @@ MXNET_REGISTER_API("_npi.ldexp").set_body([](runtime::MXNetArgs args, runtime::M
   const nnvm::Op* op_rscalar = Op::Get("_npi_rldexp_scalar");
   UFuncHelper(args, ret, op, op_scalar, op_rscalar);
 });
+
+MXNET_REGISTER_API("_npi.bitwise_left_shift")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_bitwise_left_shift");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_bitwise_left_shift_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_rbitwise_left_shift_scalar");
+      UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
+
+MXNET_REGISTER_API("_npi.bitwise_right_shift")
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op         = Op::Get("_npi_bitwise_right_shift");
+      const nnvm::Op* op_scalar  = Op::Get("_npi_bitwise_right_shift_scalar");
+      const nnvm::Op* op_rscalar = Op::Get("_npi_rbitwise_right_shift_scalar");
+      UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+    });
 
 }  // namespace mxnet

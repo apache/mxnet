@@ -64,7 +64,8 @@ void DNNLConcatForward(const nnvm::NodeAttrs& attrs,
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   const int num_in_data    = param.num_args;
-  const int concat_dim     = param.dim;
+  int concat_dim           = param.dim.has_value() ? param.dim.value() : 0;
+  concat_dim               = CheckAxis(concat_dim, in_data[concat_enum::kData0].shape().ndim());
   std::vector<dnnl::memory::desc> data_md;
   std::vector<const dnnl::memory*> data_mem;
   data_md.reserve(num_in_data);
@@ -96,7 +97,8 @@ void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   const int num_in_data    = param.num_args;
-  const int axis           = param.dim;
+  int concat_dim           = param.dim.has_value() ? param.dim.value() : 0;
+  concat_dim               = CheckAxis(concat_dim, outputs[concat_enum::kData0].shape().ndim());
   const auto gradz_mem     = inputs[0].GetDNNLData();
   /* init the offset */
   dnnl::memory::dims offsets(outputs[0].shape().ndim());
@@ -112,7 +114,7 @@ void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
     auto from_md = gradz_mem->get_desc().submemory_desc(diff_src_tz, offsets);
     auto from_mem =
         new dnnl::memory(from_md, gradz_mem->get_engine(), gradz_mem->get_data_handle());
-    offsets[axis] += diff_src_tz[axis];
+    offsets[concat_dim] += diff_src_tz[concat_dim];
 
     std::unordered_map<int, dnnl::memory> net_args(
         {{DNNL_ARG_FROM, *gradz_mem}, {DNNL_ARG_TO, *gradi_mem.second}});

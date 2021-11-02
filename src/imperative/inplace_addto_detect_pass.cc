@@ -39,7 +39,12 @@ Graph DetectInplaceAddTo(Graph g) {
   auto& idx                      = g.indexed_graph();
   // reference cont.
   std::vector<int> ref_count(idx.num_node_entries(), 0);
-  std::vector<int> addto_entry(idx.num_node_entries(), 0);
+  std::vector<int> addto_entry;
+  if (g.attrs.count("addto_entry")) {
+    addto_entry = g.GetAttr<std::vector<int> >("addto_entry");
+  } else {
+    addto_entry = std::vector<int>(idx.num_node_entries(), 0);
+  }
   std::vector<int> skip_plus_node(idx.num_nodes(), 0);
 
   for (auto& e : idx.outputs()) {

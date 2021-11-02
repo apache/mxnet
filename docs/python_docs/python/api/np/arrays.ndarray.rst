@@ -512,12 +512,13 @@ Container customization: (see :ref:`Indexing <arrays.indexing>`)
    ndarray.__getitem__
    ndarray.__setitem__
 
-Conversion; the operations :func:`int()` and :func:`float()`.
+Conversion; the operations :func:`index()`, :func:`int()` and :func:`float()`.
 They work only on arrays that have one element in them
 and return the appropriate scalar.
 
 .. autosummary::
 
+   ndarray.__index__
    ndarray.__int__
    ndarray.__float__
 

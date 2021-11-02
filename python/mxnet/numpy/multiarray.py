@@ -31,6 +31,8 @@ except ImportError:
 from array import array as native_array
 import functools
 import ctypes
+import sys
+import datetime
 import warnings
 import numpy as _np
 from .. import _deferred_compute as dc
@@ -80,7 +82,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal', 'positive']
+           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
+           'positive', 'logaddexp', 'floor_divide', 'permute_dims', 'bitwise_left_shift', 'bitwise_right_shift']
 
 __all__ += fallback.__all__
 
@@ -410,6 +413,34 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                                            zero_copy=func_name in {'may_share_memory', 'shares_memory'})
                 new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
                 return mx_np_func(*new_args, **new_kwargs)
+
+
+    def __array_namespace__(self, api_version=None):
+        """
+        Returns an object that has all the array API functions on it.
+
+        Notes
+        -----
+        This is a standard API in
+        https://data-apis.org/array-api/latest/API_specification/array_object.html#array-namespace-self-api-version-none.
+
+        Parameters
+        ----------
+        self : ndarray
+            The indexing key.
+        api_version : Optional, string
+            string representing the version of the array API specification to be returned, in `YYYY.MM` form.
+            If it is None, it should return the namespace corresponding to latest version of the array API
+            specification.
+        """
+        if api_version is not None:
+            try:
+                date = datetime.datetime.strptime(api_version, '%Y.%m')
+                if date.year != 2021:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(f"Unrecognized array API version: {api_version!r}")
+        return sys.modules[self.__module__]
 
 
     def _get_np_basic_indexing(self, key):
@@ -1057,6 +1088,16 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return bitwise_xor(other, self)
 
     @wrap_mxnp_np_ufunc
+    def __lshift__(self, other):
+        """x.__lshift__(y) <=> x << y"""
+        return bitwise_left_shift(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __rshift__(self, other):
+        """x.__rshift__(y) <=> x >> y"""
+        return bitwise_right_shift(self, other)
+
+    @wrap_mxnp_np_ufunc
     def __iand__(self, other):
         """x.__iand__(y) <=> x &= y"""
         return bitwise_and(self, other, out=self)
@@ -1070,6 +1111,26 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __ixor__(self, other):
         """x.__ixor__(y) <=> x ^= y"""
         return bitwise_xor(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __ilshift__(self, other):
+        """x.__ilshift__(y) <=> x <<= y"""
+        return bitwise_left_shift(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __irshift__(self, other):
+        """x.__irshift__(y) <=> x >>= y"""
+        return bitwise_right_shift(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rlshift__(self, other):
+        """x.__rlshift__(y) <=> y << x"""
+        return bitwise_left_shift(other, self)
+
+    @wrap_mxnp_np_ufunc
+    def __rrshift__(self, other):
+        """x.__rrshift__(y) <=> y >> x"""
+        return bitwise_right_shift(other, self)
 
     def __round__(self, n=0):
         """x.__round__(n)"""
@@ -1112,6 +1173,23 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
         return multiply(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __floordiv__(self, other):
+        """x.__floordiv__(y) <=> x // y"""
+        return floor_divide(self, other)
+
+    @wrap_mxnp_np_ufunc
+    def __ifloordiv__(self, other):
+        """x.__ifloordiv__(y) <=> x //= y"""
+        if not self.writable:
+            raise ValueError('trying to divide from a readonly ndarray')
+        return floor_divide(self, other, out=self)
+
+    @wrap_mxnp_np_ufunc
+    def __rfloordiv__(self, other):
+        """x.__rfloordiv__(y) <=> y // x"""
+        return floor_divide(other, self)
 
     def __neg__(self):
         """x.__neg__() <=> -x"""
@@ -1255,6 +1333,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     __nonzero__ = __bool__
 
+    def __index__(self):
+        if self.ndim == 0 and _np.issubdtype(self.dtype, _np.integer):
+            return self.item()
+        raise TypeError('only integer scalar arrays can be converted to a scalar index')
+
     def __float__(self):
         num_elements = self.size
         if num_elements != 1:
@@ -1315,7 +1398,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
         """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim != 2:
+            warnings.warn('x.T requires x to have 2 dimensions. '
+                          'Use x.mT to transpose stacks of matrices and '
+                          'permute_dims() to permute dimensions.')
         return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def mT(self):
+        """Same as self.transpose(). This always returns a copy of self."""
+        if self.ndim < 2:
+            raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+        return _mx_nd_np.swapaxes(self, -1, -2)
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
@@ -1568,10 +1664,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
-    def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
+    def argmax(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return indices of the maximum values along the given axis.
         Refer to `mxnet.numpy.argmax` for full documentation."""
-        return argmax(self, axis, out)
+        return argmax(self, axis, out, keepdims)
 
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
@@ -1909,10 +2005,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute argmax_channel')
 
-    def argmin(self, axis=None, out=None):  # pylint: disable=arguments-differ
+    def argmin(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return indices of the minium values along the given axis.
         Refer to `mxnet.numpy.argmin` for full documentation."""
-        return argmin(self, axis, out)
+        return argmin(self, axis, out, keepdims)
 
     def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
         """Return an array whose values are limited to [min, max].
@@ -3430,6 +3526,50 @@ def true_divide(x1, x2, out=None):
     array([0.  , 0.25, 0.5 , 0.75, 1.  ])
     """
     return _mx_nd_np.true_divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def floor_divide(x1, x2, out=None):
+    """Return the largest integer smaller or equal to the division of the inputs.
+
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+
+    .. note::
+
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
+
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+         precise type
+
+    Examples
+    --------
+    >>> np.floor_divide(7,3)
+    2
+    >>> np.floor_divide([1., 2., 3., 4.], 2.5)
+    array([ 0.,  0.,  1.,  1.])
+    """
+    return _mx_nd_np.floor_divide(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -6386,6 +6526,46 @@ def transpose(a, axes=None):
 
 
 @set_module('mxnet.numpy')
+def permute_dims(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted.
+
+    Note
+    --------
+    `permute_dims` is a alias for `transpose`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html#permute-dims-x-axes
+    instead of an official NumPy operator.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.permute_dims(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.permute_dims(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _mx_nd_np.transpose(a, axes)
+
+
+@set_module('mxnet.numpy')
 def repeat(a, repeats, axis=None):
     """
     Repeat elements of an array.
@@ -7758,7 +7938,7 @@ def clip(a, a_min, a_max, out=None):
 
 
 @set_module('mxnet.numpy')
-def argmax(a, axis=None, out=None):
+def argmax(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -7772,6 +7952,11 @@ def argmax(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -7780,6 +7965,10 @@ def argmax(a, axis=None, out=None):
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the maximum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -7823,11 +8012,11 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _mx_nd_np.argmax(a, axis, out)
+    return _mx_nd_np.argmax(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
-def argmin(a, axis=None, out=None):
+def argmin(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the minimum values along an axis.
 
@@ -7841,6 +8030,11 @@ def argmin(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -7849,6 +8043,10 @@ def argmin(a, axis=None, out=None):
         with the dimension along `axis` removed.
 
     .. note::
+       ``keepdims`` param is part of request in data-api-standard
+       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+       which is not the parameter in official NumPy
+
        In case of multiple occurrences of the minimum values, the indices
        corresponding to the first occurrence are returned.
 
@@ -7892,7 +8090,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _mx_nd_np.argmin(a, axis, out)
+    return _mx_nd_np.argmin(a, axis, out, keepdims)
 
 
 @set_module('mxnet.numpy')
@@ -9502,6 +9700,46 @@ def ldexp(x1, x2, out=None, **kwargs):
     array([  5.,  10.,  20.,  40.])
     """
     return _mx_nd_np.ldexp(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logaddexp(x1, x2, out=None, **kwargs):
+    """
+    Logarithm of the sum of exponentiations of the inputs.
+
+    Calculates log(exp(x1) + exp(x2)). This function is useful in statistics where
+    the calculated probabilities of events may be so small as to exceed the range of
+    normal floating point numbers. In such cases the logarithm of the calculate
+    probability is stored. This function allows adding probabilities stored
+    in such a fashion.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Array of multipliers.
+    x2 : ndarray or scalar, int
+        Array of twos exponents.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Logarithm of exp(x1) + exp(x2). This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    --------
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> prob12 = np.logaddexp(prob1, prob2)
+    >>> prob12
+    -113.87649168120691
+    >>> np.exp(prob12)
+    3.5000000000000057e-50
+    """
+    return _mx_nd_np.logaddexp(x1, x2, out)
 
 
 @set_module('mxnet.numpy')
@@ -12860,3 +13098,75 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     """
     return _mx_nd_np.sum(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims, initial=initial, where=where)
 # pylint: enable=redefined-outer-name, too-many-arguments
+
+
+@set_module('mxnet.numpy')
+def bitwise_left_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the left. Bits are shifted to the left by
+    appending x2 0s at the right of x1. Since the internal representation of numbers
+    is in binary format, this operation is equivalent to ``x1 * 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x2 : ndarray or scalar
+        Number of zeros to append to x1. Has to be non-negative. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.left_shift(5, 2)
+    20
+    >>> np.binary_repr(20)
+    '10100'
+    """
+    return _mx_nd_np.bitwise_left_shift(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+def bitwise_right_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the right. Bits are shifted to the right by
+    x2. Because the internal representation of numbers is in binary format,
+    this operation is equivalent to ``x1 / 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x1 : ndarray or scalar
+        Number of bits to remove at the right of x1. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(10)
+    '1010'
+    >>> np.right_shift(10, 1)
+    5
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.right_shift(10, np.array([1,2,3]))
+    array([5, 2, 1])
+    """
+    return _mx_nd_np.bitwise_right_shift(x1, x2, out)

@@ -51,7 +51,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
            'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal',
-           'positive']
+           'positive', 'logaddexp', 'floor_divide', 'bitwise_left_shift', 'bitwise_right_shift']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1166,6 +1166,45 @@ def true_divide(x1, x2, out=None):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.true_divide(x1, x2, out=out)
     return _api_internal.true_divide(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def floor_divide(x1, x2, out=None):
+    """Return the largest integer smaller or equal to the division of the inputs.
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+
+    .. note::
+
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
+
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+       precise type
+
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.floor_divide(x1, x2, out=out)
+    return _api_internal.floor_divide(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5373,7 +5412,7 @@ def tril_indices(n, k=0, m=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def argmax(a, axis=None, out=None):
+def argmax(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -5388,6 +5427,11 @@ def argmax(a, axis=None, out=None):
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -5397,6 +5441,10 @@ def argmax(a, axis=None, out=None):
 
     Notes
     -----
+    ``keepdims`` param is part of request in data-api-standard
+    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+    which is not the parameter in official NumPy
+
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
@@ -5438,11 +5486,11 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _api_internal.argmax(a, axis, False, out)
+    return _api_internal.argmax(a, axis, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
-def argmin(a, axis=None, out=None):
+def argmin(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -5456,6 +5504,11 @@ def argmin(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -5465,6 +5518,10 @@ def argmin(a, axis=None, out=None):
 
     Notes
     -----
+    ``keepdims`` param is part of request in data-api-standard
+    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+    which is not the parameter in official NumPy
+
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
@@ -5506,7 +5563,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _api_internal.argmin(a, axis, False, out)
+    return _api_internal.argmin(a, axis, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6912,6 +6969,48 @@ def ldexp(x1, x2, out=None, **kwargs):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.ldexp(x1, x2, out=out)
     return _api_internal.ldexp(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def logaddexp(x1, x2, out=None, **kwargs):
+    """
+    Logarithm of the sum of exponentiations of the inputs.
+
+    Calculates log(exp(x1) + exp(x2)). This function is useful in statistics where
+    the calculated probabilities of events may be so small as to exceed the range of
+    normal floating point numbers. In such cases the logarithm of the calculate
+    probability is stored. This function allows adding probabilities stored
+    in such a fashion.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Array of multipliers.
+    x2 : ndarray or scalar, int
+        Array of twos exponents.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Logarithm of exp(x1) + exp(x2). This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    --------
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> prob12 = np.logaddexp(prob1, prob2)
+    >>> prob12
+    -113.87649168120691
+    >>> np.exp(prob12)
+    3.5000000000000057e-50
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.logaddexp(x1, x2, out=out)
+    return _api_internal.logaddexp(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -9916,3 +10015,81 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
         raise ValueError("only where=None or where=True cases are supported for now")
     return _api_internal.sum(a, axis, dtype, keepdims, initial, out)
 # pylint:enable=redefined-outer-name, too-many-arguments
+
+
+@set_module('mxnet.ndarray.numpy')
+def bitwise_left_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the left. Bits are shifted to the left by
+    appending x2 0s at the right of x1. Since the internal representation of numbers
+    is in binary format, this operation is equivalent to ``x1 * 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x2 : ndarray or scalar
+        Number of zeros to append to x1. Has to be non-negative. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.left_shift(5, 2)
+    20
+    >>> np.binary_repr(20)
+    '10100'
+    >>> np.left_shift(5, np.array([1,2,3]))
+    array([10, 20, 40])
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.left_shift(x1, x2, out=out)
+    return _api_internal.bitwise_left_shift(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def bitwise_right_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the right. Bits are shifted to the right by
+    x2. Because the internal representation of numbers is in binary format,
+    this operation is equivalent to ``x1 / 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x1 : ndarray or scalar
+        Number of bits to remove at the right of x1. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(10)
+    '1010'
+    >>> np.right_shift(10, 1)
+    5
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.right_shift(10, np.array([1,2,3]))
+    array([5, 2, 1])
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.right_shift(x1, x2, out=out)
+    return _api_internal.bitwise_right_shift(x1, x2, out)

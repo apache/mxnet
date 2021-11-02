@@ -105,6 +105,7 @@ Exponents and logarithms
    log10
    log2
    log1p
+   logaddexp
 
 
 Other special functions
@@ -133,6 +134,7 @@ Rational routines
    :toctree: generated/
 
    lcm
+   gcd
 
 
 Arithmetic operations
@@ -155,6 +157,7 @@ Arithmetic operations
    fmod
    modf
    divmod
+   floor_divide
 
 
 Miscellaneous
