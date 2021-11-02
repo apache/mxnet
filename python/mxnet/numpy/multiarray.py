@@ -2647,7 +2647,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 def empty(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
@@ -2703,7 +2703,7 @@ def array(
         object: Union[...],
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         ctx: Optional[Context] = None
 ) -> ndarray:
     """
@@ -2820,7 +2820,7 @@ def shape(a) -> Tuple[int, ...]:
 def zeros(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
@@ -2869,7 +2869,7 @@ def zeros(
 def ones(
         shape: Union[int, Tuple[int, ...]],
         *,
-        dtype: Optional[Union[dtype, str]] = "float", # pylint: disable=undefined-variable
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
 ) -> ndarray:  # pylint: disable=redefined-outer-name
