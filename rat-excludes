@@ -120,6 +120,9 @@ CODEOWNERS
 .asf.yaml
 
 # Incorporated third-party source files that carry its own license, captured in licenses/
+_export_onnx.py
+_op_translations_opset12.py
+_op_translations_opset13.py
 pool.h
 pool.cuh
 erfinv-inl.h
@@ -127,6 +130,9 @@ im2col.cuh
 im2col.h
 deformable_im2col.cuh
 deformable_im2col.h
+modulated_deformable_convolution-inl.h
+modulated_deformable_convolution.cc
+modulated_deformable_convolution.cu
 modulated_deformable_im2col.cuh
 modulated_deformable_im2col.h
 FindCUDAToolkit.cmake
