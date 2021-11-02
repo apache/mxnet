@@ -3670,6 +3670,7 @@ def floor_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) 
     -------
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
+
     .. note::
 
         This operator now supports automatic type promotion. The resulting type will be determined
@@ -3679,6 +3680,7 @@ def floor_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) 
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is the more
           precise type
+
     Examples
     --------
     >>> np.floor_divide(7,3)

@@ -89,20 +89,33 @@ def matrix_rank(
 def matrix_transpose(a: ndarray, /) -> ndarray:
     r"""
     Transposes a matrix (or a stack of matrices) `a`.
+
     Notes
     -----
     `matrix_transpose` is new in array API spec:
     https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-transpose-x
     instead of an official NumPy operator. Unlike transpose, it only transposes the last two axes.
+
     Parameters
     ----------
-@@ -103,21 +113,17 @@ def matrix_transpose(a):
+    a : ndarray
+        Input array having shape (..., M, N) and whose innermost two dimensions form MxN matrices.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the transpose for each matrix and having shape (..., N, M).
+        The returned array must have the same data type as `a`.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
     >>> x
     array([[0., 1.],
-        [2., 3.]])
+          [2., 3.]])
     >>> np.linalg.matrix_transpose(x)
     array([[0., 2.],
-        [1., 3.]])
+          [1., 3.]])
     >>> x = np.ones((1, 2, 3))
     >>> np.linalg.matrix_transpose(x)
     array([[[1., 1.],
@@ -720,16 +733,19 @@ def svd(a: ndarray, /) -> ndarray:
 def svdvals(a: ndarray, /) -> ndarray:
     r"""
     Computes the singular values of a matrix (or a stack of matrices) `x`.
+
     Parameters
     ----------
     a : (..., M, N) ndarray
         A real array with ``a.ndim >= 2`` and ``M <= N``.
+
     Returns
     -------
     out : (..., M) ndarray
         Vector(s) with the singular values, within each vector sorted in
         descending order. The first ``a.ndim - 2`` dimensions have the same
         size as those of the input `a`.
+
     .. note::
        `svdvals` is a standard api in
        https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-svdvals-x
