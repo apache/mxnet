@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file batchnorm_test.cc
  * \brief batchnorm operator unit tests and utility functions
  * \author Chris Olivier

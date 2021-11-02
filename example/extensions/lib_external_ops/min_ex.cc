@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file min_ex.cc
  * \brief example external operator source file
  */

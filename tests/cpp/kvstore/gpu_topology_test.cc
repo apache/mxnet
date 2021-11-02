@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file gpu_topology_test.cc
  * \brief gpu topology tests
 */

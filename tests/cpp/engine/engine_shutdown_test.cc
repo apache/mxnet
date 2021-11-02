@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file engine_shutdown_test.cc
  * \brief Tests engine shutdown for possible crashes
 */

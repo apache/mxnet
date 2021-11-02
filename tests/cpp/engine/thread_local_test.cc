@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file engine_thread_local_test.cc
  * \brief Tests thread safety and lifetime of thread local store
 */

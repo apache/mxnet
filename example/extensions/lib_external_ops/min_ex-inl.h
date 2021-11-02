@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file min_ex-inl.h
  * \brief example external operator header file
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file transsparse_lib.cc
  * \brief Sample 2D transpose custom operator.
  */
