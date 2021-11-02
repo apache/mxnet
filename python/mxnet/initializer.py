@@ -373,8 +373,8 @@ class Mixed(object):
     Example
     -------
     >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize biases to zero
-    ... # and every other parameter to random values with uniform distribution.
-    ...
+    >>> # and every other parameter to random values with uniform distribution.
+
     >>> init = mx.initializer.Mixed(['bias', '.*'], [mx.init.Zero(), mx.init.Uniform(0.1)])
     >>> block.initialize(init)
     >>>

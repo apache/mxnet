@@ -4539,7 +4539,7 @@ def dsplit(ary, indices_or_sections):
             [ 6.,  7.]],
            [[10., 11.],
             [14., 15.]]])]
-    >>> np.dsplit(x, np.array([3, 6]))
+    >>> np.dsplit(x, [3, 4])
     [array([[[ 0.,   1.,   2.],
             [ 4.,   5.,   6.]],
            [[ 8.,   9.,  10.],

@@ -3943,7 +3943,7 @@ def sinh(x, out=None, **kwargs):
     >>> np.sinh(0)
     0.0
     >>> # Example of providing the optional output parameter
-    >>> out1 = np.array([0], dtype='f')
+    >>> out1 = np.array([0], dtype='float64')
     >>> out2 = np.sinh(np.array([0.1]), out1)
     >>> out2 is out1
     True
@@ -4483,7 +4483,7 @@ acos.__doc__ = """
 
     Examples
     ----------
-    >>> np.acos([1, -1])
+    >>> np.acos(np.array([1, -1]))
     array([ 0.        ,  3.14159265])
     """
 
@@ -7843,8 +7843,8 @@ def argmax(a, axis=None, out=None):
 
     Specify ``out`` ndarray:
 
-    >>> a = np.arange(6).reshape(2,3) + 10
-    >>> b = np.zeros((2,))
+    >>> a = np.arange(6, dtype="int64").reshape(2,3) + 10
+    >>> b = np.zeros((2,), dtype="int64")
     >>> np.argmax(a, axis=1, out=b)
     array([2., 2.])
     >>> b
