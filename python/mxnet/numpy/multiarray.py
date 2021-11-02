@@ -1229,12 +1229,12 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return divide(self, other)
 
     @wrap_mxnp_np_ufunc
-    def __rdiv__(self: ndarray, other: ndarray, /) -> ndarray:
+    def __rdiv__(self: ndarray, other: ndarray, /) -> ndarray: # pylint: disable=arguments-differ
         """x.__rdiv__(y) <=> y / x"""
         return divide(other, self)
 
     @wrap_mxnp_np_ufunc
-    def __idiv__(self: ndarray, other: ndarray, /) -> ndarray:
+    def __idiv__(self: ndarray, other: ndarray, /) -> ndarray: # pylint: disable=arguments-differ
         """x.__idiv__(y) <=> x /= y"""
         return divide(self, other, out=self)
 
@@ -1582,6 +1582,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return _np_ndarray_cls(hdl)
 
+    # pylint: disable=arguments-differ
     def astype(
             self: ndarray,
             /,
@@ -1591,7 +1592,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             casting: Optional[str] = 'unsafe',
             subok: Optional[bool] = True,
             copy: Optional[bool] = True
-    ) -> ndarray:  # pylint: disable=arguments-differ,unused-argument, too-many-arguments
+    ) -> ndarray:  # pylint: disable=arguments-differ, unused-argument, too-many-arguments,
         """
         Copy of the array, cast to a specified type.
 
@@ -2551,7 +2552,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """Remove single-dimensional entries from the shape of a."""
         return squeeze(self, axis=axis)
 
-    def broadcast_to(self: ndarray, /, shape: Tuple[int, ...]) -> ndarray:  # pylint: disable=redefined-outer-name
+    def broadcast_to(
+            self: ndarray,
+            /,
+            shape: Tuple[int, ...]
+    ) -> ndarray:  # pylint: disable=redefined-outer-name, arguments-differ
         return _mx_nd_np.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
@@ -2645,7 +2650,7 @@ def empty(
         dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
-) -> ndarray:  # pylint: disable=redefined-outer-name
+) -> ndarray:  # pylint: disable=redefined-outer-name, undefined-variable
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -2700,7 +2705,7 @@ def array(
         *,
         dtype: Optional[Union[dtype, str]] = "float",
         ctx: Optional[Context] = None
-) -> ndarray:
+) -> ndarray: # pylint: disable=undefined-variable
     """
     Create an array.
 
@@ -2818,7 +2823,7 @@ def zeros(
         dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
-) -> ndarray:  # pylint: disable=redefined-outer-name
+) -> ndarray:  # pylint: disable=redefined-outer-name, disable=undefined-variable
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2867,7 +2872,7 @@ def ones(
         dtype: Optional[Union[dtype, str]] = "float",
         order: Optional[str] = 'C',
         ctx: Optional[Context] = None,
-) -> ndarray:  # pylint: disable=redefined-outer-name
+) -> ndarray:  # pylint: disable=redefined-outer-name, disable=undefined-variable
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
