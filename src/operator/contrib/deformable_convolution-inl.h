@@ -1,11 +1,13 @@
 /*!
  * Copyright (c) 2017 Microsoft
- * Licensed under The Apache-2.0 License [see LICENSE for details]
+ * Licensed under The MIT License [see LICENSE for details]
  * \file deformable_convolution-inl.h
  * \brief
  * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo
  * \ref: https://arxiv.org/abs/1703.06211
  * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai
+ *
+ * Code from https://github.com/msracver/Deformable-ConvNets/blob/d51075968c5fd40b37a55d20c8e945c1f181d529/rfcn/operator_cxx/deformable_convolution-inl.h
 */
 #ifndef MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_

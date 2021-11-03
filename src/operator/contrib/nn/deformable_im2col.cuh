@@ -48,8 +48,8 @@
  *
  ***************** END Caffe Copyright Notice and Disclaimer ********************
  *
- * Copyright (c) 2017 Microsoft
- * Licensed under The Apache-2.0 License [see LICENSE for details]
+ * Copyright (c) 2018 Microsoft
+ * Licensed under The MIT License [see LICENSE for details]
  * \file deformable_im2col.cuh
  * \brief Function definitions of converting an image to
  * column matrix based on kernel, padding, dilation, and offset.

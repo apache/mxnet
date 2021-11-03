@@ -238,17 +238,9 @@
     include/mkldnn (header symlinks to 3rdparty/mkldnn)
     include/mshadow (header symlinks to 3rdparty/mshadow/mshadow)
     include/nnvm (header symlinks to 3rdparty/tvm/nnvm/include/nnvm)
-    src/operator/contrib/deformable_convolution-inl.h
-    src/operator/contrib/deformable_convolution.cc
-    src/operator/contrib/deformable_convolution.cu
-    src/operator/contrib/deformable_psroi_pooling-inl.h
-    src/operator/contrib/deformable_psroi_pooling.cc
-    src/operator/contrib/deformable_psroi_pooling.cu
     src/operator/contrib/multi_proposal-inl.h
     src/operator/contrib/multi_proposal.cc
     src/operator/contrib/multi_proposal.cu
-    src/operator/contrib/psroi_pooling.cc
-    src/operator/contrib/psroi_pooling.cu
     src/operator/nn/mkldnn/mkldnn_base-inl.h
     src/operator/special_functions-inl.h
 
@@ -264,9 +256,18 @@
     3rdparty/tvm/3rdparty/cma
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
     example/gluon/tree_lstm
-    src/operator/contrib/modulated_deformable_convolution-inl.h
-    src/operator/contrib/modulated_deformable_convolution.cc
-    src/operator/contrib/modulated_deformable_convolution.cu
+    src/operator/contrib/deformable_convolution-inl.h (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/deformable_convolution.cc (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/deformable_convolution.cu (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/deformable_psroi_pooling-inl.h (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/deformable_psroi_pooling.cc (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/deformable_psroi_pooling.cu (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/modulated_deformable_convolution-inl.h (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/modulated_deformable_convolution.cc (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/modulated_deformable_convolution.cu (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/psroi_pooling-inl.h (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/psroi_pooling.cc (see licenses/LICENSE.deformable_convnets.txt)
+    src/operator/contrib/psroi_pooling.cu (see licenses/LICENSE.deformable_convnets.txt)
     src/operator/nn/layer_norm_cpu.h
 
     =======================================================================================
@@ -315,14 +316,14 @@
     2-clause BSD license + Caffe Copyright Notice and Disclaimer
     =======================================================================================
 
-    src/operator/nn/pool.h
-    src/operator/nn/pool.cuh
-    src/operator/nn/im2col.h
-    src/operator/nn/im2col.cuh
     src/operator/contrib/nn/deformable_im2col.h
     src/operator/contrib/nn/deformable_im2col.cuh
     src/operator/contrib/nn/modulated_deformable_im2col.h
     src/operator/contrib/nn/modulated_deformable_im2col.cuh
+    src/operator/nn/pool.h
+    src/operator/nn/pool.cuh
+    src/operator/nn/im2col.h
+    src/operator/nn/im2col.cuh
 
     =======================================================================================
     2-clause BSD license + zlib license
