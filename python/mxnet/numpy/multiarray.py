@@ -48,7 +48,8 @@ from ..runtime import Features
 from ..device import Device
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype, wrap_ctx_to_device_func,\
-                   dtype_from_number, wrap_data_api_statical_func
+                   dtype_from_number, wrap_data_api_statical_func,\
+                   wrap_sort_functions
 from ..device import current_device
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -1989,13 +1990,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pick')
 
-    def sort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
+    def sort(self, axis=-1, descending=False, stable=True):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sort`.
 
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        raise sort(self, axis=axis, kind=kind, order=order)
+        return sort(self, axis=axis, descending=descending, stable=stable)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -2005,13 +2006,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute topk')
 
-    def argsort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
+    def argsort(self, axis=-1, descending=False, stable=True):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        return argsort(self, axis=axis, kind=kind, order=order)
+        return argsort(self, axis=axis, descending=descending, stable=stable)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -5931,12 +5932,16 @@ atanh.__doc__ = """
 
 
 @set_module('mxnet.numpy')
-def argsort(a, axis=-1, kind=None, order=None):
+@wrap_sort_functions
+def argsort(a, axis=-1, descending=False, stable=True):
     """
-    Returns the indices that would sort an array.
-    Perform an indirect sort along the given axis using the algorithm specified
-    by the `kind` keyword. It returns an array of indices of the same shape as
-    `a` that index data along the given axis in sorted order.
+    Returns the indices that sort an array `x` along a specified axis.
+
+    Notes
+    -----
+    `argsort` is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#argsort-x-axis-1-descending-false-stable-true
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -5945,11 +5950,13 @@ def argsort(a, axis=-1, kind=None, order=None):
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : string, optional
-        This argument can take any string, but it does not have any effect on the
-        final result.
-    order : str or list of str, optional
-        Not supported yet, will raise NotImplementedError if not None.
+    descending : bool, optional
+        sort order. If `True`, the returned indices sort x in descending order (by value).
+        If `False`, the returned indices sort x in ascending order (by value).Default: False.
+    stable : bool, optional
+        sort stability. If `True`, the returned indices must maintain the relative order
+        of x values which compare as equal. If `False`, the returned indices may or may not
+        maintain the relative order of x values which compare as equal. Default: True.
 
     Returns
     -------
@@ -6000,26 +6007,37 @@ def argsort(a, axis=-1, kind=None, order=None):
     >>> x[ind]  # same as np.sort(x, axis=None)
     array([0, 2, 2, 3])
     """
-    return _mx_nd_np.argsort(a, axis=axis, kind=kind, order=order)
+    if stable:
+        warnings.warn("Currently, MXNet only support quicksort in backend, which is not stable")
+    return _mx_nd_np.argsort(a, axis=axis, descending=descending)
 
 
 @set_module('mxnet.numpy')
-def sort(a, axis=-1, kind=None, order=None):
+@wrap_sort_functions
+def sort(a, axis=-1, descending=False, stable=True):
     """
     Return a sorted copy of an array.
+
+    Notes
+    -----
+    `sort` is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#sort-x-axis-1-descending-false-stable-true
+    instead of an official NumPy operator.
 
     Parameters
     ----------
     a : ndarray
-        Array to be sorted.
+        Array to sort.
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : string, optional
-        This argument can take any string, but it does not have any effect on the
-        final result.
-    order : str or list of str, optional
-        Not supported yet, will raise NotImplementedError if not None.
+    descending : bool, optional
+        sort order. If `True`, the returned indices sort x in descending order (by value).
+        If `False`, the returned indices sort x in ascending order (by value).Default: False.
+    stable : bool, optional
+        sort stability. If `True`, the returned indices must maintain the relative order
+        of x values which compare as equal. If `False`, the returned indices may or may not
+        maintain the relative order of x values which compare as equal. Default: True.
 
     Returns
     -------
@@ -6042,7 +6060,7 @@ def sort(a, axis=-1, kind=None, order=None):
     array([[1, 1],
            [3, 4]])
     """
-    return _mx_nd_np.sort(a, axis=axis, kind=kind, order=order)
+    return _mx_nd_np.sort(a, axis=axis, descending=descending)
 
 
 @set_module('mxnet.numpy')

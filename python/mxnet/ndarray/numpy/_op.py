@@ -1604,12 +1604,15 @@ def any(a, axis=None, out=None, keepdims=False):
 
 
 @set_module('mxnet.ndarray.numpy')
-def argsort(a, axis=-1, kind=None, order=None):
+def argsort(a, axis=-1, descending=False, stable=True):
     """
-    Returns the indices that would sort an array.
-    Perform an indirect sort along the given axis using the algorithm specified
-    by the `kind` keyword. It returns an array of indices of the same shape as
-    `a` that index data along the given axis in sorted order.
+    Returns the indices that sort an array `x` along a specified axis.
+
+    Notes
+    -----
+    `argsort` is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#argsort-x-axis-1-descending-false-stable-true
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -1618,11 +1621,13 @@ def argsort(a, axis=-1, kind=None, order=None):
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : string, optional
-        This argument can take any string, but it does not have any effect on the
-        final result.
-    order : str or list of str, optional
-        Not supported yet, will raise NotImplementedError if not None.
+    descending : bool, optional
+        sort order. If `True`, the returned indices sort x in descending order (by value).
+        If `False`, the returned indices sort x in ascending order (by value).Default: False.
+    stable : bool, optional
+        sort stability. If `True`, the returned indices must maintain the relative order
+        of x values which compare as equal. If `False`, the returned indices may or may not
+        maintain the relative order of x values which compare as equal. Default: True.
 
     Returns
     -------
@@ -1673,29 +1678,34 @@ def argsort(a, axis=-1, kind=None, order=None):
     >>> x[ind]  # same as np.sort(x, axis=None)
     array([0, 2, 2, 3])
     """
-    if order is not None:
-        raise NotImplementedError("order not supported here")
-
-    return _api_internal.argsort(a, axis, True, 'int64')
+    return _api_internal.argsort(a, axis, not descending, 'int64')
 
 
 @set_module('mxnet.ndarray.numpy')
-def sort(a, axis=-1, kind=None, order=None):
+def sort(a, axis=-1, descending=False, stable=True):
     """
     Return a sorted copy of an array.
+
+    Notes
+    -----
+    `sort` is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#sort-x-axis-1-descending-false-stable-true
+    instead of an official NumPy operator.
 
     Parameters
     ----------
     a : ndarray
-        Array to be sorted.
+        Array to sort.
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : string, optional
-        This argument can take any string, but it does not have any effect on the
-        final result.
-    order : str or list of str, optional
-        Not supported yet, will raise NotImplementedError if not None.
+    descending : bool, optional
+        sort order. If `True`, the returned indices sort x in descending order (by value).
+        If `False`, the returned indices sort x in ascending order (by value).Default: False.
+    stable : bool, optional
+        sort stability. If `True`, the returned indices must maintain the relative order
+        of x values which compare as equal. If `False`, the returned indices may or may not
+        maintain the relative order of x values which compare as equal. Default: True.
 
     Returns
     -------
@@ -1718,9 +1728,7 @@ def sort(a, axis=-1, kind=None, order=None):
     array([[1, 1],
            [3, 4]])
     """
-    if order is not None:
-        raise NotImplementedError("order not supported here")
-    return _api_internal.sort(a, axis, True)
+    return _api_internal.sort(a, axis, not descending)
 
 @set_module('mxnet.ndarray.numpy')
 def dot(a, b, out=None):
