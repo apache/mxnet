@@ -146,6 +146,7 @@ np_einsum_path_op-inl.h
 deformable_psroi_pooling.cu
 deformable_convolution.cu
 deformable_convolution-inl.h
+psroi_pooling-inl.h
 psroi_pooling.cc
 multi_proposal.cu
 deformable_psroi_pooling-inl.h
