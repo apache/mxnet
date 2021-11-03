@@ -3191,7 +3191,6 @@ def convert_embedding(node, **kwargs):
 
 
 @mx_op.register("stack")
-@mx_op.register("_npi_stack")
 def convert_stack(node, **kwargs):
     """Map MXNet's stack operator to onnx operators.
     """

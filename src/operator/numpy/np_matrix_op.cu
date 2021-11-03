@@ -34,8 +34,6 @@ NNVM_REGISTER_OP(_np_reshape).set_attr<FCompute>("FCompute<gpu>", UnaryOp::Ident
 
 NNVM_REGISTER_OP(_npi_squeeze).set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_npi_stack).set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
-
 NNVM_REGISTER_OP(_npi_vstack).set_attr<FCompute>("FCompute<gpu>", NumpyVstackForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_np_vstack).set_attr<FCompute>("FCompute<gpu>", NumpyVstackBackward<gpu>);
