@@ -219,15 +219,11 @@ def file_have_valid_license(fname):
         lines = f.readlines()
     if not lines:
         return True
-    elif _lines_have_apache_license(lines):
-        has_issue = False
-        if _lines_have_old_license(lines):
-            has_issue = True
-            logging.error("File %s has old license", fname)
-        if _lines_have_multiple_license(lines) and not _file_listed_in_top_level_license(fname):
-            has_issue = True
-            logging.error("File %s has multiple license", fname)
-        return not has_issue
+    if (_lines_have_apache_license(lines) and (not _lines_have_multiple_license(lines))):
+        return True
+    elif _lines_have_multiple_license(lines):
+        logging.error("File %s has multiple licenses", fname)
+        return False
     else:
         if _file_listed_in_top_level_license(fname):
             return True

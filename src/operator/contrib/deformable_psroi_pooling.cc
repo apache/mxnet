@@ -1,9 +1,11 @@
 /*!
  * Copyright (c) 2017 Microsoft
- * Licensed under The Apache-2.0 License [see LICENSE for details]
+ * Licensed under The MIT License [see LICENSE for details]
  * \file deformable_psroi_pooling.cc
  * \brief
  * \author Yi Li, Guodong Zhang, Jifeng Dai
+ *
+ * Code from https://github.com/msracver/Deformable-ConvNets/blob/d51075968c5fd40b37a55d20c8e945c1f181d529/rfcn/operator_cxx/deformable_psroi_pooling.cc
 */
 #include "./deformable_psroi_pooling-inl.h"
 #include <mshadow/base.h>
