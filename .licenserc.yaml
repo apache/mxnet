@@ -41,6 +41,7 @@ header:
     - 'src/operator/contrib/multi_proposal-inl.h'
     - 'src/operator/contrib/multi_proposal.cc'
     - 'src/operator/contrib/multi_proposal.cu'
+    - 'src/operator/contrib/psroi_pooling-inl.h'
     - 'src/operator/contrib/psroi_pooling.cc'
     - 'src/operator/contrib/psroi_pooling.cu'
     - 'src/operator/nn/mkldnn/mkldnn_base-inl.h'
