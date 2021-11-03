@@ -8080,6 +8080,130 @@ def test_np_unique():
 
 
 @use_np
+@pytest.mark.parametrize('shape,index,inverse,counts', [
+    ((), True, True, True),
+    ((1, ), True, True, True),
+    ((5, ), True, True, True),
+    ((5, ), True, True, True),
+    ((5, 4), True, True, True),
+    ((5, 0, 4), True, True, True),
+    ((0, 0, 0), True, True, True),
+    ((5, 3, 4), True, True, True),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_unique_all(shape, index, inverse, counts, dtype, hybridize):
+    class TestUniqueAll(HybridBlock):
+        def __init__(self):
+            super(TestUniqueAll, self).__init__()
+
+        def forward(self, a):
+            return np.unique_all(a)
+
+    test_unique = TestUniqueAll()
+    if hybridize:
+        test_unique.hybridize()
+    x = onp.random.uniform(-8.0, 8.0, size=shape)
+    x = np.array(x, dtype=dtype)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    mx_out = test_unique(x)
+    for i in range(len(mx_out)):
+        assert mx_out[i].shape == np_out[i].shape
+        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+    # Test imperative once again
+    mx_out = np.unique_all(x)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    assert mx_out.values.shape == np_out[0].shape
+    assert_almost_equal(mx_out.values.asnumpy(), np_out[0], rtol=1e-3, atol=1e-5)
+    assert mx_out.indices.shape == np_out[1].shape
+    assert_almost_equal(mx_out.indices.asnumpy(), np_out[1], rtol=1e-3, atol=1e-5)
+    assert mx_out.inverse_indices.shape == np_out[2].shape
+    assert_almost_equal(mx_out.inverse_indices.asnumpy(), np_out[2], rtol=1e-3, atol=1e-5)
+    assert mx_out.counts.shape == np_out[3].shape
+    assert_almost_equal(mx_out.counts.asnumpy(), np_out[3], rtol=1e-3, atol=1e-5)
+
+
+@use_np
+@pytest.mark.parametrize('shape,index,inverse,counts', [
+    ((), False, True, False),
+    ((1, ), False, True, False),
+    ((5, ), False, True, False),
+    ((5, ), False, True, False),
+    ((5, 4), False, True, False),
+    ((5, 0, 4), False, True, False),
+    ((0, 0, 0), False, True, False),
+    ((5, 3, 4), False, True, False),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_unique_inverse(shape, index, inverse, counts, dtype, hybridize):
+    class TestUniqueInverse(HybridBlock):
+        def __init__(self):
+            super(TestUniqueInverse, self).__init__()
+
+        def forward(self, a):
+            return np.unique_inverse(a)
+
+    test_unique = TestUniqueInverse()
+    if hybridize:
+        test_unique.hybridize()
+    x = onp.random.uniform(-8.0, 8.0, size=shape)
+    x = np.array(x, dtype=dtype)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    mx_out = test_unique(x)
+    for i in range(len(mx_out)):
+        assert mx_out[i].shape == np_out[i].shape
+        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+    # Test imperative once again
+    mx_out = np.unique_inverse(x)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    assert mx_out.values.shape == np_out[0].shape
+    assert_almost_equal(mx_out.values.asnumpy(), np_out[0], rtol=1e-3, atol=1e-5)
+    assert mx_out.inverse_indices.shape == np_out[1].shape
+    assert_almost_equal(mx_out.inverse_indices.asnumpy(), np_out[1], rtol=1e-3, atol=1e-5)
+
+
+@use_np
+@pytest.mark.parametrize('shape,index,inverse,counts', [
+    ((), False, False, False),
+    ((1, ), False, False, False),
+    ((5, ), False, False, False),
+    ((5, ), False, False, False),
+    ((5, 4), False, False, False),
+    ((5, 0, 4), False, False, False),
+    ((0, 0, 0), False, False, False),
+    ((5, 3, 4), False, False, False),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_unique_values(shape, index, inverse, counts, dtype, hybridize):
+    class TestUniqueValues(HybridBlock):
+        def __init__(self):
+            super(TestUniqueValues, self).__init__()
+
+        def forward(self, a):
+            return np.unique_values(a)
+
+    test_unique = TestUniqueValues()
+    if hybridize:
+        test_unique.hybridize()
+    x = onp.random.uniform(-8.0, 8.0, size=shape)
+    x = np.array(x, dtype=dtype)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    mx_out = test_unique(x)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+    # Test imperative once again
+    mx_out = np.unique_values(x)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@use_np
 def test_np_take():
     configs = [
         ((4, 4), (4, 0), None),
