@@ -39,7 +39,7 @@ MXNET_REGISTER_API("_npi.sort").set_body([](runtime::MXNetArgs args, runtime::MX
   } else {
     param.axis = args[1].operator int();
   }
-  param.is_ascend = true;
+  param.is_ascend = args[2].operator bool();
 
   attrs.parsed = std::move(param);
   attrs.op     = op;
@@ -65,7 +65,7 @@ MXNET_REGISTER_API("_npi.argsort")
       } else {
         param.axis = args[1].operator int();
       }
-      param.is_ascend = true;
+      param.is_ascend = args[2].operator bool();
       if (args[3].type_code() == kNull) {
         param.dtype = mshadow::kFloat32;
       } else {

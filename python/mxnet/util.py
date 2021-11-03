@@ -682,17 +682,49 @@ def wrap_data_api_linalg_func(func):
     """
 
     @functools.wraps(func)
-    def _wrap_api_creation_func(*args, **kwargs):
+    def _wrap_linalg_func(*args, **kwargs):
         if len(kwargs) != 0:
             upper = kwargs.pop('UPLO', None)
+            rcond = kwargs.pop('rcond', None)
+            tol = kwargs.pop('tol', None)
             if upper is not None:
                 if upper == 'U':
                     kwargs['upper'] = True
                 else:
                     kwargs['upper'] = False
+            if rcond is not None:
+                kwargs['rtol'] = rcond
+            if tol is not None:
+                kwargs['rtol'] = tol
         return func(*args, **kwargs)
 
-    return _wrap_api_creation_func
+    return _wrap_linalg_func
+
+
+def wrap_sort_functions(func):
+    """A convenience decorator for wrapping sort functions
+
+    Parameters
+    ----------
+    func : a numpy-compatible array creation function to be wrapped for parameter keyword change.
+
+    Returns
+    -------
+    Function
+        A function wrapped with changed keywords.
+    """
+    @functools.wraps(func)
+    def _wrap_sort_func(*args, **kwargs):
+        if len(kwargs) != 0:
+            kind = kwargs.pop('kind', None)
+            order = kwargs.pop('order', None)
+            if kind is not None:
+                kwargs['stable'] = kind == 'stable'
+            if order is not None:
+                raise NotImplementedError("order not supported here")
+        return func(*args, **kwargs)
+    return _wrap_sort_func
+
 
 # pylint: disable=exec-used
 def numpy_fallback(func):
