@@ -21,7 +21,7 @@
  * Copyright (c) 2018 by Contributors
  * \file gpu_topology_test.cc
  * \brief gpu topology tests
-*/
+ */
 
 #if MXNET_USE_CUDA
 
@@ -33,17 +33,17 @@
 void GenerateMatrix(std::vector<float>* W, int num_gpus, std::mt19937* gen) {
   std::uniform_real_distribution<> dis(0., 1.);
   for (int row = 0; row < num_gpus; ++row) {
-    for (int col = row+1; col < num_gpus; ++col) {
+    for (int col = row + 1; col < num_gpus; ++col) {
       double sample = dis(*gen);
       if (sample < 0.33) {
-        (*W)[row*num_gpus+col] = 1.;
-        (*W)[col*num_gpus+row] = 1.;
+        (*W)[row * num_gpus + col] = 1.;
+        (*W)[col * num_gpus + row] = 1.;
       } else if (sample < 0.66f) {
-        (*W)[row*num_gpus+col] = 2.;
-        (*W)[col*num_gpus+row] = 2.;
+        (*W)[row * num_gpus + col] = 2.;
+        (*W)[col * num_gpus + row] = 2.;
       } else {
-        (*W)[row*num_gpus+col] = 3.;
-        (*W)[col*num_gpus+row] = 3.;
+        (*W)[row * num_gpus + col] = 3.;
+        (*W)[col * num_gpus + row] = 3.;
       }
     }
   }
@@ -53,7 +53,7 @@ bool IsSatisfactory(const std::vector<float>& W, int num_gpus, int depth) {
   for (int row = 0; row < num_gpus; ++row) {
     int out_edges = 0;
     for (int col = 0; col < num_gpus; ++col) {
-      if (W[row*num_gpus+col] > 0.f)
+      if (W[row * num_gpus + col] > 0.f)
         out_edges++;
     }
     if (out_edges < depth)
@@ -63,11 +63,10 @@ bool IsSatisfactory(const std::vector<float>& W, int num_gpus, int depth) {
 }
 
 // Generates random link topology matrix using random number generator
-void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
-                                std::mt19937* gen) {
+void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack, std::mt19937* gen) {
   std::uniform_real_distribution<> dis(0.f, 1.f);
   bool satisfied = false;
-  std::vector<float> W(num_gpus*num_gpus, 0.f);
+  std::vector<float> W(num_gpus * num_gpus, 0.f);
   int depth = mxnet::kvstore::ComputeDepth(num_gpus);
   GenerateMatrix(&W, num_gpus, gen);
   satisfied = IsSatisfactory(W, num_gpus, depth);
@@ -82,7 +81,7 @@ void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
   mxnet::kvstore::ComputeTrees(W, num_gpus, alpha, backtrack, &topo, &scan);
 
   unsigned correct_topo_size = (1 << (depth + 1)) - 1;
-  unsigned correct_scan_size = depth+2;
+  unsigned correct_scan_size = depth + 2;
   ASSERT_EQ(topo.size(), static_cast<unsigned>(num_gpus));
   for (unsigned i = 0; i < topo.size(); ++i) {
     ASSERT_EQ(correct_topo_size, topo[i].size());
@@ -92,26 +91,24 @@ void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
 
 // Permutes matrix W using permutation vector P and stores output in matrix A
 // Assumption: W is square and symmetric
-void PermuteMatrix(const std::vector<int>& W,
-                   const std::vector<int>& P,
-                   std::vector<int>*       A) {
+void PermuteMatrix(const std::vector<int>& W, const std::vector<int>& P, std::vector<int>* A) {
   int nrows = P.size();
-  std::vector<int> temp(nrows*nrows, 0);
+  std::vector<int> temp(nrows * nrows, 0);
 
   int count = 0;
-  for (int row=0; row < nrows; ++row) {
-    for (int col=0; col < nrows; ++col) {
+  for (int row = 0; row < nrows; ++row) {
+    for (int col = 0; col < nrows; ++col) {
       int row_start = P[row];
-      temp[count] = W[row_start*nrows+col];
+      temp[count]   = W[row_start * nrows + col];
       count++;
     }
   }
 
   count = 0;
-  for (int row=0; row < nrows; ++row) {
-    for (int col=0; col < nrows; ++col) {
+  for (int row = 0; row < nrows; ++row) {
+    for (int col = 0; col < nrows; ++col) {
       int col_index = P[col];
-      (*A)[count] = temp[row*nrows+col_index];
+      (*A)[count]   = temp[row * nrows + col_index];
       count++;
     }
   }
@@ -121,7 +118,7 @@ TEST(GpuTopology, TestFormTopology) {
   std::vector<int> state0 = {3, 2, 1, 5, 0, 0, 4, 6};
   std::vector<size_t> topo0;
   std::vector<size_t> scan0;
-  std::vector<int> correct0 = {3, 3, 0, 3, 1, 0, 4, 3, 2, 1, 5, 0, 0, 4, 6};
+  std::vector<int> correct0      = {3, 3, 0, 3, 1, 0, 4, 3, 2, 1, 5, 0, 0, 4, 6};
   std::vector<int> correct_scan0 = {0, 1, 3, 7, 15};
   mxnet::kvstore::FormTopology(state0, &topo0, &scan0, 3);
   ASSERT_EQ(topo0.size(), correct0.size());
@@ -134,7 +131,7 @@ TEST(GpuTopology, TestFormTopology) {
   std::vector<int> state1 = {3, 2, 0, 4, 1, 1, 5, 6};
   std::vector<size_t> topo1;
   std::vector<size_t> scan1;
-  std::vector<int> correct1 = {3, 3, 1, 3, 0, 1, 5, 3, 2, 0, 4, 1, 1, 5, 6};
+  std::vector<int> correct1      = {3, 3, 1, 3, 0, 1, 5, 3, 2, 0, 4, 1, 1, 5, 6};
   std::vector<int> correct_scan1 = {0, 1, 3, 7, 15};
   mxnet::kvstore::FormTopology(state1, &topo1, &scan1, 3);
   ASSERT_EQ(topo1.size(), correct1.size());
@@ -146,13 +143,8 @@ TEST(GpuTopology, TestFormTopology) {
 }
 
 TEST(GpuTopology, TestComputeTreeWeight) {
-  std::vector<int> W = {0, 2, 2, 3, 3, 0, 0,
-                        2, 0, 3, 2, 0, 3, 0,
-                        2, 3, 0, 3, 0, 0, 2,
-                        3, 2, 3, 0, 0, 0, 0,
-                        3, 0, 0, 0, 0, 2, 2,
-                        0, 3, 0, 0, 2, 0, 3,
-                        0, 0, 2, 0, 2, 3, 0};
+  std::vector<int> W = {0, 2, 2, 3, 3, 0, 0, 2, 0, 3, 2, 0, 3, 0, 2, 3, 0, 3, 0, 0, 2, 3, 2, 3, 0,
+                        0, 0, 0, 3, 0, 0, 0, 0, 2, 2, 0, 3, 0, 0, 2, 0, 3, 0, 0, 2, 0, 2, 3, 0};
 
   std::vector<int> state0 = {3, 2, 1, 5, 0, 0, 4, 6};
   ASSERT_EQ(mxnet::kvstore::ComputeTreeWeight(W, state0, 7, 3, false), 16);
@@ -180,7 +172,7 @@ TEST(GpuTopology, TestPostprocess) {
   for (unsigned i = 0; i < correct2.size(); ++i)
     ASSERT_EQ(result2[i], correct2[i]);
 
-  std::vector<int> result3  = {10, 10,  0,  0, 0, 0, 0, 1, 2, 3, 6, 4, 7, 5, 8, 9};
+  std::vector<int> result3  = {10, 10, 0, 0, 0, 0, 0, 1, 2, 3, 6, 4, 7, 5, 8, 9};
   std::vector<int> correct3 = {10, 10, 10, 10, 0, 0, 0, 1, 2, 3, 6, 4, 7, 5, 8, 9};
   mxnet::kvstore::Postprocess(&result3, 11, 4);
   for (unsigned i = 0; i < correct3.size(); ++i)
@@ -198,13 +190,8 @@ TEST(GpuTopology, TestDepth) {
 }
 
 TEST(GpuTopology, TestIsValid) {
-  std::vector<int> W = {0, 2, 2, 3, 3, 0, 0,
-                        2, 0, 3, 2, 0, 3, 0,
-                        2, 3, 0, 3, 0, 0, 2,
-                        3, 2, 3, 0, 0, 0, 0,
-                        3, 0, 0, 0, 0, 2, 2,
-                        0, 3, 0, 0, 2, 0, 3,
-                        0, 0, 2, 0, 2, 3, 0};
+  std::vector<int> W = {0, 2, 2, 3, 3, 0, 0, 2, 0, 3, 2, 0, 3, 0, 2, 3, 0, 3, 0, 0, 2, 3, 2, 3, 0,
+                        0, 0, 0, 3, 0, 0, 0, 0, 2, 2, 0, 3, 0, 0, 2, 0, 3, 0, 0, 2, 0, 2, 3, 0};
 
   std::vector<int> state0 = {3, 2, 1, 5, 0, 0, 4, 6};
   ASSERT_EQ(mxnet::kvstore::IsValid(W, state0, 7, 7, 3), true);
@@ -260,7 +247,7 @@ TEST(GpuTopology, TestEwisemult) {
   std::vector<int> x(8, 1);
   std::vector<int> y(8, 0);
   std::iota(y.begin(), y.end(), 0);
-  int alpha = 5;
+  int alpha                  = 5;
   std::vector<int> correct_y = {0, 5, 10, 15, 20, 25, 30, 35};
   mxnet::kvstore::ewisemult(x, alpha, &y);
 
@@ -271,14 +258,9 @@ TEST(GpuTopology, TestEwisemult) {
 
 // FindBestMoveTest
 TEST(GpuTopology, TestFindBestMove) {
-  std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1,
-                        2, 0, 3, 2, 1, 3, 1, 1,
-                        2, 3, 0, 3, 1, 1, 2, 1,
-                        3, 2, 3, 0, 1, 1, 1, 2,
-                        3, 1, 1, 1, 0, 2, 2, 3,
-                        1, 3, 1, 1, 2, 0, 3, 2,
-                        1, 1, 2, 1, 2, 3, 0, 3,
-                        1, 1, 1, 2, 3, 2, 3, 0};
+  std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1, 2, 0, 3, 2, 1, 3, 1, 1, 2, 3, 0, 3, 1, 1,
+                        2, 1, 3, 2, 3, 0, 1, 1, 1, 2, 3, 1, 1, 1, 0, 2, 2, 3, 1, 3, 1, 1,
+                        2, 0, 3, 2, 1, 1, 2, 1, 2, 3, 0, 3, 1, 1, 1, 2, 3, 2, 3, 0};
   std::vector<int> P(8, 0);
   std::iota(P.begin(), P.end(), 1);
   std::unordered_set<int> used;
@@ -311,32 +293,32 @@ TEST(GpuTopology, TestGetRoot) {
 
   // Test when roots are non-empty, and matches color
   std::unordered_set<int> roots1 = {0, 2, 4, 6};
-  std::vector<int> color1 = {0, 1, 2, 3};
+  std::vector<int> color1        = {0, 1, 2, 3};
   for (unsigned i = 0; i < color1.size(); ++i) {
-    int root1 = mxnet::kvstore::GetRoot(P, color1[i], roots1);
-    int correct_root1 = 2*i;
+    int root1         = mxnet::kvstore::GetRoot(P, color1[i], roots1);
+    int correct_root1 = 2 * i;
     ASSERT_EQ(root1, correct_root1);
   }
 
   // Test when roots is empty
   std::unordered_set<int> roots2;
-  int color2 = 0;
+  int color2        = 0;
   int correct_root2 = -1;
-  int root2  = mxnet::kvstore::GetRoot(P, color2, roots2);
+  int root2         = mxnet::kvstore::GetRoot(P, color2, roots2);
   ASSERT_EQ(root2, correct_root2);
 
   // Test when roots is non-empty, but no root matches color
   std::unordered_set<int> roots3 = {0};
-  int color3 = 1;
-  int correct_root3 = -1;
-  int root3  = mxnet::kvstore::GetRoot(P, color3, roots3);
+  int color3                     = 1;
+  int correct_root3              = -1;
+  int root3                      = mxnet::kvstore::GetRoot(P, color3, roots3);
   ASSERT_EQ(root3, correct_root3);
 
-  std::vector<int> P2 = {0, 1, 1, 0, 2, 3, 3, 2};
+  std::vector<int> P2            = {0, 1, 1, 0, 2, 3, 3, 2};
   std::unordered_set<int> roots4 = roots1;
-  int color4 = 0;
-  int correct_root4 = 0;
-  int root4 = mxnet::kvstore::GetRoot(P, color4, roots4);
+  int color4                     = 0;
+  int correct_root4              = 0;
+  int root4                      = mxnet::kvstore::GetRoot(P, color4, roots4);
   ASSERT_EQ(root4, correct_root4);
 }
 
@@ -345,37 +327,32 @@ TEST(GpuTopology, TestGetChild) {
   std::vector<int> P = {0, 0, 1, 2, 2, 2, 3, 3};
 
   // Test when color is not found
-  int color1  = 4;
-  int parent1 = 4;
+  int color1         = 4;
+  int parent1        = 4;
   int correct_child1 = -1;
-  int child1  = mxnet::kvstore::GetChild(P, color1, parent1);
+  int child1         = mxnet::kvstore::GetChild(P, color1, parent1);
   ASSERT_EQ(child1, correct_child1);
 
   // Test when color is found, but is equal to parent
-  int color2  = 1;
-  int parent2 = 2;
+  int color2         = 1;
+  int parent2        = 2;
   int correct_child2 = -1;
-  int child2  = mxnet::kvstore::GetChild(P, color2, parent2);
+  int child2         = mxnet::kvstore::GetChild(P, color2, parent2);
   ASSERT_EQ(child2, correct_child2);
 
   // Test when color is found and not equal to parent
-  int color3  = 3;
-  int parent3 = 6;
+  int color3         = 3;
+  int parent3        = 6;
   int correct_child3 = 7;
-  int child3  = mxnet::kvstore::GetChild(P, color3, parent3);
+  int child3         = mxnet::kvstore::GetChild(P, color3, parent3);
   ASSERT_EQ(child3, correct_child3);
 }
 
 // FindBestEdgeTest
 TEST(GpuTopology, TestFindBestEdge) {
-  std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1,
-                        2, 0, 3, 2, 1, 3, 1, 1,
-                        2, 3, 0, 3, 1, 1, 2, 1,
-                        3, 2, 3, 0, 1, 1, 1, 2,
-                        3, 1, 1, 1, 0, 2, 2, 3,
-                        1, 3, 1, 1, 2, 0, 3, 2,
-                        1, 1, 2, 1, 2, 3, 0, 3,
-                        1, 1, 1, 2, 3, 2, 3, 0};
+  std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1, 2, 0, 3, 2, 1, 3, 1, 1, 2, 3, 0, 3, 1, 1,
+                        2, 1, 3, 2, 3, 0, 1, 1, 1, 2, 3, 1, 1, 1, 0, 2, 2, 3, 1, 3, 1, 1,
+                        2, 0, 3, 2, 1, 1, 2, 1, 2, 3, 0, 3, 1, 1, 1, 2, 3, 2, 3, 0};
   std::vector<int> P(8, 0);
   std::unordered_set<int> used;
 
@@ -384,7 +361,7 @@ TEST(GpuTopology, TestFindBestEdge) {
   std::vector<int> b1;
   int g1;
   std::vector<int> correct_b1 = {0, 2};
-  int correct_g1 = 3;
+  int correct_g1              = 3;
   mxnet::kvstore::FindBestEdge(W, P, parent1, dest1, &b1, &g1);
   ASSERT_EQ(b1.size(), correct_b1.size());
   for (unsigned i = 0; i < b1.size(); ++i)
@@ -397,7 +374,7 @@ TEST(GpuTopology, TestFindBestEdge) {
   std::vector<int> b2;
   int g2;
   std::vector<int> correct_b2 = {-1};
-  int correct_g2 = 0;
+  int correct_g2              = 0;
   mxnet::kvstore::FindBestEdge(W, P, parent2, dest2, &b2, &g2);
   ASSERT_EQ(b2.size(), correct_b2.size());
   for (unsigned i = 0; i < b2.size(); ++i)
@@ -407,14 +384,9 @@ TEST(GpuTopology, TestFindBestEdge) {
 
 // KLGenerateBinaryTreeTest
 TEST(GpuTopology, TestKLGenerateBinaryTree1) {
-  std::vector<int> W = {0, 2, 3, 3, 3, 1, 1, 1,
-                        2, 0, 3, 2, 1, 3, 1, 1,
-                        2, 3, 0, 3, 1, 1, 2, 1,
-                        3, 2, 3, 0, 1, 1, 1, 2,
-                        3, 1, 1, 1, 0, 2, 3, 3,
-                        1, 3, 1, 1, 2, 0, 3, 2,
-                        1, 1, 2, 1, 2, 3, 0, 3,
-                        1, 1, 1, 2, 3, 2, 3, 0};
+  std::vector<int> W = {0, 2, 3, 3, 3, 1, 1, 1, 2, 0, 3, 2, 1, 3, 1, 1, 2, 3, 0, 3, 1, 1,
+                        2, 1, 3, 2, 3, 0, 1, 1, 1, 2, 3, 1, 1, 1, 0, 2, 3, 3, 1, 3, 1, 1,
+                        2, 0, 3, 2, 1, 1, 2, 1, 2, 3, 0, 3, 1, 1, 1, 2, 3, 2, 3, 0};
   std::vector<int> P = {0, 1, 1, 0, 2, 3, 3, 2};
   std::vector<std::pair<int, int>> cluster_pairs;
   cluster_pairs.push_back(std::pair<int, int>(0, -2));
@@ -422,11 +394,10 @@ TEST(GpuTopology, TestKLGenerateBinaryTree1) {
   cluster_pairs.push_back(std::pair<int, int>(2, -2));
   cluster_pairs.push_back(std::pair<int, int>(3, -2));
   std::unordered_set<int> roots = {0, 2, 4, 6};
-  std::vector<size_t> topo = {0, 2, 4, 6};
+  std::vector<size_t> topo      = {0, 2, 4, 6};
   std::vector<size_t> scan(2, 0);
   std::mt19937 gen(1);
-  mxnet::kvstore::KLGenerateBinaryTree(W, P, &cluster_pairs, &roots, &topo,
-                                       &scan, &gen);
+  mxnet::kvstore::KLGenerateBinaryTree(W, P, &cluster_pairs, &roots, &topo, &scan, &gen);
   std::vector<size_t> correct_topo = {0, 2, 4, 6, 0, 3, 2, 1, 4, 7, 6, 5};
   std::vector<size_t> correct_scan = {0, 0, 4};
   ASSERT_EQ(topo.size(), correct_topo.size());
@@ -438,14 +409,9 @@ TEST(GpuTopology, TestKLGenerateBinaryTree1) {
 }
 
 TEST(GpuTopology, TestKLGenerateBinaryTree2) {
-  std::vector<int> W = {0, 2, 3, 3, 3, 1, 1, 1,
-                        2, 0, 3, 2, 1, 3, 1, 1,
-                        2, 3, 0, 3, 1, 1, 2, 1,
-                        3, 2, 3, 0, 1, 1, 1, 2,
-                        3, 1, 1, 1, 0, 2, 3, 3,
-                        1, 3, 1, 1, 2, 0, 3, 2,
-                        1, 1, 2, 1, 2, 3, 0, 3,
-                        1, 1, 1, 2, 3, 2, 3, 0};
+  std::vector<int> W = {0, 2, 3, 3, 3, 1, 1, 1, 2, 0, 3, 2, 1, 3, 1, 1, 2, 3, 0, 3, 1, 1,
+                        2, 1, 3, 2, 3, 0, 1, 1, 1, 2, 3, 1, 1, 1, 0, 2, 3, 3, 1, 3, 1, 1,
+                        2, 0, 3, 2, 1, 1, 2, 1, 2, 3, 0, 3, 1, 1, 1, 2, 3, 2, 3, 0};
   std::vector<int> P = {0, 1, 1, 0, 2, 3, 3, 2};
   std::vector<std::pair<int, int>> cluster_pairs;
   cluster_pairs.push_back(std::pair<int, int>(0, -2));
@@ -453,11 +419,10 @@ TEST(GpuTopology, TestKLGenerateBinaryTree2) {
   cluster_pairs.push_back(std::pair<int, int>(2, -2));
   cluster_pairs.push_back(std::pair<int, int>(3, -2));
   std::unordered_set<int> roots = {0, 2, 4, 6};
-  std::vector<size_t> topo = {0, 6, 4, 2};
+  std::vector<size_t> topo      = {0, 6, 4, 2};
   std::vector<size_t> scan(2, 0);
   std::mt19937 gen(1);
-  mxnet::kvstore::KLGenerateBinaryTree(W, P, &cluster_pairs, &roots, &topo,
-                                       &scan, &gen);
+  mxnet::kvstore::KLGenerateBinaryTree(W, P, &cluster_pairs, &roots, &topo, &scan, &gen);
   std::vector<size_t> correct_topo = {0, 6, 4, 2, 0, 3, 6, 5, 4, 7, 2, 1};
   std::vector<size_t> correct_scan = {0, 0, 4};
   ASSERT_EQ(topo.size(), correct_topo.size());
@@ -470,13 +435,11 @@ TEST(GpuTopology, TestKLGenerateBinaryTree2) {
 
 // UpdateWeightTest
 TEST(GpuTopology, TestUpdateWeight) {
-  std::vector<float> W = {0.f, 1.f,
-                          1.f, 0.f};
-  std::vector<size_t> topo = {1, 1, 0};
-  int num_gpus = 2;
-  float alpha  = 0.7;
-  std::vector<float> correct_W = {0.f, 0.7f,
-                                  0.7f, 0.f};
+  std::vector<float> W         = {0.f, 1.f, 1.f, 0.f};
+  std::vector<size_t> topo     = {1, 1, 0};
+  int num_gpus                 = 2;
+  float alpha                  = 0.7;
+  std::vector<float> correct_W = {0.f, 0.7f, 0.7f, 0.f};
   mxnet::kvstore::UpdateWeight(&W, topo, num_gpus, alpha);
   ASSERT_EQ(W.size(), correct_W.size());
   for (unsigned i = 0; i < W.size(); ++i) {
@@ -486,25 +449,19 @@ TEST(GpuTopology, TestUpdateWeight) {
 
 // ComputeTreesFromRoot
 TEST(GpuTopology, TestComputeTreesFromRoot1) {
-  std::vector<float> W = {0, 2, 2, 3, 3, 1, 1, 1,
-                          2, 0, 3, 2, 1, 3, 1, 1,
-                          2, 3, 0, 3, 1, 1, 2, 1,
-                          3, 2, 3, 0, 1, 1, 1, 2,
-                          3, 1, 1, 1, 0, 2, 2, 3,
-                          1, 3, 1, 1, 2, 0, 3, 2,
-                          1, 1, 2, 1, 2, 3, 0, 3,
-                          1, 1, 1, 2, 3, 2, 3, 0};
-  int num_gpus = 8;
-  int root     = 0;
-  float alpha  = 0.7;
-  bool backtrack = true;
+  std::vector<float> W       = {0, 2, 2, 3, 3, 1, 1, 1, 2, 0, 3, 2, 1, 3, 1, 1, 2, 3, 0, 3, 1, 1,
+                          2, 1, 3, 2, 3, 0, 1, 1, 1, 2, 3, 1, 1, 1, 0, 2, 2, 3, 1, 3, 1, 1,
+                          2, 0, 3, 2, 1, 1, 2, 1, 2, 3, 0, 3, 1, 1, 1, 2, 3, 2, 3, 0};
+  int num_gpus               = 8;
+  int root                   = 0;
+  float alpha                = 0.7;
+  bool backtrack             = true;
   unsigned correct_topo_size = 15;
   unsigned correct_scan_size = 5;
   std::vector<size_t> topo;
   std::vector<size_t> scan;
 
-  mxnet::kvstore::ComputeTreesFromRoot(&W, num_gpus, root, alpha, backtrack,
-                                       &topo, &scan);
+  mxnet::kvstore::ComputeTreesFromRoot(&W, num_gpus, root, alpha, backtrack, &topo, &scan);
 
   ASSERT_EQ(topo.size(), correct_topo_size);
   ASSERT_EQ(scan.size(), correct_scan_size);
@@ -513,11 +470,8 @@ TEST(GpuTopology, TestComputeTreesFromRoot1) {
 // IsConnected
 // Test on graph that is "disconnected" by NVLink
 TEST(GpuTopology, TestIsConnected1) {
-  std::vector<float> W = {0, 0, 2, 0,
-                          0, 0, 0, 2,
-                          2, 0, 0, 0,
-                          0, 2, 0, 0};
-  int num_gpus = 4;
+  std::vector<float> W = {0, 0, 2, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0};
+  int num_gpus         = 4;
 
   bool connected = mxnet::kvstore::IsConnected(W, num_gpus);
 
@@ -528,11 +482,8 @@ TEST(GpuTopology, TestIsConnected1) {
 // IsConnected
 // Test on graph that is "disconnected" by NVLink
 TEST(GpuTopology, TestIsConnected2) {
-  std::vector<float> W = {1, 1, 2, 1,
-                          1, 1, 1, 2,
-                          2, 1, 1, 1,
-                          1, 2, 1, 1};
-  int num_gpus = 4;
+  std::vector<float> W = {1, 1, 2, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 1, 1};
+  int num_gpus         = 4;
 
   bool connected = mxnet::kvstore::IsConnected(W, num_gpus);
 
@@ -543,11 +494,8 @@ TEST(GpuTopology, TestIsConnected2) {
 // IsConnected
 // Test on graph that is "disconnected" by NVLink
 TEST(GpuTopology, TestIsConnected3) {
-  std::vector<float> W = {1, 1, 2, 2,
-                          1, 1, 1, 2,
-                          2, 1, 1, 1,
-                          2, 2, 1, 1};
-  int num_gpus = 4;
+  std::vector<float> W = {1, 1, 2, 2, 1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 1, 1};
+  int num_gpus         = 4;
 
   bool connected = mxnet::kvstore::IsConnected(W, num_gpus);
 
@@ -558,7 +506,7 @@ TEST(GpuTopology, TestIsConnected3) {
 // ComputeTreesTest with backtracking
 TEST(GpuTopology, TestComputeTrees1) {
   std::mt19937 gen(1);
-  float alpha = 0.7;
+  float alpha    = 0.7;
   bool backtrack = true;
   for (int num_gpus = 2; num_gpus <= 8; ++num_gpus) {
     LOG(INFO) << "Testing " << num_gpus << " x " << num_gpus;
@@ -571,7 +519,7 @@ TEST(GpuTopology, TestComputeTrees1) {
 // ComputeTreesTest with Kernighan-Lin
 TEST(GpuTopology, TestComputeTrees2) {
   std::mt19937 gen(1);
-  float alpha = 0.7;
+  float alpha    = 0.7;
   bool backtrack = false;
   // Do 5 randomized tests per GPU count from 2 to 16
   for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
@@ -583,35 +531,25 @@ TEST(GpuTopology, TestComputeTrees2) {
 }
 
 TEST(GpuTopology, TestPermuteMatrix) {
-  std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1,
-                        2, 0, 3, 2, 1, 3, 1, 1,
-                        2, 3, 0, 3, 1, 1, 2, 1,
-                        3, 2, 3, 0, 1, 1, 1, 2,
-                        3, 1, 1, 1, 0, 2, 2, 3,
-                        1, 3, 1, 1, 2, 0, 3, 2,
-                        1, 1, 2, 1, 2, 3, 0, 3,
-                        1, 1, 1, 2, 3, 2, 3, 0};
+  std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1, 2, 0, 3, 2, 1, 3, 1, 1, 2, 3, 0, 3, 1, 1,
+                        2, 1, 3, 2, 3, 0, 1, 1, 1, 2, 3, 1, 1, 1, 0, 2, 2, 3, 1, 3, 1, 1,
+                        2, 0, 3, 2, 1, 1, 2, 1, 2, 3, 0, 3, 1, 1, 1, 2, 3, 2, 3, 0};
 
   std::vector<int> P1 = {0, 1, 2, 3, 4, 5, 6, 7};
-  std::vector<int> A(8*8, 0);
+  std::vector<int> A(8 * 8, 0);
   PermuteMatrix(W, P1, &A);
-  for (unsigned i=0; i < W.size(); ++i)
+  for (unsigned i = 0; i < W.size(); ++i)
     ASSERT_EQ(A[i], W[i]);
 }
 
 TEST(GpuTopology, TestKernighanLin1) {
-  std::vector<float> W = {0, 1, 2, 3, 2, 4,
-                          1, 0, 1, 4, 2, 1,
-                          2, 1, 0, 3, 2, 1,
-                          3, 4, 3, 0, 4, 3,
-                          2, 2, 2, 4, 0, 2,
-                          4, 1, 1, 3, 2, 0};
+  std::vector<float> W = {0, 1, 2, 3, 2, 4, 1, 0, 1, 4, 2, 1, 2, 1, 0, 3, 2, 1,
+                          3, 4, 3, 0, 4, 3, 2, 2, 2, 4, 0, 2, 4, 1, 1, 3, 2, 0};
   std::vector<int> P(6, 0);
   std::vector<std::pair<int, int>> cluster_pairs;
   int num_partitions = 1;
   std::mt19937 gen(1);
-  bool stop = mxnet::kvstore::KernighanLin(W, &P, &num_partitions,
-                                           &cluster_pairs, &gen);
+  bool stop = mxnet::kvstore::KernighanLin(W, &P, &num_partitions, &cluster_pairs, &gen);
 
   std::vector<std::pair<int, int>> correct_pairs;
   correct_pairs.push_back(std::pair<int, int>(0, 1));
@@ -630,26 +568,19 @@ TEST(GpuTopology, TestKernighanLin1) {
       error++;
   }
   EXPECT_TRUE(error == 0 || error == P.size())
-           << "Where real value: "   << error
-           << " not equal neither: " << 0
-           << " nor: "               << P.size() << ".";
+      << "Where real value: " << error << " not equal neither: " << 0 << " nor: " << P.size()
+      << ".";
 }
 
 TEST(GpuTopology, TestKernighanLin2) {
-  std::vector<float> W = {0, 1, 0, 0, 1, 1, 0, 0,
-                           1, 0, 0, 0, 1, 1, 0, 0,
-                           0, 0, 0, 1, 0, 1, 1, 1,
-                           0, 0, 1, 0, 0, 0, 1, 1,
-                           1, 1, 0, 0, 0, 1, 0, 0,
-                           1, 1, 1, 0, 1, 0, 0, 0,
-                           0, 0, 1, 1, 0, 0, 0, 1,
-                           0, 0, 1, 1, 0, 0, 1, 0};
+  std::vector<float> W = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1,
+                          1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0,
+                          1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
   std::vector<int> P(8, 0);
   std::vector<std::pair<int, int>> cluster_pairs;
   int num_partitions = 1;
   std::mt19937 gen(1);
-  bool stop = mxnet::kvstore::KernighanLin(W, &P, &num_partitions,
-                                           &cluster_pairs, &gen);
+  bool stop = mxnet::kvstore::KernighanLin(W, &P, &num_partitions, &cluster_pairs, &gen);
 
   std::vector<std::pair<int, int>> correct_pairs;
   correct_pairs.push_back(std::pair<int, int>(0, 1));
@@ -668,9 +599,8 @@ TEST(GpuTopology, TestKernighanLin2) {
       error++;
   }
   EXPECT_TRUE(error == 0 || error == P.size())
-           << "Where real value: "   << error
-           << " not equal neither: " << 0
-           << " nor: "               << P.size() << ".";
+      << "Where real value: " << error << " not equal neither: " << 0 << " nor: " << P.size()
+      << ".";
 }
 
 #endif  // MXNET_USE_CUDA

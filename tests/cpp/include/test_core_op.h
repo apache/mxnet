@@ -34,16 +34,13 @@ namespace test {
 namespace op {
 
 // Tried making this a struct w/constexpr, but getting undefined reference on gcc 5.4.1
-#define COREOP_FWD_OP_NAME_KEY          "fwd_op_name"
-#define COREOP_BWD_OP_NAME_KEY          "bwd_op_name"
-#define COREOP_BWD_OP_NAME_VALUE_NONE   "[none]"
+#define COREOP_FWD_OP_NAME_KEY        "fwd_op_name"
+#define COREOP_BWD_OP_NAME_KEY        "bwd_op_name"
+#define COREOP_BWD_OP_NAME_VALUE_NONE "[none]"
 
-enum TimingDirection {
-  kForward,
-  kBackward
-};
+enum TimingDirection { kForward, kBackward };
 
-inline const char *TimingDirectionAsString(const TimingDirection td) {
+inline const char* TimingDirectionAsString(const TimingDirection td) {
   switch (td) {
     case kForward:
       return "Forward";
@@ -59,9 +56,9 @@ inline const char *TimingDirectionAsString(const TimingDirection td) {
  * Low-noise operator executor
  * @tparam DType Data type for the operator executions
  */
-template<typename DType, typename AccReal = float>
-class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
-  , public test::op::OperatorExecutorTiming {
+template <typename DType, typename AccReal = float>
+class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>,
+                       public test::op::OperatorExecutorTiming {
   /*! \brief Performance timing categories */
   /*!
    * \brief Parse additional arguments into NodeAttrs structure
@@ -69,13 +66,13 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param args vector of string pairs representing argument key/value pairs
    * \return Constructed NodeAttrs structure
    */
-  static nnvm::NodeAttrs ParseAttrs(const nnvm::Op *op, const kwargs_t& args) {
+  static nnvm::NodeAttrs ParseAttrs(const nnvm::Op* op, const kwargs_t& args) {
     const size_t count = args.size();
-    std::vector<const char *> keys, values;
+    std::vector<const char*> keys, values;
     keys.reserve(count);
     values.reserve(count);
-    for (kwargs_t::const_iterator i_iter = args.begin(), e_iter = args.end();
-         i_iter != e_iter; ++i_iter) {
+    for (kwargs_t::const_iterator i_iter = args.begin(), e_iter = args.end(); i_iter != e_iter;
+         ++i_iter) {
       keys.emplace_back(i_iter->first.c_str());
       values.emplace_back(i_iter->second.c_str());
     }
@@ -89,7 +86,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \return Reference to the supplied vector of TBlob results
    */
   static inline std::vector<TBlob>& CollectBlobs(const std::vector<NDArray>& src,
-                                                 std::vector<TBlob> *dest) {
+                                                 std::vector<TBlob>* dest) {
     dest->resize(0);
     dest->reserve(dest->size() + src.size());
     for (size_t i = 0, n = src.size(); i < n; ++i) {
@@ -128,7 +125,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
   nnvm::ObjectPtr MakeNode() const {
     nnvm::ObjectPtr node = nnvm::Node::Create();
-    node->attrs = attrs_;
+    node->attrs          = attrs_;
     return node;
   }
 
@@ -138,7 +135,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    */
   std::vector<std::pair<std::shared_ptr<CoreOpExecutor>, std::string>> GetBackward() {
     std::vector<std::pair<std::shared_ptr<CoreOpExecutor>, std::string>> res;
-    static auto gradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
+    static auto gradient     = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
     nnvm::FGradient grad_fun = gradient.get(op_, nullptr);
     if (grad_fun) {
       auto n = MakeNode();
@@ -154,8 +151,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           std::cout << node_entry.node->op()->name << std::endl;
         }
         std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
-          ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(outputs()));
-        res.push_back({ pOp, node_entry.node->op()->name });
+            ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(outputs()));
+        res.push_back({pOp, node_entry.node->op()->name});
       }
     }
     return res;
@@ -167,10 +164,10 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param attrs NodeAttrs structure (node attributes)
    * \param op Pointer to nnvm Operator object
    */
-  void AttachResources(OpContext *ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
+  void AttachResources(OpContext* ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op* op) {
     std::vector<ResourceRequest> reqs;
     std::vector<Resource>& requested = ctx->requested;
-    static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+    static auto& fresource           = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
     if (fresource.count(op) != 0) {
       reqs = fresource[op](attrs);
     } else {
@@ -218,7 +215,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   }
 
  public:
-  typedef DType   DataType;
+  typedef DType DataType;
   typedef AccReal AccRealType;
 
   /*! \brief Add 'fwd_op_name' to kwargs and return the new kwargs */
@@ -233,9 +230,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         new_args.emplace_back(a);
       }
     }
-    new_args.push_back({ COREOP_FWD_OP_NAME_KEY, fwd_op_name});
+    new_args.push_back({COREOP_FWD_OP_NAME_KEY, fwd_op_name});
     if (!bwd_op_name.empty()) {
-      new_args.push_back({ COREOP_BWD_OP_NAME_KEY, bwd_op_name});
+      new_args.push_back({COREOP_BWD_OP_NAME_KEY, bwd_op_name});
     }
     return new_args;
   }
@@ -267,11 +264,10 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param shapes Array of input shapes
    */
   CoreOpExecutor(const bool isGPU, const mxnet::ShapeVector& shapes)
-    : input_shapes_(shapes)
-      , op_(nullptr)  {
-    ctx_.is_train = true;
-    ctx_.run_ctx.ctx.dev_id = 0;
-    ctx_.run_ctx.stream = nullptr;
+      : input_shapes_(shapes), op_(nullptr) {
+    ctx_.is_train             = true;
+    ctx_.run_ctx.ctx.dev_id   = 0;
+    ctx_.run_ctx.stream       = nullptr;
     ctx_.run_ctx.ctx.dev_type = Context::kCPU;
 #if MXNET_USE_CUDA
     if (isGPU) {
@@ -300,7 +296,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   }
 
   nnvm::ObjectPtr GetBackwardDependency(const nnvm::ObjectPtr& node,
-                                      std::map<int, const NDArray *>* index2array) const {
+                                        std::map<int, const NDArray*>* index2array) const {
     index2array->clear();
     static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
 
@@ -331,9 +327,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     return nullptr;
   }
 
-  nnvm::ObjectPtr CalcBackwardPass(std::map<int, const NDArray *> *index2array) const {
+  nnvm::ObjectPtr CalcBackwardPass(std::map<int, const NDArray*>* index2array) const {
     nnvm::ObjectPtr node = nnvm::Node::Create();
-    node->attrs = attrs_;
+    node->attrs          = attrs_;
     return GetBackwardDependency(node, index2array);
   }
 
@@ -343,11 +339,10 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param inputs Optional input data (otherwise, random data will be used as input)
    */
   void Init(const kwargs_t& in_args,
-            const std::vector<NDArray>& inputs = {},
-            const std::vector<NDArray>& outputs = {},
-            const CoreOpExecutor *backward_for_op = nullptr,
-            nnvm::ObjectPtr bwd_node_ptr = nullptr
-  ) {
+            const std::vector<NDArray>& inputs    = {},
+            const std::vector<NDArray>& outputs   = {},
+            const CoreOpExecutor* backward_for_op = nullptr,
+            nnvm::ObjectPtr bwd_node_ptr          = nullptr) {
     if (!initialized_) {
       initialized_ = true;
 
@@ -356,7 +351,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       CHECK(op_name.empty() == false);
 
       CHECK(!backward_for_op || bwd_op_name.empty())
-        << "Backward op should not be supplied another backward operator";
+          << "Backward op should not be supplied another backward operator";
 
       if (verbose_ && backward_for_op) {
         std::cout << "Backward op: " << op_name;
@@ -365,7 +360,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       op_ = nnvm::Op::Get(op_name);
       CHECK_NOTNULL(op_);
 
-      std::map<int, const NDArray *> index2array;
+      std::map<int, const NDArray*> index2array;
       nnvm::ObjectPtr bwd_node_ptr;
       if (backward_for_op) {
         bwd_node_ptr = backward_for_op->CalcBackwardPass(&index2array);
@@ -400,12 +395,12 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       std::vector<mxnet::TShape> input_shapes;
       if (!input_shapes_.empty()) {
         for (size_t i = 0, n = num_inputs; i < n; ++i) {
-          input_shapes.emplace_back(i < input_shapes_.size() ? input_shapes_[i]
-                                                             : input_shapes_[input_shapes_.size()
-                                                                             - 1]);
+          input_shapes.emplace_back(i < input_shapes_.size() ?
+                                        input_shapes_[i] :
+                                        input_shapes_[input_shapes_.size() - 1]);
         }
       }
-      std::vector<NDArray *> inputs_p, outputs_p;
+      std::vector<NDArray*> inputs_p, outputs_p;
 
       if (!outputs.empty()) {
         CHECK_EQ(outputs.size(), static_cast<size_t>(inferred_num_outputs));
@@ -438,9 +433,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
               const int map_key = bwd_node_ptr->inputs[i].index;
               CHECK(index2array.find(map_key) != index2array.end());
               const int dtype = index2array[map_key]->dtype();
-              input_types[i] = dtype;
+              input_types[i]  = dtype;
             }
-            for (const auto &fwd_inp : backward_for_op->inputs()) {
+            for (const auto& fwd_inp : backward_for_op->inputs()) {
               const int dtype = fwd_inp.data().type_flag_;
               output_types.emplace_back(dtype);
             }
@@ -448,7 +443,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
             for (int x = 0; x < num_inputs; ++x) {
               input_types.emplace_back(default_dtype());
             }
-            for (const auto &fwd_inp : backward_for_op->inputs()) {
+            for (const auto& fwd_inp : backward_for_op->inputs()) {
               const int dtype = fwd_inp.data().type_flag_;
               output_types.emplace_back(dtype);
             }
@@ -482,7 +477,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
               for (int i = 0; i < num_inputs; ++i) {
                 const int map_key = bwd_node_ptr->inputs[i].index;
                 CHECK(index2array.find(map_key) != index2array.end());
-                const mxnet::TShape &shp = index2array[map_key]->shape();
+                const mxnet::TShape& shp = index2array[map_key]->shape();
                 input_shapes.push_back(shp);
                 const mxnet::TShape ss = input_shapes[i];
               }
@@ -503,22 +498,21 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         for (size_t i = 0; i < static_cast<size_t>(inferred_num_outputs); ++i) {
           // If supplied and valid, pass from the supplied outputs vector
           // Otherwise use empty for forward pass, or zero-filled for backward pass
-          outputs_.emplace_back(i < outputs.size() ? outputs[i]
-                                                   : (backward_for_op
-                                                      ? CreateZeroArray(output_shapes[i],
-                                                                        ctx_.run_ctx,
-                                                                        output_types[i])
-                                                      : NDArray()));
+          outputs_.emplace_back(
+              i < outputs.size() ?
+                  outputs[i] :
+                  (backward_for_op ?
+                       CreateZeroArray(output_shapes[i], ctx_.run_ctx, output_types[i]) :
+                       NDArray()));
           outputs_p.emplace_back(&*outputs_.rbegin());
         }
       }
 
       for (size_t i = 0; i < static_cast<size_t>(num_inputs); ++i) {
         CHECK_LT(i, static_cast<int>(input_shapes.size()));
-        inputs_.emplace_back(i < inputs.size()
-                             ? inputs[i] : CreateRandArray(input_shapes[i],
-                                                           ctx_.run_ctx,
-                                                           input_types[i]));
+        inputs_.emplace_back(i < inputs.size() ?
+                                 inputs[i] :
+                                 CreateRandArray(input_shapes[i], ctx_.run_ctx, input_types[i]));
         inputs_p.emplace_back(&*inputs_.rbegin());
       }
 
@@ -533,15 +527,15 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       CollectBlobs(inputs_, &blob_inputs_);
       CollectBlobs(outputs_, &blob_outputs_);
 
-      function_ = common::GetFCompute<FCompute>(op_, "FCompute", ctx_.run_ctx.ctx);
+      function_   = common::GetFCompute<FCompute>(op_, "FCompute", ctx_.run_ctx.ctx);
       functionex_ = common::GetFCompute<FComputeEx>(op_, "FComputeEx", ctx_.run_ctx.ctx);
-      stateful_function_ = common::GetFCompute<FStatefulCompute>(op_, "FStatefulCompute",
-                                                                 ctx_.run_ctx.ctx);
+      stateful_function_ =
+          common::GetFCompute<FStatefulCompute>(op_, "FStatefulCompute", ctx_.run_ctx.ctx);
 
       AttachResources(&ctx_, attrs_, op_);
 
       auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
-      auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
+      auto& createop          = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
       if (createop.count(op_) || is_layer_backward.get(op_, false)) {
         if (backward_for_op) {
           state_ = backward_for_op->state_;
@@ -562,7 +556,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           if (bwd_op_name != COREOP_BWD_OP_NAME_VALUE_NONE) {
             // Backward op was specified
             std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
-              ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(this->outputs()));
+                ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(this->outputs()));
             bwd.push_back({pOp, bwd_op_name});
           } else {
             no_backward = true;
@@ -573,9 +567,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         }
         if (!no_backward) {
           CHECK_GE(bwd.size(), 1U)
-            << "Can't automatically determine backward op name. Please specify";
+              << "Can't automatically determine backward op name. Please specify";
 
-          for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string> &bw_item : bwd) {
+          for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string>& bw_item : bwd) {
             bw_item.first->set_verbose(verbose_);
             backward_.emplace_back(bw_item.first);
             bw_item.first->Init(ArgsWithOpName(args, bw_item.second), {}, {}, this);
@@ -585,15 +579,15 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     }
   }
 
-  template<typename OpProp>
-  inline bool initForward(const OpProp &opProp, std::vector<int> *in_type) {
+  template <typename OpProp>
+  inline bool initForward(const OpProp& opProp, std::vector<int>* in_type) {
     Init(opProp.GetArgs());
     resetForward();
     return true;
   }
 
-  template<typename OpProp>
-  inline bool initBackward(const OpProp &opProp, std::vector<int> *in_type) {
+  template <typename OpProp>
+  inline bool initBackward(const OpProp& opProp, std::vector<int>* in_type) {
     resetBackward();
     return true;
   }
@@ -670,7 +664,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     CHECK(HasBackward());
     if (!backward_.empty()) {
       // Avoid locked ref count here
-      for (std::shared_ptr<CoreOpExecutor> &p : backward_) {
+      for (std::shared_ptr<CoreOpExecutor>& p : backward_) {
         p->Execute();
       }
       return true;
@@ -686,7 +680,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     CHECK(HasBackward());
     if (!backward_.empty()) {
       // Avoid locked ref count here
-      for (std::shared_ptr<CoreOpExecutor> &p : backward_) {
+      for (std::shared_ptr<CoreOpExecutor>& p : backward_) {
         p->ExecuteEx();
       }
       return true;
@@ -702,7 +696,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     CHECK(HasBackward());
     if (!backward_.empty()) {
       // Avoid locked ref count here
-      for (std::shared_ptr<CoreOpExecutor> &p : backward_) {
+      for (std::shared_ptr<CoreOpExecutor>& p : backward_) {
         p->ExecuteStateful();
       }
       return true;
@@ -714,19 +708,35 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \brief Access input NDArray vector
    * \return reference to NDArray vector of forward inputs
    */
-  std::vector<NDArray>& inputs() { return inputs_; }
-  const std::vector<NDArray>& inputs() const { return inputs_; }
-  std::vector<TBlob>& input_blobs() { return blob_inputs_; }
-  const std::vector<TBlob>& input_blobs() const { return blob_inputs_; }
+  std::vector<NDArray>& inputs() {
+    return inputs_;
+  }
+  const std::vector<NDArray>& inputs() const {
+    return inputs_;
+  }
+  std::vector<TBlob>& input_blobs() {
+    return blob_inputs_;
+  }
+  const std::vector<TBlob>& input_blobs() const {
+    return blob_inputs_;
+  }
 
   /*!
    * \brief Access input NDArray vector
    * \return reference to NDArray vector of forward outputs
    */
-  std::vector<NDArray>& outputs() { return outputs_; }
-  const std::vector<NDArray>& outputs() const { return outputs_; }
-  std::vector<TBlob>& output_blobs() { return blob_outputs_; }
-  const std::vector<TBlob>& output_blobs() const { return blob_outputs_; }
+  std::vector<NDArray>& outputs() {
+    return outputs_;
+  }
+  const std::vector<NDArray>& outputs() const {
+    return outputs_;
+  }
+  std::vector<TBlob>& output_blobs() {
+    return blob_outputs_;
+  }
+  const std::vector<TBlob>& output_blobs() const {
+    return blob_outputs_;
+  }
 
   /*!
    * \brief Backward inputs (i.e. output grad)
@@ -792,7 +802,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   /*
    * \brief Pointer to the operator object
    */
-  const nnvm::Op *op_;
+  const nnvm::Op* op_;
   /*!
    * \brief Operator attributes
    */
@@ -838,16 +848,20 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
 class CoreOpProp {
  public:
-  virtual void Init(const kwargs_t& kwargs) { kwargs_ = kwargs; }
-  const kwargs_t& GetArgs() const { return kwargs_; }
+  virtual void Init(const kwargs_t& kwargs) {
+    kwargs_ = kwargs;
+  }
+  const kwargs_t& GetArgs() const {
+    return kwargs_;
+  }
   virtual ~CoreOpProp() {}
+
  private:
-  kwargs_t          kwargs_;
+  kwargs_t kwargs_;
 };
 
-template<typename DType>
+template <typename DType>
 using CoreOperatorRunner = test::OperatorRunner<CoreOpProp, CoreOpExecutor<DType>>;
-
 
 /*!
  * \brief Rune a core op forward and backward
@@ -860,13 +874,13 @@ using CoreOperatorRunner = test::OperatorRunner<CoreOpProp, CoreOpExecutor<DType
  *        an exception will be thrown.
  *        If the string is [none], then no backward operator will be created or executed
  */
-template<typename DType = float>
+template <typename DType = float>
 inline void BasicRunCoreOpBidirectional(const bool isGPU,
                                         bool verbose,
                                         const kwargs_t& op_kwargs,
                                         const mxnet::ShapeVector& shapes,
-                                        const char *op_name,
-                                        const char *backward_op_name = "") {
+                                        const char* op_name,
+                                        const char* backward_op_name = "") {
   test::op::CoreOpExecutor<DType> op(isGPU, shapes);
   op.set_verbose(verbose);
 

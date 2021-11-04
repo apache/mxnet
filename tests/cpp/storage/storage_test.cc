@@ -20,7 +20,7 @@
  * Copyright (c) 2017 by Contributors
  * \file storage_test.cc
  * \brief cpu/gpu storage tests
-*/
+ */
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
 #include <mxnet/storage.h>
@@ -30,7 +30,7 @@
 
 TEST(Storage, Basic_CPU) {
   constexpr size_t kSize = 1024;
-  auto&& storage = mxnet::Storage::Get();
+  auto&& storage         = mxnet::Storage::Get();
   mxnet::Context context_cpu{};
   auto&& handle = storage->Alloc(kSize, context_cpu);
   EXPECT_EQ(handle.ctx, context_cpu);
@@ -48,7 +48,7 @@ TEST(Storage, Basic_CPU) {
 }
 
 TEST(Storage, CPU_MemAlign) {
-  #if MXNET_USE_ONEDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // DNNL requires special alignment. 64 is used by the DNNL library in
   // memory allocation.
   static constexpr size_t alignment_ = mxnet::kDNNLAlign;
@@ -56,12 +56,12 @@ TEST(Storage, CPU_MemAlign) {
   static constexpr size_t alignment_ = 16;
 #endif
 
-  auto&& storage = mxnet::Storage::Get();
+  auto&& storage             = mxnet::Storage::Get();
   mxnet::Context context_cpu = mxnet::Context::CPU(0);
 
   for (int i = 0; i < 5; ++i) {
     const size_t kSize = (std::rand() % 1024) + 1;
-    auto&& handle = storage->Alloc(kSize, context_cpu);
+    auto&& handle      = storage->Alloc(kSize, context_cpu);
     EXPECT_EQ(handle.ctx, context_cpu);
     EXPECT_EQ(handle.size, kSize);
     EXPECT_EQ(reinterpret_cast<intptr_t>(handle.dptr) % alignment_, 0);
@@ -69,22 +69,21 @@ TEST(Storage, CPU_MemAlign) {
   }
 }
 
-
 #if MXNET_USE_CUDA
 TEST(Storage_GPU, Basic_GPU) {
   if (mxnet::test::unitTestsWithCuda) {
     setenv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF", "20", 1);
     setenv("MXNET_GPU_MEM_POOL_TYPE", "Round", 1);
 
-    auto &&storage = mxnet::Storage::Get();
+    auto&& storage             = mxnet::Storage::Get();
     mxnet::Context context_gpu = mxnet::Context::GPU(0);
-    auto &&handle = storage->Alloc(32, context_gpu);
-    auto &&handle2 = storage->Alloc(2097153, context_gpu);
+    auto&& handle              = storage->Alloc(32, context_gpu);
+    auto&& handle2             = storage->Alloc(2097153, context_gpu);
     EXPECT_EQ(handle.ctx, context_gpu);
     EXPECT_EQ(handle.size, 32);
     EXPECT_EQ(handle2.ctx, context_gpu);
     EXPECT_EQ(handle2.size, 2097153);
-    auto ptr = handle.dptr;
+    auto ptr  = handle.dptr;
     auto ptr2 = handle2.dptr;
     storage->Free(handle);
     storage->Free(handle2);
@@ -109,10 +108,10 @@ TEST(Storage_GPU, Basic_GPU) {
     unsetenv("MXNET_GPU_MEM_POOL_TYPE");
   }
   if (mxnet::test::unitTestsWithCuda) {
-    constexpr size_t kSize = 1024;
+    constexpr size_t kSize     = 1024;
     mxnet::Context context_gpu = mxnet::Context::GPU(0);
-    auto &&storage = mxnet::Storage::Get();
-    auto &&handle = storage->Alloc(kSize, context_gpu);
+    auto&& storage             = mxnet::Storage::Get();
+    auto&& handle              = storage->Alloc(kSize, context_gpu);
     assert(handle.ctx == context_gpu);
     assert(handle.size == kSize);
     auto ptr = handle.dptr;
@@ -129,4 +128,3 @@ TEST(Storage_GPU, Basic_GPU) {
   }
 }
 #endif  // MXNET_USE_CUDA
-

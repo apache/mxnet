@@ -28,24 +28,23 @@
 #include <sys/wait.h>
 #include <dmlc/logging.h>
 
-
 TEST(OMPBehaviour, after_fork) {
-    /* 
-     * Check that after fork, OMP is disabled, and the recommended thread count is 1 to prevent 
-     * process fanout.
-     */
-    using namespace mxnet::engine;
-    auto openmp = OpenMP::Get();
-    pid_t pid = fork();
-    if (pid == 0) {
-        EXPECT_FALSE(openmp->enabled());
-        EXPECT_EQ(openmp->GetRecommendedOMPThreadCount(), 1);
-    } else if (pid > 0) {
-        int status;
-        int ret = waitpid(pid, &status, 0);
-        CHECK_EQ(ret, pid) << "waitpid failed";
-    } else {
-        CHECK(false) << "fork failed";
-    }
+  /*
+   * Check that after fork, OMP is disabled, and the recommended thread count is 1 to prevent
+   * process fanout.
+   */
+  using namespace mxnet::engine;
+  auto openmp = OpenMP::Get();
+  pid_t pid   = fork();
+  if (pid == 0) {
+    EXPECT_FALSE(openmp->enabled());
+    EXPECT_EQ(openmp->GetRecommendedOMPThreadCount(), 1);
+  } else if (pid > 0) {
+    int status;
+    int ret = waitpid(pid, &status, 0);
+    CHECK_EQ(ret, pid) << "waitpid failed";
+  } else {
+    CHECK(false) << "fork failed";
+  }
 }
 #endif

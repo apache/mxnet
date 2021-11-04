@@ -22,7 +22,7 @@
  * \file test_main.cc
  * \brief operator unit test utility functions
  * \author Chris Olivier
-*/
+ */
 #include <gtest/gtest.h>
 #include "mxnet/base.h"
 
@@ -30,7 +30,8 @@
 #include <breakpad/client/linux/handler/exception_handler.h>
 
 static bool dumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
-                         void* context, bool succeeded) {
+                         void* context,
+                         bool succeeded) {
   printf("Dump path: %s\n", descriptor.path());
   return succeeded;
 }
@@ -44,9 +45,9 @@ bool debug_output = false;
 #else
 bool debug_output = false;
 #endif
-bool quick_test = false;
-bool performance_run = false;
-bool csv = false;
+bool quick_test              = false;
+bool performance_run         = false;
+bool csv                     = false;
 bool thread_safety_force_cpu = false;
 }  // namespace test
 }  // namespace mxnet
@@ -60,8 +61,8 @@ static bool checkForWorkingCuda() {
     for (int device = 0; device < device_count; ++device) {
       cudaDeviceProp prop;
       if (cudaSuccess == cudaGetDeviceProperties(&prop, device)) {
-        std::cout << "Found CUDA Device #: " << device << " properties: " << prop.major
-                  << "." << prop.minor << std::endl;
+        std::cout << "Found CUDA Device #: " << device << " properties: " << prop.major << "."
+                  << prop.minor << std::endl;
         workingCuda = true;
       }
     }
@@ -80,7 +81,7 @@ void backtrace_test() {
   CHECK(false) << "backtrace()";
 }
 
-int main(int argc, char ** argv) {
+int main(int argc, char** argv) {
 #ifdef USE_BREAKPAD
   google_breakpad::MinidumpDescriptor descriptor("/tmp");
   google_breakpad::ExceptionHandler eh(descriptor, NULL, dumpCallback, NULL, true, -1);
@@ -92,7 +93,7 @@ int main(int argc, char ** argv) {
   mxnet::test::unitTestsWithCuda = checkForWorkingCuda();  // auto-determine
 
   for (int x = 1; x < argc; ++x) {
-    const char *arg = argv[x];
+    const char* arg = argv[x];
     // force checks with CUDA
     if (!strcmp(arg, "--with-cuda")) {
       // override (ie force attempt CUDA)
@@ -108,8 +109,8 @@ int main(int argc, char ** argv) {
     } else if (!strcmp(arg, "--thread-safety-with-cpu")) {
       mxnet::test::thread_safety_force_cpu = true;
     } else if (!strcmp(arg, "--backtrace")) {
-        backtrace_test();
-        return 0;
+      backtrace_test();
+      return 0;
     }
   }
 
