@@ -222,7 +222,8 @@ inline bool NumpyLinspaceShape(const nnvm::NodeAttrs& attrs,
 }
 
 struct numpy_linspace_fwd {
-  template <typename DType, typename ValueType, 
+  template <typename DType,
+            typename ValueType,
             typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i,
                                   index_t size,
@@ -243,7 +244,8 @@ struct numpy_linspace_fwd {
     }
   }
 
-  template <typename DType, typename ValueType,
+  template <typename DType,
+            typename ValueType,
             typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i,
                                   index_t size,
