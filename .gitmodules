@@ -28,3 +28,6 @@
 [submodule "3rdparty/onednn"]
 	path = 3rdparty/onednn
 	url = https://github.com/oneapi-src/oneDNN
+[submodule "3rdparty/parallel-hashmap"]
+	path = 3rdparty/parallel-hashmap
+	url = https://github.com/greg7mdp/parallel-hashmap.git
