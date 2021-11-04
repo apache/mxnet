@@ -546,6 +546,7 @@ constexpr size_t kDNNLAlign = 1 << 21;
 #else
 constexpr size_t kDNNLAlign = 4096ul;
 #endif
+#endif
 
 }  // namespace mxnet
 
