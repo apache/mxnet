@@ -819,7 +819,15 @@ MXNET_BINARY_MATH_OP(bitwise_or, static_cast<int64_t>(a) | static_cast<int64_t>(
 #endif
 
 /*! \brief used for generate element of bitwise_left_shift */
-MXNET_BINARY_MATH_OP(bitwise_left_shift, static_cast<int64_t>(a) << static_cast<int64_t>(b));
+struct bitwise_left_shift : public mxnet_op::tunable {
+  template <typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b >= DType(sizeof(DType) * CHAR_BIT)) {
+      return DType(0);
+    }
+    return static_cast<int64_t>(a) << static_cast<int64_t>(b);
+  }
+};
 
 MXNET_BINARY_MATH_OP(bitwise_left_shift_grad, math::pow(2.0f, static_cast<int64_t>(b)));
 
@@ -834,7 +842,19 @@ MXNET_BINARY_MATH_OP(rbitwise_left_shift_grad,
                          math::log(2.0f));
 
 /*! \brief used for generate element of bitwise_right_shift */
-MXNET_BINARY_MATH_OP(bitwise_right_shift, static_cast<int64_t>(a) >> static_cast<int64_t>(b));
+struct bitwise_right_shift : public mxnet_op::tunable {
+  template <typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b >= DType(sizeof(DType) * CHAR_BIT)) {
+      if (a < 0) {
+        return DType(-1);
+      } else {
+        return DType(0);
+      }
+    }
+    return static_cast<int64_t>(a) >> static_cast<int64_t>(b);
+  }
+};
 
 MXNET_BINARY_MATH_OP(bitwise_right_shift_grad, math::pow(0.5f, static_cast<int64_t>(b)));
 

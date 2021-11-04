@@ -117,7 +117,34 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
     // Case when types of the 2 input tensors are different
     if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
       // both lhs and rhs are float types, output type is the more precise one
-      LOG(FATAL) << "not implemented yet...";
+      TBlob temp_tblob;
+      if (lhs.type_flag_ == out.type_flag_) {
+        MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+          Tensor<xpu, 1, LType> temp_tensor =
+            ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+          temp_tblob = TBlob(temp_tensor);
+        });
+        CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+          MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+            Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+                s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), temp_tblob.dptr<DType>());
+          });
+        });
+      } else {
+        MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
+          Tensor<xpu, 1, RType> temp_tensor =
+            ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+          temp_tblob = TBlob(temp_tensor);
+        });
+        CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+          MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+            Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+                s, out.Size(), out.dptr<DType>(), temp_tblob.dptr<DType>(), rhs.dptr<DType>());
+          });
+        });
+      }
     } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
       // one is float type, the other is integer type, the output type should be the same as float
       CHECK_EQ(out.type_flag_, common::is_float(lhs.type_flag_) ? lhs.type_flag_ : rhs.type_flag_)
@@ -213,7 +240,46 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
       } else {
         if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
           // lhs and rhs have different float types, the output is the more precise one
-          LOG(FATAL) << "not implemented yet...";
+          TBlob temp_tblob;
+          if (lhs.type_flag_ == out.type_flag_) {
+            MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+              Tensor<xpu, 1, LType> temp_tensor =
+                ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+              temp_tblob = TBlob(temp_tensor);
+            });
+            CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+            MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
+                  s,
+                  new_oshape.Size(),
+                  req[0],
+                  lstride,
+                  rstride,
+                  oshape,
+                  lhs.dptr<DType>(),
+                  temp_tblob.dptr<DType>(),
+                  out.dptr<DType>());
+            });
+          } else {
+            MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
+              Tensor<xpu, 1, RType> temp_tensor =
+                ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+              temp_tblob = TBlob(temp_tensor);
+            });
+            CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+            MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
+                  s,
+                  new_oshape.Size(),
+                  req[0],
+                  lstride,
+                  rstride,
+                  oshape,
+                  temp_tblob.dptr<DType>(),
+                  rhs.dptr<DType>(),
+                  out.dptr<DType>());
+            });
+          }
         } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
           // one of lhs and rhs is float, the output is the same type as the float one
           if (common::is_float(lhs.type_flag_)) {

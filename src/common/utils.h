@@ -901,13 +901,44 @@ inline bool is_float(const int dtype) {
 }
 
 inline bool is_int(const int dtype) {
-  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 || dtype == mshadow::kInt32 ||
-         dtype == mshadow::kInt64;
+  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kUint16 || dtype == mshadow::kInt16 ||
+         dtype == mshadow::kUint32 || dtype == mshadow::kInt32 ||
+         dtype == mshadow::kUint64 || dtype == mshadow::kInt64;
 }
 
-inline int get_more_precise_type(const int type1, const int type2) {
-  if (type1 == type2)
-    return type1;
+inline bool is_signed_int(const int dtype) {
+  return dtype == mshadow::kInt8 || dtype == mshadow::kInt16 ||
+         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
+}
+
+inline bool is_unsigned_int(const int dtype) {
+  return dtype == mshadow::kUint8 || dtype == mshadow::kUint16 ||
+         dtype == mshadow::kUint32 || dtype == mshadow::kUint64;
+}
+
+static int bits_of(const int type_flag) {
+  switch (type_flag) {
+    case mshadow::kFloat32: return sizeof(float) * CHAR_BIT;
+    case mshadow::kFloat64: return sizeof(double) * CHAR_BIT;
+    case mshadow::kUint8: return sizeof(uint8_t) * CHAR_BIT;
+    case mshadow::kInt32: return sizeof(int32_t) * CHAR_BIT;
+    case mshadow::kInt8: return sizeof(int8_t) * CHAR_BIT;
+    case mshadow::kInt64: return sizeof(int64_t) * CHAR_BIT;
+    case mshadow::kBool: return sizeof(bool) * CHAR_BIT;
+    case mshadow::kInt16: return sizeof(int16_t) * CHAR_BIT;
+    case mshadow::kUint16: return sizeof(uint16_t) * CHAR_BIT;
+    case mshadow::kUint32: return sizeof(uint32_t) * CHAR_BIT;
+    case mshadow::kUint64: return sizeof(uint64_t) * CHAR_BIT;
+    default: {
+      LOG(FATAL) << "Unknown type_flag=" << type_flag;
+      return -1;
+    }
+  }
+}
+
+inline int type_promotion(const int type1, const int type2) {
+  if (type1 == type2) return type1;
   if (is_float(type1) && is_float(type2)) {
     if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
       return mshadow::kFloat64;
@@ -919,27 +950,63 @@ inline int get_more_precise_type(const int type1, const int type2) {
   } else if (is_float(type1) || is_float(type2)) {
     return is_float(type1) ? type1 : type2;
   }
-  if (type1 == mshadow::kInt64 || type2 == mshadow::kInt64) {
-    return mshadow::kInt64;
-  }
-  if (type1 == mshadow::kInt32 || type2 == mshadow::kInt32) {
-    return mshadow::kInt32;
-  }
-  CHECK(!((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
-          (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)))
-      << "1 is UInt8 and 1 is Int8 should not get here";
-  if (type1 == mshadow::kUint8 || type2 == mshadow::kUint8) {
+  if (is_signed_int(type1) && is_signed_int(type2)) {
+    if (type1 == mshadow::kInt64 || type2 == mshadow::kInt64) {
+      return mshadow::kInt64;
+    }
+    if (type1 == mshadow::kInt32 || type2 == mshadow::kInt32) {
+      return mshadow::kInt32;
+    }
+    if (type1 == mshadow::kInt16 || type2 == mshadow::kInt16) {
+      return mshadow::kInt16;
+    }
+    return mshadow::kInt8;
+  } else if (is_unsigned_int(type1) && is_unsigned_int(type2)) {
+    if (type1 == mshadow::kUint64 || type2 == mshadow::kUint64) {
+      return mshadow::kUint64;
+    }
+    if (type1 == mshadow::kUint32 || type2 == mshadow::kUint32) {
+      return mshadow::kUint32;
+    }
+    if (type1 == mshadow::kUint16 || type2 == mshadow::kUint16) {
+      return mshadow::kUint16;
+    }
     return mshadow::kUint8;
+  } else if (is_unsigned_int(type1) || is_unsigned_int(type2)) {
+    if (bits_of(type1) < bits_of(type2)) {
+      if (type1 == mshadow::kInt8 && type2 == mshadow::kUint16) {
+        return mshadow::kInt32;
+      } else if (type1 == mshadow::kInt8 && type2 == mshadow::kUint32) {
+        return mshadow::kInt64;
+      } else if (type1 == mshadow::kInt16 && type2 == mshadow::kUint32) {
+        return mshadow::kInt64;
+      } else {
+        return type2;
+      }
+    } else if (bits_of(type2) < bits_of(type1)) {
+      if (type2 == mshadow::kInt8 && type1 == mshadow::kUint16) {
+        return mshadow::kInt32;
+      } else if (type2 == mshadow::kInt8 && type1 == mshadow::kUint32) {
+        return mshadow::kInt64;
+      } else if (type2 == mshadow::kInt16 && type1 == mshadow::kUint32) {
+        return mshadow::kInt64;
+      } else {
+        return type1;
+      }
+    } else {
+      if (type1 == mshadow::kUint8 || type2 == mshadow::kUint8) {
+        return mshadow::kInt16;
+      }
+      if (type1 == mshadow::kUint16 || type2 == mshadow::kUint16) {
+        return mshadow::kInt32;
+      }
+      if (type1 == mshadow::kUint32 || type2 == mshadow::kUint32) {
+        return mshadow::kInt64;
+      }
+    }
   }
-  return mshadow::kInt8;
-}
-
-inline int np_binary_out_infer_type(const int type1, const int type2) {
-  if ((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
-      (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)) {
-    return mshadow::kInt32;
-  }
-  return get_more_precise_type(type1, type2);
+  LOG(FATAL) << "should not reach here ";
+  return -1;
 }
 
 inline const std::string NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {

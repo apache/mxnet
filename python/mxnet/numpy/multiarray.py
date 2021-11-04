@@ -581,6 +581,8 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         remaining_dims = shape[key_ndim:]
         data = _reshape_view(self, -1, *remaining_dims)
         key = _reshape_view(key, -1)
+        if data.size == 0 and key.size == 0:
+            return data
         return _reshape_view(_npi.boolean_mask(data, key), -1, *remaining_dims)
 
     def _set_np_boolean_indexing(self, key, value):
