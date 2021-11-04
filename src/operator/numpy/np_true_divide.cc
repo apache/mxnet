@@ -75,9 +75,9 @@ NNVM_REGISTER_OP(_npi_true_divide)
                                       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
                                     })
     .set_attr<FResourceRequest>("FResourceRequest",
-                                    [](const NodeAttrs& attrs) {
-                                      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-                                    })
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
     .set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_div"})
     .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
