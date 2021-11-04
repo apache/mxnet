@@ -243,7 +243,7 @@ class UnaryOp : public OpBase {
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         if (inputs[0].Size() != 0) {
           mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
