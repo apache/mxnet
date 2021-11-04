@@ -25,7 +25,7 @@ import collections
 import ctypes
 import itertools
 from mxnet import amp
-from mxnet.test_utils import set_default_context, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
+from mxnet.test_utils import set_default_device, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))

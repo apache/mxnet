@@ -269,7 +269,7 @@ def test_fusion_compiler_cache():
     check_fused_symbol(a+b, ctx=mx.gpu(0), a=arr1, b=arr2)
 
     # On multi-GPU systems, invoke the same model on other GPUs
-    num_gpus = mx.context.num_gpus()
+    num_gpus = mx.device.num_gpus()
     if num_gpus > 1:
         check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
 

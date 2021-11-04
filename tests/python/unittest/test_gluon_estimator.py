@@ -53,16 +53,16 @@ def test_fit():
     net = _get_test_network()
     dataloader, dataiter = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.gluon.metric.Accuracy()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
                     trainer=trainer,
-                    context=ctx)
+                    device=device)
 
     est.fit(train_data=dataloader,
             epochs=num_epochs)
@@ -83,17 +83,17 @@ def test_validation():
     net = _get_test_network()
     dataloader, dataiter = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.gluon.metric.Accuracy()
     val_loss = gluon.loss.L1Loss()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
                     trainer=trainer,
-                    context=ctx,
+                    device=device,
                     val_loss=val_loss)
     # Input dataloader
     est.fit(train_data=dataloader,
@@ -122,7 +122,7 @@ def test_initializer():
     net = _get_test_network()
     train_data, _ = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
 
     loss = gluon.loss.L2Loss()
     acc = mx.gluon.metric.Accuracy()
@@ -130,13 +130,13 @@ def test_initializer():
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
-                    context=ctx)
+                    device=device)
     est.fit(train_data=train_data,
             epochs=num_epochs)
 
     # different initializer for net and estimator
     net = _get_test_network()
-    net.initialize(mx.init.Xavier(), ctx=ctx)
+    net.initialize(mx.init.Xavier(), device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # catch reinit warning
     with warnings.catch_warnings(record=True) as w:
@@ -145,14 +145,14 @@ def test_initializer():
                         train_metrics=acc,
                         initializer=mx.init.MSRAPrelu(),
                         trainer=trainer,
-                        context=ctx)
+                        device=device)
         assert 'Network already fully initialized' in str(w[-1].message)
     # net partially initialized, fine tuning use case
-    net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
-    net.features.initialize(ctx=ctx)
+    net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, device=device)
+    net.features.initialize(device=device)
     net.features(mx.np.zeros((1, 3, 224, 224)))
     net.output = gluon.nn.Dense(10) #last layer not initialized
-    est = Estimator(net, loss=loss, train_metrics=acc, context=ctx)
+    est = Estimator(net, loss=loss, train_metrics=acc, device=device)
     dataset =  gluon.data.ArrayDataset(mx.np.zeros((10, 3, 224, 224)), mx.np.zeros((10, 10)))
     train_data = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     est.fit(train_data=train_data,
@@ -165,17 +165,17 @@ def test_trainer():
     net = _get_test_network()
     train_data, _ = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
 
     loss = gluon.loss.L2Loss()
     acc = mx.gluon.metric.Accuracy()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     # input no trainer
     with warnings.catch_warnings(record=True) as w:
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=acc,
-                        context=ctx)
+                        device=device)
         assert 'No trainer specified' in str(w[-1].message)
     est.fit(train_data=train_data,
             epochs=num_epochs)
@@ -187,7 +187,7 @@ def test_trainer():
                         loss=loss,
                         train_metrics=acc,
                         trainer=trainer,
-                        context=ctx)
+                        device=device)
 
 
 @mx.util.use_np
@@ -196,16 +196,16 @@ def test_metric():
     net = _get_test_network()
     train_data, _ = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
 
     loss = gluon.loss.L2Loss()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # input no metric
     est = Estimator(net=net,
                     loss=loss,
                     trainer=trainer,
-                    context=ctx)
+                    device=device)
     est.fit(train_data=train_data,
             epochs=num_epochs)
     # input list of metrics
@@ -214,7 +214,7 @@ def test_metric():
                     loss=loss,
                     train_metrics=metrics,
                     trainer=trainer,
-                    context=ctx)
+                    device=device)
     est.fit(train_data=train_data,
             epochs=num_epochs)
     # input invalid metric
@@ -223,13 +223,13 @@ def test_metric():
                         loss=loss,
                         train_metrics='acc',
                         trainer=trainer,
-                        context=ctx)
+                        device=device)
     # test default metric
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     est = Estimator(net=net,
                     loss=loss,
                     trainer=trainer,
-                    context=ctx)
+                    device=device)
     assert isinstance(est.train_metrics[0], mx.gluon.metric.Accuracy)
 
 
@@ -237,9 +237,9 @@ def test_metric():
 def test_loss():
     ''' test with invalid loss '''
     net = _get_test_network()
-    ctx = mx.cpu()
+    device = mx.cpu()
     acc = mx.gluon.metric.Accuracy()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # input invalid loss
     with pytest.raises(ValueError):
@@ -247,39 +247,39 @@ def test_loss():
                         loss='mse',
                         train_metrics=acc,
                         trainer=trainer,
-                        context=ctx)
+                        device=device)
 
 
 @mx.util.use_np
-def test_context():
-    ''' test with no context, list of context, invalid context '''
+def test_device():
+    ''' test with no device, list of device, invalid device '''
     net = _get_test_network()
     loss = gluon.loss.L2Loss()
     metrics = mx.gluon.metric.Accuracy()
-    # input no context
+    # input no device
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=metrics)
-    # input list of context
-    gpus = mx.context.num_gpus()
-    ctx = [mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()]
+    # input list of device
+    gpus = mx.device.num_gpus()
+    device = [mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()]
     net = _get_test_network()
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=metrics,
-                    context=ctx)
-    # input invalid context
+                    device=device)
+    # input invalid device
     with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=metrics,
-                        context='cpu')
+                        device='cpu')
 
     with pytest.raises(AssertionError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=metrics,
-                        context=[mx.gpu(0), mx.gpu(100)])
+                        device=[mx.gpu(0), mx.gpu(100)])
 
 
 @mx.util.use_np
@@ -334,9 +334,9 @@ def test_default_handlers():
     train_data, _ = _get_test_data()
 
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
 
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
 
     train_acc = mx.gluon.metric.RMSE()
@@ -346,7 +346,7 @@ def test_default_handlers():
                     loss=loss,
                     train_metrics=train_acc,
                     trainer=trainer,
-                    context=ctx)
+                    device=device)
     # no handler(all default handlers), no warning
     with warnings.catch_warnings(record=True) as w:
         est.fit(train_data=train_data, epochs=num_epochs)
@@ -387,17 +387,17 @@ def test_val_net():
     val_net = _get_test_network(params=net.collect_params())
     dataloader, dataiter = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
     loss = gluon.loss.L2Loss()
     val_loss = gluon.loss.L2Loss()
     acc = mx.gluon.metric.Accuracy()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
                     trainer=trainer,
-                    context=ctx,
+                    device=device,
                     val_loss=val_loss,
                     val_net=val_net)
 
@@ -406,20 +406,20 @@ def test_val_net():
             epochs=num_epochs)
 
     ''' test partial weight sharing of two resnets '''
-    net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
+    net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, device=device)
     net.output = gluon.nn.Dense(10)
-    val_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
+    val_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, device=device)
     val_net.output = net.output
     dataset = gluon.data.ArrayDataset(mx.np.zeros((10, 3, 224, 224)), mx.np.zeros((10, 10)))
     dataloader = gluon.data.DataLoader(dataset=dataset, batch_size=5)
-    net.initialize(ctx=ctx)
-    val_net.initialize(ctx=ctx)
+    net.initialize(device=device)
+    val_net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
                     trainer=trainer,
-                    context=ctx,
+                    device=device,
                     val_loss=val_loss,
                     val_net=val_net)
 
@@ -434,8 +434,8 @@ def test_val_handlers():
     val_data, _ = _get_test_data()
 
     num_epochs = 1
-    ctx = mx.cpu()
-    net.initialize(ctx=ctx)
+    device = mx.cpu()
+    net.initialize(device=device)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
 
     train_acc = mx.gluon.metric.RMSE()
@@ -445,7 +445,7 @@ def test_val_handlers():
                     loss=loss,
                     train_metrics=train_acc,
                     trainer=trainer,
-                    context=ctx)
+                    device=device)
 
     with warnings.catch_warnings(record=True) as w:
         est.fit(train_data=train_data, epochs=num_epochs)

@@ -23,14 +23,14 @@ import numpy as np
 from mxnet import gluon
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
-from mxnet.test_utils import assert_almost_equal, set_default_context
+from mxnet.test_utils import assert_almost_equal, set_default_device
 from mxnet.test_utils import almost_equal, same
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import assertRaises
 from test_numpy_gluon_data_vision import test_to_tensor, test_normalize, test_crop_resize
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))
 
 def test_normalize_gpu():
     test_normalize()

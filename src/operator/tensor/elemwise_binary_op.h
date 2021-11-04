@@ -449,7 +449,7 @@ class ElemwiseBinaryOp : public OpBase {
     CHECK_EQ(inputs.size(), 2U);
     CHECK_EQ(outputs.size(), 1U);
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      MXNET_INT_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
         const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size()) +
                              DataType<DType>::kLanes - 1) /
                             DataType<DType>::kLanes;

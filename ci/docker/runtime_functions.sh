@@ -872,6 +872,10 @@ unittest_array_api_standardization() {
     # when cython is enabled
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=100
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_creation_functions.py
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_indexing.py
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_elementwise_functions.py
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_constants.py
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
         array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
@@ -888,12 +892,6 @@ unittest_array_api_standardization() {
         array_api_tests/test_type_promotion.py::test_operator_two_arg_promoted_promotion
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
         array_api_tests/test_type_promotion.py::test_operator_inplace_two_arg_promoted_promotion
-    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
-        array_api_tests/test_elementwise_functions.py
-    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
-        array_api_tests/test_indexing.py
-    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
-        array_api_tests/test_constants.py
     popd
 }
 

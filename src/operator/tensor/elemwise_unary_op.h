@@ -275,7 +275,7 @@ class UnaryOp : public OpBase {
       UnaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
       MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        MXNET_INT_TYPE_SWITCH_EXT(inputs[0].type_flag_, IType, {
+        MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, IType, {
           MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
             if (inputs[0].Size() != 0) {
               mxnet_op::Kernel<mxnet_op::mixed_type_unary_op<OP, Req>, xpu>::Launch(
@@ -294,7 +294,7 @@ class UnaryOp : public OpBase {
                          const std::vector<OpReqType>& req,
                          const std::vector<TBlob>& outputs) {
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-    MXNET_INT_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         if (inputs[0].Size() != 0) {
           mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(

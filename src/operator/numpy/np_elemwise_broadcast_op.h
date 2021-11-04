@@ -116,7 +116,7 @@ void MixedIntRealBinaryElemwiseCompute(const OpContext& ctx,
     if (size == 0)
       return;
 
-    MXNET_INT_TYPE_SWITCH_EXT(rhs.type_flag_, IType, {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
         Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
             s, size, out.dptr<FType>(), rhs.dptr<IType>(), lhs.dptr<FType>());
@@ -176,7 +176,7 @@ void MixedIntBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
   } else {
     TBlob temp_tblob_l;
     TBlob temp_tblob_r;
-    MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, OType, {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH(out.type_flag_, OType, {
       Tensor<xpu, 1, OType> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
       TBlob temp_tblob = TBlob(workspace);
@@ -351,7 +351,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
         if (lhs.type_flag_ == out.type_flag_) {
           MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, LType, {
-            MXNET_INT_TYPE_SWITCH_EXT(rhs.type_flag_, RType, {
+            MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
               mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, ROP>,
                                xpu>::template LaunchEx(s,
                                                        new_oshape.Size(),
@@ -366,7 +366,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
           });
         } else {
           MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, RType, {
-            MXNET_INT_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+            MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
               mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, LOP>,
                                xpu>::template LaunchEx(s,
                                                        new_oshape.Size(),
@@ -384,7 +384,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     } else if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
       TBlob temp_tblob;
       if (lhs.type_flag_ == out.type_flag_) {
-        MXNET_INT_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+        MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
           Tensor<xpu, 1, LType> temp_tensor =
               ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
           temp_tblob = TBlob(temp_tensor);
@@ -404,7 +404,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
       } else {
         TBlob temp_tblob_l;
         TBlob temp_tblob_r;
-        MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, OType, {
+        MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(out.type_flag_, OType, {
           Tensor<xpu, 1, OType> workspace =
               ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
           TBlob temp_tblob = TBlob(workspace);
@@ -479,7 +479,7 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     Stream<xpu>* s = ctx.get_stream<xpu>();
     TBlob temp_tblob;
     if (lhs.type_flag_ == out.type_flag_) {
-      MXNET_INT_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
         Tensor<xpu, 1, LType> temp_tensor =
             ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
         temp_tblob = TBlob(temp_tensor);
@@ -488,7 +488,7 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
       BinaryBroadcastCompute<xpu, OP>(
           attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
     } else if (rhs.type_flag_ == out.type_flag_) {
-      MXNET_INT_TYPE_SWITCH_EXT(rhs.type_flag_, RType, {
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
         Tensor<xpu, 1, RType> temp_tensor =
             ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
         temp_tblob = TBlob(temp_tensor);
@@ -499,7 +499,7 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     } else {
       TBlob temp_tblob_l;
       TBlob temp_tblob_r;
-      MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, OType, {
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(out.type_flag_, OType, {
         Tensor<xpu, 1, OType> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
         TBlob temp_tblob = TBlob(workspace);
@@ -546,7 +546,7 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   TBlob temp_tblob;
   if (lhs.type_flag_ == out.type_flag_) {
-    MXNET_INT_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
       Tensor<xpu, 1, LType> temp_tensor =
           ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
       temp_tblob = TBlob(temp_tensor);
@@ -555,7 +555,7 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastIntCompute<xpu, OP>(
         attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
   } else if (rhs.type_flag_ == out.type_flag_) {
-    MXNET_INT_TYPE_SWITCH_EXT(rhs.type_flag_, RType, {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
       Tensor<xpu, 1, RType> temp_tensor =
           ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
       temp_tblob = TBlob(temp_tensor);
@@ -566,7 +566,7 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
   } else {
     TBlob temp_tblob_l;
     TBlob temp_tblob_r;
-    MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, OType, {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(out.type_flag_, OType, {
       Tensor<xpu, 1, OType> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
       TBlob temp_tblob = TBlob(workspace);

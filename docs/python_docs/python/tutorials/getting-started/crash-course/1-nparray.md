@@ -195,7 +195,7 @@ a = np.array(a)
 (type(a), a)
 ```
 
-Additionally, you can move them to different GPU contexts. You will dive more
+Additionally, you can move them to different GPU devices. You will dive more
 into this later, but here is an example for now.
 
 ```{.python .input}

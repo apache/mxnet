@@ -57,8 +57,8 @@ values and then push the aggregated value. Here we will just demonstrate pushing
 Please note summation only happens if the value list is longer than one
 
 ```{.python .input}
-contexts = [mx.cpu(i) for i in range(4)]
-b = [mx.np.ones(shape=shape, ctx=ctx) for ctx in contexts]
+devices = [mx.cpu(i) for i in range(4)]
+b = [mx.np.ones(shape=shape, device=device) for device in devices]
 kv.push(3, b)
 kv.pull(3, out = a)
 print(a.asnumpy())
@@ -98,7 +98,7 @@ You've already seen how to pull a single key-value pair. Similarly, to push, you
 pull the value onto several devices with a single call:
 
 ```{.python .input}
-b = [mx.np.ones(shape=shape, ctx=ctx) for ctx in contexts]
+b = [mx.np.ones(shape=shape, device=device) for device in devices]
 kv.pull(3, out = b)
 print(b[1].asnumpy())
 ```
@@ -132,7 +132,7 @@ print(b[1].asnumpy())
 For multiple devices:
 
 ```{.python .input}
-b = [[mx.np.ones(shape=shape, ctx=ctx) for ctx in contexts]] * len(keys)
+b = [[mx.np.ones(shape=shape, device=device) for device in devices]] * len(keys)
 kv.push(keys, b)
 kv.pull(keys, out = b)
 print(b[1][1].asnumpy())

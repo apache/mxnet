@@ -33,7 +33,7 @@ import numpy as np
 
 from mxnet import numpy
 from .. import symbol
-from ..context import gpu
+from ..device import gpu
 from ..symbol import Symbol
 from ..symbol import contrib as symbol_contrib
 from .. import ndarray
@@ -47,6 +47,7 @@ from ..base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
 from .. import optimizer as opt
 from .loss_scaler import LossScaler
 from ..operator import get_all_registered_operators_grouped
+from ..util import wrap_ctx_to_device_func
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
@@ -667,9 +668,10 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     # Return the converted symbol and casted params
     return sym, arg_params, aux_params
 
+@wrap_ctx_to_device_func
 def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
-                         excluded_sym_names=None, ctx=gpu(0),
+                         excluded_sym_names=None, device=gpu(0),
                          cast_optional_params=False):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
     return a block with mixed precision support which can be used for inference use cases.
@@ -692,7 +694,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
         from being quantized
-    ctx : Context
+    device : Context
         Context on which model parameters should live
     cast_optional_params : bool, default False
         Whether to cast the arg_params and aux_params that don't require to be in LP16
@@ -757,7 +759,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
         if aux_param_name in arg_dict and param.dtype != arg_dict[aux_param_name].dtype:
             param.cast(arg_dict[aux_param_name].dtype)
 
-    ret.load_dict(arg_dict, ctx=ctx)
+    ret.load_dict(arg_dict, device=device)
     return ret
 
 def list_lp16_ops(target_dtype):

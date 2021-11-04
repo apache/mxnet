@@ -51,7 +51,7 @@ my_num_workers = kv.num_workers
 
 
 def test_pushpull():
-    ctx = mx.gpu(kv.local_rank) if mx.context.num_gpus() > 0 else mx.cpu(kv.local_rank)
+    ctx = mx.gpu(kv.local_rank) if mx.device.num_gpus() > 0 else mx.cpu(kv.local_rank)
     scale = kv.rank + 1
     tensor = mx.nd.ones(shape, ctx) * scale
     kv.pushpull('3', tensor)
@@ -62,7 +62,7 @@ def test_pushpull():
 
 
 def test_broadcast():
-    ctx = mx.gpu(kv.local_rank) if mx.context.num_gpus() > 0 else mx.cpu(kv.local_rank)
+    ctx = mx.gpu(kv.local_rank) if mx.device.num_gpus() > 0 else mx.cpu(kv.local_rank)
     val = mx.nd.zeros(shape, ctx)
     kv.broadcast('0', mx.nd.ones(shape), out=val)
     expected = 1

@@ -112,8 +112,8 @@ class MultivariateNormal(Distribution):
             if isinstance(size, int):
                 size = (size,)
             shape_tensor = np.broadcast_to(shape_tensor, size + (-2,))
-        noise = np.random.normal(np.zeros_like(
-            shape_tensor), np.ones_like(shape_tensor))
+        noise = np.random.normal(np.zeros_like(  # pylint: disable=too-many-function-args
+            shape_tensor), np.ones_like(shape_tensor))  # pylint: disable=too-many-function-args
         samples = self.loc + \
             np.einsum('...jk,...j->...k', self.scale_tril, noise)
         return samples
@@ -125,7 +125,7 @@ class MultivariateNormal(Distribution):
         shape_tensor = self.loc + self.scale_tril[..., 0]
         if isinstance(size, int):
             size = (size,)
-        noise = np.random.normal(np.zeros_like(shape_tensor), np.ones_like(shape_tensor),
+        noise = np.random.normal(np.zeros_like(shape_tensor), np.ones_like(shape_tensor),  # pylint: disable=too-many-function-args
                                  (-2,) + size)
         samples = self.loc + \
             np.einsum('...jk,...j->...k', self.scale_tril, noise)
