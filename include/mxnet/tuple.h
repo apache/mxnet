@@ -53,14 +53,14 @@ namespace mxnet {
  * \tparam ValueType The type of data stored inside tuple.
  * \sa TShape
  */
-template<typename ValueType>
+template <typename ValueType>
 class Tuple {
  public:
   /*! \brief default constructor */
   Tuple() = default;
   /*! \brief destructor */
   inline ~Tuple() {
-    delete [] data_heap_;
+    delete[] data_heap_;
   }
   /*!
    * constructor to construct a tuple with all `value`.
@@ -103,7 +103,7 @@ class Tuple {
    * \param src the source shape
    */
 
-  inline Tuple(Tuple<ValueType>&& src) {   // NOLINT(runtime/explicit)
+  inline Tuple(Tuple<ValueType>&& src) {  // NOLINT(runtime/explicit)
     this->swap(src);
   }
   /*!
@@ -112,9 +112,8 @@ class Tuple {
    * \param end end the end of the iterator
    * \tparam RandomAccessIterator iterator type
    */
-  template<typename RandomAccessIterator>
-  inline Tuple(RandomAccessIterator begin,
-               RandomAccessIterator end) {
+  template <typename RandomAccessIterator>
+  inline Tuple(RandomAccessIterator begin, RandomAccessIterator end) {
     this->assign(begin, end);
   }
 
@@ -133,9 +132,8 @@ class Tuple {
    * \param end end the end of the iterator
    * \tparam RandomAccessIterator iterator type
    */
-  template<typename RandomAccessIterator>
-  inline void assign(RandomAccessIterator begin,
-                     RandomAccessIterator end) {
+  template <typename RandomAccessIterator>
+  inline void assign(RandomAccessIterator begin, RandomAccessIterator end) {
     this->SetDim(end - begin);
     CHECK_GE(ndim(), 0);
     std::copy(begin, end, this->begin());
@@ -177,7 +175,7 @@ class Tuple {
    * \param init the source initializer list
    * \return reference of self
    */
-  inline Tuple<ValueType> &operator=(std::initializer_list<ValueType> init) {
+  inline Tuple<ValueType>& operator=(std::initializer_list<ValueType> init) {
     this->assign(init.begin(), init.end());
     return *this;
   }
@@ -185,33 +183,35 @@ class Tuple {
    * \return whether two tuple equals
    * \param s the tuple to compare against
    */
-  inline bool operator==(const Tuple<ValueType> &s) const {
-    if (ndim_ != s.ndim_) return false;
-    if (ndim() == -1) return true;
+  inline bool operator==(const Tuple<ValueType>& s) const {
+    if (ndim_ != s.ndim_)
+      return false;
+    if (ndim() == -1)
+      return true;
     return std::equal(begin(), end(), s.begin());
   }
   /*!
    * \return whether two tuple not equal
    * \param s the tuple to compare against
    */
-  inline bool operator!=(const Tuple<ValueType> &s) const {
+  inline bool operator!=(const Tuple<ValueType>& s) const {
     return !(*this == s);
   }
   /*! \return the begin data pointer to content of the tuple */
-  inline const ValueType *begin() const {
+  inline const ValueType* begin() const {
     return ndim_ <= kStackCache ? data_stack_ : data_heap_;
   }
   /*! \return the begin data pointer to content of the tuple */
-  inline ValueType *begin() {
+  inline ValueType* begin() {
     return ndim_ <= kStackCache ? data_stack_ : data_heap_;
   }
   /*! \return the data pointer to end of the tuple */
   inline const ValueType* end() const {
-    return ndim_ <= kStackCache ? (data_stack_ + ndim_): (data_heap_ + ndim_);
+    return ndim_ <= kStackCache ? (data_stack_ + ndim_) : (data_heap_ + ndim_);
   }
   /*! \return the data pointer to end the tuple */
   inline ValueType* end() {
-    return ndim_ <= kStackCache ? (data_stack_ + ndim_): (data_heap_ + ndim_);
+    return ndim_ <= kStackCache ? (data_stack_ + ndim_) : (data_heap_ + ndim_);
   }
   /*! \return number of dimension of the tuple */
   inline int ndim() const {
@@ -223,12 +223,12 @@ class Tuple {
    * \return the corresponding dimension size
    */
   inline ValueType& operator[](int i) {
-    // it fixes the false alarm of assuming signed overflow does not occur
-    // when assuming that (X - c) > X is always false [-Werror=strict-overflow]
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wstrict-overflow"
+// it fixes the false alarm of assuming signed overflow does not occur
+// when assuming that (X - c) > X is always false [-Werror=strict-overflow]
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
     CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
-    #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
     return begin()[i];
   }
   /*!
@@ -237,12 +237,12 @@ class Tuple {
    * \return the corresponding dimension size
    */
   inline const ValueType& operator[](int i) const {
-    // it fixes the false alarm of assuming signed overflow does not occur
-    // when assuming that (X - c) > X is always false [-Werror=strict-overflow]
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wstrict-overflow"
+// it fixes the false alarm of assuming signed overflow does not occur
+// when assuming that (X - c) > X is always false [-Werror=strict-overflow]
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
     CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
-    #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
     return begin()[i];
   }
   /*!
@@ -268,7 +268,7 @@ class Tuple {
    * \param t the tuple
    * \return the ostream
    */
-  friend std::ostream &operator<<(std::ostream &os, const Tuple<ValueType> &t) {
+  friend std::ostream& operator<<(std::ostream& os, const Tuple<ValueType>& t) {
     if (t.ndim() == -1) {
       // If t is an unknown shape, return string "None".
       // This is consistent with returning unknown shape in Python and generating
@@ -278,9 +278,10 @@ class Tuple {
     }
     os << '[';
     const ValueType* begin = t.begin();
-    const ValueType* end = t.end();
+    const ValueType* end   = t.end();
     for (const ValueType* it = begin; it != end; ++it) {
-      if (it != begin) os << ',';
+      if (it != begin)
+        os << ',';
       os << *it;
     }
     os << ']';
@@ -292,7 +293,7 @@ class Tuple {
    * \param t The tuple
    * \return the istream
    */
-  friend std::istream &operator>>(std::istream &is, Tuple<ValueType> &t) {
+  friend std::istream& operator>>(std::istream& is, Tuple<ValueType>& t) {
     // get (
     while (true) {
       char ch = is.peek();
@@ -304,7 +305,8 @@ class Tuple {
         return is;
       }
       is.get();
-      if (ch == '(' || ch == '[') break;
+      if (ch == '(' || ch == '[')
+        break;
       if (!isspace(ch)) {
         if (ch == 'N') {
           std::string tmp_val;
@@ -344,14 +346,17 @@ class Tuple {
         while (true) {
           ch = is.peek();
           if (isspace(ch)) {
-            is.get(); continue;
+            is.get();
+            continue;
           }
           if (ch == ')' || ch == ']') {
-            is.get(); break;
+            is.get();
+            break;
           }
           break;
         }
-        if (ch == ')' || ch == ']') break;
+        if (ch == ')' || ch == ']')
+          break;
       } else if (ch == ')' || ch == ']') {
         break;
       } else {
@@ -368,8 +373,8 @@ class Tuple {
    * \tparam DType data type that save to
    * \tparam TStream any stream type that have write
    */
-  template<typename DType = ValueType, typename TStream>
-  inline void Save(TStream *strm) const;
+  template <typename DType = ValueType, typename TStream>
+  inline void Save(TStream* strm) const;
   /*!
    * \brief load the content from binary stream
    * \param strm the output stream
@@ -377,8 +382,8 @@ class Tuple {
    * \tparam TStream any stream type that have write
    * \return whether the load is successful
    */
-  template<typename DType = ValueType, typename TStream>
-  inline bool Load(TStream *strm);
+  template <typename DType = ValueType, typename TStream>
+  inline bool Load(TStream* strm);
 
  protected:
   // stack cache size
@@ -394,20 +399,18 @@ class Tuple {
   // internal function to change the dimension
   inline void SetDim(int ndim) {
     CHECK_GE(ndim, -1) << "ndim cannot be less than -1, received " << ndim;
-    if (ndim > kStackCache &&
-        ndim > num_heap_allocated_) {
-      delete [] data_heap_;
-      data_heap_ = new ValueType[ndim];
+    if (ndim > kStackCache && ndim > num_heap_allocated_) {
+      delete[] data_heap_;
+      data_heap_          = new ValueType[ndim];
       num_heap_allocated_ = ndim;
     } else if (ndim <= 0 && data_heap_ != nullptr) {
-      delete [] data_heap_;
-      data_heap_ = nullptr;
+      delete[] data_heap_;
+      data_heap_          = nullptr;
       num_heap_allocated_ = 0;
     }
     ndim_ = ndim;
   }
 };
-
 
 /*! brief check if a shape's ndim is known. */
 inline bool ndim_is_known(const int ndim) {
@@ -455,7 +458,7 @@ class TShape : public Tuple<dim_t> {
    * \brief copy constructor of TShape
    * \param s source shape.
    */
-  inline TShape(const Tuple<dim_t>& s) { // NOLINT(*)
+  inline TShape(const Tuple<dim_t>& s) {  // NOLINT(*)
     if (s.ndim() == -1) {
       this->SetDim(-1);
     } else {
@@ -484,16 +487,16 @@ class TShape : public Tuple<dim_t> {
    * \param end end the end of the iterator
    * \tparam RandomAccessIterator iterator type
    */
-  template<typename RandomAccessIterator,
-           typename std::enable_if<
-               std::is_same<typename std::iterator_traits<RandomAccessIterator>::iterator_category,
-                            std::random_access_iterator_tag>::value, int>::type = 0>
-  inline TShape(RandomAccessIterator begin,
-                RandomAccessIterator end) {
+  template <typename RandomAccessIterator,
+            typename std::enable_if<
+                std::is_same<typename std::iterator_traits<RandomAccessIterator>::iterator_category,
+                             std::random_access_iterator_tag>::value,
+                int>::type = 0>
+  inline TShape(RandomAccessIterator begin, RandomAccessIterator end) {
     this->assign(begin, end);
   }
 
-  inline explicit TShape(const ObjectRef& src): Tuple(src) {}
+  inline explicit TShape(const ObjectRef& src) : Tuple(src) {}
   /*!
    * \brief assignment function from tshape
    * \param src source shape.
@@ -513,14 +516,14 @@ class TShape : public Tuple<dim_t> {
    * \return self.
    */
   inline TShape& operator=(Tuple<dim_t>&& src) {  // NOLINT(*)
-    TShape(std::move(src)).swap(*this);  // NOLINT(*)
+    TShape(std::move(src)).swap(*this);           // NOLINT(*)
     return *this;
   }
   /*! \return total number of elements in the shape */
   inline size_t Size() const {
     CHECK(ndim_is_known(this->ndim())) << "Shape is unknown.";
-    dim_t size = 1;
-    const dim_t* start = begin(), *fin = end();
+    dim_t size         = 1;
+    const dim_t *start = begin(), *fin = end();
     for (const dim_t* it = start; it != fin; ++it) {
       CHECK(dim_size_is_known(*it)) << "Shape dim size cannot be a negative value " << *it;
       size *= *it;
@@ -535,10 +538,10 @@ class TShape : public Tuple<dim_t> {
   inline size_t ProdShape(int dimstart, int dimend) const {
     CHECK(ndim_is_known(this->ndim())) << "Shape is unknown.";
     CHECK_GE(dimstart, 0) << "dimstart must be >= 0, while received " << dimstart;
-    CHECK_LE(dimend, this->ndim()) << "dimend must be <= " << this->ndim()
-                                   << ", while received " << dimend;
-    dim_t num = 1;
-    const dim_t *d = this->data();
+    CHECK_LE(dimend, this->ndim())
+        << "dimend must be <= " << this->ndim() << ", while received " << dimend;
+    dim_t num      = 1;
+    const dim_t* d = this->data();
     for (int i = dimstart; i < dimend; ++i) {
       CHECK(dim_size_is_known(d[i])) << "Shape dim size must be known, while received " << d[i];
       num *= d[i];
@@ -546,21 +549,21 @@ class TShape : public Tuple<dim_t> {
     return num;
   }
   /*! \return the begin data pointer to content of the tuple */
-  inline const dim_t *data() const {
+  inline const dim_t* data() const {
     return begin();
   }
   /*! \return the begin data pointer to content of the tuple */
-  inline dim_t *data() {
+  inline dim_t* data() {
     return begin();
   }
 #ifdef MSHADOW_XINLINE
-  template<int dim>
-  inline TShape(const mshadow::Shape<dim> &s) {// NOLINT(*)
+  template <int dim>
+  inline TShape(const mshadow::Shape<dim>& s) {  // NOLINT(*)
     this->assign(s.shape_, s.shape_ + dim);
   }
 
-  template<int dim>
-  inline TShape(mshadow::Shape<dim> &&s) {// NOLINT(*)
+  template <int dim>
+  inline TShape(mshadow::Shape<dim>&& s) {  // NOLINT(*)
     this->assign(s.shape_, s.shape_ + dim);
   }
   /*!
@@ -569,8 +572,8 @@ class TShape : public Tuple<dim_t> {
    * \tparam dim shape dimension
    * \return reference of self
    */
-  template<int dim>
-  inline TShape &operator=(const mshadow::Shape<dim> &shape) {
+  template <int dim>
+  inline TShape& operator=(const mshadow::Shape<dim>& shape) {
     this->assign(shape.shape_, shape.shape_ + dim);
     return *this;
   }
@@ -579,11 +582,10 @@ class TShape : public Tuple<dim_t> {
    * \return the shape requested
    * \tparam dim dimension of the tensor
    */
-  template<int dim>
+  template <int dim>
   inline mshadow::Shape<dim> get() const {
-    CHECK_EQ(dim, ndim())
-        << "dimension do not match target dimension " << dim << " vs " << ndim();
-    const dim_t *d = this->data();
+    CHECK_EQ(dim, ndim()) << "dimension do not match target dimension " << dim << " vs " << ndim();
+    const dim_t* d = this->data();
     mshadow::Shape<dim> s;
     for (int i = 0; i < dim; ++i) {
       s[i] = d[i];
@@ -597,10 +599,11 @@ class TShape : public Tuple<dim_t> {
   inline mshadow::Shape<2> FlatTo2D(void) const {
     mshadow::Shape<2> s;
     CHECK(ndim_is_known(ndim())) << "shape must have a valid ndim";
-    if (ndim() == 0) return mshadow::Shape2(1, 1);
-    const dim_t *d = this->data();
-    s.shape_[1] = d[ndim() - 1];
-    dim_t ymax = 1;
+    if (ndim() == 0)
+      return mshadow::Shape2(1, 1);
+    const dim_t* d = this->data();
+    s.shape_[1]    = d[ndim() - 1];
+    dim_t ymax     = 1;
     for (int i = 1; i < ndim(); ++i) {
       ymax *= d[i - 1];
     }
@@ -617,11 +620,12 @@ class TShape : public Tuple<dim_t> {
     CHECK(axis_end >= axis_begin);
     mshadow::Shape<3> s;
     CHECK(ndim_is_known(ndim())) << "shape must have a valid ndim";
-    if (ndim() == 0) return mshadow::Shape3(1, 1, 1);
-    const dim_t *d = this->data();
-    s.shape_[0] = 1;
-    s.shape_[1] = 1;
-    s.shape_[2] = 1;
+    if (ndim() == 0)
+      return mshadow::Shape3(1, 1, 1);
+    const dim_t* d = this->data();
+    s.shape_[0]    = 1;
+    s.shape_[1]    = 1;
+    s.shape_[2]    = 1;
 
     for (int i = 0; i < axis_begin; ++i) {
       s.shape_[0] *= d[i];
@@ -642,11 +646,12 @@ class TShape : public Tuple<dim_t> {
   inline mshadow::Shape<3> FlatTo3D(int axis) const {
     return FlatTo3D(axis, axis);
   }
-  inline bool operator==(const TShape &s) const {
-    if (ndim() != s.ndim()) return false;
+  inline bool operator==(const TShape& s) const {
+    if (ndim() != s.ndim())
+      return false;
     return std::equal(begin(), end(), s.begin());
   }
-  inline bool operator!=(const TShape &s) const {
+  inline bool operator!=(const TShape& s) const {
     return !(*this == s);
   }
   /*!
@@ -654,12 +659,14 @@ class TShape : public Tuple<dim_t> {
    * \param s the shape to compare against
    * \tparam dim dimension of the shape
    */
-  template<int dim>
-  inline bool operator==(const mshadow::Shape<dim> &s) const {
-    if (ndim_ != dim) return false;
-    const dim_t *d = dim <= kStackCache ? data_stack_ : data_heap_;
+  template <int dim>
+  inline bool operator==(const mshadow::Shape<dim>& s) const {
+    if (ndim_ != dim)
+      return false;
+    const dim_t* d = dim <= kStackCache ? data_stack_ : data_heap_;
     for (size_t i = 0; i < dim; ++i) {
-      if (d[i] != s.shape_[i]) return false;
+      if (d[i] != s.shape_[i])
+        return false;
     }
     return true;
   }
@@ -668,8 +675,8 @@ class TShape : public Tuple<dim_t> {
    * \param s the shape to compare against
    * \tparam dim dimension of the shape
    */
-  template<int dim>
-  inline bool operator!=(const mshadow::Shape<dim> &s) const {
+  template <int dim>
+  inline bool operator!=(const mshadow::Shape<dim>& s) const {
     return !(*this == s);
   }
 #endif
@@ -690,25 +697,26 @@ inline bool dim_size_is_known(const TShape& x, const int idx) {
 /*! brief check if shape is known using the NumPy compatible definition.
  * zero-dim and zero-size tensors are valid. -1 means unknown.*/
 inline bool shape_is_known(const TShape& x) {
-  if (!ndim_is_known(x)) return false;
+  if (!ndim_is_known(x))
+    return false;
   for (int i = 0; i < x.ndim(); ++i) {
-    if (!dim_size_is_known(x, i)) return false;
+    if (!dim_size_is_known(x, i))
+      return false;
   }
   return true;
 }
 
 inline bool shape_is_known(const std::vector<TShape>& shapes) {
   for (const TShape& shape : shapes) {
-    if (!shape_is_known(shape)) return false;
+    if (!shape_is_known(shape))
+      return false;
   }
   return true;
 }
 
 /*! \brief helper function to cast type of container elements */
-template<typename SrcIter, typename DstIter>
-inline DstIter ShapeTypeCast(const SrcIter begin,
-                             const SrcIter end,
-                             DstIter dst_begin) {
+template <typename SrcIter, typename DstIter>
+inline DstIter ShapeTypeCast(const SrcIter begin, const SrcIter end, DstIter dst_begin) {
   typedef typename std::iterator_traits<SrcIter>::value_type SrcDType;
   typedef typename std::iterator_traits<DstIter>::value_type DstDType;
   auto cast = [](const SrcDType& dim) { return static_cast<DstDType>(dim); };
@@ -716,7 +724,7 @@ inline DstIter ShapeTypeCast(const SrcIter begin,
 }
 
 /*! \brief helper function to transform a container to TShape with type cast */
-template<typename SrcIter>
+template <typename SrcIter>
 inline TShape ShapeTypeCast(const SrcIter begin, const SrcIter end) {
   size_t ndim = std::distance(begin, end);
   TShape res(ndim, -1);
@@ -725,9 +733,9 @@ inline TShape ShapeTypeCast(const SrcIter begin, const SrcIter end) {
 }
 
 /*! \tparam ValueType The type of data stored inside tuple. */
-template<typename ValueType>
-template<typename DType, typename TStream>
-inline void Tuple<ValueType>::Save(TStream *strm) const {
+template <typename ValueType>
+template <typename DType, typename TStream>
+inline void Tuple<ValueType>::Save(TStream* strm) const {
   strm->Write(&ndim_, sizeof(ndim_));
   if (typeid(DType) == typeid(ValueType)) {
     strm->Write(begin(), sizeof(ValueType) * ndim_);
@@ -739,17 +747,20 @@ inline void Tuple<ValueType>::Save(TStream *strm) const {
 }
 
 /*! \tparam ValueType The type of data stored inside tuple. */
-template<typename ValueType>
-template<typename DType, typename TStream>
-inline bool Tuple<ValueType>::Load(TStream *strm) {
-  if (strm->Read(&ndim_, sizeof(ndim_)) != sizeof(ndim_)) return false;
+template <typename ValueType>
+template <typename DType, typename TStream>
+inline bool Tuple<ValueType>::Load(TStream* strm) {
+  if (strm->Read(&ndim_, sizeof(ndim_)) != sizeof(ndim_))
+    return false;
   this->SetDim(ndim_);
   size_t nread = sizeof(DType) * ndim_;
   if (typeid(DType) == typeid(ValueType)) {
-    if (strm->Read(begin(), nread) != nread) return false;
+    if (strm->Read(begin(), nread) != nread)
+      return false;
   } else {
     std::vector<DType> buffer(ndim_);
-    if (strm->Read(buffer.data(), nread) != nread) return false;
+    if (strm->Read(buffer.data(), nread) != nread)
+      return false;
     ShapeTypeCast(buffer.begin(), buffer.end(), begin());
   }
   return true;
@@ -759,8 +770,8 @@ inline bool Tuple<ValueType>::Load(TStream *strm) {
 
 namespace std {
 /*! \brief hash function for Tuple. */
-template<typename T>
-struct hash<mxnet::Tuple<T> > {
+template <typename T>
+struct hash<mxnet::Tuple<T>> {
   /*! \brief hash a Tuple into unsigned int */
   size_t operator()(const mxnet::Tuple<T>& val) const {
     std::hash<int> hash_int;
@@ -773,7 +784,7 @@ struct hash<mxnet::Tuple<T> > {
 };
 
 /*! \brief hash function for TShape. */
-template<>
+template <>
 struct hash<mxnet::TShape> {
   /*! \brief hash a TShape into unsigned int */
   size_t operator()(const mxnet::TShape& val) const {
@@ -793,8 +804,8 @@ DMLC_DECLARE_TYPE_NAME(optional<mxnet::TShape>, "Shape or None");
 DMLC_DECLARE_TYPE_NAME(optional<mxnet::Tuple<int>>, "Shape or None");
 // avoid low version of MSVC
 #if !(defined(_MSC_VER) && _MSC_VER < 1900)
-template<typename T>
-struct type_name_helper<mxnet::Tuple<T> > {
+template <typename T>
+struct type_name_helper<mxnet::Tuple<T>> {
   static inline std::string value() {
     return "tuple of <" + type_name<T>() + ">";
   }

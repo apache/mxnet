@@ -41,8 +41,8 @@ class NDArrayHandle : public ObjectRef {
  public:
   explicit NDArrayHandle(NDArray* value) {
     runtime::ObjectPtr<NDArrayHandleObj> node = make_object<NDArrayHandleObj>();
-    node->value = *value;
-    data_ = std::move(node);
+    node->value                               = *value;
+    data_                                     = std::move(node);
   }
   inline NDArray* getArray() const {
     return static_cast<NDArray*>(&(static_cast<NDArrayHandleObj*>(data_.get())->value));

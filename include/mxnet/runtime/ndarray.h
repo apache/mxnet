@@ -34,7 +34,7 @@ namespace runtime {
  *  For TVM NDArray itself, code = 0.
  *  All subclasses of NDArray should override code > 0.
  */
-template<typename T>
+template <typename T>
 struct array_type_info {
   /*! \brief the value of the traits */
   static const int code = -1;

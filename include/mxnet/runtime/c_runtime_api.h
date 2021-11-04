@@ -34,7 +34,6 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 
-
 /*!
  * \brief The type code in MXNetType
  * \note MXNetType is used in two places.
@@ -43,25 +42,25 @@ typedef enum {
   // The type code of other types are compatible with DLPack.
   // The next few fields are extension types
   // that is used by MXNet API calls.
-  kHandle = 3U,
-  kNull = 4U,
-  kMXNetType = 5U,
-  kMXNetContext = 6U,
-  kObjectHandle = 7U,
-  kStr = 8U,
-  kBytes = 9U,
-  kPyArg = 10U,
+  kHandle        = 3U,
+  kNull          = 4U,
+  kMXNetType     = 5U,
+  kMXNetContext  = 6U,
+  kObjectHandle  = 7U,
+  kStr           = 8U,
+  kBytes         = 9U,
+  kPyArg         = 10U,
   kNDArrayHandle = 11U,
   // Extension codes for other frameworks to integrate MXNet PackedFunc.
   // To make sure each framework's id do not conflict, use first and
   // last sections to mark ranges.
   // Open an issue at the repo if you need a section of code.
-  kExtBegin = 15U,
+  kExtBegin  = 15U,
   kNNVMFirst = 16U,
-  kNNVMLast = 20U,
+  kNNVMLast  = 20U,
   // The following section of code is used for non-reserved types.
   kExtReserveEnd = 64U,
-  kExtEnd = 128U,
+  kExtEnd        = 128U,
   // The rest of the space is used for custom, user-supplied datatypes
   kCustomBegin = 129U,
 } MXNetTypeCode;
@@ -144,8 +143,7 @@ MXNET_DLL int MXNetFuncGetGlobal(const char* name, MXNetFunctionHandle* out);
  * \param out_array The array of function names.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNetFuncListGlobalNames(int* out_size,
-                                       const char*** out_array);
+MXNET_DLL int MXNetFuncListGlobalNames(int* out_size, const char*** out_array);
 
 /*!
  * \brief Free the object.
@@ -156,7 +154,6 @@ MXNET_DLL int MXNetFuncListGlobalNames(int* out_size,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNetObjectFree(MXNetObjectHandle obj);
-
 
 /*!
  * \brief Get the type_index from an object.
