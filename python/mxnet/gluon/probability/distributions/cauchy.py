@@ -65,7 +65,7 @@ class Cauchy(Distribution):
         if (isinstance(self.loc, Number), isinstance(self.scale, Number)) == (True, True):
             u = np.random.uniform(size=size)
         else:
-            u = np.random.uniform(np.zeros_like(
+            u = np.random.uniform(np.zeros_like(  # pylint: disable=too-many-function-args
                 self.loc + self.scale), size=size)
         return self.icdf(u)
 

@@ -25,12 +25,12 @@ __all__ = ['VGG',
 
 import os
 
-from ....context import cpu
+from ....device import cpu
 from ....initializer import Xavier
 from ...block import HybridBlock
 from ... import nn
 from .... import base
-from ....util import use_np
+from ....util import use_np, wrap_ctx_to_device_func
 
 
 @use_np
@@ -94,7 +94,8 @@ vgg_spec = {11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
 
 
 # Constructors
-def get_vgg(num_layers, pretrained=False, ctx=cpu(),
+@wrap_ctx_to_device_func
+def get_vgg(num_layers, pretrained=False, device=cpu(),
             root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""VGG model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -105,8 +106,8 @@ def get_vgg(num_layers, pretrained=False, ctx=cpu(),
         Number of layers for the variant of densenet. Options are 11, 13, 16, 19.
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
@@ -116,9 +117,10 @@ def get_vgg(num_layers, pretrained=False, ctx=cpu(),
         from ..model_store import get_model_file
         batch_norm_suffix = '_bn' if kwargs.get('batch_norm') else ''
         net.load_parameters(get_model_file('vgg%d%s'%(num_layers, batch_norm_suffix),
-                                           root=root), ctx=ctx)
+                                           root=root), device=device)
     return net
 
+@wrap_ctx_to_device_func
 def vgg11(**kwargs):
     r"""VGG-11 model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -127,13 +129,14 @@ def vgg11(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_vgg(11, **kwargs)
 
+@wrap_ctx_to_device_func
 def vgg13(**kwargs):
     r"""VGG-13 model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -142,13 +145,14 @@ def vgg13(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_vgg(13, **kwargs)
 
+@wrap_ctx_to_device_func
 def vgg16(**kwargs):
     r"""VGG-16 model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -157,13 +161,14 @@ def vgg16(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_vgg(16, **kwargs)
 
+@wrap_ctx_to_device_func
 def vgg19(**kwargs):
     r"""VGG-19 model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -172,13 +177,14 @@ def vgg19(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_vgg(19, **kwargs)
 
+@wrap_ctx_to_device_func
 def vgg11_bn(**kwargs):
     r"""VGG-11 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
@@ -188,14 +194,15 @@ def vgg11_bn(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     kwargs['batch_norm'] = True
     return get_vgg(11, **kwargs)
 
+@wrap_ctx_to_device_func
 def vgg13_bn(**kwargs):
     r"""VGG-13 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
@@ -205,14 +212,15 @@ def vgg13_bn(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     kwargs['batch_norm'] = True
     return get_vgg(13, **kwargs)
 
+@wrap_ctx_to_device_func
 def vgg16_bn(**kwargs):
     r"""VGG-16 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
@@ -222,14 +230,15 @@ def vgg16_bn(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     kwargs['batch_norm'] = True
     return get_vgg(16, **kwargs)
 
+@wrap_ctx_to_device_func
 def vgg19_bn(**kwargs):
     r"""VGG-19 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
@@ -239,8 +248,8 @@ def vgg19_bn(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """

@@ -41,7 +41,7 @@ def measure_cost(repeat, f, *args, **kwargs):
 
 def run_cast_storage_synthetic():
     def dense_to_sparse(m, n, density, ctx, repeat, stype):
-        set_default_context(ctx)
+        set_default_device(ctx)
         data_shape = (m, n)
         dns_data = rand_ndarray(data_shape, stype, density).tostype('default')
         dns_data.wait_to_read()

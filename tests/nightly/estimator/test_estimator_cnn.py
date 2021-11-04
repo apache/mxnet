@@ -122,7 +122,7 @@ def test_estimator_cpu():
 
 
 @pytest.mark.seed(7)  # using fixed seed to reduce flakiness in accuracy assertion
-@pytest.mark.skipif(mx.context.num_gpus() < 1, reason="skip if no GPU")
+@pytest.mark.skipif(mx.device.num_gpus() < 1, reason="skip if no GPU")
 def test_estimator_gpu():
     '''
     Test estimator by training resnet18_v1 for 5 epochs on MNIST and verify accuracy

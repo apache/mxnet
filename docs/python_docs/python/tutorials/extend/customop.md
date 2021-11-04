@@ -101,7 +101,7 @@ class SigmoidProp(mx.operator.CustomOpProp):
         # return 3 lists representing inputs shapes, outputs shapes, and aux data shapes.
         return (data_shape,), (output_shape,), ()
 
-    def create_operator(self, ctx, in_shapes, in_dtypes):
+    def create_operator(self, device, in_shapes, in_dtypes):
         #  create and return the CustomOp class.
         return Sigmoid()
 ```
@@ -183,7 +183,7 @@ class DenseProp(mx.operator.CustomOpProp):
         # return 3 lists representing inputs shapes, outputs shapes, and aux data shapes.
         return (data_shape, weight_shape), (output_shape,), ()
 
-    def create_operator(self, ctx, in_shapes, in_dtypes):
+    def create_operator(self, device, in_shapes, in_dtypes):
         #  create and return the CustomOp class.
         return Dense(self._bias)
 ```
@@ -201,8 +201,8 @@ class DenseBlock(mx.gluon.Block):
         self.weight = gluon.Parameter('weight', shape=(channels, in_channels))
 
     def forward(self, x):
-        ctx = x.context
-        return mx.nd.Custom(x, self.weight.data(ctx), bias=self._bias, op_type='dense')
+        device = x.device
+        return mx.nd.Custom(x, self.weight.data(device), bias=self._bias, op_type='dense')
 ```
 
 ### Example usage

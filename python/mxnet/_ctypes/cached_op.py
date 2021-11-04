@@ -73,7 +73,9 @@ class CachedOp(object):
     def __call__(self, *args, **kwargs):
         """ctypes implementation of imperative invoke wrapper"""
         # New FFI only supports numpy ndarray
-        default_ctx = kwargs.pop('default_ctx', None)
+        default_device = kwargs.pop('default_device', None)
+        if not default_device:
+            default_device = kwargs.pop('default_ctx', None)
         out = kwargs.pop('out', None)
         if kwargs:
             raise TypeError(
@@ -82,8 +84,8 @@ class CachedOp(object):
         if self.is_np_sym:
             if len(args) == 1 and args[0] is None:
                 args = []
-            type_id = default_ctx.device_typeid if default_ctx else None
-            device_id = default_ctx.device_id if default_ctx else None
+            type_id = default_device.device_typeid if default_device else None
+            device_id = default_device.device_id if default_device else None
             out_arg = out if out is not None and not isinstance(out, NDArrayBase) else (out, )
             output_vars = _api_internal.invoke(
                 self.handle,
@@ -119,16 +121,16 @@ class CachedOp(object):
             # (None, ) -> []
             if len(args) == 1 and args[0] is None:
                 args = []
-                assert default_ctx is not None, 'default_ctx is required if no input is provided'
+                assert default_device is not None, 'default_device is required if no input is provided'
             else:
-                default_ctx = args[0].ctx if default_ctx is None else default_ctx
+                default_device = args[0].device if default_device is None else default_device
 
             check_call(_LIB.MXInvokeCachedOp(
                 self.handle,
                 ctypes.c_int(len(args)),
                 c_handle_array(args),
-                ctypes.c_int(default_ctx.device_typeid),
-                ctypes.c_int(default_ctx.device_id),
+                ctypes.c_int(default_device.device_typeid),
+                ctypes.c_int(default_device.device_id),
                 ctypes.byref(num_output),
                 ctypes.byref(output_vars),
                 ctypes.byref(out_stypes)))

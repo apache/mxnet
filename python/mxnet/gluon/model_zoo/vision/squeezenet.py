@@ -22,11 +22,11 @@ __all__ = ['SqueezeNet', 'squeezenet1_0', 'squeezenet1_1']
 
 import os
 
-from ....context import cpu
+from ....device import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
-from ....util import use_np
+from ....util import use_np, wrap_ctx_to_device_func
 
 # Helpers
 def _make_fire(squeeze_channels, expand1x1_channels, expand3x3_channels):
@@ -110,7 +110,8 @@ class SqueezeNet(HybridBlock):
         return x
 
 # Constructor
-def get_squeezenet(version, pretrained=False, ctx=cpu(),
+@wrap_ctx_to_device_func
+def get_squeezenet(version, pretrained=False, device=cpu(),
                    root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
@@ -125,17 +126,18 @@ def get_squeezenet(version, pretrained=False, ctx=cpu(),
         Version of squeezenet. Options are '1.0', '1.1'.
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = SqueezeNet(version, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_parameters(get_model_file('squeezenet%s'%version, root=root), ctx=ctx)
+        net.load_parameters(get_model_file('squeezenet%s'%version, root=root), device=device)
     return net
 
+@wrap_ctx_to_device_func
 def squeezenet1_0(**kwargs):
     r"""SqueezeNet 1.0 model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
@@ -144,13 +146,14 @@ def squeezenet1_0(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_squeezenet('1.0', **kwargs)
 
+@wrap_ctx_to_device_func
 def squeezenet1_1(**kwargs):
     r"""SqueezeNet 1.1 model from the `official SqueezeNet repo
     <https://github.com/DeepScale/SqueezeNet/tree/master/SqueezeNet_v1.1>`_.
@@ -161,8 +164,8 @@ def squeezenet1_1(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
