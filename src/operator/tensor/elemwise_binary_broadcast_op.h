@@ -253,9 +253,6 @@ void BinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
     if (req[0] == kNullOp)
       return;
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-    if (outputs[0].type_flag_ == mshadow::kBool) {
-      LOG(FATAL) << "Operator " << attrs.op->name << " does not support boolean type";
-    }
     MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
         mshadow::Shape<NDim> oshape  = new_oshape.get<NDim>();

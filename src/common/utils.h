@@ -1015,6 +1015,10 @@ inline int type_promotion(const int type1, const int type2) {
         return mshadow::kInt64;
       }
     }
+  } else if (type1 == mshadow::kBool) {
+    return type2;
+  } else if (type2 == mshadow::kBool) {
+    return type1;
   }
   LOG(FATAL) << "should not reach here ";
   return -1;

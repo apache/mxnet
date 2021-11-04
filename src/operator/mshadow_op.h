@@ -822,7 +822,7 @@ MXNET_BINARY_MATH_OP(bitwise_or, static_cast<int64_t>(a) | static_cast<int64_t>(
 struct bitwise_left_shift : public mxnet_op::tunable {
   template <typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (b >= static_cast<DType>(sizeof(DType) * CHAR_BIT)) {
+    if (static_cast<uint64_t>(b) >= (sizeof(DType) * CHAR_BIT)) {
       return DType(0);
     }
     return static_cast<int64_t>(a) << static_cast<int64_t>(b);
@@ -845,7 +845,7 @@ MXNET_BINARY_MATH_OP(rbitwise_left_shift_grad,
 struct bitwise_right_shift : public mxnet_op::tunable {
   template <typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (b >= static_cast<DType>(sizeof(DType) * CHAR_BIT)) {
+    if (static_cast<uint64_t>(b) >= (sizeof(DType) * CHAR_BIT)) {
       if (a < 0) {
         return DType(-1);
       } else {
