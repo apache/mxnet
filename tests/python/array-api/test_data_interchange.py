@@ -33,7 +33,7 @@ def test_dlpack_torch_mxnet_torch():
     assert z == x
 
 def test_dlpack_mxnet_torch_mxnet():
-    x = np.array([5], ctx=mx.gpu(), dtype="float64") + 1
+    x = np.array([5], device=mx.gpu(), dtype="float64") + 1
     stream = torch.cuda.Stream()
     with torch.cuda.stream(stream):
         tx = torch.from_dlpack(x)

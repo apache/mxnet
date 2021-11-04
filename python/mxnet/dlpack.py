@@ -24,7 +24,7 @@
 import ctypes
 import enum
 
-from mxnet.context import current_context
+from mxnet.device import current_device
 from .base import _LIB, c_str, check_call, NDArrayHandle, mx_int
 
 DLPackHandle = ctypes.c_void_p
@@ -113,13 +113,13 @@ def ndarray_from_dlpack(array_cls):
         if tp.__module__ == "builtins" and tp.__name__ == "PyCapsule":
             dlpack = ctypes.py_object(dlpack)        
         elif hasattr(dlpack, "__dlpack__"):
-            ctx = current_context()
-            if ctx.device_type != "gpu":
+            device = current_device()
+            if device.device_type != "gpu":
                 dlpack = ctypes.py_object(dlpack.__dlpack__())
             else:
                 s = mx_int()
                 check_call(_LIB.MXGetCurrentStream(
-                    ctypes.c_int(ctypes.c_int(ctx.device_id), ctypes.byref(s))))
+                    ctypes.c_int(ctypes.c_int(device.device_id), ctypes.byref(s))))
                 dlpack = ctypes.py_object(dlpack.__dlpack__(stream=s))
         else:
             raise AttributeError("Required PyCapsule or object with __dlpack__")
