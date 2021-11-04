@@ -248,9 +248,9 @@ def binomial(n=1, p=0.5, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs)
 
     Parameters
     ----------
-    n : float or NDArray, optional
+    n : float or Symbol, optional
         Number of experiments, > 0.
-    p : float or NDArray, optional
+    p : float or Symbol, optional
         Success probability in each experiment, >= 0 and <= 1.
     shape : int or tuple of ints, optional
         The number of samples to draw. If shape is, e.g., `(m, n)` and `n` and
@@ -259,35 +259,14 @@ def binomial(n=1, p=0.5, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs)
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[n, p)` pair.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output. Default is current context. Overridden by
-        `n.context` when `n` is an NDArray.
-    out : NDArray, optional
-        Store output to an existing NDArray.
 
     Returns
     -------
-    NDArray
+    Symbol
         If input `shape` has shape, e.g., `(m, n)` and `n` and `p` are scalars, output
         shape will be `(m, n)`. If `n` and `p` are NDArrays with shape, e.g.,
         `(x, y)`, then output will have shape `(x, y, m, n)`, where `m*n` samples are
         drawn for each `[n, p)` pair.
-
-    Examples
-    --------
-    >>> mx.nd.random.binomial(10, 0.1)
-    [ 1.]
-    <NDArray 1 @cpu(0)>
-    >>> mx.nd.random.binomial(10, 0.6, shape=(2,))
-    [ 4. 6.]
-    <NDArray 2 @cpu(0)>
-    >>> n = mx.nd.array([10,2,3])
-    >>> p = mx.nd.array([0.2,0.3,0.4])
-    >>> mx.nd.random.binomial(n, p, shape=2)
-    [[  1. 4.]
-     [  0. 2.]
-     [  1. 1.]]
-    <NDArray 3x2 @cpu(0)>
     """
     return _random_helper(_internal._random_binomial, _internal._sample_binomial,
                           [n, p], shape, dtype, kwargs)
