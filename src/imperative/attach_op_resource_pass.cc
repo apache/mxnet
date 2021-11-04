@@ -52,8 +52,9 @@ void AttachOpResources(const Graph& g,
     const bool rsc_req    = (fresource.count(op) != 0);
     const bool rsc_ex_req = (fresource_ex.count(op) != 0);
     if (rsc_req || rsc_ex_req) {
-      auto reqs = rsc_ex_req ? fresource_ex[op](inode.source->attrs, dev_masks[nid], vdispatch[nid])
-                             : fresource[op](inode.source->attrs);
+      auto reqs = rsc_ex_req ?
+                      fresource_ex[op](inode.source->attrs, dev_masks[nid], vdispatch[nid]) :
+                      fresource[op](inode.source->attrs);
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
         switch (req.type) {

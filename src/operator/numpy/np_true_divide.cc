@@ -54,9 +54,9 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
 
   const int lhs_dtype = in_attrs->at(0);
   const int rhs_dtype =
-      (num_inputs == 2)
-          ? in_attrs->at(1)
-          : (common::is_float(lhs_dtype) ? lhs_dtype : mxnet::common::GetDefaultDtype());
+      (num_inputs == 2) ?
+          in_attrs->at(1) :
+          (common::is_float(lhs_dtype) ? lhs_dtype : mxnet::common::GetDefaultDtype());
   TYPE_ASSIGN_CHECK(*out_attrs, 0, TrueDivideOutType(lhs_dtype, rhs_dtype));
   return true;
 }

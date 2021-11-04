@@ -45,8 +45,8 @@ struct MultiLANSKernelStep1 {
     using namespace mshadow_op;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
-        MPDType w           = has_mixed_precision ? kernel_params.weights32[index][i]
-                                                  : MPDType(kernel_params.weights[index][i]);
+        MPDType w           = has_mixed_precision ? kernel_params.weights32[index][i] :
+                                                    MPDType(kernel_params.weights[index][i]);
         float g_norm        = sqrt(g_sq_norm[index]);
         MPDType scaled_grad = static_cast<MPDType>(kernel_params.grads[index][i]) * rescale_grad;
         scaled_grad /= g_norm;
@@ -95,8 +95,8 @@ struct MultiLANSKernelStep2 {
                                   const OpReqType req) {
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
-        MPDType w  = has_mixed_precision ? kernel_params.weights32[index][i]
-                                         : MPDType(kernel_params.weights[index][i]);
+        MPDType w  = has_mixed_precision ? kernel_params.weights32[index][i] :
+                                           MPDType(kernel_params.weights[index][i]);
         float r1   = sqrt(sum_sq_weigths[index]);
         float r2_m = sqrt(sum_sq_temp_m[index]);
         float r2_g = sqrt(sum_sq_temp_g[index]);

@@ -283,8 +283,8 @@ inline bool LaDiagTrianShape(const nnvm::NodeAttrs& attrs,
   if (ndim == 0) {
     return false;
   }
-  const int offset = (diag ? nnvm::get<LaDiagParam>(attrs.parsed).offset
-                           : nnvm::get<LaTrianParam>(attrs.parsed).offset);
+  const int offset = (diag ? nnvm::get<LaDiagParam>(attrs.parsed).offset :
+                             nnvm::get<LaTrianParam>(attrs.parsed).offset);
   std::vector<int> oshape(extract ? ndim - 1 : ndim + 1);
   for (int i = 0; i < ndim - 1; ++i) {
     oshape[i] = (*in_attrs)[0][i];
@@ -710,8 +710,8 @@ void LaOpGemmForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), inum);
   CHECK_EQ(outputs.size(), onum);
-  const int axis(inputs.size() == 2 ? nnvm::get<LaMatrixMultParam>(attrs.parsed).axis
-                                    : nnvm::get<LaMatrixMacParam>(attrs.parsed).axis);
+  const int axis(inputs.size() == 2 ? nnvm::get<LaMatrixMultParam>(attrs.parsed).axis :
+                                      nnvm::get<LaMatrixMacParam>(attrs.parsed).axis);
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     if (axis == -2 || axis == inputs[0].ndim() - 2) {
       LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, outputs, attrs, ctx);
@@ -732,8 +732,8 @@ void LaOpGemmBackward(const nnvm::NodeAttrs& attrs,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), inum);
   CHECK_EQ(outputs.size(), onum);
-  const int axis(inputs.size() == 3 ? nnvm::get<LaMatrixMultParam>(attrs.parsed).axis
-                                    : nnvm::get<LaMatrixMacParam>(attrs.parsed).axis);
+  const int axis(inputs.size() == 3 ? nnvm::get<LaMatrixMultParam>(attrs.parsed).axis :
+                                      nnvm::get<LaMatrixMacParam>(attrs.parsed).axis);
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     std::vector<TBlob> tspace(outputs);
     for (int i = 0; i < onum; ++i) {

@@ -2822,8 +2822,8 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle* out) {
   // TODO(tianjun) make label 1D when label_width=0
   mxnet::TShape shape = no_label ? TShape({
                                        1,
-                                   })
-                                 : db.data[1].shape();
+                                   }) :
+                                   db.data[1].shape();
   if (no_label || shape.Size() < 1) {
     // it's possible that label is not available and not required
     // but we need to bypass the invalid copy
@@ -3947,7 +3947,7 @@ int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
   API_END_HANDLE_ERROR(delete ret);
 }
 
-int MXNVTXRangePush(const char * name, mx_uint color) {
+int MXNVTXRangePush(const char* name, mx_uint color) {
   API_BEGIN();
 #if MXNET_USE_CUDA && MXNET_USE_NVTX
   mxnet::common::cuda::nvtx::gpuRangeStart(color, name);

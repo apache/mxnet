@@ -140,9 +140,9 @@ Example::
                                       [](const NodeAttrs& attrs) {
                                         const SoftmaxParam& param =
                                             nnvm::get<SoftmaxParam>(attrs.parsed);
-                                        return (param.use_length.value())
-                                                   ? std::vector<std::string>{"data", "length"}
-                                                   : std::vector<std::string>{"data"};
+                                        return (param.use_length.value()) ?
+                                                   std::vector<std::string>{"data", "length"} :
+                                                   std::vector<std::string>{"data"};
                                       })
     .set_attr<nnvm::FListOutputNames>("FListOutputNames",
                                       [](const NodeAttrs& attrs) {

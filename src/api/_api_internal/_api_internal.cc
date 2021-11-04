@@ -62,8 +62,8 @@ MXNET_REGISTER_GLOBAL("_ADT").set_body([](runtime::MXNetArgs args, runtime::MXNe
       ObjectRef input       = NDArrayHandle(array);
       data.push_back(input);
     } else if (args[i].type_code() != kNull) {
-      ObjectRef input = String::CanConvertFrom(args[i]) ? args[i].operator String()
-                                                        : args[i].operator ObjectRef();
+      ObjectRef input = String::CanConvertFrom(args[i]) ? args[i].operator String() :
+                                                          args[i].operator ObjectRef();
       data.push_back(input);
     } else {
       data.emplace_back(nullptr);

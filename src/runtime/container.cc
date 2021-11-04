@@ -93,8 +93,8 @@ MXNET_REGISTER_GLOBAL("container._MapGetItem").set_body([](MXNetArgs args, MXNet
   CHECK(ptr->IsInstance<MapObj>());
 
   auto* n = static_cast<const MapObj*>(ptr);
-  auto it = n->find(String::CanConvertFrom(args[1]) ? args[1].operator String()
-                                                    : args[1].operator ObjectRef());
+  auto it = n->find(String::CanConvertFrom(args[1]) ? args[1].operator String() :
+                                                      args[1].operator ObjectRef());
   CHECK(it != n->end()) << "cannot find the corresponding key in the Map";
   *rv = (*it).second;
 });

@@ -34,8 +34,7 @@ namespace cuda {
 
 class NVTXDuration {
  public:
-  explicit NVTXDuration(const char *name) noexcept
-      : range_id_(0), name_(name) {}
+  explicit NVTXDuration(const char* name) noexcept : range_id_(0), name_(name) {}
 
   inline void start() {
     range_id_ = nvtxRangeStartA(name_);
@@ -47,7 +46,7 @@ class NVTXDuration {
 
  private:
   nvtxRangeId_t range_id_;
-  const char *name_;
+  const char* name_;
 };
 
 // Utility class for NVTX
@@ -68,19 +67,19 @@ class nvtx {
 
   static void gpuRangeStart(const uint32_t rgb, const std::string& range_name) {
     nvtxEventAttributes_t att;
-    att.version = NVTX_VERSION;
-    att.size = NVTX_EVENT_ATTRIB_STRUCT_SIZE;
-    att.colorType = NVTX_COLOR_ARGB;
-    att.color = rgb | 0xff000000;
-    att.messageType = NVTX_MESSAGE_TYPE_ASCII;
+    att.version       = NVTX_VERSION;
+    att.size          = NVTX_EVENT_ATTRIB_STRUCT_SIZE;
+    att.colorType     = NVTX_COLOR_ARGB;
+    att.color         = rgb | 0xff000000;
+    att.messageType   = NVTX_MESSAGE_TYPE_ASCII;
     att.message.ascii = range_name.c_str();
     nvtxRangePushEx(&att);
   }
 
   // Utility to map a range name prefix to a random color based on its hash
   static uint32_t nameToColor(const std::string& range_name, int prefix_len) {
-    static std::vector<uint32_t> colors{kRed, kGreen, kBlue, kYellow, kOrange, kRed1, kMagenta,
-                                        kViolet, kBlue1, kCyan, kGreen1};
+    static std::vector<uint32_t> colors{
+        kRed, kGreen, kBlue, kYellow, kOrange, kRed1, kMagenta, kViolet, kBlue1, kCyan, kGreen1};
     std::string s(range_name, 0, prefix_len);
     std::hash<std::string> hash_fn;
     return colors[hash_fn(s) % colors.size()];

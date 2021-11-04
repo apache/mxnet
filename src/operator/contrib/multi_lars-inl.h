@@ -68,10 +68,10 @@ struct MultiLARSKernel {
     bool is_lars_valid = w_norm > 0. && grads_sum_sq[i] > 0.;
     KERNEL_ASSIGN(out_data[i],
                   req,
-                  is_lars_valid
-                      ? lrs[i] * eta * w_norm /
-                            (sqrtf(grads_sum_sq[i]) * rescale_grad + wds[i] * w_norm + eps)
-                      : lrs[i]);
+                  is_lars_valid ?
+                      lrs[i] * eta * w_norm /
+                          (sqrtf(grads_sum_sq[i]) * rescale_grad + wds[i] * w_norm + eps) :
+                      lrs[i]);
   }
 };
 

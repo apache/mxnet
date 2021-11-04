@@ -362,9 +362,9 @@ void RTCReduceImpl(Stream<gpu>* s,
   args.emplace_back(&param);
   args.emplace_back(&config.Mnext);
 
-  const auto& function_code = (lhs == nullptr)
-                                  ? (use_index ? reduce_function_index_code : reduce_function_code)
-                                  : reduce_function_use_input_code;
+  const auto& function_code = (lhs == nullptr) ?
+                                  (use_index ? reduce_function_index_code : reduce_function_code) :
+                                  reduce_function_use_input_code;
   const auto& kernel_name   = (config.Mnext > 1) ? "reduce_kernel_multi" : "reduce_kernel_single";
   auto reduce_kernel_func =
       get_function(code + function_code, kernel_name, reduce_kernel_code, dev_id);
@@ -497,9 +497,9 @@ void RTCReduceM1Impl(Stream<gpu>* s,
   args.emplace_back(&small.dptr_);
   args.emplace_back(&param);
 
-  const auto& function_code = (lhs == nullptr)
-                                  ? (use_index ? reduce_function_index_code : reduce_function_code)
-                                  : reduce_function_use_input_code;
+  const auto& function_code = (lhs == nullptr) ?
+                                  (use_index ? reduce_function_index_code : reduce_function_code) :
+                                  reduce_function_use_input_code;
   auto reduce_kernel_M1_func =
       get_function(code + function_code, "reduce_kernel_M1", reduce_kernel_M1_code, dev_id);
   launch(reduce_kernel_M1_func, config.kernel_1.gridDim, config.kernel_1.blockDim, 0, s, &args);

@@ -206,9 +206,9 @@ class CommCPU : public Comm {
                                           Engine::CallbackOnComplete on_complete) {
             on_start();
             NDArray out = buf_merged;
-            is_serial_push_
-                ? ReduceSumCPUExSerial(reduce, &out)
-                : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
+            is_serial_push_ ?
+                ReduceSumCPUExSerial(reduce, &out) :
+                mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
             on_complete();
           },
           Context::CPU(),
@@ -263,10 +263,10 @@ class CommCPU : public Comm {
       const bool is_same_ctx = out->ctx() == src.ctx();
       const bool is_diff_var = out->var() != src.var();
       NDArray retained_cpu =
-          (is_same_ctx && is_diff_var)
-              ? *out
-              : NDArray(
-                    kRowSparseStorage, src.shape(), src.ctx(), true, src.dtype(), src.aux_types());
+          (is_same_ctx && is_diff_var) ?
+              *out :
+              NDArray(
+                  kRowSparseStorage, src.shape(), src.ctx(), true, src.dtype(), src.aux_types());
       if (!is_diff_var) {
         common::LogOnce("The output of row_sparse_pull() on key " + std::to_string(key) +
                         "refers to the same NDArray as the one stored in KVStore."
@@ -670,13 +670,11 @@ class CommDevice : public Comm {
       // retain according to indices
       const bool is_same_ctx = out->ctx() == src.ctx();
       const bool is_diff_var = out->var() != src.var();
-      NDArray retained_gpu   = (is_same_ctx && is_diff_var) ? *out
-                                                            : NDArray(kRowSparseStorage,
-                                                                    out->shape(),
-                                                                    src.ctx(),
-                                                                    true,
-                                                                    out->dtype(),
-                                                                    out->aux_types());
+      NDArray retained_gpu =
+          (is_same_ctx && is_diff_var) ?
+              *out :
+              NDArray(
+                  kRowSparseStorage, out->shape(), src.ctx(), true, out->dtype(), out->aux_types());
       if (!is_diff_var) {
         common::LogOnce("The output of row_sparse_pull() on key " + std::to_string(key) +
                         "refers to the same NDArray as the one stored in KVStore."

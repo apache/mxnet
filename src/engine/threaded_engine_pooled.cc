@@ -66,7 +66,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
     thread_pool_    = nullptr;
     io_thread_pool_ = nullptr;
     streams_->Finalize();
-    streams_        = nullptr;
+    streams_ = nullptr;
   }
 
   void Stop() override {
@@ -154,8 +154,8 @@ class ThreadedEnginePooled : public ThreadedEngine {
     }
     bool is_copy = (opr_block->opr->prop == FnProperty::kCopyFromGPU ||
                     opr_block->opr->prop == FnProperty::kCopyToGPU);
-    auto&& rctx  = is_copy ? streams_->GetIORunContext(opr_block->ctx)
-                           : streams_->GetRunContext(opr_block->ctx);
+    auto&& rctx  = is_copy ? streams_->GetIORunContext(opr_block->ctx) :
+                             streams_->GetRunContext(opr_block->ctx);
 #if MXNET_USE_CUDA
     CallbackOnStart on_start;
     CallbackOnComplete callback;

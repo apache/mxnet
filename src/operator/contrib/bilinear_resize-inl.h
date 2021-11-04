@@ -132,8 +132,8 @@ static inline DType area_pixel_compute_scale(int64_t input_size,
    *     src_idx + 0.5 = scale * (dst_index + 0.5)
    */
   if (output_size > 1) {
-    return align_corners ? static_cast<DType>(input_size - 1) / (output_size - 1)
-                         : static_cast<DType>(input_size) / output_size;
+    return align_corners ? static_cast<DType>(input_size - 1) / (output_size - 1) :
+                           static_cast<DType>(input_size) / output_size;
   } else {
     return DType(0);
   }
@@ -270,12 +270,12 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
       break;
     }
     case bilinear_resize::odd_scale: {
-      new_height = ((dshape[2] % 2) == 0)
-                       ? (int16_t)(dshape[2] * param.scale_height.value())
-                       : (int16_t)((dshape[2] - 1) * param.scale_height.value()) + 1;
-      new_width  = ((dshape[3] % 2) == 0)
-                       ? (int16_t)(dshape[3] * param.scale_width.value())
-                       : (int16_t)((dshape[3] - 1) * param.scale_width.value()) + 1;
+      new_height = ((dshape[2] % 2) == 0) ?
+                       (int16_t)(dshape[2] * param.scale_height.value()) :
+                       (int16_t)((dshape[2] - 1) * param.scale_height.value()) + 1;
+      new_width  = ((dshape[3] % 2) == 0) ?
+                       (int16_t)(dshape[3] * param.scale_width.value()) :
+                       (int16_t)((dshape[3] - 1) * param.scale_width.value()) + 1;
       break;
     }
     case bilinear_resize::like: {

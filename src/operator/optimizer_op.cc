@@ -228,8 +228,8 @@ struct AdamStdDnsRspDnsKernel<req, cpu> {
     const RType grad_i  = (prefix_sum[i] - 1) * row_length;
     for (index_t j = 0; j < row_length; j++) {
       const index_t data_i = row_i + j;
-      DType grad_rescaled  = non_zero ? static_cast<DType>(grad_data[grad_i + j] * rescale_grad)
-                                      : static_cast<DType>(0);
+      DType grad_rescaled  = non_zero ? static_cast<DType>(grad_data[grad_i + j] * rescale_grad) :
+                                        static_cast<DType>(0);
       if (clip_gradient >= 0.0f) {
         grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
       }

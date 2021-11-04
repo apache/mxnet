@@ -53,8 +53,8 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
   auto weight_md = GetWeightDesc(weights, param.conv_param.num_group, param.dnnl_param.quantized);
   auto out_md    = GetMemDesc(output);
   auto bias_md =
-      bias ? (param.dnnl_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias))
-           : dnnl::memory::desc{{}, dnnl::memory::data_type::undef, dnnl::memory::format_tag::any};
+      bias ? (param.dnnl_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias)) :
+             dnnl::memory::desc{{}, dnnl::memory::data_type::undef, dnnl::memory::format_tag::any};
   auto bias_md_ptr = bias ? &bias_md : nullptr;
 
   dnnl::memory::dims strides(param.conv_param.kernel.ndim());

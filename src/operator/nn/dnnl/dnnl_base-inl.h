@@ -607,9 +607,9 @@ class DNNLMemory {
       dnnl::memory::data_type data_type = dnnl::memory::data_type::undef) const {
     dnnl::memory::dims dims(desc.data.dims, desc.data.dims + desc.data.ndims);
     dnnl::memory::data_type cpp_type =
-        (data_type == dnnl::memory::data_type::undef)
-            ? static_cast<dnnl::memory::data_type>(desc.data.data_type)
-            : data_type;
+        (data_type == dnnl::memory::data_type::undef) ?
+            static_cast<dnnl::memory::data_type>(desc.data.data_type) :
+            data_type;
     dnnl::memory::desc data_md(dims, cpp_type, static_cast<dnnl::memory::format_tag>(format));
     return data_md;
   }

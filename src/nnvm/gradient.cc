@@ -88,8 +88,7 @@ Graph Gradient(Graph src) {
   const std::vector<NodeEntry>& ys_out_grad =
       src.GetAttr<std::vector<NodeEntry> >("grad_ys_out_grad");
   CHECK_EQ(ys.size(), ys_out_grad.size());
-  const std::vector<NodeEntry>& us =
-      src.GetAttr<std::vector<NodeEntry> >("grad_us");
+  const std::vector<NodeEntry>& us = src.GetAttr<std::vector<NodeEntry> >("grad_us");
 
   // initialize a topological order of the graph nodes and `output_grads`
   // that maps every operator node to its gradient entries
@@ -506,7 +505,6 @@ inline bool CheckGradAllZero(const std::vector<NodeEntry>& grads,
   return true;
 }
 
-
 Graph BuildGradientGraph(const Graph& src,
                          const std::vector<NodeEntry>& xs,
                          const std::vector<ObjectPtr>& topo_order,
@@ -546,9 +544,9 @@ Graph BuildGradientGraph(const Graph& src,
   if (src.attrs.count("zero_ops") != 0) {
     zero_ops = src.GetAttr<std::vector<const Op*> >("zero_ops");
   }
-  const Op* copy_op = (src.attrs.count("copy_op_str") != 0)
-                          ? Op::Get(src.GetAttr<std::string>("copy_op_str"))
-                          : nullptr;
+  const Op* copy_op = (src.attrs.count("copy_op_str") != 0) ?
+                          Op::Get(src.GetAttr<std::string>("copy_op_str")) :
+                          nullptr;
 
   std::vector<NodeEntry> out_agg_grads;
   for (auto topo_order_rit = topo_order.rbegin(); topo_order_rit != topo_order.rend();

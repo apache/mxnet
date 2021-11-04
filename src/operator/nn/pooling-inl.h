@@ -296,9 +296,9 @@ class PoolingOp {
       }
       stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
-    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value())
-                            ? param_.p_value.value()
-                            : 1;
+    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
+                            param_.p_value.value() :
+                            1;
     const bool count_include_pad =
         (param_.count_include_pad.has_value()) ? param_.count_include_pad.value() : true;
     switch (p_value) {
@@ -377,9 +377,9 @@ class PoolingOp {
       stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
 
-    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value())
-                            ? param_.p_value.value()
-                            : 1;
+    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
+                            param_.p_value.value() :
+                            1;
     const bool count_include_pad =
         (param_.count_include_pad.has_value()) ? param_.count_include_pad.value() : true;
     switch (p_value) {

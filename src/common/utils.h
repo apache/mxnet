@@ -711,8 +711,8 @@ FCompType GetFCompute(const nnvm::Op* op, const std::string& name, const Context
  */
 template <typename T>
 constexpr size_t MaxIntegerValue() {
-  return std::is_integral<T>::value ? std::numeric_limits<T>::max()
-                                    : size_t(2) << (std::numeric_limits<T>::digits - 1);
+  return std::is_integral<T>::value ? std::numeric_limits<T>::max() :
+                                      size_t(2) << (std::numeric_limits<T>::digits - 1);
 }
 
 template <>

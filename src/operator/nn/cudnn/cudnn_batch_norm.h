@@ -21,7 +21,7 @@
  * \file cudnn_batch_norm.h
  * \brief
  * \author Junyuan Xie
-*/
+ */
 
 #ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_H_
 #define MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_H_
@@ -39,12 +39,16 @@ STATIC_ASSERT_CUDNN_VERSION_GE(7401);
 
 bool CudnnBatchNormSupports(const BatchNormParam& param, const TBlob& x);
 
-void CudnnBatchNormForward(const BatchNormParam& param, const OpContext& ctx,
-                           const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
+void CudnnBatchNormForward(const BatchNormParam& param,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs);
 
-void CudnnBatchNormBackward(const BatchNormParam& param, const OpContext& ctx,
-                            const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
+void CudnnBatchNormBackward(const BatchNormParam& param,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs);
 
 #endif  // MXNET_USE_CUDNN == 1

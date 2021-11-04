@@ -284,16 +284,16 @@ inline void SoftmaxGrad(Stream<cpu>* s,
       DType final_result;
       if (temperature == 1.0) {
         for (index_t j = 0; j < M; ++j) {
-          final_result = negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum)
-                                : OP2::Map(ograd[base + j * sa], out[base + j * sa], sum);
+          final_result = negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) :
+                                  OP2::Map(ograd[base + j * sa], out[base + j * sa], sum);
           final_result = (j < len) ? final_result : DType(0.0f);
           KERNEL_ASSIGN(igrad[base + j * sa], Req, final_result);
         }
       } else {
         for (index_t j = 0; j < M; ++j) {
           final_result =
-              negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature
-                     : OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature;
+              negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature :
+                       OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature;
           final_result = (j < len) ? final_result : DType(0.0f);
           KERNEL_ASSIGN(igrad[base + j * sa], Req, final_result);
         }
@@ -314,15 +314,15 @@ inline void SoftmaxGrad(Stream<cpu>* s,
       DType final_result;
       if (temperature == 1.0) {
         for (index_t j = 0; j < M; ++j) {
-          final_result = negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum)
-                                : OP2::Map(ograd[base + j * sa], out[base + j * sa], sum);
+          final_result = negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) :
+                                  OP2::Map(ograd[base + j * sa], out[base + j * sa], sum);
           KERNEL_ASSIGN(igrad[base + j * sa], Req, final_result);
         }
       } else {
         for (index_t j = 0; j < M; ++j) {
           final_result =
-              negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature
-                     : OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature;
+              negate ? -OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature :
+                       OP2::Map(ograd[base + j * sa], out[base + j * sa], sum) / temperature;
           KERNEL_ASSIGN(igrad[base + j * sa], Req, final_result);
         }
       }
@@ -449,9 +449,9 @@ __global__ void masked_softmax_kernel(DType* in,
   for (index_t i = x; i < M; i += x_size) {
     val                = (negate ? -in[base + i * sa] : in[base + i * sa]);
     bool mask_value    = bcst_mask_axis ? in_mask[base_mask] : in_mask[base_mask + i * sa_mask];
-    out[base + i * sa] = mask_value
-                             ? DType(OP::Map((val - smax) / static_cast<DType>(temperature), ssum))
-                             : DType(masked_value);
+    out[base + i * sa] = mask_value ?
+                             DType(OP::Map((val - smax) / static_cast<DType>(temperature), ssum)) :
+                             DType(masked_value);
   }
 }
 
@@ -578,8 +578,8 @@ __global__ void masked_softmax_stride1_kernel(const DType* in,
     masked_value = -INFINITY;
   for (index_t i = my_id; i < M; i += threads_per_row) {
     const DType val = (negate ? -row[i] : row[i]);
-    row[i] = row_mask[i] ? DType(OP::Map((val - smax) / static_cast<DType>(temperature), ssum))
-                         : DType(masked_value);
+    row[i] = row_mask[i] ? DType(OP::Map((val - smax) / static_cast<DType>(temperature), ssum)) :
+                           DType(masked_value);
   }
   __syncthreads();
 
@@ -852,8 +852,8 @@ __global__ void masked_softmax_grad_kernel(OType* out,
   DType final_result;
   for (index_t i = x; i < M; i += x_size) {
     bool mask_value = bcst_mask_axis ? in_mask[base_mask] : in_mask[base_mask + i * sa_mask];
-    final_result    = negate ? -OP2::Map(ograd[base + i * sa], out[base + i * sa], ssum)
-                             : OP2::Map(ograd[base + i * sa], out[base + i * sa], ssum);
+    final_result    = negate ? -OP2::Map(ograd[base + i * sa], out[base + i * sa], ssum) :
+                               OP2::Map(ograd[base + i * sa], out[base + i * sa], ssum);
     final_result    = mask_value ? final_result / static_cast<DType>(temperature) : DType(0.0f);
     KERNEL_ASSIGN(igrad[base + i * sa], Req, final_result);
   }
