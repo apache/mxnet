@@ -215,7 +215,7 @@ The current data loading pipeline is the major bottleneck for many training task
 - `Transform.__call__()/forward()`
 - `Batchify`
 - (optional communicate through shared_mem)
-- `split_and_load(ctxs)`
+- `split_and_load(devices)`
 - training on GPUs
 
 Performance concerns include slow python dataset/transform functions, multithreading issues due to global interpreter lock, Python multiprocessing issues due to speed, and batchify issues due to poor memory management.

@@ -268,11 +268,11 @@ new_sym, new_arg_params, new_aux_params = get_layer_output(sym, arg_params, aux_
 We can now take advantage of the features and pattern detection knowledge that our network learnt training on ImageNet, and apply that to the new Caltech101 dataset.
 
 
-We pick a context, fine-tuning on CPU will be **WAY** slower.
+We pick a device, fine-tuning on CPU will be **WAY** slower.
 
 
 ```{.python .input}
-ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
+device = mx.gpu() if mx.device.num_gpus() > 0 else mx.cpu()
 ```
 
 We create a symbol block that is going to hold all our pre-trained layers, and assign the weights of the different pre-trained layers to the newly created SymbolBlock
@@ -286,10 +286,10 @@ with warnings.catch_warnings():
 net_params = pre_trained.collect_params()
 for param in new_arg_params:
     if param in net_params:
-        net_params[param]._load_init(new_arg_params[param], ctx=ctx)
+        net_params[param]._load_init(new_arg_params[param], device=device)
 for param in new_aux_params:
     if param in net_params:
-        net_params[param]._load_init(new_aux_params[param], ctx=ctx)
+        net_params[param]._load_init(new_aux_params[param], device=device)
 
 ```
 
@@ -298,7 +298,7 @@ We create the new dense layer with the right new number of classes (101) and ini
 
 ```{.python .input}
 dense_layer = gluon.nn.Dense(NUM_CLASSES)
-dense_layer.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+dense_layer.initialize(mx.init.Xavier(magnitude=2.24), device=device)
 ```
 
 We add the SymbolBlock and the new dense layer to a HybridSequential network
@@ -346,10 +346,10 @@ We measure the accuracy in a non-blocking way, using `np.array` to take care of 
 ```{.python .input}
  def evaluate_accuracy_gluon(data_iterator, net):
     num_instance = 0
-    sum_metric = np.zeros(1,ctx=ctx, dtype=np.int32)
+    sum_metric = np.zeros(1,device=device, dtype=np.int32)
     for i, (data, label) in enumerate(data_iterator):
-        data = data.astype(np.float32).as_in_context(ctx)
-        label = label.astype(np.int32).as_in_context(ctx)
+        data = data.astype(np.float32).to_device(device)
+        label = label.astype(np.int32).to_device(device)
         output = net(data)
         prediction = np.argmax(output, axis=1).astype(np.int32)
         num_instance += len(prediction)
@@ -375,8 +375,8 @@ print("Untrained network Test Accuracy: {0:.4f}".format(evaluate_accuracy_gluon(
 val_accuracy = 0
 for epoch in range(5):
     for i, (data, label) in enumerate(dataloader_train):
-        data = data.astype(np.float32).as_in_context(ctx)
-        label = label.as_in_context(ctx)
+        data = data.astype(np.float32).to_device(device)
+        label = label.to_device(device)
 
         if i%20==0 and i >0:
             print('Batch [{0}] loss: {1:.4f}'.format(i, loss.mean().item()))
@@ -416,7 +416,7 @@ TOP_P = 3
 ```{.python .input}
 # Convert img to format expected by the network
 def transform(img):
-    return np.array(np.expand_dims(np.transpose(img, (2,0,1)),axis=0).astype(np.float32), ctx=ctx)
+    return np.array(np.expand_dims(np.transpose(img, (2,0,1)),axis=0).astype(np.float32), device=device)
 ```
 
 

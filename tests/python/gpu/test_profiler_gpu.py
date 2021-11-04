@@ -21,7 +21,7 @@ import sys
 
 import numpy as np
 import mxnet as mx
-mx.test_utils.set_default_context(mx.gpu(0))
+mx.test_utils.set_default_device(mx.gpu(0))
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -120,11 +120,11 @@ def test_gpu_memory_profiler_gluon():
     model.add(nn.Dense(64, activation='tanh'),
               nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
-    model.initialize(ctx=mx.gpu())
+    model.initialize(device=mx.gpu())
     model.hybridize()
 
     with mx.autograd.record():
-        out = model(mx.np.zeros((16, 10), ctx=mx.gpu()))
+        out = model(mx.np.zeros((16, 10), device=mx.gpu()))
     out.backward()
     mx.npx.waitall()
     profiler.set_state('stop')

@@ -28,7 +28,7 @@ import scipy.stats as ss
 import scipy.special as scipy_special
 from mxnet import np, npx
 from mxnet.base import MXNetError
-from mxnet.test_utils import assert_almost_equal, use_np, set_default_context
+from mxnet.test_utils import assert_almost_equal, use_np, set_default_device
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -38,7 +38,7 @@ from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.util import numpy_fallback
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))
 
 @use_np
 @pytest.mark.serial
@@ -88,18 +88,18 @@ def test_np_fallback_decorator():
     for fallback_out, onp_out in zip(fallback_ret, onp_ret):
         if isinstance(fallback_out, (list, tuple)):
             for fallback_item, onp_item in zip(fallback_out, onp_out):
-                assert fallback_item.ctx == mx.context.current_context(), "incorrect output context %s vs desired %s" % (str(fallback_item.ctx), str(mx.context.current_context()))
+                assert fallback_item.device == mx.device.current_device(), "incorrect output device %s vs desired %s" % (str(fallback_item.device), str(mx.device.current_device()))
                 assert isinstance(fallback_item, np.ndarray)
                 assert_almost_equal(fallback_item.asnumpy(), onp_item, rtol=1e-3, atol=1e-5, equal_nan=False)
         else:
-            assert fallback_out.ctx == mx.context.current_context(), "incorrect output context %s vs desired %s" % (str(fallback_out.ctx), str(mx.context.current_context()))
+            assert fallback_out.device == mx.device.current_device(), "incorrect output device %s vs desired %s" % (str(fallback_out.device), str(mx.device.current_device()))
             assert isinstance(fallback_out, np.ndarray)
             assert_almost_equal(fallback_out.asnumpy(), onp_out, rtol=1e-3, atol=1e-5, equal_nan=False)
 
-    # does not support mixed-context inputs
-    assertRaises(AssertionError, dnp_func, mx_a.as_in_ctx(npx.cpu(0)), b=mx_b, split_inputs=(mx_c, mx_indices), ret_type=ret_type)
+    # does not support mixed-device inputs
+    assertRaises(AssertionError, dnp_func, mx_a.to_device(npx.cpu(0)), b=mx_b, split_inputs=(mx_c, mx_indices), ret_type=ret_type)
     assertRaises(AssertionError, dnp_func, mx_a, b=mx_b,
-                 split_inputs=(mx_c.as_in_ctx(npx.cpu(0)), mx_indices.as_in_ctx(npx.gpu(0))), ret_type=ret_type)
+                 split_inputs=(mx_c.to_device(npx.cpu(0)), mx_indices.to_device(npx.gpu(0))), ret_type=ret_type)
 
     @numpy_fallback
     def empty_ret_func():

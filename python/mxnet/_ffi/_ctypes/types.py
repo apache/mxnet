@@ -46,10 +46,12 @@ class MXNetValue(ctypes.Union):
     _fields_ = [("v_int64", ctypes.c_int64),
                 ("v_float64", ctypes.c_double),
                 ("v_handle", ctypes.c_void_p),
-                ("v_str", ctypes.c_char_p)]
+                ("v_str", ctypes.c_char_p),
+                ("v_uint64", ctypes.c_uint64)]
 
 RETURN_SWITCH = {
     TypeCode.INT: lambda x: x.v_int64,
+    TypeCode.UINT: lambda x: x.v_uint64,
     TypeCode.FLOAT: lambda x: x.v_float64,
     TypeCode.NULL: lambda x: None,
     TypeCode.STR: lambda x: py_str(x.v_str),

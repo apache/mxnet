@@ -23,7 +23,7 @@ from functools import partial
 from numpy.testing import assert_allclose
 from mxnet.gluon.utils import split_rnn_params
 import pytest
-from mxnet.test_utils import almost_equal, assert_almost_equal, default_context
+from mxnet.test_utils import almost_equal, assert_almost_equal, default_device
 from common import assert_raises_cudnn_not_satisfied, retry
 
 
@@ -543,7 +543,7 @@ def test_rnn_cells_export_import():
             self.cell.infer_shape(0, input, False)
 
     for hybrid in [RNNLayer(), LSTMLayer(), GRULayer()]:
-        input = mx.np.ones(shape=(1, 2, 1), ctx=mx.context.current_context())
+        input = mx.np.ones(shape=(1, 2, 1), device=mx.device.current_device())
         hybrid.infer_shape(input)
         hybrid.initialize()
         hybrid.hybridize()
@@ -553,21 +553,21 @@ def test_rnn_cells_export_import():
             symbol_file="./model-symbol.json",
             input_names=["data"],
             param_file="./model-0000.params",
-            ctx=mx.context.current_context()
+            device=mx.device.current_device()
         )
         output2 = symbol(input)
         assert_almost_equal(output1.asnumpy(), output2.asnumpy())
 
 
-def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, ctx=mx.cpu()):
-    layer.initialize(ctx=ctx)
-    inputs = inputs.as_in_context(ctx)
+def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, device=mx.cpu()):
+    layer.initialize(device=device)
+    inputs = inputs.to_device(device)
     inputs.attach_grad()
     if states is not None:
         if isinstance(states, (list, tuple)):
-            states = [s.as_in_context(ctx) for s in states]
+            states = [s.to_device(device) for s in states]
         else:
-            states = states.as_in_context(ctx)
+            states = states.to_device(device)
     with mx.autograd.record():
         if states is None:
             out = layer(inputs)
@@ -606,39 +606,39 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, ctx=mx.c
 
 
 @mx.util.use_np
-def run_rnn_layers(dtype, dtype2, ctx=mx.cpu()):
+def run_rnn_layers(dtype, dtype2, device=mx.cpu()):
 
-    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype), mx.np.ones((8, 3, 20), dtype=dtype), ctx=ctx)
-    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype), ctx=ctx)
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2,dtype=dtype), mx.np.ones((8, 3, 20),  dtype=dtype), ctx=ctx)
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2,dtype=dtype,  bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), [mx.np.ones((4, 3, 10),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype)],ctx=ctx)
-    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dtype=dtype, ), mx.np.ones((8, 3, 20), dtype=dtype),ctx=ctx)
-    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dtype=dtype, bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype),ctx=ctx)
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype), mx.np.ones((8, 3, 20), dtype=dtype), device=device)
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype), device=device)
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2,dtype=dtype), mx.np.ones((8, 3, 20),  dtype=dtype), device=device)
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2,dtype=dtype,  bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), [mx.np.ones((4, 3, 10),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype)],device=device)
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dtype=dtype, ), mx.np.ones((8, 3, 20), dtype=dtype),device=device)
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dtype=dtype, bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype),device=device)
 
 
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, dropout=0.5), mx.np.ones((8, 3, 20), dtype=dtype),
-                            run_only=True, ctx=ctx)
+                            run_only=True, device=device)
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, bidirectional=True, dropout=0.5, dtype=dtype),
-                            mx.np.ones((8, 3, 20), dtype=dtype), mx.np.ones((4, 3, 10), dtype=dtype), run_only=True, ctx=ctx)
+                            mx.np.ones((8, 3, 20), dtype=dtype), mx.np.ones((4, 3, 10), dtype=dtype), run_only=True, device=device)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5, dtype=dtype), mx.np.ones((8, 3, 20), dtype=dtype),
-                            run_only=True, ctx=ctx)
+                            run_only=True, device=device)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5, dtype=dtype),
                             mx.np.ones((8, 3, 20), dtype=dtype),
-                            [mx.np.ones((4, 3, 10), dtype=dtype), mx.np.ones((4, 3, 10), dtype=dtype)], run_only=True, ctx=ctx)
+                            [mx.np.ones((4, 3, 10), dtype=dtype), mx.np.ones((4, 3, 10), dtype=dtype)], run_only=True, device=device)
     check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dropout=0.5, dtype=dtype), mx.np.ones((8, 3, 20), dtype=dtype),
-                            run_only=True, ctx=ctx)
+                            run_only=True, device=device)
     check_rnn_layer_forward(gluon.rnn.GRU(10, 2, bidirectional=True, dropout=0.5, dtype=dtype),
-                            mx.np.ones((8, 3, 20), dtype=dtype), mx.np.ones((4, 3, 10), dtype=dtype), run_only=True, ctx=ctx)
+                            mx.np.ones((8, 3, 20), dtype=dtype), mx.np.ones((4, 3, 10), dtype=dtype), run_only=True, device=device)
 
     net = gluon.nn.Sequential()
     net.add(gluon.rnn.LSTM(10, bidirectional=True, dtype=dtype2))
     net.add(gluon.nn.BatchNorm(axis=2))
     net.add(gluon.nn.Flatten())
     net.add(gluon.nn.Dense(3, activation='relu'))
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     net.cast(dtype)
     with mx.autograd.record():
-        out = net(mx.np.ones((2, 3, 10), dtype=dtype, ctx=ctx))
+        out = net(mx.np.ones((2, 3, 10), dtype=dtype, device=device))
         out.backward()
         out = out.asnumpy()
 
@@ -648,10 +648,10 @@ def run_rnn_layers(dtype, dtype2, ctx=mx.cpu()):
     net2.add(gluon.nn.Flatten())
     net2.add(gluon.nn.Dense(3, activation='relu'))
     net2.hybridize()
-    net2.initialize(ctx=ctx)
+    net2.initialize(device=device)
     net2.cast(dtype)
     with mx.autograd.record():
-        out = net2(mx.np.ones((2, 3, 10), dtype=dtype, ctx=ctx))
+        out = net2(mx.np.ones((2, 3, 10), dtype=dtype, device=device))
         out.backward()
         out = out.asnumpy()
 
@@ -661,10 +661,10 @@ def run_rnn_layers(dtype, dtype2, ctx=mx.cpu()):
     net3.add(gluon.nn.Flatten())
     net3.add(gluon.nn.Dense(3, activation='relu'))
     net3.hybridize()
-    net3.initialize(ctx=ctx)
+    net3.initialize(device=device)
     net3.cast(dtype2)
     with mx.autograd.record():
-        out = net3(mx.np.ones((2, 3, 10), dtype=dtype2, ctx=ctx))
+        out = net3(mx.np.ones((2, 3, 10), dtype=dtype2, device=device))
         out.backward()
         out = out.asnumpy()
 
@@ -673,7 +673,7 @@ def test_rnn_layers_fp32():
     run_rnn_layers('float32', 'float32')
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
+@pytest.mark.skipif(mx.device.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
 @pytest.mark.serial
 def test_rnn_layers_fp16():
     run_rnn_layers('float16', 'float32', mx.gpu())
@@ -1027,7 +1027,7 @@ def test_vardrop():
                                                 drop_states=drop_states,
                                                 drop_inputs=drop_inputs)
 
-        input_data = mx.np.random.uniform(size=(10, 3, 50), ctx=mx.context.current_context())
+        input_data = mx.np.random.uniform(size=(10, 3, 50), device=mx.device.current_device())
         cell.infer_shape(0, input_data, False)
         cell.initialize(init='xavier')
         with mx.autograd.record():
@@ -1085,26 +1085,26 @@ def test_unroll(cell_type, num_states, layout):
     input_size = 50
     hidden_size = 30
     seq_len = 10
-    ctx = default_context()
+    device = default_device()
     if layout == 'TNC':
-        rnn_data = mx.np.random.normal(loc=0, scale=1, size=(seq_len, batch_size, input_size), ctx=ctx)
+        rnn_data = mx.np.random.normal(loc=0, scale=1, size=(seq_len, batch_size, input_size), device=device)
     elif layout == 'NTC':
-        rnn_data = mx.np.random.normal(loc=0, scale=1, size=(batch_size, seq_len, input_size), ctx=ctx)
+        rnn_data = mx.np.random.normal(loc=0, scale=1, size=(batch_size, seq_len, input_size), device=device)
     else:
         print("Wrong layout")
         return
-    valid_length = mx.np.round(mx.np.random.uniform(low=1, high=10, size=(batch_size), ctx=ctx))
+    valid_length = mx.np.round(mx.np.random.uniform(low=1, high=10, size=(batch_size), device=device))
     state_shape = (batch_size, hidden_size)
-    states = [mx.np.random.normal(loc=0, scale=1, size=state_shape, ctx=ctx) for i in range(num_states)]
+    states = [mx.np.random.normal(loc=0, scale=1, size=state_shape, device=device) for i in range(num_states)]
 
     cell = cell_type(hidden_size)
     if layout == 'TNC':
         cell.infer_shape(0, rnn_data[0], False)
-        cell.initialize(ctx=default_context())
+        cell.initialize(device=default_device())
         cell(rnn_data[0], states)
     else:
         cell.infer_shape(0, rnn_data[:,0,:], False)
-        cell.initialize(ctx=default_context())
+        cell.initialize(device=default_device())
         cell(rnn_data[:,0,:], states)
     params1 = cell.collect_params()
     orig_params1 = copy.deepcopy(params1)
@@ -1129,7 +1129,7 @@ def test_unroll(cell_type, num_states, layout):
     for config in configs:
         layer = RNNLayer(cell_type, hidden_size, layout)
         layer.infer_shape(rnn_data)
-        layer.initialize(ctx=default_context())
+        layer.initialize(device=default_device())
         config(layer)
         res2, states2 = layer(rnn_data, states, valid_length)
         params2 = layer.collect_params()
