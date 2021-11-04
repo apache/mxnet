@@ -222,7 +222,8 @@ inline bool NumpyLinspaceShape(const nnvm::NodeAttrs& attrs,
 }
 
 struct numpy_linspace_fwd {
-  template <typename DType, typename ValueType>
+  template <typename DType, typename ValueType, 
+            typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i,
                                   index_t size,
                                   ValueType start,
@@ -236,6 +237,27 @@ struct numpy_linspace_fwd {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(start));
     } else {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
+    }
+    if (endpoint && i != 0 && i == size - 1) {
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(stop));
+    }
+  }
+
+  template <typename DType, typename ValueType,
+            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  index_t size,
+                                  ValueType start,
+                                  ValueType stop,
+                                  bool endpoint,
+                                  double step,
+                                  int req,
+                                  DType* out) {
+    if (i == 0) {
+      // Special cases : start = 9007199254740993
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(start));
+    } else {
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(std::floor(start + step * i)));
     }
     if (endpoint && i != 0 && i == size - 1) {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(stop));
