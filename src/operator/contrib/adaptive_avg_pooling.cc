@@ -243,8 +243,8 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs &attrs,
   */
   if (SupportMKLDNN(inputs[0]) &&
       SupportMKLDNNAveragePooling(inputs[0], outputs[0])) {
-    const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed); 
-        
+    const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+
     const NDArray *workspace = nullptr;
     MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
     MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, true);

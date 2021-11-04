@@ -268,7 +268,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
 }
 
 #if MXNET_USE_MKLDNN == 1
-void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, 
+void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs,
                          const OpContext &ctx,
                          const std::vector<NDArray> &inputs,
                          const std::vector<OpReqType> &req,
