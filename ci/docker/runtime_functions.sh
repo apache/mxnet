@@ -701,12 +701,12 @@ build_ubuntu_gpu_large_tensor() {
 
 sanity_check() {
     set -ex
-    #sanity_clang
-    #sanity_license
+    sanity_clang
+    sanity_license
     sanity_cmakelint
-    #sanity_tutorial
-    #sanity_python_prospector
-    #sanity_cpp
+    sanity_tutorial
+    sanity_python_prospector
+    sanity_cpp
 }
 
 sanity_cmakelint() {
