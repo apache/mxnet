@@ -50,7 +50,7 @@ void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
 }
 
 DNNLDeconvFwd& DNNLDeconvFwd::GetCached(const DeconvolutionParam& param, const Tensors& tensors) {
-  using deconv_fwd_map = std::unordered_map<DeconvSignature, DNNLDeconvFwd, OpHash>;
+  using deconv_fwd_map = phmap::flat_hash_map<DeconvSignature, DNNLDeconvFwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local deconv_fwd_map fwds;
 #else
@@ -176,7 +176,7 @@ void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
 
 DNNLDeconvBwd& DNNLDeconvBwd::GetCached(const DeconvolutionParam& param,
                                         const ReadTensors& read_tensors) {
-  using deconv_bwd_map = std::unordered_map<DeconvSignature, DNNLDeconvBwd, OpHash>;
+  using deconv_bwd_map = phmap::flat_hash_map<DeconvSignature, DNNLDeconvBwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local deconv_bwd_map bwds;
 #else

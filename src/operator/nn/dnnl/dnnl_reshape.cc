@@ -104,9 +104,9 @@ DNNLReshapeFwd& GetReshapeForward(const OpReqType& req,
                                   const NDArray& input,
                                   const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLReshapeSignature, DNNLReshapeFwd, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<DNNLReshapeSignature, DNNLReshapeFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLReshapeSignature, DNNLReshapeFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLReshapeSignature, DNNLReshapeFwd, OpHash> fwds;
 #endif
   DNNLReshapeSignature key;
   key.AddSign(req);

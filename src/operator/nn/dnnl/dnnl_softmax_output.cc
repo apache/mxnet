@@ -67,10 +67,10 @@ static DNNLSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam& p
                                                      const OpContext& ctx,
                                                      const NDArray& in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
+  static thread_local phmap::flat_hash_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
       fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
       fwds;
 #endif
   DNNLSoftmaxOuputSignature key(param);

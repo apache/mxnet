@@ -42,7 +42,7 @@ bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& outp
 DNNLBatchDotFwd& DNNLBatchDotFwd::GetCached(const DNNLDotParam& param,
                                             const std::vector<NDArray>& inputs,
                                             const std::vector<NDArray>& outputs) {
-  using batch_dot_fwd_map = std::unordered_map<BatchDotSignature, DNNLBatchDotFwd, OpHash>;
+  using batch_dot_fwd_map = phmap::flat_hash_map<BatchDotSignature, DNNLBatchDotFwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local batch_dot_fwd_map fwds;
 #else

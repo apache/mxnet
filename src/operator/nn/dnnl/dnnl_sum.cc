@@ -81,9 +81,9 @@ static DNNLSumFwd& GetSumForward(const std::vector<float>& scales,
                                  const std::vector<NDArray>& in_data,
                                  const std::vector<dnnl::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, DNNLSumFwd, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<OpSignature, DNNLSumFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLSumFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<OpSignature, DNNLSumFwd, OpHash> fwds;
 #endif
   OpSignature key;
   key.AddSign(in_data);

@@ -62,7 +62,7 @@ void DNNLLayerNormForward(const nnvm::NodeAttrs& attrs,
 DNNLLayerNormFwd& DNNLLayerNormFwd::GetCached(const LayerNormParam& param,
                                               const OpContext& ctx,
                                               const NDArray& data) {
-  using layernorm_fwd_map = std::unordered_map<LayerNormSignature, DNNLLayerNormFwd, OpHash>;
+  using layernorm_fwd_map = phmap::flat_hash_map<LayerNormSignature, DNNLLayerNormFwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local layernorm_fwd_map layer_norm_fwds;
 #else
@@ -219,7 +219,7 @@ void DNNLLayerNormBwd::Execute(const std::vector<NDArray>& inputs,
 
 DNNLLayerNormBwd& DNNLLayerNormBwd::GetCached(const LayerNormParam& param,
                                               const std::vector<NDArray>& inputs) {
-  using layernorm_bwd_map = std::unordered_map<LayerNormSignature, DNNLLayerNormBwd, OpHash>;
+  using layernorm_bwd_map = phmap::flat_hash_map<LayerNormSignature, DNNLLayerNormBwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local layernorm_bwd_map layer_norm_bwds;
 #else

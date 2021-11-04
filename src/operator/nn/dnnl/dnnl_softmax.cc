@@ -73,9 +73,9 @@ DNNLSoftmaxFwd& DNNLSoftmaxFwd::GetCached(const SoftmaxParam& param,
                                           const Tensors& tensors,
                                           const bool is_train) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxFwd, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLSoftmaxFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLSoftmaxFwd, OpHash> fwds;
 #endif
 
   DNNLSoftmaxSignature key(param);
@@ -173,9 +173,9 @@ void DNNLSoftmaxBackward(const nnvm::NodeAttrs& attrs,
 
 DNNLSoftmaxBwd& DNNLSoftmaxBwd::GetCached(const SoftmaxParam& param, const Tensors& tensors) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
+  static thread_local phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
 #endif
 
   const float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;

@@ -130,9 +130,9 @@ DNNLActForward& GetActForward(const DNNLActParam& param,
                               const NDArray& in_data,
                               const dnnl::memory& in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLActSignature, DNNLActForward, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<DNNLActSignature, DNNLActForward, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLActSignature, DNNLActForward, OpHash> fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLActSignature, DNNLActForward, OpHash> fwds;
 #endif
   DNNLActSignature key(param);
   key.AddSign(ctx.is_train);
@@ -216,9 +216,9 @@ static inline DNNLActBackward& GetActBackward(const DNNLActParam& param,
                                               const NDArray& out_grad,
                                               const dnnl::memory& in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLActSignature, DNNLActBackward, OpHash> bwds;
+  static thread_local phmap::flat_hash_map<DNNLActSignature, DNNLActBackward, OpHash> bwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLActSignature, DNNLActBackward, OpHash> bwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLActSignature, DNNLActBackward, OpHash> bwds;
 #endif
   DNNLActSignature key(param);
   key.AddSign(in_data);

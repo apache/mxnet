@@ -144,9 +144,9 @@ dnnl::lrn_forward::primitive_desc& DNNLLRNFwd::GetFwdPd() {
 
 static DNNLLRNFwd& GetLRNFwd(const LRNParam& param, const OpContext& ctx, const NDArray& in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLLRNSignature, DNNLLRNFwd, OpHash> lrn_fwds;
+  static thread_local phmap::flat_hash_map<DNNLLRNSignature, DNNLLRNFwd, OpHash> lrn_fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLLRNSignature, DNNLLRNFwd, OpHash> lrn_fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLLRNSignature, DNNLLRNFwd, OpHash> lrn_fwds;
 #endif
   auto kind_ = ctx.is_train ? dnnl::prop_kind::forward_training : dnnl::prop_kind::forward_scoring;
 
@@ -218,9 +218,9 @@ static DNNLLRNBwd& GetLRNBwd(const LRNParam& param,
                              const NDArray& in_grad,
                              const NDArray& out_grad) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLLRNSignature, DNNLLRNBwd, OpHash> lrn_bwds;
+  static thread_local phmap::flat_hash_map<DNNLLRNSignature, DNNLLRNBwd, OpHash> lrn_bwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLLRNSignature, DNNLLRNBwd, OpHash> lrn_bwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLLRNSignature, DNNLLRNBwd, OpHash> lrn_bwds;
 #endif
   DNNLLRNSignature key(param);
   key.AddSign(in_data);

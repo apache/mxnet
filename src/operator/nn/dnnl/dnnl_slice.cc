@@ -74,9 +74,9 @@ DNNLSliceFwd& GetSliceForward(const SliceParam& param,
                               const NDArray& in_data,
                               const NDArray& out_data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLSliceSignature, DNNLSliceFwd, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<DNNLSliceSignature, DNNLSliceFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLSliceSignature, DNNLSliceFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLSliceSignature, DNNLSliceFwd, OpHash> fwds;
 #endif
   DNNLSliceSignature key(param);
   key.AddSign(is_train);

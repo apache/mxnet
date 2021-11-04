@@ -126,9 +126,9 @@ static DNNLBNForward& GetBNForward(const BatchNormParam& param,
                                    const dnnl::memory* data_mem,
                                    dnnl::normalization_flags flags) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLBNSignature, DNNLBNForward, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<DNNLBNSignature, DNNLBNForward, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLBNSignature, DNNLBNForward, OpHash> fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLBNSignature, DNNLBNForward, OpHash> fwds;
 #endif
   DNNLBNSignature key(param);
   key.AddSign(ctx.is_train);
@@ -298,9 +298,9 @@ static DNNLBNBackward& GetBNBackward(const BatchNormParam& param,
                                      const dnnl::memory& diff_mem,
                                      dnnl::normalization_flags flags) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLBNSignature, DNNLBNBackward, OpHash> bwds;
+  static thread_local phmap::flat_hash_map<DNNLBNSignature, DNNLBNBackward, OpHash> bwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLBNSignature, DNNLBNBackward, OpHash> bwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLBNSignature, DNNLBNBackward, OpHash> bwds;
 #endif
   DNNLBNSignature key(param);
   key.AddSign(in_data);

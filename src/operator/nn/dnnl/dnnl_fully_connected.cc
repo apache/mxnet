@@ -126,11 +126,11 @@ DNNLFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
                                     const NDArray* bias,
                                     const dnnl::memory::desc& out_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLFullyconSignature, DNNLFullyConnectedForward, OpHash>
+  static thread_local phmap::flat_hash_map<DNNLFullyconSignature, DNNLFullyConnectedForward, OpHash>
       fcFwds;
 #else
   static MX_THREAD_LOCAL
-      std::unordered_map<DNNLFullyconSignature, DNNLFullyConnectedForward, OpHash>
+      phmap::flat_hash_map<DNNLFullyconSignature, DNNLFullyConnectedForward, OpHash>
           fcFwds;
 #endif
   DNNLFullyconSignature key(param);

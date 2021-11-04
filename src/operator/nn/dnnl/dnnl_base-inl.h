@@ -41,6 +41,7 @@
 #include "mxnet/ndarray.h"
 #include "mxnet/op_attr_types.h"
 #include "mxnet/resource.h"
+#include "../../../3rdparty/parallel-hashmap/parallel_hashmap/phmap.h"
 
 #define DNNL_REAL_TYPE_SWITCH(type, DType, ...)   \
   switch (type) {                                 \
@@ -154,6 +155,19 @@ static inline bool DNNLEnvSet() {
 static inline int GetDNNLCacheSize() {
   static int dnnl_cache_size = dmlc::GetEnv("MXNET_ONEDNN_CACHE_NUM", -1);
   return dnnl_cache_size;
+}
+
+// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
+template <typename S, typename I, typename H>
+static typename phmap::flat_hash_map<S, I, H>::iterator AddToCache(phmap::flat_hash_map<S, I, H>* cache,
+                                                                 const S& key,
+                                                                 const I& item) {
+  int dnnl_cache_size = GetDNNLCacheSize();
+  if (dnnl_cache_size != -1 && static_cast<int>(cache->size()) > dnnl_cache_size)
+    cache->erase(cache->begin());
+  auto ins_return = cache->insert(std::pair<S, I>(key, item));
+  CHECK(ins_return.second);
+  return ins_return.first;
 }
 
 // TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime

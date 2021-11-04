@@ -231,6 +231,7 @@
     include/nnvm (header symlinks to 3rdparty/tvm/nnvm/include/nnvm)
     3rdparty/ps-lite
     3rdparty/onednn
+    3rdparty/parallel-hashmap
     include/onednn (header symlinks to 3rdparty/onednn)
     3rdparty/googletest/googlemock/scripts/generator
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark

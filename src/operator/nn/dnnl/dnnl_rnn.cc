@@ -468,9 +468,9 @@ void DNNLRnnForward::SetNewDataMem(void* x,
 
 inline void DNNLMemoryReorder(const dnnl::memory& src, const dnnl::memory& dst) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
+  static thread_local phmap::flat_hash_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
 #endif
   OpSignature key{};
   key.AddSign(src);

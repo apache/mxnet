@@ -94,9 +94,9 @@ static DNNLLogSoftmaxFwd& GetLogSoftmaxFwd(const SoftmaxParam& param,
                                            const NDArray& data,
                                            const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLSoftmaxSignature, DNNLLogSoftmaxFwd, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLLogSoftmaxFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxSignature, DNNLLogSoftmaxFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLLogSoftmaxFwd, OpHash> fwds;
 #endif
 
   DNNLSoftmaxSignature key(param);
@@ -159,9 +159,9 @@ static DNNLLogSoftmaxBwd& GetLogSoftmaxBwd(const SoftmaxParam& param,
                                            const std::vector<NDArray>& data,
                                            const std::vector<NDArray>& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLSoftmaxSignature, DNNLLogSoftmaxBwd, OpHash> bwds;
+  static thread_local phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLLogSoftmaxBwd, OpHash> bwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxSignature, DNNLLogSoftmaxBwd, OpHash> bwds;
+  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLSoftmaxSignature, DNNLLogSoftmaxBwd, OpHash> bwds;
 #endif
 
   DNNLSoftmaxSignature key(param);
