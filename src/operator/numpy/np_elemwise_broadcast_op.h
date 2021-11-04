@@ -540,7 +540,7 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
     return;
 
   if (lhs.type_flag_ == rhs.type_flag_) {
-    BinaryBroadcastIntCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(attrs, ctx, inputs, req, outputs);
     return;
   }
   Stream<xpu>* s = ctx.get_stream<xpu>();
@@ -552,7 +552,7 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
       temp_tblob = TBlob(temp_tensor);
     });
     CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
-    BinaryBroadcastIntCompute<xpu, OP>(
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(
         attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
   } else if (rhs.type_flag_ == out.type_flag_) {
     MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
@@ -561,7 +561,7 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
       temp_tblob = TBlob(temp_tensor);
     });
     CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
-    BinaryBroadcastIntCompute<xpu, OP>(
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(
         attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
   } else {
     TBlob temp_tblob_l;
@@ -581,7 +581,7 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
     });
     CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob_l});
     CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob_r});
-    BinaryBroadcastIntCompute<xpu, OP>(attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
   }
   return;
 }
