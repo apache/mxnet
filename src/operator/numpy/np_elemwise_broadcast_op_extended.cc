@@ -131,10 +131,9 @@ NNVM_REGISTER_OP(_npi_lcm_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::lcm>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION_WITH_BOOL(_npi_bitwise_and)
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastIntComputeWithBool<cpu, mshadow_op::bitwise_and>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyBinaryBroadcastIntComputeWithBool<cpu, mshadow_op::bitwise_and>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(_npi_bitwise_and_scalar)
     .set_num_inputs(1)
@@ -152,16 +151,14 @@ NNVM_REGISTER_OP(_npi_bitwise_and_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_and>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION_WITH_BOOL(_npi_bitwise_xor)
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastIntComputeWithBool<cpu, mshadow_op::bitwise_xor>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyBinaryBroadcastIntComputeWithBool<cpu, mshadow_op::bitwise_xor>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION_WITH_BOOL(_npi_bitwise_or)
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastIntComputeWithBool<cpu, mshadow_op::bitwise_or>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyBinaryBroadcastIntComputeWithBool<cpu, mshadow_op::bitwise_or>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(_npi_bitwise_xor_scalar)
     .set_num_inputs(1)
@@ -204,7 +201,6 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rcopysign_scalar)
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_copysign_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::copysign_grad>);
 
-
 NNVM_REGISTER_OP(_npi_arctan2)
     .set_num_inputs(2)
     .set_num_outputs(1)
@@ -221,9 +217,9 @@ NNVM_REGISTER_OP(_npi_arctan2)
                                       return std::vector<std::pair<int, int> >{{0, 0}};
                                     })
     .set_attr<FResourceRequest>("FResourceRequest",
-      [](const NodeAttrs& attrs) {
-        return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-      })
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
     .add_argument("x1", "NDArray-or-Symbol", "The input array")
     .add_argument("x2", "NDArray-or-Symbol", "The input array");
 

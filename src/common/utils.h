@@ -901,35 +901,45 @@ inline bool is_float(const int dtype) {
 }
 
 inline bool is_int(const int dtype) {
-  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 ||
-         dtype == mshadow::kUint16 || dtype == mshadow::kInt16 ||
-         dtype == mshadow::kUint32 || dtype == mshadow::kInt32 ||
+  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 || dtype == mshadow::kUint16 ||
+         dtype == mshadow::kInt16 || dtype == mshadow::kUint32 || dtype == mshadow::kInt32 ||
          dtype == mshadow::kUint64 || dtype == mshadow::kInt64;
 }
 
 inline bool is_signed_int(const int dtype) {
-  return dtype == mshadow::kInt8 || dtype == mshadow::kInt16 ||
-         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
+  return dtype == mshadow::kInt8 || dtype == mshadow::kInt16 || dtype == mshadow::kInt32 ||
+         dtype == mshadow::kInt64;
 }
 
 inline bool is_unsigned_int(const int dtype) {
-  return dtype == mshadow::kUint8 || dtype == mshadow::kUint16 ||
-         dtype == mshadow::kUint32 || dtype == mshadow::kUint64;
+  return dtype == mshadow::kUint8 || dtype == mshadow::kUint16 || dtype == mshadow::kUint32 ||
+         dtype == mshadow::kUint64;
 }
 
 static int bits_of(const int type_flag) {
   switch (type_flag) {
-    case mshadow::kFloat32: return sizeof(float) * CHAR_BIT;
-    case mshadow::kFloat64: return sizeof(double) * CHAR_BIT;
-    case mshadow::kUint8: return sizeof(uint8_t) * CHAR_BIT;
-    case mshadow::kInt32: return sizeof(int32_t) * CHAR_BIT;
-    case mshadow::kInt8: return sizeof(int8_t) * CHAR_BIT;
-    case mshadow::kInt64: return sizeof(int64_t) * CHAR_BIT;
-    case mshadow::kBool: return sizeof(bool) * CHAR_BIT;
-    case mshadow::kInt16: return sizeof(int16_t) * CHAR_BIT;
-    case mshadow::kUint16: return sizeof(uint16_t) * CHAR_BIT;
-    case mshadow::kUint32: return sizeof(uint32_t) * CHAR_BIT;
-    case mshadow::kUint64: return sizeof(uint64_t) * CHAR_BIT;
+    case mshadow::kFloat32:
+      return sizeof(float) * CHAR_BIT;
+    case mshadow::kFloat64:
+      return sizeof(double) * CHAR_BIT;
+    case mshadow::kUint8:
+      return sizeof(uint8_t) * CHAR_BIT;
+    case mshadow::kInt32:
+      return sizeof(int32_t) * CHAR_BIT;
+    case mshadow::kInt8:
+      return sizeof(int8_t) * CHAR_BIT;
+    case mshadow::kInt64:
+      return sizeof(int64_t) * CHAR_BIT;
+    case mshadow::kBool:
+      return sizeof(bool) * CHAR_BIT;
+    case mshadow::kInt16:
+      return sizeof(int16_t) * CHAR_BIT;
+    case mshadow::kUint16:
+      return sizeof(uint16_t) * CHAR_BIT;
+    case mshadow::kUint32:
+      return sizeof(uint32_t) * CHAR_BIT;
+    case mshadow::kUint64:
+      return sizeof(uint64_t) * CHAR_BIT;
     default: {
       LOG(FATAL) << "Unknown type_flag=" << type_flag;
       return -1;
@@ -938,7 +948,8 @@ static int bits_of(const int type_flag) {
 }
 
 inline int type_promotion(const int type1, const int type2) {
-  if (type1 == type2) return type1;
+  if (type1 == type2)
+    return type1;
   if (is_float(type1) && is_float(type2)) {
     if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
       return mshadow::kFloat64;

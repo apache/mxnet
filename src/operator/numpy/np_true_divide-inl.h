@@ -121,7 +121,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
       if (lhs.type_flag_ == out.type_flag_) {
         MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
           Tensor<xpu, 1, LType> temp_tensor =
-            ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+              ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
           temp_tblob = TBlob(temp_tensor);
         });
         CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
@@ -134,7 +134,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
       } else {
         MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
           Tensor<xpu, 1, RType> temp_tensor =
-            ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+              ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
           temp_tblob = TBlob(temp_tensor);
         });
         CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
@@ -244,40 +244,40 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
           if (lhs.type_flag_ == out.type_flag_) {
             MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
               Tensor<xpu, 1, LType> temp_tensor =
-                ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+                  ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
               temp_tblob = TBlob(temp_tensor);
             });
             CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
             MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
-                  s,
-                  new_oshape.Size(),
-                  req[0],
-                  lstride,
-                  rstride,
-                  oshape,
-                  lhs.dptr<DType>(),
-                  temp_tblob.dptr<DType>(),
-                  out.dptr<DType>());
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                     xpu>::template LaunchEx(s,
+                                             new_oshape.Size(),
+                                             req[0],
+                                             lstride,
+                                             rstride,
+                                             oshape,
+                                             lhs.dptr<DType>(),
+                                             temp_tblob.dptr<DType>(),
+                                             out.dptr<DType>());
             });
           } else {
             MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
               Tensor<xpu, 1, RType> temp_tensor =
-                ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+                  ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
               temp_tblob = TBlob(temp_tensor);
             });
             CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
             MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
-                  s,
-                  new_oshape.Size(),
-                  req[0],
-                  lstride,
-                  rstride,
-                  oshape,
-                  temp_tblob.dptr<DType>(),
-                  rhs.dptr<DType>(),
-                  out.dptr<DType>());
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                     xpu>::template LaunchEx(s,
+                                             new_oshape.Size(),
+                                             req[0],
+                                             lstride,
+                                             rstride,
+                                             oshape,
+                                             temp_tblob.dptr<DType>(),
+                                             rhs.dptr<DType>(),
+                                             out.dptr<DType>());
             });
           }
         } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {

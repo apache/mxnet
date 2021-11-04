@@ -45,7 +45,8 @@ namespace op {
       .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION(_npi_bitwise_left_shift)
-    .set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_left_shift>)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyBinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_left_shift>)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_left_shift"});
 
 NNVM_REGISTER_OP(_npi_bitwise_left_shift_scalar)
@@ -112,7 +113,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rbitwise_left_shift_scalar)
                         BinaryScalarOp::Backward<cpu, mshadow_op::rbitwise_left_shift_grad>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION(_npi_bitwise_right_shift)
-    .set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_right_shift>)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyBinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_right_shift>)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_right_shift"});
 
 NNVM_REGISTER_OP(_npi_bitwise_right_shift_scalar)
