@@ -563,8 +563,8 @@ Descriptor SelectPlan(const OpContext& ctx,
   if (tune == conv::kOff || plans.size() == 1 || (param.add_to && !out_space.dptr)) {
     if (verbose > 0)
       LOG(INFO) << " " << PlanStr(plans[0]);
-    Storage::Get()->Free(out_space);
-    Storage::Get()->Free(workspace);
+    Storage::Get()->DirectFree(out_space);
+    Storage::Get()->DirectFree(workspace);
     return std::move(plans[0]);
   }
 
@@ -578,8 +578,8 @@ Descriptor SelectPlan(const OpContext& ctx,
                                 CUDNN_ATTR_VARIANT_PACK_WORKSPACE,
                                 workspace.dptr);
   auto top      = FindTopPlans(std::move(plans), n, s->dnn_handle_, var_pack, MakeAvgSampler(3));
-  Storage::Get()->Free(out_space);
-  Storage::Get()->Free(workspace);
+  Storage::Get()->DirectFree(out_space);
+  Storage::Get()->DirectFree(workspace);
   auto str_time = [](float t) {
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(6) << t;
