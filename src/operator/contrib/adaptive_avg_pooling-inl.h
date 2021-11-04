@@ -43,23 +43,10 @@
 #include "../operator_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
-#if MXNET_USE_MKLDNN == 1
-#include "../nn/mkldnn/mkldnn_adaptive_pooling-inl.h"
-#endif
+#include "../nn/pooling-inl.h"
 
 namespace mxnet {
 namespace op {
-
-struct AdaptiveAvgPoolParam : public dmlc::Parameter<AdaptiveAvgPoolParam> {
-  mxnet::Tuple<int> output_size;
-  DMLC_DECLARE_PARAMETER(AdaptiveAvgPoolParam) {
-    DMLC_DECLARE_FIELD(output_size).set_default(mxnet::Tuple<int>())
-    .describe("int (output size) or a tuple of int for output (height, width).");
-  }
-  bool operator==(const AdaptiveAvgPoolParam &other) const {
-    return this->output_size == other.output_size;
-  }
-};
 
 static inline bool IsWriting(const OpReqType ort) {
   return ort == kWriteTo || ort == kWriteInplace;
@@ -128,18 +115,25 @@ static bool AdaptiveAvgPoolOpInferShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
   CHECK_EQ(out_shape->size(), 1U) << "Output:[data]";
-  const AdaptiveAvgPoolParam& param = nnvm::get<AdaptiveAvgPoolParam>(attrs.parsed);
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+
   mxnet::TShape dshape(in_shape->at(0));
-  if (mxnet::op::shape_is_none(dshape)) return false;
-  if (param.output_size.ndim() == 0) {
-    dshape[2] = 1;
-    dshape[3] = 1;
-  } else if (param.output_size.ndim() == 1) {
-    dshape[2] = param.output_size[0];
-    dshape[3] = param.output_size[0];
-  } else if (param.output_size.ndim() == 2) {
-    dshape[2] = param.output_size[0];
-    dshape[3] = param.output_size[1];
+
+  if (mxnet::op::shape_is_none(dshape)) {
+    return false;
+  }
+
+  if (param.output_size.has_value()) {
+    if (param.output_size.value().ndim() == 1) {
+      dshape[2] = param.output_size.value()[0];
+      dshape[3] = param.output_size.value()[0];
+    } else if (param.output_size.value().ndim() == 2) {
+      dshape[2] = param.output_size.value()[0];
+      dshape[3] = param.output_size.value()[1];
+    } else {
+      dshape[2] = 1;
+      dshape[3] = 1;
+    }
   } else {
     dshape[2] = 1;
     dshape[3] = 1;
@@ -161,14 +155,4 @@ MSHADOW_XINLINE int get_stride(Tensor<xpu, Dim, DType> tensor, int idx) {
 
 }  // namespace op
 }  // namespace mxnet
-namespace std {
-template <>
-struct hash<mxnet::op::AdaptiveAvgPoolParam> {
-  size_t operator()(const mxnet::op::AdaptiveAvgPoolParam &val) {
-    size_t ret = 0;
-    ret = dmlc::HashCombine(ret, val.output_size);
-    return ret;
-  }
-};
-}  // namespace std
 #endif  // MXNET_OPERATOR_CONTRIB_ADAPTIVE_AVG_POOLING_INL_H_
