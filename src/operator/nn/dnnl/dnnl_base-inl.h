@@ -157,11 +157,9 @@ static inline int GetDNNLCacheSize() {
   return dnnl_cache_size;
 }
 
-// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
 template <typename S, typename I, typename H>
-static typename phmap::flat_hash_map<S, I, H>::iterator AddToCache(phmap::flat_hash_map<S, I, H>* cache,
-                                                                 const S& key,
-                                                                 const I& item) {
+static typename phmap::flat_hash_map<S, I, H>::iterator
+AddToCache(phmap::flat_hash_map<S, I, H>* cache, const S& key, const I& item) {
   int dnnl_cache_size = GetDNNLCacheSize();
   if (dnnl_cache_size != -1 && static_cast<int>(cache->size()) > dnnl_cache_size)
     cache->erase(cache->begin());
@@ -169,7 +167,6 @@ static typename phmap::flat_hash_map<S, I, H>::iterator AddToCache(phmap::flat_h
   CHECK(ins_return.second);
   return ins_return.first;
 }
-
 // TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
 template <typename S, typename I, typename H>
 static typename std::unordered_map<S, I, H>::iterator AddToCache(std::unordered_map<S, I, H>* cache,
