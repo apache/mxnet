@@ -133,7 +133,7 @@ def get_dataset(prefetch=False):
 train_data, val_data = get_dataset()
 
 mx.np.random.seed(opt.seed)
-ctx = [mx.gpu(0)] if opt.use_gpu else [mx.cpu()]
+device = [mx.gpu(0)] if opt.use_gpu else [mx.cpu()]
 
 
 class SuperResolutionNet(gluon.HybridBlock):
@@ -156,14 +156,14 @@ class SuperResolutionNet(gluon.HybridBlock):
 net = SuperResolutionNet(upscale_factor)
 metric = mx.gluon.metric.MSE()
 
-def test(ctx):
+def test(device):
     val_data.reset()
     avg_psnr = 0
     batches = 0
     for batch in val_data:
         batches += 1
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch.data[0], device_list=device, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0], device_list=device, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -174,20 +174,20 @@ def test(ctx):
     print('validation avg psnr: %f' % avg_psnr)
 
 
-def train(epoch, ctx):
-    if isinstance(ctx, mx.Context):
-        ctx = [ctx]
-    net.initialize(mx.init.Orthogonal(), ctx=ctx)
+def train(epoch, device):
+    if isinstance(device, mx.Device):
+        device = [device]
+    net.initialize(mx.init.Orthogonal(), device=device)
     # re-initialize conv4's weight to be Orthogonal
-    net.conv4.initialize(mx.init.Orthogonal(scale=1), force_reinit=True, ctx=ctx)
+    net.conv4.initialize(mx.init.Orthogonal(scale=1), force_reinit=True, device=device)
     trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
     loss = gluon.loss.L2Loss()
 
     for i in range(epoch):
         train_data.reset()
         for batch in train_data:
-            data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = gluon.utils.split_and_load(batch.data[0], device_list=device, batch_axis=0)
+            label = gluon.utils.split_and_load(batch.label[0], device_list=device, batch_axis=0)
             outputs = []
             with ag.record():
                 for x, y in zip(data, label):
@@ -201,20 +201,20 @@ def train(epoch, ctx):
         name, acc = metric.get()
         metric.reset()
         print('training mse at epoch %d: %s=%f'%(i, name, acc))
-        test(ctx)
+        test(device)
 
     net.save_parameters(path.join(this_dir, 'superres.params'))
 
-def resolve(ctx):
+def resolve(device):
     from PIL import Image
 
-    if isinstance(ctx, list):
-        ctx = [ctx[0]]
+    if isinstance(device, list):
+        device = [device[0]]
 
     img_basename = path.splitext(path.basename(opt.resolve_img))[0]
     img_dirname = path.dirname(opt.resolve_img)
 
-    net.load_parameters(path.join(this_dir, 'superres.params'), ctx=ctx)
+    net.load_parameters(path.join(this_dir, 'superres.params'), device=device)
     img = Image.open(opt.resolve_img).convert('YCbCr')
     y, cb, cr = img.split()
     data = mx.np.expand_dims(mx.np.expand_dims(mx.np.array(y), axis=0), axis=0)
@@ -229,6 +229,6 @@ def resolve(ctx):
     out_img.save(path.join(img_dirname, '{}-resolved.png'.format(img_basename)))
 
 if opt.resolve_img:
-    resolve(ctx)
+    resolve(device)
 else:
-    train(opt.epochs, ctx)
+    train(opt.epochs, device)

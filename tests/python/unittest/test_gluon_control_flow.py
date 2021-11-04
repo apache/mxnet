@@ -156,14 +156,14 @@ def test_cut_subgraph_foreach():
     data = mx.np.random.normal(loc=0, scale=1, size=(5, 10))
     states = mx.np.random.normal(loc=0, scale=1, size=(10))
     layer = TestLayer()
-    layer.initialize(ctx=default_context())
+    layer.initialize(device=default_device())
     res1 = layer(data, [states])
 
     with mx.autograd.record():
         res1 = layer(data, [states])
 
     layer = TestLayer()
-    layer.initialize(ctx=default_context())
+    layer.initialize(device=default_device())
     layer.hybridize()
     res2 = layer(data, [states])
 
@@ -243,14 +243,14 @@ def test_uniq_name():
     states = mx.np.random.normal(loc=0, scale=1, size=(5))
     for TestLayer in TestLayers:
         layer = TestLayer()
-        layer.initialize(ctx=default_context())
+        layer.initialize(device=default_device())
         res1 = layer(data, [states])
 
         with mx.autograd.record():
             res1 = layer(data, [states])
 
         layer = TestLayer()
-        layer.initialize(ctx=default_context())
+        layer.initialize(device=default_device())
         layer.hybridize()
         res2 = layer(data, [states])
 
@@ -280,12 +280,12 @@ def test_cut_subgraph_while_loop():
             return data2[0]
     data = mx.np.random.normal(loc=0, scale=1, size=(1, ))
     layer = TestLayer()
-    layer.initialize(ctx=default_context())
+    layer.initialize(device=default_device())
     res1 = layer(data)
     with mx.autograd.record():
         res1 = layer(data)
     layer = TestLayer()
-    layer.initialize(ctx=default_context())
+    layer.initialize(device=default_device())
     layer.hybridize()
     res2 = layer(data)
     with mx.autograd.record():
@@ -314,12 +314,12 @@ def test_cut_subgraph_cond():
             return data2
     data = mx.np.random.normal(loc=0, scale=1, size=(1, ))
     layer = TestLayer()
-    layer.initialize(ctx=default_context())
+    layer.initialize(device=default_device())
     res1 = layer(data)
     with mx.autograd.record():
         res1 = layer(data)
     layer = TestLayer()
-    layer.initialize(ctx=default_context())
+    layer.initialize(device=default_device())
     layer.hybridize()
     res2 = layer(data)
     with mx.autograd.record():
@@ -357,9 +357,9 @@ def test_output_format_foreach():
     state = mx.np.random.normal(loc=0, scale=1, size=(2))
     for step in steps:
         layer1 = TestLayer1(step)
-        layer1.initialize(ctx=default_context())
+        layer1.initialize(device=default_device())
         layer2 = TestLayer1(step)
-        layer2.initialize(ctx=default_context())
+        layer2.initialize(device=default_device())
         layer2.hybridize()
         out1, state1 = layer1(data, [state])
         out2, state2 = layer2(data, [state])
@@ -378,9 +378,9 @@ def test_output_format_foreach():
             assert_almost_equal(state1[i].asnumpy(), state2[i].asnumpy(), rtol=0.001, atol=0.0001)
 
         layer1 = TestLayer1(step)
-        layer1.initialize(ctx=default_context())
+        layer1.initialize(device=default_device())
         layer2 = TestLayer1(step)
-        layer2.initialize(ctx=default_context())
+        layer2.initialize(device=default_device())
         layer2.hybridize()
         out1, state1 = layer1(data, state)
         out2, state2 = layer2(data, state)
@@ -401,9 +401,9 @@ def test_output_format_foreach():
         if step == step3:
             continue
         layer1 = TestLayer1(step)
-        layer1.initialize(ctx=default_context())
+        layer1.initialize(device=default_device())
         layer2 = TestLayer1(step)
-        layer2.initialize(ctx=default_context())
+        layer2.initialize(device=default_device())
         layer2.hybridize()
         out1, state1 = layer1(data, [state, [state + 1]])
         out2, state2 = layer2(data, [state, [state + 1]])
@@ -465,9 +465,9 @@ def test_output_format_while():
     state = mx.np.random.normal(loc=0, scale=1, size=(2))
     for step in steps:
         layer1 = TestLayer1(step, False)
-        layer1.initialize(ctx=default_context())
+        layer1.initialize(device=default_device())
         layer2 = TestLayer1(step, False)
-        layer2.initialize(ctx=default_context())
+        layer2.initialize(device=default_device())
         layer2.hybridize()
         out1, state1 = layer1(state)
         out2, state2 = layer2(state)
@@ -483,9 +483,9 @@ def test_output_format_while():
             assert_almost_equal(state1[i].asnumpy(), state2[i].asnumpy(), rtol=0.001, atol=0.0001)
 
         layer1 = TestLayer1(step, True)
-        layer1.initialize(ctx=default_context())
+        layer1.initialize(device=default_device())
         layer2 = TestLayer1(step, True)
-        layer2.initialize(ctx=default_context())
+        layer2.initialize(device=default_device())
         layer2.hybridize()
         out1, state1 = layer1(state)
         out2, state2 = layer2(state)
@@ -519,9 +519,9 @@ def test_output_format_while():
     steps = [step4, step5, step6]
     for step in steps:
         layer1 = TestLayer1(step, False, True)
-        layer1.initialize(ctx=default_context())
+        layer1.initialize(device=default_device())
         layer2 = TestLayer1(step, False, True)
-        layer2.initialize(ctx=default_context())
+        layer2.initialize(device=default_device())
         layer2.hybridize()
         out1, state1 = layer1(state)
         out2, state2 = layer2(state)
@@ -564,9 +564,9 @@ def test_output_format_cond():
     data = mx.np.random.normal(loc=0, scale=1, size=(2))
     for func in funcs:
         layer1 = TestLayer1(func)
-        layer1.initialize(ctx=default_context())
+        layer1.initialize(device=default_device())
         layer2 = TestLayer1(func)
-        layer2.initialize(ctx=default_context())
+        layer2.initialize(device=default_device())
         layer2.hybridize()
         out1 = layer1(data)
         out2 = layer2(data)
@@ -613,11 +613,11 @@ def test_scope():
     data = mx.np.random.normal(loc=0, scale=1, size=(1, ))
     with AttrScope(__subgraph_name__="my_cond"):
         block1 = TestBlock1()
-        block1.initialize(ctx=default_context())
+        block1.initialize(device=default_device())
         block1.hybridize()
         _ = block1(data)
         block2 = TestBlock2()
-        block2.initialize(ctx=default_context())
+        block2.initialize(device=default_device())
         block2.hybridize()
         _ = block2(data)
         assert len(AttrScope._subgraph_names) == 3
@@ -647,7 +647,7 @@ def check_rnn(cell_type, num_states):
     states = [mx.np.random.normal(loc=0, scale=1, size=state_shape) for i in range(num_states)]
     layer = RNNLayer(cell_type, hidden_size)
     layer.infer_shape(rnn_data)
-    layer.initialize(ctx=default_context())
+    layer.initialize(device=default_device())
     res1 = layer(rnn_data, states)
     params1 = layer.collect_params()
     orig_params1 = copy.deepcopy(params1)
@@ -666,7 +666,7 @@ def check_rnn(cell_type, num_states):
     for config in configs:
         layer = RNNLayer(cell_type, hidden_size)
         layer.infer_shape(rnn_data)
-        layer.initialize(ctx=default_context())
+        layer.initialize(device=default_device())
         layer.hybridize(**config)
         res2 = layer(rnn_data, states)
         params2 = layer.collect_params()

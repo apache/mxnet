@@ -22,7 +22,7 @@ import pytest
 
 shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
 keys = [1,2,3,4,5,6,7]
-num_gpus = mx.context.num_gpus()
+num_gpus = mx.device.num_gpus()
 
 
 if num_gpus > 8 :

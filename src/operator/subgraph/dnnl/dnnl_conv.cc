@@ -731,6 +731,7 @@ bool SgDNNLAvoidConvQuantizeInput(const NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_sg_onednn_conv)
+    .add_alias("_sg_mkldnn_conv")
     .describe(R"code(_sg_onednn_conv)code" ADD_FILELINE)
     .set_num_inputs(SgDNNLConvNumInputs)
     .set_num_outputs([](const NodeAttrs& attrs) {

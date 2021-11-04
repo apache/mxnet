@@ -1218,8 +1218,8 @@ def test_np_linspace_gluon(config, dtype, endpoint, hybridize):
             if self._retstep:
                 raise ValueError("linspace didn't support retstep = True inside HybridBlock")
             else:
-                return x + np.linspace(self._start, self._stop, self._num, \
-                self._endpoint, self._retstep, self._dtype)
+                return x + np.linspace(self._start, self._stop, num=self._num, \
+                endpoint=self._endpoint, retstep=self._retstep, dtype=self._dtype)
 
     x = np.zeros(shape=(), dtype=dtype)
     if isinstance(config, tuple):
@@ -1664,9 +1664,9 @@ def test_npx_index_update():
 
 @use_np
 def test_npx_batch_dot():
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     dtypes = ['float32', 'float64']
-    if ctx.device_type == 'gpu':
+    if device.device_type == 'gpu':
         dtypes += ['float16']
     eps_dict = {'float32': 1E-4, 'float64': 1E-4, 'float16': 1E-3}
     class TestBatchDot(HybridBlock):
@@ -2175,41 +2175,44 @@ def test_np_reshape():
 
 
 @use_np
-def test_np_argsort():
+@pytest.mark.parametrize('descending', [True, False])
+@pytest.mark.parametrize('shape', [
+    (),
+    (2, 3),
+    (1, 0, 2),
+])
+@pytest.mark.parametrize('hybrid', [False, True])
+def test_np_argsort(descending, shape, hybrid):
     class TestArgsort(HybridBlock):
-        def __init__(self, axis):
+        def __init__(self, axis, descending):
             super(TestArgsort, self).__init__()
             self._axis = axis
+            self._descending = descending
 
         def forward(self, x):
-            return np.argsort(x, axis=self._axis)
+            return np.argsort(x, axis=self._axis, descending=self._descending)
 
-    shapes = [
-        (),
-        (2, 3),
-        (1, 0, 2),
-    ]
-
-    for shape in shapes:
-        data = np.random.uniform(size=shape)
-        np_data = data.asnumpy()
-
-        for axis in [None] + [i for i in range(-len(shape), len(shape))]:
+    data = np.random.uniform(size=shape)
+    np_data = data.asnumpy()
+    for axis in [None] + [i for i in range(-len(shape), len(shape))]:
+        if descending:
+            np_out = onp.argsort(-1 * np_data, axis)
+        else:
             np_out = onp.argsort(np_data, axis)
 
-            test_argsort = TestArgsort(axis)
-            for hybrid in [False, True]:
-                if hybrid:
-                    test_argsort.hybridize()
-                mx_out = test_argsort(data)
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+        test_argsort = TestArgsort(axis, descending)
 
-            mx_out = np.argsort(data, axis)
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+        if hybrid:
+            test_argsort.hybridize()
+        mx_out = test_argsort(data)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+        mx_out = np.argsort(data, axis, descending)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
 @use_np
-@pytest.mark.parametrize('kind', ['quicksort', 'mergesort', 'heapsort'])
+@pytest.mark.parametrize('descending', [True, False])
 @pytest.mark.parametrize('shape', [
     (),
     (1,),
@@ -2231,32 +2234,35 @@ def test_np_argsort():
 ])
 @pytest.mark.parametrize('dtype', [np.int8, np.uint8, np.int32, np.int64, np.float32, np.float64])
 @pytest.mark.parametrize('hybridize', [True, False])
-def test_np_sort(kind, shape, dtype, hybridize):
+def test_np_sort(shape, dtype, hybridize, descending):
     class TestSort(HybridBlock):
-        def __init__(self, axis, kind):
+        def __init__(self, axis, descending):
             super(TestSort, self).__init__()
             self._axis = axis
-            self._kind = kind
+            self._descending = descending
 
-        def forward(self, x, *args, **kwargs):
-            return np.sort(x, self._axis, self._kind)
+        def forward(self, x):
+            return np.sort(x, self._axis, descending=self._descending)
 
     a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
     axis_list = list(range(len(shape)))
     axis_list.append(None)
     axis_list.append(-1)
     for axis in axis_list:
-        test = TestSort(axis, kind)
+        test = TestSort(axis, descending)
         if hybridize:
             test.hybridize()
         if axis == -1 and len(shape)==0:
             continue
         ret = test(a)
-        expected_ret = onp.sort(a.asnumpy(), axis, kind)
+        if descending:
+            expected_ret = -onp.sort(-1 * a.asnumpy(), axis)
+        else:
+            expected_ret = onp.sort(a.asnumpy(), axis)
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
         # check imperative again
-        ret = np.sort(a, axis, kind)
+        ret = np.sort(a, axis=axis, descending=descending)
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
 
@@ -2578,6 +2584,67 @@ def test_np_transpose_error():
     dat = np.random.normal(0, 1, (3, 4, 5), dtype=np.float32)
     pytest.raises(ValueError, lambda: dat.transpose((0, 0, 1)))
     pytest.raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
+
+
+@use_np
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('dtype', [onp.float32, onp.float16, onp.int32])
+@pytest.mark.parametrize('data_shape,axes_workload', [
+    [(), [(), None]],
+    [(2,), [(0,), None]],
+    [(0, 2), [(0, 1), (1, 0)]],
+    [(5, 10), [(0, 1), (1, 0), None]],
+    [(8, 2, 3), [(2, 0, 1), (0, 2, 1), (0, 1, 2), (2, 1, 0), (-1, 1, 0), None]],
+    [(8, 2, 16), [(0, 2, 1), (2, 0, 1), (0, 1, 2), (2, 1, 0), (-1, -2, -3)]],
+    [(8, 3, 4, 8), [(0, 2, 3, 1), (1, 2, 3, 0), (0, 3, 2, 1)]],
+    [(8, 3, 2, 3, 8), [(0, 1, 3, 2, 4), (0, 1, 2, 3, 4), (4, 0, 1, 2, 3)]],
+    [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5), None]],
+    [(3, 4, 3, 4, 3, 2, 2), [(0, 1, 3, 2, 4, 5, 6),
+     (2, 3, 4, 1, 0, 5, 6), None]],
+    [(3, 4, 3, 4, 3, 2, 3, 2), [(0, 1, 3, 2, 4, 5, 7, 6),
+     (2, 3, 4, 1, 0, 5, 7, 6), None]],
+])
+@pytest.mark.parametrize('grad_req', ['write', 'add'])
+def test_np_permute_dims(data_shape, axes_workload, hybridize, dtype, grad_req):
+    def np_permute_dims_grad(out_shape, dtype, axes=None):
+        ograd = onp.ones(out_shape, dtype=dtype)
+        if axes is None or axes == ():
+            return onp.transpose(ograd, axes)
+        np_axes = onp.array(list(axes))
+        permute_dims_axes = onp.zeros_like(np_axes)
+        permute_dims_axes[np_axes] = onp.arange(len(np_axes))
+        return onp.transpose(ograd, tuple(list(permute_dims_axes)))
+
+    class TestPermuteDims(HybridBlock):
+        def __init__(self, axes=None):
+            super(TestPermuteDims, self).__init__()
+            self.axes = axes
+
+        def forward(self, a):
+            return np.permute_dims(a, self.axes)
+
+    for axes in axes_workload:
+        test_trans = TestPermuteDims(axes)
+        if hybridize:
+            test_trans.hybridize()
+        x = np.random.normal(0, 1, data_shape).astype(dtype)
+        x = x.astype(dtype)
+        x.attach_grad(grad_req=grad_req)
+        if grad_req == 'add':
+            x.grad[()] = np.random.normal(0, 1, x.grad.shape).astype(x.grad.dtype)
+            x_grad_np = x.grad.asnumpy()
+        np_out = onp.transpose(x.asnumpy(), axes)
+        with mx.autograd.record():
+            mx_out = test_trans(x)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        mx_out.backward()
+        np_backward = np_permute_dims_grad(np_out.shape, dtype, axes)
+        if grad_req == 'add':
+            assert_almost_equal(x.grad.asnumpy(), np_backward + x_grad_np,
+                                rtol=1e-3, atol=1e-5, use_broadcast=False)
+        else:
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @use_np
@@ -2987,6 +3054,58 @@ def test_np_bitwise_not(func, low, high, ndim):
         assertRaises(TypeError, getattr(np, func), mx_test_data,  casting='mxnet')
         assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  order='C')
         assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  order='mxnet')
+
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        check_unary_func(func, shape, low, high)
+
+
+@use_np
+@pytest.mark.parametrize('ndim', [2, 3, 4])
+@pytest.mark.parametrize('func,low,high', [
+    ('left_shift', -5, 5),
+    ('right_shift', -5, 5),
+])
+def test_np_bitwise_shift(func, low, high, ndim):
+    def check_unary_func(func, shape, low, high):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def forward(self, a, b, *args, **kwargs):
+                return getattr(np, self._func)(a, b)
+
+        np_func = getattr(onp, func)
+        mx_func = TestUnary("bitwise_" + func)
+        np_test_data1 = onp.random.randint(low, high, shape).astype(onp.int64)
+        np_test_data2 = onp.random.randint(low + 5, high + 5, shape).astype(onp.int64)
+        mx_test_data1 = mx.numpy.array(np_test_data1).astype(onp.int64)
+        mx_test_data2 = mx.numpy.array(np_test_data2).astype(onp.int64)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            np_out = np_func(np_test_data1, np_test_data2)
+            with mx.autograd.record():
+                y = mx_func(mx_test_data1, mx_test_data2)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            if np_out.dtype == np.bool_:
+                assert y.dtype == np.bool_
+
+        np_out = getattr(onp, func)(np_test_data1, np_test_data2)
+        mx_out = getattr(mx.np, "bitwise_" + func)(mx_test_data1, mx_test_data2)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, where=False)
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, subok=False)
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, dtype=onp.int8)
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, dtype="abcdefg")
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, casting='safe')
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, casting='mxnet')
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, order='C')
+        assertRaises(TypeError, getattr(np, "bitwise_" + func), mx_test_data1, mx_test_data2, order='mxnet')
 
     shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
     for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
@@ -3978,7 +4097,7 @@ def test_np_concat():
 
     shapes = [(0, 0), (2, 3), (2, 1, 3)]
     hybridizes = [True, False]
-    axes = [0, 1, None]
+    axes = [0, 1, -1, None]
     grad_reqs = ['write', 'add', 'null']
     dtypes = [np.float32, np.float64, np.bool]
     combinations = itertools.product(shapes, hybridizes, axes, grad_reqs, dtypes)
@@ -4289,7 +4408,7 @@ def test_np_ravel():
 
 @use_np
 def test_np_randint():
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     # test shapes
     params = [
         (0, 10),
@@ -4321,13 +4440,13 @@ def test_np_randint():
             # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
             buckets = onp.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
-            generator_mx = lambda x: np.random.randint(low, high, size=x, dtype=dtype, ctx=ctx).asnumpy()
+            generator_mx = lambda x: np.random.randint(low, high, size=x, dtype=dtype, device=device).asnumpy()
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nrepeat=100)
             # Scipy uses alpha = 0.01 for testing discrete distribution generator but we are using default alpha=0.05 (higher threshold ensures robustness)
             # Refer - https://github.com/scipy/scipy/blob/9f12af697763fb5f9767d5cb1280ce62456a3974/scipy/stats/tests/test_discrete_basic.py#L45
             generator_mx_same_seed = \
                 lambda x: onp.concatenate(
-                    [np.random.randint(low, high, size=x // 10, dtype=dtype, ctx=ctx).asnumpy()
+                    [np.random.randint(low, high, size=x // 10, dtype=dtype, device=device).asnumpy()
                         for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
@@ -4441,73 +4560,67 @@ def test_np_delete():
 
 
 @use_np
-def test_np_argmin_argmax():
-    workloads = [
-        ((), 0, False),
-        ((), -1, False),
-        ((), 1, True),
-        ((5, 3), None, False),
-        ((5, 3), -1, False),
-        ((5, 3), 1, False),
-        ((5, 3), 3, True),
-        ((5, 0, 3), 0, False),
-        ((5, 0, 3), -1, False),
-        ((5, 0, 3), None, True),
-        ((5, 0, 3), 1, True),
-        ((3, 5, 7), None, False),
-        ((3, 5, 7), 0, False),
-        ((3, 5, 7), 1, False),
-        ((3, 5, 7), 2, False),
-        ((3, 5, 7, 9, 11), -3, False),
-    ]
-    dtypes = ['float16', 'float32', 'float64', 'bool', 'int32']
-    ops = ['argmin', 'argmax']
-
+@pytest.mark.parametrize('shape,axis,throw_exception', [
+    ((), 0, False),
+    ((), -1, False),
+    ((), 1, True),
+    ((5, 3), None, False),
+    ((5, 3), -1, False),
+    ((5, 3), 1, False),
+    ((5, 3), 3, True),
+    ((5, 0, 3), 0, False),
+    ((5, 0, 3), -1, False),
+    ((5, 0, 3), None, True),
+    ((5, 0, 3), 1, True),
+    ((3, 5, 7), None, False),
+    ((3, 5, 7), 0, False),
+    ((3, 5, 7), 1, False),
+    ((3, 5, 7), 2, False),
+    ((3, 5, 7, 9, 11), -3, False),
+])
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'bool', 'int32'])
+@pytest.mark.parametrize('op_name', ['argmin', 'argmax'])
+@pytest.mark.parametrize('keepdims', [True, False])
+@pytest.mark.parametrize('hybridize', [True, False])
+def test_np_argmin_argmax(shape, axis, throw_exception, dtype, op_name, keepdims, hybridize):
     class TestArgExtreme(HybridBlock):
-        def __init__(self, op_name, axis=None):
+        def __init__(self, op_name, axis=None, keepdims=False):
             super(TestArgExtreme, self).__init__()
             self._op_name = op_name
             self._axis = axis
+            self.keepdims = keepdims
 
         def forward(self, x):
-            return getattr(x, self._op_name)(self._axis)
+            return getattr(x, self._op_name)(self._axis, keepdims=self.keepdims)
 
-    for op_name in ops:
-        for shape, axis, throw_exception in workloads:
-            for dtype in dtypes:
-                a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
-                if throw_exception:
-                    # Cannot use assert_exception because sometimes the main thread
-                    # proceeds to `assert False` before the exception is thrown
-                    # in the worker thread. Have to use mx.nd.waitall() here
-                    # to block the main thread.
-                    try:
-                        getattr(np, op_name)(a, axis)
-                        mx.nd.waitall()
-                        assert False
-                    except mx.MXNetError:
-                        pass
-                else:
-                    mx_ret = getattr(np, op_name)(a, axis=axis)
-                    np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
-                    assert mx_ret.dtype == np_ret.dtype
-                    assert same(mx_ret.asnumpy(), np_ret)
+    a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
+    if throw_exception:
+        with pytest.raises(MXNetError):
+            getattr(np, op_name)(a, axis)
+            mx.npx.waitall()
+    else:
+        mx_ret = getattr(np, op_name)(a, axis=axis, keepdims=keepdims)
+        np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
+        assert mx_ret.dtype == np_ret.dtype
+        if keepdims:
+            assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
+        else:
+            assert same(mx_ret.asnumpy(), np_ret)
 
-                for hybridize in [False, True]:
-                    net = TestArgExtreme(op_name, axis)
-                    if hybridize:
-                        net.hybridize()
-                    if throw_exception:
-                        try:
-                            net(a)
-                            mx.nd.waitall()
-                            assert False
-                        except mx.MXNetError:
-                            pass
-                    else:
-                        mx_ret = net(a)
-                        assert mx_ret.dtype == np_ret.dtype
-                        assert same(mx_ret.asnumpy(), np_ret)
+    net = TestArgExtreme(op_name, axis, keepdims)
+    if hybridize:
+        net.hybridize()
+    if throw_exception:
+        with pytest.raises(MXNetError):
+            getattr(np, op_name)(a, axis)
+            mx.npx.waitall()
+    else:
+        mx_ret = net(a)
+        assert mx_ret.dtype == np_ret.dtype
+        if keepdims:
+            assert same(np.squeeze(mx_ret, axis=axis).asnumpy(), np_ret)
+        else:
+            assert same(mx_ret.asnumpy(), np_ret)
 
 
 @use_np
@@ -4982,14 +5095,14 @@ def test_gamma_grad(shape, a, b):
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_beta():
     class TestRandomBeta(HybridBlock):
-        def __init__(self, size=None, dtype=None, ctx=None):
+        def __init__(self, size=None, dtype=None, device=None):
             super(TestRandomBeta, self).__init__()
             self._size = size
             self._dtype = dtype
-            self._ctx = ctx
+            self._device = device
 
         def forward(self, a, b):
-            return np.random.beta(a, b, size=self._size, dtype=self._dtype, ctx=self._ctx)
+            return np.random.beta(a, b, size=self._size, dtype=self._dtype, device=self._device)
 
     def _test_random_beta_range(output):
         bigger_than_zero = onp.all(output > 0)
@@ -5057,14 +5170,14 @@ def test_np_random_f():
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_chisquare():
     class TestRandomChisquare(HybridBlock):
-        def __init__(self, size=None, dtype=None, ctx=None):
+        def __init__(self, size=None, dtype=None, device=None):
             super(TestRandomChisquare, self).__init__()
             self._size = size
             self._dtype = dtype
-            self._ctx = ctx
+            self._device = device
 
         def forward(self, df):
-            return np.random.chisquare(df, size=self._size, dtype=self._dtype, ctx=self._ctx)
+            return np.random.chisquare(df, size=self._size, dtype=self._dtype, device=self._device)
 
     shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
 
@@ -6117,18 +6230,36 @@ def test_np_linalg_qr():
 
 
 @use_np
-def test_np_linalg_cholesky():
+@pytest.mark.parametrize('shape', [
+    (0, 0),
+    (1, 1),
+    (5, 5),
+    (6, 6),
+    (10, 10),
+    (6, 6, 6),
+    (1, 0, 0),
+    (0, 1, 1),
+    (2, 3, 4, 4),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('upper', [True, False])
+@pytest.mark.parametrize('hybridize', [True, False])
+def test_np_linalg_cholesky(shape, dtype, upper, hybridize):
     class TestCholesky(HybridBlock):
-        def __init__(self):
+        def __init__(self, upper=False):
             super(TestCholesky, self).__init__()
+            self._upper = upper
 
         def forward(self, data):
-            return np.linalg.cholesky(data)
+            return np.linalg.cholesky(data, upper=self._upper)
 
-    def get_grad(L):
+    def get_grad(L, upper):
         # shape of m is [batch, n, n]
         if 0 in L.shape:
             return L
+        
+        if upper:
+            L = onp.swapaxes(L, -1, -2)
 
         def copyltu(m):
             eye = onp.array([onp.eye(m.shape[-1]) for i in range(m.shape[0])])
@@ -6147,11 +6278,14 @@ def test_np_linalg_cholesky():
         dA = 0.5 * onp.matmul(onp.matmul(L_inv_T, copyltu(onp.matmul(L_T, dL))), L_inv)
         return dA.reshape(shape)
 
-    def check_cholesky(L, data_np):
+    def check_cholesky(L, data_np, upper):
         assert L.shape == data_np.shape
         # catch error if numpy throws rank < 2
         try:
-            L_expected = onp.linalg.cholesky(data_np)
+            if upper:
+                L_expected = onp.swapaxes(onp.linalg.cholesky(data_np), -1, -2)
+            else:
+                L_expected = onp.linalg.cholesky(data_np)
         except Exception as e:
             print(data_np)
             print(data_np.shape)
@@ -6176,64 +6310,52 @@ def test_np_linalg_cholesky():
         n = int(onp.prod(shape[:-2])) if len(shape) > 2 else 1
         return onp.array([newSymmetricPositiveDefineMatrix_2D(shape[-2:], ran, max_cond) for i in range(n)]).reshape(shape)
 
-    shapes = [
-        (0, 0),
-        (1, 1),
-        (5, 5),
-        (6, 6),
-        (10, 10),
-        (6, 6, 6),
-        (1, 0, 0),
-        (0, 1, 1),
-        (2, 3, 4, 4),
-    ]
-    dtypes = ['float32', 'float64']
-    for hybridize, dtype, shape in itertools.product([True, False], dtypes, shapes):
-        rtol = 1e-3
-        atol = 1e-5
-        if dtype == 'float32':
-            rtol = 1e-2
-            atol = 1e-4
 
-        test_cholesky = TestCholesky()
-        if hybridize:
-            test_cholesky.hybridize()
+    rtol = 1e-3
+    atol = 1e-5
+    if dtype == 'float32':
+        rtol = 1e-2
+        atol = 1e-4
 
-        # Numerical issue:
-        # When backpropagating through Cholesky decomposition, we need to compute the inverse
-        # of L according to dA = 0.5 * L**(-T) * copyLTU(L**T * dL) * L**(-1) where A = LL^T.
-        # The inverse is calculated by "trsm" method in CBLAS. When the data type is float32,
-        # this causes numerical instability. It happens when the matrix is ill-conditioned.
-        # In this example, the issue occurs frequently if the symmetric positive definite input
-        # matrix A is constructed by A = LL^T + \epsilon * I. A proper way of testing such
-        # operators involving numerically unstable operations is to use well-conditioned random
-        # matrices as input. Here we test Cholesky decomposition for FP32 and FP64 separately.
-        # See rocBLAS:
-        # https://github.com/ROCmSoftwarePlatform/rocBLAS/wiki/9.Numerical-Stability-in-TRSM
+    test_cholesky = TestCholesky(upper)
+    if hybridize:
+        test_cholesky.hybridize()
 
-        # generate symmetric PD matrices
-        if 0 in shape:
-            data_np = np.ones(shape)
-        else:
-            data_np = newSymmetricPositiveDefineMatrix_nD(shape)
+    # Numerical issue:
+    # When backpropagating through Cholesky decomposition, we need to compute the inverse
+    # of L according to dA = 0.5 * L**(-T) * copyLTU(L**T * dL) * L**(-1) where A = LL^T.
+    # The inverse is calculated by "trsm" method in CBLAS. When the data type is float32,
+    # this causes numerical instability. It happens when the matrix is ill-conditioned.
+    # In this example, the issue occurs frequently if the symmetric positive definite input
+    # matrix A is constructed by A = LL^T + \epsilon * I. A proper way of testing such
+    # operators involving numerically unstable operations is to use well-conditioned random
+    # matrices as input. Here we test Cholesky decomposition for FP32 and FP64 separately.
+    # See rocBLAS:
+    # https://github.com/ROCmSoftwarePlatform/rocBLAS/wiki/9.Numerical-Stability-in-TRSM
 
-        # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
-        # instability since the ground-truth gradient is computed using FP64 data.
-        data = np.array(data_np, dtype=dtype)
-        data.attach_grad()
-        with mx.autograd.record():
-            L = test_cholesky(data)
+    # generate symmetric PD matrices
+    if 0 in shape:
+        data_np = np.ones(shape)
+    else:
+        data_np = newSymmetricPositiveDefineMatrix_nD(shape)
 
-        # check cholesky validity
-        check_cholesky(L, data_np)
-        # check backward. backward does not support empty input
-        if 0 not in L.shape:
-            mx.autograd.backward(L)
-            backward_expected = get_grad(L.asnumpy())
-            assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
-        # check imperative once again
-        L = np.linalg.cholesky(data)
-        check_cholesky(L, data_np)
+    # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
+    # instability since the ground-truth gradient is computed using FP64 data.
+    data = np.array(data_np, dtype=dtype)
+    data.attach_grad()
+    with mx.autograd.record():
+        L = test_cholesky(data)
+
+    # check cholesky validity
+    check_cholesky(L, data_np, upper)
+    # check backward. backward does not support empty input
+    if 0 not in L.shape:
+        mx.autograd.backward(L)
+        backward_expected = get_grad(L.asnumpy(), upper)
+        assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+    # check imperative once again
+    L = np.linalg.cholesky(data, upper=upper)
+    check_cholesky(L, data_np, upper)
 
 
 @use_np
@@ -6818,6 +6940,44 @@ def test_np_linalg_matrix_rank():
                     rank = test_matrix_rank(a, tol)
                     # check matrix_rank validity
                     check_matrix_rank(rank, a.asnumpy(), tol.asnumpy(), hermitian=False)
+
+
+@use_np
+@pytest.mark.parametrize('shape', [
+    (),
+    (1,),
+    (0, 1, 2),
+    (0, 1, 2),
+    (0, 1, 2),
+    (4, 5, 6, 7),
+    (4, 5, 6, 7),
+    (4, 5, 6, 7),
+])
+def test_np_linalg_matrix_transpose(shape):
+    class TestMatTranspose(HybridBlock):
+        def __init__(self):
+            super(TestMatTranspose, self).__init__()
+
+        def forward(self, x):
+            return np.linalg.matrix_transpose(x)
+
+    data_np = onp.random.uniform(size=shape)
+    data_mx = np.array(data_np, dtype=data_np.dtype)
+    if data_mx.ndim < 2:
+        assertRaises(ValueError, np.linalg.matrix_transpose, data_mx)
+        return
+    ret_np = onp.swapaxes(data_np, -1, -2)
+    ret_mx = np.linalg.matrix_transpose(data_mx)
+    assert same(ret_mx.asnumpy(), ret_np)
+
+    net = TestMatTranspose()
+    for hybrid in [False, True]:
+        if hybrid:
+            net.hybridize()
+        ret_mx = net(data_mx)
+        assert same(ret_mx.asnumpy(), ret_np)
+    
+    assert same(data_mx.mT.asnumpy(), ret_np)
 
 
 @use_np
@@ -7429,14 +7589,14 @@ def test_np_full():
 @pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_full_like():
     class TestFullLike(HybridBlock):
-        def __init__(self, fill_value, dtype, ctx):
+        def __init__(self, fill_value, dtype, device):
             super(TestFullLike, self).__init__()
             self._fill_value = fill_value
             self._dtype = dtype
-            self._ctx = ctx
+            self._device = device
 
         def forward(self, x, *args, **kwargs):
-            return np.full_like(x, self._fill_value, dtype=self._dtype, ctx=self._ctx)
+            return np.full_like(x, self._fill_value, dtype=self._dtype, device=self._device)
 
     if StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
         return
@@ -7460,7 +7620,7 @@ def test_np_full_like():
         fill_values, dtypes, shapes, flags):
         param_dtype = onp.random.choice(dtypes)
         a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
-        test = TestFullLike(fill_value, param_dtype, npx.current_context())
+        test = TestFullLike(fill_value, param_dtype, npx.current_device())
         expected_ret = onp.full_like(a.asnumpy(), fill_value=fill_value, dtype=param_dtype)
         if hybridize:
             test.hybridize()
@@ -7917,6 +8077,130 @@ def test_np_unique():
                     for i in range(len(mx_out)):
                         assert mx_out[i].shape == np_out[i].shape
                         assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+
+@use_np
+@pytest.mark.parametrize('shape,index,inverse,counts', [
+    ((), True, True, True),
+    ((1, ), True, True, True),
+    ((5, ), True, True, True),
+    ((5, ), True, True, True),
+    ((5, 4), True, True, True),
+    ((5, 0, 4), True, True, True),
+    ((0, 0, 0), True, True, True),
+    ((5, 3, 4), True, True, True),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_unique_all(shape, index, inverse, counts, dtype, hybridize):
+    class TestUniqueAll(HybridBlock):
+        def __init__(self):
+            super(TestUniqueAll, self).__init__()
+
+        def forward(self, a):
+            return np.unique_all(a)
+
+    test_unique = TestUniqueAll()
+    if hybridize:
+        test_unique.hybridize()
+    x = onp.random.uniform(-8.0, 8.0, size=shape)
+    x = np.array(x, dtype=dtype)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    mx_out = test_unique(x)
+    for i in range(len(mx_out)):
+        assert mx_out[i].shape == np_out[i].shape
+        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+    # Test imperative once again
+    mx_out = np.unique_all(x)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    assert mx_out.values.shape == np_out[0].shape
+    assert_almost_equal(mx_out.values.asnumpy(), np_out[0], rtol=1e-3, atol=1e-5)
+    assert mx_out.indices.shape == np_out[1].shape
+    assert_almost_equal(mx_out.indices.asnumpy(), np_out[1], rtol=1e-3, atol=1e-5)
+    assert mx_out.inverse_indices.shape == np_out[2].shape
+    assert_almost_equal(mx_out.inverse_indices.asnumpy(), np_out[2], rtol=1e-3, atol=1e-5)
+    assert mx_out.counts.shape == np_out[3].shape
+    assert_almost_equal(mx_out.counts.asnumpy(), np_out[3], rtol=1e-3, atol=1e-5)
+
+
+@use_np
+@pytest.mark.parametrize('shape,index,inverse,counts', [
+    ((), False, True, False),
+    ((1, ), False, True, False),
+    ((5, ), False, True, False),
+    ((5, ), False, True, False),
+    ((5, 4), False, True, False),
+    ((5, 0, 4), False, True, False),
+    ((0, 0, 0), False, True, False),
+    ((5, 3, 4), False, True, False),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_unique_inverse(shape, index, inverse, counts, dtype, hybridize):
+    class TestUniqueInverse(HybridBlock):
+        def __init__(self):
+            super(TestUniqueInverse, self).__init__()
+
+        def forward(self, a):
+            return np.unique_inverse(a)
+
+    test_unique = TestUniqueInverse()
+    if hybridize:
+        test_unique.hybridize()
+    x = onp.random.uniform(-8.0, 8.0, size=shape)
+    x = np.array(x, dtype=dtype)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    mx_out = test_unique(x)
+    for i in range(len(mx_out)):
+        assert mx_out[i].shape == np_out[i].shape
+        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+    # Test imperative once again
+    mx_out = np.unique_inverse(x)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    assert mx_out.values.shape == np_out[0].shape
+    assert_almost_equal(mx_out.values.asnumpy(), np_out[0], rtol=1e-3, atol=1e-5)
+    assert mx_out.inverse_indices.shape == np_out[1].shape
+    assert_almost_equal(mx_out.inverse_indices.asnumpy(), np_out[1], rtol=1e-3, atol=1e-5)
+
+
+@use_np
+@pytest.mark.parametrize('shape,index,inverse,counts', [
+    ((), False, False, False),
+    ((1, ), False, False, False),
+    ((5, ), False, False, False),
+    ((5, ), False, False, False),
+    ((5, 4), False, False, False),
+    ((5, 0, 4), False, False, False),
+    ((0, 0, 0), False, False, False),
+    ((5, 3, 4), False, False, False),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_unique_values(shape, index, inverse, counts, dtype, hybridize):
+    class TestUniqueValues(HybridBlock):
+        def __init__(self):
+            super(TestUniqueValues, self).__init__()
+
+        def forward(self, a):
+            return np.unique_values(a)
+
+    test_unique = TestUniqueValues()
+    if hybridize:
+        test_unique.hybridize()
+    x = onp.random.uniform(-8.0, 8.0, size=shape)
+    x = np.array(x, dtype=dtype)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    mx_out = test_unique(x)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+    # Test imperative once again
+    mx_out = np.unique_values(x)
+    np_out = onp.unique(x.asnumpy(), return_index=index, return_inverse=inverse, return_counts=counts)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @use_np
@@ -8553,22 +8837,22 @@ def test_np_pad():
 
             # test gradient
             if m == "constant":
-                ctx = mx.context.current_context()
+                device = mx.device.current_device()
                 x = mx.np.random.uniform(-1.0, 1.0, size=shape)
-                x = mx.np.array(x, ctx=ctx)
+                x = mx.np.array(x, device=device)
                 for grad_req in ['write', 'add']:
                     x.attach_grad(grad_req)
                     if grad_req == 'add':
-                        init_grad = mx.np.random.uniform(-1.0, 1.0, size=shape, ctx=ctx)
+                        init_grad = mx.np.random.uniform(-1.0, 1.0, size=shape, device=device)
                         x.grad[:] = init_grad
                     with mx.autograd.record():
                         mx_out = mx.np.pad(x, pad_width=pw, mode="constant")
                         out_grad = mx.np.random.normal(0, 1, mx_out.shape)
-                        out_grad = mx.np.array(out_grad, ctx=ctx)
+                        out_grad = mx.np.array(out_grad, device=device)
                         loss = mx_out * out_grad
                         loss = loss.sum()
                         loss.backward()
-                    gt_in_grad = mx.np.pad(mx.np.ones_like(x.grad), pad_width=pw, mode="constant") * mx.np.array(out_grad, ctx=ctx)
+                    gt_in_grad = mx.np.pad(mx.np.ones_like(x.grad), pad_width=pw, mode="constant") * mx.np.array(out_grad, device=device)
                     mx_grad = x.grad
                     if grad_req == 'add':
                         assert_almost_equal(mx.np.pad(mx_grad - init_grad, pad_width=pw, mode="constant"), gt_in_grad.asnumpy(), rtol=rtol, atol=atol)
@@ -8597,7 +8881,7 @@ def test_np_rand():
             assert data_mx.shape == shape
 
     # Test random generator.
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     samples = 1000000
     trials = 8
     num_buckets = 10
@@ -8614,12 +8898,12 @@ def test_np_rand():
                  for i in range(num_buckets)]
 
         def generator_mx(x): return np.random.rand(
-            samples, ctx=ctx, dtype=dtype).asnumpy()
+            samples, device=device, dtype=dtype).asnumpy()
         verify_generator(generator=generator_mx, buckets=buckets,
                          probs=probs, nsamples=samples, nrepeat=trials)
         generator_mx_same_seed =\
             lambda x: onp.concatenate(
-                [np.random.rand(x // 10, ctx=ctx, dtype=dtype).asnumpy()
+                [np.random.rand(x // 10, device=device, dtype=dtype).asnumpy()
                     for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets,
                          probs=probs, nsamples=samples, nrepeat=trials)
@@ -10531,22 +10815,22 @@ def check_multihead_attention_selfatt(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, qkv):
-            ctx = qkv.ctx
-            qkv_weight = self.convert_weight(self.q_weight.data().as_in_ctx(ctx),
-                                             self.k_weight.data().as_in_ctx(ctx),
-                                             self.v_weight.data().as_in_ctx(ctx),
+            device = qkv.device
+            qkv_weight = self.convert_weight(self.q_weight.data().to_device(device),
+                                             self.k_weight.data().to_device(device),
+                                             self.v_weight.data().to_device(device),
                                              self.num_heads)
-            qkv_bias = self.convert_bias(self.q_bias.data().as_in_ctx(ctx),
-                                         self.k_bias.data().as_in_ctx(ctx),
-                                         self.v_bias.data().as_in_ctx(ctx),
+            qkv_bias = self.convert_bias(self.q_bias.data().to_device(device),
+                                         self.k_bias.data().to_device(device),
+                                         self.v_bias.data().to_device(device),
                                          self.num_heads)
             qkv = np.transpose(qkv, axes=(1, 0, 2))
             qkv_proj = npx.fully_connected(qkv, weight=qkv_weight, bias=qkv_bias, flatten=False,
                                            num_hidden=self.qkv_units * 3, no_bias=False)
             att_score = npx.interleaved_matmul_selfatt_qk(qkv_proj, heads=self.num_heads)
             weighted_value = npx.interleaved_matmul_selfatt_valatt(qkv_proj, att_score, heads=self.num_heads)
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return np.transpose(output, axes=(1, 0, 2)), att_score
 
@@ -10595,15 +10879,15 @@ def check_multihead_attention_selfatt(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, qkv):
-            ctx = qkv.ctx
-            q = npx.fully_connected(qkv, weight=self.q_weight.data().as_in_ctx(ctx),
-                                    bias=self.q_bias.data().as_in_ctx(ctx), flatten=False,
+            device = qkv.device
+            q = npx.fully_connected(qkv, weight=self.q_weight.data().to_device(device),
+                                    bias=self.q_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            k = npx.fully_connected(qkv, weight=self.k_weight.data().as_in_ctx(ctx),
-                                    bias=self.k_bias.data().as_in_ctx(ctx), flatten=False,
+            k = npx.fully_connected(qkv, weight=self.k_weight.data().to_device(device),
+                                    bias=self.k_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            v = npx.fully_connected(qkv, weight=self.v_weight.data().as_in_ctx(ctx),
-                                    bias=self.v_bias.data().as_in_ctx(ctx), flatten=False,
+            v = npx.fully_connected(qkv, weight=self.v_weight.data().to_device(device),
+                                    bias=self.v_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
             q = npx.reshape(q, (-2, -2, self.num_heads, -1))
             q = np.transpose(q, axes=(0, 2, 1, 3))
@@ -10623,8 +10907,8 @@ def check_multihead_attention_selfatt(dtype):
                                          reverse=True)
             weighted_value = np.transpose(weighted_value, axes=(0, 2, 1, 3))
             weighted_value = npx.reshape(weighted_value, (-2, -2, -1))
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return output, att_score
 
@@ -10662,7 +10946,7 @@ def check_multihead_attention_selfatt(dtype):
 @pytest.mark.serial
 def test_multihead_attention_selfatt():
     dtypes = ['float32']
-    if mx.context.current_context().device_type == 'gpu':
+    if mx.device.current_device().device_type == 'gpu':
         dtypes += ['float16']
 
     for dtype in dtypes:
@@ -10699,24 +10983,24 @@ def check_multihead_attention_encdec(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, q, kv):
-            ctx = kv.ctx
-            kv_weight = self.convert_weight(self.k_weight.data().as_in_ctx(ctx),
-                                            self.v_weight.data().as_in_ctx(ctx),
+            device = kv.device
+            kv_weight = self.convert_weight(self.k_weight.data().to_device(device),
+                                            self.v_weight.data().to_device(device),
                                             self.num_heads)
-            kv_bias = self.convert_bias(self.k_bias.data().as_in_ctx(ctx),
-                                        self.v_bias.data().as_in_ctx(ctx),
+            kv_bias = self.convert_bias(self.k_bias.data().to_device(device),
+                                        self.v_bias.data().to_device(device),
                                         self.num_heads)
             kv = np.transpose(kv, axes=(1, 0, 2))
             kv_proj = npx.fully_connected(kv, weight=kv_weight, bias=kv_bias, flatten=False,
                                           num_hidden=self.qkv_units * 2, no_bias=False)
             q = np.transpose(q, axes=(1, 0, 2))
-            q_proj = npx.fully_connected(q, weight=self.q_weight.data().as_in_ctx(ctx),
-                                         bias=self.q_bias.data().as_in_ctx(ctx), flatten=False,
+            q_proj = npx.fully_connected(q, weight=self.q_weight.data().to_device(device),
+                                         bias=self.q_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.qkv_units, no_bias=False)
             att_score = npx.interleaved_matmul_encdec_qk(q_proj, kv_proj, heads=self.num_heads)
             weighted_value = npx.interleaved_matmul_encdec_valatt(kv_proj, att_score, heads=self.num_heads)
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return np.transpose(output, axes=(1, 0, 2)), att_score
 
@@ -10763,15 +11047,15 @@ def check_multihead_attention_encdec(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, q, kv):
-            ctx = kv.ctx
-            q = npx.fully_connected(q, weight=self.q_weight.data().as_in_ctx(ctx),
-                                    bias=self.q_bias.data().as_in_ctx(ctx), flatten=False,
+            device = kv.device
+            q = npx.fully_connected(q, weight=self.q_weight.data().to_device(device),
+                                    bias=self.q_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            k = npx.fully_connected(kv, weight=self.k_weight.data().as_in_ctx(ctx),
-                                    bias=self.k_bias.data().as_in_ctx(ctx), flatten=False,
+            k = npx.fully_connected(kv, weight=self.k_weight.data().to_device(device),
+                                    bias=self.k_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            v = npx.fully_connected(kv, weight=self.v_weight.data().as_in_ctx(ctx),
-                                    bias=self.v_bias.data().as_in_ctx(ctx), flatten=False,
+            v = npx.fully_connected(kv, weight=self.v_weight.data().to_device(device),
+                                    bias=self.v_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
             q = npx.reshape(q, (-2, -2, self.num_heads, -1))
             q = np.transpose(q, axes=(0, 2, 1, 3))
@@ -10790,8 +11074,8 @@ def check_multihead_attention_encdec(dtype):
                                          reverse=True)
             weighted_value = np.transpose(weighted_value, axes=(0, 2, 1, 3))
             weighted_value = npx.reshape(weighted_value, (-2, -2, -1))
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return output, att_score
 
@@ -10830,7 +11114,7 @@ def check_multihead_attention_encdec(dtype):
 @pytest.mark.serial
 def test_multihead_attention_encdec():
     dtypes = ['float32']
-    if mx.context.current_context().device_type == 'gpu':
+    if mx.device.current_device().device_type == 'gpu':
         dtypes += ['float16']
 
     for dtype in dtypes:
@@ -10895,7 +11179,7 @@ def test_slice_like():
     ((1, 4, 3, 15, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
     ((8, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
 def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
-    if len(kernel) == 3 and mx.current_context().device_type == 'gpu':
+    if len(kernel) == 3 and mx.current_device().device_type == 'gpu':
         pytest.skip('Skipping deconvoluition 3D tests for GPU')
 
     class TestConv(mx.gluon.HybridBlock):
@@ -10904,7 +11188,7 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
             self.weight = w
 
         def forward(self, x, *args):
-            return npx.convolution(x, self.weight.data(x.ctx), no_bias=True, kernel=kernel,
+            return npx.convolution(x, self.weight.data(x.device), no_bias=True, kernel=kernel,
                                    pad=pad, num_filter=self.weight.shape[0], num_group=num_group)
 
     class TestDeconv(mx.gluon.HybridBlock):
@@ -10915,7 +11199,7 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
             self.bias = mx.gluon.Parameter('bias', shape=num_filter)
 
         def forward(self, x, *args):
-            return npx.deconvolution(x, self.weight.data(x.ctx), self.bias.data(x.ctx), kernel,
+            return npx.deconvolution(x, self.weight.data(x.device), self.bias.data(x.device), kernel,
                                      pad=pad, num_filter=num_filter, num_group=num_group)
     
     deconvNet = TestDeconv()

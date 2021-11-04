@@ -25,7 +25,7 @@ import mxnet as mx
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_np_tensor, use_np
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_device, check_symbolic_forward, create_2d_np_tensor, use_np
 from mxnet import gluon, np, npx
 import pytest
 from tests.python.unittest.common import assertRaises

@@ -95,7 +95,9 @@ static void DNNLQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
       data_md.push_back(mem_desc);
     }
   }
-  DNNLConcatFwd& fwd           = GetConcatForward(param_.dim, in_data, data_md);
+  int param_dim                = param_.dim.has_value() ? param_.dim.value() : 0;
+  param_dim                    = CheckAxis(param_dim, in_data[concat_enum::kData0].shape().ndim());
+  DNNLConcatFwd& fwd           = GetConcatForward(param_dim, in_data, data_md);
   mxnet::dnnl_output_t out_mem = CreateDNNLMem(
       out_data[quantized_concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
   dnnl_args_map_t net_args;

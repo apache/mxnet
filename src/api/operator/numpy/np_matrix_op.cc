@@ -139,17 +139,17 @@ MXNET_REGISTER_API("_npi.concatenate")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_concatenate");
       nnvm::NodeAttrs attrs;
-      op::NumpyConcatenateParam param;
+      op::ConcatParam param;
       int arg_size   = args.num_args;
       param.num_args = arg_size - 2;
       if (args[arg_size - 2].type_code() == kNull) {
-        param.axis = dmlc::nullopt;
+        param.dim = dmlc::nullopt;
       } else {
-        param.axis = args[arg_size - 2].operator int();
+        param.dim = args[arg_size - 2].operator int();
       }
       attrs.parsed = param;
       attrs.op     = op;
-      SetAttrDict<op::NumpyConcatenateParam>(&attrs);
+      SetAttrDict<op::ConcatParam>(&attrs);
       int num_inputs = arg_size - 2;
       std::vector<NDArray*> inputs;
       inputs.reserve(num_inputs);

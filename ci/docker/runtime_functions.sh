@@ -703,8 +703,15 @@ sanity_check() {
     set -ex
     sanity_clang
     sanity_license
-    sanity_python
+    sanity_tutorial
+    sanity_python_prospector
     sanity_cpp
+}
+
+sanity_tutorial() {
+    set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
 
 sanity_license() {
@@ -715,6 +722,21 @@ sanity_license() {
 sanity_cpp() {
     set -ex
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests --exclude_path src/operator/contrib/ctc_include include/onednn
+}
+
+sanity_python_prospector() {
+    set -e
+    set +x
+
+    # Run Prospector
+    python3 -m prospector --profile prospector.yaml | tee prospector-output.txt
+    error_cnt=$(awk '/Messages Found:/{print $NF}' prospector-output.txt)
+    if [ $error_cnt -ne 0 ]; then
+        echo 'Please fix the above Prospector warnings.'
+        rm -rf prospector-output.txt
+        exit 1
+    fi
+    rm -rf prospector-output.txt
 }
 
 sanity_clang() {
@@ -753,13 +775,6 @@ sanity_clang() {
     echo "$GIT_DIFFERENCE"
     git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
     exit 1
-}
-
-sanity_python() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=100
-    python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
-    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
 
 # Tests libmxnet
@@ -859,6 +874,8 @@ unittest_array_api_standardization() {
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
         array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_creation_functions.py
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_indexing.py
     popd
 }
 

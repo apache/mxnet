@@ -159,7 +159,7 @@ class ComposeTransform(Transformation):
 
     def log_det_jacobian(self, x, y):
         if not self._parts:
-            return np.zeros_like(x)
+            return np.zeros_like(x)  # pylint: disable=too-many-function-args
         result = 0
         x_prime = None
         for t in self._parts[:-1]:
@@ -211,7 +211,7 @@ class AffineTransform(Transformation):
 
     def log_det_jacobian(self, x, y):
         # element-wise abs(log(dy/dx))
-        value = np.ones_like(x) * np.log(np.abs(self._scale))
+        value = np.ones_like(x) * np.log(np.abs(self._scale))  # pylint: disable=too-many-function-args
         return sum_right_most(value, self.event_dim)
 
     @property

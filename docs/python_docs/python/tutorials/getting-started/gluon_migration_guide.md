@@ -79,11 +79,18 @@ MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is
 |                   Deprecated Attributes               |    NumPy ndarray Equivalent    |
 |-------------------------------------------------------|--------------------------------|
 |                   `a.asscalar()`                      |         `a.item()`         |
-|                 `a.as_in_context()`                   |      `a.as_in_ctx()`       |
-|                    `a.context`                        |          `a.ctx`           |
+|                 `a.as_in_context()`                   |      `a.to_device()`       |
+|                    `a.context`                        |          `a.device`           |
 |                   `a.reshape_like(b)`                 |    `a.reshape(b.shape)`    |
 |                    `a.zeros_like(b)`                  |   `mx.np.zeros_like(b)`  |
 |                    `a.ones_like(b)`                   |   `mx.np.ones_like(b)`   |
+
+---
+**NOTE**
+
+`Context` class has also been deprecated in MXNet2.0, it is renamed to `Device` and some related methods and attributes are also renamed as above. All the creation functions inside MXNet NumPy package will take `device` as keyword instead of `ctx`.
+
+---
 
 4. Compared with legacy NDArray, some attributes will have different behaviors and take different inputs. 
 
@@ -176,7 +183,7 @@ class SampleBlock(HybridBlock):
         # Access constant parameters, which are not iterated during training
         self.weight = Constant('const', const_arr)
 ```
-Also, there will be new mechanisms for parameter loading, sharing and setting context. 
+Also, there will be new mechanisms for parameter loading, sharing and setting device. 
 
 1. Parameter loading in Gluon 1.x vs Gluon 2.0:
     ```{.python}
@@ -185,7 +192,7 @@ Also, there will be new mechanisms for parameter loading, sharing and setting co
     net.collect_params().load_dict(arg_dict, ctx=ctx)
     # in Gluon 2.0
     net = nn.Dense(8, activation='relu')
-    net.load_dict(arg_dict, ctx=ctx)
+    net.load_dict(arg_dict, device=device)
     ```
 
 2. Parameter sharing in Gluon 1.x vs Gluon 2.0:
@@ -198,14 +205,14 @@ Also, there will be new mechanisms for parameter loading, sharing and setting co
     net = nn.Dense(8, activation='relu').share_parameters(shared.params)
     ```
 
-3. Parameter setting context in Gluon 1.x vs Gluon 2.0:
+3. Parameter setting device in Gluon 1.x vs Gluon 2.0:
     ```{.python}
     # in Gluon 1.x
     net = nn.Dense(8, activation='relu')
-    net.collect_params().reset_ctx(devices)
+    net.collect_params().reset_ctx(ctx)
     # in Gluon 2.0
     net = nn.Dense(8, activation='relu')
-    net.reset_ctx(devices)
+    net.reset_device(devices)
     ```
 
 #### Forward Interface
@@ -228,11 +235,11 @@ Now, in deferred computation mode of Gluon2.0, the divergence of NDArray and Sym
 ```{.python}
 # forward interface, no F any more
 def forward(self, x):
-    # get the context information of input array and make parameters run on the same context
-    ctx = x.ctx
+    # get the device information of input array and make parameters run on the same device
+    device = x.device
     # use np/npx interfaces instead of F
-    act = npx.fully_connected(x, self.weight.data(ctx),
-                              self.bias.data(ctx) if self.bias is not None else None,
+    act = npx.fully_connected(x, self.weight.data(device),
+                              self.bias.data(device) if self.bias is not None else None,
                               no_bias=self.bias is None,
                               num_hidden=self._units, flatten=self._flatten, name='fwd')
     if self.act is not None:
@@ -282,9 +289,9 @@ class Dense(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        ctx = x.ctx
-        act = npx.fully_connected(x, self.weight.data(ctx),
-                                  self.bias.data(ctx) if self.bias is not None else None,
+        device = x.device
+        act = npx.fully_connected(x, self.weight.data(device),
+                                  self.bias.data(device) if self.bias is not None else None,
                                   no_bias=self.bias is None,
                                   num_hidden=self._units, flatten=self._flatten, name='fwd')
         if self.act is not None:
@@ -348,10 +355,10 @@ Example:
 import mxnet as mx
 # create key-value store with horovod backend
 kv = mx.kv.create('horovod') # or choose 'kvstore', 'byteps' as backend
-ctx = mx.gpu(kv.local_rank) if mx.context.num_gpus() > 0 else mx.cpu(kv.local_rank)
-val = mx.np.zeros((2, 3), ctx=ctx)
+device = mx.gpu(kv.local_rank) if mx.device.num_gpus() > 0 else mx.cpu(kv.local_rank)
+val = mx.np.zeros((2, 3), device=device)
 # broadcast the value at rank 0 to all ranks
-kv.broadcast('0', mx.np.zeros((2, 3), ctx=ctx), out=val)
+kv.broadcast('0', mx.np.zeros((2, 3), device=device), out=val)
 scale = kv.rank + 1
 # performs allreduce on a single array
 kv.pushpull('3', val * scale)

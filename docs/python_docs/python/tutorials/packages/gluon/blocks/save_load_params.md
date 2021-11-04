@@ -49,7 +49,7 @@ Let's define a helper function to build a LeNet model and another helper to trai
 
 ```{.python .input}
 # Use GPU if one exists, else use CPU
-ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
+device = mx.gpu() if mx.device.num_gpus() else mx.cpu()
 
 # MNIST images are 28x28. Total pixels in input layer is 28x28 = 784
 num_inputs = 784
@@ -82,7 +82,7 @@ def build_lenet(net):
 # Train a given model using MNIST data
 def train_model(model):
     # Initialize the parameters with Xavier initializer
-    model.initialize(mx.init.Xavier(), ctx=ctx)
+    model.initialize(mx.init.Xavier(), device=device)
     # Use cross entropy loss
     softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
     # Use Adam optimizer
@@ -93,8 +93,8 @@ def train_model(model):
         # Iterate through the images and labels in the training data
         for batch_num, (data, label) in enumerate(train_data):
             # get the images and labels
-            data = data.as_in_context(ctx)
-            label = label.as_in_context(ctx)
+            data = data.to_device(device)
+            label = label.to_device(device)
             # Ask autograd to record the forward pass
             with autograd.record():
                 # Run the forward pass
@@ -156,7 +156,7 @@ Let's now create a network with the parameters we saved into the file. We build 
 
 ```{.python .input}
 new_net = build_lenet(gluon.nn.Sequential())
-new_net.load_parameters(file_name, ctx=ctx)
+new_net.load_parameters(file_name, device=device)
 ```
 
 Note that to do this, we need the definition of the network as Python code. If we want to recreate this network on a different machine using the saved weights, we need the same Python code (`build_lenet`) that created the network to create the `new_net` object shown above. This means Python code needs to be copied over to any machine where we want to run this network.
@@ -190,7 +190,7 @@ def verify_loaded_model(net):
 
         # Display the predictions
         data = np.transpose(data, (0, 3, 1, 2))
-        out = net(data.as_in_ctx(ctx))
+        out = net(data.to_device(device))
         predictions = np.argmax(out, axis=1)
         print('Model predictions: ', predictions.asnumpy())
 
@@ -254,7 +254,7 @@ Serialized Hybrid networks (saved as .JSON and .params file) can be loaded and u
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    deserialized_net = gluon.nn.SymbolBlock.imports("lenet-symbol.json", ['data'], "lenet-0001.params", ctx=ctx)
+    deserialized_net = gluon.nn.SymbolBlock.imports("lenet-symbol.json", ['data'], "lenet-0001.params", device=device)
 ```
 
 `deserialized_net` now contains the network we deserialized from files. Let's test the deserialized network to make sure it works.
