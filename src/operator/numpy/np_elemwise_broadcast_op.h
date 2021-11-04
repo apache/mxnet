@@ -581,7 +581,8 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
     });
     CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob_l});
     CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob_r});
-    BinaryBroadcastIntComputeWithBool<xpu, OP>(attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(
+        attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
   }
   return;
 }
