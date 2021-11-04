@@ -116,7 +116,8 @@ class DNNLTransposeForward {
 
 static DNNLTransposeForward& GetTransposeForward(const TransposeParam& param, const NDArray& data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local phmap::flat_hash_map<DNNLTransposeSignature, DNNLTransposeForward, OpHash> fwds;
+  static thread_local phmap::flat_hash_map<DNNLTransposeSignature, DNNLTransposeForward, OpHash>
+      fwds;
 #else
   static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLTransposeSignature, DNNLTransposeForward, OpHash>
       fwds;

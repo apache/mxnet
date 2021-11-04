@@ -261,7 +261,8 @@ DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                               const NDArray& data,
                               const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local phmap::flat_hash_map<DNNLPoolingSignature, DNNLPoolingFwd, OpHash> pooling_fwds;
+  static thread_local phmap::flat_hash_map<DNNLPoolingSignature, DNNLPoolingFwd, OpHash>
+      pooling_fwds;
 #else
   static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLPoolingSignature, DNNLPoolingFwd, OpHash>
       pooling_fwds;
@@ -318,7 +319,8 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
                               const NDArray& in_grad,
                               const NDArray& out_grad) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local phmap::flat_hash_map<DNNLPoolingSignature, DNNLPoolingBwd, OpHash> pooling_bwds;
+  static thread_local phmap::flat_hash_map<DNNLPoolingSignature, DNNLPoolingBwd, OpHash>
+      pooling_bwds;
 #else
   static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLPoolingSignature, DNNLPoolingBwd, OpHash>
       pooling_bwds;

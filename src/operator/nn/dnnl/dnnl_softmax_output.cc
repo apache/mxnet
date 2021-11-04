@@ -70,8 +70,9 @@ static DNNLSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam& p
   static thread_local phmap::flat_hash_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
       fwds;
 #else
-  static MX_THREAD_LOCAL phmap::flat_hash_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
-      fwds;
+  static MX_THREAD_LOCAL
+      phmap::flat_hash_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
+          fwds;
 #endif
   DNNLSoftmaxOuputSignature key(param);
   key.AddSign(ctx.is_train);
