@@ -304,7 +304,7 @@ deep learning library. The problems of Python's [Global Interpreter
 Lock](https://wiki.python.org/moin/GlobalInterpreterLock) are well
 known.
 
-In the context of deep learning, we often have highly performant GPUs that
+In the device of deep learning, we often have highly performant GPUs that
 depend on CPUs running Python to tell them what to do. This mismatch can
 manifest in the form of GPU starvation when the CPUs can not provide
 instruction fast enough. We can improve this situation by deferring to a more

@@ -18,26 +18,26 @@
 import threading
 import numpy as np
 import mxnet as mx
-from mxnet import context, attribute
-from mxnet.context import Context
+from mxnet import device, attribute
+from mxnet.device import Device
 from mxnet.attribute import AttrScope
-from mxnet.test_utils import assert_almost_equal, set_default_context
+from mxnet.test_utils import assert_almost_equal, set_default_device
 from mxnet.util import _NumpyArrayScope, set_np_shape
 
 
-def test_context():
-    ctx_list = []
-    ctx_list.append(context.current_context())
+def test_device():
+    device_list = []
+    device_list.append(device.current_device())
     def f():
-        set_default_context(mx.gpu(11))
-        ctx_list.append(context.current_context())
+        set_default_device(mx.gpu(11))
+        device_list.append(device.current_device())
     thread = threading.Thread(target=f)
     thread.start()
     thread.join()
-    assert Context.devtype2str[ctx_list[0].device_typeid] == "cpu"
-    assert ctx_list[0].device_id == 0
-    assert Context.devtype2str[ctx_list[1].device_typeid] == "gpu"
-    assert ctx_list[1].device_id == 11
+    assert Device.devtype2str[device_list[0].device_typeid] == "cpu"
+    assert device_list[0].device_id == 0
+    assert Device.devtype2str[device_list[1].device_typeid] == "gpu"
+    assert device_list[1].device_id == 11
 
     e1 = threading.Event()
     e2 = threading.Event()
@@ -46,17 +46,17 @@ def test_context():
         with mx.cpu(10):
             e2.set()
             e1.wait()
-            if context.current_context().device_id == 10:
+            if device.current_device().device_id == 10:
                 status[0] = True
     thread = threading.Thread(target=g)
     thread.start()
     e2.wait()
-    with Context("cpu", 11):
+    with Device("cpu", 11):
         e1.set()
         thread.join()
     e1.clear()
     e2.clear()
-    assert status[0], "Spawned thread didn't set the correct context"
+    assert status[0], "Spawned thread didn't set the correct device"
 
 def test_attrscope():
     attrscope_list = []

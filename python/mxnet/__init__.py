@@ -20,7 +20,8 @@
 # coding: utf-8
 """MXNet: a concise, fast and flexible framework for deep learning."""
 
-from .context import Context, current_context, cpu, gpu, cpu_pinned
+from .context import Context, current_context
+from .device import Device, current_device, cpu, gpu, cpu_pinned
 from . import engine, error
 from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape

@@ -1218,8 +1218,8 @@ def test_np_linspace_gluon(config, dtype, endpoint, hybridize):
             if self._retstep:
                 raise ValueError("linspace didn't support retstep = True inside HybridBlock")
             else:
-                return x + np.linspace(self._start, self._stop, self._num, \
-                self._endpoint, self._retstep, self._dtype)
+                return x + np.linspace(self._start, self._stop, num=self._num, \
+                endpoint=self._endpoint, retstep=self._retstep, dtype=self._dtype)
 
     x = np.zeros(shape=(), dtype=dtype)
     if isinstance(config, tuple):
@@ -1664,9 +1664,9 @@ def test_npx_index_update():
 
 @use_np
 def test_npx_batch_dot():
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     dtypes = ['float32', 'float64']
-    if ctx.device_type == 'gpu':
+    if device.device_type == 'gpu':
         dtypes += ['float16']
     eps_dict = {'float32': 1E-4, 'float64': 1E-4, 'float16': 1E-3}
     class TestBatchDot(HybridBlock):
@@ -4408,7 +4408,7 @@ def test_np_ravel():
 
 @use_np
 def test_np_randint():
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     # test shapes
     params = [
         (0, 10),
@@ -4440,13 +4440,13 @@ def test_np_randint():
             # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
             buckets = onp.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
-            generator_mx = lambda x: np.random.randint(low, high, size=x, dtype=dtype, ctx=ctx).asnumpy()
+            generator_mx = lambda x: np.random.randint(low, high, size=x, dtype=dtype, device=device).asnumpy()
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nrepeat=100)
             # Scipy uses alpha = 0.01 for testing discrete distribution generator but we are using default alpha=0.05 (higher threshold ensures robustness)
             # Refer - https://github.com/scipy/scipy/blob/9f12af697763fb5f9767d5cb1280ce62456a3974/scipy/stats/tests/test_discrete_basic.py#L45
             generator_mx_same_seed = \
                 lambda x: onp.concatenate(
-                    [np.random.randint(low, high, size=x // 10, dtype=dtype, ctx=ctx).asnumpy()
+                    [np.random.randint(low, high, size=x // 10, dtype=dtype, device=device).asnumpy()
                         for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
@@ -5095,14 +5095,14 @@ def test_gamma_grad(shape, a, b):
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_beta():
     class TestRandomBeta(HybridBlock):
-        def __init__(self, size=None, dtype=None, ctx=None):
+        def __init__(self, size=None, dtype=None, device=None):
             super(TestRandomBeta, self).__init__()
             self._size = size
             self._dtype = dtype
-            self._ctx = ctx
+            self._device = device
 
         def forward(self, a, b):
-            return np.random.beta(a, b, size=self._size, dtype=self._dtype, ctx=self._ctx)
+            return np.random.beta(a, b, size=self._size, dtype=self._dtype, device=self._device)
 
     def _test_random_beta_range(output):
         bigger_than_zero = onp.all(output > 0)
@@ -5170,14 +5170,14 @@ def test_np_random_f():
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_chisquare():
     class TestRandomChisquare(HybridBlock):
-        def __init__(self, size=None, dtype=None, ctx=None):
+        def __init__(self, size=None, dtype=None, device=None):
             super(TestRandomChisquare, self).__init__()
             self._size = size
             self._dtype = dtype
-            self._ctx = ctx
+            self._device = device
 
         def forward(self, df):
-            return np.random.chisquare(df, size=self._size, dtype=self._dtype, ctx=self._ctx)
+            return np.random.chisquare(df, size=self._size, dtype=self._dtype, device=self._device)
 
     shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
 
@@ -7589,14 +7589,14 @@ def test_np_full():
 @pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_full_like():
     class TestFullLike(HybridBlock):
-        def __init__(self, fill_value, dtype, ctx):
+        def __init__(self, fill_value, dtype, device):
             super(TestFullLike, self).__init__()
             self._fill_value = fill_value
             self._dtype = dtype
-            self._ctx = ctx
+            self._device = device
 
         def forward(self, x, *args, **kwargs):
-            return np.full_like(x, self._fill_value, dtype=self._dtype, ctx=self._ctx)
+            return np.full_like(x, self._fill_value, dtype=self._dtype, device=self._device)
 
     if StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
         return
@@ -7620,7 +7620,7 @@ def test_np_full_like():
         fill_values, dtypes, shapes, flags):
         param_dtype = onp.random.choice(dtypes)
         a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
-        test = TestFullLike(fill_value, param_dtype, npx.current_context())
+        test = TestFullLike(fill_value, param_dtype, npx.current_device())
         expected_ret = onp.full_like(a.asnumpy(), fill_value=fill_value, dtype=param_dtype)
         if hybridize:
             test.hybridize()
@@ -8837,22 +8837,22 @@ def test_np_pad():
 
             # test gradient
             if m == "constant":
-                ctx = mx.context.current_context()
+                device = mx.device.current_device()
                 x = mx.np.random.uniform(-1.0, 1.0, size=shape)
-                x = mx.np.array(x, ctx=ctx)
+                x = mx.np.array(x, device=device)
                 for grad_req in ['write', 'add']:
                     x.attach_grad(grad_req)
                     if grad_req == 'add':
-                        init_grad = mx.np.random.uniform(-1.0, 1.0, size=shape, ctx=ctx)
+                        init_grad = mx.np.random.uniform(-1.0, 1.0, size=shape, device=device)
                         x.grad[:] = init_grad
                     with mx.autograd.record():
                         mx_out = mx.np.pad(x, pad_width=pw, mode="constant")
                         out_grad = mx.np.random.normal(0, 1, mx_out.shape)
-                        out_grad = mx.np.array(out_grad, ctx=ctx)
+                        out_grad = mx.np.array(out_grad, device=device)
                         loss = mx_out * out_grad
                         loss = loss.sum()
                         loss.backward()
-                    gt_in_grad = mx.np.pad(mx.np.ones_like(x.grad), pad_width=pw, mode="constant") * mx.np.array(out_grad, ctx=ctx)
+                    gt_in_grad = mx.np.pad(mx.np.ones_like(x.grad), pad_width=pw, mode="constant") * mx.np.array(out_grad, device=device)
                     mx_grad = x.grad
                     if grad_req == 'add':
                         assert_almost_equal(mx.np.pad(mx_grad - init_grad, pad_width=pw, mode="constant"), gt_in_grad.asnumpy(), rtol=rtol, atol=atol)
@@ -8881,7 +8881,7 @@ def test_np_rand():
             assert data_mx.shape == shape
 
     # Test random generator.
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     samples = 1000000
     trials = 8
     num_buckets = 10
@@ -8898,12 +8898,12 @@ def test_np_rand():
                  for i in range(num_buckets)]
 
         def generator_mx(x): return np.random.rand(
-            samples, ctx=ctx, dtype=dtype).asnumpy()
+            samples, device=device, dtype=dtype).asnumpy()
         verify_generator(generator=generator_mx, buckets=buckets,
                          probs=probs, nsamples=samples, nrepeat=trials)
         generator_mx_same_seed =\
             lambda x: onp.concatenate(
-                [np.random.rand(x // 10, ctx=ctx, dtype=dtype).asnumpy()
+                [np.random.rand(x // 10, device=device, dtype=dtype).asnumpy()
                     for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets,
                          probs=probs, nsamples=samples, nrepeat=trials)
@@ -10815,22 +10815,22 @@ def check_multihead_attention_selfatt(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, qkv):
-            ctx = qkv.ctx
-            qkv_weight = self.convert_weight(self.q_weight.data().as_in_ctx(ctx),
-                                             self.k_weight.data().as_in_ctx(ctx),
-                                             self.v_weight.data().as_in_ctx(ctx),
+            device = qkv.device
+            qkv_weight = self.convert_weight(self.q_weight.data().to_device(device),
+                                             self.k_weight.data().to_device(device),
+                                             self.v_weight.data().to_device(device),
                                              self.num_heads)
-            qkv_bias = self.convert_bias(self.q_bias.data().as_in_ctx(ctx),
-                                         self.k_bias.data().as_in_ctx(ctx),
-                                         self.v_bias.data().as_in_ctx(ctx),
+            qkv_bias = self.convert_bias(self.q_bias.data().to_device(device),
+                                         self.k_bias.data().to_device(device),
+                                         self.v_bias.data().to_device(device),
                                          self.num_heads)
             qkv = np.transpose(qkv, axes=(1, 0, 2))
             qkv_proj = npx.fully_connected(qkv, weight=qkv_weight, bias=qkv_bias, flatten=False,
                                            num_hidden=self.qkv_units * 3, no_bias=False)
             att_score = npx.interleaved_matmul_selfatt_qk(qkv_proj, heads=self.num_heads)
             weighted_value = npx.interleaved_matmul_selfatt_valatt(qkv_proj, att_score, heads=self.num_heads)
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return np.transpose(output, axes=(1, 0, 2)), att_score
 
@@ -10879,15 +10879,15 @@ def check_multihead_attention_selfatt(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, qkv):
-            ctx = qkv.ctx
-            q = npx.fully_connected(qkv, weight=self.q_weight.data().as_in_ctx(ctx),
-                                    bias=self.q_bias.data().as_in_ctx(ctx), flatten=False,
+            device = qkv.device
+            q = npx.fully_connected(qkv, weight=self.q_weight.data().to_device(device),
+                                    bias=self.q_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            k = npx.fully_connected(qkv, weight=self.k_weight.data().as_in_ctx(ctx),
-                                    bias=self.k_bias.data().as_in_ctx(ctx), flatten=False,
+            k = npx.fully_connected(qkv, weight=self.k_weight.data().to_device(device),
+                                    bias=self.k_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            v = npx.fully_connected(qkv, weight=self.v_weight.data().as_in_ctx(ctx),
-                                    bias=self.v_bias.data().as_in_ctx(ctx), flatten=False,
+            v = npx.fully_connected(qkv, weight=self.v_weight.data().to_device(device),
+                                    bias=self.v_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
             q = npx.reshape(q, (-2, -2, self.num_heads, -1))
             q = np.transpose(q, axes=(0, 2, 1, 3))
@@ -10907,8 +10907,8 @@ def check_multihead_attention_selfatt(dtype):
                                          reverse=True)
             weighted_value = np.transpose(weighted_value, axes=(0, 2, 1, 3))
             weighted_value = npx.reshape(weighted_value, (-2, -2, -1))
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return output, att_score
 
@@ -10946,7 +10946,7 @@ def check_multihead_attention_selfatt(dtype):
 @pytest.mark.serial
 def test_multihead_attention_selfatt():
     dtypes = ['float32']
-    if mx.context.current_context().device_type == 'gpu':
+    if mx.device.current_device().device_type == 'gpu':
         dtypes += ['float16']
 
     for dtype in dtypes:
@@ -10983,24 +10983,24 @@ def check_multihead_attention_encdec(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, q, kv):
-            ctx = kv.ctx
-            kv_weight = self.convert_weight(self.k_weight.data().as_in_ctx(ctx),
-                                            self.v_weight.data().as_in_ctx(ctx),
+            device = kv.device
+            kv_weight = self.convert_weight(self.k_weight.data().to_device(device),
+                                            self.v_weight.data().to_device(device),
                                             self.num_heads)
-            kv_bias = self.convert_bias(self.k_bias.data().as_in_ctx(ctx),
-                                        self.v_bias.data().as_in_ctx(ctx),
+            kv_bias = self.convert_bias(self.k_bias.data().to_device(device),
+                                        self.v_bias.data().to_device(device),
                                         self.num_heads)
             kv = np.transpose(kv, axes=(1, 0, 2))
             kv_proj = npx.fully_connected(kv, weight=kv_weight, bias=kv_bias, flatten=False,
                                           num_hidden=self.qkv_units * 2, no_bias=False)
             q = np.transpose(q, axes=(1, 0, 2))
-            q_proj = npx.fully_connected(q, weight=self.q_weight.data().as_in_ctx(ctx),
-                                         bias=self.q_bias.data().as_in_ctx(ctx), flatten=False,
+            q_proj = npx.fully_connected(q, weight=self.q_weight.data().to_device(device),
+                                         bias=self.q_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.qkv_units, no_bias=False)
             att_score = npx.interleaved_matmul_encdec_qk(q_proj, kv_proj, heads=self.num_heads)
             weighted_value = npx.interleaved_matmul_encdec_valatt(kv_proj, att_score, heads=self.num_heads)
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return np.transpose(output, axes=(1, 0, 2)), att_score
 
@@ -11047,15 +11047,15 @@ def check_multihead_attention_encdec(dtype):
                                       init=None, dtype=dtype, allow_deferred_init=True)
 
         def forward(self, q, kv):
-            ctx = kv.ctx
-            q = npx.fully_connected(q, weight=self.q_weight.data().as_in_ctx(ctx),
-                                    bias=self.q_bias.data().as_in_ctx(ctx), flatten=False,
+            device = kv.device
+            q = npx.fully_connected(q, weight=self.q_weight.data().to_device(device),
+                                    bias=self.q_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            k = npx.fully_connected(kv, weight=self.k_weight.data().as_in_ctx(ctx),
-                                    bias=self.k_bias.data().as_in_ctx(ctx), flatten=False,
+            k = npx.fully_connected(kv, weight=self.k_weight.data().to_device(device),
+                                    bias=self.k_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
-            v = npx.fully_connected(kv, weight=self.v_weight.data().as_in_ctx(ctx),
-                                    bias=self.v_bias.data().as_in_ctx(ctx), flatten=False,
+            v = npx.fully_connected(kv, weight=self.v_weight.data().to_device(device),
+                                    bias=self.v_bias.data().to_device(device), flatten=False,
                                     num_hidden=self.qkv_units, no_bias=False)
             q = npx.reshape(q, (-2, -2, self.num_heads, -1))
             q = np.transpose(q, axes=(0, 2, 1, 3))
@@ -11074,8 +11074,8 @@ def check_multihead_attention_encdec(dtype):
                                          reverse=True)
             weighted_value = np.transpose(weighted_value, axes=(0, 2, 1, 3))
             weighted_value = npx.reshape(weighted_value, (-2, -2, -1))
-            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().as_in_ctx(ctx),
-                                         bias=self.out_bias.data().as_in_ctx(ctx), flatten=False,
+            output = npx.fully_connected(weighted_value, weight=self.out_weight.data().to_device(device),
+                                         bias=self.out_bias.data().to_device(device), flatten=False,
                                          num_hidden=self.out_dim, no_bias=False)
             return output, att_score
 
@@ -11114,7 +11114,7 @@ def check_multihead_attention_encdec(dtype):
 @pytest.mark.serial
 def test_multihead_attention_encdec():
     dtypes = ['float32']
-    if mx.context.current_context().device_type == 'gpu':
+    if mx.device.current_device().device_type == 'gpu':
         dtypes += ['float16']
 
     for dtype in dtypes:
@@ -11179,7 +11179,7 @@ def test_slice_like():
     ((1, 4, 3, 15, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
     ((8, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
 def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
-    if len(kernel) == 3 and mx.current_context().device_type == 'gpu':
+    if len(kernel) == 3 and mx.current_device().device_type == 'gpu':
         pytest.skip('Skipping deconvoluition 3D tests for GPU')
 
     class TestConv(mx.gluon.HybridBlock):
@@ -11188,7 +11188,7 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
             self.weight = w
 
         def forward(self, x, *args):
-            return npx.convolution(x, self.weight.data(x.ctx), no_bias=True, kernel=kernel,
+            return npx.convolution(x, self.weight.data(x.device), no_bias=True, kernel=kernel,
                                    pad=pad, num_filter=self.weight.shape[0], num_group=num_group)
 
     class TestDeconv(mx.gluon.HybridBlock):
@@ -11199,7 +11199,7 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
             self.bias = mx.gluon.Parameter('bias', shape=num_filter)
 
         def forward(self, x, *args):
-            return npx.deconvolution(x, self.weight.data(x.ctx), self.bias.data(x.ctx), kernel,
+            return npx.deconvolution(x, self.weight.data(x.device), self.bias.data(x.device), kernel,
                                      pad=pad, num_filter=num_filter, num_group=num_group)
     
     deconvNet = TestDeconv()

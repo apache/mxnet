@@ -37,8 +37,8 @@ In this tutorial we will use fake dataset, which contains 10 features drawn from
 
 
 ```{.python .input}
-def get_random_data(size, ctx):
-    x = np.random.normal(0, 1, size=(size, 10), ctx=ctx)
+def get_random_data(size, device):
+    x = np.random.normal(0, 1, size=(size, 10), device=device)
     y = x.sum(axis=1) > 3
     return x, y
 ```
@@ -47,7 +47,7 @@ Also, let's define a set of hyperparameters, that we are going to use later. Sin
 
 
 ```{.python .input}
-ctx = mx.cpu()
+device = mx.cpu()
 train_data_size = 1000
 val_data_size = 100
 batch_size = 10
@@ -61,11 +61,11 @@ Below we define training and validation datasets, which we are going to use in t
 
 
 ```{.python .input}
-train_x, train_ground_truth_class = get_random_data(train_data_size, ctx)
+train_x, train_ground_truth_class = get_random_data(train_data_size, device)
 train_dataset = ArrayDataset(train_x, train_ground_truth_class)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-val_x, val_ground_truth_class = get_random_data(val_data_size, ctx)
+val_x, val_ground_truth_class = get_random_data(val_data_size, device)
 val_dataset = ArrayDataset(val_x, val_ground_truth_class)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 ```

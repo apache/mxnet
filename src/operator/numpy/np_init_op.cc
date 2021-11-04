@@ -34,6 +34,8 @@ DMLC_REGISTER_PARAMETER(IndicesOpParam);
 DMLC_REGISTER_PARAMETER(LogspaceParam);
 DMLC_REGISTER_PARAMETER(FullLikeOpParam);
 DMLC_REGISTER_PARAMETER(AtleastNDParam);
+DMLC_REGISTER_PARAMETER(NumpyInitOpWithScalarParam);
+DMLC_REGISTER_PARAMETER(NumpyLinspaceParam);
 
 inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
                               mxnet::ShapeVector* in_shapes,
@@ -205,11 +207,11 @@ NNVM_REGISTER_OP(_npi_full)
     .describe("fill target with a scalar value")
     .set_num_inputs(0)
     .set_num_outputs(1)
-    .set_attr_parser(ParamParser<InitOpWithScalarParam>)
-    .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpWithScalarParam>)
-    .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpWithScalarParam>)
-    .set_attr<FCompute>("FCompute<cpu>", InitFillWithScalarCompute<cpu>)
-    .add_arguments(InitOpWithScalarParam::__FIELDS__());
+    .set_attr_parser(ParamParser<NumpyInitOpWithScalarParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", InitShape<NumpyInitOpWithScalarParam>)
+    .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyInitOpWithScalarParam>)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyInitFillWithScalarCompute<cpu>)
+    .add_arguments(NumpyInitOpWithScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_arange)
     .set_num_inputs(0)
@@ -244,11 +246,11 @@ NNVM_REGISTER_OP(_npi_linspace)
     .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
     .set_num_inputs(0)
     .set_num_outputs(1)
-    .set_attr_parser(ParamParser<LinspaceParam>)
-    .set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
-    .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<LinspaceParam>)
-    .set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
-    .add_arguments(RangeParam::__FIELDS__());
+    .set_attr_parser(ParamParser<NumpyLinspaceParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyLinspaceShape)
+    .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyLinspaceParam>)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyLinspaceCompute<cpu>)
+    .add_arguments(NumpyLinspaceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_logspace)
     .describe("Return numbers spaced evenly on a log scale.")

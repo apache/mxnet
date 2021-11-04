@@ -22,7 +22,7 @@ from cpython.version cimport PY_MAJOR_VERSION
 from cpython cimport pycapsule
 from libc.stdint cimport int32_t, int64_t, uint64_t, uint8_t, uint16_t, uint32_t
 import ctypes
-from ...base import get_last_ffi_error
+from ...base import get_last_ffi_error, _MAX_VALUE_64_BIT_SIGNED_, _MAX_VALUE_64_BIT_UNSIGNED_
 
 cdef enum MXNetTypeCode:
     kInt = 0
@@ -45,6 +45,7 @@ cdef extern from "mxnet/runtime/c_runtime_api.h":
         double v_float64
         void* v_handle
         const char* v_str
+        uint64_t v_uint64
 
 ctypedef void* MXNetRetValueHandle
 ctypedef void* MXNetFunctionHandle

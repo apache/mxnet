@@ -21,7 +21,7 @@ import numpy as np
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
-from mxnet.test_utils import assert_exception, default_context, set_default_context, use_np
+from mxnet.test_utils import assert_exception, default_device, set_default_device, use_np
 import pytest
 
 mx.npx.reset_np()
@@ -49,14 +49,14 @@ def test_exc_symbolic():
         inputs = [x, y]
         out = mx.symbol.ElementWiseSum(*inputs, name="esum")
         out = mx.sym.dot(z, out)
-        out2 = mx.sym.random.normal(0, -1, x_shape, ctx=default_context())
+        out2 = mx.sym.random.normal(0, -1, x_shape, ctx=default_device())
         out = mx.sym.dot(out, out2)
         out = mx.sym.make_loss(out)
-        arr = {'x': mx.nd.random.normal(0, 1, x_shape, ctx=default_context()),
-               'y': mx.nd.random.normal(0, 1, x_shape, ctx=default_context()),
-               'z': mx.nd.random.normal(0, 1, z_shape, ctx=default_context())}
+        arr = {'x': mx.nd.random.normal(0, 1, x_shape, ctx=default_device()),
+               'y': mx.nd.random.normal(0, 1, x_shape, ctx=default_device()),
+               'z': mx.nd.random.normal(0, 1, z_shape, ctx=default_device())}
         arr_grad = {'x': mx.nd.empty(x_shape), 'y': mx.nd.empty(x_shape), 'z': mx.nd.empty(z_shape)}
-        exec1 = out._bind(ctx=default_context(), args=arr, args_grad=arr_grad)
+        exec1 = out._bind(ctx=default_device(), args=arr, args_grad=arr_grad)
         outputs = exec1.forward()
         if exec_backward:
             exec1.backward()
@@ -84,7 +84,7 @@ def test_exc_multiple_waits():
         # for vars with exceptions in same scope
         caught = False
         try:
-            a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
+            a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_device())
             if waitall:
                 mx.nd.waitall()
             else:
@@ -93,7 +93,7 @@ def test_exc_multiple_waits():
             caught = True
         assert caught, "No exception thrown, exception should be rethrown with wait_to_read/waitall"
         try:
-            b = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
+            b = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_device())
             if waitall:
                 mx.nd.waitall()
             else:
@@ -111,7 +111,7 @@ def test_exc_post_fail():
     def post_fail(waitall=False):
         caught = False
         try:
-            a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
+            a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_device())
             if waitall:
                 mx.nd.waitall()
             else:
@@ -125,7 +125,7 @@ def test_exc_post_fail():
 
 def test_exc_mutable_var_fail():
     def mutable_var_check(waitall=False):
-        a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
+        a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_device())
         a = mx.nd.dot(a, a)
         if waitall:
             mx.nd.waitall()
@@ -137,7 +137,7 @@ def test_exc_mutable_var_fail():
 def test_multiple_waitalls():
     caught = False
     try:
-        a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
+        a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_device())
         mx.nd.waitall()
     except MXNetError:
         caught = True
@@ -150,7 +150,7 @@ def run_training_iteration(data):
     net = gluon.nn.HybridSequential()
     net.add(gluon.nn.Dense(10))
 
-    ctx = default_context()
+    ctx = default_device()
     net.initialize(mx.init.Xavier(), ctx=ctx)
     data = mx.nd.ones((3, 4))
     mx.profiler.set_state("run")

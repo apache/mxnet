@@ -75,6 +75,7 @@ typedef union {
   double v_float64;
   void* v_handle;
   const char* v_str;
+  uint64_t v_uint64;
   DLDataType v_type;
 } MXNetValue;
 

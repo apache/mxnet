@@ -151,7 +151,7 @@ MXNET_REGISTER_API("_npx.convolution")
       // num_group
       param.num_group = (uint32_t)(args[num_inputs + 5].operator int());
       // workspace
-      param.workspace = args[num_inputs + 6].operator uint64_t();
+      param.workspace = args[num_inputs + 6].operator int64_t();
       // cudnn_tune
       if (args[num_inputs + 8].type_code() == kNull) {
         param.cudnn_tune = dmlc::nullopt;

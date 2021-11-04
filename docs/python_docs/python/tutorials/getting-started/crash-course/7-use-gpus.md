@@ -36,11 +36,11 @@ npx.num_gpus() #This command provides the number of GPUs MXNet can access
 
 ## Allocate data to a GPU
 
-MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `context` attribute specifieing which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
+MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `device` attribute specifieing which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
 
 ```{.python .input}
 gpu = npx.gpu() if npx.num_gpus() > 0 else npx.cpu()
-x = np.ones((3,4), ctx=gpu)
+x = np.ones((3,4), device=gpu)
 x
 ```
 
@@ -63,7 +63,7 @@ If you have multiple GPUs on your machine, MXNet can access each of them through
 To perform an operation on a particular GPU, you only need to guarantee that the input of an operation is already on that GPU. The output is allocated on the same GPU as well. Almost all operators in the `np` and `npx` module support running on a GPU.
 
 ```{.python .input}
-y = np.random.uniform(size=(3,4), ctx=gpu)
+y = np.random.uniform(size=(3,4), device=gpu)
 x + y
 ```
 
@@ -115,17 +115,17 @@ class LeafNetwork(nn.HybridBlock):
         return batch
 ```
 
-Load the saved parameters onto GPU 0 directly as shown below; additionally, you could use `net.collect_params().reset_ctx(gpu)` to change the device.
+Load the saved parameters onto GPU 0 directly as shown below; additionally, you could use `net.collect_params().reset_device(gpu)` to change the device.
 
 ```{.python .input}
 net = LeafNetwork()
-net.load_parameters('leaf_models.params', ctx=gpu)
+net.load_parameters('leaf_models.params', device=gpu)
 ```
 
 Use the following command to create input data on GPU 0. The forward function will then run on GPU 0.
 
 ```{.python .input}
-x = np.random.uniform(size=(1, 3, 128, 128), ctx=gpu)
+x = np.random.uniform(size=(1, 3, 128, 128), device=gpu)
 net(x)
 ```
 
@@ -201,7 +201,7 @@ devices = available_gpus[:num_gpus]
 print('Using {} GPUs'.format(len(devices)))
 
 # Diff 2: reinitialize the parameters and place them on multiple GPUs
-net.initialize(force_reinit=True, ctx=devices)
+net.initialize(force_reinit=True, device=devices)
 
 # Loss and trainer are the same as before
 loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
