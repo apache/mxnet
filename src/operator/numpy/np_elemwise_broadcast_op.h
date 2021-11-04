@@ -176,7 +176,7 @@ void MixedIntBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
   } else {
     TBlob temp_tblob_l;
     TBlob temp_tblob_r;
-    MXNET_INT_TYPE_SWITCH_EXT_WITH(out.type_flag_, OType, {
+    MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, OType, {
       Tensor<xpu, 1, OType> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
       TBlob temp_tblob = TBlob(workspace);
