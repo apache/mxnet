@@ -42,8 +42,8 @@ int main(void) {
   HINSTANCE handle;
   handle = LoadLibrary(TEXT("libinit_lib.dll"));
 #else
-  void *handle;
-  handle = dlopen("libinit_lib.so", RTLD_LAZY);
+  void* handle;
+  handle   = dlopen("libinit_lib.so", RTLD_LAZY);
 #endif
 
   if (!handle) {
@@ -54,9 +54,9 @@ int main(void) {
   // get initialize function address from the library
   initialize_t init_lib;
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  init_lib = (initialize_t) GetProcAddress(handle, MXLIB_INITIALIZE_STR);
+  init_lib = (initialize_t)GetProcAddress(handle, MXLIB_INITIALIZE_STR);
 #else
-  init_lib = (initialize_t) dlsym(handle, MXLIB_INITIALIZE_STR);
+  init_lib = (initialize_t)dlsym(handle, MXLIB_INITIALIZE_STR);
 #endif
 
   if (!init_lib) {

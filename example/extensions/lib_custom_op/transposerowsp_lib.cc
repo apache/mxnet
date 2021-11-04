@@ -31,26 +31,25 @@ using namespace mxnet::ext;
 
 void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
   MXSparse* A = src.data<MXSparse>();
-  MXSparse* B = dst.data<MXSparse>(); 
+  MXSparse* B = dst.data<MXSparse>();
 
   std::vector<int64_t> shape = src.shape;
-  int64_t h = shape[0];
-  int64_t w = shape[1];
-  if(src.stype == kRowSparseStorage) {
+  int64_t h                  = shape[0];
+  int64_t w                  = shape[1];
+  if (src.stype == kRowSparseStorage) {
     // Keys of the map is the row index of transposed tensors.
-    // Values of the map is the rows which have non-zero elements.    
+    // Values of the map is the rows which have non-zero elements.
     std::map<int, std::vector<float>> mp;
-    float *Aval = (float*) (A->data);
-    for(int i = 0; i < A->data_len; i++) {
+    float* Aval = (float*)(A->data);
+    for (int i = 0; i < A->data_len; i++) {
       int row = i / w;
       int col = i % w;
-      row = A->indices[row];
-      if(Aval[i] != 0) {
-        if(mp.find(col) == mp.end()) {
-          mp[col] = std::vector<float>(h, 0);
+      row     = A->indices[row];
+      if (Aval[i] != 0) {
+        if (mp.find(col) == mp.end()) {
+          mp[col]      = std::vector<float>(h, 0);
           mp[col][row] = Aval[i];
-        }
-        else {
+        } else {
           mp[col][row] = Aval[i];
         }
       }
@@ -58,11 +57,11 @@ void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
 
     // Alloc memory for output tensors.
     res.alloc_sparse(B, 0, mp.size());
-    float *Bval = (float*) (B->data);
+    float* Bval = (float*)(B->data);
     int didx = 0, iidx = 0;
-    for(const auto& i : mp) {
+    for (const auto& i : mp) {
       B->indices[iidx++] = i.first;
-      for(auto j : i.second) {
+      for (auto j : i.second) {
         Bval[didx++] = j;
       }
     }
@@ -74,8 +73,7 @@ MXReturnValue forward(const std::unordered_map<std::string, std::string>& attrs,
                       std::vector<MXTensor>* outputs,
                       const OpResource& res) {
   // The data types and storage types of inputs and outputs should be the same.
-  if(inputs->at(0).dtype != outputs->at(0).dtype ||
-     inputs->at(0).stype != outputs->at(0).stype) {
+  if (inputs->at(0).dtype != outputs->at(0).dtype || inputs->at(0).stype != outputs->at(0).stype) {
     MX_ERROR_MSG << "Error! Expected all inputs and outputs to be the same type."
                  << "Found input storage type:" << inputs->at(0).stype
                  << " Found output storage type:" << outputs->at(0).stype
@@ -95,8 +93,9 @@ MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs
 }
 
 MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& attrs,
-                         int* num_in, int* num_out) {
-  *num_in = 1;
+                         int* num_in,
+                         int* num_out) {
+  *num_in  = 1;
   *num_out = 1;
   return MX_SUCCESS;
 }
@@ -144,59 +143,58 @@ MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& att
 }
 
 REGISTER_OP(my_transposerowsp)
-.setForward(forward, "cpu")
-.setBackward(backward, "cpu")
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferSType(inferSType)
-.setInferShape(inferShape);
+    .setForward(forward, "cpu")
+    .setBackward(backward, "cpu")
+    .setParseAttrs(parseAttrs)
+    .setInferType(inferType)
+    .setInferSType(inferSType)
+    .setInferShape(inferShape);
 
 /* ------------------------------------------------------------------------- */
 
 class MyStatefulTransposeRowSP : public CustomStatefulOp {
-  public:
-    explicit MyStatefulTransposeRowSP(int count,
-                                      std::unordered_map<std::string, std::string>  attrs)
+ public:
+  explicit MyStatefulTransposeRowSP(int count, std::unordered_map<std::string, std::string> attrs)
       : count(count), attrs_(std::move(attrs)) {}
 
-    MXReturnValue Forward(std::vector<MXTensor>* inputs,
-                          std::vector<MXTensor>* outputs,
-                          const OpResource& op_res) override {
-      std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
-      return forward(attrs_, inputs, outputs, op_res);
-    }
+  MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                        std::vector<MXTensor>* outputs,
+                        const OpResource& op_res) override {
+    std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
+    return forward(attrs_, inputs, outputs, op_res);
+  }
 
-    MXReturnValue Backward(std::vector<MXTensor>* inputs,
-                           std::vector<MXTensor>* outputs,
-                           const OpResource& op_res) override {
-      return backward(attrs_, inputs, outputs, op_res);
-    }
+  MXReturnValue Backward(std::vector<MXTensor>* inputs,
+                         std::vector<MXTensor>* outputs,
+                         const OpResource& op_res) override {
+    return backward(attrs_, inputs, outputs, op_res);
+  }
 
-  private:
-    int count;
-    const std::unordered_map<std::string, std::string> attrs_;
+ private:
+  int count;
+  const std::unordered_map<std::string, std::string> attrs_;
 };
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
                             const MXContext& ctx,
-                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<std::vector<unsigned int>>& in_shapes,
                             const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;
   // creating stateful operator instance
-  *op_inst = new MyStatefulTransposeRowSP(count, attrs);
+  *op_inst                = new MyStatefulTransposeRowSP(count, attrs);
   (*op_inst)->ignore_warn = true;
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
 
 REGISTER_OP(my_state_transposerowsp)
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferSType(inferSType)
-.setInferShape(inferShape)
-.setCreateOpState(createOpState, "cpu");
+    .setParseAttrs(parseAttrs)
+    .setInferType(inferType)
+    .setInferSType(inferSType)
+    .setInferShape(inferShape)
+    .setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
   if (version >= 10700) {
