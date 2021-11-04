@@ -33,82 +33,45 @@ NNVM_REGISTER_OP(_sample_multinomial)
     .add_alias("_npx__random_categorical")
     .describe(R"code(Concurrent sampling from multiple multinomial distributions.
 
-*data* is an *n* dimensional array whose last dimension has length *k*, where
-*k* is the number of possible outcomes of each multinomial distribution. This
-operator will draw *shape* samples from each distribution. If shape is empty
-one sample will be drawn from each distribution.
+Samples are distributed according to a multinomial distribution parametrized by
+*n* (number of experiments) and *p* (success probabilities of the k possible outcomes
+in each experiment). Samples will always be returned as a floating point data type.
 
-If *get_prob* is true, a second array containing log likelihood of the drawn
-samples will also be returned. This is usually used for reinforcement learning
-where you can provide reward as head gradient for this array to estimate
-gradient.
-
-Note that the input distribution must be normalized, i.e. *data* must sum to
+Note that the input distribution must be normalized, i.e. *p* must sum to
 1 along its last axis.
 
 Examples::
 
-   probs = [[0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0]]
+   n = [5., 6.]
+   probs = [[0., 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0.]]
 
-   // Draw a single sample for each distribution
-   sample_multinomial(probs) = [3, 0]
-
-   // Draw a vector containing two samples for each distribution
-   sample_multinomial(probs, shape=(2)) = [[4, 2],
-                                           [0, 0]]
-
-   // requests log likelihood
-   sample_multinomial(probs, get_prob=True) = [2, 1], [0.2, 0.3]
+   multinomial(n, probs) = [[0., 0., 0., 3., 2.],
+                            [0., 3., 1., 2., 0.]]
 )code")
-    .set_num_inputs(1)
-    .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-      const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(attrs.parsed);
-      return param.get_prob ? 2U : 1U;
-    })
+    .set_num_inputs(2)
+    .set_num_outputs(1)
     .set_attr_parser(ParamParser<SampleMultinomialParam>)
     .set_attr<mxnet::FInferShape>("FInferShape", SampleMultinomialOpShape)
     .set_attr<nnvm::FInferType>("FInferType", SampleMultinomialOpType)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const nnvm::NodeAttrs& attrs) {
-                                  return std::vector<ResourceRequest>{ResourceRequest::kRandom,
-                                                                      ResourceRequest::kTempSpace};
+                                  return std::vector<ResourceRequest>{
+                                      ResourceRequest::kParallelRandom,
+                                      ResourceRequest::kTempSpace};
                                 })
-    .set_attr<nnvm::FGradient>(
-        "FGradient",
-        [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-          const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(n->attrs.parsed);
-          if (param.get_prob) {
-            return MakeGradNode("_backward_sample_multinomial",
-                                n,
-                                {ograds[1], n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
-                                std::unordered_map<std::string, std::string>());
-          } else {
-            return MakeZeroGradNodes(n, ograds);
-          }
-        })
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       std::vector<std::string> v = {"n", "p"};
+                                       v.resize(2);
+                                       return v;
+                                     })
     .set_attr<FCompute>("FCompute<cpu>", SampleMultinomialForward<cpu>)
-    .add_argument("data",
+    .add_argument("n", "NDArray-or-Symbol", "Number of experiments")
+    .add_argument("p",
                   "NDArray-or-Symbol",
-                  "Distribution probabilities. Must sum to one on the last axis.")
+                  "Probability of every outcome in each experiment. Must sum to 1 on the last axis")
     .add_arguments(SampleMultinomialParam::__FIELDS__());
-
-struct SampleMultinomialBackwardCPUKernel {
-  template <typename DType, typename IType>
-  MSHADOW_XINLINE static void
-  Map(int i, index_t K, index_t M, DType* ograd, DType* dist, IType* out, DType* igrad) {
-    for (index_t j = 0; j < M; ++j) {
-      igrad[i * K + static_cast<size_t>(out[i * M + j])] +=
-          ograd[i * M + j] / dist[i * K + static_cast<size_t>(out[i * M + j])];
-    }
-  }
-};
-
-NNVM_REGISTER_OP(_backward_sample_multinomial)
-    .set_num_inputs(3)
-    .set_num_outputs(1)
-    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-    .set_attr<FCompute>("FCompute<cpu>",
-                        SampleMultinomialBackward<SampleMultinomialBackwardCPUKernel, cpu>);
 
 }  // namespace op
 }  // namespace mxnet
