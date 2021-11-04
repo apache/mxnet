@@ -88,7 +88,7 @@ class MKLDNNPoolingBwd {
 };
 
 template <typename T = mkldnn::memory::dims>
-void useAdaptivePaddingKernel(T* kernel,
+void UseAdaptivePaddingKernel(T* kernel,
                               T* strides,
                               T* pad_l,
                               T* pad_r,

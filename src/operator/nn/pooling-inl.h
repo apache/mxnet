@@ -108,7 +108,8 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
               "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
 
     DMLC_DECLARE_FIELD(output_size).set_default(dmlc::optional<mxnet::Tuple<int>>())
-    .describe("Only used for Adaptive Pooling.");
+    .describe("Only used for Adaptive Pooling. int (output size) or a tuple of int for output "
+    "(height, width).");
   }
 
   bool operator==(const PoolingParam& other) const {

@@ -226,13 +226,15 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
       pooling_fwds;
 #endif
 
-  const bool with_workspace = is_train && (MKLDNNRequireWorkspace(param) || !use_adaptive_pooling);
+  const bool with_workspace = is_train && MKLDNNRequireWorkspace(param);
   MKLDNNPoolingSignature key(param);
   key.AddSign(is_train);
   key.AddSign(with_workspace);
   key.AddSign(data);
   key.AddSign(output);
-
+  if (use_adaptive_pooling) {
+    key.AddSign(use_adaptive_pooling);
+  }
   auto it = pooling_fwds.find(key);
   if (it == pooling_fwds.end()) {
     CHECK(use_adaptive_pooling || (param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3))
@@ -247,7 +249,7 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
     mkldnn::memory::dims pad_r(kernel_ndims);
 
     if (use_adaptive_pooling) {
-      useAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data, output);
+      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data, output);
       mkldnn::memory::validate_dims(kernel);
       mkldnn::memory::validate_dims(strides);
       mkldnn::memory::validate_dims(pad_l);
