@@ -380,11 +380,7 @@ MXNET_REGISTER_API("_npi.full").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_full");
   nnvm::NodeAttrs attrs;
-<<<<<<< HEAD
-  op::NumpyInitOpWithScalarParam param;
-=======
-  op::InitOpWithScalarParam param = {};
->>>>>>> 119a2314f (Zero intialization to avoid error message on a Centos)
+  op::NumpyInitOpWithScalarParam param = {};
   if (args[0].type_code() == kDLInt) {
     param.shape = TShape(1, args[0].operator int64_t());
   } else {
