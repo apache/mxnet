@@ -75,7 +75,7 @@ inline bool UnravelOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   CHECK_GT(shape.ndim(), 0) << "Empty shape parameter for unravel operator.";
   const mxnet::TShape& in_shape = (*in_attrs)[0];
-  if (in_shape.ndim() > 0) {
+  if (in_shape.ndim() >= 0) {
     mxnet::TShape out_shape(in_shape.ndim() + 1, -1);
     out_shape[0] = shape.ndim();
     for (int i = 0; i < in_shape.ndim(); ++i) {

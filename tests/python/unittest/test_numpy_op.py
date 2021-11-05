@@ -10053,8 +10053,20 @@ def test_np_expand_dims():
 
 
 @use_np
-@pytest.mark.skip(reason='Test hangs. Tracked in #18144')
-def test_np_unravel_index():
+@pytest.mark.parametrize('ishape', [
+    2, 5,
+    (), (1,), (4,),
+    (2, 2), (2, 4), (3, 5),
+    (2, 2, 2), (2, 3, 2), (2, 3, 4),
+])
+@pytest.mark.parametrize('rshape', [
+    10, (15,),
+    (3, 4), (4, 5),
+    (2,3,4)
+])
+@pytest.mark.parametrize('dtype', [np.uint8, np.int8, np.int32, np.int64])
+@pytest.mark.parametrize('hybridize', [True, False])
+def test_np_unravel_index(ishape, rshape, dtype, hybridize):
     class TestUnravel_index(HybridBlock):
         def __init__(self, shape, order='C') :
             super(TestUnravel_index, self).__init__()
@@ -10064,44 +10076,33 @@ def test_np_unravel_index():
         def forward(self, a):
             return np.unravel_index(a, self._shape, self._order)
 
-    in_shapes = [
-        2, 5,
-        (), (1,), (4,),
-        (2, 2), (2, 4), (3, 5),
-        (2, 2, 2), (2, 3, 2), (2, 3, 4),
-    ]
-    unravel_shapes = [
-        10, (15,),
-        (3, 4), (4, 5),
-        (2,3,4)
-    ]
-    dtypes = [np.uint8, np.int8, np.int32, np.int64]
-    for hybridize, ishape, dtype, rshape in itertools.product([False, True], in_shapes, dtypes, unravel_shapes):
-        rtol = 1e-2 if dtype == np.float16 else 1e-3
-        atol = 1e-4 if dtype == np.float16 else 1e-5
-        test_unravel_index = TestUnravel_index(rshape)
-        if hybridize:
-            test_unravel_index.hybridize()
-        if type(ishape) == int and hybridize:
-            x = np.array([ishape], dtype=dtype)
-            np_out = onp.unravel_index(x.asnumpy(), rshape)
-        else:
-            x = np.random.uniform(0, 8, size=ishape).astype(dtype)
-            np_out = onp.unravel_index(x.asnumpy(), rshape)
-        mx_out = test_unravel_index(x)
-        assert len(mx_out) == len(np_out)
-        for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elem_np.shape
-            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
-        # no backward function for unravel_index operator
 
-        # Test imperative once again
-        mx_out = np.unravel_index(x, rshape)
+    rtol = 1e-2 if dtype == np.float16 else 1e-3
+    atol = 1e-4 if dtype == np.float16 else 1e-5
+    test_unravel_index = TestUnravel_index(rshape)
+    if hybridize:
+        test_unravel_index.hybridize()
+    if type(ishape) == int and hybridize:
+        x = np.array([ishape], dtype=dtype)
         np_out = onp.unravel_index(x.asnumpy(), rshape)
-        assert len(mx_out) == len(np_out)
-        for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elem_np.shape
-            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+    else:
+        x = np.random.uniform(0, 8, size=ishape).astype(dtype)
+        np_out = onp.unravel_index(x.asnumpy(), rshape)
+    mx_out = test_unravel_index(x)
+    assert len(mx_out) == len(np_out)
+    for elem_mx, elem_np in zip(mx_out, np_out):
+        assert elem_mx.asnumpy().shape == elem_np.shape
+        assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+    # no backward function for unravel_index operator
+
+    # Test imperative once again
+    mx_out = np.unravel_index(x, rshape)
+    np_out = onp.unravel_index(x.asnumpy(), rshape)
+    print(np_out)
+    assert len(mx_out) == len(np_out)
+    for elem_mx, elem_np in zip(mx_out, np_out):
+        assert elem_mx.asnumpy().shape == elem_np.shape
+        assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
 @use_np
