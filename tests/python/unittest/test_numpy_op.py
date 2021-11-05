@@ -5359,28 +5359,29 @@ def test_np_multivariate_normal():
 
 
 @use_np
-def test_npx_categorical():
-    class TestNumpyCategorical(HybridBlock):
+def test_npx_multinomial():
+    class TestNumpyMultinomial(HybridBlock):
         def __init__(self, size=None):
-            super(TestNumpyCategorical, self).__init__()
+            super(TestNumpyMultinomial, self).__init__()
             self.size = size
 
-        def forward(self, prob):
+        def forward(self, n, prob):
             if self.size is None:
-                return npx.random.categorical(prob)
-            return npx.random.categorical(prob, shape=self.size)
+                return npx.random.multinomial(n, prob)
+            return npx.random.multinomial(n, prob, shape=self.size)
 
     batch_sizes = [(2,), (2, 3)]
     event_shapes = [None, (10,), (10, 12)]
     num_event = [2, 4, 10]
     for batch_size, num_event, event_shape in itertools.product(batch_sizes, num_event, event_shapes):
         for hybridize in [True, False]:
+            n = np.ones(batch_size)
             prob = np.ones(batch_size + (num_event,)) / num_event
-            net = TestNumpyCategorical(event_shape)
+            net = TestNumpyMultinomial(event_shape)
             if hybridize:
                 net.hybridize()
-            mx_out = net(prob)
-            desired_shape = batch_size + event_shape if event_shape is not None else batch_size
+            mx_out = net(n, prob)
+            desired_shape = batch_size + event_shape + (num_event,) if event_shape is not None else batch_size + (num_event,)
             assert mx_out.shape == desired_shape
 
 

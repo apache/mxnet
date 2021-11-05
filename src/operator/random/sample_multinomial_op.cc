@@ -30,7 +30,7 @@ DMLC_REGISTER_PARAMETER(SampleMultinomialParam);
 
 NNVM_REGISTER_OP(_sample_multinomial)
     .add_alias("sample_multinomial")
-    .add_alias("_npx__random_categorical")
+    .add_alias("_npx__random_multinomial")
     .describe(R"code(Concurrent sampling from multiple multinomial distributions.
 
 Samples are distributed according to a multinomial distribution parametrized by
