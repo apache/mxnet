@@ -44,7 +44,7 @@ MXNET_REGISTER_API("_npi.unravel_index")
       attrs.parsed = param;
       attrs.op     = op;
       SetAttrDict<op::RavelParam>(&attrs);
-      NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+      NDArray* inputs[] = {args[0].operator mxnet::NDArray *()};
       int num_inputs    = 1;
       int num_outputs   = 0;
       auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
