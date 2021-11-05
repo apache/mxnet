@@ -1011,24 +1011,27 @@ struct mod : public mxnet_op::tunable {
   MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type Map(DType a,
                                                                                          DType b) {
     if (b == DType(0)) {
-      if (a < DType(0)) {
-        return -DType(0);
-      }
       return DType(0);
     } else if (b < DType(0)) {
       if (a < DType(0)) {
-        return DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
-      } else if (a == DType(0)) {
-        return -DType(0);
+        DType ret = DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
+        if (ret == 0) {
+          return -ret;
+        }
+        return ret;
       } else {
-        return DType(
+        DType ret = DType(
             ::fmod(static_cast<double>(a), -static_cast<double>(b)) +
             (::fmod(static_cast<double>(a), -static_cast<double>(b)) != DType(0) ? b : DType(0)));
+        if (ret == 0) {
+          return -ret;
+        }
+        return ret;
       }
     } else {
       if (a < DType(0)) {
-        return -DType(
-            ::fmod(-static_cast<double>(a), static_cast<double>(b)) +
+        return DType(
+            -::fmod(-static_cast<double>(a), static_cast<double>(b)) +
             (::fmod(-static_cast<double>(a), static_cast<double>(b)) != DType(0) ? b : DType(0)));
       } else {
         return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
@@ -1049,11 +1052,7 @@ struct mod : public mxnet_op::tunable {
 struct mixed_mod {
   template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
-    mshadow::half::half_t ret = mod::Map(static_cast<mshadow::half::half_t>(a), b);
-    if ((ret == 0) && ((a < 0) != (b < 0))) {
-      return -ret;
-    }
-    return ret;
+    return mod::Map(static_cast<mshadow::half::half_t>(a), b);
   }
 
   template <typename DType,
@@ -1061,11 +1060,7 @@ struct mixed_mod {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
-    float ret = mod::Map(static_cast<float>(a), b);
-    if ((ret == 0) && ((a < 0) != (b < 0))) {
-      return -ret;
-    }
-    return ret;
+    return mod::Map(static_cast<float>(a), b);
   }
 
   template <typename DType,
@@ -1074,22 +1069,14 @@ struct mixed_mod {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
-    double ret = mod::Map(static_cast<double>(a), b);
-    if ((ret == 0) && ((a < 0) != (b < 0))) {
-      return -ret;
-    }
-    return ret;
+    return mod::Map(static_cast<double>(a), b);
   }
 };
 
 struct mixed_rmod {
   template <typename DType, typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
-    mshadow::half::half_t ret = mod::Map(b, static_cast<mshadow::half::half_t>(a));
-    if ((ret == 0) && ((a < 0) != (b < 0))) {
-      return -ret;
-    }
-    return ret;
+    return mod::Map(b, static_cast<mshadow::half::half_t>(a));
   }
 
   template <typename DType,
@@ -1097,11 +1084,7 @@ struct mixed_rmod {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
-    float ret = mod::Map(b, static_cast<float>(a));
-    if ((ret == 0) && ((a < 0) != (b < 0))) {
-      return -ret;
-    }
-    return ret;
+    return mod::Map(b, static_cast<float>(a));
   }
 
   template <typename DType,
@@ -1110,11 +1093,7 @@ struct mixed_rmod {
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
-    double ret = mod::Map(b, static_cast<double>(a));
-    if ((ret == 0) && ((a < 0) != (b < 0))) {
-      return -ret;
-    }
-    return ret;
+    return mod::Map(b, static_cast<double>(a));
   }
 };
 
