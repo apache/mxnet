@@ -6100,8 +6100,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
         if isinstance(indices, NDArray):
             return tuple(_api_internal.unravel_index(indices, shape))
         raise TypeError('Do not support type {} as indices.'.format(str(type(indices))))
-    else:
-        raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
+    raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
 
 
 def flatnonzero(a):
