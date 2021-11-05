@@ -35,13 +35,13 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <parallel_hashmap/phmap.h>
 
 #include "dnnl.hpp"
 #include "mxnet/graph_attr_types.h"
 #include "mxnet/ndarray.h"
 #include "mxnet/op_attr_types.h"
 #include "mxnet/resource.h"
-#include <parallel_hashmap/phmap.h>
 
 #define DNNL_REAL_TYPE_SWITCH(type, DType, ...)   \
   switch (type) {                                 \
