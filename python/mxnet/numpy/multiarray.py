@@ -483,7 +483,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                        'cpu_pinned': DLDeviceType.DLCPUPINNED}
         if self.device.device_type not in devtype_map:
             raise ValueError('Unkown device type {} for DLPack'.format(self.device.device_type))
-        return (devtype_map(self.device.device_type), self.device.device_id)
+        return (devtype_map[self.device.device_type], self.device.device_id)
 
 
     def _get_np_basic_indexing(self, key):
@@ -13221,38 +13221,6 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     array(-128, dtype=int8)
     """
     return _mx_nd_np.sum(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims, initial=initial, where=where)
-
-
-@set_module('mxnet.numpy')
-def from_dlpack(x):
-    """
-    Returns a np.ndarray backed by a dlpack tensor.
-
-    Parameters
-    ----------
-    dlpack : an object with __dlpack__ method or PyCapsule (the pointer of DLManagedTensor)
-        input data
-
-    Returns
-    -------
-    out : np.ndarray
-        an ndarray backed by a dlpack tensor
-
-    Examples
-    --------
-    >>> x = mx.np.ones((2,3))
-    >>> y = mx.np.from_dlpack(x)
-    >>> y
-    array([[1., 1., 1.],
-           [1., 1., 1.]])
-    >>> y += 1
-    >>> x
-    array([[2., 2., 2.],
-           [2., 2., 2.]])
-    """
-    from_dlpack = ndarray_from_dlpack(ndarray)
-    return from_dlpack(x)
-# pylint: enable=redefined-outer-name, too-many-arguments
 
 
 @set_module('mxnet.numpy')
