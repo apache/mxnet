@@ -59,10 +59,10 @@ namespace contrib {
 
 // needs to be same with
 //   https://github.com/apache/incubator-mxnet/blob/1c874cfc807cee755c38f6486e8e0f4d94416cd8/src/operator/subgraph/tensorrt/tensorrt-inl.h#L190
-static const std::string TENSORRT_SUBGRAPH_PARAM_IDENTIFIER = "subgraph_params_names";
+static const std::string TENSORRT_SUBGRAPH_PARAM_IDENTIFIER = "subgraph_params_names";  // NOLINT
 // needs to be same with
 //   https://github.com/apache/incubator-mxnet/blob/master/src/operator/subgraph/tensorrt/tensorrt.cc#L244
-static const std::string TENSORRT_SUBGRAPH_PARAM_PREFIX = "subgraph_param_";
+static const std::string TENSORRT_SUBGRAPH_PARAM_PREFIX = "subgraph_param_";  // NOLINT
 /*!
  * this is a mimic to
  * https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/contrib/tensorrt.py#L37

@@ -950,8 +950,6 @@ static void timingTest(const std::string& label,
       timing += info.executor_->GetTiming();
     }
   }
-  while (false)
-    ;
 
   timing.print(&std::cout, label);
   std::cout << std::endl << std::flush;

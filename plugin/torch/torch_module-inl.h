@@ -208,7 +208,7 @@ class TorchModuleOp : public Operator {
       // iterate the grad of params
       lua_pushnil(L);
       it = in_grad.begin() + param_.num_data;
-      ;
+
       while (lua_next(L, -2)) {
         TorchTensor::SetInternal(
             torchState_,

@@ -125,7 +125,6 @@ class TimedScope {
 
   inline void stop() {
     stopTime_ = getMicroTickCount();
-    ;
   }
 
   inline float elapsedMilliseconds() const {

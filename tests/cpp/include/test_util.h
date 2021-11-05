@@ -444,7 +444,6 @@ inline StreamType& print_blob_(const RunContext& ctx,
         break;
       } else {
         os << " |" << std::flush;
-        ;
       }
     }
     if (r < height - 1) {

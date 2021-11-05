@@ -197,7 +197,9 @@ class Xavier : public Initializer {
   enum RandType { gaussian, uniform } rand_type;
   enum FactorType { avg, in, out } factor_type;
   float magnitude;
-  Xavier(RandType rand_type = gaussian, FactorType factor_type = avg, float magnitude = 3)
+  Xavier(RandType rand_type     = gaussian,  // NOLINT
+         FactorType factor_type = avg,       // NOLINT
+         float magnitude        = 3)                // NOLINT
       : rand_type(rand_type), factor_type(factor_type), magnitude(magnitude) {}
 
   void operator()(const std::string& name, NDArray* arr) override {
