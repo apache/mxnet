@@ -25,6 +25,7 @@
 #define MXNET_OPERATOR_TENSOR_RAVEL_H_
 
 #include <mxnet/operator_util.h>
+#include <string>
 #include <vector>
 #include <algorithm>
 #include "../mshadow_op.h"
