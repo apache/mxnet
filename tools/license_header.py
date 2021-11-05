@@ -71,6 +71,7 @@ _WHITE_LIST = [
                '3rdparty/dmlc-core',
                '3rdparty/googletest',
                '3rdparty/onednn',
+               '3rdparty/parallel-hashmap',
                '3rdparty/nvidia_cub',
                '3rdparty/onnx-tensorrt',
                '3rdparty/openmp',

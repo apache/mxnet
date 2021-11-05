@@ -41,7 +41,7 @@
 #include "mxnet/ndarray.h"
 #include "mxnet/op_attr_types.h"
 #include "mxnet/resource.h"
-#include "../../../3rdparty/parallel-hashmap/parallel_hashmap/phmap.h"
+#include <parallel_hashmap/phmap.h>
 
 #define DNNL_REAL_TYPE_SWITCH(type, DType, ...)   \
   switch (type) {                                 \
