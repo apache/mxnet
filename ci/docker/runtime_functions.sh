@@ -873,6 +873,25 @@ unittest_array_api_standardization() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_creation_functions.py
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_indexing.py
+    popd
+}
+
+unittest_array_api_signatrues() {
+    set -ex
+    python3 -m pip install -e /work/mxnet/python --user
+    cd ..
+    git clone https://github.com/data-apis/array-api-tests.git
+    pushd /work/array-api-tests
+    git checkout c1dba80a196a03f880d2e0a998a272fb3867b720
+    export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
+    # OverflowError: Python int too large to convert to C long
+    # when cython is enabled
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
         array_api_tests/test_signatures.py::test_elementwise_function_two_arg_bool_type_promotion
     popd
 }

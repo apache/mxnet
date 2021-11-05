@@ -1858,7 +1858,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
 
-    def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
+    def repeat(self: Union[...], repeats: int, /, *, axis: Optional[int] = None) -> ndarray: # pylint: disable=arguments-differ
         """Repeat elements of an array."""
         return repeat(self, repeats, axis=axis)
 
@@ -1992,7 +1992,15 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         return _npi.slice_assign(self, rhs, begin=begin, end=end, step=step, out=self)
 
-    def take(self, indices, axis=None, mode='raise'):  # pylint: disable=arguments-differ, redefined-outer-name
+    def take(
+        self: ndarray,
+        indices: ndarray,
+        /,
+        *,
+        axis: Optional[int] = None,
+        mode: Optional[str] = 'raise',
+        out: Optional[ndarray] = None
+    ) -> ndarray:  # pylint: disable=arguments-differ, redefined-outer-name
         """Convenience fluent method for :py:func:`take`.
 
         The arguments are the same as for :py:func:`take`, with
@@ -2016,7 +2024,14 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pick')
 
-    def sort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
+    def sort(
+            self: ndarray,
+            /,
+            *,
+            axis: Optional[int] = -1,
+            kind: Optional[str] = None,
+            order: Optional[str, Tuple[str, ...]] = None
+    ) -> ndarray:  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sort`.
 
         The arguments are the same as for :py:func:`sort`, with
@@ -2032,7 +2047,14 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute topk')
 
-    def argsort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
+    def argsort(
+            self: ndarray,
+            /,
+            *,
+            axis: Optional[int] = -1,
+            kind: Optional[str] = None,
+            order: Optional[str, Tuple[str, ...]] = None
+    ) -> ndarray:  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
@@ -3664,6 +3686,7 @@ def floor_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) 
     """Return the largest integer smaller or equal to the division of the inputs.
     It is equivalent to the Python // operator and pairs with the Python % (remainder),
     function so that a = a % b + b * (a // b) up to roundoff.
+
     Parameters
     ----------
     x1 : ndarray or scalar
@@ -3674,6 +3697,7 @@ def floor_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) 
         A location into which the result is stored. If provided, it must have a shape
         that the inputs broadcast to. If not provided or None, a freshly-allocated array
         is returned.
+
     Returns
     -------
     out : ndarray or scalar
@@ -3681,13 +3705,13 @@ def floor_divide(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) 
 
     .. note::
 
-        This operator now supports automatic type promotion. The resulting type will be determined
-        according to the following rules:
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
 
-        * If both inputs are of floating number types, the output is the more precise type.
-        * If only one of the inputs is floating number type, the result is that type.
-        * If both inputs are of integer types (including boolean), the output is the more
-          precise type
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+         precise type
 
     Examples
     --------
@@ -6742,7 +6766,7 @@ def permute_dims(a: ndarray, /, *, axes: Optional[list[int]] = None) -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def repeat(a: Union[...], repeats: int, /, *, axis: Optional[int] = None):
+def repeat(a: Union[...], repeats: int, /, *, axis: Optional[int] = None) -> ndarray:
     """
     Repeat elements of an array.
 
@@ -10230,7 +10254,6 @@ def cross(
         a: ndarray,
         b: ndarray,
         /,
-        *,
         axisa: Optional[int] = -1,
         axisb: Optional[int] = -1,
         axisc: Optional[int] = -1,
