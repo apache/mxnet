@@ -29,7 +29,7 @@ namespace op {
 // clang-format off
 template <>
 void CheckSameIdx<gpu>(const OpContext& ctx, const TBlob& ograd_row_idx, const TBlob& in_row_idx) {
-// clang-format on	
+    // clang-format on
     MSHADOW_IDX_TYPE_SWITCH(ograd_row_idx.type_flag_,
                             IType,
                             {
