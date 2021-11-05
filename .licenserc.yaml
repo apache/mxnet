@@ -61,6 +61,7 @@ header:
     # symlinks
     - 'include/dlpack' # symlink to 3rdparty/dlpack/include/dlpack
     - 'include/dmlc' # symlink to 3rdparty/dmlc-core/include/dmlc
+    - 'include/parallel_hashmap' # symlink to 3rdparty/parallel_hashmap/parallel_hashmap
     - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
     - 'include/onednn' # symlinks to 3rdparty/onednn
     # test/build data
