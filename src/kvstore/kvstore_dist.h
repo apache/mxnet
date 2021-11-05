@@ -508,16 +508,16 @@ class KVStoreDist : public KVStoreLocal {
       const int dtype     = recv_buf.dtype();
       const int num_bytes = mshadow::mshadow_sizeof(dtype);
       PSKV& pskv          = (gradient_compression_->get_type() == CompressionType::kNone) ?
-                                EncodeDefaultKey(key, size, num_bytes) :
-                                EncodeCompressedKey(key, size, false, num_bytes);
-      char* data          = static_cast<char*>(recv_buf.data().dptr_);
+                       EncodeDefaultKey(key, size, num_bytes) :
+                       EncodeCompressedKey(key, size, false, num_bytes);
+      char* data = static_cast<char*>(recv_buf.data().dptr_);
       // false means not to delete data when SArray is deleted
       auto vals = new ps::SArray<char>(data, size * num_bytes, false);
       // issue pull
       RequestType mode = (gradient_compression_->get_type() != CompressionType::kNone) ?
                              RequestType::kCompressedPushPull :
                              RequestType::kDefaultPushPull;
-      const int cmd    = GetCommandType(mode, dtype);
+      const int cmd = GetCommandType(mode, dtype);
       CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, cmd, [vals, cb]() {
         delete vals;
         cb();

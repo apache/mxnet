@@ -853,8 +853,8 @@ __global__ void masked_softmax_grad_kernel(OType* out,
   for (index_t i = x; i < M; i += x_size) {
     bool mask_value = bcst_mask_axis ? in_mask[base_mask] : in_mask[base_mask + i * sa_mask];
     final_result    = negate ? -OP2::Map(ograd[base + i * sa], out[base + i * sa], ssum) :
-                               OP2::Map(ograd[base + i * sa], out[base + i * sa], ssum);
-    final_result    = mask_value ? final_result / static_cast<DType>(temperature) : DType(0.0f);
+                            OP2::Map(ograd[base + i * sa], out[base + i * sa], ssum);
+    final_result = mask_value ? final_result / static_cast<DType>(temperature) : DType(0.0f);
     KERNEL_ASSIGN(igrad[base + i * sa], Req, final_result);
   }
 }

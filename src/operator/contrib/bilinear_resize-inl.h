@@ -273,9 +273,9 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
       new_height = ((dshape[2] % 2) == 0) ?
                        (int16_t)(dshape[2] * param.scale_height.value()) :
                        (int16_t)((dshape[2] - 1) * param.scale_height.value()) + 1;
-      new_width  = ((dshape[3] % 2) == 0) ?
-                       (int16_t)(dshape[3] * param.scale_width.value()) :
-                       (int16_t)((dshape[3] - 1) * param.scale_width.value()) + 1;
+      new_width = ((dshape[3] % 2) == 0) ?
+                      (int16_t)(dshape[3] * param.scale_width.value()) :
+                      (int16_t)((dshape[3] - 1) * param.scale_width.value()) + 1;
       break;
     }
     case bilinear_resize::like: {

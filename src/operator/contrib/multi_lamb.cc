@@ -44,8 +44,8 @@ struct MultiLAMBKernelStep1 {
     using namespace mshadow_op;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
-        MPDType w           = has_mixed_precision ? kernel_params.weights32[index][i] :
-                                                    MPDType(kernel_params.weights[index][i]);
+        MPDType w = has_mixed_precision ? kernel_params.weights32[index][i] :
+                                          MPDType(kernel_params.weights[index][i]);
         MPDType scaled_grad = static_cast<MPDType>(kernel_params.grads[index][i]) * rescale_grad;
         if (clip_gradient >= 0.0f)
           scaled_grad = mshadow_op::clip::Map(scaled_grad, static_cast<MPDType>(clip_gradient));
@@ -93,8 +93,8 @@ struct MultiLAMBKernelStep2 {
       if ((size_t)i < kernel_params.sizes[index]) {
         MPDType w = has_mixed_precision ? kernel_params.weights32[index][i] :
                                           MPDType(kernel_params.weights[index][i]);
-        float r1  = sqrt(sum_sq_weigths[index]);
-        float r2  = sqrt(sum_sq_temp_g[index]);
+        float r1 = sqrt(sum_sq_weigths[index]);
+        float r2 = sqrt(sum_sq_temp_g[index]);
         if (lower_bound >= 0)
           r1 = std::max(r1, lower_bound);
         if (upper_bound >= 0)

@@ -242,19 +242,19 @@ const dnnl::memory* GetWeights(const NDArray& arr, int num_groups) {
     tz         = dnnl::memory::dims{arr.shape()[O], arr.shape()[I]};
     format_tag = dnnl::memory::format_tag::oi;
   } else if (ndim == 3) {
-    tz         = num_groups > 1 ?
-                     dnnl::memory::dims{
+    tz = num_groups > 1 ?
+             dnnl::memory::dims{
                  num_groups, arr.shape()[O] / num_groups, arr.shape()[I], arr.shape()[H]} :
-                     dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H]};
+             dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H]};
     format_tag = num_groups > 1 ? dnnl::memory::format_tag::goiw : dnnl::memory::format_tag::oiw;
   } else if (ndim == 4) {
-    tz         = num_groups > 1 ?
-                     dnnl::memory::dims{num_groups,
+    tz = num_groups > 1 ?
+             dnnl::memory::dims{num_groups,
                                 arr.shape()[O] / num_groups,
                                 arr.shape()[I],
                                 arr.shape()[H],
                                 arr.shape()[W]} :
-                     dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H], arr.shape()[W]};
+             dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H], arr.shape()[W]};
     format_tag = num_groups > 1 ? dnnl::memory::format_tag::goihw : dnnl::memory::format_tag::oihw;
   } else if (ndim == 5) {
     tz = num_groups > 1 ?

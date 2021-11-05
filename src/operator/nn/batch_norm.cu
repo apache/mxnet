@@ -282,7 +282,7 @@ __launch_bounds__(inference_forward_threads) __global__
 
       AType invstd = small_num_channels ? saved_invstd[my_channel] :
                                           variance_to_invstd(runningVar[my_channel], epsilon);
-      AType mean   = small_num_channels ? saved_mean[my_channel] : runningMean[my_channel];
+      AType mean = small_num_channels ? saved_mean[my_channel] : runningMean[my_channel];
       AType gamma =
           small_num_channels ?
               saved_weight[my_channel] :
@@ -349,8 +349,8 @@ __global__ void BatchNormalizationUpdateOutputKernel(DeviceTensor input,
   const AccReal gamma = ((flags & FIX_GAMMA_FLAG) == 0 && weight.numElements() > 0) ?
                             ScalarConvert<DType, AccReal>::to(weight[plane]) :
                             ScalarConvert<int, AccReal>::to(1);
-  const AccReal beta  = bias.numElements() > 0 ? ScalarConvert<DType, AccReal>::to(bias[plane]) :
-                                                 ScalarConvert<int, AccReal>::to(0);
+  const AccReal beta = bias.numElements() > 0 ? ScalarConvert<DType, AccReal>::to(bias[plane]) :
+                                                ScalarConvert<int, AccReal>::to(0);
   for (int batch = 0, nbatch = input.OuterSize(); batch < nbatch; ++batch) {
     for (int x = threadIdx.x, nx = input.InnerSize(); x < nx; x += blockDim.x) {
       const DType inp = input.get_ref(batch, plane, x);
@@ -651,7 +651,7 @@ static __global__ void BatchNormalizationBackwardKernel(const DeviceTensor input
   const AccReal weightVal = ((flags & FIX_GAMMA_FLAG) == 0 && tensors.weight.numElements() > 0) ?
                                 ScalarConvert<DType, AccReal>::to(tensors.weight[plane]) :
                                 AccReal(1);
-  const AccReal norm      = AccReal(1) / N;
+  const AccReal norm = AccReal(1) / N;
 
   // Compute two values across (batch, x/y/z) in one pass:
   // 1. Sum(gradOutput)

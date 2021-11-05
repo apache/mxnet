@@ -73,11 +73,13 @@ class TRT_Logger : public nvinfer1::ILogger {
       time_t rawtime = std::time(0);
       char buf[256];
       strftime(&buf[0], 256, "%Y-%m-%d %H:%M:%S", std::gmtime(&rawtime));
+      // clang-format off
       const char* sevstr = (severity == Severity::kINTERNAL_ERROR ? "    BUG" :
                             severity == Severity::kERROR          ? "  ERROR" :
                             severity == Severity::kWARNING        ? "WARNING" :
                             severity == Severity::kINFO           ? "   INFO" :
                                                                     "UNKNOWN");
+      // clang-format on
       (*_ostream) << "[" << buf << " " << sevstr << "] " << msg << std::endl;
     }
   }

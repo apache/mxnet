@@ -490,8 +490,8 @@ __launch_bounds__(NMS<DType>::THRESHOLD) __global__
   for (int i = 0; i < n_threads / warp_size; ++i) {
     uint32_t my_mask = my_next_mask;
     my_next_mask     = (((i + 1) < n_threads / warp_size) && (my_element_in_batch < topk)) ?
-                           nms_results[(i + 1) * topk * num_batches + my_element] :
-                           full_mask;
+                       nms_results[(i + 1) * topk * num_batches + my_element] :
+                       full_mask;
     if (my_warp == i && !__all_sync(full_mask, my_mask == full_mask)) {
       my_mask = my_mask | earlier_threads_mask;
       // Loop over warp_size - 1 because the last
