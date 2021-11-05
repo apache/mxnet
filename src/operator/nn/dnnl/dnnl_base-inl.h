@@ -28,6 +28,7 @@
 #define MXNET_OPERATOR_NN_DNNL_DNNL_BASE_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
+#include <parallel_hashmap/phmap.h>
 #include <algorithm>
 #include <iterator>
 #include <memory>
@@ -35,7 +36,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <parallel_hashmap/phmap.h>
 
 #include "dnnl.hpp"
 #include "mxnet/graph_attr_types.h"
