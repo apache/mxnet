@@ -42,6 +42,11 @@ struct RavelParam : public dmlc::Parameter<RavelParam> {
         .set_default(mxnet::TShape())
         .describe("Shape of the array into which the multi-indices apply.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s;
+    shape_s << shape;
+    (*dict)["shape"] = shape_s.str();
+  }
 };
 
 inline bool RavelOpShape(const nnvm::NodeAttrs& attrs,
