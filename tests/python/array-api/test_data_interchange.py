@@ -16,7 +16,7 @@
 # under the License.
 
 import mxnet as mx
-import numpy as np
+from mxnet import np
 import torch
 
 
