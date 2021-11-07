@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file  cudnn_ops.h
  * \brief cuDNN v8 ops
  */

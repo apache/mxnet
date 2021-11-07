@@ -86,6 +86,7 @@ class Storage {
    * \brief Allocate a new contiguous memory for a given size.
    * \param size Total size of memory in bytes.
    * \param ctx Context information about the device and ID.
+   * \param failsafe Return a handle with a null dptr if out of memory, rather than exit.
    * \return Handle struct.
    */
   Handle Alloc(size_t size, Context ctx, bool failsafe = false) {

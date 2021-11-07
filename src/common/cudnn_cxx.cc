@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file cudnn_cxx.cc
  */
 #include "cudnn_cxx.h"

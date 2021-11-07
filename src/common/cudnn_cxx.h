@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file cudnn_cxx.h
  * \brief Convenience utilities to make coding against cuDNN v8 API less verbose
  */

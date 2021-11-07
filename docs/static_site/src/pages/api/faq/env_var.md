@@ -300,11 +300,40 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - If set to '0', disallows Tensor Core use in CUDA ops.
   - If set to '1', allows Tensor Core use in CUDA ops.
   - This variable can only be set once in a session.
+  - Also controls filtering cuDNN engines with CUDNN_NUMERICAL_NOTE_TENSOR_CORE.
 
 * MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION
   - 0(false) or 1(true) ```(default=0)```
   - If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
   - If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
+  - Also controls filtering cuDNN engines with CUDNN_NUMERICAL_NOTE_DOWN_CONVERT_INPUTS (such engines are disallowed if set to 0).
+
+* MXNET_CUDNN_ALLOW_REDUCED_PRECISION_REDUCTION
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows cuDNN engines with CUDNN_NUMERICAL_NOTE_REDUCED_PRECISION_REDUCTION.
+  - If set to '1', allows cuDNN engines with CUDNN_NUMERICAL_NOTE_REDUCED_PRECISION_REDUCTION.
+
+* MXNET_CUDNN_ALLOW_FFT
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows cuDNN engines with CUDNN_NUMERICAL_NOTE_FFT.
+  - If set to '1', allows cuDNN engines with CUDNN_NUMERICAL_NOTE_FFT.
+
+* MXNET_CUDNN_ALLOW_WINOGRAD
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows cuDNN engines with CUDNN_NUMERICAL_NOTE_WINOGRAD.
+  - If set to '1', allows cuDNN engines with CUDNN_NUMERICAL_NOTE_WINOGRAD.
+
+* MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES
+  - Comma-separated list of cuDNN convolution forward engine numbers to disable.
+  - Normally should be left alone, unless you know what you're doing.
+
+* MXNET_CUDNN_DISABLED_CONV_DGRAD_ENGINES
+  - Comma-separated list of cuDNN convolution dgrad engine numbers to disable.
+  - Normally should be left alone, unless you know what you're doing.
+
+* MXNET_CUDNN_DISABLED_CONV_WGRAD_ENGINES
+  - Comma-separated list of cuDNN convolution wgrad engine numbers to disable.
+  - Normally should be left alone, unless you know what you're doing.
 
 * MXNET_CUDA_LIB_CHECKING
   - 0(false) or 1(true) ```(default=1)```
@@ -342,6 +371,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - If set to true, MXNet will only use deterministic algorithms in forward and backward computation.
   If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
   of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
+  - Also controls filtering cuDNN engines with CUDNN_NUMERICAL_NOTE_NONDETERMINISTIC (such engines are disallowed if set to 1).
 
 * MXNET_CPU_PARALLEL_SIZE
   - Values: Int ```(default=200000)```

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file  cudnn_ops.cc
  * \brief cuDNN v8 ops
  */
@@ -425,8 +424,9 @@ std::vector<Descriptor> MakeFallbackPlans(
 
 cudnnBackendHeurMode_t HeurMode() {
 #if CUDNN_VERSION >= 8100
+  auto major       = cudnnGetVersion() / 1000;
   auto minor       = cudnnGetVersion() / 100 % 10;
-  int default_mode = minor < 2 ? CUDNN_HEUR_MODE_INSTANT : CUDNN_HEUR_MODE_B;
+  int default_mode = major == 8 && minor < 2 ? CUDNN_HEUR_MODE_INSTANT : CUDNN_HEUR_MODE_B;
 #else
   int default_mode = CUDNN_HEUR_MODE_INSTANT;
 #endif  // CUDNN_VERSION >= 8100

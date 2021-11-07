@@ -37,6 +37,7 @@ class CPUDeviceStorage {
   /*!
    * \brief Aligned allocation on CPU.
    * \param handle Handle struct.
+   * \param failsafe Return a handle with a null dptr if out of memory, rather than exit.
    */
   inline static void Alloc(Storage::Handle* handle, bool failsafe = false);
   /*!
