@@ -29,11 +29,11 @@ import weakref
 import numpy as np
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer, context, _deferred_compute as dc
-from ..context import Context, cpu
+from .. import symbol, ndarray, initializer, device as _device, _deferred_compute as dc
+from ..device import Device, cpu
 from .. import autograd
 from .utils import shape_is_known
-from ..util import is_np_shape, is_np_array
+from ..util import is_np_shape, is_np_array, wrap_ctx_to_device_func
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 # pylint: disable= invalid-name
@@ -47,17 +47,17 @@ class DeferredInitializationError(MXNetError):
 class Parameter(object):
     """A Container holding parameters (weights) of Blocks.
 
-    :py:class:`Parameter` holds a copy of the parameter on each :py:class:`Context` after
+    :py:class:`Parameter` holds a copy of the parameter on each :py:class:`Device` after
     it is initialized with ``Parameter.initialize(...)``. If :py:attr:`grad_req` is
-    not ``'null'``, it will also hold a gradient array on each :py:class:`Context`::
+    not ``'null'``, it will also hold a gradient array on each :py:class:`Device`::
 
-        ctx = mx.gpu(0)
-        x = mx.np.zeros((16, 100), ctx=ctx)
+        device = mx.gpu(0)
+        x = mx.np.zeros((16, 100), device=device)
         w = mx.gluon.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
         b = mx.gluon.Parameter('fc_bias', shape=(64,), init=mx.init.Zero())
-        w.initialize(ctx=ctx)
-        b.initialize(ctx=ctx)
-        out = mx.npx.fully_connected(x, w.data(ctx), b.data(ctx), num_hidden=64)
+        w.initialize(device=device)
+        b.initialize(device=device)
+        out = mx.npx.fully_connected(x, w.data(device), b.data(device), num_hidden=64)
 
     Parameters
     ----------
@@ -111,8 +111,8 @@ class Parameter(object):
         self._var_name = None
         self._data = None
         self._grad = None
-        self._ctx_list = None
-        self._ctx_map = None
+        self._device_list = None
+        self._device_map = None
         self._trainer = None
         self._deferred_init = ()
         self._differentiable = differentiable
@@ -218,24 +218,24 @@ class Parameter(object):
         else:
             self._trainer = trainer
 
-    def _check_and_get(self, arr_list, ctx):
+    def _check_and_get(self, arr_list, device):
         if arr_list is not None:
-            if ctx is list:
+            if device is list:
                 return arr_list
-            if ctx is None:
+            if device is None:
                 if len(arr_list) == 1:
                     return arr_list[0]
                 else:
-                    ctx = context.current_context()
-            ctx_list = self._ctx_map[ctx.device_typeid&1]
-            if ctx.device_id < len(ctx_list):
-                idx = ctx_list[ctx.device_id]
+                    device = _device.current_device()
+            device_list = self._device_map[device.device_typeid&1]
+            if device.device_id < len(device_list):
+                idx = device_list[device.device_id]
                 if idx is not None:
                     return arr_list[idx]
             raise RuntimeError(
-                "Parameter '%s' was not initialized on context %s. "
+                "Parameter '%s' was not initialized on device %s. "
                 "It was only initialized on %s."%(
-                    self.name, str(ctx), str(self._ctx_list)))
+                    self.name, str(device), str(self._device_list)))
         if self._deferred_init:
             raise DeferredInitializationError(
                 "Parameter '%s' has not been initialized yet because initialization was " \
@@ -250,7 +250,8 @@ class Parameter(object):
             "because the later does not include Parameters of " \
             "nested child Blocks"%(self.name))
 
-    def _get_row_sparse(self, arr_list, ctx, row_id):
+    @wrap_ctx_to_device_func
+    def _get_row_sparse(self, arr_list, device, row_id):
         """ Get row_sparse data from row_sparse parameters based on row_id. """
         # get row sparse params based on row ids
         if not isinstance(row_id, ndarray.NDArray):
@@ -259,21 +260,22 @@ class Parameter(object):
         if not trainer:
             raise RuntimeError("Cannot get row_sparse data for Parameter '%s' when no " \
                                "Trainer is created with it."%self.name)
-        results = self._check_and_get(arr_list, ctx)
+        results = self._check_and_get(arr_list, device)
 
         # fetch row sparse params from the trainer
         trainer._row_sparse_pull(self, results, row_id)
         return results
 
-    def _load_init(self, data, ctx, cast_dtype=False, dtype_source='current'):
+    @wrap_ctx_to_device_func
+    def _load_init(self, data, device, cast_dtype=False, dtype_source='current'):
         """
         (Re)initializes by loading from data.
         Parameters
         ----------
         data : NDArray
             The data to load
-        ctx : Context or list of Context
-            Context(s) initialize loaded parameters on.
+        device : Device or list of Device
+            Device(s) initialize loaded parameters on.
         cast_dtype : bool, default False
             Cast the data type of the parameter
         dtype_source : str, default 'current'
@@ -313,23 +315,23 @@ class Parameter(object):
                         self.name, str(self.dtype), str(data.dtype))
         if self._stype != data.stype:
             data = data.tostype(self._stype)
-        if isinstance(ctx, Context):
-            ctx = [ctx]
+        if isinstance(device, Device):
+            device = [device]
         if self._data is None:
             if self._deferred_init:
-                assert ctx is None or set(ctx) == set(self._deferred_init[1]), \
+                assert device is None or set(device) == set(self._deferred_init[1]), \
                     "Failed to load Parameter '%s' on %s because it was " \
                     "previous initialized on %s."%(
-                        self.name, str(ctx), str(self.list_ctx()))
-                ctx = self._deferred_init[1]
-            elif ctx is None:
-                ctx = [cpu()]
-            self._init_impl(data, ctx)
+                        self.name, str(device), str(self.list_device()))
+                device = self._deferred_init[1]
+            elif device is None:
+                device = [cpu()]
+            self._init_impl(data, device)
         else:
-            assert ctx is None or set(ctx) == set(self.list_ctx()), \
+            assert device is None or set(device) == set(self.list_device()), \
                 "Failed to load Parameter '%s' on %s because it was " \
                 "previous initialized on %s."%(
-                    self.name, str(ctx), str(self.list_ctx()))
+                    self.name, str(device), str(self.list_device()))
             self.set_data(data)
         self._deferred_init = ()
 
@@ -337,7 +339,7 @@ class Parameter(object):
         """Finishes deferred initialization."""
         if not self._deferred_init:
             return
-        init, ctx, default_init, data = self._deferred_init
+        init, device, default_init, data = self._deferred_init
         self._deferred_init = ()
 
         assert shape_is_known(self.shape), \
@@ -348,32 +350,33 @@ class Parameter(object):
 
         with autograd.pause(), dc.context(False):
             if data is None:
-                kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': context.cpu()}
                 if is_np_array():
+                    kwargs = {'shape': self.shape, 'dtype': self.dtype, 'device': cpu()}
                     if self._stype != 'default':
                         raise ValueError("Currently stype {} is not supported in NumPy interface and Gluon2.0"
                                          .format(self._stype))
                     zeros_fn = _mx_np.zeros
                 else:
+                    kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': cpu()}
                     kwargs['stype'] = self._stype
                     zeros_fn = ndarray.zeros
                 data = zeros_fn(**kwargs)
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
 
-            self._init_impl(data, ctx)
+            self._init_impl(data, device)
 
-    def _init_impl(self, data, ctx_list):
+    def _init_impl(self, data, device_list):
         """Sets data and grad."""
-        self._ctx_list = list(ctx_list)
-        self._ctx_map = [[], []]
-        for i, ctx in enumerate(self._ctx_list):
-            dev_list = self._ctx_map[ctx.device_typeid&1]
-            while len(dev_list) <= ctx.device_id:
+        self._device_list = list(device_list)
+        self._device_map = [[], []]
+        for i, device in enumerate(self._device_list):
+            dev_list = self._device_map[device.device_typeid&1]
+            while len(dev_list) <= device.device_id:
                 dev_list.append(None)
-            dev_list[ctx.device_id] = i
+            dev_list[device.device_id] = i
 
-        self._data = [data.copyto(ctx) for ctx in self._ctx_list]
+        self._data = [data.copyto(device) for device in self._device_list]
         self._init_grad()
 
     def _init_grad(self):
@@ -386,31 +389,31 @@ class Parameter(object):
             if self._grad_stype != 'default':
                 raise ValueError("Currently stype {} is not supported in NumPy interface and Gluon2.0"
                                  .format(self._grad_stype))
-            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx)
+            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, device=i.device)
                           for i in self._data]
         else:
-            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx,
+            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
                                         stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
                                 self._grad, self.grad_req)
 
     def _reduce(self):
-        """Reduce data from multiple context to cpu."""
-        ctx = context.cpu()
+        """Reduce data from multiple device to cpu."""
+        device = cpu()
         if self._stype == 'default':
             block = self.list_data()
             if len(block) > 1:
                 if is_np_array():
-                    data = sum([w.copyto(ctx) for w in block]) / len(block)
+                    data = sum([w.copyto(device) for w in block]) / len(block)
                 else:
-                    data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
+                    data = ndarray.add_n(*(w.copyto(device) for w in block)) / len(block)
             else:
-                data = self.data().copyto(ctx)
+                data = self.data().copyto(device)
         else:
             # fetch all rows for 'row_sparse' param
-            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
-            data = ndarray.zeros(self.shape, stype='row_sparse', ctx=ctx)
+            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=device)
+            data = ndarray.zeros(self.shape, stype='row_sparse', ctx=device)
             trainer = self._trainer() if self._trainer else None
             if not trainer:
                 raise RuntimeError("Cannot reduce row_sparse data for Parameter '%s' when no " \
@@ -418,7 +421,8 @@ class Parameter(object):
             trainer._row_sparse_pull(self, data, all_row_ids, full_idx=True)
         return data
 
-    def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
+    @wrap_ctx_to_device_func
+    def initialize(self, init=None, device=None, default_init=initializer.Uniform(),
                    force_reinit=False):
         """Initializes parameter and gradient arrays. Only used for :py:class:`NDArray` API.
 
@@ -426,9 +430,9 @@ class Parameter(object):
         ----------
         init : Initializer
             The initializer to use. Overrides :py:meth:`Parameter.init` and default_init.
-        ctx : Context or list of Context, defaults to :py:meth:`context.current_context()`.
-            Initialize Parameter on given context. If ctx is a list of Context, a
-            copy will be made for each context.
+        device : Device or list of Device, default :py:meth:`device.current_device()`.
+            Assign Parameter to given device. If device is a list of Device, a
+            copy will be made for each device.
 
             .. note::
                 Copies are independent arrays. User is responsible for keeping
@@ -443,7 +447,7 @@ class Parameter(object):
         Examples
         --------
         >>> weight = mx.gluon.Parameter('weight', shape=(2, 2))
-        >>> weight.initialize(ctx=mx.cpu(0))
+        >>> weight.initialize(device=mx.cpu(0))
         >>> weight.data()
         [[-0.01068833  0.01729892]
          [ 0.02042518 -0.01618656]]
@@ -452,7 +456,7 @@ class Parameter(object):
         [[ 0.  0.]
          [ 0.  0.]]
         <NDArray 2x2 @cpu(0)>
-        >>> weight.initialize(ctx=[mx.gpu(0), mx.gpu(1)])
+        >>> weight.initialize(device=[mx.gpu(0), mx.gpu(1)])
         >>> weight.data(mx.gpu(0))
         [[-0.00873779 -0.02834515]
          [ 0.05484822 -0.06206018]]
@@ -468,10 +472,10 @@ class Parameter(object):
                           stacklevel=2)
             return
         self._data = self._grad = None
-        if ctx is None:
-            ctx = [context.current_context()]
-        if isinstance(ctx, Context):
-            ctx = [ctx]
+        if device is None:
+            device = [_device.current_device()]
+        if isinstance(device, Device):
+            device = [device]
         if isinstance(self.init, initializer.RNNFused):
             self.init.set_initializer(init if init else default_init)
             init = default_init = self.init
@@ -479,40 +483,46 @@ class Parameter(object):
             init = default_init if self.init is None else self.init
         if not shape_is_known(self.shape):
             if self._allow_deferred_init:
-                self._deferred_init = (init, ctx, default_init, None)
+                self._deferred_init = (init, device, default_init, None)
                 return
             raise ValueError("Cannot initialize Parameter '%s' because it has " \
                              "invalid shape: %s."%(self.name, str(self.shape)))
 
-        self._deferred_init = (init, ctx, default_init, None)
+        self._deferred_init = (init, device, default_init, None)
         self._finish_deferred_init()
 
-    def reset_ctx(self, ctx):
-        """Re-assign Parameter to other contexts.
+    def reset_device(self, device):
+        """Re-assign Parameter to other devices.
 
         Parameters
         ----------
-        ctx : Context or list of Context, default ``context.current_context()``.
-            Assign Parameter to given context. If ctx is a list of Context, a
-            copy will be made for each context.
+        device : Device or list of Device, default ``device.current_device()``.
+            Assign Parameter to given device. If device is a list of Device, a
+            copy will be made for each device.
         """
-        if ctx is None:
-            ctx = [context.current_context()]
-        if isinstance(ctx, Context):
-            ctx = [ctx]
+        if device is None:
+            device = [_device.current_device()]
+        if isinstance(device, Device):
+            device = [device]
         if self._data:
             data = self._reduce()
             with autograd.pause():
-                self._init_impl(data, ctx)
+                self._init_impl(data, device)
         elif self._deferred_init:
             init, _, default_init, data = self._deferred_init
-            self._deferred_init = (init, ctx, default_init, data)
+            self._deferred_init = (init, device, default_init, data)
         else:
-            raise ValueError("Cannot reset context for Parameter '%s' because it "
+            raise ValueError("Cannot reset device for Parameter '%s' because it "
                              "has not been initialized."%self.name)
 
+    def reset_ctx(self, ctx):
+        """This function has been deprecated. Please refer to ``Parameter.reset_device``."""
+        warnings.warn('Parameter.reset_ctx has been renamed to'
+                      ' Parameter.reset_device', DeprecationWarning)
+        self.reset_device(ctx)
+
     def set_data(self, data):
-        """Sets this parameter's value on all contexts."""
+        """Sets this parameter's value on all devices."""
         self.shape = data.shape
 
         if self._data is None:
@@ -531,9 +541,9 @@ class Parameter(object):
             arr[:] = data
 
     def row_sparse_data(self, row_id):
-        """Returns a copy of the 'row_sparse' parameter on the same context as row_id's.
+        """Returns a copy of the 'row_sparse' parameter on the same device as row_id's.
         The copy only retains rows whose ids occur in provided row ids.
-        The parameter must have been initialized on this context before.
+        The parameter must have been initialized on this device before.
 
         Parameters
         ----------
@@ -542,16 +552,16 @@ class Parameter(object):
 
         Returns
         -------
-        NDArray on row_id's context
+        NDArray on row_id's device
         """
         if self._stype != 'row_sparse':
             raise RuntimeError("Cannot return a copy of Parameter %s via row_sparse_data() " \
                                "because its storage type is %s. Please use data() instead." \
                                %(self.name, self._stype))
-        return self._get_row_sparse(self._data, row_id.ctx, row_id)
+        return self._get_row_sparse(self._data, row_id.device, row_id)
 
     def list_row_sparse_data(self, row_id):
-        """Returns copies of the 'row_sparse' parameter on all contexts, in the same order
+        """Returns copies of the 'row_sparse' parameter on all devices, in the same order
         as creation. The copy only retains rows whose ids occur in provided row ids.
         The parameter must have been initialized before.
 
@@ -565,35 +575,36 @@ class Parameter(object):
         list of NDArrays
         """
         if self._stype != 'row_sparse':
-            raise RuntimeError("Cannot return copies of Parameter '%s' on all contexts via " \
+            raise RuntimeError("Cannot return copies of Parameter '%s' on all devices via " \
                                "list_row_sparse_data() because its storage type is %s. Please " \
                                "use data() instead." % (self.name, self._stype))
         return self._get_row_sparse(self._data, list, row_id)
 
-    def data(self, ctx=None):
-        """Returns a copy of this parameter on one context. Must have been
-        initialized on this context before. For sparse parameters, use
+    @wrap_ctx_to_device_func
+    def data(self, device=None):
+        """Returns a copy of this parameter on one device. Must have been
+        initialized on this device before. For sparse parameters, use
         :py:meth:`Parameter.row_sparse_data` instead.
 
         Parameters
         ----------
-        ctx : Context
-            Desired context.
+        device : Device
+            Desired device.
 
         Returns
         -------
-        NDArray on ctx
+        NDArray on device
         """
         if self._stype != 'default':
-            raise RuntimeError("Cannot return a copy of Parameter '%s' on ctx %s via data() " \
+            raise RuntimeError("Cannot return a copy of Parameter '%s' on device %s via data() " \
                                "because its storage type is %s. Please use row_sparse_data() " \
-                               "instead." % (self.name, str(ctx), self._stype))
-        data = self._check_and_get(self._data, ctx)
+                               "instead." % (self.name, str(device), self._stype))
+        data = self._check_and_get(self._data, device)
         dc.set_variable(data, self.var())
         return data
 
     def list_data(self):
-        """Returns copies of this parameter on all contexts, in the same order
+        """Returns copies of this parameter on all devices, in the same order
         as creation. For sparse parameters, use :py:meth:`Parameter.list_row_sparse_data`
         instead.
 
@@ -602,27 +613,27 @@ class Parameter(object):
         list of NDArrays
         """
         if self._stype != 'default':
-            raise RuntimeError("Cannot return copies of Parameter '%s' on all contexts via " \
+            raise RuntimeError("Cannot return copies of Parameter '%s' on all devices via " \
                                "list_data() because its storage type is %s. Please use " \
                                "row_sparse_data() instead." % (self.name, self._stype))
         return self._check_and_get(self._data, list)
 
-    def grad(self, ctx=None):
-        """Returns a gradient buffer for this parameter on one context.
+    def grad(self, device=None):
+        """Returns a gradient buffer for this parameter on one device.
 
         Parameters
         ----------
-        ctx : Context
-            Desired context.
+        device : Device
+            Desired device.
         """
         if self._data is not None and self._grad is None:
             raise RuntimeError(
                 "Cannot get gradient array for Parameter '%s' " \
                 "because grad_req='null'"%(self.name))
-        return self._check_and_get(self._grad, ctx)
+        return self._check_and_get(self._grad, device)
 
     def list_grad(self):
-        """Returns gradient buffers on all contexts, in the same order
+        """Returns gradient buffers on all devices, in the same order
         as :py:meth:`values`."""
         if self._data is not None and self._grad is None:
             raise RuntimeError(
@@ -631,15 +642,21 @@ class Parameter(object):
         return self._check_and_get(self._grad, list)
 
     def list_ctx(self):
-        """Returns a list of contexts this parameter is initialized on."""
+        """This function has been deprecated. Please refer to ``Parameter.list_device``."""
+        warnings.warn('Parameter.list_ctx has been renamed to'
+                      ' Parameter.list_device', DeprecationWarning)
+        return self.list_device()
+
+    def list_device(self):
+        """Returns a list of devices this parameter is initialized on."""
         if self._data is None:
             if self._deferred_init:
                 return self._deferred_init[1]
             raise RuntimeError("Parameter '%s' has not been initialized"%self.name)
-        return self._ctx_list
+        return self._device_list
 
     def zero_grad(self):
-        """Sets gradient buffer on all contexts to 0. No action is taken if
+        """Sets gradient buffer on all devices to 0. No action is taken if
         parameter is uninitialized or doesn't require gradient."""
         if self._grad is None:
             return

@@ -94,7 +94,7 @@ def _assert_dc(setup, compute, mode='all', setup_is_deterministic=True, numpy=Tr
                 xs = setup(nd=nd)
 
             args = {name: x for name, x in zip(xs_names, xs)}
-            ys_sym = sym._bind(mx.context.current_context(), args=args).forward()
+            ys_sym = sym._bind(mx.device.current_device(), args=args).forward()
 
             ys_sym_np = [y.asnumpy() for y in ys_sym]
             _all_same(ys_np, ys_sym_np)
@@ -272,10 +272,10 @@ def test_dc_no_inputs_context_switch():
         a = nd.arange(10)
         if nd is mx.nd:
             b = a.as_in_context(mx.cpu(1))
-            c = (b - 1).as_in_context(mx.context.current_context())
+            c = (b - 1).as_in_context(mx.device.current_device())
         else:
-            b = a.as_in_ctx(mx.cpu(1))
-            c = (b - 1).as_in_ctx(mx.context.current_context())
+            b = a.to_device(mx.cpu(1))
+            c = (b - 1).to_device(mx.device.current_device())
         return [c]
 
     _assert_dc(_dc_empty_setup, f)
@@ -285,10 +285,10 @@ def test_dc_context_switch():
     def f(a, *, nd):
         if nd is mx.nd:
             b = a.as_in_context(mx.cpu(1))
-            c = (b - 1).as_in_context(mx.context.current_context())
+            c = (b - 1).as_in_context(mx.device.current_device())
         else:
-            b = a.as_in_ctx(mx.cpu(1))
-            c = (b - 1).as_in_ctx(mx.context.current_context())
+            b = a.to_device(mx.cpu(1))
+            c = (b - 1).to_device(mx.device.current_device())
         return [c]
 
     _assert_dc(_dc_simple_setup, f)
@@ -371,7 +371,7 @@ def test_dc_numpy_indexing_error():
 ###############################################################################
 # Gluon
 ###############################################################################
-def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autograd=True, ctx=None):
+def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autograd=True, device=None):
     """Compare results of deferred compute and normal imperative mode.
 
     Parameters
@@ -392,9 +392,9 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
 
     nd = mx.np if numpy else mx.nd
 
-    if ctx is None:
-        ctx = mx.context.current_context()
-    with ctx:
+    if device is None:
+        device = mx.device.current_device()
+    with device:
         xs = setup(nd=nd)
 
     ys = net(*xs)
@@ -425,7 +425,7 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
             net.export(root)
 
 def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
-    return [nd.ones(shape=shape, ctx=mx.context.current_context())]
+    return [nd.ones(shape=shape, device=mx.device.current_device())]
 
 
 def test_dc_hybridblock():
@@ -439,14 +439,14 @@ def test_dc_hybridblock():
             assert x.shape[1] == 10  # due to in_units=10 above
             return self.dense(x) + self.weight.data(x.context)
 
-    if mx.context.current_context() == mx.cpu(0):  # CPU tests
-        contexts = [mx.cpu(0), mx.cpu(1)]
-    else:  # Use default context, GPU tests
-        contexts = [mx.context.current_context()]
-    for ctx in contexts:
+    if mx.device.current_device() == mx.cpu(0):  # CPU tests
+        devices = [mx.cpu(0), mx.cpu(1)]
+    else:  # Use default device, GPU tests
+        devices = [mx.device.current_device()]
+    for device in devices:
         net = MyBlock()
-        net.initialize(ctx=contexts)
-        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True, ctx=ctx)
+        net.initialize(device=devices)
+        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True, device=device)
 
 
 def test_dc_hybridblock_wrapped():
@@ -478,7 +478,7 @@ def test_dc_hybridblock_deferred_init_no_infer_shape_error():
 
     net = MyBlock()
     net.initialize()
-    data = mx.np.ones(shape=(8, 10), ctx=mx.context.current_context())
+    data = mx.np.ones(shape=(8, 10), device=mx.device.current_device())
     with pytest.raises(RuntimeError):
         net(data)
 
@@ -494,7 +494,7 @@ def test_dc_hybridblock_deferred_init():
             self.weight.shape = (x.shape[1], )
 
         def forward(self, x):
-            return self.dense(x) + self.weight.data(x.context)
+            return self.dense(x) + self.weight.data(x.device)
 
     net = MyBlock()
     net.initialize()

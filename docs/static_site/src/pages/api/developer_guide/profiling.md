@@ -60,13 +60,13 @@ with model.name_scope():
     model.add(nn.Dense(64, activation='tanh'),
               nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
-model.initialize(ctx=mx.cpu())
+model.initialize(device=mx.cpu())
 model.hybridize()
 
 inputs = mx.sym.var('data')
 
 with mx.autograd.record():
-    out = model(mx.nd.zeros((16, 10), ctx=mx.cpu()))
+    out = model(mx.nd.zeros((16, 10), device=mx.cpu()))
 out.backward()
 mx.nd.waitall()
 profiler.set_state('stop')

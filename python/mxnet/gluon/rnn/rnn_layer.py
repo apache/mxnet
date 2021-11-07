@@ -23,7 +23,7 @@
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import np, npx, context, initializer
+from ... import np, npx, initializer, cpu
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
 from ...util import use_np
@@ -125,7 +125,7 @@ class _RNNLayer(HybridBlock):
             else:
                 info = kwargs
             state = func(shape=info.pop("shape", ()),
-                         ctx=info.pop("ctx", context.cpu()),
+                         device=info.pop("device", cpu()),
                          dtype=info.pop("dtype", "float32"))
             states.append(state)
         return states
@@ -134,7 +134,7 @@ class _RNNLayer(HybridBlock):
         self.skip_states = states is None
         if states is None:
             batch_size = inputs.shape[self._layout.find('N')]
-            states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
+            states = self.begin_state(batch_size, device=inputs.device, dtype=inputs.dtype)
         if isinstance(states, tensor_types):
             states = [states]
 
@@ -176,7 +176,7 @@ class _RNNLayer(HybridBlock):
 
     def _forward_kernel(self, inputs, states, sequence_length):
         """ forward using CUDNN or CPU kenrel"""
-        ctx = inputs.ctx
+        device = inputs.device
         if self._layout == 'NTC':
             inputs = np.swapaxes(inputs, 0, 1)
 
@@ -185,12 +185,12 @@ class _RNNLayer(HybridBlock):
         else:
             rnn_args = states
 
-        rnn_args_ctx = []
+        rnn_args_device = []
         for args in rnn_args:
-            new_args = args.as_in_ctx(ctx)
-            rnn_args_ctx.append(new_args)
+            new_args = args.to_device(device)
+            rnn_args_device.append(new_args)
 
-        rnn = npx.rnn(inputs, self.rnn_param.data().as_in_ctx(ctx), *rnn_args_ctx,
+        rnn = npx.rnn(inputs, self.rnn_param.data(device), *rnn_args_device,
                       use_sequence_length=self._use_sequence_length,
                       state_size=self._hidden_size, projection_size=self._projection_size,
                       num_layers=self._num_layers, bidirectional=self._dir == 2,

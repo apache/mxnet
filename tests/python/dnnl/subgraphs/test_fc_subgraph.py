@@ -134,9 +134,9 @@ def test_neg_fc_relu(data_shape, use_bias, flatten):
 ])
 def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32)
-  data_nd = mx.np.random.uniform(data_min, data_max, size=data_shape, ctx=mx.cpu())
-  weight_nd = mx.np.random.uniform(weight_min, weight_max, size=[64, 32], ctx=mx.cpu())
-  bias_nd = mx.np.random.uniform(-1, +1, size=[64], ctx=mx.cpu())
+  data_nd = mx.np.random.uniform(data_min, data_max, size=data_shape, device=mx.cpu())
+  weight_nd = mx.np.random.uniform(weight_min, weight_max, size=[64, 32], device=mx.cpu())
+  bias_nd = mx.np.random.uniform(-1, +1, size=[64], device=mx.cpu())
 
   class FCBiasOverflow(nn.HybridBlock):
     def __init__(self, dtype='float32', **kwargs):
@@ -145,8 +145,8 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
         self.bias = mx.gluon.Parameter('bias', dtype=dtype, allow_deferred_init=True)
 
     def forward(self, x):
-        conv1 = mx.npx.fully_connected(x, num_hidden=64, weight=self.weight.data(x.ctx),
-                                       no_bias=False, bias=self.bias.data(x.ctx))
+        conv1 = mx.npx.fully_connected(x, num_hidden=64, weight=self.weight.data(x.device),
+                                       no_bias=False, bias=self.bias.data(x.device))
         return conv1
     
     def infer_shape(self, x, *args):
@@ -163,7 +163,7 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
 
   calib_data = mx.gluon.data.DataLoader(data_nd, batch_size=1)
   qnet = quantization.quantize_net(net,
-                                   ctx=mx.cpu(),
+                                   device=mx.cpu(),
                                    exclude_layers=None,
                                    exclude_operators=None,
                                    quantized_dtype='int8',

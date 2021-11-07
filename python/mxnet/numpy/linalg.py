@@ -32,6 +32,7 @@ __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 't
 __all__ += fallback_linalg.__all__
 
 
+@wrap_data_api_linalg_func
 def matrix_rank(
         M: ndarray,
         /,
@@ -43,22 +44,22 @@ def matrix_rank(
     Return matrix rank of array using SVD method
 
     Rank of the array is the number of singular values of the array that are
-    greater than `tol`.
+    greater than `rtol`.
 
     Notes
     -----
-    `matrix_rank` is an alias for `matrix_rank`. It is a standard API in
+    `rtol` param is requested in array-api-standard in
     https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-rank-x-rtol-none
-    instead of an official NumPy operator.
+    instead of a parameter in official NumPy operator.
 
     Parameters
     ----------
     M : {(M,), (..., M, N)} ndarray
         Input vector or stack of matrices.
-    tol : (...) ndarray, float, optional
-        Threshold below which SVD values are considered zero. If `tol` is
+    rtol : (...) ndarray, float, optional
+        Threshold below which SVD values are considered zero. If `rtol` is
         None, and ``S`` is an array with singular values for `M`, and
-        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        ``eps`` is the epsilon value for datatype of ``S``, then `rtol` is
         set to ``S.max() * max(M.shape) * eps``.
     hermitian : bool, optional
         If True, `M` is assumed to be Hermitian (symmetric if real-valued),
@@ -83,7 +84,7 @@ def matrix_rank(
     >>> np.linalg.matrix_rank(np.zeros((4,)))
     0
     """
-    return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
+    return _mx_nd_np.linalg.matrix_rank(M, rtol, hermitian)
 
 
 def matrix_transpose(a: ndarray, /) -> ndarray:
@@ -512,6 +513,7 @@ def lstsq(a: ndarray, b: ndarray, / , *, rcond: Optional[float] = 'warn') -> Tup
     return _mx_nd_np.linalg.lstsq(a, b, rcond)
 
 
+@wrap_data_api_linalg_func
 def pinv(
         a: ndarray,
         /,
@@ -526,14 +528,20 @@ def pinv(
     singular-value decomposition (SVD) and including all
     *large* singular values.
 
+    Notes
+    -----
+    `rtol` param is requested in array-api-standard in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-pinv-x-rtol-none
+    instead of a parameter in official NumPy operator.
+
     Parameters
     ----------
     a : (..., M, N) ndarray
         Matrix or stack of matrices to be pseudo-inverted.
-    rcond : (...) {float or ndarray of float}, optional
+    rtol : (...) {float or ndarray of float}, optional
         Cutoff for small singular values.
         Singular values less than or equal to
-        ``rcond * largest_singular_value`` are set to zero.
+        ``rtol * largest_singular_value`` are set to zero.
         Broadcasts against the stack of matrices.
     hermitian : bool, optional
         If True, `a` is assumed to be Hermitian (symmetric if real-valued),
@@ -583,7 +591,7 @@ def pinv(
     >>> (pinv_a - np.dot(pinv_a, np.dot(a, pinv_a))).sum()
     array(0.)
     """
-    return _mx_nd_np.linalg.pinv(a, rcond, hermitian)
+    return _mx_nd_np.linalg.pinv(a, rtol, hermitian)
 
 
 def norm(
@@ -755,9 +763,15 @@ def svdvals(a: ndarray, /) -> ndarray:
     return s
 
 
-def cholesky(a: ndarray, /) -> ndarray:
+def cholesky(a: ndarray, /) -> ndarray::
     r"""
     Cholesky decomposition.
+
+    Notes
+    -----
+    `upper` param is requested by API standardization in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-cholesky-x-upper-false
+    instead of parameter in official NumPy operator.
 
     Return the Cholesky decomposition, `L * L.T`, of the square matrix `a`,
     where `L` is lower-triangular and .T is the transpose operator. `a` must be
@@ -768,6 +782,10 @@ def cholesky(a: ndarray, /) -> ndarray:
     ----------
     a : (..., M, M) ndarray
         Symmetric, positive-definite input matrix.
+    upper : bool
+        If `True`, the result must be the upper-triangular Cholesky factor.
+        If `False`, the result must be the lower-triangular Cholesky factor.
+        Default: `False`.
 
     Returns
     -------
@@ -811,7 +829,7 @@ def cholesky(a: ndarray, /) -> ndarray:
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    return _mx_nd_np.linalg.cholesky(a)
+    return _mx_nd_np.linalg.cholesky(a, upper)
 
 
 def qr(a: ndarray, /, *, mode: Optional[str] = 'reduced') -> Tuple[ndarray, ndarray]:

@@ -32,7 +32,7 @@ from ...data import DataLoader
 from ...loss import Loss as gluon_loss
 from ...trainer import Trainer
 from ...utils import split_and_load
-from ....context import Context, cpu, gpu, num_gpus
+from ....device import Device, cpu, gpu, num_gpus
 from ...metric import Loss as metric_loss
 from .batch_processor import BatchProcessor
 
@@ -59,7 +59,7 @@ class Estimator(object):
         Initializer to initialize the network.
     trainer : Trainer
         Trainer to apply optimizer on network parameters.
-    context : Context or list of Context
+    device : Device or list of Device
         Device(s) to run the training on.
     val_net : gluon.Block
         The model used for validation. The validation model does not necessarily belong to
@@ -73,7 +73,7 @@ class Estimator(object):
         >>> net = _get_train_network()
         >>> val_net = _get_test_network()
         >>> val_net.share_parameters(net.collect_params())
-        >>> net.initialize(ctx=ctx)
+        >>> net.initialize(device=device)
         >>> est = Estimator(net, loss, val_net=val_net)
 
         Proper namespace match is required for weight sharing between two networks. Most networks
@@ -113,7 +113,7 @@ class Estimator(object):
                  val_metrics=None,
                  initializer=None,
                  trainer=None,
-                 context=None,
+                 device=None,
                  val_net=None,
                  val_loss=None,
                  batch_processor=None):
@@ -133,7 +133,7 @@ class Estimator(object):
         self.logger = logging.Logger(name='Estimator', level=logging.INFO)
         self.logger.addHandler(logging.StreamHandler(sys.stdout))
 
-        self.context = self._check_context(context)
+        self.device = self._check_devices(device)
         self._initialize(initializer)
         self.trainer = self._check_trainer(trainer)
         self.batch_processor = self._check_batch_processor(batch_processor)
@@ -145,37 +145,43 @@ class Estimator(object):
         return loss
 
     def _check_context(self, context):
-        # infer available context
+        """This function has been deprecated. Please refer to ``Estimator._check_devices``."""
+        warnings.warn('Estimator._check_context has been renamed to'
+                      ' Estimator._check_devices', DeprecationWarning)
+        return self._check_devices(context)
+
+    def _check_devices(self, devices):
+        # infer available devices
         gpus = num_gpus()
         available_gpus = [gpu(i) for i in range(gpus)]
 
-        if context:
-            # check context values, only accept Context or a list of Context
-            if isinstance(context, Context):
-                context = [context]
-            elif isinstance(context, list) and all([isinstance(c, Context) for c in context]):
-                context = context
+        if devices:
+            # check devices values, only accept Device or a list of Device
+            if isinstance(devices, Device):
+                devices = [devices]
+            elif isinstance(devices, list) and all([isinstance(c, Device) for c in devices]):
+                devices = devices
             else:
-                raise ValueError("context must be a Context or a list of Context, "
+                raise ValueError("devices must be a Device or a list of Device, "
                                  "for example mx.cpu() or [mx.gpu(0), mx.gpu(1)], "
-                                 "refer to mxnet.Context:{}".format(context))
-            for ctx in context:
-                assert ctx in available_gpus or str(ctx).startswith('cpu'), \
+                                 "refer to mxnet.Device:{}".format(devices))
+            for device in devices:
+                assert device in available_gpus or str(device).startswith('cpu'), \
                     "%s is not available, please make sure " \
-                    "your context is in one of: mx.cpu(), %s" % \
-                    (ctx, ", ".join([str(ctx) for ctx in available_gpus]))
+                    "your device is in one of: mx.cpu(), %s" % \
+                    (device, ", ".join([str(device) for device in available_gpus]))
         else:
-            # provide default context
+            # provide default device
             if gpus > 0:
                 # only use 1 GPU by default
                 if gpus > 1:
                     warnings.warn("You have multiple GPUs, gpu(0) will be used by default."
-                                  "To utilize all your GPUs, specify context as a list of gpus, "
-                                  "e.g. context=[mx.gpu(0), mx.gpu(1)] ")
-                context = [gpu(0)]
+                                  "To utilize all your GPUs, specify device as a list of gpus, "
+                                  "e.g. devices=[mx.gpu(0), mx.gpu(1)] ")
+                devices = [gpu(0)]
             else:
-                context = [cpu()]
-        return context
+                devices = [cpu()]
+        return devices
 
     def _check_batch_processor(self, batch_processor):
         # check whether the batch processor contains fit_batch() and evaluate_batch() methods
@@ -197,9 +203,9 @@ class Estimator(object):
             # if initializer is None, default initializer will be used
             # do not re-init layers already initialized
             if initializer:
-                self.net.initialize(init=initializer, ctx=self.context)
+                self.net.initialize(init=initializer, device=self.device)
             else:
-                self.net.initialize(ctx=self.context)
+                self.net.initialize(device=self.device)
         elif initializer:
             # net is fully initialized, and user passed not None initializer
             # do not force reinitialize, give warning
@@ -225,16 +231,16 @@ class Estimator(object):
         param_dict = self.net.collect_params()
         for param in param_dict:
             try:
-                param_dict[param].list_ctx()
+                param_dict[param].list_device()
             except RuntimeError:
                 return False
         return True
 
-    def _get_data_and_label(self, batch, ctx, batch_axis=0):
+    def _get_data_and_label(self, batch, device, batch_axis=0):
         data = batch[0]
         label = batch[1]
-        data = split_and_load(data, ctx_list=ctx, batch_axis=batch_axis)
-        label = split_and_load(label, ctx_list=ctx, batch_axis=batch_axis)
+        data = split_and_load(data, device, batch_axis=batch_axis)
+        label = split_and_load(label, device, batch_axis=batch_axis)
         return data, label
 
     def _add_default_training_metrics(self):

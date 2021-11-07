@@ -265,9 +265,28 @@ MXNET_REGISTER_API("_npi.linspace")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_linspace");
       nnvm::NodeAttrs attrs;
-      op::LinspaceParam param;
-      param.start = args[0].operator double();
-      param.stop  = args[1].operator double();
+      op::NumpyLinspaceParam param;
+      if (args[0].type_code() == kDLFloat || args[1].type_code() == kDLFloat) {
+        param.start_double = args[0].operator double();
+        param.stop_double  = args[1].operator double();
+        param.value_type   = 2;
+      } else if (args[0].type_code() == kDLUInt || args[1].type_code() == kDLUInt) {
+        if (args[0].type_code() == kDLUInt) {
+          param.start_uint = args[0].operator uint64_t();
+        } else {
+          param.start_uint = args[0].operator int64_t();
+        }
+        if (args[1].type_code() == kDLUInt) {
+          param.stop_uint = args[1].operator uint64_t();
+        } else {
+          param.stop_uint = args[1].operator int64_t();
+        }
+        param.value_type = 1;
+      } else {
+        param.start_int  = args[0].operator int64_t();
+        param.stop_int   = args[1].operator int64_t();
+        param.value_type = 0;
+      }
       if (features::is_enabled(features::INT64_TENSOR_SIZE))
         param.num = args[2].operator int64_t();
       else
@@ -284,7 +303,7 @@ MXNET_REGISTER_API("_npi.linspace")
       }
       attrs.parsed = param;
       attrs.op     = op;
-      SetAttrDict<op::LinspaceParam>(&attrs);
+      SetAttrDict<op::NumpyLinspaceParam>(&attrs);
       if (args[4].type_code() != kNull) {
         attrs.dict["ctx"] = args[4].operator std::string();
       }
@@ -361,7 +380,7 @@ MXNET_REGISTER_API("_npi.full").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_full");
   nnvm::NodeAttrs attrs;
-  op::InitOpWithScalarParam param;
+  op::NumpyInitOpWithScalarParam param;
   if (args[0].type_code() == kDLInt) {
     param.shape = TShape(1, args[0].operator int64_t());
   } else {
@@ -372,13 +391,22 @@ MXNET_REGISTER_API("_npi.full").set_body([](runtime::MXNetArgs args, runtime::MX
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
-  param.value  = args[2].operator double();
+  if (args[2].type_code() == kDLInt) {
+    param.value_type = 0;
+    param.int_value  = args[2].operator int64_t();
+  } else if (args[2].type_code() == kDLUInt) {
+    param.value_type = 1;
+    param.uint_value = args[2].operator uint64_t();
+  } else {
+    param.value_type   = 2;
+    param.double_value = args[2].operator double();
+  }
   attrs.parsed = param;
   attrs.op     = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
   }
-  SetAttrDict<op::InitOpWithScalarParam>(&attrs);
+  SetAttrDict<op::NumpyInitOpWithScalarParam>(&attrs);
   NDArray* out      = args[4].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs   = out != nullptr;

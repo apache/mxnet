@@ -19,7 +19,7 @@ import os
 import sys
 
 import mxnet as mx
-mx.test_utils.set_default_context(mx.gpu(0))
+mx.test_utils.set_default_device(mx.gpu(0))
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))

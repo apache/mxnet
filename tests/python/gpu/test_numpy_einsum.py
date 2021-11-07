@@ -21,13 +21,13 @@ import pytest
 import mxnet as mx
 from mxnet import np
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import assert_almost_equal, use_np, set_default_context, environment
+from mxnet.test_utils import assert_almost_equal, use_np, set_default_device, environment
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import assertRaises
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))
 
 @use_np
 def test_np_einsum():

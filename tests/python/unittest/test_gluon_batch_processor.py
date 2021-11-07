@@ -53,17 +53,17 @@ def test_batch_processor_fit():
     net = _get_test_network()
     dataloader, dataiter = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.gluon.metric.Accuracy()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     processor = BatchProcessor()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
                     trainer=trainer,
-                    context=ctx,
+                    device=device,
                     batch_processor=processor)
 
     est.fit(train_data=dataloader,
@@ -85,18 +85,18 @@ def test_batch_processor_validation():
     net = _get_test_network()
     dataloader, dataiter = _get_test_data()
     num_epochs = 1
-    ctx = mx.cpu()
+    device = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.gluon.metric.Accuracy()
     val_loss = gluon.loss.L1Loss()
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     processor = BatchProcessor()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
                     trainer=trainer,
-                    context=ctx,
+                    device=device,
                     val_loss=val_loss,
                     batch_processor=processor)
     # Input dataloader

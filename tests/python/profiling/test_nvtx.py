@@ -22,7 +22,7 @@ import sys
 
 from subprocess import Popen, PIPE
 
-@pytest.mark.skipif(not mx.context.num_gpus(), reason='Test only applicable to machines with GPUs')
+@pytest.mark.skipif(not mx.device.num_gpus(), reason='Test only applicable to machines with GPUs')
 def test_nvtx_ranges_present_in_profile():
 
     # Build a system independent wrapper to execute simple_forward with nvprof

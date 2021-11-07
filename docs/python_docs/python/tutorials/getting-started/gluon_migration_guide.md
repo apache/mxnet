@@ -50,6 +50,7 @@ Adopting these new functionalities may or may not require modifications on your 
 
 
 You can refer to [Step5 in Crash Course](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/getting-started/crash-course/5-datasets.html#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
+
 ## Modeling
 In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and the deferred compute mechanism. 
 
@@ -63,51 +64,97 @@ To help users migrate smoothly to use these simplified interfaces, we will provi
 ### NumPy-compatible Programming Experience
 #### NumPy Arrays
 MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is a multidimensional container of items of the same type and size. Most of its properties and attributes are the same as legacy NDArrays(i.e. `mx.nd.ndarray`), so users can use the NumPy array library just as they did with legacy NDArrays. But, there are still some changes and deprecations that need attention, as mentioned below. 
+
 **Migration Guide**: 
 
 1. Currently, NumPy ndarray only supports `default` storage type, other storage types, like `row_sparse`, `csr` are not supported. Also, `tostype()` attribute is deprecated. 
 
 2. Users can use `as_np_ndarray` attribute to switch from a legacy NDArray to NumPy ndarray just like this:
-    ```{.python}
-    import mxnet as mx
-    nd_array = mx.ones((5,3))
-    np_array = nd_array.as_np_ndarray()
-    ```
+
+```{.python}
+import mxnet as mx
+nd_array = mx.ones((5,3))
+np_array = nd_array.as_np_ndarray()
+```
 
 3. Compared with legacy NDArray, some attributes are deprecated in NumPy ndarray. Listed below are some of the deprecated APIs and their corresponding replacements in NumPy ndarray, others can be found in [**Appendix/NumPy Array Deprecated Attributes**](#NumPy-Array-Deprecated-Attributes).
-    |                   Deprecated Attributes               |    NumPy ndarray Equivalent    |
-    | ----------------------------------------------------- | ------------------------------ |
-    |                   `a.asscalar()`                      |         `a.item()`         |
-    |                 `a.as_in_context()`                   |      `a.as_in_ctx()`       |
-    |                    `a.context`                        |          `a.ctx`           |
-    |                   `a.reshape_like(b)`                 |    `a.reshape(b.shape)`    |
-    |                    `a.zeros_like(b)`                  |   `mx.np.zeros_like(b)`  |
-    |                    `a.ones_like(b)`                   |   `mx.np.ones_like(b)`   |
+
+|                   Deprecated Attributes               |    NumPy ndarray Equivalent    |
+| ----------------------------------------------------- | ------------------------------ |
+|                   `a.asscalar()`                      |         `a.item()`             |
+|                 `a.as_in_context()`                   |      `a.to_device()`           |
+|                    `a.context`                        |          `a.device`            |
+|                   `a.reshape_like(b)`                 |    `a.reshape(b.shape)`        |
+|                    `a.zeros_like(b)`                  |   `mx.np.zeros_like(b)`        |
+|                    `a.ones_like(b)`                   |   `mx.np.ones_like(b)`         |
+
+
+**NOTE**
+
+`Context` class has also been deprecated in MXNet2.0, it is renamed to `Device` and some related methods and attributes are also renamed as above. All the creation functions inside MXNet NumPy package will take `device` as keyword instead of `ctx`.
+
 
 4. Compared with legacy NDArray, some attributes will have different behaviors and take different inputs. 
-    |          Attribute            | Legacy Inputs | NumPy Inputs |
-    | ----------------------------- | ------------------------ | -------- |
-    | `a.reshape(*args, **kwargs)`  | **shape**: Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}. <br> The significance of each is explained below: <br>  ``0``  copy this dimension from the input to the output shape. <br>  ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions. <br> ``-2`` copy all/remainder of the input dimensions to the output shape. <br> ``-3`` use the product of two consecutive dimensions of the input shape as the output dimension. <br> ``-4`` split one dimension of the input into two dimensions passed subsequent to -4 in shape (can contain -1). <br> **reverse**: If set to 1, then the special values are inferred from right to left | **shape**: shape parameter will be **positional argument** rather than key-word argument. <br> Some dimensions of the shape can take special values from the set {-1, -2, -3, -4, -5, -6}. <br> The significance of each is explained below: <br>  ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions. <br> ``-2`` copy this dimension from the input to the output shape. <br> ``-3`` skip the current dimension if and only if the current dim size is one. <br> ``-4`` copy all the remaining the input dimensions to the output shape. <br> ``-5`` use the product of two consecutive dimensions of the input shape as the output. <br> ``-6`` split one dimension of the input into two dimensions passed subsequent to -6 in the new shape. <br> **reverse**: No **reverse** parameter for `np.reshape` but for `npx.reshape`. <br> **order**: Read the elements of `a` using this index order, and place the elements into the reshaped array using this index order. |
+
++--------------------------------------------------+--------------------------------------------------------------+------------------------------------------------------------------+
+|                       Attribute                  |                       Legacy Inputs                          |                    NumPy Inputs                                  |
++==================================================+==============================================================+==================================================================+
+|            a.reshape(*args, **kwargs)            | **shape**: Some dimensions of the shape can take special     | **shape**: shape parameter will be **positional argument** rather|
+|                                                  | values from the set {0, -1, -2, -3, -4}.                     |            than key-word argument. Some dimensions of the shape  |
+|                                                  | The significance of each is explained below:                 |            can take special values from the set {-1, -2, -3, -4, |
+|                                                  | 0  copy this dimension from the input to the output shape.   |            -5, -6}.                                              |
+|                                                  | -1 infers the dimension of the output shape by using the     | The significance of each is explained below:                     |
+|                                                  |    remainder of the input dimensions.                        | -1 infers the dimension of the output shape by using the         |
+|                                                  | -2 copy all/remainder of the input dimensions to the         |    remainder  of the input dimensions.                           |
+|                                                  |    output shape.                                             | -2 copy this dimension from the input to the output shape.       |
+|                                                  | -3 use the product of two consecutive dimensions of the      | -3 skip the current dimension if and only if the current dim size|
+|                                                  |    input shape as the output dimension.                      |    is one.                                                       |
+|                                                  | -4 split one dimension of the input into two dimensions      | -4 copy all the remaining the input dimensions to the output     |
+|                                                  |    passed subsequent to -4 in shape (can contain -1).        |    shape.                                                        |
+|                                                  | **reverse**: If set to 1, then the special values are        | -5 use the product of two consecutive dimensions of the input    |
+|                                                  |              inferred from right to left                     |    shape as the output.                                          |
+|                                                  |                                                              | -6 split one dimension of the input into two dimensions passed   |
+|                                                  |                                                              |    subsequent to -6 in the new shape.                            |
+|                                                  |                                                              | **reverse**: No **reverse** parameter for `np.reshape` but for   |
+|                                                  |                                                              |              `npx.reshape`.                                      |
+|                                                  |                                                              | **order**: Read the elements of `a` using this index order, and  |
+|                                                  |                                                              |            place the elements into the reshaped array using this |
+|                                                  |                                                              |            index order.                                          |
++--------------------------------------------------+--------------------------------------------------------------+------------------------------------------------------------------+
+
 
 
 #### NumPy and NumPy-extension Operators
 Most of the legacy NDArray operators(`mx.nd.op`) have the equivalent ones in np/npx namespace. Users can just replace them with `mx.np.op` or `mx.npx.op` to migrate. Some of the operators will have different inputs and behaviors as listed in the table below. 
+
 **Migration Guide**:
 
 1. Operators migration with name/inputs changes
-    |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
-    | ----------------------------------------------------- | ------------------------------ | ------------------- |
-    |       `mx.nd.flatten(*args, **kwargs)`                |            `mx.npx.batch_flatten(*args, **kwargs)`                    |                moved to `npx` namespace with new name `batch_flatten`            |
-    |       `mx.nd.concat(a, b, c)`                |            `mx.np.concatenate([a, b, c])`                    |              - moved to `np` namespace with new name `concatenate`. <br> - use list of ndarrays as input rather than positional ndarrays           |
-    |        `mx.nd.stack(a, b, c)`                 |            `mx.np.stack([a, b, c])`                    |              - moved to `np` namespace. <br> - use list of ndarrays as input rather than positional ndarrays           |
-    |      `mx.nd.SliceChannel(*args, **kwargs)`              |            `mx.npx.slice_channel(*args, **kwargs)`                 |              - moved to `npx` namespace with new name `slice_channel`.          |
-    |      `mx.nd.FullyConnected(*args, **kwargs)`              |            `mx.npx.fully_connected(*args, **kwargs)`                 |              - moved to `npx` namespace with new name `fully_connected`.          |
-    |      `mx.nd.Activation(*args, **kwargs)`              |            `mx.npx.activation(*args, **kwargs)`                 |              - moved to `npx` namespace with new name `activation`.          |
-    |      `mx.nd.Activation(*args, **kwargs)`              |            `mx.npx.activation(*args, **kwargs)`                 |              - moved to `npx` namespace with new name `activation`.          |
-    |      `mx.nd.elemwise_add(a, b)`              |            `a + b`                 |              - Just use ndarray python operator.          |
-    |      `mx.nd.elemwise_mul(a, b)`              |            `mx.np.multiply(a, b)`                 |              - Use `multiply` operator in `np` namespace.          |
+
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|                   Legacy Operators               |               NumPy Operators Equivalent                |                              Changes                                  |
++==================================================+=========================================================+=======================================================================+
+|        mx.nd.flatten(*args, **kwargs)            |        mx.npx.batch_flatten(*args, **kwargs)            |     moved to npx namespace with new name batch_flatten                |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|       mx.nd.concat(a, b, c)                      |            mx.np.concatenate([a, b, c])                 |       - moved to np namespace with new name concatenate.              |
+|                                                  |                                                         |       - use list of ndarrays as input rather than positional ndarrays |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|        mx.nd.stack(a, b, c)                      |            mx.np.stack([a, b, c])                       |       - moved to np namespace.                                        |
+|                                                  |                                                         |       - use list of ndarrays as input rather than positional ndarrays |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|      mx.nd.SliceChannel(*args, **kwargs)         |            mx.npx.slice_channel(*args, **kwargs)        |         moved to npx namespace with new name slice_channel.           |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|      mx.nd.FullyConnected(*args, **kwargs)       |        mx.npx.fully_connected(*args, **kwargs)          |         moved to npx namespace with new name fully_connected.         |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|      mx.nd.Activation(*args, **kwargs)           |            mx.npx.activation(*args, **kwargs)           |         moved to npx namespace with new name activation.              |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|      mx.nd.elemwise_add(a, b)                    |            a + b                                        |         Just use ndarray python operator.                             |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|      mx.nd.elemwise_mul(a, b)                    |            mx.np.multiply(a, b)                         |              Use multiply operator in np namespace.                   |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
 
 2. Operators migration with multiple steps: `mx.nd.mean` -> `mx.np.mean`:
+
 ```{.python}
 import mxnet as mx
 # Legacy: calculate mean value with reduction on axis 1
@@ -121,24 +168,46 @@ np_mean = mx.np.mean(data, axis=axes)
 ```
 
 3. Random Operators
-    |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
-    | ----------------------------------------------------- | ------------------------------ | ---------------------------- |
-    |       `mx.random.uniform(-1.0, 1.0, shape=(2, 3))` <br> `mx.nd.random.uniform(-1.0, 1.0, shape=(2, 3))`                |            `mx.np.random.uniform(-1.0, 1.0, size=(2, 3))`                    |                For all the NumPy random operators, use **size** keyword instead of **shape**           |
-    |       `mx.nd.random.multinomial(*args, **kwargs)`              |            `mx.npx.random.categorical(*args, **kwargs)`                    |                [use `npx.random.categorical` to have the behavior of drawing 1 sample from multiple distributions.](https://github.com/apache/incubator-mxnet/issues/20373#issuecomment-869120214)           |
+
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|                   Legacy Operators               |               NumPy Operators Equivalent                |                              Changes                                  |
++==================================================+=========================================================+=======================================================================+
+|   `mx.random.uniform(-1.0, 1.0, shape=(2, 3))`   |       `mx.np.random.uniform(-1.0, 1.0, size=(2, 3))`    |   For all the NumPy random operators, use **size** keyword instead of |
+|  `mx.nd.random.uniform(-1.0, 1.0, shape=(2, 3))` |                                                         |   **shape**                                                           |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|    `mx.nd.random.multinomial(*args, **kwargs)`   |       `mx.npx.random.categorical(*args, **kwargs)`      |   use `npx.random.categorical` to have the behavior of drawing 1 sample from multiple distributions.  |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
 
 4. Control Flow Operators
-    |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
-    | ----------------------------------------------------- | ------------------------------ | ------------------- |
-    |       `mx.nd.contrib.foreach(body, data, init_states, name)`                |            `mx.npx.foreach(body, data, init_states, name)`                    |                - moved to `npx` namespace. <br> - Will not support global variables as body's inputs(body's inputs must be either data or states or both)           |
-    |       `mx.nd.contrib.while_loop(cond, func, loop_vars, max_iterations, name)`                |            `mx.npx.while_loop(cond, func, loop_vars, max_iterations, name)`                    |                - moved to `npx` namespace. <br> - Will not support global variables as cond or func's inputs(cond or func's inputs must be in loop_vars)           |
-    |       `mx.nd.contrib.cond(pred, then_func, else_func, inputs, name)`                |            `mx.npx.cond(pred, then_func, else_func, name)`                    |                - moved to `npx` namespace. <br> - users needs to provide the inputs of pred, then_func and else_func as inputs <br> - Will not support global variables as pred, then_func or else_func's inputs(pred, then_func or else_func's inputs must be in inputs)           |
+
++----------------------------------------------------------------------------+---------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------+
+|                               Legacy Operators                             |                NumPy Operators Equivalent                                 |                             Changes                                                                           |
++============================================================================+===========================================================================+===============================================================================================================+
+|          `mx.nd.contrib.foreach(body, data, init_states, name)`            |    `mx.npx.foreach(body, data, init_states, name)`                        | - moved to `npx` namespace.                                                                        |
+|                                                                            |                                                                           | - Will not support global variables as body's inputs(body's inputs must be either data or states or both)   |
++----------------------------------------------------------------------------+---------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------+
+|  `mx.nd.contrib.while_loop(cond, func, loop_vars, max_iterations, name)`   |    `mx.npx.while_loop(cond, func, loop_vars, max_iterations, name)`       | - moved to `npx` namespace.                                                                        |
+|                                                                            |                                                                           | - Will not support global variables as cond or func's inputs(cond or func's inputs must be in loop_vars)    |
++----------------------------------------------------------------------------+---------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------+
+|       `mx.nd.contrib.cond(pred, then_func, else_func, inputs, name)`       |        `mx.npx.cond(pred, then_func, else_func, name)`                    | - moved to `npx` namespace.                                                                        |
+|                                                                            |                                                                           | - users needs to provide the inputs of pred, then_func and else_func as inputs                             |
+|                                                                            |                                                                           | - Will not support global variables as pred, then_func or else_func's                                       |
+|                                                                            |                                                                           | inputs(pred, then_func or else_func's inputs must be in inputs)                                             |
++----------------------------------------------------------------------------+---------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------+
 
 5. Functionalities
-    |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
-    | ----------------------------------------------------- | ------------------------------ | ------------------- |
-    |       `mx.nd.save(*args, **kwargs)`                |            `mx.npx.savez(*args, **kwargs)`                    |                - moved to `npx` namespace. <br> - Only accept positional arguments, try to flatten the list/dict before feed in          |
-    |       `mx.nd.load(*args, **kwargs)`                |            `mx.npx.load(*args, **kwargs)`                    |                - moved to `npx` namespace.         |
-    |       `mx.nd.waitall()`                |            `mx.npx.waitall()`                    |                - moved to `npx` namespace.         |
+
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|                   Legacy Operators               |               NumPy Operators Equivalent                |                              Changes                                  |
++==================================================+=========================================================+=======================================================================+
+|       `mx.nd.save(*args, **kwargs)`              |            `mx.npx.savez(*args, **kwargs)`              |  - moved to `npx` namespace.                                          |
+|                                                  |                                                         |  - Only accept positional arguments, try to flatten the list/dict     |
+|                                                  |                                                         |    before feed in                                                     |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|       `mx.nd.load(*args, **kwargs)`              |            `mx.npx.load(*args, **kwargs)`               |  - moved to `npx` namespace.                                          |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
+|       `mx.nd.waitall()`                          |            `mx.npx.waitall()`                           |  - moved to `npx` namespace.                                          |
++--------------------------------------------------+---------------------------------------------------------+-----------------------------------------------------------------------+
 
 Other operator changes are included in [**Appendix/NumPy and NumPy-extension Operators**](#NumPy-and-NumPy-extension-Operators1) 
 
@@ -170,37 +239,40 @@ class SampleBlock(HybridBlock):
         # Access constant parameters, which are not iterated during training
         self.weight = Constant('const', const_arr)
 ```
-Also, there will be new mechanisms for parameter loading, sharing and setting context. 
+Also, there will be new mechanisms for parameter loading, sharing and setting device. 
 
 1. Parameter loading in Gluon 1.x vs Gluon 2.0:
-    ```{.python}
-    # in Gluon 1.x
-    net = nn.Dense(8, activation='relu')
-    net.collect_params().load_dict(arg_dict, ctx=ctx)
-    # in Gluon 2.0
-    net = nn.Dense(8, activation='relu')
-    net.load_dict(arg_dict, ctx=ctx)
-    ```
+
+```{.python}
+# in Gluon 1.x
+net = nn.Dense(8, activation='relu')
+net.collect_params().load_dict(arg_dict, ctx=ctx)
+# in Gluon 2.0
+net = nn.Dense(8, activation='relu')
+net.load_dict(arg_dict, device=device)
+```
 
 2. Parameter sharing in Gluon 1.x vs Gluon 2.0:
-    ```{.python}
-    # in Gluon 1.x
-    shared = nn.Dense(8, activation='relu')
-    net = nn.Dense(8, activation='relu', params=shared.params)
-    # in Gluon 2.0
-    shared = nn.Dense(8, activation='relu')
-    net = nn.Dense(8, activation='relu').share_parameters(shared.params)
-    ```
 
-3. Parameter setting context in Gluon 1.x vs Gluon 2.0:
-    ```{.python}
-    # in Gluon 1.x
-    net = nn.Dense(8, activation='relu')
-    net.collect_params().reset_ctx(devices)
-    # in Gluon 2.0
-    net = nn.Dense(8, activation='relu')
-    net.reset_ctx(devices)
-    ```
+```{.python}
+# in Gluon 1.x
+shared = nn.Dense(8, activation='relu')
+net = nn.Dense(8, activation='relu', params=shared.params)
+# in Gluon 2.0
+shared = nn.Dense(8, activation='relu')
+net = nn.Dense(8, activation='relu').share_parameters(shared.params)
+```
+
+3. Parameter setting device in Gluon 1.x vs Gluon 2.0:
+
+```{.python}
+# in Gluon 1.x
+net = nn.Dense(8, activation='relu')
+net.collect_params().reset_ctx(devices)
+# in Gluon 2.0
+net = nn.Dense(8, activation='relu')
+net.reset_device(devices)
+```
 
 #### Forward Interface
 `hybrid_forward` interface in Gluon1.x provides the user with a unified imperative and symbolic programming interface to do graph construction and imperative execution. For the inputs of `hybrid_forward`, `F` can be either mx.symbol or mx.ndarray depending on the running mode(symbolic or imperative) of variable recording. Apart from `F` and input arrays, the parameters registered when Block is initialized are also required as part of the inputs. Take `nn.Dense` as an example:
@@ -222,11 +294,11 @@ Now, in deferred computation mode of Gluon2.0, the divergence of NDArray and Sym
 ```{.python}
 # forward interface, no F any more
 def forward(self, x):
-    # get the context information of input array and make parameters run on the same context
-    ctx = x.ctx
+    # get the device information of input array and make parameters run on the same device
+    device = x.device
     # use np/npx interfaces instead of F
-    act = npx.fully_connected(x, self.weight.data(ctx),
-                              self.bias.data(ctx) if self.bias is not None else None,
+    act = npx.fully_connected(x, self.weight.data(device),
+                              self.bias.data(device) if self.bias is not None else None,
                               no_bias=self.bias is None,
                               num_hidden=self._units, flatten=self._flatten, name='fwd')
     if self.act is not None:
@@ -276,9 +348,9 @@ class Dense(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        ctx = x.ctx
-        act = npx.fully_connected(x, self.weight.data(ctx),
-                                  self.bias.data(ctx) if self.bias is not None else None,
+        device = x.device
+        act = npx.fully_connected(x, self.weight.data(device),
+                                  self.bias.data(device) if self.bias is not None else None,
                                   no_bias=self.bias is None,
                                   num_hidden=self._units, flatten=self._flatten, name='fwd')
         if self.act is not None:
@@ -342,10 +414,10 @@ Example:
 import mxnet as mx
 # create key-value store with horovod backend
 kv = mx.kv.create('horovod') # or choose 'kvstore', 'byteps' as backend
-ctx = mx.gpu(kv.local_rank) if mx.context.num_gpus() > 0 else mx.cpu(kv.local_rank)
-val = mx.np.zeros((2, 3), ctx=ctx)
+device = mx.gpu(kv.local_rank) if mx.device.num_gpus() > 0 else mx.cpu(kv.local_rank)
+val = mx.np.zeros((2, 3), device=device)
 # broadcast the value at rank 0 to all ranks
-kv.broadcast('0', mx.np.zeros((2, 3), ctx=ctx), out=val)
+kv.broadcast('0', mx.np.zeros((2, 3), device=device), out=val)
 scale = kv.rank + 1
 # performs allreduce on a single array
 kv.pushpull('3', val * scale)

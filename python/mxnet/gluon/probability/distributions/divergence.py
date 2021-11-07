@@ -309,7 +309,7 @@ def _kl_mvn_mvn(p, q):
         # Batch matrix vector multiply
         np.einsum('...jk,...j->...k', q.precision, diff)
     ) * -0.5
-    n = np.ones_like(diff).sum(-1)
+    n = np.ones_like(diff).sum(-1)  # pylint: disable=too-many-function-args
     return 0.5 * (term1 + term2 + term3 - n)
 
 

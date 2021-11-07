@@ -24,7 +24,7 @@ import numpy as np
 from mxnet import nd
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
-from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_context
+from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_device
 import pytest
 
 base_path = os.path.join(os.path.dirname(__file__), "../../..")

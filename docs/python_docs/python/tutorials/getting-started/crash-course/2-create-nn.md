@@ -564,7 +564,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     net_loaded = nn.SymbolBlock.imports("MLP_hybrid-symbol.json",
                                         ['data'], "MLP_hybrid-0000.params",
-                                        ctx=None)
+                                        device=None)
 ```
 
 ```{.python .input}

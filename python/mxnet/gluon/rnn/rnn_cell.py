@@ -26,7 +26,7 @@ __all__ = ['RecurrentCell', 'HybridRecurrentCell',
            'ModifierCell', 'ZoneoutCell', 'ResidualCell',
            'BidirectionalCell', 'VariationalDropoutCell', 'LSTMPCell']
 
-from ... import np, npx, context
+from ... import np, npx, cpu
 from ...util import use_np
 from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock
@@ -44,8 +44,8 @@ def _cells_begin_state(cells, **kwargs):
 
 def _get_begin_state(cell, begin_state, inputs, batch_size):
     if begin_state is None:
-        ctx = inputs.context if isinstance(inputs, tensor_types) else inputs[0].context
-        with ctx:
+        device = inputs.device if isinstance(inputs, tensor_types) else inputs[0].device
+        with device:
             begin_state = cell.begin_state(func=np.zeros, batch_size=batch_size)
     return begin_state
 
@@ -163,7 +163,7 @@ class RecurrentCell(Block):
             else:
                 info = kwargs
             state = func(shape=info.pop("shape", ()),
-                         ctx=info.pop("ctx", context.cpu()),
+                         device=info.pop("device", cpu()),
                          dtype=info.pop("dtype", "float32"))
             states.append(state)
         return states
@@ -384,14 +384,14 @@ class RNNCell(HybridRecurrentCell):
                         **self.__dict__)
 
     def forward(self, inputs, states):
-        ctx = inputs.ctx
-        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
-                                  bias=self.i2h_bias.data(ctx),
+        device = inputs.device
+        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(device),
+                                  bias=self.i2h_bias.data(device),
                                   num_hidden=self._hidden_size,
                                   no_bias=False)
-        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
-                                  weight=self.h2h_weight.data(ctx),
-                                  bias=self.h2h_bias.data(ctx),
+        h2h = npx.fully_connected(states[0].to_device(device),
+                                  weight=self.h2h_weight.data(device),
+                                  bias=self.h2h_bias.data(device),
                                   num_hidden=self._hidden_size,
                                   no_bias=False)
         i2h_plus_h2h = i2h + h2h
@@ -507,13 +507,13 @@ class LSTMCell(HybridRecurrentCell):
 
     def forward(self, inputs, states):
         # pylint: disable=too-many-locals
-        ctx = inputs.ctx
-        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
-                                  bias=self.i2h_bias.data(ctx),
+        device = inputs.device
+        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(device),
+                                  bias=self.i2h_bias.data(device),
                                   num_hidden=self._hidden_size*4, no_bias=False)
-        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
-                                  weight=self.h2h_weight.data(ctx),
-                                  bias=self.h2h_bias.data(ctx),
+        h2h = npx.fully_connected(states[0].to_device(device),
+                                  weight=self.h2h_weight.data(device),
+                                  bias=self.h2h_bias.data(device),
                                   num_hidden=self._hidden_size*4, no_bias=False)
         gates = i2h + h2h
         slice_gates = npx.slice_channel(gates, num_outputs=4)
@@ -521,7 +521,7 @@ class LSTMCell(HybridRecurrentCell):
         forget_gate = self._get_activation(slice_gates[1], self._recurrent_activation)
         in_transform = self._get_activation(slice_gates[2], self._activation)
         out_gate = self._get_activation(slice_gates[3], self._recurrent_activation)
-        next_c = np.multiply(forget_gate, states[1].as_in_ctx(ctx)) + \
+        next_c = np.multiply(forget_gate, states[1].to_device(device)) + \
                  np.multiply(in_gate, in_transform)
         next_h = np.multiply(out_gate, npx.activation(next_c, act_type=self._activation))
 
@@ -630,16 +630,16 @@ class GRUCell(HybridRecurrentCell):
 
     def forward(self, inputs, states):
         # pylint: disable=too-many-locals
-        ctx = inputs.ctx
-        prev_state_h = states[0].as_in_ctx(ctx)
+        device = inputs.device
+        prev_state_h = states[0].to_device(device)
         i2h = npx.fully_connected(inputs,
-                                  weight=self.i2h_weight.data(ctx),
-                                  bias=self.i2h_bias.data(ctx),
+                                  weight=self.i2h_weight.data(device),
+                                  bias=self.i2h_bias.data(device),
                                   num_hidden=self._hidden_size * 3,
                                   no_bias=False)
         h2h = npx.fully_connected(prev_state_h,
-                                  weight=self.h2h_weight.data(ctx),
-                                  bias=self.h2h_bias.data(ctx),
+                                  weight=self.h2h_weight.data(device),
+                                  bias=self.h2h_bias.data(device),
                                   num_hidden=self._hidden_size * 3,
                                   no_bias=False)
 
@@ -959,7 +959,7 @@ class ZoneoutCell(ModifierCell):
         self._prev_output = None
 
     def forward(self, inputs, states):
-        ctx = inputs.ctx
+        device = inputs.device
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
         mask = (lambda p, like: npx.dropout(np.ones(like.shape), p=p))
@@ -970,7 +970,7 @@ class ZoneoutCell(ModifierCell):
 
         output = (np.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
-        states = ([np.where(mask(p_states, new_s), new_s, old_s.as_in_ctx(ctx)) for new_s, old_s in
+        states = ([np.where(mask(p_states, new_s), new_s, old_s.to_device(device)) for new_s, old_s in
                    zip(next_states, states)] if p_states != 0. else next_states)
 
         self._prev_output = output
@@ -1172,14 +1172,14 @@ class VariationalDropoutCell(ModifierCell):
 
 
     def forward(self, inputs, states):
-        ctx = inputs.ctx
+        device = inputs.device
         cell = self.base_cell
         self._initialize_input_masks(inputs, states)
 
         if self.drop_states:
             states = list(states)
             # state dropout only needs to be applied on h, which is always the first state.
-            states[0] = states[0].as_in_ctx(ctx) * self.drop_states_mask
+            states[0] = states[0].to_device(device) * self.drop_states_mask
 
         if self.drop_inputs:
             inputs = inputs * self.drop_inputs_mask
@@ -1380,13 +1380,13 @@ class LSTMPCell(HybridRecurrentCell):
 
     # pylint: disable= arguments-differ
     def forward(self, inputs, states):
-        ctx = inputs.ctx
-        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
-                                  bias=self.i2h_bias.data(ctx),
+        device = inputs.device
+        i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(device),
+                                  bias=self.i2h_bias.data(device),
                                   num_hidden=self._hidden_size*4, no_bias=False)
-        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
-                                  weight=self.h2h_weight.data(ctx),
-                                  bias=self.h2h_bias.data(ctx),
+        h2h = npx.fully_connected(states[0].to_device(device),
+                                  weight=self.h2h_weight.data(device),
+                                  bias=self.h2h_bias.data(device),
                                   num_hidden=self._hidden_size*4, no_bias=False)
         gates = i2h + h2h
         slice_gates = npx.slice_channel(gates, num_outputs=4)
@@ -1394,10 +1394,10 @@ class LSTMPCell(HybridRecurrentCell):
         forget_gate = npx.activation(slice_gates[1], act_type="sigmoid")
         in_transform = npx.activation(slice_gates[2], act_type="tanh")
         out_gate = npx.activation(slice_gates[3], act_type="sigmoid")
-        next_c = forget_gate * states[1].as_in_ctx(ctx) + in_gate * in_transform
+        next_c = forget_gate * states[1].to_device(device) + in_gate * in_transform
         hidden = np.multiply(out_gate, npx.activation(next_c, act_type="tanh"))
         next_r = npx.fully_connected(hidden, num_hidden=self._projection_size,
-                                     weight=self.h2r_weight.data(ctx), no_bias=True)
+                                     weight=self.h2r_weight.data(device), no_bias=True)
 
         return next_r, [next_r, next_c]
 
@@ -1459,7 +1459,7 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     >>> batch_size = 2
     >>> input_size = 5
     >>> cell = mx.gluon.rnn.LSTMCell(input_size)
-    >>> cell.initialize(ctx=mx.cpu())
+    >>> cell.initialize(device=mx.cpu())
     >>> rnn_data = mx.np.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
     >>> state_shape = (batch_size, input_size)
     >>> states = [mx.np.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]

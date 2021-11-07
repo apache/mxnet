@@ -109,7 +109,7 @@ class Categorical(Distribution):
             self._validate_samples(value)
         logit = self.logit
         indices = np.expand_dims(value, axis=-1).astype('int')
-        expanded_logit = logit * np.ones_like(logit + indices)
+        expanded_logit = logit * np.ones_like(logit + indices)  # pylint: disable=too-many-function-args
         return npx.pick(expanded_logit, indices).squeeze()
 
     def sample(self, size=None):

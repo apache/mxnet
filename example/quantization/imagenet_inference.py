@@ -44,8 +44,8 @@ def score(symblock, data, ctx, max_num_examples, skip_num_batches, logger=None):
     for i, input_data in enumerate(data):
         if i < skip_num_batches:
             continue
-        x = input_data[0].as_in_ctx(ctx)
-        label = input_data[1].as_in_ctx(ctx)
+        x = input_data[0].to_device(ctx)
+        label = input_data[1].to_device(ctx)
         outputs = symblock.forward(x)
         for m in metrics:
             m.update(label, outputs)
@@ -126,13 +126,13 @@ if __name__ == '__main__':
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
 
-    if args.ctx == 'cpu':
+    if args.device == 'cpu':
         ctx = mx.cpu(0)
-    elif args.ctx == 'gpu':
+    elif args.device == 'gpu':
         ctx = mx.gpu(0)
         logger.warning('Notice that oneDNN optimized and quantized model may not work with GPU context')
     else:
-        raise ValueError('ctx %s is not supported in this script' % args.ctx)
+        raise ValueError('ctx %s is not supported in this script' % args.device)
 
     symbol_file = args.symbol_file
     param_file = args.param_file

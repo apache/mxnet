@@ -64,18 +64,18 @@ def test_np_empty():
         (4, 5),
         (1, 1, 1, 1),
     ]
-    ctxes = [npx.current_context(), None]
+    devices = [npx.current_device(), None]
     for dtype, expected_dtype in dtype_pairs:
         for shape in shapes:
             for order in orders:
-                for ctx in ctxes:
+                for device in devices:
                     if order == 'C':
-                        ret = np.empty(shape, dtype=dtype,order=order, ctx=ctx)
+                        ret = np.empty(shape, dtype=dtype, order=order, device=device)
                         assert ret.dtype == expected_dtype
                         assert ret.shape == shape if isinstance(shape, tuple) else (shape,)
-                        assert ret.ctx == npx.current_context()
+                        assert ret.device == npx.current_device()
                     else:
-                        assert_exception(np.empty, NotImplementedError, shape, dtype=dtype, order=order, ctx=ctx)
+                        assert_exception(np.empty, NotImplementedError, shape, dtype=dtype, order=order, device=device)
 
 
 @use_np
@@ -93,7 +93,7 @@ def test_np_array_creation():
     for dtype in dtypes:
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
-            assert mx_arr.ctx == mx.current_context()
+            assert mx_arr.device == mx.current_device()
             if dtype is None:
                 dtype = src.dtype if isinstance(src, _np.ndarray) else _np.float32
             if isinstance(src, mx.nd.NDArray):
@@ -115,7 +115,7 @@ def test_np_zeros():
             self._dtype = dtype
 
         def forward(self, x, *args, **kwargs):
-            return x + np.zeros(shape, dtype)
+            return x + np.zeros(shape, dtype=dtype)
 
     class TestZerosOutputType(HybridBlock):
         def forward(self, x, *args, **kwargs):
@@ -610,12 +610,12 @@ def test_formatting():
         b = np.arange(8).reshape(2,2,2)
         assert '{}'.format(a) == '{}'.format(_a)
 
-    context = mx.context.current_context()
-    if str(context)[:3] != 'gpu':
+    device = mx.device.current_device()
+    if str(device)[:3] != 'gpu':
         test_0d()
         test_nd_format()
         test_nd_no_format()
-    # if the program is running in GPU, the formatted string would be appended with context notation
+    # if the program is running in GPU, the formatted string would be appended with device notation
     # for exmpale, if a = np.array([np.pi]), the return value of '{}'.format(a) is '[3.1415927] @gpu(0)'
 
 
@@ -1322,7 +1322,7 @@ def test_np_get_dtype():
     for dtype in dtypes:
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
-            assert mx_arr.ctx == mx.current_context()
+            assert mx_arr.device == mx.current_device()
             if isinstance(src, mx.nd.NDArray):
                 np_arr = _np.array(src.asnumpy(), dtype=dtype if dtype is not None else _np.float32)
             else:
@@ -1419,7 +1419,7 @@ def test_mixed_array_types_share_memory():
     assert _np.may_share_memory(np_array_slice, mx_array)
     assert _np.shares_memory(np_array_slice, mx_array)
 
-    mx_pinned_array = mx_array.as_in_ctx(mx.cpu_pinned(0))
+    mx_pinned_array = mx_array.to_device(mx.cpu_pinned(0))
     assert not _np.may_share_memory(np_array, mx_pinned_array)
     assert not _np.shares_memory(np_array, mx_pinned_array)
 
