@@ -498,9 +498,9 @@ Descriptor SelectPlan(const OpContext& ctx,
   if (verbose > 0)
     LOG(INFO) << "Selecting plan for " << make_op_str() << ":";
 
-  auto tune = param.cudnn_tune
-                  ? param.cudnn_tune.value()
-                  : dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", static_cast<int>(conv::kLimited));
+  auto tune = param.cudnn_tune ?
+                  param.cudnn_tune.value() :
+                  dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", static_cast<int>(conv::kLimited));
   size_t workspace_size = 0;
   size_t workspace_limit =
       tune != conv::kFastest ? param.workspace << 20 : std::numeric_limits<size_t>::max();
