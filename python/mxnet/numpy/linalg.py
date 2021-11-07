@@ -37,7 +37,7 @@ def matrix_rank(
         M: ndarray,
         /,
         *,
-        tol: Optional[Union[float, ndarray]] = None,
+        rtol: Optional[Union[float, ndarray]] = None,
         hermitian: bool = False,
 ) -> ndarray:
     r"""
@@ -518,7 +518,7 @@ def pinv(
         a: ndarray,
         /,
         *,
-        rcond: Optional[Union[float, ndarray]] = 1e-15,
+        rtol: Optional[Union[float, ndarray]] = None,
         hermitian: Optional[bool] = False
 ) -> ndarray:
     r"""
@@ -763,7 +763,7 @@ def svdvals(a: ndarray, /) -> ndarray:
     return s
 
 
-def cholesky(a: ndarray, /) -> ndarray:
+def cholesky(a: ndarray, upper: bool = False, /) -> ndarray:
     r"""
     Cholesky decomposition.
 

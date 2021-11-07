@@ -2687,7 +2687,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 def empty(
     shape: Union[int, Tuple[int, ...]],
     *,
-    dtype: Optional[Union[dtype, str]] = None,  # pylint: disable=redefined-outer-name
+    dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
     order: Optional[str] = 'C',
     device: Optional[Device] = None
 ) -> ndarray:
