@@ -122,23 +122,21 @@ DNNLTransposeFwd& GetTransposeForward(const NumpyTransposeParam& param, const ND
 }
 
 template <>
-NumpyTransposeParam ProcessTransposeParam<NumpyTransposeParam>(const nnvm::NodeAttrs& attrs) {
-  const NumpyTransposeParam& param_in = nnvm::get<NumpyTransposeParam>(attrs.parsed);
-  NumpyTransposeParam param_out;
-  param_out.axes = common::CanonicalizeAxes(param_in.axes);
-  return param_out;
+NumpyTransposeParam ProcessTransposeParam<NumpyTransposeParam>(const NumpyTransposeParam& param) {
+  NumpyTransposeParam numpy_param;
+  numpy_param.axes = common::CanonicalizeAxes(param.axes);
+  return numpy_param;
 }
 
 template <>
-NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const nnvm::NodeAttrs& attrs) {
-  const TransposeParam& param_in = nnvm::get<TransposeParam>(attrs.parsed);
-  NumpyTransposeParam param_out;
-  if (param_in.axes.ndim() == 0) {
-    param_out.axes = mxnet::TShape(-1, 0);
+NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const TransposeParam& param) {
+  NumpyTransposeParam numpy_param;
+  if (param.axes.ndim() == 0) {
+    numpy_param.axes = mxnet::TShape(-1, 0);
   } else {
-    param_out.axes = param_in.axes;
+    numpy_param.axes = param.axes;
   }
-  return param_out;
+  return numpy_param;
 }
 
 }  // namespace op

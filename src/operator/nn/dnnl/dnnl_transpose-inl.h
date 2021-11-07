@@ -33,6 +33,7 @@
 namespace mxnet {
 namespace op {
 
+struct NumpyTransposeParam;
 struct TransposeParam;
 
 bool SupportDNNLTranspose(const NDArray& data);
@@ -51,22 +52,17 @@ class DNNLTransposeFwd {
 
 DNNLTransposeFwd& GetTransposeForward(const NumpyTransposeParam& param, const NDArray& data);
 
-template <typename ParamType>
-NumpyTransposeParam ProcessTransposeParam(const nnvm::NodeAttrs& attrs);
+template <class ParamType>
+NumpyTransposeParam ProcessTransposeParam(const ParamType& param);
 
-template <>
-NumpyTransposeParam ProcessTransposeParam<NumpyTransposeParam>(const nnvm::NodeAttrs& attrs);
-
-template <>
-NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const nnvm::NodeAttrs& attrs);
-
-template <typename ParamType>
+template <class ParamType>
 void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const NDArray& data,
                           const OpReqType& req,
                           const NDArray& output) {
-  const NumpyTransposeParam param = ProcessTransposeParam<ParamType>(attrs);
+  const ParamType& org_param = nnvm::get<ParamType>(attrs.parsed);
+  auto  param = ProcessTransposeParam<ParamType>(org_param);
   auto fwd                        = GetTransposeForward(param, data);
   fwd.SetNewMem(data, output);
   fwd.Execute();
