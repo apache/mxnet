@@ -2064,7 +2064,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute topk')
 
-    def argsort((
+    def argsort(
             self: ndarray,
             /,
             *,
@@ -2687,7 +2687,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 def empty(
     shape: Union[int, Tuple[int, ...]],
     *,
-    dtype=Optional[Union[dtype, str]] = None,  # pylint: disable=redefined-outer-name
+    dtype: Optional[Union[dtype, str]] = None,  # pylint: disable=redefined-outer-name
     order: Optional[str] = 'C',
     device: Optional[Device] = None
 ) -> ndarray:
@@ -6084,7 +6084,7 @@ atanh.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_sort_functions
-def argsort((
+def argsort(
         a: ndarray,
         /,
         *,
@@ -6335,7 +6335,7 @@ def eye(N: int,
         *,
         dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         device: Optional[Device] = None,
-        **kwargs: Any
+        **kwargs
 ) -> ndarray:
     """
     Return a 2-D array with ones on the diagonal and zeros elsewhere.

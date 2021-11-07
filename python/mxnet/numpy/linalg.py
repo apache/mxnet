@@ -763,7 +763,7 @@ def svdvals(a: ndarray, /) -> ndarray:
     return s
 
 
-def cholesky(a: ndarray, /) -> ndarray::
+def cholesky(a: ndarray, /) -> ndarray:
     r"""
     Cholesky decomposition.
 
