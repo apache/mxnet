@@ -280,7 +280,7 @@ class ImageBboxRandomExpand(Block):
             fill = F.array(self._fill, dtype=img.dtype, ctx=img.device)
             if not c == fill.size:
                 raise ValueError("Channel and fill size mismatch, {} vs {}".format(c, fill.size))
-            dst = F.tile(fill.reshape((1, c)), reps=(oh * ow, 1)).reshape((oh, ow, c))
+            dst = F.tile(fill.reshape((1, c)), (oh * ow, 1)).reshape((oh, ow, c))
 
         dst[off_y:off_y+h, off_x:off_x+w, :] = img
 

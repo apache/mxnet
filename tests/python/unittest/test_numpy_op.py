@@ -4628,8 +4628,8 @@ def test_np_argmin_argmax_large_tensor():
     # be multiple extrema
     def single_run(op, dtype):
         inp = np.random.normal(0, 10, size=(200, 30000), dtype=dtype)
-        arg = op[0](inp, 1)
-        ref = op[1](inp, 1)
+        arg = op[0](inp, axis=1)
+        ref = op[1](inp, axis=1)
         for i, idx in enumerate(arg):
             assert inp[i, idx] == ref[i]
 
@@ -5804,13 +5804,13 @@ def test_np_repeat():
             self._axis = axis
 
         def forward(self, x):
-            return x.repeat(self._repeats, self._axis)
+            return x.repeat(self._repeats, axis=self._axis)
 
     for shape, repeats, axis in config:
         data_np = onp.random.randint(low=0, high=1000, size=shape)
         data_mx = np.array(data_np, dtype=data_np.dtype)
         ret_np = data_np.repeat(repeats, axis)
-        ret_mx = data_mx.repeat(repeats, axis)
+        ret_mx = data_mx.repeat(repeats, axis=axis)
         assert same(ret_mx.asnumpy(), ret_np)
 
         net = TestRepeat(repeats, axis)
@@ -6250,7 +6250,7 @@ def test_np_linalg_cholesky(shape, dtype, upper, hybridize):
             self._upper = upper
 
         def forward(self, data):
-            return np.linalg.cholesky(data, upper=self._upper)
+            return np.linalg.cholesky(data, self._upper)
 
     def get_grad(L, upper):
         # shape of m is [batch, n, n]
@@ -6353,7 +6353,7 @@ def test_np_linalg_cholesky(shape, dtype, upper, hybridize):
         backward_expected = get_grad(L.asnumpy(), upper)
         assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
     # check imperative once again
-    L = np.linalg.cholesky(data, upper=upper)
+    L = np.linalg.cholesky(data, upper)
     check_cholesky(L, data_np, upper)
 
 
