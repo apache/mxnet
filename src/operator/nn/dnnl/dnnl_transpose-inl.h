@@ -28,13 +28,12 @@
 #if MXNET_USE_ONEDNN == 1
 #include "./dnnl_base-inl.h"
 #include "./dnnl_ops-inl.h"
-
 #include "../../numpy/np_matrix_op-inl.h"
-#include "../../operator_common.h"
-#include "../../tensor/matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
+
+struct TransposeParam;
 
 bool SupportDNNLTranspose(const NDArray& data);
 
