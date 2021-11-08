@@ -2571,6 +2571,7 @@ def test_np_transpose(data_shape, axes_workload, hybridize, dtype, grad_req):
             np_out = x.asnumpy().transpose(*axes)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
+            
 @use_np
 def test_np_transpose_error():
     # Test for error raising
@@ -2578,6 +2579,7 @@ def test_np_transpose_error():
     pytest.raises(ValueError, lambda: dat.transpose((0, 0, 1)))
     pytest.raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
 
+    
 @use_np
 def test_np_meshgrid():
     nx, ny = (4, 5)
