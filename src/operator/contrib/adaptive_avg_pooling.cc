@@ -24,6 +24,9 @@
 #include "adaptive_avg_pooling-inl.h"
 // #include "elemwise_op_common.h"
 #include "../elemwise_op_common.h"
+#if MXNET_USE_ONEDNN == 1
+#include "../nn/dnnl/dnnl_pooling-inl.h"
+#endif  // MXNET_USE_ONEDNN
 
 #define START_IND(a, b, c) static_cast<int>(std::floor(static_cast<float>(a * c) / b))
 #define END_IND(a, b, c)   static_cast<int>(std::ceil(static_cast<float>((a + 1) * c) / b))
@@ -199,6 +202,58 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
   }
 }
 
+#if MXNET_USE_ONEDNN == 1
+bool SupportONEDNNAveragePooling(const NDArray &in_data,
+                                    const NDArray &out_data) {
+  for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
+    const int s1 = in_data.shape()[idx];
+    const int s2 = out_data.shape()[idx];
+    if (s2 == 0) {
+      return false;
+    }
+    if (s1 % s2 != 0) {
+      return false;
+    }
+  }
+  const int IH = in_data.shape()[2];
+  const int IW = in_data.shape()[3];
+  const int OH = out_data.shape()[2];
+  const int OW = out_data.shape()[3];
+  const int strides_H = floor((IH << 1) / OH) - floor(IH / OH);
+  const int strides_W = floor((IW << 1) / OW) - floor(IW / OW);
+  const int kernel_H = ceil((IH << 1) / OH) - floor(IH / OH);
+  const int kernel_W = ceil((IW << 1) / OW) - floor(IW / OW);
+  const int pad_l_top = (strides_H * (OH - 1) + kernel_H - IH) / 2;
+  const int pad_l_left = (strides_W * (OW - 1) + kernel_W - IW) / 2;
+  return pad_l_top == 0 && pad_l_left == 0;
+}
+
+void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs &attrs,
+                                 const OpContext &ctx,
+                                 const std::vector<NDArray> &inputs,
+                                 const std::vector<OpReqType> &req,
+                                 const std::vector<NDArray> &outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  /*
+  OneDNN doesn't support adaptive pooling. 
+  Fallback is needed when padding is not equal 0;
+  */
+  if (SupportDNNLPooling(inputs[0]) &&
+      SupportONEDNNAveragePooling(inputs[0], outputs[0])) {
+    const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+
+    const NDArray *workspace = nullptr;
+    DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
+    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, true);
+    DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  FallBackCompute(AdaptiveAvgPoolOpForward<cpu>, attrs, ctx, inputs, req,
+                  outputs);
+}
+#endif
+
 DMLC_REGISTER_PARAMETER(AdaptiveAvgPoolParam);
 
 NNVM_REGISTER_OP(_contrib_AdaptiveAvgPooling2D)
@@ -213,18 +268,22 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
   (N x C x height x width) for any input (NCHW).
 
 )code" ADD_FILELINE)
-    .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
+    .set_attr_parser(ParamParser<PoolingParam>)
     .set_num_inputs(1)
     .set_num_outputs(1)
     .set_attr<mxnet::FInferShape>("FInferShape", AdaptiveAvgPoolOpInferShape)
     .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpForward<cpu>)
     .set_attr<nnvm::FGradient>("FGradient",
                                ElemwiseGradUseNone{"_backward_contrib_AdaptiveAvgPooling2D"})
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", AdaptiveAvgPoolComputeExCPU)
+#endif
     .add_argument("data", "NDArray-or-Symbol", "Input data")
-    .add_arguments(AdaptiveAvgPoolParam::__FIELDS__());
+    .add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
-    .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
+    .set_attr_parser(ParamParser<PoolingParam>)
     .set_num_inputs(1)
     .set_num_outputs(1)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
