@@ -1678,7 +1678,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                       ' ndarray.to_device', DeprecationWarning)
         return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
 
-    def default_device(self, ctx):
+    def as_in_ctx(self, ctx):
         """This function has been deprecated. Please refer to ``ndarray.to_device``."""
         warnings.warn('ndarray.to_device has been renamed to'
                       ' ndarray.to_device', DeprecationWarning)
