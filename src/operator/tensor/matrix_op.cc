@@ -939,8 +939,9 @@ static void StackForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK(!inputs.empty());
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  if (req[0] == kNullOp)
+  if (req[0] == kNullOp) {
     return;
+  }
 
   if (SupportDNNLStack(inputs)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);

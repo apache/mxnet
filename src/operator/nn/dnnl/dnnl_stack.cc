@@ -32,20 +32,24 @@ namespace mxnet {
 namespace op {
 
 bool SupportDNNLStack(const std::vector<NDArray>& inputs) {
-  if (inputs[0].dtype() != mshadow::kFloat32 && inputs[0].dtype() != mshadow::kBfloat16)
+  if (inputs[0].dtype() != mshadow::kFloat32 && inputs[0].dtype() != mshadow::kBfloat16) {
     return false;
+  }
 
   int src_dtype = inputs[0].dtype();
-  for (auto& arr : inputs) {
+  for (const auto& arr : inputs) {
     if (arr.dtype() != src_dtype) {
       return false;
     }
     // DO not support zero-size tensors.
-    if (arr.shape().Size() == 0)
+    if (arr.shape().Size() == 0) {
       return false;
+    }
+
     int ndim = arr.shape().ndim();
-    if (ndim <= 0)
+    if (ndim <= 0) {
       return false;
+    }
   }
   return true;
 }
@@ -57,28 +61,34 @@ void DNNLStackForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
 
+  // const value of new dimension to stack
+  // tensors with oneDNN concat primitive
+  constexpr int stacking_dim = 1;
+
   const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
   const int axis          = CheckAxis(param.axis, out_data[0].shape().ndim());
-  const auto oshape       = out_data[0].shape();
+  const TShape oshape     = out_data[0].shape();
   const int src_dtype     = in_data[0].dtype();
   const int dst_dtype     = out_data[0].dtype();
-  int leading             = 1;
-  int trailing            = 1;
+  const int mid_dim       = oshape[axis];
+  int leading_dim         = 1;
+  int trailing_dim        = 1;
 
   for (int i = 0; i < axis; ++i) {
-    leading *= oshape[i];
+    leading_dim *= oshape[i];
   }
   for (int i = axis + 1; i < oshape.ndim(); ++i) {
-    trailing *= oshape[i];
+    trailing_dim *= oshape[i];
   }
-  int mid = oshape[axis];
 
   std::vector<dnnl::memory::desc> data_md;
   std::vector<dnnl::memory> data_mem;
-  dnnl::memory::desc in_md(
-      {leading, 1, trailing}, get_dnnl_type(src_dtype), dnnl::memory::format_tag::abc);
-  dnnl::memory::desc out_md(
-      {leading, mid, trailing}, get_dnnl_type(dst_dtype), dnnl::memory::format_tag::any);
+  dnnl::memory::desc in_md({leading_dim, stacking_dim, trailing_dim},
+                           get_dnnl_type(src_dtype),
+                           dnnl::memory::format_tag::abc);
+  dnnl::memory::desc out_md({leading_dim, mid_dim, trailing_dim},
+                            get_dnnl_type(dst_dtype),
+                            dnnl::memory::format_tag::any);
 
   const int num_in_data = in_data.size();
   data_md.reserve(num_in_data);
@@ -93,7 +103,7 @@ void DNNLStackForward(const nnvm::NodeAttrs& attrs,
     }
   });
 
-  auto& fwd = GetConcatForward(1, in_data, data_md, axis);
+  auto& fwd = GetConcatForward(stacking_dim, in_data, data_md, axis);
   mxnet::dnnl_output_t out_mem =
       CreateDNNLMem(out_data[concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
 
