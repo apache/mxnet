@@ -48,7 +48,8 @@ from ..runtime import Features
 from ..device import Device
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype, wrap_ctx_to_device_func,\
-                   wrap_sort_functions, wrap_data_api_statical_func
+                   dtype_from_number, wrap_data_api_statical_func,\
+                   wrap_sort_functions
 from ..device import current_device
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -13305,40 +13306,15 @@ def asarray(obj, dtype=None, device=None, copy=None):
     array([[0, 6],
             [1, 7]])
     """
-    if device is None:
-        ctx = current_device()
-    if isinstance(obj, _np.ndarray):
-        if is_np_default_dtype():
-            dtype = obj.dtype if dtype is None else dtype
-        else:
-            dtype = _np.float32 if dtype is None or obj.dtype is _np.float64 else dtype
-    if isinstance(obj, ndarray):
+    if isinstance(obj, numeric_types):
+        dtype = dtype_from_number(obj) if dtype is None else dtype
+        obj = _np.asarray(obj, dtype=dtype)
+    elif isinstance(obj, _np.ndarray):
         dtype = obj.dtype if dtype is None else dtype
-    elif hasattr(obj, '__dlpack__'):
-        return from_dlpack(obj)
-    elif isinstance(obj, NDArray):
-        raise ValueError("If you're trying to create a mxnet.numpy.ndarray "
-                         "from mx.nd.NDArray, please use the zero-copy as_np_ndarray function.")
-    else:
-        try:
-            obj = _np.array(obj)
-        except Exception as e:
-            # printing out the error raised by official NumPy's array function
-            # for transparency on users' side
-            raise TypeError('{}'.format(str(e)))
-        if dtype is None:
-            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
-            dtype = obj.dtype if hasattr(obj, "dtype") else default_dtype
-        try:
-            obj = obj.astype(dtype)
-        except Exception as e:
-            raise TypeError('{}'.format(str(e)))
-    ret = empty(obj.shape, dtype=dtype, ctx=ctx)
-    if len(obj.shape) == 0:
-        ret[()] = obj
-    else:
-        ret[:] = obj
-    return ret
+    elif isinstance(obj, ndarray):
+        dtype = obj.dtype if dtype is None else dtype
+    array = _as_mx_np_array(obj, device=device, zero_copy=copy)
+    return array.astype(dtype)
 
 
 # pylint: disable=redefined-outer-name
