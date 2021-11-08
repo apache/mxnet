@@ -13313,6 +13313,8 @@ def asarray(obj, dtype=None, device=None, copy=None):
         dtype = obj.dtype if dtype is None else dtype
     elif isinstance(obj, ndarray):
         dtype = obj.dtype if dtype is None else dtype
+    elif hasattr(obj, '__dlpack__'):
+        return from_dlpack(obj)
     array = _as_mx_np_array(obj, device=device, zero_copy=copy)
     return array.astype(dtype)
 
