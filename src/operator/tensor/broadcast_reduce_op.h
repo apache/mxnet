@@ -1640,7 +1640,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   }
 #else
   const std::string& red = param.ord == 1 ? "red::sum{}" : "red::nrm2{}";
-  const std::string& op = param.ord == 1 ? "abs" : "identity";
+  const std::string& op  = param.ord == 1 ? "abs" : "identity";
   ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, red, nullptr, false, op);
 #endif
 }

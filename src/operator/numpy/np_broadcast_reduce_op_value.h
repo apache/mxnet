@@ -32,11 +32,11 @@
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 
+#include "np_broadcast_reduce_op.h"
+
 #if MXNET_USE_ONEDNN
 #include "../nn/dnnl/dnnl_reduce-inl.h"
 #endif  // MXNET_USE_ONEDNN
-
-#include "np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
