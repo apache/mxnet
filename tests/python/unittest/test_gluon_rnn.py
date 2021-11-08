@@ -342,9 +342,9 @@ def test_layer_bidirectional():
 
         def forward(self, inpt):
             fwd = self._lstm_fwd(inpt)
-            bwd_inpt = np.flip(inpt, 0)
+            bwd_inpt = np.flip(inpt, axis=0)
             bwd = self._lstm_bwd(bwd_inpt)
-            bwd = np.flip(bwd, 0)
+            bwd = np.flip(bwd, axis=0)
             return np.concatenate([fwd, bwd], axis=2)
 
     size = 7

@@ -7039,7 +7039,7 @@ def logaddexp(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.logaddexp(x1, x2, out=out)
-    return _api_internal.logaddexp(x1, x2, out)
+    return _api_internal.logaddexp(x1, x2, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')

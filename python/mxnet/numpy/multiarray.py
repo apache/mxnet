@@ -6748,7 +6748,7 @@ def trace(a: ndarray,
 
 
 @set_module('mxnet.numpy')
-def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int, ...]]] = None) -> ndarray:
+def transpose(a: ndarray, axes: Optional[Union[int, Tuple[int, ...]]] = None) -> ndarray:
     """
     Permute the dimensions of an array.
 
@@ -12753,7 +12753,7 @@ def polyval(p: ndarray, x: ndarray, /) -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def bincount(x: ndarray, weights: ndarray = None, minlength: int = 0, /) -> ndarray:
+def bincount(x: ndarray, weights: Optional[ndarray] = None, minlength: Optional[int] = 0) -> ndarray:
     """
     Count number of occurrences of each value in array of non-negative ints.
 
