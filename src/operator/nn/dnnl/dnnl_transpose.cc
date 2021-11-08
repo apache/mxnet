@@ -25,9 +25,11 @@
 
 #if MXNET_USE_ONEDNN == 1
 
+// clang-format off
 #include "../../tensor/matrix_op-inl.h"
 
 #include "./dnnl_transpose-inl.h"
+// clang-format on
 
 namespace mxnet {
 namespace op {
