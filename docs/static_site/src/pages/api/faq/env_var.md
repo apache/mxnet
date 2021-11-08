@@ -295,6 +295,12 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Value of 1 chooses the best algo in a limited workspace
   - Value of 2 chooses the fastest algo whose memory requirements may be larger than the default workspace threshold
 
+* MXNET_CUDNN_HEUR_MODE
+  - Values: 0 or 1 (available since cuDNN 8.1) ```(default=1 for cuDNN 8.1 and later, otherwise 0)```
+  - Choose cuDNN heuristics mode.
+  - If set to '0', use fast decision tree based method.
+  - If set to '1', use neural network based method. It generalizes better for unknown or uncommon models.
+
 * MXNET_CUDA_ALLOW_TENSOR_CORE
   - 0(false) or 1(true) ```(default=1)```
   - If set to '0', disallows Tensor Core use in CUDA ops.
