@@ -19,22 +19,20 @@
 
 /*!
  * \file dnnl_transpose-inl.h
- * \brief
  * \author Rafal Litka
  */
 
 #ifndef MXNET_OPERATOR_NN_DNNL_DNNL_TRANSPOSE_INL_H_
 #define MXNET_OPERATOR_NN_DNNL_DNNL_TRANSPOSE_INL_H_
 #if MXNET_USE_ONEDNN == 1
+
 #include "./dnnl_base-inl.h"
 #include "./dnnl_ops-inl.h"
+
 #include "../../numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
-
-struct NumpyTransposeParam;
-struct TransposeParam;
 
 bool SupportDNNLTranspose(const NDArray& data);
 
@@ -53,7 +51,7 @@ class DNNLTransposeFwd {
 DNNLTransposeFwd& GetTransposeForward(const NumpyTransposeParam& param, const NDArray& data);
 
 template <class ParamType>
-NumpyTransposeParam ProcessTransposeParam(const ParamType& param);
+NumpyTransposeParam ConvertParamsToNumpy(const ParamType& param);
 
 template <class ParamType>
 void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
@@ -62,8 +60,8 @@ void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
                           const OpReqType& req,
                           const NDArray& output) {
   const ParamType& org_param = nnvm::get<ParamType>(attrs.parsed);
-  auto  param = ProcessTransposeParam<ParamType>(org_param);
-  auto fwd                        = GetTransposeForward(param, data);
+  auto param                 = ConvertParamsToNumpy<ParamType>(org_param);
+  auto fwd                   = GetTransposeForward(param, data);
   fwd.SetNewMem(data, output);
   fwd.Execute();
 }

@@ -25,8 +25,9 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "../../tensor/matrix_op-inl.h"
 #include "./dnnl_transpose-inl.h"
+
+#include "../../tensor/matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -122,14 +123,14 @@ DNNLTransposeFwd& GetTransposeForward(const NumpyTransposeParam& param, const ND
 }
 
 template <>
-NumpyTransposeParam ProcessTransposeParam<NumpyTransposeParam>(const NumpyTransposeParam& param) {
+NumpyTransposeParam ConvertParamsToNumpy<NumpyTransposeParam>(const NumpyTransposeParam& param) {
   NumpyTransposeParam numpy_param;
   numpy_param.axes = common::CanonicalizeAxes(param.axes);
   return numpy_param;
 }
 
 template <>
-NumpyTransposeParam ProcessTransposeParam<TransposeParam>(const TransposeParam& param) {
+NumpyTransposeParam ConvertParamsToNumpy<TransposeParam>(const TransposeParam& param) {
   NumpyTransposeParam numpy_param;
   if (param.axes.ndim() == 0) {
     numpy_param.axes = mxnet::TShape(-1, 0);
