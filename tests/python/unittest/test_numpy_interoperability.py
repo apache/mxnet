@@ -683,7 +683,7 @@ def _add_workload_linalg_pinv():
             a_np = _np.array(a_np, dtype=dtype)
             rcond_np = _np.random.uniform(0., 0.1, rcond_shape)
             rcond_np = _np.array(rcond_np, dtype=dtype)
-            OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), rtol=np.array(rcond_np, dtype=dtype), hermitian=hermitian)
+            OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), rcond=np.array(rcond_np, dtype=dtype), hermitian=hermitian)
 
 
 def _add_workload_linalg_lstsq():
@@ -2271,11 +2271,11 @@ def _add_workload_linalg_matrix_rank():
                 a_np = _np.asarray(_np.random.uniform(-10., 10., a_shape))
                 a = np.array(a_np, dtype=dtype)
                 if tol_is_none:
-                    OpArgMngr.add_workload('linalg.matrix_rank', a, rtol=None, hermitian=False)
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, tol=None, hermitian=False)
                 else:
                     tol_np = _np.random.uniform(10., 20., tol_shape)
                     tol = np.array(tol_np, dtype=dtype)
-                    OpArgMngr.add_workload('linalg.matrix_rank', a, rtol=tol, hermitian=False)
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, tol=tol, hermitian=False)
 
 
 def _add_workload_linalg_multi_dot():
