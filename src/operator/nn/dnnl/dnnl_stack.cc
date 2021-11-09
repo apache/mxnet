@@ -61,8 +61,8 @@ void DNNLStackForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
 
-  // const value of new dimension to stack
-  // tensors with oneDNN concat primitive
+  // const value of artificial new dimension to
+  // stack tensors on using oneDNN concat primitive
   constexpr int stacking_dim = 1;
 
   const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
@@ -96,7 +96,7 @@ void DNNLStackForward(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_TYPE_SWITCH(src_dtype, DType, {
     for (int i = 0; i < num_in_data; i++) {
-      NDArray tmp = in_data[i].IsDNNLData() ? in_data[i].Reorder2Default() : in_data[i];
+      NDArray tmp = in_data[i].Reorder2Default();
       dnnl::memory tmp_mem(in_md, CpuEngine::Get()->get_engine(), tmp.data().dptr<DType>());
       data_mem.emplace_back(tmp_mem);
       data_md.emplace_back(in_md);

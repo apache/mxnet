@@ -53,18 +53,16 @@ class DNNLConcatFwd {
 static DNNLConcatFwd& GetConcatForward(int concat_dim,
                                        const std::vector<NDArray>& in_data,
                                        const std::vector<dnnl::memory::desc>& data_md,
-                                       int cache_dim = -1) {
+                                       int stack_axis = -1 /*used only by stack op*/) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
 #endif
-  if (cache_dim == -1) {
-    cache_dim = concat_dim;
-  }
+
   OpSignature key;
-  key.AddSign(cache_dim);
   key.AddSign(concat_dim);
+  key.AddSign(stack_axis);
   key.AddSign(in_data);
 
   auto it = fwds.find(key);
