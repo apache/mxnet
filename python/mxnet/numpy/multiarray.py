@@ -70,7 +70,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'asin', 'arccos', 'acos', 'arctan',
            'atan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square',
            'negative', 'histogram', 'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'asinh',
-           'arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
+           'arccosh', 'acosh', 'arctanh', 'atanh', 'append', 'argsort', 'sort', 'tensordot', 'eye', 'ce',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit',
            'dsplit', 'flatnonzero', 'tril_indices', 'concatenate', 'concat', 'stack', 'vstack', 'row_stack',
            'column_stack', 'hstack', 'dstack', 'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin',
@@ -13732,7 +13732,14 @@ def bitwise_right_shift(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] =
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_ctx_to_device_func
-def asarray(obj, dtype=None, device=None, copy=None):
+def asarray(
+        obj: Union[ndarray, bool, int, float, Sequence[Union[bool, int, float]]],
+        /,
+        *,
+        dtype: Optional[Union[dtype, str]] = None,
+        device: Optional[Device] = None,
+        copy: Optional[bool] = None
+) -> ndarray:
     """
     Convert the input to an array.
 
@@ -13790,7 +13797,7 @@ def asarray(obj, dtype=None, device=None, copy=None):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def from_dlpack(x):
+def from_dlpack(x, /) -> ndarray:
     """
     Returns a np.ndarray backed by a dlpack tensor.
 

@@ -5683,7 +5683,7 @@ def test_np_eye():
         (4, None, 1),
         (2, 2, 1),
         (4, 6, 1),
-        (7, 3, -3),
+        (7, 3,-3),
         (3, 2, -2),
         (4, 0),
         (0, 0),
@@ -5700,8 +5700,12 @@ def test_np_eye():
     for config in configs:
         for dtype in dtypes:
             if isinstance(config, tuple):
-                mx_ret = np.eye(*config, dtype=dtype)
-                np_ret = onp.eye(*config, dtype=dtype)
+                N, M = config[:2]
+                k = 0
+                if len(config) ==3:
+                    k = config[2]
+                mx_ret = np.eye(N, M, k = k, dtype=dtype)
+                np_ret = onp.eye(N, M, k = k, dtype=dtype)
             else:
                 mx_ret = np.eye(config, dtype=dtype)
                 np_ret = onp.eye(config, dtype=dtype)
@@ -5722,7 +5726,7 @@ def test_np_eye():
             self._dtype = dtype
 
         def forward(self, x):
-            return x + np.eye(self._N, self._M, self._k, dtype=self._dtype)
+            return x + np.eye(self._N, self._M, k=self._k, dtype=self._dtype)
 
     for dtype in dtypes:
         x = np.zeros(shape=(), dtype=dtype)
