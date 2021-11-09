@@ -6330,9 +6330,9 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
 @wrap_ctx_to_device_func
 def eye(N: int,
         M: Optional[int] = None,
-        k: Optional[int] = 0,
         /,
         *,
+        k: Optional[int] = 0,
         dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         device: Optional[Device] = None,
         **kwargs
@@ -7153,6 +7153,7 @@ def triu(m: ndarray, /, *, k: int = 0) -> ndarray:
 @wrap_ctx_to_device_func
 def arange(
         start: Union[int, float],
+        /,
         stop: Optional[Union[int, float]] = None,
         step: Union[int, float] = 1,
         *,
