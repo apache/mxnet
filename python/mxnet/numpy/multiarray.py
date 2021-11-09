@@ -13736,7 +13736,7 @@ def asarray(
         obj: Union[ndarray, bool, int, float, Sequence[Union[bool, int, float]]],
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None,
+        dtype: Optional[Union[dtype, str]] = None, # pylint disable=undefined-variable
         device: Optional[Device] = None,
         copy: Optional[bool] = None
 ) -> ndarray:
