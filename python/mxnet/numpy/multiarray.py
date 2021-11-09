@@ -3410,7 +3410,7 @@ def divide(x1, x2, out=None, **kwargs):
 
     Examples
     --------
-    >>> np.true_divide(x, 4)
+    >>> np.true_divide(np.array([0, 1, 2, 3, 4]), 4)
     array([0.  , 0.25, 0.5 , 0.75, 1.  ])
     """
     return _mx_nd_np.divide(x1, x2, out=out)
@@ -9220,8 +9220,8 @@ def arctan2(x1, x2, out=None, **kwargs):
     --------
     Consider four points in different quadrants:
 
-    >>> x = np.array([-1, +1, +1, -1])
-    >>> y = np.array([-1, -1, +1, +1])
+    >>> x = np.array([-1, +1, +1, -1], float)
+    >>> y = np.array([-1, -1, +1, +1], float)
     >>> np.arctan2(y, x) * 180 / np.pi
     array([-135.,  -45.,   45.,  135.])
 
@@ -9229,8 +9229,8 @@ def arctan2(x1, x2, out=None, **kwargs):
     and at several other special points, obtaining values in
     the range ``[-pi, pi]``:
 
-    >>> x = np.array([1, -1])
-    >>> y = np.array([0, 0])
+    >>> x = np.array([1, -1], float)
+    >>> y = np.array([0, 0], float)
     >>> np.arctan2(x, y)
     array([ 1.5707964, -1.5707964])
     """
@@ -9313,8 +9313,8 @@ atan2.__doc__ = """
     --------
     Consider four points in different quadrants:
 
-    >>> x = np.array([-1, +1, +1, -1])
-    >>> y = np.array([-1, -1, +1, +1])
+    >>> x = np.array([-1, +1, +1, -1], float)
+    >>> y = np.array([-1, -1, +1, +1], float)
     >>> np.atan2(y, x) * 180 / np.pi
     array([-135.,  -45.,   45.,  135.])
 
@@ -9322,8 +9322,8 @@ atan2.__doc__ = """
     and at several other special points, obtaining values in
     the range ``[-pi, pi]``:
 
-    >>> x = np.array([1, -1])
-    >>> y = np.array([0, 0])
+    >>> x = np.array([1, -1], float)
+    >>> y = np.array([0, 0], float)
     >>> np.atan2(x, y)
     array([ 1.5707964, -1.5707964])
     """

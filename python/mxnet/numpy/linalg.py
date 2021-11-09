@@ -747,7 +747,7 @@ def cholesky(a):
 
     Examples
     --------
-    >>> A = np.array([[16, 4], [4, 10]])
+    >>> A = np.array([[16, 4], [4, 10]], float)
     >>> A
     array([[16.,  4.],
            [ 4., 10.]])

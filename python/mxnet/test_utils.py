@@ -426,7 +426,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     all following columns in all followings rows until we reach the required density.
 
     >>> csr_arr, _ = rand_sparse_ndarray(shape=(5, 16), stype="csr",
-                                         density=0.50, distribution="powerlaw")
+    ...                                  density=0.50, distribution="powerlaw")
     >>> indptr = csr_arr.indptr.asnumpy()
     >>> indices = csr_arr.indices.asnumpy()
     >>> data = csr_arr.data.asnumpy()
@@ -1244,7 +1244,7 @@ def check_symbolic_forward(sym, location, expected, rtol=None, atol=None,
     >>> mat1 = np.array([[1, 2], [3, 4]])
     >>> mat2 = np.array([[5, 6], [7, 8]])
     >>> ret_expected = np.array([[19, 22], [43, 50]])
-    >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
+    >>> mx.test_utils.check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
     assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
@@ -1328,14 +1328,14 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=None, atol=
     >>> sym_add = mx.symbol.elemwise_add(lhs, rhs)
     >>> mat1 = np.array([[1, 2], [3, 4]])
     >>> mat2 = np.array([[5, 6], [7, 8]])
-    >>> grad1 = mx.nd.zeros(shape)
-    >>> grad2 = mx.nd.zeros(shape)
-    >>> exec_add = sym_add._bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
+    >>> grad1 = mx.nd.zeros((2, 2))
+    >>> grad2 = mx.nd.zeros((2, 2))
+    >>> exec_add = sym_add._bind(mx.test_utils.default_context(), args={'lhs': mat1, 'rhs': mat2},
     ... args_grad={'lhs': grad1, 'rhs': grad2}, grad_req={'lhs': 'write', 'rhs': 'write'})
     >>> exec_add.forward(is_train=True)
-    >>> ograd = mx.nd.ones(shape)
+    >>> ograd = mx.nd.ones((2, 2))
     >>> grad_expected = ograd.copy().asnumpy()
-    >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
+    >>> mx.test_utils.check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
     assert dtype == 'asnumpy' or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
@@ -1538,7 +1538,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
  {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},\
  {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},\
  {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}}]
-    >>> check_consistency(sym, ctx_list)
+    >>> mx.test_utils.check_consistency(sym, ctx_list)
     >>> sym = mx.sym.Concat(name='concat', num_args=2)
     >>> ctx_list = \
 [{'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
@@ -1551,7 +1551,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
   'type_dict': {'concat_arg0': np.float64, 'concat_arg1': np.float64}},\
  {'ctx': mx.cpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
   'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}}]
-    >>> check_consistency(sym, ctx_list)
+    >>> mx.test_utils.check_consistency(sym, ctx_list)
     """
 
     assert len(ctx_list) > 1
@@ -1879,8 +1879,8 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
     Examples
     --------
     >>> get_bz2_data("data_dir", "kdda.t",
-                     "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
-                     "kdda.t.bz2")
+    ...              "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
+    ...              "kdda.t.bz2")
     """
 
     data_name = os.path.join(data_dir, data_name)

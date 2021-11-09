@@ -477,8 +477,8 @@ def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
 
     Examples
     --------
-    >>> mean = np.array([1, 2])
-    >>> cov = np.array([[1, 0], [0, 1]])
+    >>> mean = np.array([1, 2], float)
+    >>> cov = np.array([[1, 0], [0, 1]], float)
     >>> x = np.random.multivariate_normal(mean, cov, (3, 3))
     >>> x.shape
     (3, 3, 2)
@@ -492,8 +492,8 @@ def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
     # Performs autobroadcasting when the batch shape of
     # `mean` and `cov` is different but compatible.
 
-    >>> mean = np.zeros((3,2)) # shape (3, 2)
-    >>> cov = np.array([[1, 0], [0, 100]]) # shape (2, 2)
+    >>> mean = np.zeros((3,2), np.float) # shape (3, 2)
+    >>> cov = np.array([[1, 0], [0, 100]], np.float) # shape (2, 2)
     >>> x = np.random.multivariate_normal(mean, cov)
     >>> x
     array([[-1.6115597 , -8.726251  ],
