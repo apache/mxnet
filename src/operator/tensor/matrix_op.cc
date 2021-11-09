@@ -140,7 +140,8 @@ bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
                         std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(
+      attrs, dev_mask, /*support_dnnl*/ true, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -944,7 +945,7 @@ static void StackForwardEx(const nnvm::NodeAttrs& attrs,
   }
 
   if (SupportDNNLStack(inputs)) {
-    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNL_OPCHECK_INIT(/*is backward*/ false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLStackForward, attrs, op_ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(StackOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
   } else {
