@@ -584,9 +584,10 @@ Descriptor SelectPlan(const OpContext& ctx,
     return ss.str();
   };
   for (size_t i = 0; verbose > 0 && i < top.size(); ++i) {
+    std::ostringstream ss;
     auto prefix = i == 0 ? " * " : "   ";
-    LOG(INFO) << prefix << top[i].heur_i << ") " << str_time(top[i].time) << "ms "
-              << PlanStr(top[i].plan);
+    ss << prefix << top[i].heur_i << ") " << str_time(top[i].time) << "ms " << PlanStr(top[i].plan);
+    LOG(INFO) << ss.str();
   }
   return std::move(top[0].plan);
 }

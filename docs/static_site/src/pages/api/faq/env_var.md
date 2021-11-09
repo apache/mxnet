@@ -301,6 +301,17 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - If set to '0', use fast decision tree based method.
   - If set to '1', use neural network based method. It generalizes better for unknown or uncommon models.
 
+* MXNET_CUDNN_ALGO_VERBOSE_LEVEL
+  - Values: 0, 1, or 2 ```(default=0)```
+  - The level of printed output describing the "convolution engine" configurations
+  - Value of 0 produces no output
+  - Value of 1 outputs for the chosen config the engine number ("algo"), additional parameters ("knobs") and numerical notes
+  - Value of 2 outputs the same info as with a '1' setting, but for all configs considered
+  The output can be used to develop engine config filtering strategies to modify model behaviors.
+  Numerical accuracy may be improved by filtering out configs shown with 'rp', 'w' or 'fft' (i.e. reduced precision, winograd, or fft).
+  The configs are output with their list-index, as suggested by cuDNN, and with the chosen config flagged with a '*'.
+  If autotuning is enabled (MXNET_CUDNN_AUTOTUNE_DEFAULT != 0), the measured kernel times will be reported.
+
 * MXNET_CUDA_ALLOW_TENSOR_CORE
   - 0(false) or 1(true) ```(default=1)```
   - If set to '0', disallows Tensor Core use in CUDA ops.
