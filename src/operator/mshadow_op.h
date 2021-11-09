@@ -239,7 +239,7 @@ struct floor_divide : public mxnet_op::tunable {
       typename std::enable_if<!std::is_same<DType, bool>::value && std::is_integral<DType>::value,
                               int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    DType c = static_cast<DType>(::floor(a / b));
+    DType c = static_cast<DType>(::floor(static_cast<double>(a) / static_cast<double>(b)));
     if ((c * a != b) && ((a < 0) != (b < 0))) {
       return DType(c - 1);
     } else {
@@ -270,7 +270,7 @@ struct rfloor_divide : public mxnet_op::tunable {
       typename std::enable_if<!std::is_same<DType, bool>::value && std::is_integral<DType>::value,
                               int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    DType c = static_cast<DType>(::floor(b / a));
+    DType c = static_cast<DType>(::floor(static_cast<double>(b) / static_cast<double>(a)));
     if ((c * a != b) && ((a < 0) != (b < 0))) {
       return DType(c - 1);
     } else {
