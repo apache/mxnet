@@ -30,6 +30,7 @@ from common import assertRaises
 set_default_device(mx.gpu(0))
 
 @use_np
+@pytest.mark.xfail(reason="NumPy==1.21.0 einsum issue, see https://github.com/numpy/numpy/issues/20305")
 @pytest.mark.parametrize('config', [
     ('ii', [(5, 5)], lambda *args: (onp.eye(5),)),
     ('ii->i', [(5, 5)], lambda *args: (onp.eye(5),)),
