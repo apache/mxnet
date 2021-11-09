@@ -582,9 +582,9 @@ def multinomial(n=[1], p=[[1.0]], shape=_Null, dtype='float32', ctx=None, out=No
     -------
     NDArray
         If input `shape` has shape, e.g., `(m, n)` and `n` and `p` are a scalar and an array of length k
-        respectively, output shape will be `(m, n, k)`. If `n` and `p` are NDArrays with shape, e.g., `(x, y)` and `(x, y, k)`,
-        then output will have shape `(x, y, m, n, k)`, where `m*n` samples are drawn for
-        each `[n, p)` pair.
+        respectively, output shape will be `(m, n, k)`. If `n` and `p` are NDArrays with shape, e.g.,
+        `(x, y)` and `(x, y, k)`, then output will have shape `(x, y, m, n, k)`, where `m*n`
+        samples are drawn for each `[n, p)` pair.
 
     Examples
     --------

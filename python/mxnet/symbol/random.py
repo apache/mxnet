@@ -240,7 +240,7 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, **kwargs):
                           [alpha, beta], shape, dtype, kwargs)
 
 
-def binomial(n=1, p=0.5, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
+def binomial(n=1, p=0.5, shape=_Null, dtype=_Null, **kwargs):
     """Draw random samples from a binomial distribution.
 
     Samples are distributed according to a binomial distribution parametrized
@@ -370,9 +370,9 @@ def multinomial(n=[1], p=[[1.0]], shape=_Null, dtype='float32', **kwargs):
     -------
     Symbol
         If input `shape` has shape, e.g., `(m, n)` and `n` and `p` are a scalar and an array of length k
-        respectively, output shape will be `(m, n, k)`. If `n` and `p` are NDArrays with shape, e.g., `(x, y)` and `(x, y, k)`,
-        then output will have shape `(x, y, m, n, k)`, where `m*n` samples are drawn for
-        each `[n, p)` pair.
+        respectively, output shape will be `(m, n, k)`. If `n` and `p` are NDArrays with shape, e.g.,
+        `(x, y)` and `(x, y, k)`, then output will have shape `(x, y, m, n, k)`, where `m*n`
+        samples are drawn for each `[n, p)` pair.
     """
     return _internal._sample_multinomial(n, p, shape, dtype=dtype, **kwargs)
 
