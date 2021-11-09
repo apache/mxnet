@@ -1349,8 +1349,7 @@ def dtype_from_number(number):
         else:
             return _np.int32
     else:
-        if abs(number) > _MAX_VALUE_FLOAT32_REPRESENT_ or \
-            _np.float32(number) != _np.float64(number):
+        if abs(number) > _MAX_VALUE_FLOAT32_REPRESENT_:
             return _np.float64
         else:
             return _np.float64 if is_np_default_dtype() else _np.float32
