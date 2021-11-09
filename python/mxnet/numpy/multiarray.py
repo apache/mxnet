@@ -7153,7 +7153,6 @@ def triu(m: ndarray, /, *, k: int = 0) -> ndarray:
 @wrap_ctx_to_device_func
 def arange(
         start: Union[int, float],
-        /,
         stop: Optional[Union[int, float]] = None,
         step: Union[int, float] = 1,
         *,
