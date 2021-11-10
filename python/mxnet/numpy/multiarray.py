@@ -13310,13 +13310,36 @@ def asarray(obj, dtype=None, device=None, copy=None):
         dtype = dtype_from_number(obj) if dtype is None else dtype
         obj = _np.asarray(obj, dtype=dtype)
     elif isinstance(obj, _np.ndarray):
-        dtype = obj.dtype if dtype is None else dtype
+        if is_np_default_dtype():
+            dtype = obj.dtype if dtype is None else dtype
+        else:
+            dtype = _np.float32 if dtype is None or obj.dtype is _np.float64 else dtype
     elif isinstance(obj, ndarray):
-        dtype = obj.dtype if dtype is None else dtype
+        if dtype is not None:
+            obj = obj.astype(dtype, copy=copy)
+        if device is not None:
+            obj = obj.to_device(device)
+        return obj
     elif hasattr(obj, '__dlpack__'):
         return from_dlpack(obj)
-    array = _as_mx_np_array(obj, device=device, zero_copy=copy)
-    return array.astype(dtype)
+    else:
+        if dtype is None:
+            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
+            dtype = obj.dtype if hasattr(obj, "dtype") else default_dtype
+        try:
+            obj = _np.array(obj, dtype=dtype)
+        except Exception as e:
+            # printing out the error raised by official NumPy's array function
+            # for transparency on users' side
+            raise TypeError('{}'.format(str(e)))
+    if device is None:
+        device = current_device()
+    ret = empty(obj.shape, dtype=dtype, device=device)
+    if len(obj.shape) == 0:
+        ret[()] = obj
+    else:
+        ret[:] = obj
+    return ret
 
 
 # pylint: disable=redefined-outer-name
