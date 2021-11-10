@@ -88,9 +88,6 @@ std::vector<Descriptor> GetAllAttrs(const Descriptor& desc,
   CUDNN_CALL(cudnnBackendGetAttribute(
       desc.get(), name, CUDNN_TYPE_BACKEND_DESCRIPTOR, raw.size(), &count, raw.data()));
 
-  // TODO(vcherepanov): uncomment when cuDNN fix 3313649
-  // CHECK_EQ(count, raw.size());
-  // std::vector<Descriptor> ret(raw.begin(), raw.end());
   CHECK_LE(count, raw.size());
   std::vector<Descriptor> ret(raw.begin(), raw.begin() + count);
   for (size_t i = count; i < raw.size(); ++i)

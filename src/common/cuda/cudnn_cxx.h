@@ -21,8 +21,8 @@
  * \file cudnn_cxx.h
  * \brief Convenience utilities to make coding against cuDNN v8 API less verbose
  */
-#ifndef MXNET_COMMON_CUDNN_CXX_H_
-#define MXNET_COMMON_CUDNN_CXX_H_
+#ifndef MXNET_COMMON_CUDA_CUDNN_CXX_H_
+#define MXNET_COMMON_CUDA_CUDNN_CXX_H_
 
 #include <mxnet/base.h>
 #if MXNET_USE_CUDNN == 1
@@ -42,7 +42,7 @@
 #include <utility>
 #include <vector>
 
-#include "cuda/utils.h"
+#include "utils.h"
 
 STATIC_ASSERT_CUDNN_VERSION_GE(8002);
 
@@ -317,4 +317,4 @@ std::string PlanStr(const Descriptor& plan);
 
 #endif  // MXNET_USE_CUDNN == 1
 
-#endif  //  MXNET_COMMON_CUDNN_CXX_H_
+#endif  //  MXNET_COMMON_CUDA_CUDNN_CXX_H_

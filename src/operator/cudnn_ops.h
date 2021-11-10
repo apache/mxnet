@@ -38,7 +38,7 @@
 #include "nn/convolution-inl.h"
 #include "nn/deconvolution-inl.h"
 
-#include "../common/cudnn_cxx.h"
+#include "../common/cuda/cudnn_cxx.h"
 
 namespace mxnet {
 namespace tuple_util {
