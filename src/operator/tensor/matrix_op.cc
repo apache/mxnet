@@ -29,6 +29,7 @@
 #include "../nn/dnnl/dnnl_ops-inl.h"
 #include "../nn/dnnl/dnnl_reshape-inl.h"
 #include "../nn/dnnl/dnnl_slice-inl.h"
+#include "../nn/dnnl/dnnl_transpose-inl.h"
 #endif
 
 namespace mxnet {
@@ -309,14 +310,13 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) {
     return;
   }
-  const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
   CHECK(req[0] == kWriteTo || req[0] == kAddTo)
       << "Transpose only supports kNullOp, kWriteTo and kAddTo";
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportDNNLTranspose(param, inputs[0]) && req[0] == kWriteTo) {
-    DNNLRun(DNNLTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportDNNLTranspose(inputs[0]) && req[0] == kWriteTo) {
+    DNNLRun(DNNLTransposeForward<TransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
