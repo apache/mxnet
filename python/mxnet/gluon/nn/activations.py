@@ -139,8 +139,8 @@ class PReLU(HybridBlock):
         self.alpha = Parameter('alpha', shape=(in_channels,), init=alpha_initializer)
 
     def forward(self, x):
-        ctx = x.ctx
-        return npx.leaky_relu(x, gamma=self.alpha.data(ctx), act_type='prelu', name='fwd')
+        device = x.device
+        return npx.leaky_relu(x, gamma=self.alpha.data(device), act_type='prelu', name='fwd')
 
 
 @use_np

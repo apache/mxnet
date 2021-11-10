@@ -27,7 +27,7 @@ import numpy as np
 from . import ndarray as nd
 from . import symbol as sym
 from . import kvstore as kvs
-from .context import cpu
+from .device import cpu
 
 BASE_ESTIMATOR = object
 

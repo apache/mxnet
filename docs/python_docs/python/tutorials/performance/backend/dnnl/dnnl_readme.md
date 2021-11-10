@@ -15,14 +15,12 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Install MXNet with ONEDNN
+# Install MXNet with oneDNN
 
-A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel ONEDNN](https://github.com/oneapi-src/oneDNN) on multiple operating system, including Linux, Windows and MacOS.
-In the following sections, you will find build instructions for MXNet with Intel ONEDNN on Linux, MacOS and Windows.
+A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [oneDNN](https://github.com/oneapi-src/oneDNN) on multiple operating system, including Linux, Windows and MacOS.
+In the following sections, you will find build instructions for MXNet with oneDNN on Linux, MacOS and Windows.
 
-Please find ONEDNN optimized operators and other features in the [ONEDNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md).
-
-The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel ONEDNN can be found [here](https://mxnet.apache.org/api/faq/perf#intel-cpu).
+The detailed performance data collected on Intel Xeon CPU with MXNet built with oneDNN can be found [here](https://mxnet.apache.org/api/faq/perf#intel-cpu).
 
 
 <h2 id="0">Contents</h2>
@@ -55,12 +53,12 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
 ```
 
-### Build MXNet with ONEDNN
+### Build MXNet with oneDNN
 
-To achieve better performance, the Intel OpenMP and llvm OpenMP are recommended as below instruction. Otherwise, default GNU OpenMP will be used and you may get the sub-optimal performance. If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=openblas.
+To achieve better performance, the Intel OpenMP and llvm OpenMP are recommended as below instruction. Otherwise, default GNU OpenMP will be used and you may get the sub-optimal performance. If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=Open.
 
 ```
-# build with llvm OpenMP and Intel MKL/openblas
+# build with llvm OpenMP and Intel MKL/OpenBlas
 mkdir build && cd build
 cmake -DUSE_CUDA=OFF -DUSE_ONEDNN=ON -DUSE_OPENMP=ON -DUSE_OPENCV=ON ..
 make -j $(nproc)
@@ -68,12 +66,16 @@ make -j $(nproc)
 
 ```
 # build with Intel MKL and Intel OpenMP
-make -j $(nproc) USE_OPENCV=1 USE_ONEDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
+mkdir build && cd build
+cmake -DUSE_CUDA=OFF -DUSE_ONEDNN=ON -DUSE_BLAS=mkl ..
+make -j $(nproc)
 ```
 
 ```
-# build with openblas and GNU OpenMP(sub-optimal performance)
-make -j $(nproc) USE_OPENCV=1 USE_ONEDNN=1 USE_BLAS=openblas
+# build with openblas and GNU OpenMP (sub-optimal performance)
+mkdir build && cd build
+cmake -DUSE_CUDA=OFF -DUSE_ONEDNN=ON -DUSE_BLAS=Open ..
+make -j $(nproc)
 ```
 
 <h2 id="2">MacOS</h2>
@@ -107,7 +109,7 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
 ```
 
-### Build MXNet with ONEDNN
+### Build MXNet with oneDNN
 
 ```
 LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_ONEDNN=1 USE_BLAS=apple
@@ -115,7 +117,7 @@ LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew -
 
 <h2 id="3">Windows</h2>
 
-On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with Intel ONEDNN.
+On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with oneDNN.
 [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.
 
 **Visual Studio 2015**
@@ -136,14 +138,14 @@ After you have installed all of the required dependencies, build the MXNet sourc
 git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd C:\incubator-mxent
 ```
-2. Enable Intel ONEDNN by -DUSE_ONEDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the
+2. Enable oneDNN by -DUSE_ONEDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the
 command:
 ```
 >mkdir build
 >cd build
->cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
+>cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=Open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
 ```
-3. Enable Intel ONEDNN and Intel MKL as BLAS library by the command:
+3. Enable oneDNN and Intel MKL as BLAS library by the command:
 ```
 >"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64
 >cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
@@ -158,7 +160,7 @@ msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 
 **Visual Studio 2017**
 
-User can follow the same steps of Visual Studio 2015 to build MXNET with ONEDNN, but change the version related command, for example,```C:\opencv\build\x64\vc15\bin``` and build command is as below:
+User can follow the same steps of Visual Studio 2015 to build MXNET with oneDNN, but change the version related command, for example,```C:\opencv\build\x64\vc15\bin``` and build command is as below:
 
 ```
 >cmake -G "Visual Studio 15 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
@@ -183,29 +185,24 @@ Expected Output:
 [[ 2.  2.  2.]
  [ 2.  2.  2.]]
 ```
-### Verify whether ONEDNN works
+### Verify whether oneDNN works
 
-After MXNet is installed, you can verify if ONEDNN backend works well with a single Convolution layer.
+After MXNet is installed, you can verify if oneDNN backend works well with a single Convolution layer.
 ```
-import mxnet as mx
-import numpy as np
+from mxnet import np
+from mxnet.gluon import nn
 
 num_filter = 32
 kernel = (3, 3)
 pad = (1, 1)
 shape = (32, 32, 256, 256)
 
-x = mx.sym.Variable('x')
-w = mx.sym.Variable('w')
-y = mx.sym.Convolution(data=x, weight=w, num_filter=num_filter, kernel=kernel, no_bias=True, pad=pad)
-exe = y.simple_bind(mx.cpu(), x=shape)
+conv_layer = nn.Conv2D(channels=num_filter, kernel_size=kernel, padding=pad)
+conv_layer.initialize()
 
-exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
-exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
-
-exe.forward(is_train=False)
-o = exe.outputs[0]
-t = o.asnumpy()
+data = np.random.normal(size=shape)
+o = conv_layer(data)
+print(o)
 ```
 
 More detailed debugging and profiling information can be logged by setting the environment variable 'DNNL_VERBOSE':
@@ -214,16 +211,17 @@ export DNNL_VERBOSE=1
 ```
 For example, by running above code snippet, the following debugging logs providing more insights on oneDNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
 ```
-dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
-dnnl_verbose,info,Detected ISA is Intel AVX-512 with Intel DL Boost
-dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:aBcd16b:f0,,,32x32x256x256,7.43701
-dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:ABcd16b16a:f0,,,32x32x3x3,0.202148
-dnnl_verbose,exec,cpu,convolution,jit:avx512_common,forward_inference,src_f32::blocked:aBcd16b:f0 wei_f32::blocked:ABcd16b16a:f0 bia_undef::undef::f0 dst_f32::blocked:aBcd16b:f0,,alg:convolution_direct,mb32_ic32oc32_ih256oh256kh3sh1dh0ph1_iw256ow256kw3sw1dw0pw1,20.7539
-dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:ABcd16b16a:f0,,,32x32x3x3,1.86694
-dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:aBcd16b:f0 dst_f32::blocked:abcd:f0,,,32x32x256x256,35.9771
+dnnl_verbose,info,oneDNN v2.3.2 (commit e2d45252ae9c3e91671339579e3c0f0061f81d49)
+dnnl_verbose,info,cpu,runtime:OpenMP
+dnnl_verbose,info,cpu,isa:Intel AVX-512 with Intel DL Boost
+dnnl_verbose,info,gpu,runtime:none
+dnnl_verbose,info,prim_template:operation,engine,primitive,implementation,prop_kind,memory_descriptors,attributes,auxiliary,problem_desc,exec_time
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:acdb:f0,,,32x32x256x256,8.34912
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:Acdb32a:f0,,,32x32x3x3,0.0229492
+dnnl_verbose,exec,cpu,convolution,brgconv:avx512_core,forward_inference,src_f32::blocked:acdb:f0 wei_f32::blocked:Acdb32a:f0 bia_f32::blocked:a:f0 dst_f32::blocked:acdb:f0,,alg:convolution_direct,mb32_ic32oc32_ih256oh256kh3sh1dh0ph1_iw256ow256kw3sw1dw0pw1,10.5898
 ```
 
-You can find step-by-step guidance to do profiling for ONEDNN primitives in [Profiling ONEDNN Operators](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html#Profiling-MKLDNN-Operators).
+You can find step-by-step guidance to do profiling for oneDNN primitives in [Profiling oneDNN Operators](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html#Profiling-MKLDNN-Operators).
 
 <h2 id="5">Enable MKL BLAS</h2>
 
@@ -233,67 +231,96 @@ Installing the full MKL installation enables MKL support for all operators under
 
   1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl) You can also install MKL through [YUM](https://software.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/yum-dnf-zypper.html) or [APT](https://software.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html) Repository.
 
-  2. Run `make -j ${nproc} USE_BLAS=mkl`
+  2. Create and navigate to build directory `mkdir build && cd build`
 
-  3. Navigate into the python directory
+  3. Run `cmake -DUSE_CUDA=OFF -DUSE_BLAS=mkl ..`
 
-  4. Run `sudo python setup.py install`
+  4. Run `make -j`
+
+  5. Navigate into the python directory
+
+  6. Run `sudo python setup.py install`
 
 ### Verify whether MKL works
 
-After MXNet is installed, you can verify if MKL BLAS works well with a single dot layer.
+After MXNet is installed, you can verify if MKL BLAS works well with a linear matrix solver.
 
 ```
-import mxnet as mx
-import numpy as np
-
-shape_x = (1, 10, 8)
-shape_w = (1, 12, 8)
-
-x_npy = np.random.normal(0, 1, shape_x)
-w_npy = np.random.normal(0, 1, shape_w)
-
-x = mx.sym.Variable('x')
-w = mx.sym.Variable('w')
-y = mx.sym.batch_dot(x, w, transpose_b=True)
-exe = y.simple_bind(mx.cpu(), x=x_npy.shape, w=w_npy.shape)
-
-exe.forward(is_train=False)
-o = exe.outputs[0]
-t = o.asnumpy()
+from mxnet import np
+coeff = np.array([[7, 0], [5, 2]])
+y = np.array([14, 18])
+x = np.linalg.solve(coeff, y)
+print(x)
 ```
 
-You can open the `MKL_VERBOSE` flag by setting environment variable:
+You can get the verbose log output from mkl library by setting environment variable:
 ```
 export MKL_VERBOSE=1
 ```
-Then by running above code snippet, you probably will get the following output message which means `SGEMM` primitive from MKL are called. Layout information and primitive execution performance are also demonstrated in the log message.
+Then by running above code snippet, you should get the similar output to message below (`SGESV` primitive from MKL was executed). Layout information and primitive execution performance are also demonstrated in the log message.
 ```
-Numpy + Intel(R) MKL: THREADING LAYER: (null)
-Numpy + Intel(R) MKL: setting Intel(R) MKL to use INTEL OpenMP runtime
-Numpy + Intel(R) MKL: preloading libiomp5.so runtime
-MKL_VERBOSE Intel(R) MKL 2019.0 Update 3 Product build 20190125 for Intel(R) 64 architecture Intel(R) Advanced Vector Extensions 512 (Intel(R) AVX-512) enabled processors, Lnx 2.40GHz lp64 intel_thread NMICDev:0
-MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
-```
-
-<h2 id="6">Enable graph optimization</h2>
-
-Graph optimization with subgraph is available and enabled by default in master branch. For MXNet release v1.5, you can manually enable it by:
-
-```
-export MXNET_SUBGRAPH_BACKEND=ONEDNN
+mkl-service + Intel(R) MKL: THREADING LAYER: (null)
+mkl-service + Intel(R) MKL: setting Intel(R) MKL to use INTEL OpenMP runtime
+mkl-service + Intel(R) MKL: preloading libiomp5.so runtime
+Intel(R) MKL 2020.0 Update 1 Product build 20200208 for Intel(R) 64 architecture Intel(R) Advanced Vector Extensions 512 (Intel(R) AVX-512) with support of Vector Neural Network Instructions enabled processors, Lnx 2.70GHz lp64 intel_thread
+MKL_VERBOSE SGESV(2,1,0x7f74d4002780,2,0x7f74d4002798,0x7f74d4002790,2,0) 77.58us CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:56
 ```
 
-This limitations of this experimental feature are:
+<h2 id="6">Graph optimization</h2>
 
-- Use this feature only for inference. When training, be sure to turn the feature off by unsetting the `MXNET_SUBGRAPH_BACKEND` environment variable.
+To better utilise oneDNN potential, using graph optimizations is recommended. There are few limitations of this feature:
 
+- It works only for inference.
+- Only subclasses of HybridBlock and Symbol can call optimize_for API.
 - This feature will only run on the CPU, even if you're using a GPU-enabled build of MXNet.
 
+If your use case met above conditions, graph optimizations can be enabled by just simple call `optimize_for` API. Example below:
+```
+from mxnet import np
+from mxnet.gluon import nn
+
+data = np.random.normal(size=(32,3,224,224))
+
+net = nn.HybridSequential()
+net.add(nn.Conv2D(channels=64, kernel_size=(3,3)))
+net.add(nn.Activation('relu'))
+net.initialize()
+print("=" * 5, " Not optimized ", "=" * 5)
+o = net(data)
+print(o)
+
+net.optimize_for(data, backend='ONEDNN')
+print("=" * 5, " Optimized ", "=" * 5)
+o = net(data)
+print(o)
+
+```
+
+Above code snippet should produce similar output to the following one (printed tensors are omitted) :
+```
+===== Not optimized =====
+[15:05:43] ../src/storage/storage.cc:202: Using Pooled (Naive) StorageManager for CPU
+dnnl_verbose,info,oneDNN v2.3.2 (commit e2d45252ae9c3e91671339579e3c0f0061f81d49)
+dnnl_verbose,info,cpu,runtime:OpenMP
+dnnl_verbose,info,cpu,isa:Intel AVX-512 with AVX512BW, AVX512VL, and AVX512DQ extensions
+dnnl_verbose,info,gpu,runtime:none
+dnnl_verbose,info,prim_template:operation,engine,primitive,implementation,prop_kind,memory_descriptors,attributes,auxiliary,problem_desc,exec_time
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:acdb:f0,,,32x3x224x224,8.87793
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:Acdb64a:f0,,,64x3x3x3,0.00708008
+dnnl_verbose,exec,cpu,convolution,brgconv:avx512_core,forward_inference,src_f32::blocked:acdb:f0 wei_f32::blocked:Acdb64a:f0 bia_f32::blocked:a:f0 dst_f32::blocked:acdb:f0,,alg:convolution_direct,mb32_ic3oc64_ih224oh222kh3sh1dh0ph0_iw224ow222kw3sw1dw0pw0,91.511
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:Acdb64a:f0,,,64x3x3x3,0.00610352
+dnnl_verbose,exec,cpu,eltwise,jit:avx512_common,forward_inference,data_f32::blocked:acdb:f0 diff_undef::undef::f0,,alg:eltwise_relu alpha:0 beta:0,32x64x222x222,85.4392
+===== Optimized =====
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:Acdb64a:f0 dst_f32::blocked:abcd:f0,,,64x3x3x3,0.00610352
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:Acdb64a:f0,,,64x3x3x3,0.00585938
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:acdb:f0,,,32x3x224x224,3.98999
+dnnl_verbose,exec,cpu,convolution,brgconv:avx512_core,forward_inference,src_f32::blocked:acdb:f0 wei_f32::blocked:Acdb64a:f0 bia_f32::blocked:a:f0 dst_f32::blocked:acdb:f0,attr-post-ops:eltwise_relu:0:1 ,alg:convolution_direct,mb32_ic3oc64_ih224oh222kh3sh1dh0ph0_iw224ow222kw3sw1dw0pw0,20.46
+```
+After optimization of Convolution + ReLU oneDNN executes both operations within single convolution primitive.
 
 <h2 id="7">Quantization and Inference with INT8</h2>
 
-Benefiting from oneDNN, MXNet built with oneDNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
+MXNet built with oneDNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
 
 - [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
 

@@ -50,7 +50,7 @@ Devices
    cpu_pinned
    gpu
    gpu_memory_info
-   current_context
+   current_device
    num_gpus
 
 Nerual networks

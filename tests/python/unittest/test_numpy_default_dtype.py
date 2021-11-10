@@ -43,7 +43,7 @@ _NUMPY_DTYPE_DEFAULT_FUNC_LIST = [
     'ones',
     'zeros',
     'eye',
-    'full',
+    # 'full',  dtype of mx.np.full now infers from fill_value
     'identity',
     'linspace',
     'logspace',

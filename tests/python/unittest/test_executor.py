@@ -153,7 +153,7 @@ def test_cached_op_init():
         out = mx.sym.zeros((3,3))
         flags = [('static_alloc', static_alloc), ('static_shape', static_shape)]
         exe = mx.ndarray.CachedOp(out, flags)
-        z = exe(None, default_ctx=mx.cpu())
+        z = exe(None, default_device=mx.cpu())
         assert np.all(z.asnumpy() == 0)
 
     check_init(False, False)

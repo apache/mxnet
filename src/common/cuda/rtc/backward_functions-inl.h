@@ -428,6 +428,50 @@ copysign_grad(const DType val,
 
 template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
+bitwise_left_shift_grad(const DType val,
+                        const DType2 val2) {
+  return op::power(static_cast<DType>(2), val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+bitwise_left_shift_rgrad(const DType val,
+                         const DType2 val2) {
+  using type = mixed_type<DType, DType2>;
+  return val * op::power(static_cast<DType>(2), val2) * op::log(static_cast<type>(2));
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+rbitwise_left_shift_grad(const DType val,
+                         const DType2 val2) {
+  using type = mixed_type<DType, DType2>;
+  return val2 * op::power(static_cast<DType>(2), val) * op::log(static_cast<type>(2));
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+bitwise_right_shift_grad(const DType val,
+                         const DType2 val2) {
+  return op::power(0.5f, val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+bitwise_right_shift_rgrad(const DType val,
+                          const DType2 val2) {
+  return val * op::power(0.5f, val2) * op::log(0.5f);
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+rbitwise_right_shift_grad(const DType val,
+                          const DType2 val2) {
+  return val2 * op::power(0.5f, val) * op::log(0.5f);
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
 arctan2_grad(const DType val,
              const DType2 val2) {
   return val2 / (val * val + val2 * val2);

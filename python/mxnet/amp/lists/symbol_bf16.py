@@ -362,6 +362,7 @@ FP32_FUNCS = [
     'zeros_like',
     '_sg_onednn_conv',
     '_sg_onednn_fully_connected',
+    '_sg_onednn_batch_dot',
     'broadcast_mul',
     'Convolution_v1',
     'IdentityAttachKLSparseReg',

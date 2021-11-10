@@ -157,7 +157,7 @@ def all_zero(var):
 @pytest.mark.skip(reason="https://github.com/apache/incubator-mxnet/issues/18740")
 def test_elemwise_binary_ops():
     # skip testing on GPU because only CPU ops are implemented
-    if default_context().device_type is 'gpu':
+    if default_device().device_type is 'gpu':
         return
 
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
@@ -633,9 +633,9 @@ def check_sparse_mathematical_core(name, stype,
     args.append(arr_data)
 
     if arr_grad is not None:
-        exe_test = test._bind(default_context(), args=args, args_grad=[arr_grad])
+        exe_test = test._bind(default_device(), args=args, args_grad=[arr_grad])
     else:
-        exe_test = test._bind(default_context(), args=args)
+        exe_test = test._bind(default_device(), args=args)
 
     exe_test.forward(is_train=True)
     assert exe_test.outputs[0].stype == expected_result_type
@@ -1224,7 +1224,7 @@ def test_cast_storage_ex():
             check_cast_storage(shape, d, 'default', 'row_sparse')
             check_cast_storage(shape, d, 'row_sparse', 'default')
         # Test specific gpu kernels
-        if default_context().device_type is 'gpu':
+        if default_device().device_type is 'gpu':
             dim0 = rnd.randint(1, 10)
             # test gpu thread kernel
             check_cast_storage((dim0, rnd.randint(  1,   32)), d, 'default', 'csr')
@@ -1299,7 +1299,7 @@ def test_sparse_dot():
         rhs_nd = rand_ndarray(rhs_shape, stype='csr', density=rhs_density)
         rhs_dns = rhs_nd.tostype('default')
 
-        if default_context() == mx.cpu():
+        if default_device() == mx.cpu():
             forward_stype = 'csr'
         else:
             forward_stype = 'default'
@@ -1315,7 +1315,7 @@ def test_sparse_dot():
         location = {'lhs': lhs_nd, 'rhs': rhs_nd}
         check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
 
-        if default_context() == mx.cpu():
+        if default_device() == mx.cpu():
             # test symbolic backward
             backward_trans = not trans_lhs
             rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
@@ -1398,7 +1398,7 @@ def test_sparse_dot_determinism():
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.0, atol=0.0)
 
     check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'row_sparse')
-    forward_stype = 'csr' if default_context() == mx.cpu() else 'default'
+    forward_stype = 'csr' if default_device() == mx.cpu() else 'default'
     check_dot_determinism('default', 'csr', 1.0, 0.1, False, False, forward_stype)
     check_dot_determinism('default', 'csr', 1.0, 0.1, False, True, forward_stype)
     check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'default')
@@ -1618,7 +1618,7 @@ def test_sparse_square_sum():
                     dns_data = mx.sym.Variable('data')
                     baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
                     igrad_expected = mx.nd.empty(dns.shape)
-                    baseline_exec = baseline._bind(default_context(), args=[dns],
+                    baseline_exec = baseline._bind(default_device(), args=[dns],
                                                   args_grad=[igrad_expected])
                     baseline_exec.forward(is_train=True)
                     baseline_exec.backward([ret_expected])
@@ -1632,7 +1632,7 @@ def test_sparse_square_sum():
                     # Need to add one more layer after square_sum to trigger the kernel for ograd
                     # with default stype in square_sum op.
                     baseline1 = baseline + 1
-                    baseline_exec1 = baseline1._bind(default_context(), args=[dns],
+                    baseline_exec1 = baseline1._bind(default_device(), args=[dns],
                                                     args_grad=[igrad_expected])
                     baseline_exec1.forward(is_train=True)
                     baseline_exec1.backward([ret_expected])
@@ -1708,7 +1708,7 @@ def test_sparse_elementwise_sum():
         for stype in stypes:
             arr.append(rand_ndarray(shape, stype, densities[np.random.randint(0, len(densities))]))
 
-        exec1 = out._bind(default_context(),
+        exec1 = out._bind(default_device(),
                          args=arr,
                          args_grad=arr_grad)
         exec1.forward(is_train=True)
@@ -1756,7 +1756,7 @@ def test_sparse_embedding():
         if sparse_grad:
             weight_grad = weight_grad.tostype('row_sparse')
         args_grad = {'embed_weight': weight_grad}
-        exe_test = embed._bind(default_context(), args=args, args_grad=args_grad, grad_req=grad_req)
+        exe_test = embed._bind(default_device(), args=args, args_grad=args_grad, grad_req=grad_req)
         arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
         grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
         # init data
@@ -1985,7 +1985,7 @@ def test_sparse_nd_where():
         args_grad = {'condition': mx.nd.zeros_like(cond_nd),
                      'x': mx.nd.array(x_np).tostype('csr'), 'y' : mx.nd.array(y_np)}
         # test req='write'
-        where_exe_write = where_sym._bind(ctx=default_context(), args=args,
+        where_exe_write = where_sym._bind(ctx=default_device(), args=args,
                                          args_grad=args_grad, grad_req='write')
 
         # test forward req='write'
@@ -2000,7 +2000,7 @@ def test_sparse_nd_where():
         # test req='add'
         x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
         y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
-        where_exe_add = where_sym._bind(ctx=default_context(), args=args,
+        where_exe_add = where_sym._bind(ctx=default_device(), args=args,
                                        args_grad=args_grad, grad_req='add')
         where_exe_add.grad_dict['x'][:] = x_grad_init
         where_exe_add.grad_dict['y'][:] = y_grad_init
@@ -2055,7 +2055,7 @@ def test_reshape_backward_fallback():
         - or, we can have out_y = sym.dot(sparse_y, w), then grad(w) will be inferred as sparse
     reshape backward (from w_x to w) needs to understand how to handle sparse inputs.
     """
-    ctx = default_context()
+    ctx = default_device()
     w_shape = (12, 4)
     w_x_shape = (1, 48)
     x_nd = rand_ndarray((4, 1), 'csr')

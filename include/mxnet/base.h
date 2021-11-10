@@ -348,9 +348,9 @@ struct RunContext {
    */
   void *aux_stream;
   /*!
-   * \brief indicator of whether this execution is run in bulk mode
+   * \brief pointer to the cuda event pool used by the dependency engine
    */
-  bool is_bulk;
+  void* event_pool = nullptr;
   /*!
    * \brief get mshadow stream from Context
    * \return the mshadow stream

@@ -25,7 +25,7 @@ import collections
 import ctypes
 from mxnet import amp
 import pytest
-from mxnet.test_utils import set_default_context, same_symbol_structure
+from mxnet.test_utils import set_default_device, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.operator import get_all_registered_operators_grouped
@@ -33,7 +33,7 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))
 
 @pytest.fixture()
 def amp_tests(request):
@@ -99,7 +99,7 @@ def test_amp_coverage(amp_tests):
 @pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_amp_conversion_rnn(amp_tests):
-    with mx.Context(mx.gpu(0)):
+    with mx.Device(mx.gpu(0)):
         model = nn.HybridSequential()
         model.add(rnn.LSTM(hidden_size=10, num_layers=2, bidirectional=True))
         model.add(nn.Dense(2))

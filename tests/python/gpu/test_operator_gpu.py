@@ -25,9 +25,9 @@ import pytest
 import itertools
 import scipy.sparse as sps
 import mxnet.ndarray.sparse as mxsps
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
+from mxnet.test_utils import check_consistency, set_default_device, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
+from mxnet.test_utils import default_device, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -48,12 +48,11 @@ from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
 from test_subgraph_op import *
-from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_optimizer import test_adamW
 del test_custom_op_fork  #noqa
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
@@ -2059,8 +2058,8 @@ def test_bilinear_sampler_versions():
         data_shape, grid_shape = item
         # kWriteTo
         exe_cpu = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
-        exe_gpu = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
-        exe_cudnn = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_gpu = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='write')
+        exe_cudnn = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='write')
         exe_list = [exe_cpu, exe_gpu, exe_cudnn]
         ref_idx = 0
         test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
@@ -2082,8 +2081,8 @@ def test_bilinear_sampler_versions():
 
         # kAddTo
         exe_cpu_addto = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
-        exe_gpu_addto = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
-        exe_cudnn_addto = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_gpu_addto = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='add')
+        exe_cudnn_addto = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req='add')
         exe_list = [exe_cpu_addto, exe_gpu_addto, exe_cudnn_addto]
         data_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['data'].shape).astype(np.float32)
         grid_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['grid'].shape).astype(np.float32)
@@ -2102,8 +2101,8 @@ def test_bilinear_sampler_versions():
         for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
             # Mixture of kWriteTo and kNullOp
             exe_cpu_mix = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
-            exe_gpu_mix = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
-            exe_cudnn_mix = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_gpu_mix = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req=req_dict)
+            exe_cudnn_mix = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_device(), grad_req=req_dict)
             exe_list = [exe_cpu_mix, exe_gpu_mix, exe_cudnn_mix]
             for exe in exe_list:
                 exe.arg_dict['data'][:] = test_data
@@ -2116,84 +2115,13 @@ def test_bilinear_sampler_versions():
                     assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
 
 
-# isolated execution bulking test function to be invoked with different env var settings
-def _test_bulking_in_process(seed, time_per_iteration):
-    data_shape = (10,)
-    num_ops = 1000
-    num_iterations = 20
-
-    ctx = default_context()
-    # build symbol
-    X = mx.sym.Variable('X')
-    sym = mx.sym.flip(X, axis=0)
-    for _ in range(num_ops-1):
-        sym = mx.sym.flip(sym, axis=0)
-    x = mx.ndarray.zeros(data_shape)
-    dx = mx.ndarray.zeros(data_shape)
-    dy = mx.ndarray.ones(data_shape)
-    exe = sym._bind(ctx=ctx, args=[x], args_grad = {'X':dx})
-
-    # time a number of forward() and backward() executions after some warm-up iterations
-    warmups = 1
-    for i in range(num_iterations+warmups):
-        if i == warmups:
-            start = time.time()
-        exe.forward(is_train=True)
-        exe.backward(dy)
-        dx.wait_to_read()
-    time_per_iteration.value = (time.time() - start) / num_iterations
-
-
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
-def test_bulking_operator_gpu():
-    _test_bulking(_test_bulking_in_process)
-
-
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
-def test_bulking():
-    # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
-    test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
-    times = {}
-    times_str = ''
-    for seg_sizes in test_cases:
-        # Create shared variable to return measured time from test process
-        time_per_iteration = mp.Manager().Value('d', 0.0)
-        if not run_in_spawned_process(_test_bulking_in_process,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : str(seg_sizes[0]),
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : str(seg_sizes[1]),
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : str(seg_sizes[2])},
-                                      time_per_iteration):
-            # skip test since the python version can't run it properly.  Warning msg was logged.
-            return
-        times[seg_sizes] = time_per_iteration.value
-        times_str += \
-            '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
-            seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
-
-    fastest_non_bulked_time = min(times[(0,0,True)], times[(1,1,True)], times[(15,15,False)])
-    slowest_half_bulked_time = max(times[(0,15,True)], times[(15,0,True)])
-    fastest_half_bulked_time = min(times[(0,15,True)], times[(15,0,True)])
-    fully_bulked_time = times[(15,15,True)]
-
-    print(times_str)
-    # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
-    # slower than both half-bulked times[0,15,True] and times[15,0,True]
-    assert slowest_half_bulked_time < fastest_non_bulked_time, \
-        'A half-bulked exec time is slower than the non-bulked time by {} secs! {}' \
-            .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
-    # The fully bulked times[15,15,True] should be faster than both half-bulked runs
-    assert fully_bulked_time < fastest_half_bulked_time, \
-        'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
-            .format(fully_bulked_time - fastest_half_bulked_time, times_str)
-
-
 @pytest.mark.serial
 def test_allclose_function_gpu():
     allclose_function([mx.cpu(), mx.gpu(0)])
 
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
-    assert mx.context.num_gpus() > 0
+    assert mx.device.num_gpus() > 0
 
 def math_log(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))

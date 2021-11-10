@@ -313,7 +313,7 @@ def _add_workload_concatenate(array_pool):
     OpArgMngr.add_workload('concatenate', (a0, a1, a2), axis=2)
     OpArgMngr.add_workload('concatenate', (a0, a1, a2), axis=-1)
     OpArgMngr.add_workload('concatenate', (a0.T, a1.T, a2.T), axis=0)
-    out = np.empty(4, np.float32)
+    out = np.empty(4, dtype=np.float32)
     OpArgMngr.add_workload('concatenate', (np.array([1, 2]), np.array([3, 4])), out=out)
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=None)
     OpArgMngr.add_workload('concatenate', (np.arange(4).reshape((2, 2)), np.arange(4).reshape((2, 2))), axis=None)
@@ -1324,17 +1324,17 @@ def _add_workload_var(array_pool):
 
 def _add_workload_zeros_like(array_pool):
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64), np.int64)
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32), np.float64)
-    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)), int)
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64), dtype=np.int64)
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32), dtype=np.float64)
+    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)), dtype=int)
 
 
 def _add_workload_full_like(array_pool):
     OpArgMngr.add_workload('full_like', array_pool['4x1'], 1)
     OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(1,3,4), dtype='float64'), 1)
-    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3,1)), 2, np.int64)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3,1)), 2, dtype=np.int64)
     OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3)), np.nan)
-    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(2,0)), 0, np.float32)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(2,0)), 0, dtype=np.float32)
 
 
 def _add_workload_outer():
@@ -1530,6 +1530,30 @@ def _add_workload_bitwise_xor():
         OpArgMngr.add_workload('bitwise_xor', ones, ones)
 
 
+def _add_workload_bitwise_left_shift():
+    for dtype in [np.int8, np.int32, np.int64]:
+        twenty = np.array([20], dtype=dtype)
+        three = np.array([3], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_left_shift', twenty, three)
+    OpArgMngr.add_workload('bitwise_left_shift', np.array([9223372036854775807], np.int64), np.array([1], np.int64))
+    OpArgMngr.add_workload('bitwise_left_shift', np.array([-9223372036854775808], np.int64), np.array([1], np.int64))
+
+
+def _add_workload_bitwise_right_shift():
+    for dtype in [np.int8, np.int32, np.int64]:
+        twenty = np.array([20], dtype=dtype)
+        three = np.array([3], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+        OpArgMngr.add_workload('bitwise_right_shift', twenty, three)
+    OpArgMngr.add_workload('bitwise_right_shift', np.array([9223372036854775807], np.int64), np.array([1], np.int64))
+    OpArgMngr.add_workload('bitwise_right_shift', np.array([-9223372036854775808], np.int64), np.array([1], np.int64))
+
+
 def _add_workload_ldexp():
     OpArgMngr.add_workload('ldexp', np.array(2., np.float32), np.array(3, np.int8))
     OpArgMngr.add_workload('ldexp', np.array(2., np.float64), np.array(3, np.int8))
@@ -1584,6 +1608,17 @@ def _add_workload_fmod(array_pool):
     OpArgMngr.add_workload('fmod', array_pool['4x1'], 2)
     OpArgMngr.add_workload('fmod', 2, array_pool['4x1'])
     OpArgMngr.add_workload('fmod', array_pool['4x1'], array_pool['1x1x0'])
+
+
+def _add_workload_floor_divide(array_pool):
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('floor_divide', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('floor_divide', array_pool['4x1'], array_pool['1x1x0'])
+    OpArgMngr.add_workload('floor_divide', np.array([-1, -2, -3], np.float32), 1.9999)
+    OpArgMngr.add_workload('floor_divide', np.array([1000, -200, -3], np.int64), 3)
+    OpArgMngr.add_workload('floor_divide', np.array([1, -2, -3, 4, -5], np.int32), 2.0001)
+    OpArgMngr.add_workload('floor_divide', np.array([1, -50, -0.2, 40000, 0], np.float64), -7)
 
 
 def _add_workload_remainder():
@@ -3088,6 +3123,8 @@ def _prepare_workloads():
     _add_workload_bitwise_and()
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
+    _add_workload_bitwise_left_shift()
+    _add_workload_bitwise_right_shift()
     _add_workload_ldexp()
     _add_workload_logaddexp(array_pool)
     _add_workload_subtract(array_pool)
@@ -3095,6 +3132,7 @@ def _prepare_workloads():
     _add_workload_power(array_pool)
     _add_workload_mod(array_pool)
     _add_workload_fmod(array_pool)
+    _add_workload_floor_divide(array_pool)
     _add_workload_remainder()
     _add_workload_maximum(array_pool)
     _add_workload_fmax(array_pool)

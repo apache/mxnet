@@ -15,9 +15,9 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.context
+mxnet.device
 =============
 
-.. automodule:: mxnet.context
+.. automodule:: mxnet.device
     :members:
     :autosummary:
