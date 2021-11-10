@@ -203,8 +203,7 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
 }
 
 #if MXNET_USE_ONEDNN == 1
-bool SupportONEDNNAveragePooling(const NDArray &in_data,
-                                    const NDArray &out_data) {
+bool SupportONEDNNAveragePooling(const NDArray& in_data, const NDArray& out_data) {
   for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
     const int s1 = in_data.shape()[idx];
     const int s2 = out_data.shape()[idx];
@@ -215,46 +214,46 @@ bool SupportONEDNNAveragePooling(const NDArray &in_data,
       return false;
     }
   }
-  const int IH = in_data.shape()[2];
-  const int IW = in_data.shape()[3];
-  const int OH = out_data.shape()[2];
-  const int OW = out_data.shape()[3];
-  const int strides_H = floor((IH << 1) / OH) - floor(IH / OH);
-  const int strides_W = floor((IW << 1) / OW) - floor(IW / OW);
-  const int kernel_H = ceil((IH << 1) / OH) - floor(IH / OH);
-  const int kernel_W = ceil((IW << 1) / OW) - floor(IW / OW);
-  const int pad_l_top = (strides_H * (OH - 1) + kernel_H - IH) / 2;
+  const int IH         = in_data.shape()[2];
+  const int IW         = in_data.shape()[3];
+  const int OH         = out_data.shape()[2];
+  const int OW         = out_data.shape()[3];
+  const int strides_H  = floor((IH << 1) / OH) - floor(IH / OH);
+  const int strides_W  = floor((IW << 1) / OW) - floor(IW / OW);
+  const int kernel_H   = ceil((IH << 1) / OH) - floor(IH / OH);
+  const int kernel_W   = ceil((IW << 1) / OW) - floor(IW / OW);
+  const int pad_l_top  = (strides_H * (OH - 1) + kernel_H - IH) / 2;
   const int pad_l_left = (strides_W * (OW - 1) + kernel_W - IW) / 2;
   return pad_l_top == 0 && pad_l_left == 0;
 }
 
-void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs &attrs,
-                                 const OpContext &ctx,
-                                 const std::vector<NDArray> &inputs,
-                                 const std::vector<OpReqType> &req,
-                                 const std::vector<NDArray> &outputs) {
+void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   /*
-  OneDNN doesn't support adaptive pooling. 
+  OneDNN doesn't support adaptive pooling.
   Fallback is needed when padding is not equal 0;
   */
-  if (SupportDNNLPooling(inputs[0]) &&
-      SupportONEDNNAveragePooling(inputs[0], outputs[0])) {
-    const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-
-    const NDArray *workspace = nullptr;
+  // okay, so earlier SupportDNNLPooling was only provided with inputs[0], but it is not compatible
+  // with master branch, so one solution is to use SupportDNNL(inputs[0]) like on v1.x branch or to
+  // provide also param as argument this also means that param parsing would be taking to higher
+  // scope
+  // but the other things is that ONEDNN adaptive pooling is now supported? Right?
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (SupportDNNLPooling(param, inputs[0]) && SupportONEDNNAveragePooling(inputs[0], outputs[0])) {
+    const NDArray* workspace = nullptr;
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
     DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, true);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-  FallBackCompute(AdaptiveAvgPoolOpForward<cpu>, attrs, ctx, inputs, req,
-                  outputs);
+  FallBackCompute(AdaptiveAvgPoolOpForward<cpu>, attrs, ctx, inputs, req, outputs);
 }
 #endif
-
-DMLC_REGISTER_PARAMETER(AdaptiveAvgPoolParam);
 
 NNVM_REGISTER_OP(_contrib_AdaptiveAvgPooling2D)
     .describe(R"code(

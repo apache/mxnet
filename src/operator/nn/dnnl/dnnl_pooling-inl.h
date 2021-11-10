@@ -87,6 +87,26 @@ class DNNLPoolingBwd {
   const dnnl::pooling_backward::primitive_desc& GetPd();
 };
 
+template <typename T = dnnl::memory::dims>
+void UseAdaptivePaddingKernel(T* kernel,
+                              T* strides,
+                              T* pad_l,
+                              T* pad_r,
+                              const NDArray& in_data,
+                              const NDArray& out_data) {
+  const int IH = in_data.shape()[2];
+  const int IW = in_data.shape()[3];
+  const int OH = out_data.shape()[2];
+  const int OW = out_data.shape()[3];
+
+  strides->at(0) = floor((IH << 1) / OH) - floor(IH / OH);
+  strides->at(1) = floor((IW << 1) / OW) - floor(IW / OW);
+  kernel->at(0)  = ceil((IH << 1) / OH) - floor(IH / OH);
+  kernel->at(1)  = ceil((IW << 1) / OW) - floor(IW / OW);
+  pad_l->at(0)   = (strides->at(0) * (OH - 1) + kernel->at(0) - IH) >> 1;
+  pad_l->at(1)   = (strides->at(1) * (OW - 1) + kernel->at(1) - IW) >> 1;
+}
+
 inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
   if ((x + padl + padr - k) % s != 0) {
     return (padr + s - ((x + padl + padr - k) % s));
@@ -157,7 +177,8 @@ void DNNLPoolingCompute(const OpContext& ctx,
                         const NDArray& in_data,
                         const OpReqType req,
                         const NDArray& out_data,
-                        const NDArray* workspace);
+                        const NDArray* workspace,
+                        const bool use_adaptive_pooling);
 
 void DNNLPoolingGradCompute(const OpContext& ctx,
                             const PoolingParam& param,
@@ -166,10 +187,12 @@ void DNNLPoolingGradCompute(const OpContext& ctx,
                             const NDArray* workspace,
                             const OpReqType req,
                             const NDArray& in_grad);
+
 DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                               const bool is_train,
                               const NDArray& data,
-                              const NDArray& output);
+                              const NDArray& output,
+                              const bool use_adaptive_pooling);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1
