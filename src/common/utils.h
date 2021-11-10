@@ -996,9 +996,8 @@ inline int type_promotion(const int type1, const int type2) {
       } else if (type1 == mshadow::kInt16 && type2 == mshadow::kUint32) {
         return mshadow::kInt64;
       } else if (type2 == mshadow::kUint64) {
-        LOG(FATAL) << "Unsupported type promotions between "
-                   << mshadow::dtype_string(type1) << " and "
-                   << mshadow::dtype_string(type2);
+        LOG(FATAL) << "Unsupported type promotions between " << mshadow::dtype_string(type1)
+                   << " and " << mshadow::dtype_string(type2);
       } else {
         return type2;
       }
@@ -1010,9 +1009,8 @@ inline int type_promotion(const int type1, const int type2) {
       } else if (type2 == mshadow::kInt16 && type1 == mshadow::kUint32) {
         return mshadow::kInt64;
       } else if (type1 == mshadow::kUint64) {
-        LOG(FATAL) << "Unsupported type promotions between "
-                   << mshadow::dtype_string(type1) << " and "
-                   << mshadow::dtype_string(type2);
+        LOG(FATAL) << "Unsupported type promotions between " << mshadow::dtype_string(type1)
+                   << " and " << mshadow::dtype_string(type2);
       } else {
         return type1;
       }
@@ -1028,8 +1026,7 @@ inline int type_promotion(const int type1, const int type2) {
       }
     }
   }
-  LOG(FATAL) << "Unsupported type promotions between "
-             << mshadow::dtype_string(type1) << " and "
+  LOG(FATAL) << "Unsupported type promotions between " << mshadow::dtype_string(type1) << " and "
              << mshadow::dtype_string(type2);
   return -1;
 }
