@@ -11239,3 +11239,33 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
 
     assert_almost_equal(deconvOut, deconvRefOut)
     assert_almost_equal(deconvData.grad, deconvRefGrad)
+
+
+@use_np
+@pytest.mark.parametrize('dtype', np.floating_dtypes)
+def test_np_finfo(dtype):
+    mx_finfo_obj = np.finfo(dtype)
+    np_finfo = onp.finfo(dtype)
+    assert (mx_finfo_obj.bits, mx_finfo_obj.eps, mx_finfo_obj.max, mx_finfo_obj.min, mx_finfo_obj.smallest_normal) == \
+        (np_finfo.bits, np_finfo.eps, np_finfo.max, np_finfo.min, np_finfo.tiny)
+
+
+@use_np
+@pytest.mark.parametrize('dtype', np.integer_dtypes)
+def test_np_iinfo(dtype):
+    mx_iinfo_obj = np.iinfo(dtype)
+    np_iinfo = onp.iinfo(dtype)
+    assert (mx_iinfo_obj.bits, mx_iinfo_obj.max, mx_iinfo_obj.min) == \
+        (np_iinfo.bits, np_iinfo.max, np_iinfo.min)
+
+
+@use_np
+@pytest.mark.parametrize('input1', [d for d in np.numeric_dtypes + np.boolean_dtypes] + [np.ones((1,), dtype=d) for d in np.numeric_dtypes + np.boolean_dtypes])
+@pytest.mark.parametrize('input2', [d for d in np.numeric_dtypes + np.boolean_dtypes])
+def test_np_can_cast(input1, input2):
+    np_input1 = input1
+    np_input2 = input2
+    if isinstance(input1, np.ndarray):
+        np_input1 = input1.asnumpy()
+    assert np.can_cast(input1, input2) == onp.can_cast(np_input1, np_input2)
+
