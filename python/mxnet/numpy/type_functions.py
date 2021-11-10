@@ -152,7 +152,7 @@ def result_type(*arrays_and_dtypes):
     if len(arrays_and_dtypes) > 0:
         ret = _get_dtype(arrays_and_dtypes[0])
         for d in arrays_and_dtypes[1:]:
-            dd = _get_dtype(arrays_and_dtypes[d])
+            dd = _get_dtype(d)
             if (ret, dd) in _type_promotion_table:
                 ret = _type_promotion_table[ret, dd]
             elif (dd, ret) in _type_promotion_table:

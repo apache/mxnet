@@ -158,7 +158,7 @@ _type_promotion_table = {
     (int64, float64): float64,
     (uint8, float64): float64,
     (uint16, float64): float64,
-    (uint32, float64): float32,
+    (uint32, float64): float64,
     (uint64, float64): float64,
     # mixed bool and other type promotion
     (bool, int8): int8,

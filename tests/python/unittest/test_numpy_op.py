@@ -11271,6 +11271,20 @@ def test_np_can_cast(input1, input2):
 
 
 @use_np
+@pytest.mark.parametrize('nums', [1, 2, 3, 4, 10, 100])
+def test_np_result_type(nums):
+    PICK_LIST = np.numeric_dtypes + np.boolean_dtypes + [np.ones((1,), dtype=d) for d in np.numeric_dtypes + np.boolean_dtypes]
+    import random
+    inputs = [random.choice(PICK_LIST) for _ in range(nums)]
+
+    try:
+        promoted = np.result_type(*inputs)
+    except Exception as e:
+        with pytest.raises(TypeError):
+            promoted = np.result_type(*inputs)
+
+
+@use_np
 @retry(3)
 @pytest.mark.parametrize('func,func2,dtypes,ref_grad,low,high', [
     ('abs', 'abs', 'numeric', lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
