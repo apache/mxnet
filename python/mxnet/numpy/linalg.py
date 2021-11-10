@@ -389,7 +389,7 @@ def outer(a: ndarray, b: ndarray, /) -> ndarray:
     return _mx_nd_np.tensordot(a.flatten(), b.flatten(), 0)
 
 
-def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] = None) -> ndarray:
+def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = None) -> ndarray:
     r"""
     Return the dot product of two vectors.
     Note that `vecdot` handles multidimensional arrays differently than `dot`:
@@ -432,9 +432,9 @@ def vecdot(a: ndarray, b, ndarray, /, *, axis: Optional[int] = None) -> ndarray:
 
     >>> a = np.array([[1, 4], [5, 6]])
     >>> b = np.array([[4, 1], [2, 2]])
-    >>> np.linalg.vecdot(a, b)
+    >>> np.vecdot(a, b)
     array(30.)
-    >>> np.linalg.vecdot(b, a)
+    >>> np.vecdot(b, a)
     array(30.)
     >>> 1*4 + 4*1 + 5*2 + 6*2
     30

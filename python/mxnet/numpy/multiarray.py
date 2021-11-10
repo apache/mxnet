@@ -80,7 +80,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'triu_indices_from', 'triu_indices', 'tri',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'gcd', 'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'unique', 'lcm', 'gcd', 'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'vecdot', 'inner', 'outer',
            'cross', 'kron', 'equal', 'not_equal', 'interp',
            'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
@@ -3503,7 +3503,7 @@ def unique(
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray], **kwargs) -> ndarray:
     """
     Add arguments element-wise.
 
@@ -3542,7 +3542,7 @@ def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs)
            [ 3.,  5.,  7.],
            [ 6.,  8., 10.]])
     """
-    return _mx_nd_np.add(x1, x2, out)
+    return _mx_nd_np.add(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -3584,7 +3584,7 @@ def subtract(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kw
            [3., 3., 3.],
            [6., 6., 6.]])
     """
-    return _mx_nd_np.subtract(x1, x2, out)
+    return _mx_nd_np.subtract(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -3628,7 +3628,7 @@ def multiply(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kw
            [ 0.,  4., 10.],
            [ 0.,  7., 16.]])
     """
-    return _mx_nd_np.multiply(x1, x2, out)
+    return _mx_nd_np.multiply(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -4434,7 +4434,7 @@ def cbrt(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def abs(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def abs(x: ndarray, /, *, out: Optional[ndarray]) -> ndarray:
     r"""
     Calculate the absolute value element-wise.
 
@@ -4459,7 +4459,7 @@ def abs(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     >>> np.abs(x)
     array([1.2, 1.2])
     """
-    return _mx_nd_np.abs(x, out=out, **kwargs)
+    return _mx_nd_np.abs(x, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -4710,7 +4710,7 @@ asin.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arccos(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+def arccos(x: ndarray, /, *, out: Optional[ndarray]) -> ndarray:
     """
     Trigonometric inverse cosine, element-wise.
     The inverse of cos so that, if y = cos(x), then x = arccos(y).
@@ -4744,7 +4744,7 @@ def arccos(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray
     >>> np.arccos([1, -1])
     array([ 0.        ,  3.14159265])
     """
-    return _mx_nd_np.arccos(x, out=out, **kwargs)
+    return _mx_nd_np.arccos(x, out=out)
 
 acos = arccos
 acos.__doc__ = """
@@ -6385,7 +6385,7 @@ def linspace(
         start: Union[int, float],
         stop: Union[int, float],
         /,
-        num: Optional[int] = 50,
+        num: Optional[int],
         *,
         endpoint: Optional[bool] = True,
         retstep: Optional[bool] = False,
@@ -6748,7 +6748,7 @@ def trace(a: ndarray,
 
 
 @set_module('mxnet.numpy')
-def transpose(a: ndarray, axes: Optional[Union[int, Tuple[int, ...]]] = None) -> ndarray:
+def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int, ...]]] = None) -> ndarray:
     """
     Permute the dimensions of an array.
 
@@ -6784,7 +6784,7 @@ def transpose(a: ndarray, axes: Optional[Union[int, Tuple[int, ...]]] = None) ->
     array([[0., 2.],
            [1., 3.]])
     >>> x = np.ones((1, 2, 3))
-    >>> np.transpose(x, (1, 0, 2)).shape
+    >>> np.transpose(x, axes=(1, 0, 2)).shape
     (2, 1, 3)
     """
     return _mx_nd_np.transpose(a, axes)
@@ -10124,7 +10124,7 @@ def ldexp(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwarg
     >>> np.ldexp(5, np.arange(4))
     array([  5.,  10.,  20.,  40.])
     """
-    return _mx_nd_np.ldexp(x1, x2, out)
+    return _mx_nd_np.ldexp(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -10164,7 +10164,7 @@ def logaddexp(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **k
     >>> np.exp(prob12)
     3.5000000000000057e-50
     """
-    return _mx_nd_np.logaddexp(x1, x2, out)
+    return _mx_nd_np.logaddexp(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -10206,6 +10206,60 @@ def vdot(a: ndarray, b: ndarray, /) -> ndarray:
     30
     """
     return tensordot(a.flatten(), b.flatten(), axes=1)
+
+
+@set_module('mxnet.numpy')
+def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int]) -> ndarray:
+    r"""
+    Return the dot product of two vectors.
+    Note that `vecdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Notes
+    ----------
+    `vecdot` is a alias for `vdot`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/linear_algebra_functions.html#vecdot-x1-x2-axis-1
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument to the dot product.
+    b : ndarray
+        Second argument to the dot product.
+    axis : axis over which to compute the dot product. Must be an integer on
+        the interval [-N, N) , where N is the rank (number of dimensions) of
+        the shape determined according to Broadcasting . If specified as a
+        negative integer, the function must determine the axis along which
+        to compute the dot product by counting backward from the last dimension
+        (where -1 refers to the last dimension). If None , the function must
+        compute the dot product over the last axis. Default: None .
+
+    Returns
+    -------
+    output : ndarray
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.vecdot(a, b)
+    array(30.)
+    >>> np.vecdot(b, a)
+    array(30.)
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return _mx_nd_np.tensordot(a.flatten(), b.flatten(), axis)
 
 
 @set_module('mxnet.numpy')
@@ -10653,7 +10707,7 @@ def logical_and(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -
     >>> np.logical_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([False,  True])
     """
-    return _mx_nd_np.logical_and(x1, x2, out)
+    return _mx_nd_np.logical_and(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -10688,7 +10742,7 @@ def logical_or(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) ->
     >>> np.logical_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([True,  True])
     """
-    return _mx_nd_np.logical_or(x1, x2, out)
+    return _mx_nd_np.logical_or(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -10723,7 +10777,7 @@ def logical_xor(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None) -
     >>> np.logical_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, False])
     """
-    return _mx_nd_np.logical_xor(x1, x2, out)
+    return _mx_nd_np.logical_xor(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -12333,7 +12387,7 @@ def nan_to_num(
 
 
 @set_module('mxnet.numpy')
-def squeeze(x: ndarray, /, axis: Union[int, Tuple[int, ...]] = None) -> ndarray:
+def squeeze(x: ndarray, /, axis: Optional[Union[int, Tuple[int, ...]]]) -> ndarray:
     r"""Remove single-dimensional entries from the shape of an array.
 
     Parameters
@@ -12638,7 +12692,7 @@ def isfinite(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarr
 
 
 @set_module('mxnet.numpy')
-def where(condition: ndarray, x: ndarray = None, y: ndarray = None, /) -> ndarray:
+def where(condition: ndarray, x: ndarray, y: ndarray, /) -> ndarray:
     """where(condition, [x, y])
     Return elements chosen from `x` or `y` depending on `condition`.
 
@@ -13244,7 +13298,7 @@ def cumsum(
     return _mx_nd_np.cumsum(a, axis=axis, dtype=dtype, out=out)
 
 @set_module('mxnet.numpy')
-def reshape(a: ndarray, /, newshape: Union[int, Tuple[int, ...]], order: Optional[str] = 'C') -> ndarray:
+def reshape(a: ndarray, /, newshape: Union[int, Tuple[int, ...]], *, order: Optional[str] = 'C') -> ndarray:
     """
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
@@ -13305,7 +13359,7 @@ def reshape(a: ndarray, /, newshape: Union[int, Tuple[int, ...]], order: Optiona
            [3., 4.],
            [5., 6.]])
     """
-    return _mx_nd_np.reshape(a, newshape, order)
+    return _mx_nd_np.reshape(a, newshape=newshape, order=order)
 
 @set_module('mxnet.numpy')
 def moveaxis(a, source, destination):
@@ -13736,7 +13790,7 @@ def asarray(
         obj: Union[ndarray, bool, int, float, Sequence[Union[bool, int, float]]],
         /,
         *,
-        dtype: Optional[Union[dtype, str]] = None, # pylint disable=undefined-variable
+        dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
         device: Optional[Device] = None,
         copy: Optional[bool] = None
 ) -> ndarray:
