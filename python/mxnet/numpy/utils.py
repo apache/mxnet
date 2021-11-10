@@ -25,7 +25,8 @@ __all__ = ['float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64',
            'int16', 'uint16', 'uint32', 'uint64',
            'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis',
            'e', 'NINF', 'PINF', 'NAN', 'NaN',
-           '_STR_2_DTYPE_', '_DTYPE_2_STR_', '_type_promotion_table']
+           '_STR_2_DTYPE_', '_DTYPE_2_STR_', '_type_promotion_table',
+           'integer_dtypes', 'floating_dtypes', 'boolean_dtypes', 'numeric_dtypes']
 
 py_bool = bool
 
@@ -172,3 +173,29 @@ _type_promotion_table = {
     (bool, float32): float32,
     (bool, float64): float64,
 }
+
+integer_dtypes = [
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+]
+
+floating_dtypes = [
+    float16,
+    float32,
+    float64,
+]
+
+numeric_dtypes = [
+    *integer_dtypes,
+    *floating_dtypes,
+]
+
+boolean_dtypes = [
+    bool_,
+]

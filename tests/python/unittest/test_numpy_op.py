@@ -11269,3 +11269,106 @@ def test_np_can_cast(input1, input2):
         np_input1 = input1.asnumpy()
     assert np.can_cast(input1, input2) == onp.can_cast(np_input1, np_input2)
 
+
+@use_np
+@retry(3)
+@pytest.mark.parametrize('func,func2,dtypes,ref_grad,low,high', [
+    ('abs', 'abs', 'numeric', lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
+    ('acos', 'arccos', 'floating-point', lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), -1.0, 1.0),
+    ('acosh', 'arccosh', 'floating-point', lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
+    ('asin', 'arcsin', 'floating-point', lambda x: 1. / (1. - x ** 2) ** (1. / 2.), -1.0, 1.0),
+    ('asinh', 'arcsinh', 'floating-point', lambda x: 1./(x**2 + 1.)**(1./2.), -1.0, 1.0),
+    ('atan', 'arctan', 'floating-point', lambda x: 1. / (x ** 2. + 1.), -1.0, 1.0),
+    ('atanh', 'arctanh', 'floating-point', lambda x: -1./(x**2 - 1.), -0.99, 0.99),
+    ('bitwise_invert', 'invert', 'integer or boolean', None, -5, 5),
+    ('ceil', 'ceil', 'numeric', None, -10.0, 10.0),
+    ('cos', 'cos', 'floating-point', lambda x: -onp.sin(x), -1.0, 1.0),
+    ('cosh', 'cosh', 'floating-point', lambda x: onp.sinh(x), -1.0, 1.0),
+    ('exp', 'exp', 'floating-point', lambda x: onp.exp(x), -1.0, 1.0),
+    ('expm1', 'expm1', 'floating-point', lambda x: onp.exp(x), -1.0, 1.0),
+    ('floor', 'floor', 'numeric', None, -10.0, 10.0),
+    ('log', 'log', 'floating-point', lambda x: 1.0 / x, 0.1, 5.0),
+    ('log10', 'log10', 'floating-point', lambda x: 1.0 / (x * onp.log(10)), 0.1, 10.0),
+    ('log1p', 'log1p', 'floating-point', lambda x: 1.0 / (1.0 + x), -0.9, 5.0),
+    ('log2', 'log2', 'floating-point', lambda x: 1.0 / (x * onp.log(2)), 0.1, 2.0),
+    ('logical_not', 'logical_not', 'boolean', None,  -1.0, 1.0),
+    ('negative', 'negative', 'numeric', lambda x: -1. * onp.ones(x.shape), -1.0, 1.0),
+    ('positive', 'positive', 'numeric', lambda x: onp.ones(x.shape), -1.0, 1.0),
+    ('sign', 'sign', 'numeric', None, -1.0, 1.0),
+    ('sin', 'sin', 'floating-point', lambda x: onp.cos(x), -1.0, 1.0),
+    ('sinh', 'sinh', 'floating-point', lambda x: onp.cosh(x), -1.0, 1.0),
+    ('sqrt', 'sqrt', 'floating-point', lambda x: 0.5 / onp.sqrt(x), 0.001, 10.0),
+    ('square', 'square', 'numeric', lambda x: 2.0 * x, -1.0, 1.0),
+    ('tan', 'tan', 'floating-point', lambda x: onp.tan(x) ** 2 + 1.0, -1.0, 1.0),
+    ('tanh', 'tanh', 'floating-point', lambda x: 1. - onp.tanh(x) ** 2, -1.0, 1.0),
+    ('trunc', 'trunc', 'numeric', None, -5.0, 5.0),
+])
+@pytest.mark.parametrize('ndim', [2, 3, 4])
+def test_np_standard_unary_funcs(func, func2, dtypes, ref_grad, low, high, ndim):
+    class TestStandardUnary(HybridBlock):
+        def __init__(self, func):
+            super(TestStandardUnary, self).__init__()
+            self._func = func
+
+        def forward(self, a):
+            return getattr(np, self._func)(a)
+
+    type_mapping = {
+        'floating-point': np.floating_dtypes,
+        'numeric': np.numeric_dtypes,
+        'integer or boolean': np.integer_dtypes + np.boolean_dtypes,
+        'boolean': np.boolean_dtypes,
+    }
+
+    def array_values(low, high, shape):
+        for d in np.integer_dtypes + np.boolean_dtypes + np.floating_dtypes:
+            yield onp.random.uniform(low, high, shape).astype(d), d
+
+
+    shapes = [i for i in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]]
+    for shape in shapes:
+        for (np_test_data, dtype) in array_values(low, high, shape):
+            if dtype in type_mapping[dtypes]:
+                rtol = 1e-2 if dtype == np.float16 else 1e-3
+                atol = 1e-4 if dtype == np.float16 else 1e-5
+                # get rid of warning: divide by zero
+                if((func=='log' or func=='log10' or func=='log2') and
+                    (dtype=='int8' or dtype=='uint8' or dtype=='int32' or
+                    dtype=='int64')):
+                    low = 1
+                if (func=='arctanh' and dtype=='bool'):
+                    continue
+                np_func = getattr(onp, func2)
+                mx_func = TestStandardUnary(func)
+                mx_test_data = np.array(np_test_data, dtype=dtype)
+                for hybridize in [True, False]:
+                    if hybridize:
+                        mx_func.hybridize()
+                    if ref_grad:
+                        mx_test_data.attach_grad()
+                    np_out = np_func(np_test_data)
+                    with mx.autograd.record():
+                        y = mx_func(mx_test_data)
+                    assert y.shape == np_out.shape
+                    assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=atol)
+                    if np_out.dtype == np.bool_:
+                        assert y.dtype == np.bool_
+
+                    if ref_grad and (dtype == 'float16' or dtype == 'float32' or dtype == 'float64'):
+                        y.backward()
+                        assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
+
+                np_func = getattr(onp, func2)
+                mx_out = getattr(mx.np, func)(mx_test_data)
+                assert mx_out.shape == np_out.shape
+                assert mx_out.dtype == dtype
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=1e-5)
+
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, where=False)
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, subok=False)
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, dtype=onp.int8)
+                assertRaises(TypeError, getattr(np, func), mx_test_data, dtype="abcdefg")
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, casting='safe')
+                assertRaises(TypeError, getattr(np, func), mx_test_data, casting='mxnet')
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, order='C')
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, order='mxnet')
