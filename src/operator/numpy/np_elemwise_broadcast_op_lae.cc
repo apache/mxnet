@@ -68,7 +68,7 @@ NNVM_REGISTER_OP(_backward_npi_logaddexp)
                                 })
     .set_attr<FCompute>(
         "FCompute<cpu>",
-        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::logaddexp_grad, mshadow_op::logaddexp_rgrad>);
+        NumpyBinaryBackwardUseIn<cpu, mshadow_op::logaddexp_grad, mshadow_op::logaddexp_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_logaddexp_scalar)
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__())

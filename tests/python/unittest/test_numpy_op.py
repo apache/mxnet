@@ -11285,7 +11285,6 @@ def test_np_result_type(nums):
 
 
 @use_np
-@retry(3)
 @pytest.mark.parametrize('func,func2,dtypes,ref_grad,low,high', [
     ('abs', 'abs', 'numeric', lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
     ('acos', 'arccos', 'floating-point', lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), -1.0, 1.0),
@@ -11375,7 +11374,7 @@ def test_np_standard_unary_funcs(func, func2, dtypes, ref_grad, low, high, ndim)
                 np_func = getattr(onp, func2)
                 mx_out = getattr(mx.np, func)(mx_test_data)
                 assert mx_out.shape == np_out.shape
-                assert mx_out.dtype == dtype
+                assert np.result_type(mx_out) == dtype
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=1e-5)
 
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_data, where=False)
@@ -11386,3 +11385,117 @@ def test_np_standard_unary_funcs(func, func2, dtypes, ref_grad, low, high, ndim)
                 assertRaises(TypeError, getattr(np, func), mx_test_data, casting='mxnet')
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_data, order='C')
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_data, order='mxnet')
+
+
+@use_np
+@pytest.mark.parametrize('func,func2,promoted,dtypes,ref_grad_a,ref_grad_b,low,high', [
+    ('add', 'add', True, 'numeric', lambda y, x1, x2: onp.ones(y.shape), None, -1.0, 1.0),
+    ('atan2', 'arctan2', True, 'floating-point', lambda y, x1, x2: x2 / (onp.square(x1) + onp.square(x2)),
+                                                 lambda y, x1, x2: -x1 / (onp.square(x1) + onp.square(x2)), -1, 1),
+    ('bitwise_and', 'bitwise_and', True, 'integer or boolean', None, None, -100, 100),
+    ('bitwise_or', 'bitwise_or', True, 'integer or boolean', None, None, -100, 100),
+    ('bitwise_xor', 'bitwise_xor', True, 'integer or boolean', None, None, -100, 100),
+    ('divide', 'divide', True, 'floating-point', lambda y, x1, x2: onp.ones(y.shape) / x2,
+                                                 lambda y, x1, x2: -x1 / (x2 * x2), 0.1, 1.0),
+    ('equal', 'equal', False, 'all', None, None, 0.0, 2.0),
+    ('floor_divide', 'floor_divide', True, 'numeric', lambda y, x1, x2: onp.zeros(y.shape),
+                                                      lambda y, x1, x2: onp.zeros(y.shape), 2.0, 10.0),
+    ('greater', 'greater', False, 'numeric', None, None, 0.0, 2.0),
+    ('greater_equal', 'greater_equal', False, 'numeric', None, None, 0.0, 2.0),
+    ('less', 'less', False, 'numeric', None, None, 0.0, 2.0),
+    ('less_equal', 'less_equal', False, 'numeric', None, None, 0.0, 2.0),
+    ('logaddexp', 'logaddexp', True, 'floating-point', lambda y, x1, x2: onp.exp(x1) / (onp.exp(x1) + onp.exp(x2)),
+                                                       lambda y, x1, x2: onp.exp(x2) / (onp.exp(x1) + onp.exp(x2)), -10, 10),
+    ('logical_and', 'logical_and', False, 'boolean', None, None, -100, 100),
+    ('logical_or', 'logical_or', False, 'boolean', None, None, -100, 100),
+    ('logical_xor', 'logical_xor', False, 'boolean', None, None, -100, 100),
+    ('multiply', 'multiply', True, 'numeric', lambda y, x1, x2: onp.broadcast_to(x2, y.shape),
+                                              lambda y, x1, x2: onp.broadcast_to(x1, y.shape), -1.0, 1.0),
+    ('not_equal', 'not_equal', False, 'all', None, None, 0.0, 2.0),
+    ('pow', 'power', True, 'floating-point', lambda y, x1, x2: onp.power(x1, x2 - 1.0) * x2,
+                                             lambda y, x1, x2: onp.power(x1, x2) * onp.log(x1), 1.0, 3.0),
+    ('subtract', 'subtract', True, 'numeric', lambda y, x1, x2: onp.ones(y.shape),
+                                              lambda y, x1, x2: -onp.ones(y.shape), -1.0, 1.0),
+])
+@pytest.mark.parametrize('lshape,rshape', [
+    ((3, 2), (3, 2)),
+    ((3, 2), (3, 1)),
+    ((3, 1), (3, 0)),
+    ((0, 2), (1, 2)),
+    ((2, 3, 4), (3, 1)),
+    ((2, 3), ()),
+    ((), (2, 3))
+])
+def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref_grad_b, low, high, lshape, rshape):
+    class TestStandardBinary(HybridBlock):
+        def __init__(self, func):
+            super(TestStandardBinary, self).__init__()
+            self._func = func
+
+        def forward(self, a, b,):
+            return getattr(np, self._func)(a, b)
+
+    type_mapping = {
+        'floating-point': np.floating_dtypes,
+        'numeric': np.numeric_dtypes,
+        'integer or boolean': np.integer_dtypes + np.boolean_dtypes,
+        'boolean': np.boolean_dtypes,
+        'all': np.numeric_dtypes + np.boolean_dtypes,
+    }
+
+    def array_values(low, high, shape):
+        for d in np.integer_dtypes + np.boolean_dtypes + np.floating_dtypes:
+            yield onp.random.uniform(low, high, shape).astype(d), d
+
+
+    for (left_value, ltype) in array_values(low, high, lshape):
+        for (right_value, rtype) in array_values(low, high, rshape):
+            if ltype in type_mapping[dtypes] and rtype in type_mapping[dtypes]:
+                try:
+                    promote_type = np.result_type(ltype, rtype)
+                except Exception as e:
+                    # Unkown type promotion between two types
+                    continue
+                rtol = 1e-2 if ltype == np.float16 or rtype == np.float16 else 1e-3
+                atol = 1e-4 if ltype == np.float16 or rtype == np.float16 else 1e-5
+                mx_left_value = np.array(left_value, dtype=ltype)
+                mx_right_value = np.array(right_value, dtype=rtype)
+                mx_func = TestStandardBinary(func)
+                np_func = getattr(onp, func2)
+                for hybridize in [True, False]:
+                    if hybridize:
+                        mx_func.hybridize()
+                    if ref_grad_a:
+                        mx_left_value.attach_grad()
+                        mx_right_value.attach_grad()
+                    np_out = np_func(left_value, right_value)
+                    with mx.autograd.record():
+                        y = mx_func(mx_left_value, mx_right_value)
+                    assert y.shape == np_out.shape
+                    assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
+                                        use_broadcast=False, equal_nan=True)
+
+                    if ref_grad_a and ltype in np.floating_dtypes and rtype in np.floating_dtypes:
+                        y.backward()
+                        assert_almost_equal(mx_left_value.grad.asnumpy(),
+                                            collapse_sum_like(ref_grad_a(y.asnumpy(), left_value, right_value), mx_left_value.shape),
+                                            rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                        if ref_grad_b is None:
+                            assert_almost_equal(mx_right_value.grad.asnumpy(),
+                                                collapse_sum_like(ref_grad_a(y.asnumpy(), right_value, left_value), mx_right_value.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                        else:
+                            assert_almost_equal(mx_right_value.grad.asnumpy(),
+                                                collapse_sum_like(ref_grad_b(y.asnumpy(), left_value, right_value), mx_right_value.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+
+                np_out = getattr(onp, func2)(left_value, right_value)
+                mx_out = getattr(np, func)(mx_left_value, mx_right_value)
+                assert mx_out.shape == np_out.shape
+                if promoted:
+                    assert np.result_type(ltype, rtype) == mx_out.dtype
+                else:
+                    assert mx_out.dtype == np.bool_
+                assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=1e-3, atol=1e-5,
+                                    use_broadcast=False, equal_nan=True)
+
