@@ -13287,24 +13287,15 @@ def asarray(obj, dtype=None, device=None, copy=None):
 
     Examples
     --------
-    >>> a = np.arange(4).reshape(2,2)
-    >>> a
-    array([[0, 1],
-        [2, 3]])
-    >>> np.diagonal(a)
-    array([0, 3])
-    >>> np.diagonal(a, 1)
-    array([1])
+    >>> np.asarray([1, 2, 3])
+    array([1., 2., 3.])
 
-    >>> a = np.arange(8).reshape(2,2,2)
-    >>>a
-    array([[[0, 1],
-            [2, 3]],
-            [[4, 5],
-            [6, 7]]])
-    >>> np.diagonal(a, 0, 0, 1)
-    array([[0, 6],
-            [1, 7]])
+    >>> np.asarray([[1, 2], [3, 4]], dtype=np.int32)
+    array([[1, 2],
+           [3, 4]], dtype=int32)
+
+    >>> np.asarray([1.2], device=mx.gpu())
+    array([1.2], device=gpu(0))
     """
     if isinstance(obj, numeric_types):
         dtype = dtype_from_number(obj) if dtype is None else dtype
