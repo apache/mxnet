@@ -201,6 +201,7 @@ void DNNLPoolingCompute(const nnvm::NodeAttrs& attrs,
   auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0], use_adaptive_pooling);
   fwd.Execute(in_data[0], req[0], out_data[0], workspace);
 }
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1

@@ -203,7 +203,11 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
 }
 
 #if MXNET_USE_ONEDNN == 1
+<<<<<<< HEAD
 bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) {
+=======
+bool SupportONEDNNAveragePooling(const NDArray& in_data, const NDArray& out_data) {
+>>>>>>> feat: added onednn adaptive pooling to master
   for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
     const int s1 = in_data.shape()[idx];
     const int s2 = out_data.shape()[idx];
