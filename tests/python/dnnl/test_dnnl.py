@@ -580,7 +580,7 @@ def test_reshape_transpose_6d():
                                                           # (N, f1*f2*C, H, W)
             x = mx.np.reshape(x, (N, C, f1 * f2, H, W))  # (N, C, f1*f2, H, W)
             x = mx.np.reshape(x, (N, C, f1, f2, H, W))    # (N, C, f1, f2, H, W)
-            x = mx.np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+            x = mx.np.transpose(x, axes=(0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
             x = mx.np.reshape(x, (N, C, H*f1, W*f2))              # (N, C, H*f1, W*f2)
             return x
 
