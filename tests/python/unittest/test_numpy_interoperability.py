@@ -460,7 +460,7 @@ def _add_workload_transpose():
     OpArgMngr.add_workload('transpose', np.array([[]]))
     OpArgMngr.add_workload('transpose', np.array([[1, 2]]))
     OpArgMngr.add_workload('transpose', np.array([[1, 2, 3], [4, 5, 6]]))
-    OpArgMngr.add_workload('transpose', np.array([[1, 2], [3, 4], [5, 6]]), (1, 0))
+    OpArgMngr.add_workload('transpose', np.array([[1, 2], [3, 4], [5, 6]]), axes=(1, 0))
     OpArgMngr.add_workload('transpose', np.array([[1, 2], [3, 4]]))
 
 
