@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2016 Marcin Junczys-Dowmunt, the University of Edinburgh, Adam
  * Mickiewicz University
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- * 
+ *
  * All or part of this file was contributed by Intel under license:
  *   Copyright (C) 2017-2018 Intel Corporation
  *   SPDX-License-Identifier: MIT
@@ -42,7 +42,7 @@ namespace op {
  *   efficient to use on the CPU, so use float for reduction of half_t.
  *
  * width is the number of values being summed to compute a mean.
- * instances is how many independent layer normalization problems are packed into the tensors. 
+ * instances is how many independent layer normalization problems are packed into the tensors.
  *
  * Inputs:
  * data is instances x width
@@ -55,26 +55,25 @@ namespace op {
  * std is instances: standard deviation of each problem
  *
  */
-template <typename Data, typename Accum = typename
-            /* By default accumulate in float32 for float16.  Otherwise use same type. */
-            std::conditional<std::is_same<mshadow::half::half_t, Data>::value,
-                             float,
-                             Data>::type>
+template <typename Data,
+          typename Accum = typename
+          /* By default accumulate in float32 for float16.  Otherwise use same type. */
+          std::conditional<std::is_same<mshadow::half::half_t, Data>::value, float, Data>::type>
 void LayerNormCPUKernel(size_t width,
                         size_t instances,
                         Data eps,
-                        const Data *data,
-                        const Data *gamma,
-                        const Data *beta,
-                        Data *out,
-                        Data *mean,
-                        Data *std) {
+                        const Data* data,
+                        const Data* gamma,
+                        const Data* beta,
+                        Data* out,
+                        Data* mean,
+                        Data* std) {
   // Parallelize over independent instances to normalize.
   // MSVC says index variable in OpenMP 'for' statement must have signed integral type.
   const mshadow::index_t signed_instances = static_cast<mshadow::index_t>(instances);
 #pragma omp parallel for
   for (nnvm::dim_t j = 0; j < signed_instances; ++j) {
-    const Data *from = data + j * width;
+    const Data* from = data + j * width;
 
     // Sum the values to compute mean.
     Accum sum = 0.f;
@@ -83,7 +82,7 @@ void LayerNormCPUKernel(size_t width,
       sum += from[i];
     }
     Accum mean_value = sum / width;
-    mean[j] = static_cast<Data>(mean_value);
+    mean[j]          = static_cast<Data>(mean_value);
 
     // Sum squares from mean to compute stddev.
     Accum squares = 0.f;
@@ -93,10 +92,10 @@ void LayerNormCPUKernel(size_t width,
       squares += off * off;
     }
     Accum sigma = std::sqrt(squares / width + eps);
-    std[j] = static_cast<Data>(sigma);
+    std[j]      = static_cast<Data>(sigma);
 
     // Write normalized values.
-    Data *to = out + j * width;
+    Data* to = out + j * width;
 #pragma omp simd
     for (size_t i = 0; i < width; ++i) {
       to[i] = (from[i] - mean_value) * gamma[i] / sigma + beta[i];
