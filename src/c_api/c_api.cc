@@ -3960,7 +3960,7 @@ int MXGetCurrentStream(int device_id, int* stream) {
   mshadow::Stream<gpu>* cur_stream = rctx.get_stream<gpu>();
   *stream = reinterpret_cast<int64_t>(mshadow::Stream<gpu>::GetStream(cur_stream));
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "GPU is not enabled.";
 #endif
   API_END();
 }

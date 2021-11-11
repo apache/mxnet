@@ -18,6 +18,8 @@
 import mxnet as mx
 from mxnet import np
 import torch
+import numpy
+import pytest
 
 
 def test_dlpack_torch_mxnet_torch():
@@ -41,3 +43,20 @@ def test_dlpack_mxnet_torch_mxnet():
     z = np.from_dlpack(tx)
     z += 1
     assert z == x
+
+def test_dlpack_error_message():
+    with pytest.raises(AttributeError):
+        # raise Attribute Error, NumPy array is not PyCapsule or has __dlpack__ attribute
+        nx = numpy.array([5])
+        x = np.from_dlpack(nx)
+    
+    with pytest.raises(TypeError):
+        # raise TypeError, Stream must be int or None
+        stream = torch.cuda.Stream()
+        x = np.array([5], device=mx.gpu(), dtype="float64")
+        tx = torch.from_dlpack(x.__dlpack__(stream=stream))
+    
+    with pytest.raises(ValueError):
+        # raise ValueError, CPU device has no stream
+        x = np.array([5], dtype="float64")
+        tx = torch.from_dlpack(x.__dlpack__(stream=0))

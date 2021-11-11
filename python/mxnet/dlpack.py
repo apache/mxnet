@@ -113,13 +113,13 @@ def ndarray_from_dlpack(array_cls):
         if tp.__module__ == "builtins" and tp.__name__ == "PyCapsule":
             dlpack = ctypes.py_object(dlpack)        
         elif hasattr(dlpack, "__dlpack__"):
-            device = current_device()
-            if device.device_type != "gpu":
+            device, device_id = dlpack.__dlpack_device__()
+            if device != DLDeviceType.DLGPU:
                 dlpack = ctypes.py_object(dlpack.__dlpack__())
             else:
                 s = mx_int()
                 check_call(_LIB.MXGetCurrentStream(
-                    ctypes.c_int(ctypes.c_int(device.device_id), ctypes.byref(s))))
+                    ctypes.c_int(ctypes.c_int(device_id), ctypes.byref(s))))
                 dlpack = ctypes.py_object(dlpack.__dlpack__(stream=s))
         else:
             raise AttributeError("Required PyCapsule or object with __dlpack__")
