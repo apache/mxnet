@@ -393,7 +393,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         BinaryBroadcastCompute<xpu, OP>(
             attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
       } else if (rhs.type_flag_ == out.type_flag_) {
-        MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
+        MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
           Tensor<xpu, 1, RType> temp_tensor =
               ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
           temp_tblob = TBlob(temp_tensor);

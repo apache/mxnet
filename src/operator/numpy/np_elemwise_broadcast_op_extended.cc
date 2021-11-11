@@ -233,7 +233,7 @@ NNVM_REGISTER_OP(_backward_npi_arctan2)
                                 })
     .set_attr<FCompute>(
         "FCompute<cpu>",
-        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::arctan2_grad, mshadow_op::arctan2_rgrad>);
+        NumpyBinaryBackwardUseIn<cpu, mshadow_op::arctan2_grad, mshadow_op::arctan2_rgrad>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_arctan2_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::arctan2>)

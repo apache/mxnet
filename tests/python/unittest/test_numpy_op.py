@@ -11388,6 +11388,7 @@ def test_np_standard_unary_funcs(func, func2, dtypes, ref_grad, low, high, ndim)
 
 
 @use_np
+@pytest.mark.flaky
 @pytest.mark.parametrize('func,func2,promoted,dtypes,ref_grad_a,ref_grad_b,low,high', [
     ('add', 'add', True, 'numeric', lambda y, x1, x2: onp.ones(y.shape), None, -1.0, 1.0),
     ('atan2', 'arctan2', True, 'floating-point', lambda y, x1, x2: x2 / (onp.square(x1) + onp.square(x2)),
