@@ -9836,7 +9836,7 @@ def test_np_unary_bool_funcs():
             # if `out` is given and dtype == np.bool
             mx_x = np.ones_like(mx_data).astype(np.bool)
             np_x = mx_x.asnumpy()
-            getattr(mx.np, func)(mx_data, mx_x)
+            getattr(mx.np, func)(mx_data, out=mx_x)
             np_func(np_data, np_x)
             assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
             # if `out` is given but dtype mismatches

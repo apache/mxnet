@@ -3503,7 +3503,7 @@ def unique(
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
-def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray], **kwargs) -> ndarray:
+def add(x1: ndarray, x2: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
     """
     Add arguments element-wise.
 
@@ -4434,7 +4434,7 @@ def cbrt(x: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def abs(x: ndarray, /, *, out: Optional[ndarray]) -> ndarray:
+def abs(x: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     r"""
     Calculate the absolute value element-wise.
 
@@ -4710,7 +4710,7 @@ asin.__doc__ = """
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
-def arccos(x: ndarray, /, *, out: Optional[ndarray]) -> ndarray:
+def arccos(x: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
     """
     Trigonometric inverse cosine, element-wise.
     The inverse of cos so that, if y = cos(x), then x = arccos(y).
@@ -12387,7 +12387,7 @@ def nan_to_num(
 
 
 @set_module('mxnet.numpy')
-def squeeze(x: ndarray, /, axis: Optional[Union[int, Tuple[int, ...]]]) -> ndarray:
+def squeeze(x: ndarray, /, axis: Optional[Union[int, Tuple[int, ...]]] = 0) -> ndarray:
     r"""Remove single-dimensional entries from the shape of an array.
 
     Parameters

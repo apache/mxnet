@@ -603,7 +603,7 @@ def wrap_np_unary_func(func):
         A function wrapped with proper error handling.
     """
     @functools.wraps(func)
-    def _wrap_np_unary_func(x, /, *, out: Optional[ndarray] = None, **kwargs):
+    def _wrap_np_unary_func(x, /, *, out: Optional[...] = None, **kwargs):
         if len(kwargs) != 0:
             for key, value in kwargs.items():
                 # if argument is not in the set of ufunc arguments
@@ -636,7 +636,7 @@ def wrap_np_binary_func(func):
         A function wrapped with proper error handling.
     """
     @functools.wraps(func)
-    def _wrap_np_binary_func(x1, x2, /, *, out: Optional[ndarray] = None, **kwargs):
+    def _wrap_np_binary_func(x1, x2, /, *, out: Optional[...] = None, **kwargs):
         if len(kwargs) != 0:
             for key, value in kwargs.items():
                 # if argument is not in the set of ufunc arguments
