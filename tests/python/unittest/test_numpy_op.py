@@ -11497,6 +11497,6 @@ def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref
                     assert np.result_type(ltype, rtype) == mx_out.dtype
                 else:
                     assert mx_out.dtype == np.bool_
-                assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=1e-3, atol=1e-5,
+                assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
                                     use_broadcast=False, equal_nan=True)
 
