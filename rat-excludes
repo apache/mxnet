@@ -121,6 +121,7 @@ _export_onnx.py
 _op_translations_opset12.py
 _op_translations_opset13.py
 pool.h
+pool.cuh
 erfinv-inl.h
 im2col.cuh
 im2col.h
