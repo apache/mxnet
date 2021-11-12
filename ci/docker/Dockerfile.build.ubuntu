@@ -33,9 +33,6 @@ FROM $BASE_IMAGE AS base
 
 WORKDIR /work/deps
 
-# Trigger CI with no functional change: explore baseline CI behavior
-# prior to a fix for the oneapi "hash mismatch" problem
-
 SHELL ["/bin/bash", "-c"]
 RUN export DEBIAN_FRONTEND=noninteractive && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
@@ -94,7 +91,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libb2-dev \
         libzstd-dev \
         gfortran && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    add-apt-repository -r "deb https://apt.repos.intel.com/oneapi all main"
 
 # Build OpenBLAS from source
 RUN export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/7/ && \
