@@ -10209,7 +10209,7 @@ def vdot(a: ndarray, b: ndarray, /) -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int]) -> ndarray:
+def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = -1) -> ndarray:
     r"""
     Return the dot product of two vectors.
     Note that `vecdot` handles multidimensional arrays differently than `dot`:
