@@ -33,6 +33,9 @@ FROM $BASE_IMAGE AS base
 
 WORKDIR /work/deps
 
+# Trigger CI with no functional change: explore baseline CI behavior
+# prior to a fix for the oneapi "hash mismatch" problem
+
 SHELL ["/bin/bash", "-c"]
 RUN export DEBIAN_FRONTEND=noninteractive && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
