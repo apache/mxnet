@@ -132,17 +132,9 @@ RUN cd /usr/local/src && \
     tar xf apache-rat-0.13-bin.tar.gz
 
 # Python & cmake
-# We need to remove NumPy from requirements for ubuntu18.04
-# because ubuntu18.04 has only python3.6, which is not supported 
-# for NumPy >= 1.20.0
 COPY install/requirements /work/
-SHELL ["/bin/bash", "-c"]
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install cmake==3.16.6 && \
-    export OS_RELEASE="$(cat /etc/os-release)" && \
-    if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
-        sed -i '/numpy/d' /work/requirements; \
-    fi && \
     python3 -m pip install -r /work/requirements
 
 ARG USER_ID=0
@@ -168,22 +160,25 @@ SHELL ["/bin/bash", "-c"]
 ARG BASE_IMAGE
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
+    if [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer7_7.2.0-1+cuda11.0_amd64.deb; \
+        sudo apt install ./libnvinfer7_7.2.0-1+cuda11.0_amd64.deb; \
+        TRT_VERSION="7.2.0-1+cuda11.0"; \
+        TRT_MAJOR_VERSION=7; \
+    elif [ ${SHORT_CUDA_VERSION} = 11.1 ]; then \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer7_7.2.1-1+cuda11.1_amd64.deb; \
+        sudo apt install ./libnvinfer7_7.2.1-1+cuda11.1_amd64.deb; \
+        TRT_VERSION="7.2.1-1+cuda11.1"; \
+        TRT_MAJOR_VERSION=7; \
+    else \
+        echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
+        exit 1; \
+    fi; \
     apt-get update && \
-    if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
-        if [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
-            TRT_VERSION="7.2.0-1+cuda11.0"; \
-            TRT_MAJOR_VERSION=7; \
-        elif [ ${SHORT_CUDA_VERSION} = 11.1 ]; then \
-            TRT_VERSION="7.2.1-1+cuda11.1"; \
-            TRT_MAJOR_VERSION=7; \
-        else \
-            echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
-            exit 1; \
-        fi; \
-        apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
-                           libnvinfer-dev=${TRT_VERSION} \
-                           libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
-                           libnvinfer-plugin-dev=${TRT_VERSION}; \
+    apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                        libnvinfer-dev=${TRT_VERSION} \
+                        libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                        libnvinfer-plugin-dev=${TRT_VERSION}; \
     fi && \
     rm -rf /var/lib/apt/lists/*
 
