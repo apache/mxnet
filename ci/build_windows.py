@@ -118,7 +118,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DMXNET_CUDA_ARCH="5.2" '
+        '-DCMAKE_CUDA_ARCHITECTURES="52" '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_ONEDNN': (
@@ -131,7 +131,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DMXNET_CUDA_ARCH="5.2" '
+        '-DCMAKE_CUDA_ARCHITECTURES="52" '
         '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
