@@ -73,8 +73,10 @@ MXNET_REGISTER_API("_npi.tensordot")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       if (args[2].type_code() == kDLInt) {
         _npi_tensordot_int_axes(args, ret);
-      } else {
+      } else if (args[2].type_code() == kObjectHandle) {
         _npi_tensordot(args, ret);
+      } else {
+        LOG(FATAL) << "Error";
       }
     });
 

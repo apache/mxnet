@@ -56,7 +56,8 @@ from ..device import current_device
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
-from ..dlpack import ndarray_from_numpy, ndarray_from_dlpack
+from ..dlpack import ndarray_from_numpy, ndarray_to_dlpack_for_write, DLDeviceType,\
+                     ndarray_from_dlpack
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -88,7 +89,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
            'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
            'positive', 'logaddexp', 'floor_divide', 'permute_dims', 'bitwise_left_shift', 'bitwise_right_shift',
-           'asarray', 'from_dlpack']
+           'asarray', 'from_dlpack', 'matrix_transpose', 'astype']
 
 __all__ += fallback.__all__
 
@@ -446,6 +447,41 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             except ValueError:
                 raise ValueError(f"Unrecognized array API version: {api_version!r}")
         return sys.modules[self.__module__]
+
+    def __dlpack__(self, stream=None):
+        """Exports the array for consumption by from_dlpack() as a DLPack capsule.
+        Parameters
+        ----------
+        stream : int, optional
+            A Python integer representing a pointer to a stream (CUDA or ROCm).
+            Stream is provided by the consumer to the producer to instruct the producer
+            to ensure that operations can safely be performed on the array. The pointer must
+            be positive integer or -1. If stream is -1, the value must be used by the consumer
+            to signal "producer must not perform any synchronization".
+        Returns
+        -------
+        capsule : PyCapsule
+            A DLPack capsule for the array, containing a DLPackManagedTensor.
+        """
+        if stream is not None:
+            if type(stream) is not int:
+                raise TypeError('The input stream must be int or None')
+            if self.device.device_type != "gpu":
+                raise ValueError('Stream {} is not supported in current device {}' \
+                                 .format(stream, self.device.device_type))
+            if stream != -1:
+                check_call(_LIB.MXPushStreamDep(self.handle, ctypes.c_int64(stream)))
+        to_dlpack_write = ndarray_to_dlpack_for_write()
+        return to_dlpack_write(self)
+
+    def __dlpack_device__(self):
+        """Returns device type and device ID in DLPack format"""
+        devtype_map = {'cpu': DLDeviceType.DLCPU,
+                       'gpu': DLDeviceType.DLGPU,
+                       'cpu_pinned': DLDeviceType.DLCPUPINNED}
+        if self.device.device_type not in devtype_map:
+            raise ValueError('Unkown device type {} for DLPack'.format(self.device.device_type))
+        return (devtype_map[self.device.device_type], self.device.device_id)
 
 
     def _get_np_basic_indexing(self, key):
@@ -1657,7 +1693,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
         return _npi.cast(self, dtype=dtype)
 
-    def copyto(self: ndarray, other: ndarray) -> ndarray:
+    def copyto(self: ndarray, other: Union[ndarray, Device], /) -> ndarray:
         """Copies the value of this array to another array.
 
         If ``other`` is a ``ndarray`` object, then ``other.shape`` and
@@ -1734,7 +1770,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return self.device
 
 
-    def to_device(self, device):
+    def to_device(self: ndarray, device: Union[str, Device], /) -> ndarray:
         """Returns an array on the target device with the same value as this array.
 
         If the target device is the same as ``self.device``, then ``self`` is
@@ -1750,6 +1786,8 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         ndarray
             The target array.
         """
+        if isinstance(device, str):
+            device = Device(device)
         if self.device == device:
             return self
         return self.copyto(device)
@@ -2587,7 +2625,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute mish')
 
-    def squeeze(self, axis=None):  # pylint: disable=arguments-differ
+    def squeeze(self: ndarray,
+                /,
+                axis: Union[int, Tuple[int, ...]]
+    ) -> ndarray:  # pylint: disable=arguments-differ
         """Remove single-dimensional entries from the shape of a."""
         return squeeze(self, axis=axis)
 
@@ -2730,6 +2771,8 @@ def empty(
                                   .format(str(order)))
     if device is None:
         device = current_device()
+    elif isinstance(device, str):
+        device = Device(device)
     if dtype is None or dtype is float:
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if isinstance(shape, int):
@@ -2905,6 +2948,8 @@ def zeros(
     array([[0.],
            [0.]])
     """
+    if isinstance(device, str):
+        device = Device(device)
     return _mx_nd_np.zeros(shape, dtype, order, device)
 
 
@@ -2960,6 +3005,8 @@ def ones(
     array([[1., 1.],
            [1., 1.]])
     """
+    if isinstance(device, str):
+        device = Device(device)
     return _mx_nd_np.ones(shape, dtype, order, device)
 
 
@@ -3056,6 +3103,8 @@ def full(
     array([[2, 2],
            [2, 2]], dtype=int32)
     """
+    if isinstance(device, str):
+        device = Device(device)
     return _mx_nd_np.full(shape, fill_value, order=order, device=device, dtype=dtype, out=out)
 # pylint: enable=too-many-arguments, redefined-outer-name
 
@@ -6374,6 +6423,8 @@ def eye(N: int,
            [0., 0., 1.],
            [0., 0., 0.]])
     """
+    if isinstance(device, str):
+        device = Device(device)
     return _mx_nd_np.eye(N, M, k, dtype, device=device, kwargs=kwargs)
 # pylint: enable=redefined-outer-name
 
@@ -6477,6 +6528,8 @@ def linspace(
        * There could be an additional `device` argument to specify the device, e.g. the i-th
          GPU.
     """
+    if isinstance(device, str):
+        device = Device(device)
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, device)
 # pylint: enable=redefined-outer-name
 
@@ -6791,7 +6844,7 @@ def transpose(a: ndarray, /, *, axes: Optional[Union[int, Tuple[int, ...]]] = No
 
 
 @set_module('mxnet.numpy')
-def permute_dims(a: ndarray, /, *, axes: Optional[list[int]] = None) -> ndarray:
+def permute_dims(a: ndarray, /, axes: Optional[list[int]]) -> ndarray:
     """
     Permute the dimensions of an array.
 
@@ -7220,6 +7273,8 @@ def arange(
     >>> np.arange(3).dtype
     dtype('int64')
     """
+    if isinstance(device, str):
+        device = Device(device)
     return _mx_nd_np.arange(start, stop, step, dtype, device)
 # pylint: enable=redefined-outer-name
 
@@ -10209,7 +10264,7 @@ def vdot(a: ndarray, b: ndarray, /) -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = -1) -> ndarray:
+def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = None) -> ndarray:
     r"""
     Return the dot product of two vectors.
     Note that `vecdot` handles multidimensional arrays differently than `dot`:
@@ -10233,7 +10288,7 @@ def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = -1) -> ndarray:
         the shape determined according to Broadcasting . If specified as a
         negative integer, the function must determine the axis along which
         to compute the dot product by counting backward from the last dimension
-        (where -1 refers to the last dimension). If None , the function must
+        (where -1 refers to the last dimension). If None, the function must
         compute the dot product over the last axis. Default: None .
 
     Returns
@@ -10253,9 +10308,15 @@ def vecdot(a: ndarray, b: ndarray, /, *, axis: Optional[int] = -1) -> ndarray:
     >>> a = np.array([[1, 4], [5, 6]])
     >>> b = np.array([[4, 1], [2, 2]])
     >>> np.vecdot(a, b)
-    array(30.)
+    array([[ 4.,  1.,  2.,  2.],
+           [16.,  4.,  8.,  8.],
+           [20.,  5., 10., 10.],
+           [24.,  6., 12., 12.]])
     >>> np.vecdot(b, a)
-    array(30.)
+    array([[ 4., 16., 20., 24.],
+           [ 1.,  4.,  5.,  6.],
+           [ 2.,  8., 10., 12.],
+           [ 2.,  8., 10., 12.]])
     >>> 1*4 + 4*1 + 5*2 + 6*2
     30
     """
@@ -12057,6 +12118,8 @@ def full_like(
     >>> np.full_like(y, 0.1)
     array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
     """
+    if isinstance(device, str):
+        device = Device(device)
     return _mx_nd_np.full_like(a, fill_value=fill_value, dtype=dtype, order=order, device=device, out=out)
 # pylint: enable=redefined-outer-name
 
@@ -12387,7 +12450,7 @@ def nan_to_num(
 
 
 @set_module('mxnet.numpy')
-def squeeze(x: ndarray, /, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> ndarray:
+def squeeze(x: ndarray, /, axis: Union[int, Tuple[int, ...]]) -> ndarray:
     r"""Remove single-dimensional entries from the shape of an array.
 
     Parameters
@@ -13791,12 +13854,11 @@ def asarray(
         /,
         *,
         dtype: Optional[Union[dtype, str]] = None, # pylint: disable=undefined-variable
-        device: Optional[Device] = None,
+        device: Optional[Union[str, Device]] = None,
         copy: Optional[bool] = None
 ) -> ndarray:
     """
     Convert the input to an array.
-
     Parameters
     ----------
     obj : <array>, bool, int, float, NestedSequence[ bool | int | float ]
@@ -13814,39 +13876,53 @@ def asarray(
         If False, never copies for input which supports DLPack or the buffer protocol,
         and raises ValueError in case that would be necessary.
         If None, reuses existing memory buffer if possible, copies otherwise. Default: None .
-
         An array containing the data from obj.
-
     Examples
     --------
-    >>> a = np.arange(4).reshape(2,2)
-    >>> a
-    array([[0, 1],
-        [2, 3]])
-    >>> np.diagonal(a)
-    array([0, 3])
-    >>> np.diagonal(a, 1)
-    array([1])
-
-    >>> a = np.arange(8).reshape(2,2,2)
-    >>>a
-    array([[[0, 1],
-            [2, 3]],
-            [[4, 5],
-            [6, 7]]])
-    >>> np.diagonal(a, 0, 0, 1)
-    array([[0, 6],
-            [1, 7]])
+    >>> np.asarray([1, 2, 3])
+    array([1., 2., 3.])
+    >>> np.asarray([[1, 2], [3, 4]], dtype=np.int32)
+    array([[1, 2],
+           [3, 4]], dtype=int32)
+    >>> np.asarray([1.2], device=mx.gpu())
+    array([1.2], device=gpu(0))
     """
+    if isinstance(device, str):
+        device = Device(device)
     if isinstance(obj, numeric_types):
         dtype = dtype_from_number(obj) if dtype is None else dtype
         obj = _np.asarray(obj, dtype=dtype)
     elif isinstance(obj, _np.ndarray):
-        dtype = obj.dtype if dtype is None else dtype
+        if is_np_default_dtype():
+            dtype = obj.dtype if dtype is None else dtype
+        else:
+            dtype = _np.float32 if dtype is None or obj.dtype is _np.float64 else dtype
     elif isinstance(obj, ndarray):
-        dtype = obj.dtype if dtype is None else dtype
-    array = _as_mx_np_array(obj, device=device, zero_copy=copy)
-    return array.astype(dtype)
+        if dtype is not None:
+            obj = obj.astype(dtype, copy=copy)
+        if device is not None:
+            obj = obj.to_device(device)
+        return obj
+    elif hasattr(obj, '__dlpack__'):
+        return from_dlpack(obj)
+    else:
+        if dtype is None:
+            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
+            dtype = obj.dtype if hasattr(obj, "dtype") else default_dtype
+        try:
+            obj = _np.array(obj, dtype=dtype)
+        except Exception as e:
+            # printing out the error raised by official NumPy's array function
+            # for transparency on users' side
+            raise TypeError('{}'.format(str(e)))
+    if device is None:
+        device = current_device()
+    ret = empty(obj.shape, dtype=dtype, device=device)
+    if len(obj.shape) == 0:
+        ret[()] = obj
+    else:
+        ret[:] = obj
+    return ret
 
 
 # pylint: disable=redefined-outer-name
@@ -13879,3 +13955,96 @@ def from_dlpack(x, /) -> ndarray:
     """
     from_dlpack = ndarray_from_dlpack(ndarray)
     return from_dlpack(x)
+
+
+@set_module('mxnet.numpy')
+def matrix_transpose(x: ndarray, /) -> ndarray:
+    """
+    Transposes a matrix (or a stack of matrices) x ..
+
+    Parameters
+    ----------
+    x : ndarray
+        input array having shape (..., M, N) and whose innermost two dimensions form MxN matrices
+
+    Returns
+    -------
+    out : ndarray
+        an array containing the transpose for each matrix and having shape (..., N, M) . The
+        returned array must have the same data type as x .
+    """
+    if x.ndim < 2:
+        raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+    return _mx_nd_np.swapaxes(x, -1, -2)
+
+
+def astype(
+        self: ndarray,
+        /,
+        dtype: Union[str, dtype],
+        *,
+        order: Optional[str] = 'K',
+        casting: Optional[str] = 'unsafe',
+        subok: Optional[bool] = True,
+        copy: Optional[bool] = True
+) -> ndarray:  # pylint: disable=arguments-differ, unused-argument, too-many-arguments,
+    """
+    Copy of the array, cast to a specified type.
+
+    Parameters
+    ----------
+    dtype : str or dtype
+        Typecode or data-type to which the array is cast.
+    order : {'C', 'F', 'A', 'K'}, optional
+        Controls the memory layout order of the result.
+        'C' means C order, 'F' means Fortran order, 'A'
+        means 'F' order if all the arrays are Fortran contiguous,
+        'C' order otherwise, and 'K' means as close to the
+        order the array elements appear in memory as possible.
+        Default is 'K'.
+    casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+        Controls what kind of data casting may occur. Defaults to 'unsafe'
+        for backwards compatibility.
+
+        * 'no' means the data types should not be cast at all.
+        * 'equiv' means only byte-order changes are allowed.
+        * 'safe' means only casts which can preserve values are allowed.
+        * 'same_kind' means only safe casts or casts within a kind,
+        like float64 to float32, are allowed.
+        * 'unsafe' means any data conversions may be done.
+    subok : bool, optional
+        If True, then sub-classes will be passed-through (default), otherwise
+        the returned array will be forced to be a base-class array.
+    copy : bool, optional
+        Default `True`. By default, astype always returns a newly
+        allocated ndarray on the same device. If this is set to
+        `False`, and the dtype requested is the same as the ndarray's
+        dtype, the ndarray is returned instead of a copy.
+
+    Returns
+    -------
+    arr_t : ndarray
+        Unless `copy` is False and the other conditions for returning the input
+        array are satisfied (see description for `copy` input parameter), `arr_t`
+        is a new array of the same shape as the input array with `dtype`.
+
+    Notes
+    -----
+    This function differs from the official `ndarray`'s ``astype`` function in the following
+    aspects:
+        * `order` only supports 'C' and 'K'.
+        * `casting` only supports 'unsafe'.
+        * `subok` only supports ``True``.
+    """
+    if order is not None and order != 'K' and order != 'C':
+        raise ValueError('order must be either \'K\' or \'C\'')
+    if casting != 'unsafe':
+        raise ValueError('casting must be equal to \'unsafe\'')
+    if not subok:
+        raise ValueError('subok must be equal to True')
+    if dtype is None:
+        dtype = _np.float32
+    if not copy and _np.dtype(dtype) == self.dtype:
+        return self
+
+    return _npi.cast(self, dtype=dtype)

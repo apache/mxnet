@@ -21,7 +21,7 @@
 from typing import Optional, Tuple, Union
 from .multiarray import ndarray
 from ..ndarray import numpy as _mx_nd_np
-from ..util import wrap_data_api_linalg_func
+from ..util import wrap_data_api_linalg_func, wrap_np_binary_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg
 
@@ -763,7 +763,7 @@ def svdvals(a: ndarray, /) -> ndarray:
     return s
 
 
-def cholesky(a: ndarray, upper: bool = False, /) -> ndarray:
+def cholesky(a: ndarray, /, *, upper: bool = False) -> ndarray:
     r"""
     Cholesky decomposition.
 
@@ -1472,3 +1472,104 @@ def eigh(a: ndarray, /, *, upper: Optional[bool] = False):
     else:
         UPLO = 'U'
     return _mx_nd_np.linalg.eigh(a, UPLO)
+
+
+@wrap_np_binary_func
+def matmul(a: ndarray, b: ndarray, /, *, out: Optional[ndarray] = None, **kwargs) -> ndarray:
+    r"""Matrix product of two arrays.
+
+    Parameters
+    ----------
+    a, b : ndarray
+        Input arrays, scalars not allowed.
+    out : ndarray, optional
+        A location into which the result is stored.
+        If provided, it must have a shape that matches the signature (n,k),(k,m)->(n,m).
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray
+        The matrix product of the inputs.
+        This is a scalar only when both x1, x2 are 1-d vectors.
+
+    Raises
+    ------
+    MXNetError
+        If the last dimension of a is not the same size as the second-to-last dimension of b.
+        If a scalar value is passed in.
+
+    See Also
+    --------
+    tensordot : Sum products over arbitrary axes.
+    dot : alternative matrix product with different broadcasting rules.
+    einsum : Einstein summation convention.
+
+    .. note::
+
+       The behavior depends on the arguments in the following way.
+
+       * If both arguments are ``2-D`` they are multiplied like conventional matrices.
+       * If either argument is ``N-D``, ``N > 2``, it is treated as a stack of matrices
+         residing in the last two indexes and broadcast accordingly.
+       * If the first argument is ``1-D``, it is promoted to a matrix by prepending
+         a 1 to its dimensions. After matrix multiplication the prepended 1 is removed.
+       * If the second argument is ``1-D``, it is promoted to a matrix by appending a 1
+         to its dimensions. After matrix multiplication the appended 1 is removed.
+
+       matmul differs from dot in two important ways:
+
+       * Multiplication by scalars is not allowed, use multiply instead.
+       * Stacks of matrices are broadcast together as if the matrices were elements,
+         respecting the signature ``(n,k),(k,m)->(n,m)``:
+
+       >>> a = np.ones([9, 5, 7, 4])
+       >>> c = np.ones([9, 5, 4, 3])
+       >>> np.dot(a, c).shape
+       (9, 5, 7, 9, 5, 3)
+       >>> np.matmul(a, c).shape
+       (9, 5, 7, 3)
+       >>> # n is 7, k is 4, m is 3
+
+    Examples
+    --------
+    For 2-D arrays it is the matrix product:
+
+    >>> a = np.array([[1, 0],
+    ...               [0, 1]])
+    >>> b = np.array([[4, 1],
+    ...               [2, 2]])
+    >>> np.matmul(a, b)
+    array([[4., 1.],
+           [2., 2.]])
+
+    For 2-D mixed with 1-D, the result is the usual.
+
+    >>> a = np.array([[1, 0],
+    ...               [0, 1]])
+    >>> b = np.array([1, 2])
+    >>> np.matmul(a, b)
+    array([1., 2.])
+    >>> np.matmul(b, a)
+    array([1., 2.])
+
+    Broadcasting is conventional for stacks of arrays
+
+    >>> a = np.arange(2 * 2 * 4).reshape((2, 2, 4))
+    >>> b = np.arange(2 * 2 * 4).reshape((2, 4, 2))
+    >>> np.matmul(a, b).shape
+    (2, 2, 2)
+    >>> np.matmul(a, b)[0, 1, 1]
+    array(98.)
+    >>> sum(a[0, 1, :] * b[0, :, 1])
+    array(98.)
+
+    Scalar multiplication raises an error.
+
+    >>> np.matmul([1, 2], 3)
+    Traceback (most recent call last):
+    ...
+    mxnet.base.MXNetError: ... : Multiplication by scalars is not allowed.
+
+    """
+    return _mx_nd_np.matmul(a, b, out=out)

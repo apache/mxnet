@@ -1805,6 +1805,7 @@ def tensordot(a, b, axes=2):
     integer_like scalar, ``N``; if it is such, then the last ``N``
     dimensions of `a` and the first ``N`` dimensions of `b` are summed
     over.
+
     Parameters
     ----------
     a, b : ndarray, len(shape) >= 1
@@ -1816,6 +1817,7 @@ def tensordot(a, b, axes=2):
         * (2,) ndarray
         Or, a list of axes to be summed over, first sequence applying to `a`,
         second to `b`. Both elements ndarray must be of the same length.
+
     See Also
     --------
     dot, einsum
@@ -1832,6 +1834,7 @@ def tensordot(a, b, axes=2):
     (first) axes of `a` (`b`) - the argument `axes` should consist of
     two sequences of the same length, with the first axis to sum over given
     first in both sequences, the second axis second, and so forth.
+
     Examples
     --------
     >>> a = np.arange(60.).reshape(3,4,5)
@@ -1846,6 +1849,8 @@ def tensordot(a, b, axes=2):
            [ 4796.,  5162.],
            [ 4928.,  5306.]])
     """
+    if axes == None:
+        axes = -1
     return _api_internal.tensordot(a, b, axes)
 
 

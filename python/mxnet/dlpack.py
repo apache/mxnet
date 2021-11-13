@@ -22,7 +22,10 @@
 """DLPack API of MXNet."""
 
 import ctypes
-from .base import _LIB, c_str, check_call, NDArrayHandle
+import enum
+
+from mxnet.device import current_device
+from .base import _LIB, c_str, check_call, NDArrayHandle, mx_int
 
 DLPackHandle = ctypes.c_void_p
 
@@ -38,6 +41,18 @@ def _dlpack_deleter(pycapsule):
         check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
 
 _c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
+
+class DLDeviceType(enum.IntEnum):
+    DLCPU = 1,
+    DLGPU = 2,
+    DLCPUPINNED = 3,
+    DLOPENCL = 4,
+    DLVULKAN = 7,
+    DLMETAL = 8,
+    DLVPI = 9,
+    DLROCM = 10,
+    DLEXTDEV = 12,
+
 
 class DLContext(ctypes.Structure):
     _fields_ = [("device_type", ctypes.c_int),
@@ -94,8 +109,21 @@ def ndarray_from_dlpack(array_cls):
     fn : dlpack -> array_cls
     """
     def from_dlpack(dlpack):
+        tp = type(dlpack)
+        if tp.__module__ == "builtins" and tp.__name__ == "PyCapsule":
+            dlpack = ctypes.py_object(dlpack)
+        elif hasattr(dlpack, "__dlpack__"):
+            device, device_id = dlpack.__dlpack_device__()
+            if device != DLDeviceType.DLGPU:
+                dlpack = ctypes.py_object(dlpack.__dlpack__())
+            else:
+                s = mx_int()
+                check_call(_LIB.MXGetCurrentStream(
+                    ctypes.c_int(device_id), ctypes.byref(s)))
+                dlpack = ctypes.py_object(dlpack.__dlpack__(stream=s.value))
+        else:
+            raise AttributeError("Required PyCapsule or object with __dlpack__")
         handle = NDArrayHandle()
-        dlpack = ctypes.py_object(dlpack)
         assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
             'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
         dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))

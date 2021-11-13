@@ -876,7 +876,9 @@ unittest_array_api_standardization() {
         array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_creation_functions.py
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_indexing.py
-    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_signatures.py
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
+        -k '(not einsum and not linalg and not __dlpack__)' array_api_tests/test_signatures.py
+    # Need to upgrade array_api_tests to run test for einsum, linalg-funcs and __dlpack__.
     popd
 }
 
