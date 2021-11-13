@@ -71,7 +71,7 @@ if not os.path.exists(data_path):
 ```{.python .input}
 def transform(data, width=64, height=64):
     data = mx.image.imresize(data, width, height)
-    data = np.transpose(data, (2,0,1))
+    data = np.transpose(data, axes=(2,0,1))
     data = data.astype(onp.float32)/127.5 - 1
     if data.shape[0] == 1:
         data = np.tile(data, (3, 1, 1))
