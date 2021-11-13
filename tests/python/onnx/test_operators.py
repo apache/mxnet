@@ -104,7 +104,7 @@ def test_onnx_export_np_abs(tmp_path):
                                     [(0, 0, 0), (None, 4, 5), (None, 1, 2)]])
 def test_onnx_export_npx_slice(tmp_path, dtype, params):
     M = def_model(mx.npx, 'slice', begin=params[0], end=params[1], step=params[2])
-    x = mx.np.arange(start=0, stop=60, dtype=dtype).reshape((3, 4, 5))
+    x = mx.np.arange(0, stop=60, dtype=dtype).reshape((3, 4, 5))
     op_export_test('slice', M, [x], tmp_path)
 
 
@@ -1854,7 +1854,7 @@ def test_onnx_export_random_normal(tmp_path, dtype, loc, scale, shape):
 @pytest.mark.parametrize("spatial_scale", [0.7, 1.0])
 def test_onnx_export_npx_roi_pooling(tmp_path, dtype, spatial_scale):
     M = def_model(mx.npx, 'roi_pooling', pooled_size=(2,2), spatial_scale=spatial_scale)
-    x = mx.np.arange(start=0, stop=48, dtype=dtype).reshape((1,1,8,6))
+    x = mx.np.arange(0, stop=48, dtype=dtype).reshape((1,1,8,6))
     y = mx.np.array([[0,0,0,4,4]], dtype=dtype)
     op_export_test('roi_pooling', M, [x, y], tmp_path)
 

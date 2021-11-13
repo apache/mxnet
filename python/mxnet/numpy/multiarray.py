@@ -6626,7 +6626,7 @@ def expand_dims(a: ndarray, /, *, axis: int) -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def tile(A: Union[ndarray, Union[...]], reps: Union[int, Tuple[int, ...]], /) -> ndarray:
+def tile(A: Union[ndarray, Union[...]], reps: Union[int, Tuple[int, ...]]) -> ndarray:
     r"""
     Construct an array by repeating A the number of times given by reps.
 
@@ -8158,7 +8158,7 @@ def min(
 
 
 @set_module('mxnet.numpy')
-def swapaxes(a: ndarray, axis1: int, axis2: int, /) -> ndarray:
+def swapaxes(a: ndarray, axis1: int, axis2: int) -> ndarray:
     """Interchange two axes of an array.
 
     Parameters
@@ -8202,7 +8202,7 @@ def swapaxes(a: ndarray, axis1: int, axis2: int, /) -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def clip(a: ndarray, a_min: ndarray, a_max: ndarray, /, *, out: Optional[ndarray] = None) -> ndarray:
+def clip(a: ndarray, a_min: ndarray, a_max: ndarray, *, out: Optional[ndarray] = None) -> ndarray:
     """clip(a, a_min, a_max, out=None)
 
     Clip (limit) the values in an array.
