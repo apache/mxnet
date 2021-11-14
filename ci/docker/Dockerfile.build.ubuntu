@@ -36,6 +36,7 @@ WORKDIR /work/deps
 SHELL ["/bin/bash", "-c"]
 RUN export DEBIAN_FRONTEND=noninteractive && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
+    ls -lt /var/*/apt/*/* && \
     apt-get clean && \
     apt-get update && \
     apt-get install -y wget software-properties-common && \
@@ -64,8 +65,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         g++ \
         g++-7 \
         g++-8 \
-        intel-oneapi-mkl${INTEL_MKL} \
-        intel-oneapi-mkl-devel${INTEL_MKL} \
         libomp-dev \
         ## Dependencies
         libgomp1 \
@@ -91,7 +90,16 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libb2-dev \
         libzstd-dev \
         gfortran && \
+    echo "**** Before oneapi install ****" && \
+    ls -lt /var/*/apt/*/* && \
+    apt-get install -y \
+        intel-oneapi-mkl${INTEL_MKL} \
+        intel-oneapi-mkl-devel${INTEL_MKL} && \
+    echo "**** After oneapi install ****" && \
+    ls -lt /var/*/apt/*/* && \
     rm -rf /var/lib/apt/lists/* && \
+    echo "**** After apt lists clean ****" && \
+    ls -lt /var/*/apt/*/* && \
     add-apt-repository -r "deb https://apt.repos.intel.com/oneapi all main"
 
 # Build OpenBLAS from source
