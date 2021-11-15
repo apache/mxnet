@@ -84,7 +84,7 @@ struct TakeNonzeroAxisCPU {
                                   const int idx_size,
                                   const int axis_dim,
                                   const int axis) {
-    for (index_t j = 0; j < static_cast<index_t>(idx_size); ++j) {  // 4
+    for (index_t j = 0; j < static_cast<index_t>(idx_size); ++j) {
       int index = indices[j];
       if (clip) {
         index = (index < 0) ? 0 : index;
