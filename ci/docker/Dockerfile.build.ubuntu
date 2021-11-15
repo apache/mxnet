@@ -43,7 +43,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     wget -qO - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB -O - | apt-key add -; \
     add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"; \
     INTEL_MKL="-2021.3.0"; \
-    apt-get update && \
+    apt-get -o Debug::pkgAcquire::Auth=true update && \
     apt-get install -y \
         ## Utilities
         curl \
@@ -169,7 +169,7 @@ SHELL ["/bin/bash", "-c"]
 ARG BASE_IMAGE
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
-    apt-get update && \
+    apt-get -o Debug::pkgAcquire::Auth=true update && \
     if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
         if [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
             TRT_VERSION="7.2.0-1+cuda11.0"; \
