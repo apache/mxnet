@@ -203,7 +203,7 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
 }
 
 #if MXNET_USE_ONEDNN == 1
-bool SupportONEDNNAveragePooling(const NDArray& in_data, const NDArray& out_data) {
+bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) {
   for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
     const int s1 = in_data.shape()[idx];
     const int s2 = out_data.shape()[idx];
@@ -238,13 +238,8 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
   OneDNN doesn't support adaptive pooling.
   Fallback is needed when padding is not equal 0;
   */
-  // okay, so earlier SupportDNNLPooling was only provided with inputs[0], but it is not compatible
-  // with master branch, so one solution is to use SupportDNNL(inputs[0]) like on v1.x branch or to
-  // provide also param as argument this also means that param parsing would be taking to higher
-  // scope
-  // but the other things is that ONEDNN adaptive pooling is now supported? Right?
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (SupportDNNLPooling(param, inputs[0]) && SupportONEDNNAveragePooling(inputs[0], outputs[0])) {
+  if (SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0])) {
     const NDArray* workspace = nullptr;
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
     DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, true);
