@@ -162,24 +162,27 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
     if [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
         wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer7_7.2.0-1+cuda11.0_amd64.deb; \
-        sudo apt install ./libnvinfer7_7.2.0-1+cuda11.0_amd64.deb; \
-        TRT_VERSION="7.2.0-1+cuda11.0"; \
-        TRT_MAJOR_VERSION=7; \
+        dpkg -i ./libnvinfer7_7.2.0-1+cuda11.0_amd64.deb; \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer-dev_7.2.0-1+cuda11.0_amd64.deb; \
+        dpkg -i ./libnvinfer-dev_7.2.0-1+cuda11.0_amd64.deb; \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer-plugin7_7.2.0-1+cuda11.0_amd64.deb; \
+        dpkg -i ./libnvinfer-plugin7_7.2.0-1+cuda11.0_amd64.deb; \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer-plugin-dev_7.2.0-1+cuda11.0_amd64.deb; \
+        dpkg -i ./libnvinfer-plugin-dev_7.2.0-1+cuda11.0_amd64.deb; \
     elif [ ${SHORT_CUDA_VERSION} = 11.1 ]; then \
         wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer7_7.2.1-1+cuda11.1_amd64.deb; \
-        sudo apt install ./libnvinfer7_7.2.1-1+cuda11.1_amd64.deb; \
-        TRT_VERSION="7.2.1-1+cuda11.1"; \
-        TRT_MAJOR_VERSION=7; \
+        dpkg -i ./libnvinfer7_7.2.1-1+cuda11.1_amd64.deb; \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer-dev_7.2.1-1+cuda11.1_amd64.deb; \
+        dpkg -i ./libnvinfer-dev_7.2.1-1+cuda11.1_amd64.deb; \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer-plugin7_7.2.1-1+cuda11.1_amd64.deb; \
+        dpkg -i ./libnvinfer-plugin7_7.2.1-1+cuda11.1_amd64.deb; \
+        wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/libnvinfer-plugin-dev_7.2.1-1+cuda11.1_amd64.deb; \
+        dpkg -i ./libnvinfer-plugin-dev_7.2.1-1+cuda11.1_amd64.deb; \
     else \
         echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
         exit 1; \
-    fi; \
+    fi && \
     apt-get update && \
     apt-get install -y --allow-change-held-packages libcudnn8 libcudnn8-dev && \
-    apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
-                        libnvinfer-dev=${TRT_VERSION} \
-                        libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
-                        libnvinfer-plugin-dev=${TRT_VERSION}; \
-    fi && \
     rm -rf /var/lib/apt/lists/*
 
