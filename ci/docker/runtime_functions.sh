@@ -569,7 +569,7 @@ build_ubuntu_gpu_tensorrt() {
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
+    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE -DPYTHON_EXECUTABLE=/usr/bin/python3 ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
