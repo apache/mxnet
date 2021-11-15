@@ -38,11 +38,11 @@ namespace mxnet {
 namespace op {
 
 class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
-  enum InStatus { kFail = 0, kStart, kSuccess };
+  enum class InStatus { kFail = 0, kStart, kSuccess };
 
  private:
   std::vector<const BiDirectedNode*> matched_list_;
-  InStatus in_status_;
+  InStatus in_status{};
 
  public:
   bool Select(const BiDirectedNode& seed_node,
@@ -60,24 +60,25 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
     }
 
     if (status) {
-      in_status_ = InStatus::kStart;
+      in_status = InStatus::kStart;
       matched_list_.clear();
-      matched_list_.push_back(&seed_node);
+      matched_list_.emplace_back(&seed_node);
       return true;
     }
     return false;
   }
 
   bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
-    if (in_status_ == InStatus::kFail || in_status_ == InStatus::kSuccess ||
-        input_node.node->is_variable())
+    if (in_status == InStatus::kFail || in_status == InStatus::kSuccess ||
+        input_node.node->is_variable()) {
       return false;
+    }
 
-    switch (in_status_) {
+    switch (in_status) {
       case InStatus::kStart:
         if (input_node.node->op()) {
-          in_status_ = InStatus::kSuccess;
-          matched_list_.push_back(&input_node);
+          in_status = InStatus::kSuccess;
+          matched_list_.emplace_back(&input_node);
           return true;
         }
       default:
@@ -91,7 +92,7 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
   }
 
   std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
-    if (in_status_ == InStatus::kFail || in_status_ != InStatus::kSuccess) {
+    if (in_status == InStatus::kFail || in_status != InStatus::kSuccess) {
       return std::vector<BiDirectedNode*>(0);
     } else {
       std::vector<BiDirectedNode*> ret;
@@ -132,9 +133,9 @@ class SgDNNLIdentityProperty : public SubgraphProperty {
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
     nnvm::NodeEntry identity_node_entry;
-    for (auto ne : sym.outputs) {
-      if (ne.node->op() && IsIdentityNode(ne.node)) {
-        identity_node_entry = ne;
+    for (auto nentry : sym.outputs) {
+      if (nentry.node->op() && IsIdentityNode(nentry.node)) {
+        identity_node_entry = nentry;
       }
     }
 
