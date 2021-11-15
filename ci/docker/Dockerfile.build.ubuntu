@@ -175,6 +175,7 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
         exit 1; \
     fi; \
     apt-get update && \
+    apt-get install -y --allow-change-held-packages libcudnn8 libcudnn8-dev && \
     apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
                         libnvinfer-dev=${TRT_VERSION} \
                         libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \

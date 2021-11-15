@@ -26,7 +26,11 @@
 #include <set>
 #include "./np_matrix_op-inl.h"
 #include "../nn/concat-inl.h"
-
+#if MXNET_USE_ONEDNN == 1
+#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "../nn/dnnl/dnnl_base-inl.h"
+#include "../nn/dnnl/dnnl_transpose-inl.h"
+#endif
 namespace mxnet {
 namespace op {
 
@@ -100,6 +104,38 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
+#if MXNET_USE_ONEDNN == 1
+
+static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+      << "Transpose only supports kNullOp, kWriteTo and kAddTo";
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  if (SupportDNNLTranspose(inputs[0]) && req[0] == kWriteTo) {
+    DNNLRun(DNNLTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  FallBackCompute(NumpyTranspose<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+inline static bool NumpyTransposeStorageType(const nnvm::NodeAttrs& attrs,
+                                             const int dev_mask,
+                                             DispatchMode* dispatch_mode,
+                                             std::vector<int>* in_attrs,
+                                             std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif
 
 NNVM_REGISTER_OP(_npi_transpose)
     .set_num_inputs(1)
@@ -134,6 +170,11 @@ NNVM_REGISTER_OP(_npi_transpose)
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", NumpyTransposeComputeExCPU)
+    .set_attr<FInferStorageType>("FInferStorageType", NumpyTransposeStorageType)
+#endif
     .set_attr<nnvm::FListInputNames>("FListInputNames",
                                      [](const NodeAttrs& attrs) {
                                        return std::vector<std::string>{"a"};
