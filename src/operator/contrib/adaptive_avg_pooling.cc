@@ -204,10 +204,14 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
 
 #if MXNET_USE_ONEDNN == 1
 <<<<<<< HEAD
+<<<<<<< HEAD
 bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) {
 =======
 bool SupportONEDNNAveragePooling(const NDArray& in_data, const NDArray& out_data) {
 >>>>>>> feat: added onednn adaptive pooling to master
+=======
+bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) {
+>>>>>>> fix: changed SupportDNNLPooling condition to SupportDNNL in adaptive_avg_pooling.cc
   for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
     const int s1 = in_data.shape()[idx];
     const int s2 = out_data.shape()[idx];
@@ -242,7 +246,13 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
   oneDNN doesn't support adaptive pooling.
   Fallback is needed when padding is not equal 0;
   */
+<<<<<<< HEAD
   if (SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0])) {
+=======
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0])) {
+    const NDArray* workspace = nullptr;
+>>>>>>> fix: changed SupportDNNLPooling condition to SupportDNNL in adaptive_avg_pooling.cc
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
     DNNLRun(DNNLPoolingCompute<true>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
