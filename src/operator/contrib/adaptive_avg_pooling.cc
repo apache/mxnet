@@ -235,7 +235,7 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   /*
-  OneDNN doesn't support adaptive pooling.
+  oneDNN doesn't support adaptive pooling.
   Fallback is needed when padding is not equal 0;
   */
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
