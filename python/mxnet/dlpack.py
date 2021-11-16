@@ -119,7 +119,7 @@ def ndarray_from_dlpack(array_cls):
             else:
                 s = mx_int()
                 check_call(_LIB.MXGetCurrentStream(
-                    ctypes.c_int(ctypes.c_int(device_id), ctypes.byref(s))))
+                    ctypes.c_int(device_id), ctypes.byref(s)))
                 dlpack = ctypes.py_object(dlpack.__dlpack__(stream=s))
         else:
             raise AttributeError("Required PyCapsule or object with __dlpack__")
