@@ -361,26 +361,6 @@ struct mixed_type_helper<index_t, uint64> {
   using type = index_t;
 };
 
-template<>
-struct mixed_type_helper<bool_t, index_t> {
-  using type = index_t;
-};
-
-template<>
-struct mixed_type_helper<index_t, bool_t> {
-  using type = index_t;
-};
-
-template<>
-struct mixed_type_helper<bool_t, uint64> {
-  using type = uint64;
-};
-
-template<>
-struct mixed_type_helper<uint64, bool_t> {
-  using type = uint64;
-};
-
 template <typename T>
 struct mixed_type_helper<T, bool_t, typename enable_if<is_integral<T>::value &&
                                                        sizeof(T) < sizeof(bool_t)>::type> {
@@ -395,6 +375,13 @@ struct mixed_type_helper<bool_t, T, typename enable_if<is_integral<T>::value &&
 
 template <typename T>
 struct mixed_type_helper<T, bool_t, typename enable_if<is_integral<T>::value &&
+                                                       sizeof(T) == sizeof(bool_t)>::type> {
+  using type = T;
+};
+
+template <typename T>
+struct mixed_type_helper<bool_t, T, typename enable_if<is_integral<T>::value &&
+                                                       !is_same<T, bool_t>::value &&
                                                        sizeof(T) == sizeof(bool_t)>::type> {
   using type = T;
 };
