@@ -3062,6 +3062,11 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
     (*dict)["squeeze_axis"] = squeeze_axis_s.str();
     (*dict)["sections"]     = sections_s.str();
   }
+
+  bool operator==(const SplitParam& other) const {
+    return this->indices == other.indices && this->axis == other.axis &&
+           this->squeeze_axis == other.squeeze_axis && this->sections == other.sections;
+  }
 };  // struct SplitParam
 
 inline mxnet::TShape GetSplitIndices(const mxnet::TShape& ishape, int axis, int sections) {
@@ -3451,6 +3456,17 @@ struct hash<mxnet::op::ExpandDimParam> {
   }
 };
 
+template <>
+struct hash<mxnet::op::SplitParam> {
+  size_t operator()(const mxnet::op::SplitParam& val) {
+    size_t ret = 0;
+    ret        = dmlc::HashCombine(ret, val.indices);
+    ret        = dmlc::HashCombine(ret, val.axis);
+    ret        = dmlc::HashCombine(ret, val.squeeze_axis);
+    ret        = dmlc::HashCombine(ret, val.sections);
+    return ret;
+  }
+};
 }  // namespace std
 
 #endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
