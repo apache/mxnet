@@ -18,10 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file alm.h
  * \brief Automatic Layout Manager
- * \author Dawid Tracz
+ * \author Dawid Tracz, Vladimir Cherepanov
  */
 
 #ifndef MXNET_COMMON_ALM_H_
@@ -39,51 +38,21 @@ namespace mxnet {
 namespace alm {
 
 /*!
- *  \brief Class connects MXInitializeALM function from c_api and ALM.
- *         It provides simple interface for adding new targets
- *         and stores this data to be used later, while running ALM.
+ *  \brief Struct connects MXInitializeALM function from c_api and ALM.
  */
-class ALMParams {
- public:
-  using ALMTargetsT = std::unordered_map<std::string, std::string>;
+struct ALMParams {
+  bool optimize = false;
 
-  static ALMParams& getALMParams() {
+  static ALMParams& get() {
     static ALMParams alm;
     return alm;
   }
-
-  bool empty() const {
-    return targets_.empty();
-  }
-
-  void addTarget(std::string opname, std::string targetLayout) {
-    targets_[opname] = targetLayout;
-  }
-
-  int setTargets(ALMTargetsT new_targets) {
-    targets_.clear();
-    targets_ = new_targets;
-    return targets_.size();
-  }
-
-  const ALMTargetsT& getTargets() const {
-    return targets_;
-  }
-
-  ALMParams(ALMParams&) = delete;
-  ALMParams operator=(ALMParams&) = delete;
-
- private:
-  ALMTargetsT targets_;
-
-  ALMParams() {}
-};  // class ALM_params
+};
 
 /*!
  * \bried Top-level function to run layout optimization.
  */
-nnvm::Graph OptimizeLayout(nnvm::Graph&& g,
-                           const std::unordered_map<std::string, std::string>& layout_targets);
+nnvm::Graph OptimizeLayout(nnvm::Graph&& g);
 
 /*!
  * \brief Transpose, represented by permutation of axes.

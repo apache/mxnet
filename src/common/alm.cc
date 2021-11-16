@@ -18,10 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file alm.cc
  * \brief Automatic Layout Manager
- * \author Dawid Tracz
+ * \author Dawid Tracz, Vladimir Cherepanov
  */
 
 #include "alm.h"
@@ -31,6 +30,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include "../operator/nn/convolution-inl.h"
+#include "../operator/nn/deconvolution-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
 
 namespace mxnet {
@@ -50,25 +51,34 @@ nnvm::ObjectPtr CreateTransposeNode(const std::string& name, const alm::Transpos
   return newptr;
 }
 
-std::unordered_map<std::string, mshadow::LayoutFlag> ConvertTargets(
-    const std::unordered_map<std::string, std::string>& targets) {
-  std::unordered_map<std::string, mshadow::LayoutFlag> ret;
-  for (const auto& p : targets) {
-    auto layout = mshadow::layoutFlag(p.second);
-    if (layout == mshadow::kUNKNOWN) {
-      LOG(WARNING) << "Unknown layout: " << p.second << ". ignoring...";
-      continue;
-    }
-    ret.insert(std::make_pair(p.first, layout));
-  }
-  return ret;
+mshadow::LayoutFlag TargetLayout(const nnvm::ObjectPtr& node) {
+  static const Op* conv_op   = Op::Get("Convolution");
+  static const Op* deconv_op = Op::Get("Deconvolution");
+
+  static const std::unordered_map<int, mshadow::LayoutFlag> ndim2layout{
+      {1, mshadow::kNWC},
+      {2, mshadow::kNHWC},
+      {3, mshadow::kNDHWC},
+  };
+
+  auto target_layout = [](const auto& param) {
+    auto it = ndim2layout.find(param.kernel.ndim());
+    CHECK(it != ndim2layout.end()) << "Unexpected kernel dimensions: " << param.kernel;
+    return it->second;
+  };
+
+  if (node->op() == conv_op)
+    return target_layout(nnvm::get<op::ConvolutionParam>(node->attrs.parsed));
+
+  if (node->op() == deconv_op)
+    return target_layout(nnvm::get<op::DeconvolutionParam>(node->attrs.parsed));
+
+  return mshadow::kUNKNOWN;
 }
 
 }  // namespace
 
-nnvm::Graph OptimizeLayout(nnvm::Graph&& g,
-                           const std::unordered_map<std::string, std::string>& layout_targets) {
-  std::unordered_map<std::string, mshadow::LayoutFlag> targets = ConvertTargets(layout_targets);
+nnvm::Graph OptimizeLayout(nnvm::Graph&& g) {
   static const auto& op_map     = Op::GetAttr<mxnet::alm::FChangeLayout>("FChangeLayout");
   static const Op* transpose_op = Op::Get("transpose");
   std::unordered_set<nnvm::ObjectPtr> outputs;
@@ -86,41 +96,38 @@ nnvm::Graph OptimizeLayout(nnvm::Graph&& g,
     alm::Transpose axes;
   };
   std::vector<ToAdd> to_add;
-  DFSVisit(
-      g.outputs, [&targets, &outputs, &changed, &to_add, &to_delete](const nnvm::ObjectPtr& node) {
-        std::vector<alm::Transpose> input_axes(node->inputs.size());
-        for (size_t i = 0; i < node->inputs.size(); ++i) {
-          if (node->inputs[i].node->op() == transpose_op) {
-            const auto& param = nnvm::get<op::TransposeParam>(node->inputs[i].node->attrs.parsed);
-            if (IsIdentity(FromTShape(param.axes))) {
-              to_delete.push_back({node, i});
-              continue;
-            }
-          }
-          auto it = changed.find(node->inputs[i]);
-          if (it == changed.end())
-            continue;
-          input_axes[i] = it->second;
+  DFSVisit(g.outputs, [&outputs, &changed, &to_add, &to_delete](const nnvm::ObjectPtr& node) {
+    std::vector<alm::Transpose> input_axes(node->inputs.size());
+    for (size_t i = 0; i < node->inputs.size(); ++i) {
+      if (node->inputs[i].node->op() == transpose_op) {
+        const auto& param = nnvm::get<op::TransposeParam>(node->inputs[i].node->attrs.parsed);
+        if (IsIdentity(FromTShape(param.axes))) {
+          to_delete.push_back({node, i});
+          continue;
         }
-        auto fchange = op_map.get(node->op(), nullptr);
-        if (fchange && outputs.count(node) == 0) {
-          auto it            = targets.find(node->op()->name);
-          auto target_layout = it != targets.end() ? it->second : mshadow::kUNKNOWN;
-          std::vector<alm::Transpose> output_axes;
-          if (fchange(&node->attrs, target_layout, &input_axes, &output_axes))
-            node->op()->attr_parser(&node->attrs);
-          for (size_t i = 0; i < output_axes.size(); ++i) {
-            if (IsIdentity(output_axes[i]))
-              continue;
-            changed.insert(std::make_pair(nnvm::NodeEntry(node, i, 0), output_axes[i]));
-          }
-        }
-        for (size_t i = 0; i < input_axes.size(); ++i) {
-          if (IsIdentity(input_axes[i]))
-            continue;
-          to_add.push_back({node, i, input_axes[i]});
-        }
-      });
+      }
+      auto it = changed.find(node->inputs[i]);
+      if (it == changed.end())
+        continue;
+      input_axes[i] = it->second;
+    }
+    auto fchange = op_map.get(node->op(), nullptr);
+    if (fchange && outputs.count(node) == 0) {
+      std::vector<alm::Transpose> output_axes;
+      if (fchange(&node->attrs, TargetLayout(node), &input_axes, &output_axes))
+        node->op()->attr_parser(&node->attrs);
+      for (size_t i = 0; i < output_axes.size(); ++i) {
+        if (IsIdentity(output_axes[i]))
+          continue;
+        changed.insert(std::make_pair(nnvm::NodeEntry(node, i, 0), output_axes[i]));
+      }
+    }
+    for (size_t i = 0; i < input_axes.size(); ++i) {
+      if (IsIdentity(input_axes[i]))
+        continue;
+      to_add.push_back({node, i, input_axes[i]});
+    }
+  });
   for (const auto& t : to_delete) {
     auto& tnode = t.node->inputs[t.input_idx].node;
     CHECK_EQ(tnode->inputs.size(), 1);

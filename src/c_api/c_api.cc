@@ -4008,8 +4008,6 @@ int MXCUDAProfilerStop() {
 
 int MXInitializeALM() {
   API_BEGIN();
-  auto& alm = mxnet::alm::ALMParams::getALMParams();
-  alm.setTargets({{"Convolution", "NHWC"}, {"Deconvolution", "NHWC"}});
-  return -static_cast<int>(alm.empty());
+  mxnet::alm::ALMParams::get().optimize = true;
   API_END();
 }

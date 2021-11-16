@@ -209,8 +209,8 @@ void CreateForwardGraph(const nnvm::Symbol& sym, nnvm::Graph* fwd_graph) {
       fwd_graph->outputs.push_back(nodeEntry);
     }
   }
-  if (const auto& alm_params = alm::ALMParams::getALMParams(); !alm_params.empty())
-    *fwd_graph = alm::OptimizeLayout(std::move(*fwd_graph), alm_params.getTargets());
+  if (alm::ALMParams::get().optimize)
+    *fwd_graph = alm::OptimizeLayout(std::move(*fwd_graph));
 }
 
 /* \brief construct grad_graph from fwd_graph and ograd_entries*/
