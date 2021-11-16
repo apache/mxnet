@@ -102,6 +102,32 @@ message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
+execute_process(COMMAND git rev-parse --abbrev-ref HEAD 
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_BRANCH
+  RESULT_VARIABLE BRANCH_FAILED
+)
+execute_process(COMMAND git rev-parse HEAD
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_COMMIT
+  RESULT_VARIABLE COMMIT_FAILED
+)
+
+if(NOT BRANCH_FAILED)
+  string(REGEX REPLACE "\n$" "" GIT_BRANCH "${GIT_BRANCH}")
+  add_compile_definitions(MXNET_BRANCH="${GIT_BRANCH}")
+else()
+  add_compile_definitions(MXNET_BRANCH="Unavailable")
+endif()
+
+if(NOT COMMIT_FAILED)
+  string(REGEX REPLACE "\n$" "" GIT_COMMIT "${GIT_COMMIT}")
+  add_compile_definitions(MXNET_COMMIT_HASH="${GIT_COMMIT}")
+else()
+  add_compile_definitions(MXNET_COMMIT_HASH="Unavailable")
+endif()
+
+
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
 endif()
