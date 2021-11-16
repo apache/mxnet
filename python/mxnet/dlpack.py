@@ -120,7 +120,7 @@ def ndarray_from_dlpack(array_cls):
                 s = mx_int()
                 check_call(_LIB.MXGetCurrentStream(
                     ctypes.c_int(device_id), ctypes.byref(s)))
-                dlpack = ctypes.py_object(dlpack.__dlpack__(stream=s))
+                dlpack = ctypes.py_object(dlpack.__dlpack__(stream=s.value))
         else:
             raise AttributeError("Required PyCapsule or object with __dlpack__")
         handle = NDArrayHandle()

@@ -26,10 +26,12 @@ def test_dlpack_torch_mxnet_torch():
     stream = torch.cuda.Stream()
     with torch.cuda.stream(stream):
         x = torch.tensor((5,), device='cuda:0', dtype=torch.float64) + 1
-    mx = np.from_dlpack(x)
+    stream.synchronize()
+    nx = np.from_dlpack(x)
+    assert nx.device == mx.gpu(0)
     stream = torch.cuda.Stream()
     with torch.cuda.stream(stream):
-        z = torch.from_dlpack(mx)
+        z = torch.from_dlpack(nx)
     stream.synchronize()
     z += 1
     assert z == x
@@ -42,6 +44,7 @@ def test_dlpack_mxnet_torch_mxnet():
     stream.synchronize()
     z = np.from_dlpack(tx)
     z += 1
+    assert z.device == mx.gpu(0)
     assert z == x
 
 def test_dlpack_error_message():

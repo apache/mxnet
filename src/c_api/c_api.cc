@@ -3956,7 +3956,7 @@ int MXPushStreamDep(NDArrayHandle handle, int stream) {
 int MXGetCurrentStream(int device_id, int* stream) {
   API_BEGIN();
 #if MXNET_USE_CUDA
-  RunContext rctx{Context::GPU(device_id), nullptr, nullptr};
+  RunContext rctx{Context::GPU(device_id), new mshadow::Stream<gpu>(), nullptr};
   mshadow::Stream<gpu>* cur_stream = rctx.get_stream<gpu>();
   *stream = reinterpret_cast<int64_t>(mshadow::Stream<gpu>::GetStream(cur_stream));
 #else
