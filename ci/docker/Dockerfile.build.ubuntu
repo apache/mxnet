@@ -161,6 +161,7 @@ ARG BASE_IMAGE
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
     apt-get update && \
+    apt-get install -y --allow-change-held-packages libcudnn8 libcudnn8-dev && \
     if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
         if [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
             TRT_VERSION="7.2.0-1+cuda11.0"; \
