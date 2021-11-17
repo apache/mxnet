@@ -2625,7 +2625,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute mish')
 
-    def squeeze(self: ndarray,
+    def squeeze(self: ndarray, # pylint:  disable=arguments-differ
                 /,
                 axis: Union[int, Tuple[int, ...]]
     ) -> ndarray:  # pylint: disable=arguments-differ
@@ -13981,7 +13981,7 @@ def matrix_transpose(x: ndarray, /) -> ndarray:
 def astype(
         self: ndarray,
         /,
-        dtype: Union[str, dtype],
+        dtype: Union[str, dtype], # pylint: disable=undefined-variable
         *,
         order: Optional[str] = 'K',
         casting: Optional[str] = 'unsafe',
