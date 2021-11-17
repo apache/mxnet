@@ -1004,11 +1004,9 @@ struct mod : public mxnet_op::tunable {
       return DType(0);
     } else if (b < DType(0)) {
       if (a < DType(0)) {
-        DType ret = DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
-        if (ret == 0) {
-          return -ret;
-        }
-        return ret;
+        return DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
+      } else if (a == DType(0)){
+        return -DType(0);
       } else {
         DType ret = DType(
             ::fmod(static_cast<double>(a), -static_cast<double>(b)) +
