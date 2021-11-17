@@ -55,9 +55,9 @@ MXNET_REGISTER_API("_npi.std").set_body([](runtime::MXNetArgs args, runtime::MXN
   }
 
   // parse ddof
-  if ( args[3].type_code() == kDLInt) {
+  if (args[3].type_code() == kDLInt) {
     param.ddof = args[3].operator int();
-  } else if ( args[3].type_code() == kDLFloat) {
+  } else if (args[3].type_code() == kDLFloat) {
     param.ddof = args[3].operator double();
   } else {
     LOG(FATAL) << "Error: type of ddof can only be int or float";
@@ -115,9 +115,9 @@ MXNET_REGISTER_API("_npi.var").set_body([](runtime::MXNetArgs args, runtime::MXN
   }
 
   // parse ddof
-  if ( args[3].type_code() == kDLInt) {
+  if (args[3].type_code() == kDLInt) {
     param.ddof = args[3].operator int();
-  } else if ( args[3].type_code() == kDLFloat) {
+  } else if (args[3].type_code() == kDLFloat) {
     param.ddof = args[3].operator double();
   } else {
     LOG(FATAL) << "Error: type of ddof can only be int or float";
