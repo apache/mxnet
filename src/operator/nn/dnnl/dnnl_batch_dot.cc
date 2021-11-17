@@ -77,7 +77,7 @@ dnnl::primitive_attr GetQuantizationAttributes(const DNNLDotParam& param,
     // fused requantize => output is int
     out_scale_ = GetQuantizeScale(outputs[DotOut::out].dtype(),
                                   param.min_calib_range.value(),
-                                  param.min_calib_range.value()) /
+                                  param.max_calib_range.value()) /
                  lhs_scale_ / rhs_scale_;
     attr.set_output_scales(0, {out_scale_});
   } else if (param.enable_float_output) {
