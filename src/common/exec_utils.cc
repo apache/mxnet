@@ -75,5 +75,25 @@ bool CheckForInputNameDuplicates(const nnvm::IndexedGraph& idx) {
   return true;
 }
 
+void PrintGraph(const nnvm::IndexedGraph& idx, std::ostream& os) {
+  auto node_str = [&idx](uint32_t nid) {
+    return std::to_string(nid) + " " + idx[nid].source->attrs.name;
+  };
+  for (size_t i = 0; i < idx.num_nodes(); ++i) {
+    const auto& attrs = idx[i].source->attrs;
+    os << "node " << node_str(i) << " " << (attrs.op ? attrs.op->name : "(var)") << "\n";
+    for (auto [k, v] : attrs.dict)
+      os << "attr " << k << " " << v << "\n";
+    for (const auto& inp : idx[i].inputs)
+      os << "inp " << node_str(inp.node_id) << " " << inp.index << " " << inp.version << "\n";
+    for (auto dep : idx[i].control_deps)
+      os << "dep " << node_str(dep) << "\n";
+    for (const auto& sub : attrs.subgraphs) {
+      std::string name;
+      os << "sub " << (sub->GetAttr("name", &name) ? name : "(noname)") << "\n";
+    }
+  }
+}
+
 }  // namespace common
 }  // namespace mxnet

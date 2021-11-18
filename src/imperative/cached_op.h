@@ -21,6 +21,7 @@
 #define MXNET_IMPERATIVE_CACHED_OP_H_
 
 #include <mxnet/imperative.h>
+#include <fstream>
 #include <vector>
 #include <numeric>
 #include <atomic>
@@ -29,6 +30,7 @@
 #include <unordered_map>
 #include <map>
 #include "../common/alm.h"
+#include "../common/exec_utils.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 #include "./imperative_utils.h"
@@ -330,6 +332,26 @@ void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
       std::make_shared<dmlc::any>(std::move(full_ref_count));
 }
 
+void MaybePrintGraph(const nnvm::IndexedGraph& idx, const std::string& msg) {
+  if (!dmlc::GetEnv("MXNET_DEBUG_PRINT_GRAPH", false))
+    return;
+
+  std::ofstream f;
+  std::ostream* dest    = &std::cout;
+  std::string dest_name = dmlc::GetEnv("MXNET_DEBUG_PRINT_GRAPH_PATH", std::string("stdout"));
+  if (dest_name == "stderr") {
+    dest = &std::cerr;
+  } else if (dest_name != "stdout") {
+    f.open(dest_name.c_str(), std::ios::app);
+    CHECK(f.good());
+    dest = &f;
+  }
+
+  *dest << "[[[ " << msg << "\n";
+  common::PrintGraph(idx, *dest);
+  *dest << "]]] " << msg << "\n";
+}
+
 void OptimizeGraph(nnvm::Graph* full_graph,
                    nnvm::Graph* fwd_graph,
                    nnvm::Graph* grad_graph,
@@ -337,6 +359,7 @@ void OptimizeGraph(nnvm::Graph* full_graph,
                    const Context& context,
                    size_t num_forward_outputs,
                    const bool inlining) {
+  MaybePrintGraph(full_graph->indexed_graph(), "graph before optimization");
   input_map->resize(full_graph->indexed_graph().input_nodes().size());
   std::iota(input_map->begin(), input_map->end(), 0);
 #if MXNET_USE_CUDA && !defined(_WIN32)
@@ -386,6 +409,7 @@ void OptimizeGraph(nnvm::Graph* full_graph,
   grad_graph->outputs = std::vector<nnvm::NodeEntry>(
       full_graph->outputs.begin() + num_forward_outputs, full_graph->outputs.end());
   SetRefCounts(fwd_graph, *full_graph);
+  MaybePrintGraph(full_graph->indexed_graph(), "graph after optimization");
 }
 
 /* \brief Check if param indices and data indices are set, if not then set data indices */

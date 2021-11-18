@@ -27,6 +27,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
 #include <map>
+#include <ostream>
 #include <vector>
 #include <string>
 #include <utility>
@@ -569,6 +570,14 @@ void CopyGraph(nnvm::Graph* dst, const nnvm::Graph& src, bool copy_variables);
  * \return true if there are no duplicates, false otherwise
  */
 bool CheckForInputNameDuplicates(const nnvm::IndexedGraph& idx);
+
+/*!
+ * \brief Prints graph to the specified stream.
+ *
+ * \param idx Indexed graph to print
+ * \param os Output stream
+ */
+void PrintGraph(const nnvm::IndexedGraph& idx, std::ostream& os);
 
 }  // namespace common
 }  // namespace mxnet
