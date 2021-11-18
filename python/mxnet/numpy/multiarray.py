@@ -12450,7 +12450,7 @@ def nan_to_num(
 
 
 @set_module('mxnet.numpy')
-def squeeze(x: ndarray, /, axis: Union[int, Tuple[int, ...]]) -> ndarray:
+def squeeze(x: ndarray, /, axis: Optional[Union[int, Tuple[int, ...]]]) -> ndarray:
     r"""Remove single-dimensional entries from the shape of an array.
 
     Parameters

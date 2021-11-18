@@ -195,7 +195,7 @@ def test_uniq_name():
                 return data + 1, states
             out1, states1 = mx.npx.foreach(step1, inputs, states)
             def step2(data, states):
-                return data, [states[0] + states[0] + mx.np.squeeze(mx.npx.slice(data, begin=0, end=1))]
+                return data, [states[0] + states[0] + mx.np.squeeze(mx.npx.slice(data, begin=0, end=1), axis=None)]
             # The input variables have the same symbol names.
             # The free variables have the same symbol names as the input variables.
             out, states = mx.npx.foreach(step2, out1, states1)
@@ -207,7 +207,7 @@ def test_uniq_name():
 
         def forward(self, inputs, states):
             def cond(state1, state2):
-                s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1))
+                s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1), axis=None)
                 return s == s
             def step(state1, state2):
                 return state1 + 1, [state1 + 1, state2 + 1]
@@ -223,7 +223,7 @@ def test_uniq_name():
 
         def forward(self, inputs, states):
             def cond(state1, state2):
-                s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1))
+                s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1), axis=None)
                 return s == s
             def step1(state1, state2):
                 return state1 + 1, [state1, state2]

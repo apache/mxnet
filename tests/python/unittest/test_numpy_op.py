@@ -6254,7 +6254,7 @@ def test_np_linalg_cholesky(shape, dtype, upper, hybridize):
             self._upper = upper
 
         def forward(self, data):
-            return np.linalg.cholesky(data, self._upper)
+            return np.linalg.cholesky(data, upper=self._upper)
 
     def get_grad(L, upper):
         # shape of m is [batch, n, n]
@@ -6357,7 +6357,7 @@ def test_np_linalg_cholesky(shape, dtype, upper, hybridize):
         backward_expected = get_grad(L.asnumpy(), upper)
         assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
     # check imperative once again
-    L = np.linalg.cholesky(data, upper)
+    L = np.linalg.cholesky(data, upper=upper)
     check_cholesky(L, data_np, upper)
 
 
