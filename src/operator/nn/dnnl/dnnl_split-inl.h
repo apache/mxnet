@@ -34,6 +34,7 @@ namespace mxnet {
 namespace op {
 
 using split_fwd_t    = dnnl::reorder;
+using split_fwd_pd_t = dnnl::reorder::primitive_desc;
 
 class DNNLSplitFwd {
  public:
@@ -46,22 +47,22 @@ class DNNLSplitFwd {
 
   static DNNLSplitFwd GetCached(const SplitParam& param,
                                 const Tensors& tensors,
-                                const bool is_train);
+                                const TShape& split_pts,
+                                const int split_axis);
 
-  // static split_fwd_pd_t GetSplitFwdPd(const dnnl::memory::desc& input_md,
-  //                                     const dnnl::memory::desc& output_md);
+  DNNLSplitFwd(const Tensors& tensors, const TShape& split_pts, const int split_axis);
 
-  DNNLSplitFwd(const SplitParam& param, const Tensors& tensors, const bool is_train);
-
-  void Execute(const Tensors& tensors) const;
+  void Execute(const Tensors& tensors,
+               const TShape& split_pts,
+               const int split_axis,
+               const std::vector<OpReqType>& req) const;
 
  private:
-  // std::shared_ptr<split_fwd_pd_t> split_pd;
-  std::shared_ptr<split_fwd_t> split_fwd;
+  std::vector<split_fwd_t> split_fwds;
+  std::vector<split_fwd_pd_t> split_pds;
 };
 
-
-bool SupportDNNLSplit(const SplitParam& param, const NDArray& input);
+bool SupportDNNLSplit(const NDArray& input);
 
 }  // namespace op
 }  // namespace mxnet

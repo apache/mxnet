@@ -1188,8 +1188,7 @@ static void SplitForwardEx(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) {
     return;
   }
-  const SplitParam& param = dmlc::get<SplitParam>(attrs.parsed);
-  if (SupportDNNLSplit(param, inputs[0])) {
+  if (SupportDNNLSplit(inputs[0])) {
     DNNL_OPCHECK_INIT(/*is backward*/ false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLSplitForward, attrs, op_ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
