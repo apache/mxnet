@@ -22,10 +22,10 @@
 BF16_FUNCS = [
     'Convolution',
     'FullyConnected',
-    '_sg_mkldnn_conv',
-    '_sg_mkldnn_fully_connected',
-    '_sg_mkldnn_selfatt_qk',
-    '_sg_mkldnn_selfatt_valatt'
+    '_sg_onednn_conv',
+    '_sg_onednn_fully_connected',
+    '_sg_onednn_selfatt_qk',
+    '_sg_onednn_selfatt_valatt'
 ]
 
 # Functions that should not be casted, either because

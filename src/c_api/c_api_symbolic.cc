@@ -1124,35 +1124,14 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["target_dtype"]         = std::make_shared<nnvm::any>(target_dt);
   g.attrs["data_name_types"]      = std::make_shared<nnvm::any>(std::move(kwargs));
   g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
+  g                               = ApplyPass(std::move(g), "ReducePrecision");
+  g                               = mxnet::exec::InferType(std::move(g), {}, "");
 
-  g                             = ApplyPass(std::move(g), "ReducePrecision");
-  const auto& known_input_types = g.GetAttr<decltype(kwargs)>("known_input_types");
-  nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
-  mxnet::MatchArguments(g.indexed_graph(), known_input_types, &arg_types, "InferType");
-
-  std::unordered_map<std::string, int> node_name_dtype_map = known_input_types;
-  std::unordered_map<std::string, int> node_without_dtype_map;
-
-  // Need to run type inference since it is possible that inferred
-  // type of some inputs has changed
-  g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");
   const nnvm::DTypeVector& inferred_dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
-
-  g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(inferred_dtypes);
-  g.attrs["target_dtype"]    = std::make_shared<nnvm::any>(target_dt);
-
-  if (cast_optional_params) {
-    g = ApplyPass(std::move(g), "AMPInferUnknown");
-    const nnvm::DTypeVector& inferred_dtype_result =
-        g.GetAttr<nnvm::DTypeVector>("inferred_dtype_result");
-    const nnvm::IndexedGraph& idx = g.indexed_graph();
-    // set node name -> input dtype mapping using infer dtype
-    _SetInputDTypes(idx, inferred_dtype_result, &node_name_dtype_map, &node_without_dtype_map);
-  } else {
-    const nnvm::IndexedGraph& idx = g.indexed_graph();
-    // set node name -> input dtype mapping using infer dtype
-    _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
-  }
+  std::unordered_map<std::string, int> node_name_dtype_map;
+  std::unordered_map<std::string, int> node_without_dtype_map;
+  _SetInputDTypes(
+      g.indexed_graph(), inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
 
   result_sym->outputs                      = g.outputs;
   *ret_sym_handle                          = result_sym;

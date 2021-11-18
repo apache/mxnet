@@ -31,6 +31,12 @@
 namespace mxnet {
 namespace op {
 
+static const std::set<std::string> support_amp_fusion_op_name =
+    {  //"_sg_onednn_conv", - broken, waiting for a fix in oneDNN
+        "_sg_onednn_fully_connected",
+        "_sg_onednn_selfatt_qk",
+        "_sg_onednn_selfatt_valatt"};
+
 class SgDNNLPostAMPSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
@@ -43,16 +49,8 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
  private:
   SelectStatus status;
   std::vector<const nnvm::Node*> matched_list;
-  std::set<std::string> support_amp_fusion_op_name;
 
  public:
-  SgDNNLPostAMPSelector() {
-    support_amp_fusion_op_name.insert("_sg_dnnl_conv");
-    support_amp_fusion_op_name.insert("_sg_dnnl_fully_connected");
-    support_amp_fusion_op_name.insert("_sg_dnnl_selfatt_qk");
-    support_amp_fusion_op_name.insert("_sg_dnnl_selfatt_valatt");
-  }
-
   bool Select(const nnvm::Node& n) override {
     if (n.op() && support_amp_fusion_op_name.count(n.op()->name)) {
       status = kStart;
@@ -77,8 +75,9 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
       return false;
     }
     if (new_node.op()->name == "amp_cast") {
+      auto const& param = nnvm::get<AMPCastParam>(new_node.attrs.parsed);
       // quantized operators cannot convert their output to bf16
-      if (n.attrs.name.find("quantized_") == std::string::npos) {
+      if (param.dtype != mshadow::kBfloat16) {
         matched_list.push_back(&new_node);
         status = kSuccess;
         return true;
@@ -106,14 +105,8 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
 
 class SgDNNLPostAMPProperty : public SubgraphProperty {
  public:
-  SgDNNLPostAMPProperty() {
-    support_amp_fusion_op_name.insert("_sg_dnnl_conv");
-    support_amp_fusion_op_name.insert("_sg_dnnl_fully_connected");
-    support_amp_fusion_op_name.insert("_sg_dnnl_selfatt_qk");
-    support_amp_fusion_op_name.insert("_sg_dnnl_selfatt_valatt");
-  }
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL post-amp optimization pass";
+    static const std::string& name = "oneDNN post-amp optimization pass";
     auto property                  = std::make_shared<SgDNNLPostAMPProperty>();
     property->SetAttr<std::string>("property_name", name);
     return property;
@@ -151,9 +144,6 @@ class SgDNNLPostAMPProperty : public SubgraphProperty {
       *entry_ptr     = nnvm::NodeEntry{n, entry_ptr->index, 0};
     }
   }
-
- private:
-  std::set<std::string> support_amp_fusion_op_name;
 };
 }  // namespace op
 }  // namespace mxnet

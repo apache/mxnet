@@ -29,6 +29,7 @@
 #include <mxnet/base.h>
 #include <algorithm>
 #include <functional>
+#include "../operator/tensor/amp_cast.h"
 
 namespace mxnet {
 using nnvm::Graph;
@@ -36,6 +37,10 @@ using nnvm::Node;
 using nnvm::NodeEntry;
 using nnvm::NodeEntryEqual;
 using nnvm::ObjectPtr;
+
+static const std::unordered_map<int, std::string> dtype_str = {{mshadow::kFloat32, "float32"},
+                                                               {mshadow::kFloat16, "float16"},
+                                                               {mshadow::kBfloat16, "bfloat16"}};
 
 // create a node for operator : op_name with name : node_name
 static ObjectPtr CreateNode(std::string op_name, std::string node_name) {
@@ -85,9 +90,10 @@ static std::string GetSuffix(const nnvm::NodeEntry& node_entry,
 static void AddCastNode(const nnvm::NodeEntry& e,
                         const std::string& suffix,
                         const nnvm::NodeEntry& input,
-                        const std::string dtype,
+                        int target_dtype,
                         nnvm::NodeEntryMap<NodeEntry>* mirror_entry_map,
                         ObjectPtr curr_node) {
+  const std::string& dtype = dtype_str.at(target_dtype);
   ObjectPtr cast_node =
       InsertNode("amp_cast", e.node->attrs.name + suffix + "_amp_cast_" + dtype, curr_node, input);
   cast_node->attrs.dict["dtype"] = dtype;
@@ -149,9 +155,156 @@ static bool CheckConditionalFP32(
   }
 }
 
-Graph ReducePrecision(Graph&& src) {
-  static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
+// returns whether original node was used, or it had to be casted to f32
+bool keep_original_input_or_cast_it_to_f32(
+    const ObjectPtr& new_node,
+    const NodeEntry& old_node_input_entry,
+    const std::unordered_map<Node*, ObjectPtr>& mirror_map,
+    nnvm::NodeEntryMap<NodeEntry>& mirror_fp32_map,
+    const nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
+  if (mirror_fp32_map.count(old_node_input_entry)) {
+    new_node->inputs.emplace_back(mirror_fp32_map[old_node_input_entry]);
+    return false;
+  } else if (mirror_target_dtype_map.count(old_node_input_entry) &&
+             mirror_target_dtype_map.at(old_node_input_entry).node->op() != nullptr &&
+             mirror_target_dtype_map.at(old_node_input_entry).node->op()->name != "amp_cast") {
+    const ObjectPtr new_node_input_node = mirror_map.at(old_node_input_entry.node.get());
+    const NodeEntry new_node_input_node_entry =
+        NodeEntry{new_node_input_node, old_node_input_entry.index, old_node_input_entry.version};
+    const std::string suffix = GetSuffix(old_node_input_entry, mirror_map);
+    AddCastNode(old_node_input_entry,
+                suffix,
+                new_node_input_node_entry,
+                mshadow::kFloat32,
+                &mirror_fp32_map,
+                new_node);
+    return false;
+  } else {
+    const ObjectPtr new_node_input_node = mirror_map.at(old_node_input_entry.node.get());
+    const NodeEntry new_node_input_node_entry =
+        NodeEntry{new_node_input_node, old_node_input_entry.index, old_node_input_entry.version};
+    new_node->inputs.emplace_back(new_node_input_node_entry);
+    return true;
+  }
+}
+
+// Here we assume, that this node works on f32 inputs (this only matters for inputs that could have
+// been cast to low precision, ie. some other operator. For the rest, we can use the original nodes)
+void keep_original_node(const ObjectPtr& old_node,
+                        const ObjectPtr& new_node,
+                        const std::unordered_map<Node*, ObjectPtr>& mirror_map,
+                        nnvm::NodeEntryMap<NodeEntry>& mirror_fp32_map,
+                        const nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
+  for (const auto& old_node_input_entry : old_node->inputs) {
+    keep_original_input_or_cast_it_to_f32(
+        new_node, old_node_input_entry, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
+  }
+}
+
+bool try_low_precision(const ObjectPtr& old_node,
+                       const ObjectPtr& new_node,
+                       const int target_dtype,
+                       const std::unordered_map<Node*, ObjectPtr>& mirror_map,
+                       nnvm::NodeEntryMap<NodeEntry>& mirror_fp32_map,
+                       nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
   static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
+
+  std::vector<int> in_types(old_node->inputs.size(), -1);
+  std::vector<int> out_types(old_node->num_outputs(), -1);
+  in_types[0] = target_dtype;
+
+  if (infertype.count(old_node->op()) == 0 ||
+      infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == false) {
+    return false;
+  }
+
+  std::vector<uint32_t> mutable_inputs;
+  if (fmutate_inputs.count(old_node->op()) != 0) {
+    mutable_inputs = fmutate_inputs[old_node->op()](old_node->attrs);
+  }
+  for (size_t i = 0; i < old_node->inputs.size(); ++i) {
+    if ((in_types[i] == target_dtype) &&
+        std::find(mutable_inputs.begin(), mutable_inputs.end(), i) != mutable_inputs.end()) {
+      return false;
+    }
+  }
+
+  for (size_t i = 0; i < old_node->inputs.size(); ++i) {
+    const auto& old_node_input_entry = old_node->inputs[i];
+    if ((in_types[i] == target_dtype)) {
+      if (mirror_target_dtype_map.count(old_node_input_entry)) {
+        new_node->inputs.emplace_back(mirror_target_dtype_map[old_node_input_entry]);
+      } else {
+        const ObjectPtr& mirror_node = mirror_map.at(old_node_input_entry.node.get());
+        const NodeEntry& mirror_entry =
+            NodeEntry{mirror_node, old_node_input_entry.index, old_node_input_entry.version};
+        const std::string& suffix = GetSuffix(old_node_input_entry, mirror_map);
+        AddCastNode(old_node_input_entry,
+                    suffix,
+                    mirror_entry,
+                    target_dtype,
+                    &mirror_target_dtype_map,
+                    new_node);
+      }
+    } else {
+      CHECK(keep_original_input_or_cast_it_to_f32(new_node,
+                                                  old_node_input_entry,
+                                                  mirror_map,
+                                                  mirror_fp32_map,
+                                                  mirror_target_dtype_map) ||
+            in_types[i] == mshadow::kFloat32);
+    }
+  }
+
+  for (size_t i = 0; i < old_node->num_outputs(); ++i) {
+    const auto out_entry = NodeEntry(old_node, i, 0);
+    if (out_types[i] == target_dtype) {
+      mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
+    }
+  }
+
+  return true;
+}
+
+bool try_widest_dtype_node(const ObjectPtr& old_node,
+                           const ObjectPtr& new_node,
+                           const int target_dtype,
+                           const std::unordered_map<Node*, ObjectPtr>& mirror_map,
+                           nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
+  static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+
+  const auto& is_lp = [&](const NodeEntry& input) { return mirror_target_dtype_map.count(input); };
+
+  if (std::any_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
+    if (std::all_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
+      for (const NodeEntry& old_node_input_entry : old_node->inputs) {
+        new_node->inputs.emplace_back(mirror_target_dtype_map[old_node_input_entry]);
+      }
+      // if we cannot infer the output type correctly, we cannot assume it is lp16
+      // In the worst case, there will be an additional amp_cast node
+      std::vector<int> in_types(old_node->inputs.size(), target_dtype);
+      std::vector<int> out_types(old_node->num_outputs(), -1);
+      if (infertype.count(old_node->op())) {
+        if (infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == true) {
+          for (size_t i = 0; i < old_node->num_outputs(); ++i) {
+            if (out_types[i] == target_dtype) {
+              const auto out_entry               = NodeEntry(old_node, i, 0);
+              mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
+            }
+          }
+        }
+      }
+    } else {
+      const std::string& suffix = GetSuffix(old_node->inputs[0], mirror_map);
+      AddMultiCastNode(old_node->inputs, suffix, mirror_map, new_node);
+    }
+    return true;
+  }
+  return false;
+}
+
+Graph ReducePrecision(Graph&& src) {
   const auto target_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
   const auto fp32_ops         = src.GetAttr<std::unordered_set<std::string>>("fp32_ops");
   const auto widest_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
@@ -166,300 +319,149 @@ Graph ReducePrecision(Graph&& src) {
   CHECK(target_dtype == mshadow::kFloat16 || target_dtype == mshadow::kBfloat16)
       << "Only float16 and bfloat16 target_dtype is supported yet," << target_dtype;
 
-  std::string target_dtype_str = "float32";
-  if (target_dtype == mshadow::kFloat16) {
-    target_dtype_str = "float16";
-  } else if (target_dtype == mshadow::kBfloat16) {
-    target_dtype_str = "bfloat16";
-  }
-
   // Additional data structures to share common cast node inputs among different nodes
   std::unordered_map<Node*, ObjectPtr> mirror_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_fp32_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_target_dtype_map;
-
-  auto known_input_types = data_name_types;
-  std::unordered_map<Node*, std::pair<NodeEntry, std::vector<Node*>>> outs_of_amp_var_casts;
+  nnvm::NodeEntryMap<std::vector<Node*>> output_nodes_of_variable;
 
   // Visit nodes in a topologically sorted order
-  DFSVisit(src.outputs, [&](const ObjectPtr& node) {
-    ObjectPtr new_node = Node::Create(*node);
+  DFSVisit(src.outputs, [&](const ObjectPtr& old_node) {
+    ObjectPtr new_node = Node::Create(*old_node);
     new_node->inputs.clear();
-    std::vector<uint32_t> mutable_inputs;
-    if (fmutate_inputs.count(node->op()) != 0) {
-      mutable_inputs = fmutate_inputs[node->op()](node->attrs);
-    }
     /* 1. for node which needs to run in FP32 mode, add amp_cast operators
      * (to fp32) after its inputs
      * 2. for node which needs to run in LP16 mode, add amp_cast operators
      * (to target_dtype) after its inputs
      * 3. for nodes which need to run in widest dtype among its inputs, add
      * amp_multicast operators between op and its inputs
-     * 4. for nodes which need to run in FP32 mode, based on a specific condition,
-     * check the condition, and if true add amp_cast (to fp32) after its inputs
-     * 5. for other nodes, create copy node and add it to the mirror_map
+     * 4. for other nodes, create copy node and add it to the mirror_map
      */
-    if ((!node->is_variable() && fp32_ops.count(node->op()->name) > 0) ||
-        (excluded_syms.count(node->attrs.name) > 0)) {
-      // Add output entry to fp32_map
-      for (size_t i = 0; i < node->num_outputs(); ++i) {
-        const auto out_entry       = NodeEntry(node, i, 0);
-        mirror_fp32_map[out_entry] = NodeEntry(new_node, i, 0);
+    if ((!old_node->is_variable() && fp32_ops.count(old_node->op()->name) > 0) ||
+        (excluded_syms.count(old_node->attrs.name) > 0) ||
+        CheckConditionalFP32(conditional_fp32_ops, excluded_syms, old_node)) {
+      keep_original_node(old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
+    } else if (!old_node->is_variable() && target_dtype_ops.count(old_node->op()->name) > 0) {
+      if (!try_low_precision(old_node,
+                             new_node,
+                             target_dtype,
+                             mirror_map,
+                             mirror_fp32_map,
+                             mirror_target_dtype_map)) {
+        keep_original_node(
+            old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
       }
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto& node_entry = node->inputs[i];
-        if (mirror_fp32_map.count(node_entry)) {
-          new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
-        } else if (node_entry.node->is_variable()) {
-          // For variable, assume they are already fp32
-          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
-          NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-          new_node->inputs.emplace_back(mirror_entry);
-          mirror_fp32_map[node_entry] = mirror_entry;
-        } else {
-          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
-          NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-          std::string suffix     = GetSuffix(node_entry, mirror_map);
-          AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map, new_node);
-        }
-      }
-    } else if (!node->is_variable() && target_dtype_ops.count(node->op()->name) > 0 &&
-               excluded_syms.count(node->attrs.name) == 0) {
-      std::vector<int> in_types(node->inputs.size(), -1);
-      std::vector<int> out_types(node->num_outputs(), -1);
-      if (infertype.count(node->op())) {
-        // Try to infertype with target dtype. And add output entry to mirror_target_dtype_map or
-        // mirror_fp32_map based on infered result.
-        in_types[0]             = target_dtype;
-        bool infer_type_success = infertype[node->op()](node->attrs, &in_types, &out_types);
-        CHECK(infer_type_success == true);
-        for (size_t i = 0; i < node->num_outputs(); ++i) {
-          const auto out_entry = NodeEntry(node, i, 0);
-          if (out_types[i] == target_dtype) {
-            mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
-          } else if (out_types[i] == 0) {
-            mirror_fp32_map[out_entry] = NodeEntry(new_node, i, 0);
-          }
-        }
-      }
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto& node_entry = node->inputs[i];
-        if (mirror_target_dtype_map.count(node_entry)) {
-          new_node->inputs.emplace_back(mirror_target_dtype_map[node_entry]);
-          if (node_entry.node->is_variable() && cast_optional_params) {
-            ObjectPtr amp_node = mirror_target_dtype_map[node_entry].node;
-            outs_of_amp_var_casts[amp_node.get()].second.push_back(new_node.get());
-          }
-        } else if (!(in_types[i] == target_dtype || in_types[i] == -1)) {
-          // Here's some rules that not insert amp_cast for inputs:
-          // 1. Mutable inputs.
-          // 2. Even the input[0] is target dtype, some operations still require float32 for other
-          //    inputs. For example, Batchnorm.
-          ObjectPtr mirror_node   = mirror_map.at(node_entry.node.get());
-          const auto mirror_entry = NodeEntry(mirror_node, node_entry.index, node_entry.version);
-          new_node->inputs.push_back(mirror_entry);
-        } else {
-          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
-          NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-          std::string suffix     = GetSuffix(node_entry, mirror_map);
-          AddCastNode(node_entry,
-                      suffix,
-                      mirror_entry,
-                      target_dtype_str,
-                      &mirror_target_dtype_map,
-                      new_node);
-          if (node_entry.node->is_variable() && cast_optional_params) {
-            ObjectPtr amp_node = mirror_target_dtype_map[node_entry].node;
-            auto& temp         = outs_of_amp_var_casts[amp_node.get()];
-            temp.first         = node_entry;
-            temp.second.push_back(new_node.get());
-          }
-        }
-      }
-    } else if (!node->is_variable() && widest_dtype_ops.count(node->op()->name) > 0 &&
-               excluded_syms.count(node->attrs.name) == 0) {
-      CHECK(node->inputs.size() > 0)
-          << "Please check the symbol. node name: " << node->attrs.name << "op name "
-          << node->op()->name << " has no inputs."
-          << "It is likely that something went wrong during symbolic construction.";
-      CHECK_EQ(mutable_inputs.size(), 0)
-          << "can't handle the widest_dtype_ops with mutable inputs.";
-      int out_dtype           = target_dtype;
-      bool have_unknown_dtype = false;
-      for (auto& input : node->inputs) {
-        // Try to infer output dtype based on input dtype
-        if (!mirror_target_dtype_map.count(input) && !mirror_fp32_map.count(input)) {
-          have_unknown_dtype = true;
-          break;
-        } else if (mirror_fp32_map.count(input)) {
-          out_dtype = mshadow::kFloat32;
-        }
-      }
-      if (have_unknown_dtype) {
-        // We can't infer all dtype for inputs, so we need to add AddMultiCastNode here.
-        const auto& e      = node->inputs[0];
-        std::string suffix = GetSuffix(e, mirror_map);
-        AddMultiCastNode(node->inputs, suffix, mirror_map, new_node);
-      } else {
-        for (size_t i = 0; i < node->num_outputs(); ++i) {
-          const auto out_entry = NodeEntry(node, i, 0);
-          if (out_dtype == target_dtype) {
-            mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
-          } else {
-            mirror_fp32_map[out_entry] = NodeEntry(new_node, i, 0);
-          }
-        }
-        // we know all dtype from inputs, then we can use amp_cast instead.
-        for (size_t i = 0; i < node->inputs.size(); ++i) {
-          const auto& node_entry = node->inputs[i];
-          if (out_dtype == target_dtype) {
-            if (mirror_target_dtype_map.count(node_entry)) {
-              new_node->inputs.emplace_back(mirror_target_dtype_map[node_entry]);
-            } else {
-              ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
-              NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-              std::string suffix     = GetSuffix(node_entry, mirror_map);
-              AddCastNode(node_entry,
-                          suffix,
-                          mirror_entry,
-                          target_dtype_str,
-                          &mirror_target_dtype_map,
-                          new_node);
-            }
-          } else {
-            if (mirror_fp32_map.count(node_entry)) {
-              new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
-            } else {
-              ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
-              NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-              std::string suffix     = GetSuffix(node_entry, mirror_map);
-              AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map, new_node);
-            }
-          }
-        }
-      }
-    } else if (CheckConditionalFP32(conditional_fp32_ops, excluded_syms, node)) {
-      for (size_t i = 0; i < node->num_outputs(); ++i) {
-        const auto out_entry       = NodeEntry(node, i, 0);
-        mirror_fp32_map[out_entry] = NodeEntry(new_node, i, 0);
-      }
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto& node_entry = node->inputs[i];
-        if (mirror_fp32_map.count(node_entry)) {
-          new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
-        } else if (std::find(mutable_inputs.begin(), mutable_inputs.end(), i) !=
-                   mutable_inputs.end()) {
-          // Can't insert amp_cast for this inputs. Such op have to handle fp32 inputs itself.
-          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
-          new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
-        } else {
-          ObjectPtr mirror_node  = mirror_map.at(node_entry.node.get());
-          NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
-          std::string suffix     = GetSuffix(node_entry, mirror_map);
-          AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map, new_node);
-        }
-      }
+    } else if (!old_node->is_variable() && widest_dtype_ops.count(old_node->op()->name) > 0) {
+      if (!try_widest_dtype_node(
+              old_node, new_node, target_dtype, mirror_map, mirror_target_dtype_map))
+        keep_original_node(
+            old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
     } else {
-      if (node->inputs.size() && (mirror_fp32_map.count(node->inputs[0]) ||
-                                  mirror_target_dtype_map.count(node->inputs[0]))) {
-        // If we know the dtype of input[0], then we will try to infer the dtype of its output, and
-        // add the result to mirror_target_dtype_map or mirror_fp32_map.
-        const int in_type =
-            mirror_target_dtype_map.count(node->inputs[0]) ? target_dtype : mshadow::kFloat32;
-        std::vector<int> in_types(node->inputs.size(), -1);
-        std::vector<int> out_types(node->num_outputs(), -1);
-        if (infertype.count(node->op())) {
-          in_types[0]             = in_type;
-          bool infer_type_success = infertype[node->op()](node->attrs, &in_types, &out_types);
-          if (infer_type_success) {
-            for (size_t i = 0; i < node->num_outputs(); ++i) {
-              const auto out_entry = NodeEntry(node, i, 0);
-              if (out_types[i] == target_dtype) {
-                mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
-              } else if (out_types[i] == 0) {
-                mirror_fp32_map[out_entry] = NodeEntry(new_node, i, 0);
-              }
-            }
+      // handle operators from BF16_FP32_FUNCS - operators that can run on bf16, but only when
+      // inputs are already casted
+      const bool any_lp = std::any_of(
+          old_node->inputs.begin(), old_node->inputs.end(), [&](const auto& old_node_input_entry) {
+            return mirror_target_dtype_map.count(old_node_input_entry);
+          });
+      if (!any_lp || !try_low_precision(old_node,
+                                        new_node,
+                                        target_dtype,
+                                        mirror_map,
+                                        mirror_fp32_map,
+                                        mirror_target_dtype_map)) {
+        keep_original_node(
+            old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
+        if (old_node->op() != nullptr && old_node->op()->name == "amp_cast") {
+          const op::AMPCastParam& param = nnvm::get<op::AMPCastParam>(old_node->attrs.parsed);
+          if (param.dtype == target_dtype) {
+            mirror_target_dtype_map[old_node->inputs[0]]       = NodeEntry(new_node, 0, 0);
+            mirror_target_dtype_map[NodeEntry(old_node, 0, 0)] = NodeEntry(new_node, 0, 0);
           }
         }
       }
-      for (const auto& node_entry : node->inputs) {
-        ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
-        new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
+    }
+    mirror_map[old_node.get()] = std::move(new_node);
+    for (const NodeEntry& old_node_input_entry : old_node->inputs) {
+      if (old_node_input_entry.node->is_variable()) {
+        output_nodes_of_variable[old_node_input_entry].push_back(old_node.get());
       }
     }
-    mirror_map[node.get()] = std::move(new_node);
   });
-
-  if (cast_optional_params) {
-    for (auto& kv : outs_of_amp_var_casts) {
-      Node* amp_node                    = kv.first;
-      NodeEntry src_var_node_entry      = kv.second.first;
-      std::vector<Node*>& amp_out_nodes = kv.second.second;
-      CHECK(amp_node->num_inputs() == 1 && amp_node->inputs[0].node->is_variable());
-
-      NodeEntry amp_node_entry = mirror_target_dtype_map[src_var_node_entry];
-
-      bool is_input_mutable = true;
-      for (auto* node : amp_out_nodes) {
-        if (fmutate_inputs.count(node->op()) != 0) {
-          auto mutable_inputs = fmutate_inputs[node->op()](node->attrs);
-          bool is_mutable     = false;
-          for (int i = 0; i < node->inputs.size(); ++i) {
-            if (node->inputs[i].node.get() == amp_node) {
-              is_mutable = (std::find(mutable_inputs.begin(), mutable_inputs.end(), i) !=
-                            mutable_inputs.end());
-              break;
-            }
-          }
-          if (!is_mutable) {
-            is_input_mutable = false;
-            break;
-          }
-        } else {
-          is_input_mutable = false;
-          break;
-        }
-      }
-
-      // if `src_var_node_entry` is the data of the network or some operator used it as fp32,
-      // then we cannot cast this variable (the input of `amp_node`) offline
-      if ((data_name_types.count(src_var_node_entry.node->attrs.name) && !is_input_mutable) ||
-          mirror_fp32_map.count(src_var_node_entry)) {
-        continue;
-      }
-
-      ObjectPtr var_node = mirror_map.at(src_var_node_entry.node.get());
-      NodeEntry var_entry =
-          NodeEntry{var_node, src_var_node_entry.index, src_var_node_entry.version};
-      NodeEntryEqual is_equal;
-      for (auto node : amp_out_nodes) {
-        for (auto& input_entry : node->inputs) {
-          if (is_equal(input_entry, amp_node_entry)) {
-            input_entry = var_entry;
-            break;
-          }
-        }
-      }
-    }
-  }
 
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
-    if (mirror_fp32_map.count(e)) {
+    const ObjectPtr& mirror_node = mirror_map.at(e.node.get());
+    const NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
+    if (mirror_target_dtype_map.count(e)) {
+      const std::string& suffix = GetSuffix(e, mirror_map);
+      AddCastNode(e, suffix, mirror_entry, mshadow::kFloat32, &mirror_fp32_map, nullptr);
       outputs.emplace_back(mirror_fp32_map[e]);
     } else {
-      ObjectPtr mirror_node  = mirror_map.at(e.node.get());
-      NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
-      std::string suffix     = GetSuffix(e, mirror_map);
-      AddCastNode(e, suffix, mirror_entry, "float32", &mirror_fp32_map, nullptr);
-      outputs.emplace_back(mirror_fp32_map[e]);
+      outputs.emplace_back(mirror_entry);
+    }
+  }
+
+  std::vector<NodeEntry> known_node_entry_types;
+  if (cast_optional_params) {
+    for (auto& kv : output_nodes_of_variable) {
+      NodeEntry src_variable_node_entry = kv.first;
+      if (!mirror_target_dtype_map.count(src_variable_node_entry)) {
+        continue;
+      }
+
+      bool is_used_with_and_without_cast         = false;
+      const ObjectPtr& dst_variable_node         = mirror_map[src_variable_node_entry.node.get()];
+      std::vector<Node*>& variable_out_src_nodes = kv.second;
+      for (Node* src_node : variable_out_src_nodes) {
+        if (src_node->op()->name == "amp_cast" || src_node->op()->name == "amp_multicast") {
+          continue;
+        }
+        Node* dst_node = mirror_map[src_node].get();
+        for (NodeEntry dst_node_input_entry : dst_node->inputs) {
+          // if input of this node is directly the variable, and not the amp_cast, then this
+          // variable cannot be casted offline
+          if (dst_node_input_entry.node == dst_variable_node) {
+            is_used_with_and_without_cast = true;
+            break;
+          }
+        }
+        if (is_used_with_and_without_cast) {
+          break;
+        }
+      }
+
+      if (is_used_with_and_without_cast ||
+          data_name_types.count(src_variable_node_entry.node->attrs.name)) {
+        continue;
+      }
+
+      NodeEntryEqual is_equal;
+      NodeEntry dst_variable_node_entry = NodeEntry{
+          dst_variable_node, src_variable_node_entry.index, src_variable_node_entry.version};
+      known_node_entry_types.push_back(dst_variable_node_entry);
+      for (Node* src_node : variable_out_src_nodes) {
+        Node* dst_node = mirror_map[src_node].get();
+        for (NodeEntry& dst_node_input_entry : dst_node->inputs) {
+          if (is_equal(dst_node_input_entry, mirror_target_dtype_map[src_variable_node_entry])) {
+            dst_node_input_entry = dst_variable_node_entry;
+            break;
+          }
+        }
+      }
     }
   }
 
   Graph ret;
-  ret.outputs                    = std::move(outputs);
-  ret.attrs["known_input_types"] = std::make_shared<dmlc::any>(std::move(known_input_types));
+  ret.outputs = std::move(outputs);
+
+  const nnvm::IndexedGraph& idx = ret.indexed_graph();
+  nnvm::DTypeVector known_types(idx.num_node_entries(), -1);
+  for (const auto& dst_entry : known_node_entry_types) {
+    auto id         = idx.entry_id(dst_entry);
+    known_types[id] = target_dtype;
+  }
+  ret.attrs["dtype"] = std::make_shared<dmlc::any>(std::move(known_types));
+
   return ret;
 }
 

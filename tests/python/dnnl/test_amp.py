@@ -96,7 +96,7 @@ def test_amp_coverage():
 def test_bf16_casting():
     data = mx.sym.var("data")
     out1 = mx.sym.amp_cast(data, dtype=bfloat16)
-    out2 = mx.sym.amp_cast(data, dtype="float32")
+    out2 = mx.sym.softmax(data)
     out3 = mx.sym.amp_cast(data, dtype=bfloat16)
     # When two ops from data, with different dtypes,
     # data should be float32
@@ -112,13 +112,13 @@ def test_bf16_casting():
     exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2))
     assert exe.arg_arrays[0].dtype == bfloat16
 
-    # AMP Multicast test where one node is float32, another is bfloat16
-    data = mx.sym.var("data", dtype="float32")
-    data2 = mx.sym.var("data2", dtype=bfloat16)
-    out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
-    final_res = amp.convert_symbol(out4, target_dtype="bfloat16", cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.cpu(), data2=(1, 2), data=(1, 2))
-    assert exe.arg_arrays[0].dtype == bfloat16
+    # # AMP Multicast test where one node is float32, another is bfloat16
+    # data = mx.sym.var("data", dtype="float32")
+    # data2 = mx.sym.var("data2", dtype=bfloat16)
+    # out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
+    # final_res = amp.convert_symbol(out4, target_dtype="bfloat16", cast_optional_params=True)
+    # exe = final_res._simple_bind(ctx=mx.cpu(), data2=(1, 2), data=(1, 2))
+    # assert exe.arg_arrays[0].dtype == bfloat16
 
     # AMP Multicast test where two non input nodes are bfloat16,
     # and one input node is float32

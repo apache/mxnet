@@ -652,22 +652,24 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     # If dtype is set for params, cast the param to that dtype
     attr_dict = sym.attr_dict()
     for sym_name in sym.list_arguments():
-        if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
-            if attr_dict[sym_name]["__dtype__"] != "-1":
-                typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
-                if typ == bfloat16:
-                    arg_params[sym_name] = _cast_symbol_NDArray(arg_params[sym_name], bfloat16)
-                else:
-                    arg_params[sym_name] = arg_params[sym_name].astype(typ)
+        if attr_dict.get(sym_name, {}).get("__dtype__", "-1") != "-1" and sym_name in arg_params:
+            typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
+            if arg_params[sym_name].dtype == typ:
+                continue
+            if typ == bfloat16:
+                arg_params[sym_name] = _cast_symbol_NDArray(arg_params[sym_name], bfloat16, isinstance(arg_params[sym_name], numpy.ndarray))
+            else:
+                arg_params[sym_name] = arg_params[sym_name].astype(typ)
 
     for sym_name in sym.list_auxiliary_states():
-        if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
-            if attr_dict[sym_name]["__dtype__"] != "-1":
-                typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
-                if typ == bfloat16:
-                    aux_params[sym_name] = _cast_symbol_NDArray(aux_params[sym_name], bfloat16)
-                else:
-                    aux_params[sym_name] = aux_params[sym_name].astype(typ)
+        if attr_dict.get(sym_name, {}).get("__dtype__", "-1") != "-1" and sym_name in aux_params:
+            typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
+            if aux_params[sym_name].dtype == typ:
+                continue
+            if typ == bfloat16:
+                aux_params[sym_name] = _cast_symbol_NDArray(aux_params[sym_name], bfloat16, isinstance(aux_params[sym_name], numpy.ndarray))
+            else:
+                aux_params[sym_name] = aux_params[sym_name].astype(typ)
 
     # Return the converted symbol and casted params
     return sym, arg_params, aux_params
@@ -713,7 +715,8 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
             "this block at least once before calling export.")
 
     # Prepare inputs to pass to the convert_symbol API
-    inputs, sym = block._cached_graph
+    inputs, _ = block._cached_graph
+    sym, _ = block.export(None)
     input_names = []
     for inp in inputs:
         input_names.append(inp.name)
@@ -729,27 +732,30 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     # If dtype for the param was set in the json, cast the
     # param to this dtype
     attr_dict = converted_sym.attr_dict()
-    for param in block.collect_params().values():
-        name = param.name
+    for name, param in block.collect_params().items():
         if name in arg_names:
-            arg_dict['arg:%s'%name] = param._reduce()
-            if name in attr_dict and "__dtype__" in attr_dict[name]:
-                if attr_dict[name]["__dtype__"] != "-1":
-                    typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
-                    if typ == bfloat16:
-                        arg_dict['arg:%s' % name] = _cast_symbol_NDArray(arg_dict['arg:%s' % name], bfloat16)
-                    else:
-                        arg_dict['arg:%s'%name] = arg_dict['arg:%s'%name].astype(typ)
+            arg_name = 'arg:%s' % name
+            arg_dict[arg_name] = param._reduce()
+            if attr_dict.get(name, {}).get("__dtype__", "-1") != "-1":
+                typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
+                if arg_dict[arg_name].dtype == typ:
+                    continue
+                if typ == bfloat16:
+                    arg_dict[arg_name] = _cast_symbol_NDArray(arg_dict[arg_name], bfloat16, isinstance(arg_dict[arg_name], numpy.ndarray))
+                else:
+                    arg_dict[arg_name] = arg_dict[arg_name].astype(typ)
         else:
             assert name in aux_names
-            arg_dict['aux:%s'%name] = param._reduce()
-            if name in attr_dict and "__dtype__" in attr_dict[name]:
-                if attr_dict[name]["__dtype__"] != "-1":
-                    typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
-                    if typ == bfloat16:
-                        arg_dict['aux:%s' % name] = _cast_symbol_NDArray(arg_dict['aux:%s' % name], 'bfloat16')
-                    else:
-                        arg_dict['aux:%s'%name] = arg_dict['aux:%s'%name].astype(typ)
+            aux_name = 'aux:%s' % name
+            arg_dict[aux_name] = param._reduce()
+            if attr_dict.get(name, {}).get("__dtype__", "-1") != "-1":
+                typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
+                if arg_dict[arg_name].dtype == typ:
+                    continue
+                if typ == bfloat16:
+                    arg_dict[aux_name] = _cast_symbol_NDArray(arg_dict[aux_name], 'bfloat16', isinstance(arg_dict[aux_name], numpy.ndarray))
+                else:
+                    arg_dict[aux_name] = arg_dict[aux_name].astype(typ)
 
     # Create a symbolblock and cast the params to the dtypes based
     # on the dtype information from the converted_symbol

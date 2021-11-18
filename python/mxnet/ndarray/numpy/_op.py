@@ -126,7 +126,10 @@ def zeros(shape, dtype=None, order='C', device=None):  # pylint: disable=redefin
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        if _np.dtype(dtype).names:
+            dtype = _np.dtype(dtype).names[0]
+        else:
+            dtype = _np.dtype(dtype).name
     return _api_internal.zeros(shape, dtype, device)
 
 
