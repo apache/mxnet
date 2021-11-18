@@ -393,11 +393,11 @@ def _add_workload_dsplit():
 
 
 def _add_workload_squeeze():
-    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(4, 1)))
-    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 10, 10, 1, 1)))
-    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 1, 10, 1, 20)))
-    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(1, 1, 20, 10)))
-    OpArgMngr.add_workload('squeeze', np.array([[[1.5]]]))
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(4, 1)), axis=None)
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 10, 10, 1, 1)), axis=None)
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 1, 10, 1, 20)), axis=None)
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(1, 1, 20, 10)), axis=None)
+    OpArgMngr.add_workload('squeeze', np.array([[[1.5]]]), axis=None)
 
 
 def _add_workload_std():
@@ -2519,7 +2519,7 @@ def _add_workload_histogramdd():
     x = np.array([[-.5, .5, 1.5], [-.5, 1.5, 2.5], [-.5, 2.5, .5],
                       [.5,  .5, 1.5], [.5,  1.5, 2.5], [.5,  2.5, 2.5]])
     ed = [[-2, 0, 2], [0, 1, 2, 3], [0, 1, 2, 3]]
-    z = [np.squeeze(y) for y in np.split(x, 3, axis=1)]
+    z = [np.squeeze(y, axis=None) for y in np.split(x, 3, axis=1)]
     OpArgMngr.add_workload('histogramdd', x, (2, 3, 3), range=[[-1, 1], [0, 3], [0, 3]])
     OpArgMngr.add_workload('histogramdd', x, bins=ed, density=True)
     OpArgMngr.add_workload('histogramdd', x, (2, 3, 4), range=[[-1, 1], [0, 3], [0, 4]],
