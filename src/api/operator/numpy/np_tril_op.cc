@@ -31,7 +31,7 @@ MXNET_REGISTER_API("_npi.tril").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tril");
   nnvm::NodeAttrs attrs;
-  op::TrilParam param;
+  op::TrilParam param = {};
   param.k = args[1].operator int();
 
   // we directly copy TrilParam, which is trivially-copyable

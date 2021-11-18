@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.trace").set_body([](runtime::MXNetArgs args, runtime::M
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_trace");
   nnvm::NodeAttrs attrs;
-  op::NumpyTraceParam param;
+  op::NumpyTraceParam param = {};
   param.offset = args[1].operator int64_t();
   param.axis1  = args[2].operator int64_t();
   param.axis2  = args[3].operator int64_t();

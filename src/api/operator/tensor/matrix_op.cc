@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.clip").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_clip");
   nnvm::NodeAttrs attrs;
-  op::ClipParam param;
+  op::ClipParam param = {};
   NDArray* inputs[1];
 
   if (args[0].type_code() != kNull) {

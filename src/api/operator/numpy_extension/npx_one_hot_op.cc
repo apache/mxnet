@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npx.one_hot")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_one_hot");
-      op::OneHotParam param;
+      op::OneHotParam param = {};
       // inputs
       int num_inputs    = 1;
       NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};

@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.randint")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_random_randint");
       nnvm::NodeAttrs attrs;
-      op::SampleRandIntParam param;
+      op::SampleRandIntParam param = {};
       int num_inputs = 0;
       param.low      = args[0].operator int();
       param.high     = args[1].operator int();

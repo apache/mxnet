@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.bincount")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_bincount");
       nnvm::NodeAttrs attrs;
-      op::NumpyBincountParam param;
+      op::NumpyBincountParam param = {};
 
       int num_outputs = 0;
       if (args[1].type_code() == kNull) {

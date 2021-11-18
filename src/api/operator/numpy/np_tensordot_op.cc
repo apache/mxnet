@@ -30,7 +30,7 @@ namespace mxnet {
 inline static void _npi_tensordot_int_axes(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tensordot_int_axes");
-  op::TensordotIntAxesParam param;
+  op::TensordotIntAxesParam param = {};
   nnvm::NodeAttrs attrs;
   param.axes = args[2].operator int();
   attrs.op   = op;
@@ -47,7 +47,7 @@ inline static void _npi_tensordot_int_axes(runtime::MXNetArgs args, runtime::MXN
 inline static void _npi_tensordot(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tensordot");
-  op::TensordotParam param;
+  op::TensordotParam param = {};
   nnvm::NodeAttrs attrs;
   ADT adt = Downcast<ADT, ObjectRef>(args[2].operator ObjectRef());
   if (const IntegerObj* lop = adt[0].as<IntegerObj>()) {
