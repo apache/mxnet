@@ -29,8 +29,8 @@ namespace mxnet {
 namespace op {
 
 bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
-                      mxnet::ShapeVector *in_attrs,
-                      mxnet::ShapeVector *out_attrs) {
+                      mxnet::ShapeVector* in_attrs,
+                      mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -52,8 +52,8 @@ bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   } else {
     // Two tensors of at least 1 dimensions.
     const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);
-    Tuple<int> a_axes_summed = param.a_axes_summed;
-    Tuple<int> b_axes_summed = param.b_axes_summed;
+    Tuple<int> a_axes_summed    = param.a_axes_summed;
+    Tuple<int> b_axes_summed    = param.b_axes_summed;
     ShiftAxes(&a_axes_summed, a_shape.ndim());
     ShiftAxes(&b_axes_summed, b_shape.ndim());
 
@@ -61,8 +61,14 @@ bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
     Tuple<int> b_axes_remained;
     Tuple<int> a_axes;
     Tuple<int> b_axes;
-    GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                    &b_axes, a_shape, b_shape);
+    GetReorderedAxes(a_axes_summed,
+                     &a_axes_remained,
+                     &a_axes,
+                     b_axes_summed,
+                     &b_axes_remained,
+                     &b_axes,
+                     a_shape,
+                     b_shape);
 
     CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
 
@@ -100,40 +106,42 @@ bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(TensordotParam);
 
 NNVM_REGISTER_OP(_npi_tensordot)
-.set_attr_parser(mxnet::op::ParamParser<TensordotParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "b"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", TensordotOpShape)
-.set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", TensordotOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot"})
-.add_argument("a", "NDArray-or-Symbol", "First input")
-.add_argument("b", "NDArray-or-Symbol", "Second input")
-.add_arguments(TensordotParam::__FIELDS__());
+    .set_attr_parser(mxnet::op::ParamParser<TensordotParam>)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", TensordotOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", TensordotOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot"})
+    .add_argument("a", "NDArray-or-Symbol", "First input")
+    .add_argument("b", "NDArray-or-Symbol", "Second input")
+    .add_arguments(TensordotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npi_tensordot)
-.set_attr_parser(mxnet::op::ParamParser<TensordotParam>)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-  })
-.set_attr<FCompute>("FCompute<cpu>", TensordotOpBackward<cpu>);
+    .set_attr_parser(mxnet::op::ParamParser<TensordotParam>)
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", TensordotOpBackward<cpu>);
 
 bool TensordotIntAxesOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector *in_attrs,
-                             mxnet::ShapeVector *out_attrs) {
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -152,7 +160,7 @@ bool TensordotIntAxesOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
   } else {
     const TensordotIntAxesParam& param = nnvm::get<TensordotIntAxesParam>(attrs.parsed);
-    const int& axes = param.axes;
+    const int& axes                    = param.axes;
 
     Tuple<int> a_axes_summed;
     Tuple<int> b_axes_summed;
@@ -162,8 +170,14 @@ bool TensordotIntAxesOpShape(const nnvm::NodeAttrs& attrs,
     Tuple<int> b_axes_remained;
     Tuple<int> a_axes;
     Tuple<int> b_axes;
-    GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                    &b_axes, a_shape, b_shape);
+    GetReorderedAxes(a_axes_summed,
+                     &a_axes_remained,
+                     &a_axes,
+                     b_axes_summed,
+                     &b_axes_remained,
+                     &b_axes,
+                     a_shape,
+                     b_shape);
 
     CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
 
@@ -201,37 +215,39 @@ bool TensordotIntAxesOpShape(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(TensordotIntAxesParam);
 
 NNVM_REGISTER_OP(_npi_tensordot_int_axes)
-.set_attr_parser(mxnet::op::ParamParser<TensordotIntAxesParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "b"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", TensordotIntAxesOpShape)
-.set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot_int_axes"})
-.add_argument("a", "NDArray-or-Symbol", "First input")
-.add_argument("b", "NDArray-or-Symbol", "Second input")
-.add_arguments(TensordotIntAxesParam::__FIELDS__());
+    .set_attr_parser(mxnet::op::ParamParser<TensordotIntAxesParam>)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", TensordotIntAxesOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot_int_axes"})
+    .add_argument("a", "NDArray-or-Symbol", "First input")
+    .add_argument("b", "NDArray-or-Symbol", "Second input")
+    .add_arguments(TensordotIntAxesParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npi_tensordot_int_axes)
-.set_attr_parser(mxnet::op::ParamParser<TensordotIntAxesParam>)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-  })
-.set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpBackward<cpu>);
+    .set_attr_parser(mxnet::op::ParamParser<TensordotIntAxesParam>)
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

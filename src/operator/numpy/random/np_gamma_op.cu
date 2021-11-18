@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_gamma_op.cu
  * \brief Operator for random sampling from gamma distribution
  */
@@ -29,11 +28,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_gamma)
-.set_attr<FCompute>("FCompute<gpu>", NumpyGammaForward<gpu, double>);
+NNVM_REGISTER_OP(_npi_gamma).set_attr<FCompute>("FCompute<gpu>", NumpyGammaForward<gpu, double>);
 
-NNVM_REGISTER_OP(_backward_gamma_sample)
-.set_attr<FCompute>("FCompute<gpu>", NumpyGammaGrad<gpu>);
+NNVM_REGISTER_OP(_backward_gamma_sample).set_attr<FCompute>("FCompute<gpu>", NumpyGammaGrad<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

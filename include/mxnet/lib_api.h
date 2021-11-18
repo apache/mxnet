@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file lib_api.h
  * \brief APIs to interact with libraries
  * This API specifies function prototypes to

@@ -124,11 +124,11 @@ class _Conv(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        ctx = x.ctx
+        device = x.device
         if self.bias is None:
-            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), **self._kwargs)
+            act = getattr(npx, self._op_name)(x, self.weight.data(device), **self._kwargs)
         else:
-            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), self.bias.data(ctx),
+            act = getattr(npx, self._op_name)(x, self.weight.data(device), self.bias.data(device),
                                               **self._kwargs)
         if self.act is not None:
             act = self.act(act)
@@ -1416,21 +1416,21 @@ class DeformableConvolution(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        ctx = x.ctx
+        device = x.device
         if self.offset_bias is None:
-            offset = npx.convolution(x, self.offset_weight.data(ctx), cudnn_off=True, **self._kwargs_offset)
+            offset = npx.convolution(x, self.offset_weight.data(device), cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = npx.convolution(x, self.offset_weight.data(ctx), self.offset_bias.data(ctx),
+            offset = npx.convolution(x, self.offset_weight.data(device), self.offset_bias.data(device),
                                      cudnn_off=True, **self._kwargs_offset)
 
         if self.deformable_conv_bias is None:
             act = npx.deformable_convolution(data=x, offset=offset,
-                                             weight=self.deformable_conv_weight.data(ctx),
+                                             weight=self.deformable_conv_weight.data(device),
                                              name='fwd', **self._kwargs_deformable_conv)
         else:
             act = npx.deformable_convolution(data=x, offset=offset,
-                                             weight=self.deformable_conv_weight.data(ctx),
-                                             bias=self.deformable_conv_bias.data(ctx), name='fwd',
+                                             weight=self.deformable_conv_weight.data(device),
+                                             bias=self.deformable_conv_bias.data(device), name='fwd',
                                              **self._kwargs_deformable_conv)
 
         if self.act:
@@ -1639,13 +1639,13 @@ class ModulatedDeformableConvolution(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        ctx = x.ctx
+        device = x.device
         if self.offset_bias is None:
-            offset = npx.convolution(x, self.offset_weight.data(ctx),
+            offset = npx.convolution(x, self.offset_weight.data(device),
                                      cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = npx.convolution(x, self.offset_weight.data(ctx),
-                                     self.offset_bias.data(ctx), cudnn_off=True, **self._kwargs_offset)
+            offset = npx.convolution(x, self.offset_weight.data(device),
+                                     self.offset_bias.data(device), cudnn_off=True, **self._kwargs_offset)
 
         offset_t = npx.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
         mask = npx.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
@@ -1653,12 +1653,12 @@ class ModulatedDeformableConvolution(HybridBlock):
 
         if self.deformable_conv_bias is None:
             act = npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
-                                                       weight=self.deformable_conv_weight.data(ctx),
+                                                       weight=self.deformable_conv_weight.data(device),
                                                        name='fwd', **self._kwargs_deformable_conv)
         else:
             act = npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
-                                                       weight=self.deformable_conv_weight.data(ctx),
-                                                       bias=self.deformable_conv_bias.data(ctx), name='fwd',
+                                                       weight=self.deformable_conv_weight.data(device),
+                                                       bias=self.deformable_conv_bias.data(device), name='fwd',
                                                        **self._kwargs_deformable_conv)
 
         if self.act:

@@ -37,7 +37,7 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet import np, npx, gluon, autograd
 from mxnet.gluon.nn import Dense
-mx.random.seed(1)                      # Set seed for reproducable results
+mx.np.random.seed(1)                      # Set seed for reproducable results
 ```
 
 
@@ -81,7 +81,7 @@ Thanks to inheriting from HybridBlock, one can easily do forward pass on a given
 
 ```{.python .input}
 layer = NormalizationHybridLayer()
-layer(np.array([1, 2, 3], ctx=mx.cpu()))
+layer(np.array([1, 2, 3], device=mx.cpu()))
 ```
 
 Output:

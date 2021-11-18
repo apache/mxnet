@@ -20,6 +20,7 @@
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
+import warnings
 from collections import OrderedDict
 
 from .. import optimizer as opt
@@ -107,7 +108,7 @@ class Trainer(object):
             if param._grad_stype != 'default':
                 self._contains_sparse_grad = True
         self._compression_params = compression_params
-        self._contexts = self._check_contexts()
+        self._devices = self._check_devices()
         optimizer_params = optimizer_params if optimizer_params else {}
         self._init_optimizer(optimizer, optimizer_params)
         self._scale = self._optimizer.rescale_grad
@@ -126,15 +127,21 @@ class Trainer(object):
         self._reset_kvstore()
 
     def _check_contexts(self):
-        contexts = None
+        """This function has been deprecated. Please refer to ``Trainer._check_devices``."""
+        warnings.warn('Trainer._check_contexts has been renamed to'
+                      ' Trainer._check_devices', DeprecationWarning)
+        return self._check_devices()
+
+    def _check_devices(self):
+        devices = None
         for param in self._params:
-            ctx = param.list_ctx()
-            assert contexts is None or contexts == ctx, \
-                "All Parameters must be initialized on the same set of contexts, " \
+            device = param.list_device()
+            assert devices is None or devices == device, \
+                "All Parameters must be initialized on the same set of devices, " \
                 "but Parameter %s is initialized on %s while previous Parameters " \
-                "are initialized on %s."%(param.name, str(ctx), str(contexts))
-            contexts = ctx
-        return contexts
+                "are initialized on %s."%(param.name, str(device), str(devices))
+            devices = device
+        return devices
 
     def _init_optimizer(self, optimizer, optimizer_params):
         param_dict = {i: param for i, param in enumerate(self._params)}
@@ -150,7 +157,7 @@ class Trainer(object):
             self._optimizer = opt.create(optimizer, param_dict=param_dict,
                                          **optimizer_params)
         self._updaters = [opt.get_updater(self._optimizer) \
-                            for _ in self._contexts]
+                            for _ in self._devices]
 
     def _init_params(self):
         """Initialize parameters in the KVStore.
@@ -224,8 +231,8 @@ class Trainer(object):
             #    - backward()
             #    - push_and_update(grad)
             #    - pull(weight)
-            arg_arrays = {param._uuid: param.data(self._contexts[0]) for param in self._params}
-            kvstore, _ = _create_kvstore(config['kvstore'], len(self._contexts), arg_arrays)
+            arg_arrays = {param._uuid: param.data(self._devices[0]) for param in self._params}
+            kvstore, _ = _create_kvstore(config['kvstore'], len(self._devices), arg_arrays)
             self._distributed = 'dist' in kvstore.type if kvstore else False
             update_on_kvstore = self._distributed
             # raise err if user provides unsupported configs
@@ -242,8 +249,8 @@ class Trainer(object):
         else:
             # Training with dense weight and dense gradients.
             # The only unsupported mode is async with update_on_kvstore=False
-            arg_arrays = {param._uuid: param.data(self._contexts[0]) for param in self._params}
-            kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
+            arg_arrays = {param._uuid: param.data(self._devices[0]) for param in self._params}
+            kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._devices),
                                                          arg_arrays)
             self._distributed = 'dist' in kvstore.type if kvstore else False
             if self._distributed and 'async' in kvstore.type:
@@ -361,7 +368,7 @@ class Trainer(object):
         self._update(ignore_stale_grad)
 
     def allreduce_grads(self):
-        """For each parameter, reduce the gradients from different contexts.
+        """For each parameter, reduce the gradients from different devices.
 
         Should be called after `autograd.backward()`, outside of `record()` scope,
         and before `trainer.update()`.
@@ -457,13 +464,13 @@ class Trainer(object):
                 for data in param._check_and_get(param._data, list):
                     if not data._fresh_grad:
                         raise UserWarning(
-                            "Gradient of Parameter `%s` on context %s has not been updated "
+                            "Gradient of Parameter `%s` on device %s has not been updated "
                             "by backward since last `step`. This could mean a bug in your "
                             "model that made it only use a subset of the Parameters (Blocks) "
                             "for this iteration. If you are intentionally only using a subset, "
                             "call step with ignore_stale_grad=True to suppress this "
                             "warning and skip updating of Parameters with stale gradient" \
-                            %(param.name, str(data.context)))
+                            %(param.name, str(data.device)))
 
             if self._kvstore and self._update_on_kvstore:
                 continue

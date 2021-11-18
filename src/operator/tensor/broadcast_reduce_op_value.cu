@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_op_value.cu
  * \brief GPU Implementation of broadcast and reduce functions based on value.
  */
@@ -27,18 +26,15 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(broadcast_axis)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
+NNVM_REGISTER_OP(broadcast_axis).set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
 
-NNVM_REGISTER_OP(broadcast_to)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
+NNVM_REGISTER_OP(broadcast_to).set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
 
-NNVM_REGISTER_OP(broadcast_like)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
+NNVM_REGISTER_OP(broadcast_like).set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
 
 NNVM_REGISTER_OP(_broadcast_backward)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
-                                                                              "red::sum{}", false});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity", "red::sum{}", false});
 
 }  // namespace op
 }  // namespace mxnet

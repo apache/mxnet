@@ -28,11 +28,11 @@ __all__ = ['ResNetV1', 'ResNetV2',
 
 import os
 
-from ....context import cpu
+from ....device import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
-from .... util import use_np
+from .... util import use_np, wrap_ctx_to_device_func
 from .... import npx
 
 # Helpers
@@ -357,7 +357,8 @@ resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': Bottleneck
 
 
 # Constructor
-def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
+@wrap_ctx_to_device_func
+def get_resnet(version, num_layers, pretrained=False, device=cpu(),
                root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""ResNet V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -372,8 +373,8 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
         Numbers of layers. Options are 18, 34, 50, 101, 152.
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
@@ -389,9 +390,10 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
     if pretrained:
         from ..model_store import get_model_file
         net.load_parameters(get_model_file('resnet%d_v%d'%(num_layers, version),
-                                           root=root), ctx=ctx)
+                                           root=root), device=device)
     return net
 
+@wrap_ctx_to_device_func
 def resnet18_v1(**kwargs):
     r"""ResNet-18 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -400,13 +402,14 @@ def resnet18_v1(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 18, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet34_v1(**kwargs):
     r"""ResNet-34 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -415,13 +418,14 @@ def resnet34_v1(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 34, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet50_v1(**kwargs):
     r"""ResNet-50 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -430,13 +434,14 @@ def resnet50_v1(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 50, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet101_v1(**kwargs):
     r"""ResNet-101 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -445,13 +450,14 @@ def resnet101_v1(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 101, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet152_v1(**kwargs):
     r"""ResNet-152 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -460,13 +466,14 @@ def resnet152_v1(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 152, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet18_v2(**kwargs):
     r"""ResNet-18 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -475,13 +482,14 @@ def resnet18_v2(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 18, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet34_v2(**kwargs):
     r"""ResNet-34 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -490,13 +498,14 @@ def resnet34_v2(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 34, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet50_v2(**kwargs):
     r"""ResNet-50 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -505,13 +514,14 @@ def resnet50_v2(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 50, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet101_v2(**kwargs):
     r"""ResNet-101 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -520,13 +530,14 @@ def resnet101_v2(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 101, **kwargs)
 
+@wrap_ctx_to_device_func
 def resnet152_v2(**kwargs):
     r"""ResNet-152 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -535,8 +546,8 @@ def resnet152_v2(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """

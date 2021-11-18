@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_window_op.cu
  * \brief CPU Implementation of unary op hanning, hamming, blackman window.
  */
@@ -28,14 +27,11 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_hanning)
-.set_attr<FCompute>("FCompute<gpu>", NumpyWindowCompute<gpu, 0>);
+NNVM_REGISTER_OP(_npi_hanning).set_attr<FCompute>("FCompute<gpu>", NumpyWindowCompute<gpu, 0>);
 
-NNVM_REGISTER_OP(_npi_hamming)
-.set_attr<FCompute>("FCompute<gpu>", NumpyWindowCompute<gpu, 1>);
+NNVM_REGISTER_OP(_npi_hamming).set_attr<FCompute>("FCompute<gpu>", NumpyWindowCompute<gpu, 1>);
 
-NNVM_REGISTER_OP(_npi_blackman)
-.set_attr<FCompute>("FCompute<gpu>", NumpyWindowCompute<gpu, 2>);
+NNVM_REGISTER_OP(_npi_blackman).set_attr<FCompute>("FCompute<gpu>", NumpyWindowCompute<gpu, 2>);
 
 }  // namespace op
 }  // namespace mxnet

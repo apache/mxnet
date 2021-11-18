@@ -22,11 +22,11 @@ __all__ = ['AlexNet', 'alexnet']
 
 import os
 
-from ....context import cpu
+from ....device import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
-from ....util import use_np
+from ....util import use_np, wrap_ctx_to_device_func
 
 # Net
 @use_np
@@ -68,7 +68,8 @@ class AlexNet(HybridBlock):
         return x
 
 # Constructor
-def alexnet(pretrained=False, ctx=cpu(),
+@wrap_ctx_to_device_func
+def alexnet(pretrained=False, device=cpu(),
             root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""AlexNet model from the `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
 
@@ -76,13 +77,13 @@ def alexnet(pretrained=False, ctx=cpu(),
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = AlexNet(**kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_parameters(get_model_file('alexnet', root=root), ctx=ctx)
+        net.load_parameters(get_model_file('alexnet', root=root), device=device)
     return net

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_true_divide.cu
  * \brief GPU Implementation of true_divide operator.
  */
@@ -29,16 +28,16 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_true_divide)
-.set_attr<FCompute>("FCompute<gpu>", TrueDivideBroadcastCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", TrueDivideBroadcastCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_div)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"div_grad", "div_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"div_grad", "div_rgrad"});
 
 NNVM_REGISTER_OP(_npi_true_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::true_divide>);
+    .set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::true_divide>);
 
 NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::rtrue_divide>);
+    .set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::rtrue_divide>);
 
 }  // namespace op
 }  // namespace mxnet

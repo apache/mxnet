@@ -30,12 +30,9 @@
 #include <unordered_map>
 #include "./cached_op.h"
 
-
-
 namespace mxnet {
 /*! \brief CachedOp Parameters*/
-struct CachedOpThreadSafeConfig
-    : public dmlc::Parameter<CachedOpThreadSafeConfig> {
+struct CachedOpThreadSafeConfig : public dmlc::Parameter<CachedOpThreadSafeConfig> {
   // keeping the config minimal
   // inlining, bulking, dynamic shapes, static allocing and shaping not
   // supported
@@ -49,21 +46,23 @@ struct CachedOpThreadSafeConfig
   bool static_shape;
   DMLC_DECLARE_PARAMETER(CachedOpThreadSafeConfig) {
     DMLC_DECLARE_FIELD(static_alloc)
-    .set_default(false)
-    .describe("Statically allocate memory to improve speed. "
-              "Memory usage may increase.");
+        .set_default(false)
+        .describe(
+            "Statically allocate memory to improve speed. "
+            "Memory usage may increase.");
     DMLC_DECLARE_FIELD(static_shape)
-    .set_default(false)
-    .describe("Optimize for invariant input shapes between iterations. "
-              "Must also set static_alloc to True. "
-              "Change of input shapes is still allowed but slower.");
+        .set_default(false)
+        .describe(
+            "Optimize for invariant input shapes between iterations. "
+            "Must also set static_alloc to True. "
+            "Change of input shapes is still allowed but slower.");
     DMLC_DECLARE_FIELD(forward_bulk_size)
-     .set_default(Imperative::BulkExecMaxNodeTrainFwd())
-     .describe("Segment size of bulk execution during dynamic forward");
+        .set_default(Imperative::BulkExecMaxNodeTrainFwd())
+        .describe("Segment size of bulk execution during dynamic forward");
     DMLC_DECLARE_FIELD(data_indices)
         .set_default(mxnet::Tuple<uint32_t>())
         .describe("Position of argument variables.");
-            DMLC_DECLARE_FIELD(param_indices)
+    DMLC_DECLARE_FIELD(param_indices)
         .set_default(mxnet::Tuple<uint32_t>())
         .describe("Position of parameters.");
   }
@@ -72,33 +71,29 @@ struct CachedOpThreadSafeConfig
 // Thread local buff to store internal states of the graph
 // Used in dynamic_forward
 #if DMLC_CXX11_THREAD_LOCAL
-    static thread_local std::vector<NDArray> buff;
+static thread_local std::vector<NDArray> buff;
 #else
-    static MX_THREAD_LOCAL std::vector<NDArray> buff;
+static MX_THREAD_LOCAL std::vector<NDArray> buff;
 #endif
-
-
 
 class CachedOpThreadSafe : public CachedOp {
  public:
-  CachedOpThreadSafe(
-      const nnvm::Symbol &sym,
-      const std::vector<std::pair<std::string, std::string>> &flags);
+  CachedOpThreadSafe(const nnvm::Symbol& sym,
+                     const std::vector<std::pair<std::string, std::string>>& flags);
   ~CachedOpThreadSafe();
   uint32_t num_inputs() const {
-      return fwd_graph_.indexed_graph().input_nodes().size();
+    return fwd_graph_.indexed_graph().input_nodes().size();
   }
   uint32_t num_outputs() const {
-      return fwd_graph_.outputs.size();
+    return fwd_graph_.outputs.size();
   }
   const std::unordered_set<uint32_t>& mutable_input_nodes() const {
     return fwd_graph_.indexed_graph().mutable_input_nodes();
   }
-  OpStatePtr Forward(
-      const std::shared_ptr<CachedOp>& op_ptr,
-      const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs,
-      const Context& default_ctx);
+  OpStatePtr Forward(const std::shared_ptr<CachedOp>& op_ptr,
+                     const std::vector<NDArray*>& inputs,
+                     const std::vector<NDArray*>& outputs,
+                     const Context& default_ctx);
   std::vector<std::string> ListForwardInputNames() const {
     nnvm::Symbol sym = GetForwardSym();
     return sym.ListInputNames(nnvm::Symbol::kAll);
@@ -114,6 +109,7 @@ class CachedOpThreadSafe : public CachedOp {
   }
 
   struct GraphInfo;
+
  private:
   struct DynamicRuntime;
 

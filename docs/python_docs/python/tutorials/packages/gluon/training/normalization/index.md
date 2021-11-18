@@ -45,7 +45,7 @@ When using pre-trained models from the [Gluon Model Zoo](https://mxnet.apache.or
 import mxnet as mx
 from mxnet.gluon.data.vision.transforms import Normalize
 
-image_int = mx.nd.random.randint(low=0, high=256, shape=(1,3,2,2))
+image_int = mx.np.random.randint(low=0, high=256, size=(1,3,2,2))
 image_float = image_int.astype('float32')/255
 # the following normalization statistics are taken from gluon model zoo
 normalizer = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -82,7 +82,7 @@ As an example, we'll apply `BatchNorm` to a batch of 2 samples, each with 2 chan
 
 
 ```{.python .input}
-data = mx.nd.arange(start=0, stop=2*2*2*2).reshape(2, 2, 2, 2)
+data = mx.np.arange(start=0, stop=2*2*2*2).reshape(2, 2, 2, 2)
 print(data)
 ```
 
@@ -110,7 +110,7 @@ Warning: `BatchNorm` assumes the channel dimension is the 2nd in order (i.e. `ax
 ```{.python .input}
 with mx.autograd.record():
     output = net(data)
-    loss = output.abs()
+    loss = mx.np.abs(output)
 loss.backward()
 print(output)
 ```
@@ -119,8 +119,13 @@ We can immediately see the activations have been scaled down and centered around
 
 
 ```{.python .input}
-batch_means = data.mean(axis=1, exclude=True)
-batch_vars = (data - batch_means.reshape(1, -1, 1, 1)).square().mean(axis=1, exclude=True)
+axes = list(range(data.ndim))
+del axes[1]
+batch_means = mx.np.mean(data, axis=axes)
+batch_square = mx.np.square(data - batch_means.reshape(1, -1, 1, 1))
+axes = list(range(batch_square.ndim))
+del axes[1]
+batch_vars = mx.np.mean(batch_square, axis=axes)
 print('batch_means:', batch_means.asnumpy())
 print('batch_vars:', batch_vars.asnumpy())
 ```
@@ -129,7 +134,7 @@ And use these to scale the first entry in `data`, to confirm the `BatchNorm` cal
 
 
 ```{.python .input}
-print("manually calculated:", ((data[0][0][0][0] - batch_means[0])/batch_vars[0].sqrt()).asnumpy())
+print("manually calculated:", ((data[0][0][0][0] - batch_means[0])/mx.np.sqrt(batch_vars[0])).asnumpy())
 print("automatically calculated:", output[0][0][0][0].asnumpy())
 ```
 
@@ -153,7 +158,7 @@ You should notice though that these running statistics do not match the batch st
 for i in range(100):
     with mx.autograd.record():
         output = net(data)
-        loss = output.abs()
+        loss = mx.np.abs(output)
     loss.backward()
 print('running_means:', net.running_mean.data().asnumpy())
 print('running_vars:', net.running_var.data().asnumpy())
@@ -212,7 +217,7 @@ As an example, we'll apply `LayerNorm` to a batch of 2 samples, each with 4 time
 
 
 ```{.python .input}
-data = mx.nd.arange(start=0, stop=2*4*2).reshape(2, 4, 2)
+data = mx.np.arange(start=0, stop=2*4*2).reshape(2, 4, 2)
 print(data)
 ```
 
@@ -251,7 +256,7 @@ As an example, we'll apply `InstanceNorm` to a batch of 2 samples, each with 2 c
 
 
 ```{.python .input}
-data = mx.nd.arange(start=0, stop=2*2*2*2).reshape(2, 2, 2, 2)
+data = mx.np.arange(start=0, stop=2*2*2*2).reshape(2, 2, 2, 2)
 print(data)
 ```
 

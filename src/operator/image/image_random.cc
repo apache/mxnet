@@ -1,27 +1,27 @@
 /*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 /*!
-* \file image_random.cc
-* \brief
-* \author
-*/
+ * \file image_random.cc
+ * \brief
+ * \author
+ */
 
 #include <mxnet/base.h>
 #include "./image_random-inl.h"
@@ -40,8 +40,8 @@ DMLC_REGISTER_PARAMETER(RandomLightingParam);
 DMLC_REGISTER_PARAMETER(RandomColorJitterParam);
 
 NNVM_REGISTER_OP(_image_to_tensor)
-.add_alias("_npx__image_to_tensor")
-.describe(R"code(Converts an image NDArray of shape (H x W x C) or (N x H x W x C) 
+    .add_alias("_npx__image_to_tensor")
+    .describe(R"code(Converts an image NDArray of shape (H x W x C) or (N x H x W x C) 
 with values in the range [0, 255] to a tensor NDArray of shape (C x H x W) or (N x C x H x W)
 with values in the range [0, 1].
 
@@ -92,21 +92,21 @@ Examples
 <NDArray 2x3x4x2 @cpu(0)>
 
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", ToTensorShape)
-.set_attr<nnvm::FInferType>("FInferType", ToTensorType)
-.set_attr<FCompute>("FCompute<cpu>", ToTensorOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray");
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", ToTensorShape)
+    .set_attr<nnvm::FInferType>("FInferType", ToTensorType)
+    .set_attr<FCompute>("FCompute<cpu>", ToTensorOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray");
 
 NNVM_REGISTER_OP(_image_normalize)
-.add_alias("_npx__image_normalize")
-.describe(R"code(Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
+    .add_alias("_npx__image_normalize")
+    .describe(R"code(Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
 standard deviation.
 
 Given mean `(m1, ..., mn)` and std `(s\ :sub:`1`\ , ..., s\ :sub:`n`)` for `n` channels,
@@ -169,108 +169,104 @@ Example:
         <NDArray 2x3x4x2 @cpu(0)>
 
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<NormalizeParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", NormalizeOpShape)
-.set_attr<nnvm::FInferType>("FInferType", NormalizeOpType)
-.set_attr<FCompute>("FCompute<cpu>", NormalizeOpForward<cpu>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_image_normalize"})
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(NormalizeParam::__FIELDS__());
+    .set_attr_parser(ParamParser<NormalizeParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NormalizeOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", NormalizeOpType)
+    .set_attr<FCompute>("FCompute<cpu>", NormalizeOpForward<cpu>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}};
+                                    })
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_image_normalize"})
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(NormalizeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_image_normalize)
-.set_attr_parser(ParamParser<NormalizeParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NormalizeOpBackward<cpu>);
+    .set_attr_parser(ParamParser<NormalizeParam>)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", NormalizeOpBackward<cpu>);
 
 MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_left_right)
-.add_alias("_npx__image_flip_left_right")
-.describe(R"code()code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", FlipLeftRight);
+    .add_alias("_npx__image_flip_left_right")
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr<FCompute>("FCompute<cpu>", FlipLeftRight);
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_flip_left_right)
-.add_alias("_npx__image_random_flip_left_right")
-.set_attr_parser(ParamParser<RandomFlipParam>)
-.describe(R"code()code" ADD_FILELINE)
-.add_arguments(RandomFlipParam::__FIELDS__())
-.set_attr<FCompute>("FCompute<cpu>", RandomFlipLeftRight);
+    .add_alias("_npx__image_random_flip_left_right")
+    .set_attr_parser(ParamParser<RandomFlipParam>)
+    .describe(R"code()code" ADD_FILELINE)
+    .add_arguments(RandomFlipParam::__FIELDS__())
+    .set_attr<FCompute>("FCompute<cpu>", RandomFlipLeftRight);
 
 MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_top_bottom)
-.add_alias("_npx__image_flip_top_bottom")
-.describe(R"code()code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", FlipTopBottom);
+    .add_alias("_npx__image_flip_top_bottom")
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr<FCompute>("FCompute<cpu>", FlipTopBottom);
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_flip_top_bottom)
-.add_alias("_npx__image_random_flip_top_bottom")
-.set_attr_parser(ParamParser<RandomFlipParam>)
-.describe(R"code()code" ADD_FILELINE)
-.add_arguments(RandomFlipParam::__FIELDS__())
-.set_attr<FCompute>("FCompute<cpu>", RandomFlipTopBottom);
+    .add_alias("_npx__image_random_flip_top_bottom")
+    .set_attr_parser(ParamParser<RandomFlipParam>)
+    .describe(R"code()code" ADD_FILELINE)
+    .add_arguments(RandomFlipParam::__FIELDS__())
+    .set_attr<FCompute>("FCompute<cpu>", RandomFlipTopBottom);
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_brightness)
-.add_alias("_npx__image_random_brightness")
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(ParamParser<RandomEnhanceParam>)
-.set_attr<FCompute>("FCompute<cpu>", RandomBrightness)
-.add_arguments(RandomEnhanceParam::__FIELDS__());
+    .add_alias("_npx__image_random_brightness")
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<RandomEnhanceParam>)
+    .set_attr<FCompute>("FCompute<cpu>", RandomBrightness)
+    .add_arguments(RandomEnhanceParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_contrast)
-.add_alias("_npx__image_random_contrast")
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(ParamParser<RandomEnhanceParam>)
-.set_attr<FCompute>("FCompute<cpu>", RandomContrast)
-.add_arguments(RandomEnhanceParam::__FIELDS__());
-
+    .add_alias("_npx__image_random_contrast")
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<RandomEnhanceParam>)
+    .set_attr<FCompute>("FCompute<cpu>", RandomContrast)
+    .add_arguments(RandomEnhanceParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_saturation)
-.add_alias("_npx__image_random_saturation")
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(ParamParser<RandomEnhanceParam>)
-.set_attr<FCompute>("FCompute<cpu>", RandomSaturation)
-.add_arguments(RandomEnhanceParam::__FIELDS__());
-
+    .add_alias("_npx__image_random_saturation")
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<RandomEnhanceParam>)
+    .set_attr<FCompute>("FCompute<cpu>", RandomSaturation)
+    .add_arguments(RandomEnhanceParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_hue)
-.add_alias("_npx__image_random_hue")
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(ParamParser<RandomEnhanceParam>)
-.set_attr<FCompute>("FCompute<cpu>", RandomHue)
-.add_arguments(RandomEnhanceParam::__FIELDS__());
-
+    .add_alias("_npx__image_random_hue")
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<RandomEnhanceParam>)
+    .set_attr<FCompute>("FCompute<cpu>", RandomHue)
+    .add_arguments(RandomEnhanceParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_color_jitter)
-.add_alias("_npx__image_random_color_jitter")
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(ParamParser<RandomColorJitterParam>)
-.set_attr<FCompute>("FCompute<cpu>", RandomColorJitter)
-.add_arguments(RandomColorJitterParam::__FIELDS__());
-
+    .add_alias("_npx__image_random_color_jitter")
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<RandomColorJitterParam>)
+    .set_attr<FCompute>("FCompute<cpu>", RandomColorJitter)
+    .add_arguments(RandomColorJitterParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_AUG_OP(_image_adjust_lighting)
-.add_alias("_npx__image_adjust_lighting")
-.describe(R"code(Adjust the lighting level of the input. Follow the AlexNet style.)code" ADD_FILELINE)
-.set_attr_parser(ParamParser<AdjustLightingParam>)
-.set_attr<FCompute>("FCompute<cpu>", AdjustLighting)
-.add_arguments(AdjustLightingParam::__FIELDS__());
-
+    .add_alias("_npx__image_adjust_lighting")
+    .describe(
+        R"code(Adjust the lighting level of the input. Follow the AlexNet style.)code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<AdjustLightingParam>)
+    .set_attr<FCompute>("FCompute<cpu>", AdjustLighting)
+    .add_arguments(AdjustLightingParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_lighting)
-.add_alias("_npx__image_random_lighting")
-.describe(R"code(Randomly add PCA noise. Follow the AlexNet style.)code" ADD_FILELINE)
-.set_attr_parser(ParamParser<RandomLightingParam>)
-.set_attr<FCompute>("FCompute<cpu>", RandomLighting)
-.add_arguments(RandomLightingParam::__FIELDS__());
+    .add_alias("_npx__image_random_lighting")
+    .describe(R"code(Randomly add PCA noise. Follow the AlexNet style.)code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<RandomLightingParam>)
+    .set_attr<FCompute>("FCompute<cpu>", RandomLighting)
+    .add_arguments(RandomLightingParam::__FIELDS__());
 
 }  // namespace image
 }  // namespace op

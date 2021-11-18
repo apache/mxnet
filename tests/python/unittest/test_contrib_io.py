@@ -33,7 +33,7 @@ def test_contrib_DataLoaderIter():
         assert batch.label[0].shape == (batch_size,)
         count = 0
         test_iter.reset()
-        for batch in test_iter:
+        for _ in test_iter:
             count += 1
         assert count == expected, "expected {} batches, given {}".format(expected, count)
 

@@ -57,7 +57,7 @@ def test_sparse_nd_elemwise_add():
     num_repeats = 3
     g = lambda x,y: x + y
     op = mx.nd.elemwise_add
-    for i in range(num_repeats):
+    for _ in range(num_repeats):
         shape = [rand_shape_2d()] * 2
         check_sparse_nd_elemwise_binary(shape, ['default'] * 2, op, g)
         check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
@@ -67,7 +67,7 @@ def test_sparse_nd_copy():
     def check_sparse_nd_copy(from_stype, to_stype, shape):
         from_nd = rand_ndarray(shape, from_stype)
         # copy to ctx
-        to_ctx = from_nd.copyto(default_context())
+        to_ctx = from_nd.copyto(default_device())
         # copy to stype
         to_nd = rand_ndarray(shape, to_stype)
         to_nd = from_nd.copyto(to_nd)
@@ -163,7 +163,7 @@ def test_sparse_nd_concat():
     nds = []
     zero_nds = []
     ncols = rnd.randint(2, 10)
-    for i in range(3):
+    for _ in range(3):
         shape = (rnd.randint(2, 10), ncols)
         A, _ = rand_sparse_ndarray(shape, 'csr')
         nds.append(A)
@@ -471,7 +471,7 @@ def test_sparse_nd_storage_fallback():
 def test_sparse_nd_random():
     """ test sparse random operator on cpu """
     # gpu random operator doesn't use fixed seed
-    if default_context().device_type is 'gpu':
+    if default_device().device_type is 'gpu':
         return
     shape = (100, 100)
     fns = [mx.nd.random.uniform, mx.nd.random.normal, mx.nd.random.gamma]
@@ -548,7 +548,7 @@ def test_sparse_nd_save_load(save_fn):
     densities = [0, 0.5]
     fname = 'tmp_list.npz'
     data_list1 = []
-    for i in range(num_data):
+    for _ in range(num_data):
         stype = stypes[np.random.randint(0, len(stypes))]
         shape = rand_shape_2d(dim0=40, dim1=40)
         density = densities[np.random.randint(0, len(densities))]
@@ -881,7 +881,7 @@ def test_synthetic_dataset_generator():
 def test_sparse_nd_fluent():
     def check_fluent_regular(stype, func, kwargs, shape=(5, 17), equal_nan=False):
         with mx.name.NameManager():
-            data = mx.nd.random_uniform(shape=shape, ctx=default_context()).tostype(stype)
+            data = mx.nd.random_uniform(shape=shape, ctx=default_device()).tostype(stype)
             regular = getattr(mx.ndarray, func)(data, **kwargs)
             fluent = getattr(data, func)(**kwargs)
             if isinstance(regular, list):
@@ -1023,7 +1023,7 @@ def test_sparse_take():
             check_sparse_take(d, m)
 
 def test_sparse_getnnz():
-    if default_context().device_type is 'gpu':
+    if default_device().device_type is 'gpu':
         return
     def check_sparse_getnnz(density, axis):
         shape = rand_shape_2d()

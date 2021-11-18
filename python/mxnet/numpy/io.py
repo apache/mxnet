@@ -18,7 +18,7 @@
 
 """I/O functions for ndarrays."""
 import numpy as onp
-from ..context import current_context
+from ..device import current_device
 from .multiarray import array
 
 __all__ = ['genfromtxt']
@@ -32,11 +32,11 @@ def genfromtxt(*args, **kwargs):
 
     Notes
     -----
-    This function has added an additional parameter `ctx` which allows to create
+    This function has added an additional parameter `device` which allows to create
     ndarrays on the user-specified device.
     """
-    ctx = kwargs.pop('ctx', current_context())
-    if ctx is None:
-        ctx = current_context()
+    device = kwargs.pop('device', current_device())
+    if device is None:
+        device = current_device()
     ret = onp.genfromtxt(*args, **kwargs)
-    return array(ret, dtype=ret.dtype, ctx=ctx)
+    return array(ret, dtype=ret.dtype, device=device)

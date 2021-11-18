@@ -18,10 +18,9 @@
  */
 
 /*!
-* Copyright (c) 2019 by Contributors
-* \file np_tri_op.cc
-* \brief CPU implementation of numpy tri operator
-*/
+ * \file np_tri_op.cc
+ * \brief CPU implementation of numpy tri operator
+ */
 
 #include "./np_tri_op-inl.h"
 
@@ -31,21 +30,21 @@ namespace op {
 DMLC_REGISTER_PARAMETER(TriParam);
 
 inline bool TriOpShape(const nnvm::NodeAttrs& attrs,
-                      mxnet::ShapeVector* in_attrs,
-                      mxnet::ShapeVector* out_attrs) {
+                       mxnet::ShapeVector* in_attrs,
+                       mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
 
   const TriParam& param = nnvm::get<TriParam>(attrs.parsed);
-  nnvm::dim_t M = param.M.has_value() ? param.M.value() : param.N;
+  nnvm::dim_t M         = param.M.has_value() ? param.M.value() : param.N;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(param.N, M));
 
   return shape_is_known(out_attrs->at(0));
 }
 
 inline bool TriOpType(const nnvm::NodeAttrs& attrs,
-                      std::vector<int> *in_attrs,
-                      std::vector<int> *out_attrs) {
+                      std::vector<int>* in_attrs,
+                      std::vector<int>* out_attrs) {
   CHECK_GE(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -56,14 +55,14 @@ inline bool TriOpType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_tri)
-.set_attr_parser(ParamParser<TriParam>)
-.set_num_inputs(0)
-.set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", TriOpShape)
-.set_attr<nnvm::FInferType>("FInferType", TriOpType)
-.set_attr<FCompute>("FCompute<cpu>", TriOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_arguments(TriParam::__FIELDS__());
+    .set_attr_parser(ParamParser<TriParam>)
+    .set_num_inputs(0)
+    .set_num_outputs(1)
+    .set_attr<mxnet::FInferShape>("FInferShape", TriOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", TriOpType)
+    .set_attr<FCompute>("FCompute<cpu>", TriOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_arguments(TriParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

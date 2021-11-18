@@ -25,7 +25,7 @@ import mxnet as mx
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_np_tensor, use_np
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_device, check_symbolic_forward, create_2d_np_tensor, use_np
 from mxnet import gluon, np, npx
 import pytest
 from tests.python.unittest.common import assertRaises
@@ -642,6 +642,7 @@ def test_shares_memory():
     assert out == False and out2 == True
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_where():
     inp1 = np.zeros((2, INT_OVERFLOW))
     inp1[-1, -1] = 1
@@ -2065,7 +2066,7 @@ def test_rnn_dim_check():
 
 
 @use_np
-@pytest.mark.skip(reason='runs without MKLDNN, wtih is not default behavior')
+@pytest.mark.skip(reason='runs without DNNL, wtih is not default behavior')
 def test_rnn_vanilla():
     L_SEQ, BAT, L_INP, L_STA = 2**20, 4, 2**10, 2
     def batch_check(x, modes, params):

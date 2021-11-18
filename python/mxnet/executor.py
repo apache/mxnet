@@ -34,14 +34,15 @@ class Executor:
     >>> c = 2 * a + b
     >>> texec = c._bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
     """
-    def __init__(self, sym, ctx, args, args_grad, grad_req, aux_states):
+    def __init__(self, sym, device, args, args_grad, grad_req, aux_states, static_alloc=False):
         self.outputs = None
         self._input_names = sym.list_inputs()
         self._aux_names = sym.list_auxiliary_states()
         self._arg_names = sym.list_arguments()
         self._output_names = sym.list_outputs()
-        self._ctx = ctx
+        self._device = device
         self._grad_req = grad_req
+        self.static_alloc = static_alloc
         # grad_req
         self._requires_grad = False
         if isinstance(grad_req, dict):
@@ -63,7 +64,7 @@ class Executor:
             for k, v in args.items():
                 try:
                     i = self._input_names.index(k)
-                    self._args[i] = v.copyto(ctx)
+                    self._args[i] = v.copyto(device)
                 # ignore provided arg which is not present in
                 # input_names
                 except ValueError:
@@ -73,7 +74,7 @@ class Executor:
             for i, arg in enumerate(args):
                 name = self._arg_names[i]
                 index = self._input_names.index(name)
-                self._args[index] = arg.copyto(ctx)
+                self._args[index] = arg.copyto(device)
 
         # aux states
         if aux_states:
@@ -81,12 +82,12 @@ class Executor:
                 for k, v in aux_states.items():
                     if k in self._aux_names:
                         i = self._input_names.index(k)
-                        self._args[i] = v.copyto(ctx)
+                        self._args[i] = v.copyto(device)
             else:
                 assert isinstance(aux_states, (list, tuple))
                 for i, v in enumerate(aux_states):
                     index = self._input_names.index(self._aux_names[i])
-                    self._args[index] = v.copyto(ctx)
+                    self._args[index] = v.copyto(device)
 
         # arg grad
         if self._args_grad:
@@ -101,7 +102,7 @@ class Executor:
                             assert isinstance(grad_req, dict)
                             req = grad_req[k]
                         if req != 'null':
-                            with self._ctx:
+                            with self._device:
                                 self._args[i].attach_grad(req, stype=g.stype)
                                 self._args[i].grad[:] = g
                     # ignore provided arg which is not present in
@@ -118,10 +119,10 @@ class Executor:
                         assert isinstance(grad_req, dict)
                         req = grad_req[self._input_names[i]]
                     if req != 'null':
-                        with self._ctx:
+                        with self._device:
                             self._args[i].attach_grad(req, stype=g.stype)
                             self._args[i].grad[:] = g
-        self._cached_op = ndarray.CachedOp(sym)
+        self._cached_op = ndarray.CachedOp(sym, flags=[("static_alloc", self.static_alloc)])
 
     def get_optimized_symbol(self):
         """Get an optimized version of the symbol from the executor.
@@ -161,7 +162,7 @@ class Executor:
             for name, array in kwargs.items():
                 if name in self._input_names:
                     index = self._input_names.index(name)
-                    with self._ctx:
+                    with self._device:
                         arr = ndarray.array(array, dtype=array.dtype)
                         if self._args[index] is None:
                             self._args[index] = arr
@@ -172,16 +173,16 @@ class Executor:
                                 assert isinstance(self._grad_req, dict)
                                 req = self._grad_req[name]
                             if req != 'null':
-                                with self._ctx:
+                                with self._device:
                                     self._args[index].attach_grad(req)
                         else:
                             self._args[index][:] = arr
 
         from . import autograd
-        default_ctx = None if self._input_names else self._ctx
+        default_device = None if self._input_names else self._device
         with autograd.record(train_mode=is_train):
             self.outputs = self._cached_op(*self._args,
-                                           default_ctx=default_ctx)
+                                           default_device=default_device)
         if not isinstance(self.outputs, (list, tuple)):
             self.outputs = [self.outputs]
         return self.outputs
@@ -205,7 +206,7 @@ class Executor:
         if out_grads is not None:
             if not isinstance(out_grads, (list, tuple)):
                 out_grads = [out_grads]
-            out_grads = [o.copyto(self._ctx) for o in out_grads]
+            out_grads = [o.copyto(self._device) for o in out_grads]
 
         if self._requires_grad:
             if self.outputs is None:

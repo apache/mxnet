@@ -90,7 +90,7 @@ npx.load('my_array')
 ```{.python .input}
 # Save a list of arrays
 b = np.array([4, 6, 8])
-npx.save('my_arrays', [a, b])  # FIXME, cannot be a tuple
+npx.savez('my_arrays', *[a, b])
 npx.load('my_arrays')
 ```
 
@@ -411,13 +411,13 @@ npx.gpu(0), npx.gpu(1)  # Context for the first and second GPUs
 
 ```{.python .input}
 gpu_0 = npx.gpu(0) if npx.num_gpus() > 1 else npx.cpu()
-g0 = np.zeros((2,3), ctx=gpu_0)  # Create array on GPU 0
+g0 = np.zeros((2,3), device=gpu_0)  # Create array on GPU 0
 g0
 ```
 
 ```{.python .input}
 gpu_1 = npx.gpu(1) if npx.num_gpus() > 2 else npx.cpu()
-g1 = np.random.uniform(size=(2,3), ctx=gpu_1)  # Create array on GPU 1
+g1 = np.random.uniform(size=(2,3), device=gpu_1)  # Create array on GPU 1
 g1
 ```
 
@@ -427,12 +427,12 @@ g1.copyto(gpu_0)
 ```
 
 ```{.python .input}
-# Return itself if matching the context, otherwise copy
+# Return itself if matching the device, otherwise copy
 g1.copyto(gpu_0), g1.copyto(gpu_0)
 ```
 
 ```{.python .input}
-g1.context  # Query the device an array is on
+g1.device  # Query the device an array is on
 ```
 
 ```{.python .input}

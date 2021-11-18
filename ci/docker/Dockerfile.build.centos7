@@ -54,7 +54,7 @@ RUN yum -y check-update || true && \
         # CentOS Software Collections https://www.softwarecollections.org
         devtoolset-7 \
         devtoolset-8 \
-        rh-python36 \
+        rh-python38 \
         rh-maven35 \
         # Libraries
         # Provide clbas headerfiles
@@ -82,13 +82,13 @@ RUN mkdir ~/openblas && \
     CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 && \
     make PREFIX=/usr/local install
 
-# Make Python 3.6 and Maven 3.3 Software Collections available by default during
+# Make Python 3.8 and Maven 3.3 Software Collections available by default during
 # the following build steps in this Dockerfile
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python38", "rh-maven35" ]
 
 # Install minimum required cmake version
 RUN cd /usr/local/src && \
-    wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh && \
+    wget -nv --no-check-certificate https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh && \
     sh cmake-3.13.5-Linux-x86_64.sh --prefix=/usr/local --skip-license && \
     rm cmake-3.13.5-Linux-x86_64.sh
 

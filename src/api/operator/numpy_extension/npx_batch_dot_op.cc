@@ -44,42 +44,42 @@ inline int String2ForwardStype(const std::string& s) {
 }
 
 MXNET_REGISTER_API("_npx.batch_dot")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  const nnvm::Op* op = Op::Get("_npx_batch_dot");
-  op::DotParam param;
-  // inputs
-  int num_inputs = 2;
-  std::vector<NDArray*> inputs;
-  inputs.reserve(num_inputs);
-  for (int i = 0; i < num_inputs; ++i) {
-    inputs.push_back(args[i].operator mxnet::NDArray*());
-  }
-  // transpose_a
-  if (args[2].type_code() == kNull) {
-    param.transpose_a = false;
-  } else {
-    param.transpose_a = args[2].operator bool();
-  }
-  // transpose_b
-  if (args[3].type_code() == kNull) {
-    param.transpose_b = false;
-  } else {
-    param.transpose_b = args[3].operator bool();
-  }
-  // forward_stype
-  if (args[4].type_code() == kNull) {
-    param.forward_stype = dmlc::nullopt;
-  } else {
-    param.forward_stype = String2ForwardStype(args[4].operator std::string());
-  }
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::DotParam>(&attrs);
-  int num_outputs = 1;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
-  *ret = ndoutputs[0];
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      nnvm::NodeAttrs attrs;
+      const nnvm::Op* op = Op::Get("_npx_batch_dot");
+      op::DotParam param = {};
+      // inputs
+      int num_inputs = 2;
+      std::vector<NDArray*> inputs;
+      inputs.reserve(num_inputs);
+      for (int i = 0; i < num_inputs; ++i) {
+        inputs.push_back(args[i].operator mxnet::NDArray*());
+      }
+      // transpose_a
+      if (args[2].type_code() == kNull) {
+        param.transpose_a = false;
+      } else {
+        param.transpose_a = args[2].operator bool();
+      }
+      // transpose_b
+      if (args[3].type_code() == kNull) {
+        param.transpose_b = false;
+      } else {
+        param.transpose_b = args[3].operator bool();
+      }
+      // forward_stype
+      if (args[4].type_code() == kNull) {
+        param.forward_stype = dmlc::nullopt;
+      } else {
+        param.forward_stype = String2ForwardStype(args[4].operator std::string());
+      }
+      attrs.parsed = param;
+      attrs.op     = op;
+      SetAttrDict<op::DotParam>(&attrs);
+      int num_outputs = 1;
+      auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+      *ret            = ndoutputs[0];
+    });
 
 }  // namespace mxnet

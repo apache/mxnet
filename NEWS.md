@@ -1,19 +1,22 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  ~
+-->
 
 MXNet Change Log
 ================
@@ -3572,7 +3575,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
   - ImageRecordIter now stores data in pinned memory to improve GPU memcopy speed.
 ### Bugfixes
   - Cython interface is fixed. `make cython` and `python setup.py install --with-cython` should install the cython interface and reduce overhead in applications that use imperative/bucketing.
-  - Fixed various bugs in Faster-RCNN example: https://github.com/dmlc/mxnet/pull/6486
+  - Fixed various bugs in Faster-RCNN example: https://github.com/apache/mxnet/pull/6486
   - Fixed various bugs in SSD example.
   - Fixed `out` argument not working for `zeros`, `ones`, `full`, etc.
   - `expand_dims` now supports backward shape inference.
@@ -3648,9 +3651,9 @@ This is the last release before the NNVM refactor.
 - Support CuDNN v5 by @antinucleon
 - More applications
   - Speech recognition by @yzhang87
-  - [Neural art](https://github.com/dmlc/mxnet/tree/master/example/neural-style) by @antinucleon
-  - [Detection](https://github.com/dmlc/mxnet/tree/master/example/rcnn), RCNN bt @precedenceguo
-  - [Segmentation](https://github.com/dmlc/mxnet/tree/master/example/fcn-xs), FCN by @tornadomeet
+  - [Neural art](https://github.com/apache/mxnet/tree/v0.7.0/example/neural-style) by @antinucleon
+  - [Detection](https://github.com/apache/mxnet/tree/v0.7.0/example/rcnn), RCNN bt @precedenceguo
+  - [Segmentation](https://github.com/apache/mxnet/tree/v0.7.0/example/fcn-xs), FCN by @tornadomeet
   - [Face identification](https://github.com/tornadomeet/mxnet-face) by @tornadomeet
   - More on the example
 

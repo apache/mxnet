@@ -50,7 +50,7 @@ Hyper-parameters
     np.random.seed(100)
     random.seed(100)
     mx.random.seed(10000)
-    ctx = mx.gpu(0)
+    device = mx.gpu(0)
 
     # parameters for dataset
     dataset = 'IWSLT2015'
@@ -318,7 +318,7 @@ allows computation to be done using the symbolic backend.
                                                          num_bi_layers=num_bi_layers)
     model = nmt.translation.NMTModel(src_vocab=src_vocab, tgt_vocab=tgt_vocab, encoder=encoder, decoder=decoder,
                                      embed_size=num_hidden, prefix='gnmt_')
-    model.initialize(init=mx.init.Uniform(0.1), ctx=ctx)
+    model.initialize(init=mx.init.Uniform(0.1), device=device)
     static_alloc = True
     model.hybridize(static_alloc=static_alloc)
     logging.info(model)
@@ -363,10 +363,10 @@ testing datasets.
         avg_loss = 0.0
         for _, (src_seq, tgt_seq, src_valid_length, tgt_valid_length, inst_ids) \
                 in enumerate(data_loader):
-            src_seq = src_seq.as_in_context(ctx)
-            tgt_seq = tgt_seq.as_in_context(ctx)
-            src_valid_length = src_valid_length.as_in_context(ctx)
-            tgt_valid_length = tgt_valid_length.as_in_context(ctx)
+            src_seq = src_seq.to_device(device)
+            tgt_seq = tgt_seq.to_device(device)
+            src_valid_length = src_valid_length.to_device(device)
+            tgt_valid_length = tgt_valid_length.to_device(device)
             # Calculating Loss
             out, _ = model(src_seq, tgt_seq[:, :-1], src_valid_length, tgt_valid_length - 1)
             loss = loss_function(out, tgt_seq[:, 1:], tgt_valid_length - 1).mean().asscalar()
@@ -408,7 +408,7 @@ that uses ADAM optimzier.
 We can then write the training loop. During the training, we evaluate on
 the validation and testing datasets every epoch, and record the
 parameters that give the hightest BLEU score on the validation dataset.
-Before performing forward and backward, we first use ``as_in_context``
+Before performing forward and backward, we first use ``to_device``
 function to copy the mini-batch to GPU. The statement
 ``with mx.autograd.record()`` tells Gluon backend to compute the
 gradients for the part inside the block.
@@ -424,16 +424,16 @@ gradients for the part inside the block.
         for batch_id, (src_seq, tgt_seq, src_valid_length, tgt_valid_length)\
                 in enumerate(train_data_loader):
             # logging.info(src_seq.context) Context suddenly becomes GPU.
-            src_seq = src_seq.as_in_context(ctx)
-            tgt_seq = tgt_seq.as_in_context(ctx)
-            src_valid_length = src_valid_length.as_in_context(ctx)
-            tgt_valid_length = tgt_valid_length.as_in_context(ctx)
+            src_seq = src_seq.to_device(device)
+            tgt_seq = tgt_seq.to_device(device)
+            src_valid_length = src_valid_length.to_device(device)
+            tgt_valid_length = tgt_valid_length.to_device(device)
             with mx.autograd.record():
                 out, _ = model(src_seq, tgt_seq[:, :-1], src_valid_length, tgt_valid_length - 1)
                 loss = loss_function(out, tgt_seq[:, 1:], tgt_valid_length - 1).mean()
                 loss = loss * (tgt_seq.shape[1] - 1) / (tgt_valid_length - 1).mean()
                 loss.backward()
-            grads = [p.grad(ctx) for p in model.collect_params().values()]
+            grads = [p.grad(device) for p in model.collect_params().values()]
             gnorm = gluon.utils.clip_global_norm(grads, clip)
             trainer.step(1)
             src_wc = src_valid_length.sum().asscalar()

@@ -32,7 +32,7 @@
 namespace mxnet {
 namespace exec {
 
-template<typename AttrType, typename FInfer>
+template <typename AttrType, typename FInfer>
 bool ApplyOpInferAttr(const nnvm::Graph& g,
                       const FInfer& finfer,
                       const NodeAttrs& attrs,
@@ -43,7 +43,7 @@ bool ApplyOpInferAttr(const nnvm::Graph& g,
   return finfer(attrs, in_attrs, out_attrs);
 }
 
-template<>
+template <>
 bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
                                               const FInferStorageType& finfer,
                                               const NodeAttrs& attrs,
@@ -63,18 +63,17 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
   return true;
 }
 
-template<typename AttrType, typename IsNone>
+template <typename AttrType, typename IsNone>
 inline void GetAttrFromForwardNode(const uint32_t nid,
-                                   const nnvm::IndexedGraph &idx,
+                                   const nnvm::IndexedGraph& idx,
                                    std::vector<AttrType>* rshape_ptr,
                                    std::vector<bool>* inference_finished,
                                    IsNone fis_none) {
-  std::vector<AttrType>& rshape = *rshape_ptr;
+  std::vector<AttrType>& rshape         = *rshape_ptr;
   const nnvm::IndexedGraph::Node& inode = idx[nid];
   // gradient function, used to get node correspondence.
-  static auto& fgrad =
-      Op::GetAttr<nnvm::FGradient>("FGradient");
-  nnvm::ObjectPtr fwd_ptr = inode.source->control_deps[0];
+  static auto& fgrad                    = Op::GetAttr<nnvm::FGradient>("FGradient");
+  nnvm::ObjectPtr fwd_ptr               = inode.source->control_deps[0];
   const nnvm::IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
   // use gradient function to find out the correspondence.
   std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
@@ -83,8 +82,8 @@ inline void GetAttrFromForwardNode(const uint32_t nid,
   }
   // input gradient list
   const std::vector<nnvm::NodeEntry>& igrad = fgrad[fwd_ptr->op()](fwd_ptr, ograd);
-  const nnvm::Node* igrad_node = nullptr;
-  bool all_attrs_known = true;
+  const nnvm::Node* igrad_node              = nullptr;
+  bool all_attrs_known                      = true;
   // Input gradient assignement
   for (size_t i = 0; i < igrad.size(); ++i) {
     if (igrad[i].node->op() == inode.source->op()) {
@@ -110,8 +109,8 @@ inline void GetAttrFromForwardNode(const uint32_t nid,
     }
   }
   // out grad entries
-  CHECK(igrad_node != nullptr)
-    << "Cannot find matching backward op for " << inode.source->attrs.name;
+  CHECK(igrad_node != nullptr) << "Cannot find matching backward op for "
+                               << inode.source->attrs.name;
   for (size_t i = 0; i < igrad_node->inputs.size(); ++i) {
     const nnvm::NodeEntry& e = igrad_node->inputs[i];
     if (e.node == nullptr) {
@@ -128,7 +127,7 @@ inline void GetAttrFromForwardNode(const uint32_t nid,
   (*inference_finished)[nid] = all_attrs_known;
 }
 
-template<typename FAccessSubgraphType, typename AttrType, typename IsNone>
+template <typename FAccessSubgraphType, typename AttrType, typename IsNone>
 void GetAttrFromFusedNode(uint32_t nid,
                           const nnvm::IndexedGraph& idx,
                           std::vector<AttrType>* rshape_ptr,
@@ -136,20 +135,18 @@ void GetAttrFromFusedNode(uint32_t nid,
                           IsNone fis_none,
                           const std::string& infer_fusion_name) {
   std::vector<AttrType>& rshape = *rshape_ptr;
-  const auto& inode = idx[nid];
+  const auto& inode             = idx[nid];
   // gradient function, used to get node correspondence.
-  static auto& fgrad =
-      Op::GetAttr<nnvm::FGradient>("FGradient");
-  nnvm::ObjectPtr fused_fwd_ptr = inode.source->control_deps[0];
-  static auto& finfer_fused_shape =
-    Op::GetAttr<FAccessSubgraphType>(infer_fusion_name);
-  auto finfer = finfer_fused_shape.get(fused_fwd_ptr->op(), nullptr);
-  CHECK(finfer != nullptr) << "Operator " << fused_fwd_ptr->attrs.name <<
-    " is marked as Fusion but does not allow accessing attributes";
+  static auto& fgrad              = Op::GetAttr<nnvm::FGradient>("FGradient");
+  nnvm::ObjectPtr fused_fwd_ptr   = inode.source->control_deps[0];
+  static auto& finfer_fused_shape = Op::GetAttr<FAccessSubgraphType>(infer_fusion_name);
+  auto finfer                     = finfer_fused_shape.get(fused_fwd_ptr->op(), nullptr);
+  CHECK(finfer != nullptr) << "Operator " << fused_fwd_ptr->attrs.name
+                           << " is marked as Fusion but does not allow accessing attributes";
   const auto& inferred_attrs = finfer(fused_fwd_ptr->attrs);
-  const auto& fwd_ptr = std::get<0>(inferred_attrs);
-  const auto& input_attrs = std::get<1>(inferred_attrs);
-  const auto& output_attrs = std::get<2>(inferred_attrs);
+  const auto& fwd_ptr        = std::get<0>(inferred_attrs);
+  const auto& input_attrs    = std::get<1>(inferred_attrs);
+  const auto& output_attrs   = std::get<2>(inferred_attrs);
 
   // use gradient function to find out the correspondence.
   std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
@@ -158,8 +155,8 @@ void GetAttrFromFusedNode(uint32_t nid,
   }
   // input gradient list
   const std::vector<nnvm::NodeEntry>& igrad = fgrad[fwd_ptr->op()](fwd_ptr, ograd);
-  const nnvm::Node* igrad_node = nullptr;
-  bool all_attrs_known = true;
+  const nnvm::Node* igrad_node              = nullptr;
+  bool all_attrs_known                      = true;
   // Set the attributes of output gradients
   // using attributes of forward node inputs
   for (size_t i = 0; i < igrad.size(); ++i) {
@@ -188,8 +185,8 @@ void GetAttrFromFusedNode(uint32_t nid,
 
   // Set the attributes of input gradients
   // using attributes of forward node outputs
-  CHECK(igrad_node != nullptr)
-    << "Cannot find matching backward op for " << inode.source->attrs.name;
+  CHECK(igrad_node != nullptr) << "Cannot find matching backward op for "
+                               << inode.source->attrs.name;
   for (size_t i = 0; i < igrad_node->inputs.size(); ++i) {
     const nnvm::NodeEntry& e = igrad_node->inputs[i];
     if (e.node == nullptr) {
@@ -217,9 +214,9 @@ void ProvideAttrToFusion(const uint32_t nid,
   for (const auto& dep_node : inode.source->control_deps) {
     in_attrs.push_back({});
     out_attrs.push_back({});
-    auto &current_in_attrs = in_attrs.back();
-    auto &current_out_attrs = out_attrs.back();
-    uint32_t dep_node_id = idx.node_id(dep_node.get());
+    auto& current_in_attrs  = in_attrs.back();
+    auto& current_out_attrs = out_attrs.back();
+    uint32_t dep_node_id    = idx.node_id(dep_node.get());
     for (const auto& e : idx[dep_node_id].inputs) {
       current_in_attrs.push_back(rshape[idx.entry_id(e)]);
     }
@@ -228,10 +225,10 @@ void ProvideAttrToFusion(const uint32_t nid,
     }
   }
   auto provide =
-    Op::GetAttr<FProvideSubgraphType>(provide_fusion_name).get(inode.source->op(), nullptr);
-  CHECK(provide != nullptr) <<
-    "Encountered Fusion operator that does not implement providing subgraph attr " <<
-    provide_fusion_name << ".";
+      Op::GetAttr<FProvideSubgraphType>(provide_fusion_name).get(inode.source->op(), nullptr);
+  CHECK(provide != nullptr)
+      << "Encountered Fusion operator that does not implement providing subgraph attr "
+      << provide_fusion_name << ".";
   provide(inode.source->attrs, inode.source->control_deps, in_attrs, out_attrs);
 }
 
@@ -263,9 +260,13 @@ void ProvideAttrToFusion(const uint32_t nid,
  * \param default_mode_val default value of the dispatch mode attribute on the node. Used
  *                         for storage type inference
  */
-template<typename AttrType, typename FInferType, typename FAccessSubgraphType,
-         typename FProvideSubgraphType, typename IsNone, typename FDefault>
-nnvm::Graph InferAttr(nnvm::Graph &&ret,
+template <typename AttrType,
+          typename FInferType,
+          typename FAccessSubgraphType,
+          typename FProvideSubgraphType,
+          typename IsNone,
+          typename FDefault>
+nnvm::Graph InferAttr(nnvm::Graph&& ret,
                       const AttrType empty_val,
                       const char* infer_name,
                       const char* infer_fusion_name,
@@ -281,15 +282,13 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
                       const DispatchMode default_mode_val = DispatchMode::kUndefined) {
   using nnvm::IndexedGraph;
   using nnvm::Op;
-  using AttrVector = std::vector<AttrType>;
+  using AttrVector     = std::vector<AttrType>;
   using NodeAttrVector = std::vector<DispatchMode>;
   using dmlc::any;
 
-  const IndexedGraph& idx = ret.indexed_graph();
-  static auto& finfer_shape =
-      Op::GetAttr<FInferType>(infer_name);
-  static auto& is_backward =
-      Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
+  const IndexedGraph& idx   = ret.indexed_graph();
+  static auto& finfer_shape = Op::GetAttr<FInferType>(infer_name);
+  static auto& is_backward  = Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
   // reshape shape vector
   AttrVector rshape;
   // vector holding information which operators
@@ -316,7 +315,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   std::string shape_hints_key = std::string(attr_name) + "_hints";
   if (ret.attrs.count(shape_hints_key)) {
     nnvm::NodeEntryMap<AttrType> shape_hints =
-      ret.GetAttr<nnvm::NodeEntryMap<AttrType>>(shape_hints_key);
+        ret.GetAttr<nnvm::NodeEntryMap<AttrType>>(shape_hints_key);
     for (const auto& kv : shape_hints) {
       nnvm::NodeEntry e = kv.first;
       if (idx.exist(e.node.get())) {
@@ -335,18 +334,18 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   // limit inference to part of the graph
   uint32_t node_start = 0, node_end = idx.num_nodes();
   if (ret.attrs.count("node_range")) {
-    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
-    node_start = range.first;
-    node_end = range.second;
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t>>("node_range");
+    node_start        = range.first;
+    node_end          = range.second;
     CHECK_GE(node_start, 0);
     CHECK_LE(node_end, idx.num_nodes());
     ret.attrs.erase("node_range");
   }
   uint32_t entry_start = 0, entry_end = idx.num_node_entries();
   if (ret.attrs.count("entry_range")) {
-    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("entry_range");
-    entry_start = range.first;
-    entry_end = range.second;
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t>>("entry_range");
+    entry_start       = range.first;
+    entry_end         = range.second;
     CHECK_GE(entry_start, 0);
     CHECK_LE(entry_end, idx.num_node_entries());
     ret.attrs.erase("entry_range");
@@ -365,9 +364,10 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
 
   // inference step function for nid
   auto infer_step = [&](uint32_t nid, bool last_iter) {
-    if (inference_finished[nid]) return;
-    const auto& inode = idx[nid];
-    const uint32_t num_inputs = inode.inputs.size();
+    if (inference_finished[nid])
+      return;
+    const auto& inode          = idx[nid];
+    const uint32_t num_inputs  = inode.inputs.size();
     const uint32_t num_outputs = inode.source->num_outputs();
     if (inode.source->is_variable()) {
       // Variable node. No operator. Only one output entry.
@@ -388,12 +388,12 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       if (dispatch_mode_name != nullptr) {
         op::dispatch_mode_assign(&dispatch_modes[nid], default_mode_val);
       }
-    } else if (is_backward.get(inode.source->op(), false) &&
-               inode.source->control_deps.size() && bwd_identity_assign) {
+    } else if (is_backward.get(inode.source->op(), false) && inode.source->control_deps.size() &&
+               bwd_identity_assign) {
       CHECK(dispatch_mode_name == nullptr)
-        << "Backward inference for node attributes is not available";
+          << "Backward inference for node attributes is not available";
       CHECK_GE(inode.source->control_deps.size(), 1U)
-        << "BackwardOp need to have control_deps to its forward op";
+          << "BackwardOp need to have control_deps to its forward op";
       nnvm::ObjectPtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
@@ -401,8 +401,8 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       if (!is_fusion_helper.get(fwd_ptr->op(), false)) {
         GetAttrFromForwardNode(nid, idx, &rshape, &inference_finished, fis_none);
       } else {
-        GetAttrFromFusedNode<FAccessSubgraphType>(nid, idx, &rshape, &inference_finished,
-                                                  fis_none, infer_fusion_name);
+        GetAttrFromFusedNode<FAccessSubgraphType>(
+            nid, idx, &rshape, &inference_finished, fis_none, infer_fusion_name);
       }
     } else {
       DispatchMode* dispatch_mode = nullptr;
@@ -426,14 +426,15 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
           if (is_fusion.get(inode.source->op(), false)) {
             ProvideAttrToFusion<FProvideSubgraphType>(nid, idx, rshape, provide_fusion_name);
           }
-          ApplyOpInferAttr(ret, finfer, inode.source->attrs,
-                           nid, &ishape, &oshape, dispatch_mode);
+          ApplyOpInferAttr(ret, finfer, inode.source->attrs, nid, &ishape, &oshape, dispatch_mode);
           bool finished = true;
           for (const auto& attr : ishape) {
-            if (fis_none(attr)) finished = false;
+            if (fis_none(attr))
+              finished = false;
           }
           for (const auto& attr : oshape) {
-            if (fis_none(attr)) finished = false;
+            if (fis_none(attr))
+              finished = false;
           }
           inference_finished[nid] = finished;
         } catch (const std::exception& e) {
@@ -455,10 +456,9 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
         }
         inference_finished[nid] = all_attrs_known;
         if (!all_attrs_known) {
-          CHECK(!last_iter)
-              << "Attribute " << infer_name
-              << " is not registered by op " << inode.source->op()->name
-              << ". We are not able to complete the inference because of this";
+          CHECK(!last_iter) << "Attribute " << infer_name << " is not registered by op "
+                            << inode.source->op()->name
+                            << ". We are not able to complete the inference because of this";
         }
       }
       // Save to the result map.
@@ -473,11 +473,11 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
 
   size_t last_num_unknown;
   size_t num_unknown_dispatch_mode = dispatch_mode_name ? node_end - node_start : 0;
-  size_t num_unknown_entry_attr = entry_end - entry_start;
-  size_t num_unknown = num_unknown_entry_attr + num_unknown_dispatch_mode;
-  bool last_iter = false;
-  bool do_next_iteration = true;
-  int i = 0;
+  size_t num_unknown_entry_attr    = entry_end - entry_start;
+  size_t num_unknown               = num_unknown_entry_attr + num_unknown_dispatch_mode;
+  bool last_iter                   = false;
+  bool do_next_iteration           = true;
+  int i                            = 0;
   do {
     if (i % 2 == 0) {
       for (uint32_t nid = node_start; nid < node_end; ++nid) {
@@ -490,7 +490,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       }
     }
     last_num_unknown = num_unknown;
-    num_unknown = 0;
+    num_unknown      = 0;
     for (size_t j = entry_start; j < entry_end; ++j) {
       if (fis_none(rshape[j])) {
         ++num_unknown;
@@ -498,7 +498,8 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
     }
     if (dispatch_mode_name) {
       for (size_t i = node_start; i < node_end; i++) {
-        if (dispatch_modes[i] == DispatchMode::kUndefined) ++num_unknown;
+        if (dispatch_modes[i] == DispatchMode::kUndefined)
+          ++num_unknown;
       }
     }
     do_next_iteration = num_unknown > 0 && last_num_unknown > num_unknown;
@@ -549,8 +550,8 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
  * \param default_mode_val default value of the dispatch mode attribute on the node. Used
  *                         for storage type inference
  */
-template<typename IsNone, typename FDefault, typename FNumUnknown>
-nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
+template <typename IsNone, typename FDefault, typename FNumUnknown>
+nnvm::Graph InferShapeAttr(nnvm::Graph&& ret,
                            const mxnet::TShape empty_val,
                            const char* infer_name,
                            const char* input_name,
@@ -565,16 +566,14 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
                            const DispatchMode default_mode_val = DispatchMode::kUndefined) {
   using nnvm::IndexedGraph;
   using nnvm::Op;
-  using AttrType = mxnet::TShape;
-  using FInferType = mxnet::FInferShape;
-  using AttrVector = std::vector<AttrType>;
+  using AttrType       = mxnet::TShape;
+  using FInferType     = mxnet::FInferShape;
+  using AttrVector     = std::vector<AttrType>;
   using NodeAttrVector = std::vector<DispatchMode>;
   using dmlc::any;
-  const IndexedGraph& idx = ret.indexed_graph();
-  static auto& finfer_shape =
-      Op::GetAttr<FInferType>(infer_name);
-  static auto& is_backward =
-      Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
+  const IndexedGraph& idx   = ret.indexed_graph();
+  static auto& finfer_shape = Op::GetAttr<FInferType>(infer_name);
+  static auto& is_backward  = Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
   // reshape shape vector
   AttrVector rshape;
   // vector holding information which operators
@@ -601,7 +600,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   std::string shape_hints_key = std::string(attr_name) + "_hints";
   if (ret.attrs.count(shape_hints_key)) {
     nnvm::NodeEntryMap<AttrType> shape_hints =
-      ret.GetAttr<nnvm::NodeEntryMap<AttrType>>(shape_hints_key);
+        ret.GetAttr<nnvm::NodeEntryMap<AttrType>>(shape_hints_key);
     for (const auto& kv : shape_hints) {
       nnvm::NodeEntry e = kv.first;
       if (idx.exist(e.node.get())) {
@@ -620,18 +619,18 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   // limit inference to part of the graph
   uint32_t node_start = 0, node_end = idx.num_nodes();
   if (ret.attrs.count("node_range")) {
-    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
-    node_start = range.first;
-    node_end = range.second;
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t>>("node_range");
+    node_start        = range.first;
+    node_end          = range.second;
     CHECK_GE(node_start, 0);
     CHECK_LE(node_end, idx.num_nodes());
     ret.attrs.erase("node_range");
   }
   uint32_t entry_start = 0, entry_end = idx.num_node_entries();
   if (ret.attrs.count("entry_range")) {
-    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("entry_range");
-    entry_start = range.first;
-    entry_end = range.second;
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t>>("entry_range");
+    entry_start       = range.first;
+    entry_end         = range.second;
     CHECK_GE(entry_start, 0);
     CHECK_LE(entry_end, idx.num_node_entries());
     ret.attrs.erase("entry_range");
@@ -657,10 +656,11 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
 
   // inference step function for nid
   auto infer_step = [&](uint32_t nid, bool last_iter) {
-    if (inference_finished[nid]) return;
-    const auto& inode = idx[nid];
-    const std::string name = inode.source->attrs.name;
-    const uint32_t num_inputs = inode.inputs.size();
+    if (inference_finished[nid])
+      return;
+    const auto& inode          = idx[nid];
+    const std::string name     = inode.source->attrs.name;
+    const uint32_t num_inputs  = inode.inputs.size();
     const uint32_t num_outputs = inode.source->num_outputs();
 
     if (inode.source->is_variable()) {
@@ -685,12 +685,12 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       if (dispatch_mode_name != nullptr) {
         op::dispatch_mode_assign(&dispatch_modes[nid], default_mode_val);
       }
-    } else if (is_backward.get(inode.source->op(), false) &&
-               inode.source->control_deps.size() && bwd_identity_assign) {
+    } else if (is_backward.get(inode.source->op(), false) && inode.source->control_deps.size() &&
+               bwd_identity_assign) {
       CHECK(dispatch_mode_name == nullptr)
-        << "Backward inference for node attributes is not available";
+          << "Backward inference for node attributes is not available";
       CHECK_GE(inode.source->control_deps.size(), 1U)
-        << "BackwardOp need to have control_deps to its forward op";
+          << "BackwardOp need to have control_deps to its forward op";
       nnvm::ObjectPtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
@@ -698,10 +698,8 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       if (!is_fusion_helper.get(fwd_ptr->op(), false)) {
         GetAttrFromForwardNode(nid, idx, &rshape, &inference_finished, fis_none);
       } else {
-        GetAttrFromFusedNode<exec::FAccessSubgraphShape>(nid, idx, &rshape,
-                                                         &inference_finished,
-                                                         fis_none,
-                                                         "FAccessSubgraphShape");
+        GetAttrFromFusedNode<exec::FAccessSubgraphShape>(
+            nid, idx, &rshape, &inference_finished, fis_none, "FAccessSubgraphShape");
       }
     } else {
       DispatchMode* dispatch_mode = nullptr;
@@ -734,17 +732,18 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
         try {
           static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
           if (is_fusion.get(inode.source->op(), false)) {
-            ProvideAttrToFusion<exec::FProvideSubgraphShape>(nid, idx, rshape,
-                                                             "FProvideSubgraphShape");
+            ProvideAttrToFusion<exec::FProvideSubgraphShape>(
+                nid, idx, rshape, "FProvideSubgraphShape");
           }
-          ApplyOpInferAttr(ret, finfer, inode.source->attrs,
-                           nid, &ishape, &oshape, dispatch_mode);
+          ApplyOpInferAttr(ret, finfer, inode.source->attrs, nid, &ishape, &oshape, dispatch_mode);
           bool finished = true;
           for (const auto& attr : ishape) {
-            if (fis_none(attr)) finished = false;
+            if (fis_none(attr))
+              finished = false;
           }
           for (const auto& attr : oshape) {
-            if (fis_none(attr)) finished = false;
+            if (fis_none(attr))
+              finished = false;
           }
           inference_finished[nid] = finished;
         } catch (const std::exception& e) {
@@ -762,8 +761,8 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   };
 
   size_t last_num_unknown;
-  size_t num_unknown = static_cast<size_t>(-1);  // Infinity
-  bool last_iter = false;
+  size_t num_unknown     = static_cast<size_t>(-1);  // Infinity
+  bool last_iter         = false;
   bool do_next_iteration = true;
 
   int i = 0;
@@ -780,7 +779,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       }
     }
     last_num_unknown = num_unknown;
-    num_unknown = 0;
+    num_unknown      = 0;
     for (size_t j = entry_start; j < entry_end; ++j) {
       if (fis_none(rshape[j])) {
         num_unknown += fnum_unknown(rshape[j]);
@@ -827,9 +826,13 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
     graph.attrs["shape_attr_key"] = std::make_shared<any>(shape_attr_key);
   }
   return InferShapeAttr(
-      std::move(graph), mxnet::TShape(),
-      "FInferShape", "shape_inputs", "shape_attr_key",
-      "shape", "shape_num_unknown_nodes",
+      std::move(graph),
+      mxnet::TShape(),
+      "FInferShape",
+      "shape_inputs",
+      "shape_attr_key",
+      "shape",
+      "shape_num_unknown_nodes",
       [](const mxnet::TShape& s) { return !mxnet::shape_is_known(s); },
       [](const mxnet::TShape& s) {
         if (!mxnet::ndim_is_known(s)) {
@@ -843,7 +846,9 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
         }
         return ret;
       },
-      nullptr, true, nullptr);
+      nullptr,
+      true,
+      nullptr);
 }
 
 nnvm::Graph InferType(nnvm::Graph&& graph,
@@ -856,13 +861,20 @@ nnvm::Graph InferType(nnvm::Graph&& graph,
   if (dtype_attr_key.length() != 0) {
     graph.attrs["dtype_attr_key"] = std::make_shared<any>(dtype_attr_key);
   }
-  return InferAttr<int, nnvm::FInferType, exec::FAccessSubgraphType,
-                   exec::FProvideSubgraphType>(
-      std::move(graph), -1,
-      "FInferType", "FAccessSubgraphType", "FProvideSubgraphType",
-      "dtype_inputs", "dtype_attr_key", "dtype", "dtype_num_unknown_nodes",
+  return InferAttr<int, nnvm::FInferType, exec::FAccessSubgraphType, exec::FProvideSubgraphType>(
+      std::move(graph),
+      -1,
+      "FInferType",
+      "FAccessSubgraphType",
+      "FProvideSubgraphType",
+      "dtype_inputs",
+      "dtype_attr_key",
+      "dtype",
+      "dtype_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      common::SameType, true, nullptr);
+      common::SameType,
+      true,
+      nullptr);
 }
 
 nnvm::Graph InferStorageType(nnvm::Graph&& graph,
@@ -885,19 +897,30 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
     CHECK_GT(graph.attrs.count("context"), 0);
     DevMaskVector dev_masks(graph.indexed_graph().num_nodes());
     const ContextVector& vctx = graph.GetAttr<ContextVector>("context");
-    for (size_t i = 0; i < vctx.size(); i++) dev_masks[i] = vctx[i].dev_mask();
+    for (size_t i = 0; i < vctx.size(); i++)
+      dev_masks[i] = vctx[i].dev_mask();
     graph.attrs["dev_mask"] = std::make_shared<any>(std::move(dev_masks));
   }
 
   // for storage type, the backward attr is not necessarily the same as it's correspondence
-  nnvm::Graph ret = InferAttr<int, FInferStorageType, exec::FAccessSubgraphStorageType,
+  nnvm::Graph ret = InferAttr<int,
+                              FInferStorageType,
+                              exec::FAccessSubgraphStorageType,
                               exec::FProvideSubgraphStorageType>(
-      std::move(graph), -1,
-      "FInferStorageType", "FAccessSubgraphStorageType", "FProvideSubgraphStorageType",
-      "storage_type_inputs", "storage_type_attr_key", "storage_type",
+      std::move(graph),
+      -1,
+      "FInferStorageType",
+      "FAccessSubgraphStorageType",
+      "FProvideSubgraphStorageType",
+      "storage_type_inputs",
+      "storage_type_attr_key",
+      "storage_type",
       "storage_type_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      common::DefaultStorageType, false, "dispatch_mode", DispatchMode::kVariable);
+      common::DefaultStorageType,
+      false,
+      "dispatch_mode",
+      DispatchMode::kVariable);
 
   // log the storage types and dispatch modes of the graph
   static bool log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);

@@ -109,7 +109,7 @@ class Geometric(Distribution):
         if isinstance(self.prob, Number):
             shape_tensor = np.zeros(())
         else:
-            shape_tensor = np.zeros_like(self.prob)
+            shape_tensor = np.zeros_like(self.prob)  # pylint: disable=too-many-function-args
         u = np.random.uniform(shape_tensor, size=size)
         samples = np.floor(
             np.log(u) / np.log1p(-self.prob)

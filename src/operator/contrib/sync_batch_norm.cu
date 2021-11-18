@@ -17,21 +17,19 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file sync_batch_norm.cc
  * \brief Synchronized BatchNorm modified from BatchNormV1
  * \author Hang Zhang
-*/
+ */
 
 #include "sync_batch_norm-inl.h"
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<gpu>(SyncBatchNormParam param, int dtype) {
+template <>
+Operator* CreateOp<gpu>(SyncBatchNormParam param, int dtype) {
   return new SyncBatchNorm<gpu>(param);
 }
 
 }  // namespace op
 }  // namespace mxnet
-

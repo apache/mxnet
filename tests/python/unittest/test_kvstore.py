@@ -74,7 +74,7 @@ def test_row_sparse_pull():
         vals = []
         row_ids = []
         all_row_ids = np.arange(num_rows)
-        for i in range(count):
+        for _ in range(count):
             vals.append(mx.nd.zeros(shape).tostype('row_sparse'))
             row_id = np.random.randint(num_rows, size=num_rows)
             row_ids.append(mx.nd.array(row_id).reshape((2, num_rows//2)))
@@ -254,7 +254,7 @@ def test_updater(dev='cpu'):
         outs = [[mx.nd.empty(shape, d) for d in devs]] * len(key_list)
 
         num_push = 4
-        for i in range(num_push):
+        for _ in range(num_push):
             kv.push(key_list, vals)
 
         kv.pull(key_list, out=outs)

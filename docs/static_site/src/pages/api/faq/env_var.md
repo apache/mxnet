@@ -295,16 +295,62 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Value of 1 chooses the best algo in a limited workspace
   - Value of 2 chooses the fastest algo whose memory requirements may be larger than the default workspace threshold
 
+* MXNET_CUDNN_HEUR_MODE
+  - Values: 0 or 1 (available since cuDNN 8.1) ```(default=1 for cuDNN 8.1 and later, otherwise 0)```
+  - Choose cuDNN heuristics mode.
+  - If set to '0', use fast decision tree based method.
+  - If set to '1', use neural network based method. It generalizes better for unknown or uncommon models.
+
+* MXNET_CUDNN_ALGO_VERBOSE_LEVEL
+  - Values: 0, 1, or 2 ```(default=0)```
+  - The level of printed output describing the "convolution engine" configurations
+  - Value of 0 produces no output
+  - Value of 1 outputs for the chosen config the engine number ("algo"), additional parameters ("knobs") and numerical notes
+  - Value of 2 outputs the same info as with a '1' setting, but for all configs considered
+  The output can be used to develop engine config filtering strategies to modify model behaviors.
+  Numerical accuracy may be improved by filtering out configs shown with 'rp', 'w' or 'fft' (i.e. reduced precision, winograd, or fft).
+  The configs are output with their list-index, as suggested by cuDNN, and with the chosen config flagged with a '*'.
+  If autotuning is enabled (MXNET_CUDNN_AUTOTUNE_DEFAULT != 0), the measured kernel times will be reported.
+
 * MXNET_CUDA_ALLOW_TENSOR_CORE
   - 0(false) or 1(true) ```(default=1)```
   - If set to '0', disallows Tensor Core use in CUDA ops.
   - If set to '1', allows Tensor Core use in CUDA ops.
   - This variable can only be set once in a session.
+  - Also controls filtering cuDNN engines with CUDNN_NUMERICAL_NOTE_TENSOR_CORE.
 
 * MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION
   - 0(false) or 1(true) ```(default=0)```
   - If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
   - If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
+  - Also controls filtering cuDNN engines with CUDNN_NUMERICAL_NOTE_DOWN_CONVERT_INPUTS (such engines are disallowed if set to 0).
+
+* MXNET_CUDNN_ALLOW_REDUCED_PRECISION_REDUCTION
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows cuDNN engines with CUDNN_NUMERICAL_NOTE_REDUCED_PRECISION_REDUCTION.
+  - If set to '1', allows cuDNN engines with CUDNN_NUMERICAL_NOTE_REDUCED_PRECISION_REDUCTION.
+
+* MXNET_CUDNN_ALLOW_FFT
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows cuDNN engines with CUDNN_NUMERICAL_NOTE_FFT.
+  - If set to '1', allows cuDNN engines with CUDNN_NUMERICAL_NOTE_FFT.
+
+* MXNET_CUDNN_ALLOW_WINOGRAD
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows cuDNN engines with CUDNN_NUMERICAL_NOTE_WINOGRAD.
+  - If set to '1', allows cuDNN engines with CUDNN_NUMERICAL_NOTE_WINOGRAD.
+
+* MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES
+  - Comma-separated list of cuDNN convolution forward engine numbers to disable.
+  - Normally should be left alone, unless you know what you're doing.
+
+* MXNET_CUDNN_DISABLED_CONV_DGRAD_ENGINES
+  - Comma-separated list of cuDNN convolution dgrad engine numbers to disable.
+  - Normally should be left alone, unless you know what you're doing.
+
+* MXNET_CUDNN_DISABLED_CONV_WGRAD_ENGINES
+  - Comma-separated list of cuDNN convolution wgrad engine numbers to disable.
+  - Normally should be left alone, unless you know what you're doing.
 
 * MXNET_CUDA_LIB_CHECKING
   - 0(false) or 1(true) ```(default=1)```
@@ -333,11 +379,16 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: Int ```(default=-1)```
   - Flag to set num of elements that ONEDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use ONEDNN and different input shape.
 
+* MXNET_ONEDNN_FORCE_FC_AB_FORMAT
+  - Values: 0, 1 ```(default=0)```
+  - If set to true, FullyConnected will use only AB format for weights, thus MXNet won't use BRGEMM implementation of FC on machines with AVX512-VNNI support which requires special weights format.
+
 * MXNET_ENFORCE_DETERMINISM
   - Values: 0(false) or 1(true) ```(default=0)```
   - If set to true, MXNet will only use deterministic algorithms in forward and backward computation.
   If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
   of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
+  - Also controls filtering cuDNN engines with CUDNN_NUMERICAL_NOTE_NONDETERMINISTIC (such engines are disallowed if set to 1).
 
 * MXNET_CPU_PARALLEL_SIZE
   - Values: Int ```(default=200000)```
@@ -369,12 +420,6 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 * MXNET_GPU_CUDNN_DROPOUT_STATE_COPY
   - Values: Int ```(default=4)```
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
-
-* MXNET_SUBGRAPH_BACKEND
-  - Values: String ```(default="MKLDNN")``` if ONEDNN is avaliable, otherwise ```(default="")```
-  - This variable controls the subgraph partitioning in MXNet.
-  - This variable is used to perform ONEDNN FP32 operator fusion and quantization. Please refer to the [ONEDNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
-  - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
   - Values: Values: 0(false) or 1(true) ```(default=1)```

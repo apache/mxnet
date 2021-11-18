@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file pooled_storage_manager.h
  * \brief Storage manager with a memory pool.
  */
@@ -30,9 +29,9 @@
 #include <algorithm>
 #include <mutex>
 #include <tuple>
+#include <utility>
 #include "./storage_manager.h"
 #include "../profiler/storage_profiler.h"
-
 
 namespace mxnet {
 namespace storage {
@@ -49,15 +48,19 @@ const std::string env_var_name(const char* dev_type, env_var_type type);
 
 #if MXNET_USE_CUDA
 #define SET_DEVICE(device_store, contextHelper, ctx, flag) \
-      const auto *device_store = flag? contextHelper.get()->SetCurrentDevice(ctx) : nullptr;
-#define UNSET_DEVICE(device_store)    delete device_store
+  const auto* device_store = flag ? contextHelper.get()->SetCurrentDevice(ctx) : nullptr;
+#define UNSET_DEVICE(device_store) delete device_store
 
-#define SET_GPU_PROFILER(prof, contextHelper)                          \
-      auto prof = contextHelper->contextGPU()?                         \
-                  profiler::GpuDeviceStorageProfiler::Get() : nullptr; \
-      if (!prof->IsProfiling()) prof = nullptr
+#define SET_GPU_PROFILER(prof, contextHelper)                                                    \
+  auto prof = contextHelper->contextGPU() ? profiler::GpuDeviceStorageProfiler::Get() : nullptr; \
+  if (!prof->IsProfiling()) {                                                                    \
+    prof = nullptr;                                                                              \
+  }
 
-#define GPU_PROFILER_ON_FREE(prof, pntr)    if (prof) prof->OnFree(pntr)
+#define GPU_PROFILER_ON_FREE(prof, pntr) \
+  if (prof) {                            \
+    prof->OnFree(pntr);                  \
+  }
 #else
 // empty macros when MxNet is compiled without CUDA support
 #define SET_DEVICE(...)
@@ -74,30 +77,34 @@ const std::string env_var_name(const char* dev_type, env_var_type type);
  * Allocation/freeing of memory is done by contextHelper_, which is the pointer
  * to one of memory specific instance of the class, derived from ContextHelper
  */
-template<typename BucketingStrategy, typename StoringMethod>
-class PooledStorageManager : public StorageManager,
-             public BucketingStrategy, public StoringMethod {
+template <typename BucketingStrategy, typename StoringMethod>
+class PooledStorageManager : public StorageManager, public BucketingStrategy, public StoringMethod {
  public:
-  explicit PooledStorageManager(const Context &ctx, int num_gpu_device) {
-    const char *dev_type = nullptr;
+  explicit PooledStorageManager(const Context& ctx, int num_gpu_device) {
+    const char* dev_type = nullptr;
     switch (dev_type_ = ctx.dev_type) {
 #if MXNET_USE_CUDA
-      case Context::kGPU:       contextHelper_ = std::make_unique<ContextHelperGPU>();
-                                dev_type = "GPU";
-                                break;
-      case Context::kCPUPinned: dev_type = "CPU_PINNED";
-                                if (num_gpu_device > 1) {
-                                  contextHelper_ = std::make_unique<ContextHelperPinned>();
-                                  dev_type_ = Context::kGPU;
-                                  break;
-                                }
+      case Context::kGPU:
+        contextHelper_ = std::make_unique<ContextHelperGPU>();
+        dev_type       = "GPU";
+        break;
+      case Context::kCPUPinned:
+        dev_type = "CPU_PINNED";
+        if (num_gpu_device > 1) {
+          contextHelper_ = std::make_unique<ContextHelperPinned>();
+          dev_type_      = Context::kGPU;
+          break;
+        }
 #else
-      case Context::kCPUPinned: dev_type = "CPU_PINNED";
+      case Context::kCPUPinned:
+        dev_type = "CPU_PINNED";
 #endif
-                                dev_type_ = Context::kCPU;
-      case Context::kCPU:       contextHelper_ = std::make_unique<ContextHelperCPU>();
-                                dev_type = "CPU";
-      default:                  break;
+        dev_type_ = Context::kCPU;
+      case Context::kCPU:
+        contextHelper_ = std::make_unique<ContextHelperCPU>();
+        dev_type       = "CPU";
+      default:
+        break;
     }
 
     BucketingStrategy::InitRoundHelper(dev_type);
@@ -106,9 +113,9 @@ class PooledStorageManager : public StorageManager,
 
     // percentage of reserved memory
     if (dev_type) {
-      const auto env_var = env_var_name(dev_type, pool_reserve);
-      const size_t reserve = dmlc::GetEnv(env_var.c_str(), 5);
-      const size_t total = std::get<1>(contextHelper_->getMemoryInfo());
+      const auto env_var       = env_var_name(dev_type, pool_reserve);
+      const size_t reserve     = dmlc::GetEnv(env_var.c_str(), 5);
+      const size_t total       = std::get<1>(contextHelper_->getMemoryInfo());
       memory_allocation_limit_ = total * reserve / 100;
     }
   }
@@ -119,11 +126,12 @@ class PooledStorageManager : public StorageManager,
     ReleaseAll();
   }
 
-  void Alloc(Storage::Handle* handle) override;
+  void Alloc(Storage::Handle* handle, bool failsafe) override;
   void Free(Storage::Handle handle) override {
     // Insert returned memory in cache
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
-    StoringMethod::InsertInCache(BucketingStrategy::get_bucket(handle.size), handle.dptr);
+    StoringMethod::InsertInCache(
+        BucketingStrategy::get_bucket(handle.size), handle.dptr, handle.sync_obj);
   }
 
   void DirectFree(Storage::Handle handle) override {
@@ -148,7 +156,7 @@ class PooledStorageManager : public StorageManager,
     UNSET_DEVICE(device_store);
   }
 
-  bool MemoryIsAvalable(size_t roundSize) const {
+  bool MemoryIsAvailable(size_t roundSize) const {
     const auto free = contextHelper_->freeMemorySize();
     return free > roundSize && memory_allocation_limit_ <= free - roundSize;
   }
@@ -163,31 +171,43 @@ class PooledStorageManager : public StorageManager,
   std::unique_ptr<ContextHelper> contextHelper_;
 };
 
-template<typename BucketingStrategy, typename StoringMethod>
-void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Handle* handle) {
+template <typename BucketingStrategy, typename StoringMethod>
+void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Handle* handle,
+                                                                   bool failsafe) {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
   const auto bucket_id = BucketingStrategy::get_bucket(handle->size);
-  size_t roundSize = 0;
-  auto reuse_pool = StoringMethod::GetMemStorage(bucket_id);
+  size_t roundSize     = 0;
+  auto reuse_pool      = StoringMethod::GetMemStorage(bucket_id);
   if (!reuse_pool) {
     SET_DEVICE(device_store, contextHelper_, handle->ctx, true);
     roundSize = BucketingStrategy::RoundAllocSizeForBucket(bucket_id);
-    if (!MemoryIsAvalable(roundSize))
+    if (!MemoryIsAvailable(roundSize))
       ReleaseAllNoLock(false);
 
-    void *ret = nullptr;
-    auto e = contextHelper_->Malloc(&ret, roundSize);
+    void* ret = nullptr;
+    auto e    = contextHelper_->Malloc(&ret, roundSize);
     if (e) {
       // retry in case of fragmentation
       ReleaseAllNoLock(false);
       e = contextHelper_->Malloc(&ret, roundSize);
+#if MXNET_USE_CUDA
+      if (failsafe && dev_type_ == Context::kGPU && e == cudaErrorMemoryAllocation) {
+        // In failsafe mode, the only indication of the
+        // failed allocation is a null dptr.  The used_memory_
+        // should not grow.
+        // Clear sticky cuda mem alloc error
+        cudaGetLastError();
+        ret       = nullptr;
+        roundSize = 0;
+        e         = cudaSuccess;
+      }
+#endif
       if (e) {
         const std::string err(
 #if MXNET_USE_CUDA
-        dev_type_ == Context::kGPU?
-           cudaGetErrorString(static_cast<cudaError_t>(e)) :
+            dev_type_ == Context::kGPU ? cudaGetErrorString(static_cast<cudaError_t>(e)) :
 #endif
-           std::strerror(errno));
+                                       std::strerror(errno));
 
         LOG(FATAL) << "Memory allocation failed " << err;
       }
@@ -199,7 +219,19 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
     handle->dptr = ret;
   } else {
     // Reusing memory
-    handle->dptr = reuse_pool->back();
+    auto ptr_syncobj = reuse_pool->back();
+    handle->dptr     = ptr_syncobj.first;
+    if (dev_type_ == Context::kGPU) {
+      handle->sync_obj = ptr_syncobj.second;
+#if MXNET_USE_CUDA
+      for (auto ev : handle->sync_obj.events) {
+        auto valid_ev = ev.lock();
+        if (valid_ev) {
+          MSHADOW_CUDA_CALL(cudaEventSynchronize(*valid_ev));
+        }
+      }
+#endif
+    }
     reuse_pool->pop_back();
   }
 #if MXNET_USE_CUDA
@@ -209,29 +241,31 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
       roundSize = BucketingStrategy::RoundAllocSizeForBucket(bucket_id);
 
     // record the allocation event in the memory profiler
-    profilerGPU->OnAlloc(*handle, roundSize, reuse_pool);
+    if (!failsafe || handle->dptr != nullptr)
+      profilerGPU->OnAlloc(*handle, roundSize, reuse_pool);
   }
 #endif
 }
-
 
 /*!
  * \brief Base class for Rounding Method classes.
  */
 class RoundHelper {
  public:
-  virtual size_t get_size(size_t  /*bucket*/) const { return 0; }
+  virtual size_t get_size(size_t /*bucket*/) const {
+    return 0;
+  }
   virtual std::tuple<size_t, size_t> getContainerParam() const {
-     return std::tuple<size_t, size_t>(0, 0);
+    return std::tuple<size_t, size_t>(0, 0);
   }
 
  protected:
   void InitRoundHelper(const char* dev_type) {
     const auto env_var = env_var_name(dev_type, pool_page_size);
-    page_size_ = dmlc::GetEnv(env_var.c_str(), 4096);
+    page_size_         = dmlc::GetEnv(env_var.c_str(), 4096);
     if (page_size_ < NDEV) {
-      LOG(FATAL) << env_var << " cannot be set to a value smaller than " << NDEV \
-                    << ". Got " << page_size_ << ".";
+      LOG(FATAL) << env_var << " cannot be set to a value smaller than " << NDEV << ". Got "
+                 << page_size_ << ".";
     }
   }
 
@@ -249,13 +283,12 @@ class RoundHelper {
  */
 class RoundMultiple : protected RoundHelper {
  protected:
-  void InitRoundHelper(const char *dev_type) {
+  void InitRoundHelper(const char* dev_type) {
     RoundHelper::InitRoundHelper(dev_type);
-    const auto env_var = env_var_name(dev_type, large_alloc_size);
-    large_alloc_round_size_ = dmlc::GetEnv(env_var.c_str(), 2*1024*1024);
+    const auto env_var      = env_var_name(dev_type, large_alloc_size);
+    large_alloc_round_size_ = dmlc::GetEnv(env_var.c_str(), 2 * 1024 * 1024);
     if (large_alloc_round_size_ <= 0) {
-      LOG(FATAL) << env_var << " cannot be set to a value <= 0, found: "
-                 << large_alloc_round_size_;
+      LOG(FATAL) << env_var << " cannot be set to a value <= 0, found: " << large_alloc_round_size_;
     }
   }
 
@@ -265,10 +298,14 @@ class RoundMultiple : protected RoundHelper {
     // To ensure proper freeing under some driver variants, make sure
     // large allocs entirely occupy their slabs, which cannot then be
     // locked by smaller permanent allocations sharing the slab.
-    return  size > large_alloc_round_size_? RoundToMultiple(size, large_alloc_round_size_) : size;
+    return size > large_alloc_round_size_ ? RoundToMultiple(size, large_alloc_round_size_) : size;
   }
-  inline size_t get_bucket(size_t size) const                   { return RoundAllocSize(size); }
-  inline size_t RoundAllocSizeForBucket(size_t bucket_id) const { return bucket_id; }
+  inline size_t get_bucket(size_t size) const {
+    return RoundAllocSize(size);
+  }
+  inline size_t RoundAllocSizeForBucket(size_t bucket_id) const {
+    return bucket_id;
+  }
 
  private:
   // Round a value 'x' up to the next multiple of 'multiple'
@@ -298,30 +335,30 @@ class RoundMultiple : protected RoundHelper {
 class RoundPower2 : public RoundHelper {
  public:
   size_t get_size(size_t bucket) const override {
-    return bucket <= cut_off_? 1ul << bucket : (bucket - cut_off_ + 1) << cut_off_;
+    return bucket <= cut_off_ ? 1ul << bucket : (bucket - cut_off_ + 1) << cut_off_;
   }
 
  protected:
-  void InitRoundHelper(const char *dev_type) {
+  void InitRoundHelper(const char* dev_type) {
     RoundHelper::InitRoundHelper(dev_type);
     const auto log_pager_size = common::ilog2ul(page_size_ - 1);
     if (page_size_ != 1ul << log_pager_size) {
-      LOG(FATAL) << env_var_name(dev_type, pool_page_size) \
+      LOG(FATAL) << env_var_name(dev_type, pool_page_size)
                  << " must be a power of 2. Got: " << page_size_ << ".";
     }
     page_size_ = log_pager_size;
 
     const auto linear_cutoff = env_var_name(dev_type, round_linear_cutoff);
-    cut_off_ = dmlc::GetEnv(linear_cutoff.c_str(), 24);
+    cut_off_                 = dmlc::GetEnv(linear_cutoff.c_str(), 24);
     if (cut_off_ < 20 || cut_off_ > LOG2_MAX_MEM) {
-      LOG(FATAL) << linear_cutoff << " cannot be set to a value " \
-                 << "smaller than 20 or greater than " << LOG2_MAX_MEM << ". Got: " \
-                 << cut_off_ << ".";
+      LOG(FATAL) << linear_cutoff << " cannot be set to a value "
+                 << "smaller than 20 or greater than " << LOG2_MAX_MEM << ". Got: " << cut_off_
+                 << ".";
     }
     if (cut_off_ < page_size_) {
-      LOG(FATAL) << linear_cutoff << " cannot be set to a value smaller than log2 of " \
-                 << env_var_name(dev_type, pool_page_size) << ". Got: " \
-                 << cut_off_ << " vs " << page_size_ << ".";
+      LOG(FATAL) << linear_cutoff << " cannot be set to a value smaller than log2 of "
+                 << env_var_name(dev_type, pool_page_size) << ". Got: " << cut_off_ << " vs "
+                 << page_size_ << ".";
     }
   }
 
@@ -333,11 +370,15 @@ class RoundPower2 : public RoundHelper {
     return std::max(log_size, page_size_);
   }
 
-  inline size_t RoundAllocSizeForBucket(size_t bucket_id) const { return get_size(bucket_id); }
-  inline size_t RoundAllocSize(size_t size) const { return get_size(get_bucket(size)); }
+  inline size_t RoundAllocSizeForBucket(size_t bucket_id) const {
+    return get_size(bucket_id);
+  }
+  inline size_t RoundAllocSize(size_t size) const {
+    return get_size(get_bucket(size));
+  }
   std::tuple<size_t, size_t> getContainerParam() const override {
     return std::make_tuple((1ul << (LOG2_MAX_MEM - cut_off_)) + cut_off_,
-                       get_bucket(page_size_) - 1);
+                           get_bucket(page_size_) - 1);
   }
 
  private:
@@ -355,7 +396,6 @@ class RoundPower2 : public RoundHelper {
   size_t cut_off_ = 0;
 };  // class RoundPower2
 
-
 /*!
  * \brief Unordered map based storage container.
  *  The pointers to the portions of same rounded sizes memory
@@ -365,21 +405,23 @@ class RoundPower2 : public RoundHelper {
  */
 class UnorderedMapContainer {
  protected:
-  inline void InitContainer(const RoundHelper *p)   {}
-  inline void InsertInCache(size_t key, void *dptr) { memory_pool_[key].push_back(dptr); }
-
-  inline std::vector<void*> *GetMemStorage(size_t key) {
-    auto&& reuse_it = memory_pool_.find(key);
-    return reuse_it != memory_pool_.end() && reuse_it->second.size()? &reuse_it->second : nullptr;
+  inline void InitContainer(const RoundHelper* p) {}
+  inline void InsertInCache(size_t key, void* dptr, Storage::SyncObj sync_obj) {
+    memory_pool_[key].emplace_back(dptr, sync_obj);
   }
 
-  size_t ReleaseAllNoLock(const ContextHelper *contextHelper, const RoundHelper * /*rndHelper*/) {
+  inline std::vector<std::pair<void*, Storage::SyncObj>>* GetMemStorage(size_t key) {
+    auto&& reuse_it = memory_pool_.find(key);
+    return reuse_it != memory_pool_.end() && reuse_it->second.size() ? &reuse_it->second : nullptr;
+  }
+
+  size_t ReleaseAllNoLock(const ContextHelper* contextHelper, const RoundHelper* /*rndHelper*/) {
     SET_GPU_PROFILER(profilerGPU, contextHelper);
     size_t released_memory = 0;
     for (auto&& i : memory_pool_) {
       for (auto&& j : i.second) {
-        contextHelper->Free(j);
-        GPU_PROFILER_ON_FREE(profilerGPU, j);
+        contextHelper->Free(j.first);
+        GPU_PROFILER_ON_FREE(profilerGPU, j.first);
       }
       released_memory += i.first * i.second.size();
       i.second.clear();
@@ -389,7 +431,7 @@ class UnorderedMapContainer {
   }
 
  private:
-  std::unordered_map<size_t, std::vector<void *>> memory_pool_;
+  std::unordered_map<size_t, std::vector<std::pair<void*, Storage::SyncObj>>> memory_pool_;
 };  // class UnorderedMapContainer
 
 /*!
@@ -402,29 +444,31 @@ class UnorderedMapContainer {
  */
 class VectorContainer {
  protected:
-  inline void InitContainer(const RoundHelper *p) {
+  inline void InitContainer(const RoundHelper* p) {
     size_t vector_size;
     std::tie(vector_size, first_bucket_) = p->getContainerParam();
-    memory_pool_ .resize(vector_size);
+    memory_pool_.resize(vector_size);
   }
 
-  inline void InsertInCache(size_t idx, void *dptr) { memory_pool_[idx].push_back(dptr); }
+  inline void InsertInCache(size_t idx, void* dptr, Storage::SyncObj sync_obj) {
+    memory_pool_[idx].emplace_back(dptr, sync_obj);
+  }
 
-  std::vector<void*> *GetMemStorage(size_t idx) {
-    auto &&reuse_pool = memory_pool_[idx];
+  std::vector<std::pair<void*, Storage::SyncObj>>* GetMemStorage(size_t idx) {
+    auto&& reuse_pool = memory_pool_[idx];
     return reuse_pool.size() ? &reuse_pool : nullptr;
   }
 
-  size_t ReleaseAllNoLock(const ContextHelper *contextHelper, const RoundHelper *rndHelper) {
+  size_t ReleaseAllNoLock(const ContextHelper* contextHelper, const RoundHelper* rndHelper) {
     SET_GPU_PROFILER(profilerGPU, contextHelper);
     size_t released_memory = 0;
     for (size_t i = first_bucket_; i < memory_pool_.size(); i++) {
       if (!memory_pool_[i].size())
         continue;
 
-      for (auto &j : memory_pool_[i]) {
-        contextHelper->Free(j);
-        GPU_PROFILER_ON_FREE(profilerGPU, j);
+      for (auto& j : memory_pool_[i]) {
+        contextHelper->Free(j.first);
+        GPU_PROFILER_ON_FREE(profilerGPU, j.first);
       }
       released_memory += rndHelper->get_size(i) * memory_pool_[i].size();
       memory_pool_[i].clear();
@@ -433,7 +477,7 @@ class VectorContainer {
   }
 
  private:
-  std::vector<std::vector<void*>> memory_pool_;
+  std::vector<std::vector<std::pair<void*, Storage::SyncObj>>> memory_pool_;
   size_t first_bucket_;
 };  // class VectorContainer
 

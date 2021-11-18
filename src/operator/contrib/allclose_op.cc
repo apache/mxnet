@@ -30,7 +30,8 @@ namespace op {
 DMLC_REGISTER_PARAMETER(AllCloseParam);
 
 NNVM_REGISTER_OP(_contrib_allclose)
-.describe(R"code(This operators implements the numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)
+    .describe(
+        R"code(This operators implements the numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)
 
 .. math::
 
@@ -53,33 +54,38 @@ Examples::
   y = True
 
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<AllCloseParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "b"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", AllCloseShape)
-.set_attr<nnvm::FInferType>("FInferType", AllCloseType)
-.set_attr<FCompute>("FCompute<cpu>", AllClose<cpu>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.add_argument("a", "NDArray-or-Symbol", "Input array a")
-.add_argument("b", "NDArray-or-Symbol", "Input array b")
-.add_arguments(AllCloseParam::__FIELDS__());
+    .set_attr_parser(ParamParser<AllCloseParam>)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", AllCloseShape)
+    .set_attr<nnvm::FInferType>("FInferType", AllCloseType)
+    .set_attr<FCompute>("FCompute<cpu>", AllClose<cpu>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .add_argument("a", "NDArray-or-Symbol", "Input array a")
+    .add_argument("b", "NDArray-or-Symbol", "Input array b")
+    .add_arguments(AllCloseParam::__FIELDS__());
 
-template<>
-size_t GetAdditionalMemoryLogical<cpu>(mshadow::Stream<cpu> *s, const int num_items) {
+template <>
+size_t GetAdditionalMemoryLogical<cpu>(mshadow::Stream<cpu>* s, const int num_items) {
   return 0;
 }
 
-template<>
-void GetResultLogical<cpu>(mshadow::Stream<cpu> *s, INTERM_DATA_TYPE *workMem,
-                           size_t extraStorageBytes, int num_items, INTERM_DATA_TYPE *outPntr) {
-  while (num_items-- > 0 && workMem[num_items]) {}
-  outPntr[0] = num_items >= 0? 0 : 1;
+template <>
+void GetResultLogical<cpu>(mshadow::Stream<cpu>* s,
+                           INTERM_DATA_TYPE* workMem,
+                           size_t extraStorageBytes,
+                           int num_items,
+                           INTERM_DATA_TYPE* outPntr) {
+  while (num_items-- > 0 && workMem[num_items]) {
+  }
+  outPntr[0] = num_items >= 0 ? 0 : 1;
 }
 
 }  // namespace op

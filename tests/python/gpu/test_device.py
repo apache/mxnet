@@ -24,7 +24,7 @@ from mxnet.test_utils import environment
 
 shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
 keys = [1,2,3,4,5,6,7]
-num_gpus = mx.context.num_gpus()
+num_gpus = mx.device.num_gpus()
 
 
 if num_gpus > 8 :
@@ -34,7 +34,7 @@ if num_gpus > 8 :
 
 gpus = range(1, 1+num_gpus)
 
-@pytest.mark.skipif(mx.context.num_gpus() < 1, reason="test_device_pushpull needs at least 1 GPU")
+@pytest.mark.skipif(mx.device.num_gpus() < 1, reason="test_device_pushpull needs at least 1 GPU")
 def test_device_pushpull():
     def check_dense_pushpull(kv_type):
         for shape, key in zip(shapes, keys):

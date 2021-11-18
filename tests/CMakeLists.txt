@@ -25,7 +25,7 @@ if(GTEST_FOUND AND NOT MSVC)
   include_directories(${GTEST_INCLUDE_DIR})
   include_directories(cpp/include)
 
-  if (NOT PRIVATE_RUNTIME_DIR)
+  if(NOT PRIVATE_RUNTIME_DIR)
    set(PRIVATE_RUNTIME_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   endif()
 

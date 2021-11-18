@@ -18,33 +18,43 @@
 """Namespace for ops used in imperative programming."""
 
 from ..ndarray import numpy as _mx_nd_np
+from ..util import wrap_data_api_linalg_func
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
-           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
+           'tensordot', 'trace', 'matrix_transpose', 'vecdot', 'svdvals']
 __all__ += fallback_linalg.__all__
 
 
-def matrix_rank(M, tol=None, hermitian=False):
-    r"""Return matrix rank of array using SVD method
+@wrap_data_api_linalg_func
+def matrix_rank(M, rtol=None, hermitian=False):
+    r"""
+    Return matrix rank of array using SVD method
 
     Rank of the array is the number of singular values of the array that are
-    greater than `tol`.
+    greater than `rtol`.
+
+    Notes
+    -----
+    `rtol` param is requested in array-api-standard in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-rank-x-rtol-none
+    instead of a parameter in official NumPy operator.
 
     Parameters
     ----------
     M : {(M,), (..., M, N)} ndarray
         Input vector or stack of matrices.
-    tol : (...) ndarray, float, optional
-        Threshold below which SVD values are considered zero. If `tol` is
+    rtol : (...) ndarray, float, optional
+        Threshold below which SVD values are considered zero. If `rtol` is
         None, and ``S`` is an array with singular values for `M`, and
-        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        ``eps`` is the epsilon value for datatype of ``S``, then `rtol` is
         set to ``S.max() * max(M.shape) * eps``.
     hermitian : bool, optional
         If True, `M` is assumed to be Hermitian (symmetric if real-valued),
         enabling a more efficient method for finding singular values.
-        Defaults to False.
+        Default: False.
 
     Returns
     -------
@@ -54,17 +64,372 @@ def matrix_rank(M, tol=None, hermitian=False):
     Examples
     --------
     >>> from mxnet import np
-    >>> np.matrix_rank(np.eye(4)) # Full rank matrix
+    >>> np.linalg.matrix_rank(np.eye(4)) # Full rank matrix
     4
     >>> I=np.eye(4); I[-1,-1] = 0. # rank deficient matrix
-    >>> np.matrix_rank(I)
+    >>> np.linalg.matrix_rank(I)
     3
-    >>> np.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
+    >>> np.linalg.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
     1
-    >>> np.matrix_rank(np.zeros((4,)))
+    >>> np.linalg.matrix_rank(np.zeros((4,)))
     0
     """
-    return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
+    return _mx_nd_np.linalg.matrix_rank(M, rtol, hermitian)
+
+
+def matrix_transpose(a):
+    r"""
+    Transposes a matrix (or a stack of matrices) `a`.
+
+    Notes
+    -----
+    `matrix_transpose` is new in array API spec:
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-transpose-x
+    instead of an official NumPy operator. Unlike transpose, it only transposes the last two axes.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array having shape (..., M, N) and whose innermost two dimensions form MxN matrices.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the transpose for each matrix and having shape (..., N, M).
+        The returned array must have the same data type as `a`.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.linalg.matrix_transpose(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.linalg.matrix_transpose(x)
+    array([[[1., 1.],
+            [1., 1.],
+            [1., 1.]]])
+    """
+    if a.ndim < 2:
+        raise ValueError("x must be at least 2-dimensional for matrix_transpose")
+    return _mx_nd_np.swapaxes(a, -1, -2)
+
+
+def trace(a, offset=0):
+    r"""
+    Returns a tensor contraction of `a` and `b` over specific axes.
+
+    Notes
+    -----
+    `trace` is an alias for `trace`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-trace-x-offset-0
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array having shape (..., M, N) and whose innermost two dimensions form MxN matrices.
+        Should have a numeric data type.
+    offset : int
+        Offset specifying the off-diagonal relative to the main diagonal.
+
+        offset = 0 : the main diagonal.
+        offset > 0 : off-diagonal above the main diagonal.
+        offset < 0 : off-diagonal below the main diagonal.
+
+        Default: 0.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the traces and whose shape is determined by removing the last two dimensions and storing
+        the traces in the last array dimension. For example, if `a` has rank `k` and shape `(I, J, K, ..., L, M, N)`,
+        then an output array has rank `k-2` and shape `(I, J, K, ..., L)`
+        where: `out[i, j, k, ..., l] = trace(a[i, j, k, ..., l, :, :])`
+        The returned array must have the same data type as `a`.
+
+    Examples
+    --------
+    >>> x = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    >>> np.linalg.trace(x)
+    array(3.)
+    >>> x = np.arange(8).reshape((2, 2, 2))
+    >>> np.linalg.trace(x)
+    array([6., 8.])
+    >>> x = np.arange(24).reshape((2, 2, 2, 3))
+    >>> np.linalg.trace(x).shape
+    (2, 3)
+    >>> np.linalg.trace(x)
+    array([[18., 20., 22.],
+        [24., 26., 28.]])
+    """
+    # axis1, axis2: defaults are the first two axes of `a`.
+    return _mx_nd_np.trace(a, offset=offset, axis1=0, axis2=1, out=None)
+
+
+def tensordot(a, b, axes=2):
+    r"""
+    Returns a tensor contraction of `a` and `b` over specific axes.
+
+    Notes
+    -----
+    `tensordot` is an alias for `tensordot`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-tensordot-x1-x2-axes-2
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        First input array. Should have a numeric data type.
+    b : ndarray
+        Second input array. Must be compatible with `a` (see Broadcasting). Should have a numeric data type.
+    axes : int, tuple
+        Number of axes to contract or explicit sequences of axes for `a` and `b`, respectively.
+        If axes is an int equal to `N` , then contraction must be performed over the last `N` axes of `a`
+        and the first `N` axes of `b` in order.
+        The size of each corresponding axis (dimension) must match. Must be nonnegative.
+
+        If N equals 0 , the result is the tensor (outer) product.
+        If N equals 1 , the result is the tensor dot product.
+        If N equals 2 , the result is the tensor double contraction (default).
+
+        Default: 2.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the tensor contraction whose shape consists of the non-contracted axes (dimensions) of the
+        first array `a`, followed by the non-contracted axes (dimensions) of the second array `b`.
+
+    Examples
+    --------
+    >>> x = np.arange(60.).reshape(3,4,5)
+    >>> y = np.arange(24.).reshape(4,3,2)
+    >>> z = np.linalg.tensordot(x, y, axes=([1,0],[0,1]))
+    >>> z.shape
+    (5, 2)
+    >>> z
+    array([[ 4400.,  4730.],
+           [ 4532.,  4874.],
+           [ 4664.,  5018.],
+           [ 4796.,  5162.],
+           [ 4928.,  5306.]])
+    """
+    return _mx_nd_np.tensordot(a, b, axes)
+
+
+def diagonal(a, offset=0):
+    r"""
+    Returns the specified diagonals of a matrix (or a stack of matrices) `a`.
+
+    Notes
+    -----
+    `diagonal` is an alias for `diagonal`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-diagonal-x-offset-0
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        The array to apply diag method.
+    offset : int
+        Extracts or constructs kth diagonal given input array.
+        Offset specifying the off-diagonal relative to the main diagonal.
+
+        offset = 0 : the main diagonal.
+        offset > 0 : off-diagonal above the main diagonal.
+        offset < 0 : off-diagonal below the main diagonal.
+
+        Default: 0.
+
+    Returns
+    ----------
+    out : ndarray
+        An array containing the diagonals and whose shape is determined by removing the last two dimensions and
+        appending a dimension equal to the size of the resulting diagonals.
+        The returned array must have the same data type as a.
+
+    Examples
+    --------
+    >>> x = np.arange(9).reshape((3,3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.],
+           [6., 7., 8.]])
+    >>> np.linalg.diagonal(x)
+    array([0., 4., 8.])
+    >>> np.linalg.diagonal(x, offset=1)
+    array([1., 5.])
+    >>> np.linalg.diagonal(x, offset=-1)
+    array([3., 7.])
+    """
+    return _mx_nd_np.diag(a, k=offset)
+
+
+def cross(a, b, axis=-1):
+    r"""
+    Returns the cross product of 3-element vectors.
+
+    If `a` and `b` are multi-dimensional arrays (i.e., both have a rank greater than 1),
+    then the cross-product of each pair of corresponding 3-element vectors is independently computed.
+
+    Notes
+    -----
+    `cross` is an alias for `cross`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-cross-x1-x2-axis-1
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        First input array. Should have a numeric data type.
+    b : ndarray
+        Second input array. Must have the same shape as a. Should have a numeric data type.
+    axis : int
+        If defined, the axis of `a` and `b` that defines the vector(s) and cross product(s).
+
+        Default: -1.
+
+    Returns
+    -------
+    out : (...) ndarray
+        An array containing the cross products.
+
+    Examples
+    --------
+    Vector cross-product.
+
+    >>> x = np.array([1., 2., 3.])
+    >>> y = np.array([4., 5., 6.])
+    >>> np.linalg.cross(x, y)
+    array([-3.,  6., -3.])
+
+    One vector with dimension 2.
+
+    >>> x = np.array([1., 2.])
+    >>> y = np.array([4., 5., 6.])
+    >>> np.linalg.cross(x, y)
+    array([12., -6., -3.])
+
+    Equivalently:
+
+    >>> x = np.array([1., 2., 0.])
+    >>> y = np.array([4., 5., 6.])
+    >>>np.linalg.cross(x, y)
+    array([12., -6., -3.])
+
+    Both vectors with dimension 2.
+
+    >>> x = np.array([1., 2.])
+    >>> y = np.array([4., 5.])
+    >>> np.linalg.cross(x, y)
+    array(-3.)
+
+    Multiple vector cross-products. Note that the direction of the cross
+    product vector is defined by the `right-hand rule`.
+
+    >>> x = np.array([[1., 2., 3.], [4., 5., 6.]])
+    >>> y = np.array([[4., 5., 6.], [1., 2., 3.]])
+    >>> np.linalg.cross(x, y)
+    array([[-3.,  6., -3.],
+           [ 3., -6.,  3.]])
+    """
+    # For a given API standard, the axis of axisa, axisb, axisc are equal to the axis
+    return _mx_nd_np.cross(a, b, axisa=axis, axisb=axis, axisc=axis, axis=axis)
+
+
+def outer(a, b):
+    r"""
+    Computes the outer product of two vectors `a` and `b`.
+
+    Notes
+    -----
+    `outer` is an alias for `outer`. It is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-outer-x1-x2
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        One-dimensional input array of size `N` . Should have a numeric data type.
+    b : ndarray
+        One-dimensional input array of size `M` . Should have a numeric data type.
+
+    Returns
+    -------
+    out : ndarray
+        A two-dimensional array containing the outer product and whose shape is `(N, M)`.
+        The returned array must have a data type determined by Type Promotion Rules.
+
+    Examples
+    --------
+    Make a (*very* coarse) grid for computing a Mandelbrot set:
+
+    >>> x = np.linalg.outer(np.ones((5,)), np.linspace(-2, 2, 5))
+    >>> x
+    array([[-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.],
+           [-2., -1.,  0.,  1.,  2.]])
+    """
+    return _mx_nd_np.tensordot(a.flatten(), b.flatten(), 0)
+
+
+def vecdot(a, b, axis=None):
+    r"""
+    Return the dot product of two vectors.
+    Note that `vecdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Notes
+    ----------
+    `vecdot` is a alias for `vdot`. It is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/linear_algebra_functions.html#vecdot-x1-x2-axis-1
+    instead of an official NumPy operator.
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument to the dot product.
+    b : ndarray
+        Second argument to the dot product.
+    axis : axis over which to compute the dot product. Must be an integer on
+        the interval [-N, N) , where N is the rank (number of dimensions) of
+        the shape determined according to Broadcasting . If specified as a
+        negative integer, the function must determine the axis along which
+        to compute the dot product by counting backward from the last dimension
+        (where -1 refers to the last dimension). If None , the function must
+        compute the dot product over the last axis. Default: None .
+
+    Returns
+    -------
+    output : ndarray
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.linalg.vecdot(a, b)
+    array(30.)
+    >>> np.linalg.vecdot(b, a)
+    array(30.)
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return _mx_nd_np.tensordot(a.flatten(), b.flatten(), axis)
 
 
 def lstsq(a, b, rcond='warn'):
@@ -138,7 +503,8 @@ def lstsq(a, b, rcond='warn'):
     return _mx_nd_np.linalg.lstsq(a, b, rcond)
 
 
-def pinv(a, rcond=1e-15, hermitian=False):
+@wrap_data_api_linalg_func
+def pinv(a, rtol=None, hermitian=False):
     r"""
     Compute the (Moore-Penrose) pseudo-inverse of a matrix.
 
@@ -146,14 +512,20 @@ def pinv(a, rcond=1e-15, hermitian=False):
     singular-value decomposition (SVD) and including all
     *large* singular values.
 
+    Notes
+    -----
+    `rtol` param is requested in array-api-standard in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-pinv-x-rtol-none
+    instead of a parameter in official NumPy operator.
+
     Parameters
     ----------
     a : (..., M, N) ndarray
         Matrix or stack of matrices to be pseudo-inverted.
-    rcond : (...) {float or ndarray of float}, optional
+    rtol : (...) {float or ndarray of float}, optional
         Cutoff for small singular values.
         Singular values less than or equal to
-        ``rcond * largest_singular_value`` are set to zero.
+        ``rtol * largest_singular_value`` are set to zero.
         Broadcasts against the stack of matrices.
     hermitian : bool, optional
         If True, `a` is assumed to be Hermitian (symmetric if real-valued),
@@ -203,11 +575,12 @@ def pinv(a, rcond=1e-15, hermitian=False):
     >>> (pinv_a - np.dot(pinv_a, np.dot(a, pinv_a))).sum()
     array(0.)
     """
-    return _mx_nd_np.linalg.pinv(a, rcond, hermitian)
+    return _mx_nd_np.linalg.pinv(a, rtol, hermitian)
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
-    r"""Matrix or vector norm.
+    r"""
+    Matrix or vector norm.
 
     This function can only support Frobenius norm for now.
     The Frobenius norm is given by [1]_:
@@ -271,7 +644,8 @@ def norm(x, ord=None, axis=None, keepdims=False):
 
 
 def svd(a):
-    r"""Singular Value Decomposition.
+    r"""
+    Singular Value Decomposition.
 
     When `a` is a 2D array, it is factorized as ``ut @ np.diag(s) @ v``,
     where `ut` and `v` are 2D orthonormal arrays and `s` is a 1D
@@ -341,9 +715,40 @@ def svd(a):
     return _mx_nd_np.linalg.svd(a)
 
 
-def cholesky(a):
+def svdvals(a):
+    r"""
+    Computes the singular values of a matrix (or a stack of matrices) `x`.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        A real array with ``a.ndim >= 2`` and ``M <= N``.
+
+    Returns
+    -------
+    out : (..., M) ndarray
+        Vector(s) with the singular values, within each vector sorted in
+        descending order. The first ``a.ndim - 2`` dimensions have the same
+        size as those of the input `a`.
+
+    .. note::
+       `svdvals` is a standard api in
+       https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-svdvals-x
+       instead of an official NumPy operator.
+    """
+    _, s, _ = _mx_nd_np.linalg.svd(a)
+    return s
+
+
+def cholesky(a, upper=False):
     r"""
     Cholesky decomposition.
+
+    Notes
+    -----
+    `upper` param is requested by API standardization in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-cholesky-x-upper-false
+    instead of parameter in official NumPy operator.
 
     Return the Cholesky decomposition, `L * L.T`, of the square matrix `a`,
     where `L` is lower-triangular and .T is the transpose operator. `a` must be
@@ -354,6 +759,10 @@ def cholesky(a):
     ----------
     a : (..., M, M) ndarray
         Symmetric, positive-definite input matrix.
+    upper : bool
+        If `True`, the result must be the upper-triangular Cholesky factor.
+        If `False`, the result must be the lower-triangular Cholesky factor.
+        Default: `False`.
 
     Returns
     -------
@@ -397,7 +806,7 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    return _mx_nd_np.linalg.cholesky(a)
+    return _mx_nd_np.linalg.cholesky(a, upper)
 
 
 def qr(a, mode='reduced'):
@@ -772,7 +1181,8 @@ def tensorsolve(a, b, axes=None):
 
 
 def eigvals(a):
-    r"""Compute the eigenvalues of a general matrix.
+    r"""
+    Compute the eigenvalues of a general matrix.
 
     Main difference between `eigvals` and `eig`: the eigenvectors aren't
     returned.
@@ -839,8 +1249,10 @@ def eigvals(a):
     return _mx_nd_np.linalg.eigvals(a)
 
 
-def eigvalsh(a, UPLO='L'):
-    r"""Compute the eigenvalues real symmetric matrix.
+@wrap_data_api_linalg_func
+def eigvalsh(a, upper=False):
+    r"""
+    Compute the eigenvalues real symmetric matrix.
 
     Main difference from eigh: the eigenvectors are not computed.
 
@@ -893,6 +1305,10 @@ def eigvalsh(a, UPLO='L'):
     >>> LA.eigvalsh(a, UPLO='L')
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
+    if not upper:
+        UPLO = 'L'
+    else:
+        UPLO = 'U'
     return _mx_nd_np.linalg.eigvalsh(a, UPLO)
 
 
@@ -963,8 +1379,10 @@ def eig(a):
     return _mx_nd_np.linalg.eig(a)
 
 
-def eigh(a, UPLO='L'):
-    r"""Return the eigenvalues and eigenvectors real symmetric matrix.
+@wrap_data_api_linalg_func
+def eigh(a, upper=False):
+    r"""
+    Return the eigenvalues and eigenvectors real symmetric matrix.
 
     Returns two objects, a 1-D array containing the eigenvalues of `a`, and
     a 2-D square array or matrix (depending on the input type) of the
@@ -1018,7 +1436,7 @@ def eigh(a, UPLO='L'):
     >>> a = np.array([[ 6.8189726 , -3.926585  ,  4.3990498 ],
     ...               [-0.59656644, -1.9166266 ,  9.54532   ],
     ...               [ 2.1093285 ,  0.19688708, -1.1634291 ]])
-    >>> w, v = LA.eigh(a, UPLO='L')
+    >>> w, v = LA.eigh(a, upper=False)
     >>> w
     array([-2.175445 , -1.4581827,  7.3725457])
     >>> v
@@ -1026,4 +1444,8 @@ def eigh(a, UPLO='L'):
            [ 0.8242942 ,  0.56326365, -0.05721384],
            [-0.53661287,  0.80949366,  0.23825769]])
     """
+    if not upper:
+        UPLO = 'L'
+    else:
+        UPLO = 'U'
     return _mx_nd_np.linalg.eigh(a, UPLO)

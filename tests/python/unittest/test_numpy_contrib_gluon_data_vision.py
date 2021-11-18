@@ -92,7 +92,7 @@ class TestImage(unittest.TestCase):
                         rand_crop=1, rand_gray=0.1, rand_mirror=True)
                 ]
                 for it in imageiter_list:
-                    for batch in it:
+                    for _ in it:
                         pass
 
     @use_np

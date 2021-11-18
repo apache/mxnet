@@ -18,12 +18,10 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file mrcnn_mask_target-inl.h
  * \brief Mask-RCNN target generator
  * \author Serge Panev
  */
-
 
 #ifndef MXNET_OPERATOR_CONTRIB_MRCNN_MASK_TARGET_INL_H_
 #define MXNET_OPERATOR_CONTRIB_MRCNN_MASK_TARGET_INL_H_
@@ -38,8 +36,8 @@ namespace mxnet {
 namespace op {
 
 namespace mrcnn_index {
-  enum ROIAlignOpInputs {kRoi, kGtMask, kMatches, kClasses};
-  enum ROIAlignOpOutputs {kMask, kMaskClasses};
+enum ROIAlignOpInputs { kRoi, kGtMask, kMatches, kClasses };
+enum ROIAlignOpOutputs { kMask, kMaskClasses };
 }  // namespace mrcnn_index
 
 struct MRCNNMaskTargetParam : public dmlc::Parameter<MRCNNMaskTargetParam> {
@@ -50,18 +48,16 @@ struct MRCNNMaskTargetParam : public dmlc::Parameter<MRCNNMaskTargetParam> {
   mxnet::TShape mask_size;
 
   DMLC_DECLARE_PARAMETER(MRCNNMaskTargetParam) {
-    DMLC_DECLARE_FIELD(num_rois)
-    .describe("Number of sampled RoIs.");
-    DMLC_DECLARE_FIELD(num_classes)
-    .describe("Number of classes.");
-    DMLC_DECLARE_FIELD(mask_size)
-    .set_expect_ndim(2).enforce_nonzero()
-    .describe("Size of the pooled masks height and width: (h, w).");
-    DMLC_DECLARE_FIELD(sample_ratio).set_default(2)
-    .describe("Sampling ratio of ROI align. Set to -1 to use adaptative size.");
-    DMLC_DECLARE_FIELD(aligned).set_default(false)
-    .describe("Center-aligned ROIAlign introduced in Detectron2. "
-    "To enable, set aligned to True.");
+    DMLC_DECLARE_FIELD(num_rois).describe("Number of sampled RoIs.");
+    DMLC_DECLARE_FIELD(num_classes).describe("Number of classes.");
+    DMLC_DECLARE_FIELD(mask_size).set_expect_ndim(2).enforce_nonzero().describe(
+        "Size of the pooled masks height and width: (h, w).");
+    DMLC_DECLARE_FIELD(sample_ratio)
+        .set_default(2)
+        .describe("Sampling ratio of ROI align. Set to -1 to use adaptative size.");
+    DMLC_DECLARE_FIELD(aligned).set_default(false).describe(
+        "Center-aligned ROIAlign introduced in Detectron2. "
+        "To enable, set aligned to True.");
   }
 };
 
@@ -78,7 +74,7 @@ inline bool MRCNNMaskTargetShape(const NodeAttrs& attrs,
   CHECK_EQ(tshape.ndim(), 3) << "rois should be a 2D tensor of shape [batch, rois, 4]";
   CHECK_EQ(tshape[2], 4) << "rois should be a 2D tensor of shape [batch, rois, 4]";
   auto batch_size = tshape[0];
-  auto num_rois = tshape[1];
+  auto num_rois   = tshape[1];
 
   // (B, M, H, W)
   tshape = in_shape->at(mrcnn_index::kGtMask);
@@ -96,8 +92,8 @@ inline bool MRCNNMaskTargetShape(const NodeAttrs& attrs,
   CHECK_EQ(tshape[0], batch_size) << " batch size should be the same for all the inputs.";
 
   // out: 2 * (B, N, C, MS, MS)
-  auto oshape = Shape5(batch_size, num_rois, param.num_classes,
-                       param.mask_size[0], param.mask_size[1]);
+  auto oshape =
+      Shape5(batch_size, num_rois, param.num_classes, param.mask_size[0], param.mask_size[1]);
   out_shape->clear();
   out_shape->push_back(oshape);
   out_shape->push_back(oshape);
@@ -117,17 +113,19 @@ inline bool MRCNNMaskTargetType(const NodeAttrs& attrs,
   return true;
 }
 
-template<typename xpu>
-void MRCNNMaskTargetRun(const MRCNNMaskTargetParam& param, const std::vector<TBlob> &inputs,
-                        const std::vector<TBlob> &outputs, mshadow::Stream<xpu> *s);
+template <typename xpu>
+void MRCNNMaskTargetRun(const MRCNNMaskTargetParam& param,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<TBlob>& outputs,
+                        mshadow::Stream<xpu>* s);
 
-template<typename xpu>
+template <typename xpu>
 void MRCNNMaskTargetCompute(const nnvm::NodeAttrs& attrs,
-                            const OpContext &ctx,
-                            const std::vector<TBlob> &inputs,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<TBlob> &outputs) {
-  auto s = ctx.get_stream<xpu>();
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  auto s        = ctx.get_stream<xpu>();
   const auto& p = dmlc::get<MRCNNMaskTargetParam>(attrs.parsed);
   MRCNNMaskTargetRun<xpu>(p, inputs, outputs, s);
 }

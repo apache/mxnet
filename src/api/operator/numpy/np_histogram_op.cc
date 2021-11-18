@@ -30,52 +30,50 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npi.histogram")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  const nnvm::Op* op = Op::Get("_npi_histogram");
-  op::HistogramParam param;
-  // parse bin_cnt
-  if (args[2].type_code() == kNull) {
-    param.bin_cnt = dmlc::nullopt;
-  } else {
-    param.bin_cnt = args[2].operator int();
-  }
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      nnvm::NodeAttrs attrs;
+      const nnvm::Op* op = Op::Get("_npi_histogram");
+      op::HistogramParam param = {};
+      // parse bin_cnt
+      if (args[2].type_code() == kNull) {
+        param.bin_cnt = dmlc::nullopt;
+      } else {
+        param.bin_cnt = args[2].operator int();
+      }
 
-  // parse range
-  if (args[3].type_code() == kNull) {
-    param.range = dmlc::nullopt;
-  } else {
-    param.range = Obj2Tuple<double, Float>(args[3].operator ObjectRef());
-  }
+      // parse range
+      if (args[3].type_code() == kNull) {
+        param.range = dmlc::nullopt;
+      } else {
+        param.range = Obj2Tuple<double, Float>(args[3].operator ObjectRef());
+      }
 
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::HistogramParam>(&attrs);
+      attrs.parsed = param;
+      attrs.op     = op;
+      SetAttrDict<op::HistogramParam>(&attrs);
 
-  std::vector<NDArray*> inputs_vec;
-  int num_inputs = 0;
+      std::vector<NDArray*> inputs_vec;
+      int num_inputs = 0;
 
-  if (args[2].type_code() != kNull) {
-    CHECK_EQ(args[1].type_code(), kNull)
-      << "bins should be None when bin_cnt is provided";
-    inputs_vec.push_back((args[0].operator NDArray*()));
-    num_inputs = 1;
-  } else {
-    CHECK_NE(args[1].type_code(), kNull)
-      << "bins should not be None when bin_cnt is not provided";
-    // inputs
-    inputs_vec.push_back((args[0].operator NDArray*()));
-    inputs_vec.push_back((args[1].operator NDArray*()));
-    num_inputs = 2;
-  }
+      if (args[2].type_code() != kNull) {
+        CHECK_EQ(args[1].type_code(), kNull) << "bins should be None when bin_cnt is provided";
+        inputs_vec.push_back((args[0].operator NDArray*()));
+        num_inputs = 1;
+      } else {
+        CHECK_NE(args[1].type_code(), kNull)
+            << "bins should not be None when bin_cnt is not provided";
+        // inputs
+        inputs_vec.push_back((args[0].operator NDArray*()));
+        inputs_vec.push_back((args[1].operator NDArray*()));
+        num_inputs = 2;
+      }
 
-  // outputs
-  NDArray** out = nullptr;
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs_vec.data(), &num_outputs, out);
-  *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
-                 NDArrayHandle(ndoutputs[1])});
-});
+      // outputs
+      NDArray** out   = nullptr;
+      int num_outputs = 0;
+      auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs_vec.data(), &num_outputs, out);
+      *ret            = ADT(0, {NDArrayHandle(ndoutputs[0]), NDArrayHandle(ndoutputs[1])});
+    });
 
 }  // namespace mxnet

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -29,12 +29,11 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.gamma")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.gamma").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_gamma");
   nnvm::NodeAttrs attrs;
-  op::NumpyGammaParam param;
+  op::NumpyGammaParam param = {};
   int num_inputs = 0;
   std::vector<NDArray*> inputs;
   if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {
@@ -53,7 +52,7 @@ MXNET_REGISTER_API("_npi.gamma")
       }
     } else {
       // 'shape' is numeric types but 'scale' is not
-      num_inputs = 1;
+      num_inputs  = 1;
       param.scale = dmlc::nullopt;
       inputs.push_back(args[1].operator mxnet::NDArray*());
     }
@@ -70,15 +69,14 @@ MXNET_REGISTER_API("_npi.gamma")
       }
     } else {
       // nither 'shape' or 'scale' is numeric types
-      num_inputs = 2;
+      num_inputs  = 2;
       param.scale = dmlc::nullopt;
       inputs.push_back(args[1].operator mxnet::NDArray*());
     }
   }
   if (args[2].type_code() == kNull) {
     param.size = dmlc::optional<mxnet::Tuple<index_t>>();
-  } else if (args[2].type_code() == kDLInt ||
-             args[2].type_code() == kDLFloat) {
+  } else if (args[2].type_code() == kDLInt || args[2].type_code() == kDLFloat) {
     param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else {
     param.size = Tuple<index_t>(args[2].operator ObjectRef());
@@ -88,11 +86,11 @@ MXNET_REGISTER_API("_npi.gamma")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }
-  NDArray* out = args[5].operator mxnet::NDArray*();
+  NDArray* out      = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  attrs.parsed = param;
-  attrs.op = op;
+  int num_outputs   = out != nullptr;
+  attrs.parsed      = param;
+  attrs.op          = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
   }

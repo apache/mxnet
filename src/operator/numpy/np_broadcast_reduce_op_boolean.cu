@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_broadcast_reduce_op_boolean.cu
  * \brief GPU Implementation of broadcast and reduce functions based on boolean.
  */
@@ -28,13 +27,13 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_any)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<NumpyReduceAxesBoolParam, 0>
-                                     {"NonZero", "red::sum{}", false});
+NNVM_REGISTER_OP(_npi_any).set_attr<FCompute>(
+    "FCompute<gpu>",
+    ReduceAxesRTCCompute<NumpyReduceAxesBoolParam, 0>{"NonZero", "red::sum{}", false});
 
-NNVM_REGISTER_OP(_npi_all)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<NumpyReduceAxesBoolParam, 1>
-                                     {"NonZero", "red::product{}", false});
+NNVM_REGISTER_OP(_npi_all).set_attr<FCompute>(
+    "FCompute<gpu>",
+    ReduceAxesRTCCompute<NumpyReduceAxesBoolParam, 1>{"NonZero", "red::product{}", false});
 
 }  // namespace op
 }  // namespace mxnet

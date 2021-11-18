@@ -18,11 +18,9 @@
  */
 
 /*!
-* Copyright (c) 2019 by Contributors
-* \file np_tril_op.cc
-* \brief CPU implementation of numpy tril operator
-*/
-
+ * \file np_tril_op.cc
+ * \brief CPU implementation of numpy tril operator
+ */
 #include "./np_tril_op-inl.h"
 
 namespace mxnet {
@@ -31,31 +29,30 @@ namespace op {
 DMLC_REGISTER_PARAMETER(TrilParam);
 
 NNVM_REGISTER_OP(_npi_tril)
-.set_attr_parser(ParamParser<TrilParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", TrilOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", TrilOpForward<cpu>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tril"})
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(TrilParam::__FIELDS__());
-
+    .set_attr_parser(ParamParser<TrilParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", TrilOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", TrilOpForward<cpu>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}};
+                                    })
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tril"})
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(TrilParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_tril)
-.set_attr_parser(ParamParser<TrilParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", TrilOpBackward<cpu>);
+    .set_attr_parser(ParamParser<TrilParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", TrilOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

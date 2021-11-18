@@ -49,7 +49,8 @@ core_logic: {
     custom_steps.test_unix_cpp_package_gpu('gpu'),
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098
     // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
-    custom_steps.test_unix_byteps_gpu('gpu'),
+    // TODO(spanev): reenable when byteps is updated with the new dep engine API
+    // custom_steps.test_unix_byteps_gpu('gpu'),
   ]) 
 }
 ,

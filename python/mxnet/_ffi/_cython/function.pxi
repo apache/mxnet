@@ -35,8 +35,14 @@ cdef inline int make_arg(object arg,
         value[0].v_handle = <void*><size_t>(arg._get_handle())
         tcode[0] = kNDArrayHandle
     elif isinstance(arg, Integral):
-        value[0].v_int64 = arg
-        tcode[0] = kInt
+        if arg > _MAX_VALUE_64_BIT_UNSIGNED_:
+            raise OverflowError("Integer out of bounds")
+        elif arg > _MAX_VALUE_64_BIT_SIGNED_:
+            value[0].v_uint64 = arg
+            tcode[0] = kUInt
+        else:
+            value[0].v_int64 = arg
+            tcode[0] = kInt
     elif isinstance(arg, ObjectBase):
         value[0].v_handle = (<ObjectBase>arg).chandle
         tcode[0] = kObjectHandle

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file threaded_engine.h
  * \brief Implements base class of threaded engine
  *    that tracks the dependency and pushes actions to execute.
@@ -50,10 +49,14 @@ namespace engine {
 
 // Define helper macros for debug information.
 #if ENGINE_DEBUG
-#define DEFINE_ENGINE_DEBUG_INFO(Type)                          \
-  static std::atomic<std::size_t> counter;                      \
-  Type() { LOG(INFO) << __func__ << " " << ++counter; }         \
-  ~Type() { LOG(INFO) << __func__ << " " << --counter; }
+#define DEFINE_ENGINE_DEBUG_INFO(Type)         \
+  static std::atomic<std::size_t> counter;     \
+  Type() {                                     \
+    LOG(INFO) << __func__ << " " << ++counter; \
+  }                                            \
+  ~Type() {                                    \
+    LOG(INFO) << __func__ << " " << --counter; \
+  }
 #else
 #define DEFINE_ENGINE_DEBUG_INFO(Type)
 #endif
@@ -101,8 +104,7 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
  * \brief VersionedVarBlock that corresponding to a variable version.
  *  This is a basic unit of LinkedList in the ThreadedVar.
  */
-struct VersionedVarBlock
-    : public common::ObjectPoolAllocatable<VersionedVarBlock> {
+struct VersionedVarBlock : public common::ObjectPoolAllocatable<VersionedVarBlock> {
   /*! \brief next block in the LinkedList */
   VersionedVarBlock* next{nullptr};
   /*! \brief the operation this block triggers */
@@ -117,8 +119,7 @@ struct VersionedVarBlock
  * \brief Variable implementation.
  *  Each ThreadedVar is a linked list(queue) of operations to be performed.
  */
-class ThreadedVar final
-    : public Var, public common::ObjectPoolAllocatable<ThreadedVar> {
+class ThreadedVar final : public Var, public common::ObjectPoolAllocatable<ThreadedVar> {
  public:
   /*!
    * \brief constructor
@@ -179,7 +180,9 @@ class ThreadedVar final
   // code for debug.
 #if ENGINE_DEBUG
   static std::atomic<std::size_t> counter;
-  ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
+  ~ThreadedVar() {
+    LOG(INFO) << __func__ << " " << --counter;
+  }
 #endif  // ENGINE_DEBUG
   /*!
    * \brief exception_ptr associated with the ThreadedOpr
@@ -231,8 +234,7 @@ class ThreadedVar final
 /*!
  * \brief Operator used in ThreadedEngine.
  */
-struct ThreadedOpr final : public Opr,
-                           public common::ObjectPoolAllocatable<ThreadedOpr> {
+struct ThreadedOpr final : public Opr, public common::ObjectPoolAllocatable<ThreadedOpr> {
   /*! \brief The function to be invoked each time. */
   Engine::AsyncFn fn;
   /*! \brief The variable this operation will read from. */
@@ -286,23 +288,25 @@ class ThreadedEngine : public Engine {
   ThreadedOpr* NewOperator(AsyncFn fn,
                            std::vector<VarHandle> const& const_vars,
                            std::vector<VarHandle> const& mutable_vars,
-                           FnProperty prop = FnProperty::kNormal,
+                           FnProperty prop      = FnProperty::kNormal,
                            const char* opr_name = nullptr,
-                           bool wait = false) override;
+                           bool wait            = false) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override;
-  void PushAsync(AsyncFn exec_fun, Context exec_ctx,
+  void PushAsync(AsyncFn exec_fun,
+                 Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
-                 FnProperty prop = FnProperty::kNormal,
-                 int priority = 0,
+                 FnProperty prop      = FnProperty::kNormal,
+                 int priority         = 0,
                  const char* opr_name = nullptr,
-                 bool wait = false) override;
-  void PushSync(SyncFn exec_fn, Context exec_ctx,
+                 bool wait            = false) override;
+  void PushSync(SyncFn exec_fn,
+                Context exec_ctx,
                 std::vector<VarHandle> const& const_vars,
                 std::vector<VarHandle> const& mutable_vars,
-                FnProperty prop = FnProperty::kNormal,
-                int priority = 0,
+                FnProperty prop      = FnProperty::kNormal,
+                int priority         = 0,
                 const char* opr_name = nullptr) override;
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
@@ -349,7 +353,10 @@ class ThreadedEngine : public Engine {
    * \param run_ctx runtime context used to execute the function.
    * \param opr_block the opr_block to be executed and deleted.
    */
-  void ExecuteOprBlock(RunContext run_ctx, OprBlock* opr_block) {
+  void ExecuteOprBlock(RunContext run_ctx,
+                       OprBlock* opr_block,
+                       CallbackOnStart on_start,
+                       CallbackOnComplete callback) {
     ThreadedOpr* threaded_opr = opr_block->opr;
     if (opr_block->profiling && threaded_opr->opr_name.size()) {
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
@@ -357,16 +364,13 @@ class ThreadedEngine : public Engine {
         attrs.reset(new profiler::ProfileOperator::Attributes());
       }
       const Context& ctx = opr_block->ctx;
-      opr_block->opr_profile.reset(new profiler::ProfileOperator(threaded_opr->opr_name.c_str(),
-                                                                 attrs.release()));
+      opr_block->opr_profile.reset(
+          new profiler::ProfileOperator(threaded_opr->opr_name.c_str(), attrs.release()));
       opr_block->opr_profile->startForDevice(ctx.dev_type, ctx.dev_id);
     }
-    CallbackOnComplete callback =
-        this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
-    const bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
+    const bool debug_info       = (engine_info_ && debug_push_opr_ == opr_block);
     if (debug_info) {
-      LOG(INFO) << "ExecuteOprBlock " << opr_block
-                << "shutdown_phase=" << shutdown_phase_;
+      LOG(INFO) << "ExecuteOprBlock " << opr_block << "shutdown_phase=" << shutdown_phase_;
     }
     // still run cleanup in shutdown_phase
     if (!shutdown_phase_ || threaded_opr->prop == FnProperty::kDeleteVar) {
@@ -377,12 +381,15 @@ class ThreadedEngine : public Engine {
         }
         try {
           if ((!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
-              threaded_opr->prop == FnProperty::kNoSkip) || threaded_opr->wait) {
-            threaded_opr->fn(run_ctx, callback);
+               threaded_opr->prop == FnProperty::kNoSkip) ||
+              threaded_opr->wait) {
+            threaded_opr->fn(run_ctx, on_start, callback);
           } else {
+            on_start();
             callback();
           }
         } catch (const std::exception& e) {
+          on_start();
           threaded_opr->opr_exception =
               std::make_shared<std::exception_ptr>(std::current_exception());
           callback();
@@ -392,40 +399,56 @@ class ThreadedEngine : public Engine {
         }
       } catch (std::exception& e) {
         std::string what = e.what();
-        if (what.find("driver shutting down") == std::string::npos &&
-            !shutdown_phase_) {
-          LOG(FATAL)
-              << e.what() << "\n"
-              << "A fatal error occurred in asynchronous engine operation. "
-                 "If you do not know what caused this error, "
-                 "you can try set environment variable MXNET_ENGINE_TYPE "
-                 "to NaiveEngine and run with debugger (i.e. gdb). "
-                 "This will force all operations to be synchronous and "
-                 "backtrace will give you the series of calls that lead "
-                 "to this error. Remember to set MXNET_ENGINE_TYPE back to "
-                 "empty after debugging.";
+        if (what.find("driver shutting down") == std::string::npos && !shutdown_phase_) {
+          LOG(FATAL) << e.what() << "\n"
+                     << "A fatal error occurred in asynchronous engine operation. "
+                        "If you do not know what caused this error, "
+                        "you can try set environment variable MXNET_ENGINE_TYPE "
+                        "to NaiveEngine and run with debugger (i.e. gdb). "
+                        "This will force all operations to be synchronous and "
+                        "backtrace will give you the series of calls that lead "
+                        "to this error. Remember to set MXNET_ENGINE_TYPE back to "
+                        "empty after debugging.";
         }
       }
     } else {
+      on_start();
       callback();
     }
   }
 
   int bulk_size() const override {
-    const profiler::Profiler *prof = profiler::Profiler::Get();
-    return (prof && prof->AggregateRunning()) ? 0 :  BulkStatusStore::Get()->bulk_size;
+    const profiler::Profiler* prof = profiler::Profiler::Get();
+    return (prof && prof->AggregateRunning()) ? 0 : BulkStatusStore::Get()->bulk_size;
   }
 
   int set_bulk_size(int bulk_size) override {
     BulkStatus& bulk_status = *BulkStatusStore::Get();
     std::swap(bulk_status.bulk_size, bulk_size);
-    if (bulk_status.count >= bulk_status.bulk_size) BulkFlush();
+    if (bulk_status.count >= bulk_status.bulk_size)
+      BulkFlush();
     if (!bulk_status.functions) {
       bulk_status.functions.reset(new std::vector<SyncFn>());
     }
     bulk_status.functions->reserve(bulk_size);
     return bulk_size;
   }
+
+ protected:
+  static void OnStartStatic(Engine* engine, void* opr_block, const dmlc::Error* error);
+  static void OnCompleteStatic(Engine* engine, void* threaded_opr, const dmlc::Error* error);
+#if MXNET_USE_CUDA
+  static void OnStartCPU(Engine* engine, void* opr_block, const dmlc::Error* error);
+  static void OnStartGPU(Engine* engine, void* sync_info, const dmlc::Error* error);
+  static void OnCompleteGPU(Engine* engine, void* sync_info, const dmlc::Error* error);
+  struct GPUWorkerSyncInfo : public common::ObjectPoolAllocatable<GPUWorkerSyncInfo> {
+    void* opr_block{nullptr};
+    void* stream{nullptr};
+    void* event_pool{nullptr};
+  };
+
+  std::shared_ptr<common::ObjectPool<GPUWorkerSyncInfo>> objpool_gpu_sync_ref_;
+#endif
 
  private:
   /*! \brief structure for holding bulk execution status */
@@ -489,22 +512,21 @@ class ThreadedEngine : public Engine {
     }
   }
 
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr,
-                               const dmlc::Error* error);
   /*!
    * \brief find exception in global_exception_refs and add it if missing
    * \param opr_exception the exception to be added to global_exception_refs
    */
   inline void AddToGlobalExceptions(const ExceptionRef& opr_exception) {
-    auto it = std::find(global_exception_refs_.begin(),
-                        global_exception_refs_.end(), opr_exception);
+    auto it =
+        std::find(global_exception_refs_.begin(), global_exception_refs_.end(), opr_exception);
     if (it == global_exception_refs_.end()) {
       global_exception_refs_.push_back(opr_exception);
     }
     return;
   }
   /*! \brief append an operator to bulk */
-  inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
+  inline void BulkAppend(SyncFn exec_fn,
+                         Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
                          std::vector<VarHandle> const& mutable_vars) {
     BulkStatus& bulk_status = *BulkStatusStore::Get();
@@ -522,29 +544,31 @@ class ThreadedEngine : public Engine {
     bulk_status.mutable_vars.insert(
         bulk_status.mutable_vars.end(), mutable_vars.begin(), mutable_vars.end());
 
-    if (bulk_status.count >= bulk_status.bulk_size) BulkFlush();
+    if (bulk_status.count >= bulk_status.bulk_size)
+      BulkFlush();
   }
   /*! \brief flush current bulk to execution */
   inline void BulkFlush() {
     BulkStatus& bulk_status = *BulkStatusStore::Get();
-    if (!bulk_status.count) return;
+    if (!bulk_status.count)
+      return;
     bulk_status.count = 0;
     DeduplicateVarHandle(&bulk_status.const_vars, &bulk_status.mutable_vars);
     auto functions = bulk_status.functions;
-    this->PushAsync([functions](RunContext ctx, CallbackOnComplete on_complete) {
-        ctx.is_bulk = true;
-        for (auto& fn : *functions) {
-          fn(ctx);
-        }
-        ctx.is_bulk = false;
-        bool is_gpu = ctx.ctx.dev_mask() == gpu::kDevMask;
-        if (is_gpu) {
-          ctx.get_stream<gpu>()->Wait();
-        }
-        on_complete();
-      }, bulk_status.ctx, bulk_status.const_vars, bulk_status.mutable_vars,
-      FnProperty::kNormal, 0, "ImperativeBulk");
-
+    this->PushAsync(
+        [functions](RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
+          on_start();
+          for (auto& fn : *functions) {
+            fn(ctx);
+          }
+          on_complete();
+        },
+        bulk_status.ctx,
+        bulk_status.const_vars,
+        bulk_status.mutable_vars,
+        FnProperty::kNormal,
+        0,
+        "ImperativeBulk");
     bulk_status.functions.reset(new std::vector<SyncFn>());
     bulk_status.functions->reserve(bulk_status.bulk_size);
     bulk_status.const_vars.clear();
@@ -575,12 +599,12 @@ class ThreadedEngine : public Engine {
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
-   * See also #309 (https://github.com/dmlc/mxnet/issues/309)
+   * See also #309 (https://github.com/apache/mxnet/issues/309)
    */
-  std::shared_ptr<common::ObjectPool<ThreadedOpr> >       objpool_opr_ref_;
-  std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
-  std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
-  std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
+  std::shared_ptr<common::ObjectPool<ThreadedOpr>> objpool_opr_ref_;
+  std::shared_ptr<common::ObjectPool<OprBlock>> objpool_blk_ref_;
+  std::shared_ptr<common::ObjectPool<VersionedVarBlock>> objpool_varblk_ref_;
+  std::shared_ptr<common::ObjectPool<ThreadedVar>> objpool_var_ref_;
 
   /*!
    * \brief Async destruction of some objects is relied on storage,

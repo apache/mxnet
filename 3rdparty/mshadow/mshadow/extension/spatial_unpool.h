@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file spatial_unpool.h
  * \brief support for unpool
  * \author Tianqi Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_broadcast_op_logic.cu
  * \brief GPU Implementation of elementwise binary broadcast logical operators.
  */
@@ -30,31 +29,31 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(broadcast_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"equal"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"equal"});
 
 NNVM_REGISTER_OP(broadcast_not_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"not_equal"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"not_equal"});
 
 NNVM_REGISTER_OP(broadcast_greater)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"greater"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"greater"});
 
 NNVM_REGISTER_OP(broadcast_greater_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"greater_equal"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"greater_equal"});
 
 NNVM_REGISTER_OP(broadcast_lesser)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"less"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"less"});
 
 NNVM_REGISTER_OP(broadcast_lesser_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"less_equal"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"less_equal"});
 
 NNVM_REGISTER_OP(broadcast_logical_and)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logical_and"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logical_and"});
 
 NNVM_REGISTER_OP(broadcast_logical_or)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logical_or"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logical_or"});
 
 NNVM_REGISTER_OP(broadcast_logical_xor)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logical_xor"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"logical_xor"});
 
 }  // namespace op
 }  // namespace mxnet

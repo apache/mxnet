@@ -421,8 +421,8 @@ class MXNetPODValue_ {
     return value_.v_int64;
   }
   operator uint64_t() const {
-    MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
-    return value_.v_int64;
+    MXNET_CHECK_TYPE_CODE(type_code_, kDLUInt);
+    return value_.v_uint64;
   }
   operator int() const {
     MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
@@ -893,6 +893,14 @@ inline int String2MXNetTypeWithBool(const std::string& s) {
     return mshadow::kInt64;
   } else if (s == "bool") {
     return mshadow::kBool;
+  } else if (s == "int16") {
+    return mshadow::kInt16;
+  } else if (s == "uint16") {
+    return mshadow::kUint16;
+  } else if (s == "uint32") {
+    return mshadow::kUint32;
+  } else if (s == "uint64") {
+    return mshadow::kUint64;
   } else {
     LOG(FATAL) << "unknown type " << s;
   }
@@ -915,6 +923,14 @@ inline int String2MXNetType(const std::string& s) {
     return mshadow::kInt32;
   } else if (s == "int64") {
     return mshadow::kInt64;
+  } else if (s == "int16") {
+    return mshadow::kInt16;
+  } else if (s == "uint16") {
+    return mshadow::kUint16;
+  } else if (s == "uint32") {
+    return mshadow::kUint32;
+  } else if (s == "uint64") {
+    return mshadow::kUint64;
   } else {
     LOG(FATAL) << "unknown type " << s;
   }

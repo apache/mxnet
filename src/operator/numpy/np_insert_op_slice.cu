@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_slice.cu
  * \brief GPU Implementation of numpy insert operations (insert by int index)
  */
@@ -30,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_insert_slice)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertSliceCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyInsertSliceCompute<gpu>);
 
 }
-}
+}  // namespace mxnet

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file cuda_rtc.h
  * \brief Common CUDA utilities for
  *        runtime compilation.
@@ -64,9 +63,9 @@ extern std::mutex lock;
  *  \param code used for compilation of the kernel if not found in cache
  *  \param dev_id id of the device which the kernel will be launched on
  */
-CUfunction get_function(const std::string &parameters,
-                        const std::string &kernel_name,
-                        const std::string &code,
+CUfunction get_function(const std::string& parameters,
+                        const std::string& kernel_name,
+                        const std::string& code,
                         int dev_id);
 
 /*! \brief Launch a GPU kernel.
@@ -81,8 +80,8 @@ void launch(CUfunction function,
             const dim3 grid_dim,
             const dim3 block_dim,
             unsigned int shared_mem_bytes,
-            mshadow::Stream<gpu> *stream,
-            std::vector<const void*> *args);
+            mshadow::Stream<gpu>* stream,
+            std::vector<const void*>* args);
 
 }  // namespace rtc
 }  // namespace cuda

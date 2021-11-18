@@ -17,9 +17,6 @@
  * under the License.
  */
 
-/**
- * Copyright (c) 2015 by Contributors
- */
 #ifndef MXNET_KVSTORE_COMM_H_
 #define MXNET_KVSTORE_COMM_H_
 #include <dmlc/omp.h>
@@ -46,23 +43,25 @@ class Comm {
   Comm() {
     pinned_ctx_ = Context::CPUPinned(0);
   }
-  virtual ~Comm() { }
+  virtual ~Comm() {}
   /**
    * \brief init key with the data shape and storage shape
    */
-  virtual void Init(int key, const NDArrayStorageType stype,
-                    const mxnet::TShape& shape, int dtype = mshadow::kFloat32) = 0;
+  virtual void Init(int key,
+                    const NDArrayStorageType stype,
+                    const mxnet::TShape& shape,
+                    int dtype = mshadow::kFloat32) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
-  virtual const NDArray& Reduce(
-      int key, const std::vector<NDArray>& src, int priority) = 0;
+  virtual const NDArray& Reduce(int key, const std::vector<NDArray>& src, int priority) = 0;
   /**
    * \brief copy from src to dst[i] for every i
    */
-  virtual void Broadcast(
-      int key, const NDArray& src,
-      const std::vector<NDArray*> dst, int priority) = 0;
+  virtual void Broadcast(int key,
+                         const NDArray& src,
+                         const std::vector<NDArray*> dst,
+                         int priority) = 0;
 
   /**
    * \brief broadcast src to dst[i] with target row_ids for every i
@@ -72,7 +71,8 @@ class Comm {
             where the row_ids are expected to be unique and sorted in row_id.data()
    * \param priority the priority of the operation
    */
-  virtual void BroadcastRowSparse(int key, const NDArray& src,
+  virtual void BroadcastRowSparse(int key,
+                                  const NDArray& src,
                                   const std::vector<std::pair<NDArray*, NDArray>>& dst,
                                   const int priority) = 0;
 
@@ -105,23 +105,24 @@ class CommCPU : public Comm {
  public:
   CommCPU() {
     nthread_reduction_ = dmlc::GetEnv("MXNET_KVSTORE_REDUCTION_NTHREADS", 4);
-    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
+    bigarray_bound_    = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
     // TODO(junwu) delete the following data member, now for benchmark only
     is_serial_push_ = dmlc::GetEnv("MXNET_KVSTORE_SERIAL_PUSH", 0);
   }
-  virtual ~CommCPU() { }
+  virtual ~CommCPU() {}
 
-  void Init(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
+  void Init(int key,
+            const NDArrayStorageType stype,
+            const mxnet::TShape& shape,
             int type = mshadow::kFloat32) override {
     // Delayed allocation - the dense merged buffer might not be used at all if push()
     // only sees sparse arrays
-    bool delay_alloc = true;
+    bool delay_alloc       = true;
     merge_buf_[key].merged = NDArray(shape, pinned_ctx_, delay_alloc, type);
   }
 
-  const NDArray& Reduce(int key, const std::vector<NDArray>& src,
-                        int priority) override {
-    auto& buf = merge_buf_[key];
+  const NDArray& Reduce(int key, const std::vector<NDArray>& src, int priority) override {
+    auto& buf        = merge_buf_[key];
     const auto stype = src[0].storage_type();
     // avoid extra copy for single device, but it may bring problems for
     // abnormal usage of kvstore
@@ -148,29 +149,35 @@ class CommCPU : public Comm {
       reduce[0] = buf_merged;
 
       if (buf.copy_buf.empty()) {
-        buf.copy_buf.resize(src.size()-1);
+        buf.copy_buf.resize(src.size() - 1);
         for (size_t j = 0; j < src.size() - 1; ++j) {
           // allocate copy buffer
-          buf.copy_buf[j] = NDArray(
-            src[0].shape(), pinned_ctx_, false, src[0].dtype());
+          buf.copy_buf[j] = NDArray(src[0].shape(), pinned_ctx_, false, src[0].dtype());
         }
       }
       CHECK(stype == buf.copy_buf[0].storage_type())
-           << "Storage type mismatch detected. " << stype << "(src) vs. "
-           << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
+          << "Storage type mismatch detected. " << stype << "(src) vs. "
+          << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
       for (size_t i = 1; i < src.size(); ++i) {
-        CopyFromTo(src[i], &(buf.copy_buf[i-1]), priority);
-        reduce[i] = buf.copy_buf[i-1];
-        const_vars[i-1] = reduce[i].var();
+        CopyFromTo(src[i], &(buf.copy_buf[i - 1]), priority);
+        reduce[i]         = buf.copy_buf[i - 1];
+        const_vars[i - 1] = reduce[i].var();
       }
 
       Engine::Get()->PushAsync(
-        [reduce, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          ReduceSumCPU(reduce);
-          on_complete();
-        }, Context::CPU(), const_vars, {reduce[0].var()},
-        FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
-
+          [reduce, this](RunContext rctx,
+                         Engine::CallbackOnStart on_start,
+                         Engine::CallbackOnComplete on_complete) {
+            on_start();
+            ReduceSumCPU(reduce);
+            on_complete();
+          },
+          Context::CPU(),
+          const_vars,
+          {reduce[0].var()},
+          FnProperty::kCPUPrioritized,
+          priority,
+          "KVStoreReduce");
     } else {
       // sparse reduce
       std::vector<Engine::VarHandle> const_vars(src.size());
@@ -179,39 +186,50 @@ class CommCPU : public Comm {
       if (buf.copy_buf.empty()) {
         buf.copy_buf.resize(src.size());
         for (size_t j = 0; j < src.size(); ++j) {
-          buf.copy_buf[j] = NDArray(
-            src[0].storage_type(), src[0].shape(), pinned_ctx_, true, src[0].dtype());
+          buf.copy_buf[j] =
+              NDArray(src[0].storage_type(), src[0].shape(), pinned_ctx_, true, src[0].dtype());
         }
       }
       CHECK(stype == buf.copy_buf[0].storage_type())
-           << "Storage type mismatch detected. " << stype << "(src) vs. "
-           << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
+          << "Storage type mismatch detected. " << stype << "(src) vs. "
+          << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
       for (size_t i = 0; i < src.size(); ++i) {
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
-        reduce[i] = buf.copy_buf[i];
+        reduce[i]     = buf.copy_buf[i];
         const_vars[i] = reduce[i].var();
       }
       Resource rsc = ResourceManager::Get()->Request(buf_merged.ctx(),
-          ResourceRequest(ResourceRequest::kTempSpace));
+                                                     ResourceRequest(ResourceRequest::kTempSpace));
       Engine::Get()->PushAsync(
-        [reduce, buf_merged, rsc, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          NDArray out = buf_merged;
-          is_serial_push_?
-            ReduceSumCPUExSerial(reduce, &out)
-            : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
-          on_complete();
-        }, Context::CPU(), const_vars, {buf_merged.var(), rsc.var},
-        FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
+          [reduce, buf_merged, rsc, this](RunContext rctx,
+                                          Engine::CallbackOnStart on_start,
+                                          Engine::CallbackOnComplete on_complete) {
+            on_start();
+            NDArray out = buf_merged;
+            is_serial_push_
+                ? ReduceSumCPUExSerial(reduce, &out)
+                : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
+            on_complete();
+          },
+          Context::CPU(),
+          const_vars,
+          {buf_merged.var(), rsc.var},
+          FnProperty::kCPUPrioritized,
+          priority,
+          "KVStoreReduce");
     }
 
     return buf_merged;
   }
 
-  void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray*> dst, int priority) override {
+  void Broadcast(int key,
+                 const NDArray& src,
+                 const std::vector<NDArray*> dst,
+                 int priority) override {
     int mask = src.ctx().dev_mask();
     if (mask == Context::kCPU) {
-      for (auto d : dst) CopyFromTo(src, d, priority);
+      for (auto d : dst)
+        CopyFromTo(src, d, priority);
     } else {
       // First copy data to pinned_ctx, then broadcast.
       // Note that kv.init initializes the data on pinned_ctx.
@@ -220,31 +238,35 @@ class CommCPU : public Comm {
       // Also indicates that buffers are already initialized during push().
       auto& buf = merge_buf_[key].merged_buf(src.storage_type());
       CopyFromTo(src, &buf, priority);
-      for (auto d : dst) CopyFromTo(buf, d, priority);
+      for (auto d : dst)
+        CopyFromTo(buf, d, priority);
     }
   }
 
-  void BroadcastRowSparse(int key, const NDArray& src,
+  void BroadcastRowSparse(int key,
+                          const NDArray& src,
                           const std::vector<std::pair<NDArray*, NDArray>>& dst,
                           const int priority) override {
     using namespace mshadow;
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
-      << "BroadcastRowSparse expects row-sparse src NDArray";
+        << "BroadcastRowSparse expects row-sparse src NDArray";
     CHECK_EQ(src.ctx().dev_mask(), Context::kCPU)
-      << "BroadcastRowSparse with src on gpu context not supported";
+        << "BroadcastRowSparse with src on gpu context not supported";
     for (const auto& dst_kv : dst) {
-      NDArray* out = dst_kv.first;
+      NDArray* out   = dst_kv.first;
       NDArray row_id = dst_kv.second;
       CHECK_EQ(out->storage_type(), kRowSparseStorage)
-               << "BroadcastRowSparse expects row_sparse dst NDArray";
+          << "BroadcastRowSparse expects row_sparse dst NDArray";
       CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
-               << "BroadcastRowSparse with row_indices on gpu context not supported";
+          << "BroadcastRowSparse with row_indices on gpu context not supported";
       // retain according to unique indices
       const bool is_same_ctx = out->ctx() == src.ctx();
       const bool is_diff_var = out->var() != src.var();
-      NDArray retained_cpu = (is_same_ctx && is_diff_var) ? *out :
-          NDArray(kRowSparseStorage, src.shape(), src.ctx(), true,
-                  src.dtype(), src.aux_types());
+      NDArray retained_cpu =
+          (is_same_ctx && is_diff_var)
+              ? *out
+              : NDArray(
+                    kRowSparseStorage, src.shape(), src.ctx(), true, src.dtype(), src.aux_types());
       if (!is_diff_var) {
         common::LogOnce("The output of row_sparse_pull() on key " + std::to_string(key) +
                         "refers to the same NDArray as the one stored in KVStore."
@@ -254,15 +276,22 @@ class CommCPU : public Comm {
                         "consider create a new NDArray buffer to store the output.");
       }
       Engine::Get()->PushAsync(
-        [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          const TBlob& indices = row_id.data();
-          NDArray temp = retained_cpu;  // get rid the of const qualifier
-          op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
-                                                src, indices, kWriteTo,
-                                                &temp);
-          on_complete();
-        }, Context::CPU(), {src.var(), row_id.var()}, {retained_cpu.var()},
-        FnProperty::kNormal, priority, "KVStoreSparseRetain");
+          [=](RunContext rctx,
+              Engine::CallbackOnStart on_start,
+              Engine::CallbackOnComplete on_complete) {
+            on_start();
+            const TBlob& indices = row_id.data();
+            NDArray temp         = retained_cpu;  // get rid the of const qualifier
+            op::SparseRetainOpForwardRspImpl<cpu>(
+                rctx.get_stream<cpu>(), src, indices, kWriteTo, &temp);
+            on_complete();
+          },
+          Context::CPU(),
+          {src.var(), row_id.var()},
+          {retained_cpu.var()},
+          FnProperty::kNormal,
+          priority,
+          "KVStoreSparseRetain");
       // if retained_cpu == out, CopyFromTo will ignore the copy operation
       CopyFromTo(retained_cpu, out, priority);
     }
@@ -270,7 +299,7 @@ class CommCPU : public Comm {
 
  private:
   // reduce sum into val[0]
-  inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
+  inline void ReduceSumCPU(const std::vector<NDArray>& in_data) {
     MSHADOW_TYPE_SWITCH(in_data[0].dtype(), DType, {
       std::vector<DType*> dptr(in_data.size());
       for (size_t i = 0; i < in_data.size(); ++i) {
@@ -284,13 +313,13 @@ class CommCPU : public Comm {
   }
 
   // serial implementation of reduce sum for row sparse NDArray.
-  inline void ReduceSumCPUExSerial(const std::vector<NDArray> &in, NDArray *out) {
+  inline void ReduceSumCPUExSerial(const std::vector<NDArray>& in, NDArray* out) {
     using namespace rowsparse;
     using namespace mshadow;
     auto stype = out->storage_type();
     CHECK_EQ(stype, kRowSparseStorage) << "Unexpected storage type " << stype;
     size_t total_num_rows = 0;
-    size_t num_in = in.size();
+    size_t num_in         = in.size();
     // skip the ones with empty indices and values
     std::vector<bool> skip(num_in, false);
     // the values tensor of the inputs
@@ -306,10 +335,10 @@ class CommCPU : public Comm {
             skip[i] = true;
             continue;
           }
-          auto size = in[i].aux_shape(kIdx).Size();
+          auto size   = in[i].aux_shape(kIdx).Size();
           num_rows[i] = size;
           total_num_rows += size;
-          in_vals[i] = in[i].data().FlatTo2D<cpu, DType>();
+          in_vals[i]    = in[i].data().FlatTo2D<cpu, DType>();
           in_indices[i] = in[i].aux_data(kIdx).FlatTo1D<cpu, IType>();
         }
         std::vector<IType> indices;
@@ -334,9 +363,10 @@ class CommCPU : public Comm {
         for (size_t i = 0; i < nnr; i++) {
           // copy indices back
           idx_data[i] = indices[i];
-          bool zeros = true;
+          bool zeros  = true;
           for (size_t j = 0; j < num_in; j++) {
-            if (skip[j]) continue;
+            if (skip[j])
+              continue;
             size_t offset = offsets[j];
             if (offset < num_rows[j]) {
               if (indices[i] == in_indices[j][offset]) {
@@ -355,12 +385,11 @@ class CommCPU : public Comm {
     });
   }
 
-  template<typename DType>
-  inline static void ReduceSumCPU(
-      const std::vector<DType*> &dptr, size_t offset, index_t size) {
+  template <typename DType>
+  inline static void ReduceSumCPU(const std::vector<DType*>& dptr, size_t offset, index_t size) {
     using namespace mshadow;  // NOLINT(*)
     Tensor<cpu, 1, DType> in_0(dptr[0] + offset, Shape1(size));
-    for (size_t i = 1; i < dptr.size(); i+=4) {
+    for (size_t i = 1; i < dptr.size(); i += 4) {
       switch (dptr.size() - i) {
         case 1: {
           Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
@@ -369,22 +398,22 @@ class CommCPU : public Comm {
         }
         case 2: {
           Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
-          Tensor<cpu, 1, DType> in_2(dptr[i+1] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_2(dptr[i + 1] + offset, Shape1(size));
           in_0 += in_1 + in_2;
           break;
         }
         case 3: {
           Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
-          Tensor<cpu, 1, DType> in_2(dptr[i+1] + offset, Shape1(size));
-          Tensor<cpu, 1, DType> in_3(dptr[i+2] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_2(dptr[i + 1] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_3(dptr[i + 2] + offset, Shape1(size));
           in_0 += in_1 + in_2 + in_3;
           break;
         }
         default: {
           Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
-          Tensor<cpu, 1, DType> in_2(dptr[i+1] + offset, Shape1(size));
-          Tensor<cpu, 1, DType> in_3(dptr[i+2] + offset, Shape1(size));
-          Tensor<cpu, 1, DType> in_4(dptr[i+3] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_2(dptr[i + 1] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_3(dptr[i + 2] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_4(dptr[i + 3] + offset, Shape1(size));
           in_0 += in_1 + in_2 + in_3 + in_4;
           break;
         }
@@ -392,19 +421,20 @@ class CommCPU : public Comm {
     }
   }
 
-  template<typename DType>
+  template <typename DType>
   inline void ReduceSumCPUImpl(std::vector<DType*> dptr, size_t total) {
     const size_t step = std::min(bigarray_bound_, static_cast<size_t>(4 << 10));
-    long ntask = (total + step - 1) / step; // NOLINT(*)
+    long ntask        = (total + step - 1) / step;  // NOLINT(*)
     if (total < bigarray_bound_ || nthread_reduction_ <= 1) {
       ReduceSumCPU(dptr, 0, total);
     } else {
-      #pragma omp parallel for schedule(static) num_threads(nthread_reduction_)
-      for (long j = 0; j < ntask; ++j) { // NOLINT(*)
-        size_t k = static_cast<size_t>(j);
+#pragma omp parallel for schedule(static) num_threads(nthread_reduction_)
+      for (long j = 0; j < ntask; ++j) {  // NOLINT(*)
+        size_t k     = static_cast<size_t>(j);
         size_t begin = std::min(k * step, total);
-        size_t end = std::min((k + 1) * step, total);
-        if (j == ntask - 1) CHECK_EQ(end, total);
+        size_t end   = std::min((k + 1) * step, total);
+        if (j == ntask - 1)
+          CHECK_EQ(end, total);
         ReduceSumCPU(dptr, begin, static_cast<index_t>(end - begin));
       }
     }
@@ -425,8 +455,8 @@ class CommCPU : public Comm {
       // check if sparse_merged is initialized
       if (sparse_merged.is_none()) {
         CHECK(!merged.is_none());
-        sparse_merged = NDArray(kRowSparseStorage, merged.shape(), merged.ctx(),
-                                true, merged.dtype());
+        sparse_merged =
+            NDArray(kRowSparseStorage, merged.shape(), merged.ctx(), true, merged.dtype());
       }
       return sparse_merged;
     }
@@ -455,9 +485,11 @@ class CommDevice : public Comm {
     inited_ = false;
   }
 
-  virtual ~CommDevice() { }
+  virtual ~CommDevice() {}
 
-  void Init(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
+  void Init(int key,
+            const NDArrayStorageType stype,
+            const mxnet::TShape& shape,
             int dtype = mshadow::kFloat32) override {
     sorted_key_attrs_.emplace_back(key, shape, dtype);
     inited_ = false;
@@ -476,13 +508,12 @@ class CommDevice : public Comm {
     }
   }
 
-  const NDArray& ReduceRowSparse(int key, const std::vector<NDArray>& src,
-                                 int priority) {
+  const NDArray& ReduceRowSparse(int key, const std::vector<NDArray>& src, int priority) {
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
 
     const NDArrayStorageType stype = src[0].storage_type();
-    NDArray& buf_merged = buf.merged_buf(stype);
+    NDArray& buf_merged            = buf.merged_buf(stype);
     if (buf.copy_buf.empty()) {
       // initialize buffer for copying during reduce
       buf.copy_buf.resize(src.size());
@@ -491,8 +522,8 @@ class CommDevice : public Comm {
       }
     }
     CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
-         << "Storage type mismatch detected. " << src[0].storage_type() << "(src) vs. "
-         << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
+        << "Storage type mismatch detected. " << src[0].storage_type() << "(src) vs. "
+        << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
     for (size_t i = 0; i < src.size(); ++i) {
       CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       reduce[i] = buf.copy_buf[i];
@@ -501,8 +532,7 @@ class CommDevice : public Comm {
     return buf_merged;
   }
 
-  const NDArray& Reduce(int key, const std::vector<NDArray>& src,
-                        int priority) override {
+  const NDArray& Reduce(int key, const std::vector<NDArray>& src, int priority) override {
     // when this reduce is called from kvstore_dist, gc is not set
     // we don't do compression twice in dist_sync_device
     if ((gc_ != nullptr) && (gc_->get_type() != CompressionType::kNone)) {
@@ -519,7 +549,7 @@ class CommDevice : public Comm {
     auto& buf = merge_buf_[key];
 
     const NDArrayStorageType stype = src[0].storage_type();
-    NDArray& buf_merged = buf.merged_buf(stype);
+    NDArray& buf_merged            = buf.merged_buf(stype);
     // normal dense reduce
     if (stype == kDefaultStorage) {
       CopyFromTo(src[0], &buf_merged, priority);
@@ -532,18 +562,18 @@ class CommDevice : public Comm {
         // such as the largest fullc in VGG. consider to do segment reduce with
         // NDArray.Slice or gpu direct memory access. for the latter, we need to
         // remove some ctx check, and also it reduces 20% perf
-        buf.copy_buf.resize(src.size()-1);
+        buf.copy_buf.resize(src.size() - 1);
         const std::string profiler_scope =
             profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "comm_dev:";
-        for (size_t i = 0; i < src.size()-1; ++i) {
-          buf.copy_buf[i] = NDArray(
-            buf_merged.shape(), buf_merged.ctx(), false, buf_merged.dtype());
+        for (size_t i = 0; i < src.size() - 1; ++i) {
+          buf.copy_buf[i] =
+              NDArray(buf_merged.shape(), buf_merged.ctx(), false, buf_merged.dtype());
           buf.copy_buf[i].AssignStorageInfo(profiler_scope, "copy_buf");
         }
       }
-      for (size_t i = 0; i < src.size()-1; ++i) {
-        CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
-        reduce[i+1] = buf.copy_buf[i];
+      for (size_t i = 0; i < src.size() - 1; ++i) {
+        CopyFromTo(src[i + 1], &(buf.copy_buf[i]), priority);
+        reduce[i + 1] = buf.copy_buf[i];
       }
       ElementwiseSum(reduce, &buf_merged, priority);
     } else {
@@ -553,8 +583,7 @@ class CommDevice : public Comm {
     return buf_merged;
   }
 
-  const NDArray& ReduceCompressed(int key, const std::vector<NDArray>& src,
-                                  int priority) {
+  const NDArray& ReduceCompressed(int key, const std::vector<NDArray>& src, int priority) {
     InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
@@ -567,19 +596,17 @@ class CommDevice : public Comm {
       const std::string profiler_scope =
           profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "comm_dev:";
       for (size_t i = 0; i < src.size(); ++i) {
-        buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
-                                  false, buf.merged.dtype());
+        buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
         buf.copy_buf[i].AssignStorageInfo(profiler_scope, "copy_buf");
-        buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(),
-                                  false, buf.merged.dtype());
+        buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(), false, buf.merged.dtype());
         buf.residual[i].AssignStorageInfo(profiler_scope, "residual");
-        buf.residual[i] = 0;
+        buf.residual[i]    = 0;
         int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
-        buf.compressed_recv_buf[i] = NDArray(mxnet::TShape{small_size}, buf.merged.ctx(),
-                                             false, buf.merged.dtype());
+        buf.compressed_recv_buf[i] =
+            NDArray(mxnet::TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
         buf.compressed_recv_buf[i].AssignStorageInfo(profiler_scope, "compressed_recv_buf");
-        buf.compressed_send_buf[i] = NDArray(mxnet::TShape{small_size}, src[i].ctx(),
-                                             false, buf.merged.dtype());
+        buf.compressed_send_buf[i] =
+            NDArray(mxnet::TShape{small_size}, src[i].ctx(), false, buf.merged.dtype());
         buf.compressed_send_buf[i].AssignStorageInfo(profiler_scope, "compressed_send_buf");
       }
     }
@@ -604,8 +631,10 @@ class CommDevice : public Comm {
     return buf.merged;
   }
 
-  void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray*> dst, int priority) override {
+  void Broadcast(int key,
+                 const NDArray& src,
+                 const std::vector<NDArray*> dst,
+                 int priority) override {
     if (!inited_) {
       // copy to a random device first
       int dev_id = key % dst.size();
@@ -624,26 +653,30 @@ class CommDevice : public Comm {
     }
   }
 
-  void BroadcastRowSparse(int key, const NDArray& src,
+  void BroadcastRowSparse(int key,
+                          const NDArray& src,
                           const std::vector<std::pair<NDArray*, NDArray>>& dst,
                           const int priority) override {
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
-      << "BroadcastRowSparse expects row-sparse src NDArray";
+        << "BroadcastRowSparse expects row-sparse src NDArray";
 
     for (const auto& dst_kv : dst) {
-      NDArray* out = dst_kv.first;
+      NDArray* out   = dst_kv.first;
       NDArray row_id = dst_kv.second;
       CHECK_EQ(out->storage_type(), kRowSparseStorage)
-               << "BroadcastRowSparse expects row_sparse dst NDArray";
-      CHECK_EQ(row_id.ctx(), src.ctx())
-              << "row_id and src are expected to be on the same context";
+          << "BroadcastRowSparse expects row_sparse dst NDArray";
+      CHECK_EQ(row_id.ctx(), src.ctx()) << "row_id and src are expected to be on the same context";
 
       // retain according to indices
       const bool is_same_ctx = out->ctx() == src.ctx();
       const bool is_diff_var = out->var() != src.var();
-      NDArray retained_gpu = (is_same_ctx && is_diff_var) ? *out :
-          NDArray(kRowSparseStorage, out->shape(), src.ctx(), true,
-                  out->dtype(), out->aux_types());
+      NDArray retained_gpu   = (is_same_ctx && is_diff_var) ? *out
+                                                            : NDArray(kRowSparseStorage,
+                                                                    out->shape(),
+                                                                    src.ctx(),
+                                                                    true,
+                                                                    out->dtype(),
+                                                                    out->aux_types());
       if (!is_diff_var) {
         common::LogOnce("The output of row_sparse_pull() on key " + std::to_string(key) +
                         "refers to the same NDArray as the one stored in KVStore."
@@ -653,31 +686,38 @@ class CommDevice : public Comm {
                         "consider create a new NDArray buffer to store the output.");
       }
       bool is_gpu = retained_gpu.ctx().dev_mask() == gpu::kDevMask;
-      Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          const TBlob& indices = row_id.data();
-          using namespace mxnet::common;
-          NDArray temp = retained_gpu;
-          switch (temp.ctx().dev_mask()) {
-            case cpu::kDevMask: {
-              SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
-                  src, indices, kWriteTo, &temp);
-              break;
-            }
+      Engine::Get()->PushAsync(
+          [=](RunContext rctx,
+              Engine::CallbackOnStart on_start,
+              Engine::CallbackOnComplete on_complete) {
+            on_start();
+            const TBlob& indices = row_id.data();
+            using namespace mxnet::common;
+            NDArray temp = retained_gpu;
+            switch (temp.ctx().dev_mask()) {
+              case cpu::kDevMask: {
+                SparseRetainOpForwardRspWrapper<cpu>(
+                    rctx.get_stream<cpu>(), src, indices, kWriteTo, &temp);
+                break;
+              }
 #if MXNET_USE_CUDA
-            case gpu::kDevMask: {
-              SparseRetainOpForwardRspWrapper<gpu>(rctx.get_stream<gpu>(),
-                  src, indices, kWriteTo, &temp);
-              // wait for GPU operations to complete
-              rctx.get_stream<gpu>()->Wait();
-              break;
-            }
+              case gpu::kDevMask: {
+                SparseRetainOpForwardRspWrapper<gpu>(
+                    rctx.get_stream<gpu>(), src, indices, kWriteTo, &temp);
+                break;
+              }
 #endif
-            default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-          }
-          on_complete();
-        }, retained_gpu.ctx(), {src.var(), row_id.var()}, {retained_gpu.var()},
-      is_gpu ? FnProperty::kGPUPrioritized : FnProperty::kCPUPrioritized,
-      priority, "KVStoreSparseRetain");
+              default:
+                LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+            }
+            on_complete();
+          },
+          retained_gpu.ctx(),
+          {src.var(), row_id.var()},
+          {retained_gpu.var()},
+          is_gpu ? FnProperty::kGPUPrioritized : FnProperty::kCPUPrioritized,
+          priority,
+          "KVStoreSparseRetain");
       CopyFromTo(retained_gpu, out, priority);
     }
   }
@@ -685,10 +725,11 @@ class CommDevice : public Comm {
   using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
-    std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
-              const KeyAttrs& a, const KeyAttrs& b) {
-      return std::get<1>(a).Size() > std::get<1>(b).Size();
-    });
+    std::sort(sorted_key_attrs_.begin(),
+              sorted_key_attrs_.end(),
+              [](const KeyAttrs& a, const KeyAttrs& b) {
+                return std::get<1>(a).Size() > std::get<1>(b).Size();
+              });
 
     std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
     for (auto d : devs) {
@@ -699,16 +740,16 @@ class CommDevice : public Comm {
         profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "kvstore:comm_dev:";
 
     for (auto& sorted_key_attr : sorted_key_attrs_) {
-      const int key  = std::get<0>(sorted_key_attr);
+      const int key              = std::get<0>(sorted_key_attr);
       const mxnet::TShape& shape = std::get<1>(sorted_key_attr);
-      const int type = std::get<2>(sorted_key_attr);
-      auto& buf = merge_buf_[key];
+      const int type             = std::get<2>(sorted_key_attr);
+      auto& buf                  = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
       for (auto& ctx_info_kv : ctx_info) {
         size_t size = ctx_info_kv.second.second;
         if (size <= min_size) {
-          ctx = ctx_info_kv.second.first;
+          ctx      = ctx_info_kv.second.first;
           min_size = size;
         }
       }
@@ -716,7 +757,7 @@ class CommDevice : public Comm {
       // only sees sparse arrays
       if (buf.merged.is_none()) {
         bool delay_alloc = true;
-        buf.merged = NDArray(shape, ctx, delay_alloc, type);
+        buf.merged       = NDArray(shape, ctx, delay_alloc, type);
         buf.merged.AssignStorageInfo(profiler_scope, "merge_buf_" + std::to_string(key));
       }
       ctx_info[ctx.dev_id].second += shape.Size();
@@ -733,9 +774,9 @@ class CommDevice : public Comm {
         gpus.push_back(d.dev_id);
       }
     }
-    int n = static_cast<int>(gpus.size());
+    int n       = static_cast<int>(gpus.size());
     int enabled = 0;
-    std::vector<int> p2p(n*n);
+    std::vector<int> p2p(n * n);
 
     for (int i = 0; i < n; ++i) {
       // Restores active device to what it was before EnableP2P
@@ -747,21 +788,21 @@ class CommDevice : public Comm {
           cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
           if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
             ++enabled;
-            p2p[i*n+j] = 1;
+            p2p[i * n + j] = 1;
           }
         }
       }
     }
-    if (enabled != n*(n-1)) {
+    if (enabled != n * (n - 1)) {
       // print warning info if not fully enabled
-      LOG(WARNING) << "only " << enabled <<  " out of "
-                   << n*(n-1) << " GPU pairs are enabled direct access. "
+      LOG(WARNING) << "only " << enabled << " out of " << n * (n - 1)
+                   << " GPU pairs are enabled direct access. "
                    << "It may affect the performance. "
                    << "You can set MXNET_ENABLE_GPU_P2P=0 to turn it off";
       std::string access(n, '.');
       for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-          access[j] = p2p[i*n+j] ? 'v' : '.';
+          access[j] = p2p[i * n + j] ? 'v' : '.';
         }
         LOG(WARNING) << access;
       }
@@ -792,8 +833,8 @@ class CommDevice : public Comm {
       // check if sparse_merged is initialized
       if (sparse_merged.is_none()) {
         CHECK(!merged.is_none());
-        sparse_merged = NDArray(kRowSparseStorage, merged.shape(), merged.ctx(),
-                                true, merged.dtype());
+        sparse_merged =
+            NDArray(kRowSparseStorage, merged.shape(), merged.ctx(), true, merged.dtype());
       }
       return sparse_merged;
     }

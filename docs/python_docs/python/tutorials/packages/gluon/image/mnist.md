@@ -46,10 +46,13 @@ Before we define the model, let's first fetch the [MNIST](http://yann.lecun.com/
 The following source code downloads and loads the images and the corresponding labels into memory.
 
 ```{.python .input}
+import os
 import mxnet as mx
+from mxnet import gluon
+from mxnet.gluon.data.vision import transforms
 
 # Fixing the random seed
-mx.random.seed(42)
+mx.np.random.seed(42)
 
 mnist = mx.test_utils.get_mnist()
 ```
@@ -62,9 +65,18 @@ Data iterators take care of this by randomly shuffling the inputs. Note that we 
 The following source code initializes the data iterators for the MNIST dataset. Note that we initialize two iterators: one for train data and one for test data.
 
 ```{.python .input}
+def transform(data, label):
+    return data.astype(np.float32)/255, label.astype(np.float32)
+
 batch_size = 100
-train_data = mx.io.NDArrayIter(mnist['train_data'], mnist['train_label'], batch_size, shuffle=True)
-val_data = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
+num_workers = 8
+train_data = gluon.data.DataLoader(
+    gluon.data.vision.MNIST(train=True).transform_first(transforms.ToTensor()),
+    batch_size=batch_size, shuffle=True, num_workers=num_workers)
+
+val_data = gluon.data.DataLoader(
+    gluon.data.vision.MNIST(train=False).transform(transform),
+    batch_size=batch_size, shuffle=False, num_workers=num_workers)
 ```
 
 ## Approaches
@@ -115,8 +127,8 @@ initialized parameters.
 
 ```{.python .input}
 gpus = mx.test_utils.list_gpus()
-ctx =  [mx.gpu()] if gpus else [mx.cpu(0), mx.cpu(1)]
-net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+device =  mx.gpu() if gpus else [mx.cpu(0), mx.cpu(1)]
+net.initialize(mx.init.Xavier(magnitude=2.24), device=device)
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.02})
 ```
 
@@ -142,26 +154,18 @@ training scope which is defined by `autograd.record()`.
 %%time
 epoch = 10
 # Use Accuracy as the evaluation metric.
-metric = mx.metric.Accuracy()
+metric = mx.gluon.metric.Accuracy()
 softmax_cross_entropy_loss = gluon.loss.SoftmaxCrossEntropyLoss()
 for i in range(epoch):
-    # Reset the train data iterator.
-    train_data.reset()
     # Loop over the train data iterator.
-    for batch in train_data:
-        # Splits train data into multiple slices along batch_axis
-        # and copy each slice into a context.
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        # Splits train labels into multiple slices along batch_axis
-        # and copy each slice into a context.
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+    for batch_num, (data, label) in enumerate(train_data):
         outputs = []
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
-                z = net(x)
+                z = net(x.to_device(device))
                 # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y)
+                loss = softmax_cross_entropy_loss(z, y.to_device(device))
                 # Backpropagate the error for one iteration.
                 loss.backward()
                 outputs.append(z)
@@ -169,7 +173,7 @@ for i in range(epoch):
         metric.update(label, outputs)
         # Make one step of parameter update. Trainer needs to know the
         # batch size of data to normalize the gradient by 1/batch_size.
-        trainer.step(batch.data[0].shape[0])
+        trainer.step(data.shape[0])
     # Gets the evaluation result.
     name, acc = metric.get()
     # Reset evaluation result to initial state.
@@ -183,20 +187,12 @@ After the above training completes, we can evaluate the trained model by running
 
 ```{.python .input}
 # Use Accuracy as the evaluation metric.
-metric = mx.metric.Accuracy()
-# Reset the validation data iterator.
-val_data.reset()
+metric = mx.gluon.metric.Accuracy()
 # Loop over the validation data iterator.
-for batch in val_data:
-    # Splits validation data into multiple slices along batch_axis
-    # and copy each slice into a context.
-    data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-    # Splits validation label into multiple slices along batch_axis
-    # and copy each slice into a context.
-    label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+for batch_num, (data, label) in enumerate(val_data):
     outputs = []
     for x in data:
-        outputs.append(net(x))
+        outputs.append(net(x.to_device(device)))
     # Updates internal evaluation
     metric.update(label, outputs)
 print('validation acc: %s=%f'%metric.get())
@@ -217,7 +213,7 @@ A typical way to write your network is creating a new class inherited from `gluo
 class. We can define the network by composing and inheriting Block class as follows:
 
 ```{.python .input}
-import mxnet.ndarray as F
+from mxnet import np, npx
 
 class Net(gluon.Block):
     def __init__(self, **kwargs):
@@ -230,13 +226,13 @@ class Net(gluon.Block):
         self.fc2 = nn.Dense(10)
 
     def forward(self, x):
-        x = self.pool1(F.tanh(self.conv1(x)))
-        x = self.pool2(F.tanh(self.conv2(x)))
+        x = self.pool1(np.tanh(self.conv1(x)))
+        x = self.pool2(np.tanh(self.conv2(x)))
         # 0 means copy over size from corresponding dimension.
         # -1 means infer size from the rest of dimensions.
-        x = x.reshape((0, -1))
-        x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
+        x = x.reshape((-2, -1))
+        x = np.tanh(self.fc1(x))
+        x = np.tanh(self.fc2(x))
         return x
 ```
 
@@ -263,9 +259,9 @@ Training and prediction can be done in the similar way as we did for MLP.
 We will initialize the network parameters as follows:
 
 ```{.python .input}
-# set the context on GPU is available otherwise CPU
-ctx = [mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()]
-net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+# set the device on GPU is available otherwise CPU
+device = [mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()]
+net.initialize(mx.init.Xavier(magnitude=2.24), device=device)
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
 ```
 
@@ -273,27 +269,19 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
 
 ```{.python .input}
 # Use Accuracy as the evaluation metric.
-metric = mx.metric.Accuracy()
+metric = mx.gluon.metric.Accuracy()
 softmax_cross_entropy_loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 for i in range(epoch):
-    # Reset the train data iterator.
-    train_data.reset()
     # Loop over the train data iterator.
-    for batch in train_data:
-        # Splits train data into multiple slices along batch_axis
-        # and copy each slice into a context.
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        # Splits train labels into multiple slices along batch_axis
-        # and copy each slice into a context.
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+    for batch_num, (data, label) in enumerate(train_data):
         outputs = []
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
-                z = net(x)
+                z = net(x.to_device(device))
                 # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y)
+                loss = softmax_cross_entropy_loss(z, y.to_device(device))
                 # Backpropogate the error for one iteration.
                 loss.backward()
                 outputs.append(z)
@@ -301,7 +289,7 @@ for i in range(epoch):
         metric.update(label, outputs)
         # Make one step of parameter update. Trainer needs to know the
         # batch size of data to normalize the gradient by 1/batch_size.
-        trainer.step(batch.data[0].shape[0])
+        trainer.step(data.shape[0])
     # Gets the evaluation result.
     name, acc = metric.get()
     # Reset evaluation result to initial state.
@@ -315,20 +303,12 @@ Finally, we'll use the trained LeNet model to generate predictions for the test 
 
 ```{.python .input}
 # Use Accuracy as the evaluation metric.
-metric = mx.metric.Accuracy()
-# Reset the validation data iterator.
-val_data.reset()
+metric = mx.gluon.metric.Accuracy()
 # Loop over the validation data iterator.
-for batch in val_data:
-    # Splits validation data into multiple slices along batch_axis
-    # and copy each slice into a context.
-    data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-    # Splits validation label into multiple slices along batch_axis
-    # and copy each slice into a context.
-    label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+for batch_num, (data, label) in enumerate(val_data):
     outputs = []
     for x in data:
-        outputs.append(net(x))
+        outputs.append(net(x.to_device(device)))
     # Updates internal evaluation
     metric.update(label, outputs)
 print('validation acc: %s=%f'%metric.get())

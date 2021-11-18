@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -27,32 +27,32 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.tri")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.tri").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tri");
   nnvm::NodeAttrs attrs;
-  op::TriParam param;
+  op::TriParam param = {};
   param.N = args[0].operator nnvm::dim_t();
   if (args[1].type_code() == kNull) {
     param.M = dmlc::nullopt;
   } else {
     param.M = args[1].operator nnvm::dim_t();
   }
-  param.k = args[2].operator int();
-  param.dtype = args[3].type_code() == kNull ? mshadow::kFloat32 :
-                String2MXNetTypeWithBool(args[3].operator std::string());
+  param.k     = args[2].operator int();
+  param.dtype = args[3].type_code() == kNull
+                    ? mshadow::kFloat32
+                    : String2MXNetTypeWithBool(args[3].operator std::string());
   if (args[4].type_code() != kNull) {
     attrs.dict["ctx"] = args[4].operator std::string();
   }
 
   attrs.parsed = param;
-  attrs.op = op;
+  attrs.op     = op;
   SetAttrDict<op::TriParam>(&attrs);
 
   int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
+  auto ndoutputs  = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  *ret            = ndoutputs[0];
 });
 
 }  // namespace mxnet

@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2017 by Contributors
 * \file lr_scheduler.h
 * \brief Scheduling learning rate
 */

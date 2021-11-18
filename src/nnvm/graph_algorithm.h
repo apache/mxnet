@@ -18,12 +18,11 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file graph_algorithm.h
  * \brief This header contains graph algorithms on StaticGraph.
  *  It is used  compute informations such as whether two
  *  operations can run in parallel, and helps allocation.
-*/
+ */
 #ifndef MXNET_NNVM_GRAPH_ALGORITHM_H_
 #define MXNET_NNVM_GRAPH_ALGORITHM_H_
 
@@ -42,10 +41,9 @@ namespace pass {
  * \param path the output path of nodes.
  * \return the total reward of best path.
  */
-inline uint32_t MXFindBestPath(
-    const IndexedGraph& graph,
-    const std::vector<uint32_t>& node_reward,
-    std::vector<uint32_t>* path) {
+inline uint32_t MXFindBestPath(const IndexedGraph& graph,
+                               const std::vector<uint32_t>& node_reward,
+                               std::vector<uint32_t>* path) {
   const uint32_t num_nodes = static_cast<uint32_t>(graph.num_nodes());
   CHECK_EQ(num_nodes, node_reward.size());
 
@@ -58,21 +56,22 @@ inline uint32_t MXFindBestPath(
     const uint32_t nid = i - 1;
     best_reward[nid] += node_reward[nid];
     if (best_reward[nid] > best_solution) {
-      best_solution = best_reward[nid];
+      best_solution   = best_reward[nid];
       best_start_node = nid;
     }
     for (const auto& e : graph[nid].inputs) {
       const uint32_t prev = e.node_id;
       if (best_reward[nid] > best_reward[prev]) {
         best_reward[prev] = best_reward[nid];
-        next_node[prev] = nid;
+        next_node[prev]   = nid;
       }
     }
   }
   path->clear();
   uint32_t reward = 0;
   for (uint32_t nid = best_start_node; nid < num_nodes; nid = next_node[nid]) {
-    path->push_back(nid); reward += node_reward[nid];
+    path->push_back(nid);
+    reward += node_reward[nid];
   }
   CHECK_EQ(reward, best_solution);
   return best_solution;
@@ -89,11 +88,10 @@ inline uint32_t MXFindBestPath(
  * \param color the color index of each of the node.
  * \return the total number of colors.
  */
-inline uint32_t MXColorNodeGroup(
-    const IndexedGraph &graph,
-    std::vector<uint32_t> node_importance,
-    uint32_t max_ncolor,
-    std::vector<uint32_t> *color) {
+inline uint32_t MXColorNodeGroup(const IndexedGraph& graph,
+                                 std::vector<uint32_t> node_importance,
+                                 uint32_t max_ncolor,
+                                 std::vector<uint32_t>* color) {
   CHECK_NE(max_ncolor, 0U);
   CHECK_EQ(graph.num_nodes(), node_importance.size());
 
@@ -106,7 +104,8 @@ inline uint32_t MXColorNodeGroup(
   for (cindex = 0; cindex < max_ncolor - 1; ++cindex) {
     std::vector<uint32_t> path;
     uint32_t reward = MXFindBestPath(graph, node_importance, &path);
-    if (reward == 0) break;
+    if (reward == 0)
+      break;
     for (uint32_t nid : path) {
       if (node_importance[nid] != 0) {
         CHECK_EQ(color->at(nid), max_ncolor);

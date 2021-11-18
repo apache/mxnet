@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file rnn-inl.h
  * \brief
  * \author Sebastian Bodenstein, Shu Zhang
-*/
+ */
 #ifndef MXNET_OPERATOR_RNN_INL_H_
 #define MXNET_OPERATOR_RNN_INL_H_
 
@@ -53,11 +52,11 @@ namespace mxnet {
 namespace op {
 
 namespace rnn_enum {
-  enum RNNOpInputs {kData, kParams, kState, kStateCell, kSequenceLength};
-  enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
-  enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
-  enum RNNOpResource {kTempSpace, kCuDNNDropoutDescSpace};
-}
+enum RNNOpInputs { kData, kParams, kState, kStateCell, kSequenceLength };
+enum RNNOpOutputs { kOut, kStateOut, kStateCellOut };
+enum RNNModeType { kRnnRelu, kRnnTanh, kLstm, kGru };
+enum RNNOpResource { kTempSpace, kCuDNNDropoutDescSpace };
+}  // namespace rnn_enum
 
 struct RNNParam : public dmlc::Parameter<RNNParam> {
   uint32_t state_size;
@@ -78,54 +77,56 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   bool lstm_state_clip_nan;
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
-    DMLC_DECLARE_FIELD(state_size)
-    .describe("size of the state for each layer");
+    DMLC_DECLARE_FIELD(state_size).describe("size of the state for each layer");
 
-    DMLC_DECLARE_FIELD(num_layers)
-    .describe("number of stacked layers");
+    DMLC_DECLARE_FIELD(num_layers).describe("number of stacked layers");
 
-    DMLC_DECLARE_FIELD(bidirectional).set_default(false)
-    .describe("whether to use bidirectional recurrent layers");
+    DMLC_DECLARE_FIELD(bidirectional)
+        .set_default(false)
+        .describe("whether to use bidirectional recurrent layers");
 
     DMLC_DECLARE_FIELD(mode)
-    .add_enum("rnn_relu", rnn_enum::kRnnRelu)
-    .add_enum("rnn_tanh", rnn_enum::kRnnTanh)
-    .add_enum("lstm", rnn_enum::kLstm)
-    .add_enum("gru", rnn_enum::kGru)
-    .describe("the type of RNN to compute");
+        .add_enum("rnn_relu", rnn_enum::kRnnRelu)
+        .add_enum("rnn_tanh", rnn_enum::kRnnTanh)
+        .add_enum("lstm", rnn_enum::kLstm)
+        .add_enum("gru", rnn_enum::kGru)
+        .describe("the type of RNN to compute");
 
-    DMLC_DECLARE_FIELD(p).set_default(0.)
-    .set_range(0, 1)
-    .describe("drop rate of the dropout on the outputs of each RNN layer, except the last layer.");
+    DMLC_DECLARE_FIELD(p).set_default(0.).set_range(0, 1).describe(
+        "drop rate of the dropout on the outputs of each RNN layer, except the last layer.");
 
-    DMLC_DECLARE_FIELD(state_outputs).set_default(false)
-    .describe("Whether to have the states as symbol outputs.");
+    DMLC_DECLARE_FIELD(state_outputs)
+        .set_default(false)
+        .describe("Whether to have the states as symbol outputs.");
 
     DMLC_DECLARE_FIELD(projection_size)
-    .set_default(dmlc::optional<int>())
-    .describe("size of project size");
+        .set_default(dmlc::optional<int>())
+        .describe("size of project size");
 
     DMLC_DECLARE_FIELD(lstm_state_clip_min)
-    .set_default(dmlc::optional<double>())
-    .describe("Minimum clip value of LSTM states. This option must be used together with "
-              "lstm_state_clip_max.");
+        .set_default(dmlc::optional<double>())
+        .describe(
+            "Minimum clip value of LSTM states. This option must be used together with "
+            "lstm_state_clip_max.");
 
     DMLC_DECLARE_FIELD(lstm_state_clip_max)
-    .set_default(dmlc::optional<double>())
-    .describe("Maximum clip value of LSTM states. This option must be used together with "
-              "lstm_state_clip_min.");
+        .set_default(dmlc::optional<double>())
+        .describe(
+            "Maximum clip value of LSTM states. This option must be used together with "
+            "lstm_state_clip_min.");
 
     DMLC_DECLARE_FIELD(lstm_state_clip_nan)
-    .set_default(false)
-    .describe("Whether to stop NaN from propagating in state by clipping it to min/max. "
-              "If clipping range is not specified, this option is ignored.");
+        .set_default(false)
+        .describe(
+            "Whether to stop NaN from propagating in state by clipping it to min/max. "
+            "If clipping range is not specified, this option is ignored.");
 
     DMLC_DECLARE_FIELD(use_sequence_length)
-    .set_default(false)
-    .describe(
-        "If set to true, this layer takes in an extra input parameter "
-        "`sequence_length` "
-        "to specify variable length sequence");
+        .set_default(false)
+        .describe(
+            "If set to true, this layer takes in an extra input parameter "
+            "`sequence_length` "
+            "to specify variable length sequence");
   }
   std::string ComputeMode2String(int mode) {
     switch (mode) {
@@ -144,11 +145,9 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     return "";
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream state_size_s, num_layers_s, bidirectional_s,
-                       state_outputs_s, mode_s, p_s,
-                       use_sequence_length_s, projection_size_s,
-                       lstm_state_clip_min_s, lstm_state_clip_max_s,
-                       lstm_state_clip_nan_s;
+    std::ostringstream state_size_s, num_layers_s, bidirectional_s, state_outputs_s, mode_s, p_s,
+        use_sequence_length_s, projection_size_s, lstm_state_clip_min_s, lstm_state_clip_max_s,
+        lstm_state_clip_nan_s;
     state_size_s << state_size;
     num_layers_s << num_layers;
     bidirectional_s << bidirectional;
@@ -160,14 +159,14 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     lstm_state_clip_min_s << lstm_state_clip_min;
     lstm_state_clip_max_s << lstm_state_clip_max;
     lstm_state_clip_nan_s << lstm_state_clip_nan;
-    (*dict)["state_size"] = state_size_s.str();
-    (*dict)["num_layers"] = num_layers_s.str();
-    (*dict)["bidirectional"] = bidirectional_s.str();
-    (*dict)["state_outputs"] = state_outputs_s.str();
-    (*dict)["mode"] = ComputeMode2String(mode);
-    (*dict)["p"] = p_s.str();
+    (*dict)["state_size"]          = state_size_s.str();
+    (*dict)["num_layers"]          = num_layers_s.str();
+    (*dict)["bidirectional"]       = bidirectional_s.str();
+    (*dict)["state_outputs"]       = state_outputs_s.str();
+    (*dict)["mode"]                = ComputeMode2String(mode);
+    (*dict)["p"]                   = p_s.str();
     (*dict)["use_sequence_length"] = use_sequence_length_s.str();
-    (*dict)["projection_size"] = projection_size_s.str();
+    (*dict)["projection_size"]     = projection_size_s.str();
     (*dict)["lstm_state_clip_min"] = lstm_state_clip_min_s.str();
     (*dict)["lstm_state_clip_max"] = lstm_state_clip_max_s.str();
     (*dict)["lstm_state_clip_nan"] = lstm_state_clip_nan_s.str();
@@ -175,11 +174,11 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
 };
 
 inline index_t GetRnnParamSize(int num_layer,
-                           index_t input_size,
-                           int state_size,
-                           int direction,
-                           int mode,
-                           const dmlc::optional<int>& projection_size) {
+                               index_t input_size,
+                               int state_size,
+                               int direction,
+                               int mode,
+                               const dmlc::optional<int>& projection_size) {
   int size = state_size * direction;
   switch (mode) {
     case rnn_enum::kRnnRelu:
@@ -192,12 +191,12 @@ inline index_t GetRnnParamSize(int num_layer,
       size *= 3;
       break;
   }
-  index_t size1 = (input_size + state_size + 2) * size;  // first layer size
+  index_t size1 = (input_size + state_size + 2) * size;              // first layer size
   index_t size2 = (state_size * direction + state_size + 2) * size;  // other layers size
   if (projection_size.has_value()) {
     index_t proj_size = projection_size.value();
-    size1 = (input_size + proj_size + 2) * size;
-    size2 = (proj_size * direction + proj_size + 2) * size;
+    size1             = (input_size + proj_size + 2) * size;
+    size2             = (proj_size * direction + proj_size + 2) * size;
   }
   index_t param_size = size1 + (num_layer - 1) * size2;
   if (projection_size.has_value()) {
@@ -206,10 +205,7 @@ inline index_t GetRnnParamSize(int num_layer,
   return param_size;
 }
 
-inline int GetRnnBiasSize(int num_layer,
-                          int state_size,
-                          int direction,
-                          int mode) {
+inline int GetRnnBiasSize(int num_layer, int state_size, int direction, int mode) {
   int size = 2 * state_size * direction * num_layer;
   switch (mode) {
     case rnn_enum::kRnnRelu:
@@ -244,20 +240,20 @@ inline size_t GetRNNWorkspaceSize(index_t seq_length,
   switch (mode) {
     case rnn_enum::kLstm:
       size = seq_length * batch_size * hidden_size * (4 + direction) +  // wx*x + inter-y
-          batch_size * hidden_size * 6 +                                // wh*h + h + c
-          seq_length * hidden_size * 8 +                   // Used in Backward, Δbx, Δbh
-          // temporary dy in backward computation for bidirectional layers
-          seq_length * batch_size * hidden_size * (direction - 1 ? direction : 0);
+             batch_size * hidden_size * 6 +                             // wh*h + h + c
+             seq_length * hidden_size * 8 +  // Used in Backward, Δbx, Δbh
+             // temporary dy in backward computation for bidirectional layers
+             seq_length * batch_size * hidden_size * (direction - 1 ? direction : 0);
       break;
     case rnn_enum::kGru:
       // Differs with Lstm, the outputs of three gates are also held in memory
       size = seq_length * batch_size * hidden_size * direction * (3 + 1) +  // wx*x + inter-y
-          batch_size * hidden_size * (6 + direction);                       // wh*h + h + Ngates
+             batch_size * hidden_size * (6 + direction);                    // wh*h + h + Ngates
       break;
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
       size = seq_length * batch_size * hidden_size * direction * 2 +  // wx*x + inter-y
-          batch_size * hidden_size * (1 + direction);                 // h + Ngates
+             batch_size * hidden_size * (1 + direction);              // h + Ngates
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -279,14 +275,14 @@ inline size_t GetRNNReserveSpaceSize(int num_layer,
       break;
     case rnn_enum::kGru:
       size = seq_length * batch_size * hidden_size * direction * (num_layer * 9 - 1) +
-          batch_size * hidden_size * direction * 9 + hidden_size * seq_length * 6 +
-          seq_length * batch_size * 7 * hidden_size * direction;
+             batch_size * hidden_size * direction * 9 + hidden_size * seq_length * 6 +
+             seq_length * batch_size * 7 * hidden_size * direction;
       break;
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
       size = seq_length * batch_size * hidden_size * direction * (num_layer * 6 - 1) +
-          batch_size * hidden_size * direction * 3 + hidden_size * seq_length * 2 +
-          seq_length * batch_size * 2 * hidden_size * direction;
+             batch_size * hidden_size * direction * 3 + hidden_size * seq_length * 2 +
+             seq_length * batch_size * 2 * hidden_size * direction;
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -297,7 +293,8 @@ inline size_t GetRNNReserveSpaceSize(int num_layer,
 
 inline size_t GetNumInputArguments(RNNParam param_) {
   size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4U : 3U;
-  if (param_.use_sequence_length) num_inputs += 1U;
+  if (param_.use_sequence_length)
+    num_inputs += 1U;
   return num_inputs;
 }
 
@@ -347,23 +344,66 @@ void RNNForwardTraining(DType* ws,
                         DType* cy_ptr,
                         const float dropout,
                         int mode,
-                        std::mt19937 &rnd_engine) {  // NOLINT(runtime/references)
+                        std::mt19937& rnd_engine) {  // NOLINT(runtime/references)
   switch (mode) {
     case rnn_enum::kLstm:
-      LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
-                                 batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, dropout, rnd_engine);
+      LstmForwardTraining<DType>(ws,
+                                 rs,
+                                 state_outputs,
+                                 num_layers,
+                                 direction,
+                                 seq_length,
+                                 batch_size,
+                                 input_size,
+                                 state_size,
+                                 x_ptr,
+                                 hx_ptr,
+                                 cx_ptr,
+                                 w_ptr,
+                                 b_ptr,
+                                 y_ptr,
+                                 hy_ptr,
+                                 cy_ptr,
+                                 dropout,
+                                 rnd_engine);
       break;
     case rnn_enum::kGru:
-      GruForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
-                                batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                w_ptr, y_ptr, hy_ptr, dropout, rnd_engine);
+      GruForwardTraining<DType>(ws,
+                                rs,
+                                state_outputs,
+                                num_layers,
+                                direction,
+                                seq_length,
+                                batch_size,
+                                input_size,
+                                state_size,
+                                x_ptr,
+                                hx_ptr,
+                                w_ptr,
+                                y_ptr,
+                                hy_ptr,
+                                dropout,
+                                rnd_engine);
       break;
     case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
-      VanillaRNNForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
-                                       batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                       w_ptr, y_ptr, hy_ptr, dropout, mode, rnd_engine);
+      VanillaRNNForwardTraining<DType>(ws,
+                                       rs,
+                                       state_outputs,
+                                       num_layers,
+                                       direction,
+                                       seq_length,
+                                       batch_size,
+                                       input_size,
+                                       state_size,
+                                       x_ptr,
+                                       hx_ptr,
+                                       w_ptr,
+                                       y_ptr,
+                                       hy_ptr,
+                                       dropout,
+                                       mode,
+                                       rnd_engine);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -392,20 +432,55 @@ void RNNForwardInference(DType* ws,
                          int mode) {
   switch (mode) {
     case rnn_enum::kLstm:
-      LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
-                                  batch_size, input_size, state_size, projection_size,
-                                  x_ptr, hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
+      LstmForwardInference<DType>(ws,
+                                  state_outputs,
+                                  num_layers,
+                                  direction,
+                                  seq_length,
+                                  batch_size,
+                                  input_size,
+                                  state_size,
+                                  projection_size,
+                                  x_ptr,
+                                  hx_ptr,
+                                  cx_ptr,
+                                  w_ptr,
+                                  b_ptr,
+                                  y_ptr,
+                                  hy_ptr,
+                                  cy_ptr);
       break;
     case rnn_enum::kGru:
-      GruForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
-                                 batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                 w_ptr, y_ptr, hy_ptr);
+      GruForwardInference<DType>(ws,
+                                 state_outputs,
+                                 num_layers,
+                                 direction,
+                                 seq_length,
+                                 batch_size,
+                                 input_size,
+                                 state_size,
+                                 x_ptr,
+                                 hx_ptr,
+                                 w_ptr,
+                                 y_ptr,
+                                 hy_ptr);
       break;
     case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
-      VanillaRNNForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
-                                        batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                        w_ptr, y_ptr, hy_ptr, mode);
+      VanillaRNNForwardInference<DType>(ws,
+                                        state_outputs,
+                                        num_layers,
+                                        direction,
+                                        seq_length,
+                                        batch_size,
+                                        input_size,
+                                        state_size,
+                                        x_ptr,
+                                        hx_ptr,
+                                        w_ptr,
+                                        y_ptr,
+                                        hy_ptr,
+                                        mode);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode" << mode;
@@ -443,23 +518,78 @@ void RNNBackward(DType* ws,
                  int mode) {
   switch (mode) {
     case rnn_enum::kLstm:
-      LstmBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
-                          input_size, state_size, x_ptr, hx_ptr, cx_ptr, w_ptr, y_ptr,
-                          dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr, db_ptr,
-                          req_data, req_params, req_state, req_statecell, dropout);
+      LstmBackward<DType>(ws,
+                          rs,
+                          num_layers,
+                          direction,
+                          seq_length,
+                          batch_size,
+                          input_size,
+                          state_size,
+                          x_ptr,
+                          hx_ptr,
+                          cx_ptr,
+                          w_ptr,
+                          y_ptr,
+                          dy_ptr,
+                          dhy_ptr,
+                          dcy_ptr,
+                          dx_ptr,
+                          dhx_ptr,
+                          dcx_ptr,
+                          dw_ptr,
+                          db_ptr,
+                          req_data,
+                          req_params,
+                          req_state,
+                          req_statecell,
+                          dropout);
       break;
     case rnn_enum::kGru:
-      GruBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
-                         input_size, state_size, x_ptr, hx_ptr, w_ptr,
-                         dy_ptr, dhy_ptr, dx_ptr, dhx_ptr, dw_ptr,
-                         req_data, req_params, req_state, dropout);
+      GruBackward<DType>(ws,
+                         rs,
+                         num_layers,
+                         direction,
+                         seq_length,
+                         batch_size,
+                         input_size,
+                         state_size,
+                         x_ptr,
+                         hx_ptr,
+                         w_ptr,
+                         dy_ptr,
+                         dhy_ptr,
+                         dx_ptr,
+                         dhx_ptr,
+                         dw_ptr,
+                         req_data,
+                         req_params,
+                         req_state,
+                         dropout);
       break;
     case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
-      VanillaRNNBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
-                                input_size, state_size, x_ptr, hx_ptr, w_ptr,
-                                dy_ptr, dhy_ptr, dx_ptr, dhx_ptr, dw_ptr,
-                                req_data, req_params, req_state, dropout, mode);
+      VanillaRNNBackward<DType>(ws,
+                                rs,
+                                num_layers,
+                                direction,
+                                seq_length,
+                                batch_size,
+                                input_size,
+                                state_size,
+                                x_ptr,
+                                hx_ptr,
+                                w_ptr,
+                                dy_ptr,
+                                dhy_ptr,
+                                dx_ptr,
+                                dhx_ptr,
+                                dw_ptr,
+                                req_data,
+                                req_params,
+                                req_state,
+                                dropout,
+                                mode);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode" << mode;
@@ -467,7 +597,7 @@ void RNNBackward(DType* ws,
   }
 }
 
-template<typename xpu, typename DType, typename IType>
+template <typename xpu, typename DType, typename IType>
 class RNNOp {
  public:
   RNNParam param_;
@@ -475,12 +605,12 @@ class RNNOp {
 
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
-    this->ctx_ = ctx;
+    this->ctx_   = ctx;
 
     if (ctx_.dev_type == kGPU) {
 #if MXNET_USE_CUDNN == 1
       init_cudnn_ = false;
-      dtype_ = mshadow::DataType<DType>::kCudnnFlag;
+      dtype_      = mshadow::DataType<DType>::kCudnnFlag;
       // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
       // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
       cudnn_tensor_core_ = false;
@@ -508,29 +638,25 @@ class RNNOp {
       }
 #if MXNET_USE_CUDNN_GE_7200
       if (param_.projection_size.has_value()) {
-        CHECK_EQ(param_.mode, rnn_enum::kLstm)
-          << "Projection is only supported for LSTM.";
+        CHECK_EQ(param_.mode, rnn_enum::kLstm) << "Projection is only supported for LSTM.";
         CHECK_GE(param_.state_size, param_.projection_size.value())
-          << "State size must be larger than projection size.";
+            << "State size must be larger than projection size.";
       }
 #else
       CHECK(!param_.projection_size.has_value())
-        << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
+          << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
 #endif  // MXNET_USE_CUDNN_GE_7200
 #if MXNET_USE_CUDNN_GE_7200
-      if (param_.lstm_state_clip_min.has_value()
-          || param_.lstm_state_clip_max.has_value()) {
-        CHECK_EQ(param_.mode, rnn_enum::kLstm)
-          << "State clipping is only supported for LSTM.";
+      if (param_.lstm_state_clip_min.has_value() || param_.lstm_state_clip_max.has_value()) {
+        CHECK_EQ(param_.mode, rnn_enum::kLstm) << "State clipping is only supported for LSTM.";
         CHECK(param_.lstm_state_clip_min.has_value() && param_.lstm_state_clip_max.has_value())
-          << "lstm_state_clip_min and lstm_state_clip_max must be specified together.";
+            << "lstm_state_clip_min and lstm_state_clip_max must be specified together.";
         CHECK_GE(param_.lstm_state_clip_max.value(), param_.lstm_state_clip_min.value())
-          << "lstm_state_clip_max must be greater or equal to lstm_state_clip_min";
+            << "lstm_state_clip_max must be greater or equal to lstm_state_clip_min";
       }
 #else
-      CHECK(!param_.lstm_state_clip_min.has_value()
-            && !param_.lstm_state_clip_max.has_value())
-        << "State clipping is only supported for LSTM with CuDNN version later than 7.2.1.";
+      CHECK(!param_.lstm_state_clip_min.has_value() && !param_.lstm_state_clip_max.has_value())
+          << "State clipping is only supported for LSTM with CuDNN version later than 7.2.1.";
 #endif  // MXNET_USE_CUDNN_GE_7200
       // RNN Direction
       direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
@@ -564,13 +690,12 @@ class RNNOp {
     }
 
     if (ctx_.dev_type == kCPU) {
-      this->init_space_ = false;
-      this->temp_init_space_ = false;
+      this->init_space_             = false;
+      this->temp_init_space_        = false;
       this->reserve_cpu_space_size_ = 0;
-      this->temp_cpu_space_size_ = 0;
+      this->temp_cpu_space_size_    = 0;
 
-      if (param_.lstm_state_clip_min.has_value()
-          || param_.lstm_state_clip_max.has_value()) {
+      if (param_.lstm_state_clip_min.has_value() || param_.lstm_state_clip_max.has_value()) {
         LOG(FATAL) << "LSTM state clipping is only supported for GPU with CuDNN later than 7.2.1";
       }
     }
@@ -579,49 +704,50 @@ class RNNOp {
   ~RNNOp() {
     if (ctx_.dev_type == kGPU) {
 #if MXNET_USE_CUDNN == 1
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(hy_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(cy_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(dhx_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(dcx_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(dhy_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(dcy_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(hy_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(cy_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dhx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dcx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dhy_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dcy_desc_));
 
-    CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
-    CUDNN_CALL(cudnnDestroyFilterDescriptor(dw_desc_));
-    CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
-    CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
-    if (dgrad_sync_event_created_)
-      CUDA_CALL(cudaEventDestroy(dgrad_sync_event_));
+      CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
+      CUDNN_CALL(cudnnDestroyFilterDescriptor(dw_desc_));
+      CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
+      CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
+      if (dgrad_sync_event_created_)
+        CUDA_CALL(cudaEventDestroy(dgrad_sync_event_));
 
-    if (init_cudnn_) {
-      for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
-        CUDNN_CALL(cudnnDestroyTensorDescriptor(x_desc_vec_[i]));
-        CUDNN_CALL(cudnnDestroyTensorDescriptor(y_desc_vec_[i]));
-        CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]));
-        CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]));
+      if (init_cudnn_) {
+        for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
+          CUDNN_CALL(cudnnDestroyTensorDescriptor(x_desc_vec_[i]));
+          CUDNN_CALL(cudnnDestroyTensorDescriptor(y_desc_vec_[i]));
+          CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]));
+          CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]));
+        }
+        init_cudnn_ = false;
+        Storage::Get()->Free(reserve_space_);
       }
-      init_cudnn_ = false;
-      Storage::Get()->Free(reserve_space_);
-    }
 #if MXNET_USE_CUDNN_GE_7200
-    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
-    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(y_data_desc_));
-    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dx_data_desc_));
-    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
+      CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
+      CUDNN_CALL(cudnnDestroyRNNDataDescriptor(y_data_desc_));
+      CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dx_data_desc_));
+      CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
 #endif  // MXNET_USE_CUDNN_GE_7200
 #endif  // MXNET_USE_CUDNN
     }
   }
 
-  void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data) {
+  void Forward(const OpContext& ctx,
+               const std::vector<TBlob>& in_data,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK(param_.p >= 0.0f && param_.p < 1.0f)
-      << "unsupported dropout value, should be 0 <= dropout < 1";
+        << "unsupported dropout value, should be 0 <= dropout < 1";
     size_t num_inputs = GetNumInputArguments(param_);
 
     //  kOut
@@ -633,13 +759,13 @@ class RNNOp {
 
     CHECK_EQ(in_data.size(), num_inputs);
     CHECK_EQ(out_data.size(), num_outputs);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
 
     // get input + output tensors
-    Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
-    Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 3, DType> x  = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1, DType> w  = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
     Tensor<xpu, 3, DType> hx = in_data[rnn_enum::kState].get<xpu, 3, DType>(s);
-    Tensor<xpu, 3, DType> y = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> y  = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
 
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
@@ -647,36 +773,33 @@ class RNNOp {
 
     const int direction = param_.bidirectional ? 2 : 1;
     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
-    DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
+    DType* b_ptr    = w.dptr_ + w.shape_[0] - bsize;
 
     DType* hy_ptr = nullptr;
     if (param_.state_outputs) {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
     }
 
-
 #if MXNET_USE_CUDNN_GE_7200
     Tensor<cpu, 1, char> host_workspace;
-    int *sequence_length_cpu_int = nullptr;
-    IType *sequence_length_cpu_itype = nullptr;
+    int* sequence_length_cpu_int     = nullptr;
+    IType* sequence_length_cpu_itype = nullptr;
 
     if (ctx_.dev_type == kGPU) {
       int host_workspace_bytes =
-        param_.batch_size_ * sizeof(IType) + param_.batch_size_ * sizeof(int);
+          param_.batch_size_ * sizeof(IType) + param_.batch_size_ * sizeof(int);
 
-      host_workspace =
-        ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1, char>(
-            Shape1(host_workspace_bytes));
+      host_workspace = ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1, char>(
+          Shape1(host_workspace_bytes));
 
       sequence_length_cpu_int = reinterpret_cast<int*>(host_workspace.dptr_);
       sequence_length_cpu_itype =
-        reinterpret_cast<IType*>(host_workspace.dptr_ + sizeof(int) * param_.batch_size_);
+          reinterpret_cast<IType*>(host_workspace.dptr_ + sizeof(int) * param_.batch_size_);
 
       (void)sequence_length_cpu_int;
       (void)sequence_length_cpu_itype;
     }
 #endif
-
 
     if (param_.use_sequence_length) {
 #if MXNET_USE_CUDNN_GE_7200
@@ -687,17 +810,19 @@ class RNNOp {
 
       // We can assume we are on GPU for now
       size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-      if  (param_.mode != rnn_enum::kLstm) {
+      if (param_.mode != rnn_enum::kLstm) {
         seq_len_input_idx -= 1;
       }
-      IType *sequence_length_ptr_gpu = (in_data[seq_len_input_idx].get<xpu, 1, IType>(s)).dptr_;
+      IType* sequence_length_ptr_gpu = (in_data[seq_len_input_idx].get<xpu, 1, IType>(s)).dptr_;
 
       // Need to copy from GPU -> CPU, becuase cuDNN API requires this array on CPU memory.
       // TODO(stephenrawls): In future, allow users to pass this array on the CPU so we don't have
       //   to do this copy For now however it is required as several places in backend assume that
       //   all data arrays share the same context.
-      CUDA_CALL(cudaMemcpy(sequence_length_cpu_itype,  sequence_length_ptr_gpu,
-                           sizeof(IType) * param_.batch_size_, cudaMemcpyDeviceToHost));
+      CUDA_CALL(cudaMemcpy(sequence_length_cpu_itype,
+                           sequence_length_ptr_gpu,
+                           sizeof(IType) * param_.batch_size_,
+                           cudaMemcpyDeviceToHost));
 #else
       LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
 #endif
@@ -752,7 +877,7 @@ class RNNOp {
                                          sequence_length_cpu_int,
                                          reinterpret_cast<void*>(&padding_fill_)));
     int out_size =
-      (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
+        (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
     out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
     CUDNN_CALL(cudnnSetRNNDataDescriptor(y_data_desc_,
                                          dtype_,
@@ -782,7 +907,7 @@ class RNNOp {
     }
 
     bool clip_state = param_.lstm_state_clip_min.has_value();
-    bool clip_nan = param_.lstm_state_clip_nan;
+    bool clip_nan   = param_.lstm_state_clip_nan;
     CUDNN_CALL(cudnnRNNSetClip(s->dnn_handle_,
                                rnn_desc_,
                                clip_state ? CUDNN_RNN_CLIP_MINMAX : CUDNN_RNN_CLIP_NONE,
@@ -904,33 +1029,44 @@ class RNNOp {
       }
 
       // allocate temp space
-      const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-          param_.state_size, projection_size, direction, param_.mode);
+      const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_,
+                                                             param_.batch_size_,
+                                                             param_.state_size,
+                                                             projection_size,
+                                                             direction,
+                                                             param_.mode);
       if (!temp_init_space_ || temp_cpu_space_size_ < work_cpu_space_size) {
         temp_cpu_space_size_ = work_cpu_space_size;
-        temp_cpu_space_ = NDArray(TShape({static_cast<dim_t>(temp_cpu_space_size_)}), ctx_,
-            false, in_data[rnn_enum::kData].type_flag_);
-        temp_init_space_ = true;
+        temp_cpu_space_      = NDArray(TShape({static_cast<dim_t>(temp_cpu_space_size_)}),
+                                  ctx_,
+                                  false,
+                                  in_data[rnn_enum::kData].type_flag_);
+        temp_init_space_     = true;
       }
       DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
 
       if (ctx.is_train || ctx.need_grad) {
-        mshadow::Random<cpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
-        std::mt19937 &rnd_engine = prnd->GetRndEngine();
+        mshadow::Random<cpu, unsigned>* prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
+        std::mt19937& rnd_engine             = prnd->GetRndEngine();
 
         // allocate reserve space
         if (param_.projection_size.has_value()) {
           LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
         }
 
-        const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
-                                                     param_.seq_length_, param_.batch_size_,
-                                                     param_.state_size, param_.mode);
+        const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers,
+                                                     direction,
+                                                     param_.seq_length_,
+                                                     param_.batch_size_,
+                                                     param_.state_size,
+                                                     param_.mode);
         if (!init_space_ || reserve_cpu_space_size_ < r_size) {
           reserve_cpu_space_size_ = r_size;
-          reserve_cpu_space_ = NDArray(TShape({static_cast<dim_t>(reserve_cpu_space_size_)}), ctx_,
-              false, in_data[rnn_enum::kData].type_flag_);
-          init_space_ = true;
+          reserve_cpu_space_      = NDArray(TShape({static_cast<dim_t>(reserve_cpu_space_size_)}),
+                                       ctx_,
+                                       false,
+                                       in_data[rnn_enum::kData].type_flag_);
+          init_space_             = true;
         }
         DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.data().dptr_);
 
@@ -978,12 +1114,12 @@ class RNNOp {
 #endif
   }
 
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<TBlob> &out_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad) {
+  void Backward(const OpContext& ctx,
+                const std::vector<TBlob>& out_grad,
+                const std::vector<TBlob>& in_data,
+                const std::vector<TBlob>& out_data,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK(param_.p >= 0.0f && param_.p < 1.0f)
@@ -1005,16 +1141,16 @@ class RNNOp {
     CHECK_EQ(req.size(), num_inputs);
     CHECK_NE(req[rnn_enum::kData], kAddTo) << "AddTo is not supported for data";
     CHECK_NE(req[rnn_enum::kState], kAddTo) << "AddTo is not supported for state";
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     // get input + output tensors
-    Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
-    Tensor<xpu, 3, DType> dx = in_grad[rnn_enum::kData].get<xpu, 3, DType>(s);
-    Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
-    Tensor<xpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<xpu, 1, DType>(s);
-    Tensor<xpu, 3, DType> hx = in_data[rnn_enum::kState].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> x   = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> dx  = in_grad[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1, DType> w   = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 1, DType> dw  = in_grad[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 3, DType> hx  = in_data[rnn_enum::kState].get<xpu, 3, DType>(s);
     Tensor<xpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<xpu, 3, DType>(s);
-    Tensor<xpu, 3, DType> y = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
-    Tensor<xpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> y   = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> dy  = out_grad[rnn_enum::kOut].get<xpu, 3, DType>(s);
 
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
@@ -1038,22 +1174,22 @@ class RNNOp {
 
     DType* db_ptr = dw.dptr_ + w.shape_[0] - bsize;
 
-    DType * dhy_ptr = nullptr;
+    DType* dhy_ptr = nullptr;
     if (param_.state_outputs) {
       dhy_ptr = out_grad[rnn_enum::kStateOut].dptr<DType>();
     }
 
     DType* dcx_ptr = nullptr;
     DType* dcy_ptr = nullptr;
-    DType* cx_ptr = nullptr;
+    DType* cx_ptr  = nullptr;
 
     if (param_.mode == rnn_enum::kLstm) {
       CHECK_NE(req[rnn_enum::kStateCell], kAddTo) << "AddTo is not supported for state cell";
-      cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
+      cx_ptr  = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
       dcx_ptr = (in_grad[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
     }
     if ((param_.mode == rnn_enum::kLstm) && param_.state_outputs) {
-        dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
+      dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
     }
 
 #if MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
@@ -1173,16 +1309,22 @@ class RNNOp {
       }
 
       // allocate temp space
-      const size_t work_cpu_space_size =
-          GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_, param_.state_size,
-                              projection_size, direction, param_.mode);
+      const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_,
+                                                             param_.batch_size_,
+                                                             param_.state_size,
+                                                             projection_size,
+                                                             direction,
+                                                             param_.mode);
       if (!temp_init_space_ || temp_cpu_space_size_ != work_cpu_space_size) {
         LOG(FATAL) << "Check temp init error";
       }
       DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
-      size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
-                                             param_.seq_length_, param_.batch_size_,
-                                             param_.state_size, param_.mode);
+      size_t r_size         = GetRNNReserveSpaceSize(param_.num_layers,
+                                             direction,
+                                             param_.seq_length_,
+                                             param_.batch_size_,
+                                             param_.state_size,
+                                             param_.mode);
 
       if (!init_space_ || reserve_cpu_space_size_ != r_size) {
         LOG(FATAL) << "Check forward init error";
@@ -1221,10 +1363,10 @@ class RNNOp {
   }
 
  private:
-  inline void Init(const OpContext &ctx,
-                   mshadow::Stream<xpu> *s,
-                   const std::vector<TBlob> &in_data,
-                   const std::vector<TBlob> &out_data) {
+  inline void Init(const OpContext& ctx,
+                   mshadow::Stream<xpu>* s,
+                   const std::vector<TBlob>& in_data,
+                   const std::vector<TBlob>& out_data) {
     using namespace mshadow;
 
     size_t num_inputs = GetNumInputArguments(param_);
@@ -1246,9 +1388,9 @@ class RNNOp {
       // get input + output tensors
       Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
       Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
-      param_.seq_length_ = x.shape_[0];
-      param_.batch_size_ = x.shape_[1];
-      param_.input_size_ = x.shape_[2];
+      param_.seq_length_      = x.shape_[0];
+      param_.batch_size_      = x.shape_[1];
+      param_.input_size_      = x.shape_[2];
 
       // Tensor Descriptors
       std::vector<cudnnTensorDescriptor_t> x_vec(param_.seq_length_);
@@ -1263,50 +1405,34 @@ class RNNOp {
         CUDNN_CALL(cudnnCreateTensorDescriptor(&dx_vec[i]));
         CUDNN_CALL(cudnnCreateTensorDescriptor(&dy_vec[i]));
 
-        dimA[0] = param_.batch_size_;
-        dimA[1] = param_.input_size_;
-        dimA[2] = 1;
+        dimA[0]    = param_.batch_size_;
+        dimA[1]    = param_.input_size_;
+        dimA[2]    = 1;
         strideA[0] = dimA[2] * dimA[1];
         strideA[1] = dimA[2];
         strideA[2] = 1;
 
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(x_vec[i],
-                                              dtype_,
-                                              3,
-                                              dimA,
-                                              strideA));
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(dx_vec[i],
-                                              dtype_,
-                                              3,
-                                              dimA,
-                                              strideA));
-        dimA[0] = param_.batch_size_;
-        dimA[1] = param_.bidirectional ? param_.state_size * 2 : param_.state_size;
-        dimA[2] = 1;
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(x_vec[i], dtype_, 3, dimA, strideA));
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(dx_vec[i], dtype_, 3, dimA, strideA));
+        dimA[0]    = param_.batch_size_;
+        dimA[1]    = param_.bidirectional ? param_.state_size * 2 : param_.state_size;
+        dimA[2]    = 1;
         strideA[0] = dimA[2] * dimA[1];
         strideA[1] = dimA[2];
         strideA[2] = 1;
 
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(y_vec[i],
-                                              dtype_,
-                                              3,
-                                              dimA,
-                                              strideA));
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(dy_vec[i],
-                                              dtype_,
-                                              3,
-                                              dimA,
-                                              strideA));
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(y_vec[i], dtype_, 3, dimA, strideA));
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(dy_vec[i], dtype_, 3, dimA, strideA));
       }
-      x_desc_vec_ = x_vec;
-      y_desc_vec_ = y_vec;
+      x_desc_vec_  = x_vec;
+      y_desc_vec_  = y_vec;
       dx_desc_vec_ = dx_vec;
       dy_desc_vec_ = dy_vec;
 
       // set the state tensors
-      dimA[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
-      dimA[1] = param_.batch_size_;
-      dimA[2] = param_.state_size;
+      dimA[0]    = param_.num_layers * (param_.bidirectional ? 2 : 1);
+      dimA[1]    = param_.batch_size_;
+      dimA[2]    = param_.state_size;
       strideA[0] = dimA[2] * dimA[1];
       strideA[1] = dimA[2];
       strideA[2] = 1;
@@ -1315,96 +1441,47 @@ class RNNOp {
       int strideB[3];
       dimB[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
       dimB[1] = param_.batch_size_;
-      dimB[2] = param_.projection_size.has_value() ?
-                param_.projection_size.value() : param_.state_size;
+      dimB[2] =
+          param_.projection_size.has_value() ? param_.projection_size.value() : param_.state_size;
       strideB[0] = dimB[2] * dimB[1];
       strideB[1] = dimB[2];
       strideB[2] = 1;
 #endif  // MXNET_USE_CUDNN_GE_7200
 #if MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
-                                            dtype_,
-                                            3,
-                                            dimB,
-                                            strideB));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_, dtype_, 3, dimB, strideB));
 #else
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_, dtype_, 3, dimA, strideA));
 #endif  // MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(cx_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(cx_desc_, dtype_, 3, dimA, strideA));
 #if MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
-                                            dtype_,
-                                            3,
-                                            dimB,
-                                            strideB));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_, dtype_, 3, dimB, strideB));
 #else
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_, dtype_, 3, dimA, strideA));
 #endif  // MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(cy_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(cy_desc_, dtype_, 3, dimA, strideA));
 #if MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
-                                            dtype_,
-                                            3,
-                                            dimB,
-                                            strideB));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_, dtype_, 3, dimB, strideB));
 #else
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_, dtype_, 3, dimA, strideA));
 #endif  // MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(dcx_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dcx_desc_, dtype_, 3, dimA, strideA));
 #if MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
-                                            dtype_,
-                                            3,
-                                            dimB,
-                                            strideB));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_, dtype_, 3, dimB, strideB));
 #else
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_, dtype_, 3, dimA, strideA));
 #endif  // MXNET_USE_CUDNN_GE_7200
-      CUDNN_CALL(cudnnSetTensorNdDescriptor(dcy_desc_,
-                                            dtype_,
-                                            3,
-                                            dimA,
-                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dcy_desc_, dtype_, 3, dimA, strideA));
 
       // Create Dropout descriptors
-      ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
-         (&dropout_desc_, s, param_.p);
+      ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc(
+          &dropout_desc_, s, param_.p);
 
       // RNN descriptors
       // adopt pseudo-fp16 for all architectures
       cudnnDataType_t dtype_with_fallback_ =
-        (cudnnGetVersion() >= 7500 && dtype_ == CUDNN_DATA_HALF) ? CUDNN_DATA_FLOAT
-                                                             : dtype_;
+          (cudnnGetVersion() >= 7500 && dtype_ == CUDNN_DATA_HALF) ? CUDNN_DATA_FLOAT : dtype_;
       cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
-      dgrad_sync_needed_ = (rnn_algo == CUDNN_RNN_ALGO_STANDARD) && param_.bidirectional;
+      dgrad_sync_needed_      = (rnn_algo == CUDNN_RNN_ALGO_STANDARD) && param_.bidirectional;
       CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
                                           rnn_desc_,
                                           param_.state_size,
@@ -1428,10 +1505,8 @@ class RNNOp {
       CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
 #if MXNET_USE_CUDNN_GE_7200
       if (param_.projection_size.has_value()) {
-        CUDNN_CALL(cudnnSetRNNProjectionLayers(s->dnn_handle_,
-                                               rnn_desc_,
-                                               param_.projection_size.value(),
-                                               0));
+        CUDNN_CALL(cudnnSetRNNProjectionLayers(
+            s->dnn_handle_, rnn_desc_, param_.projection_size.value(), 0));
       }
       if (param_.use_sequence_length) {
         CUDNN_CALL(cudnnSetRNNPaddingMode(rnn_desc_, CUDNN_RNN_PADDED_IO_ENABLED));
@@ -1439,43 +1514,26 @@ class RNNOp {
 #endif  // MXNET_USE_CUDNN_GE_7200
 
       // Get temp space sizes
-      CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
-                                          rnn_desc_,
-                                          param_.seq_length_,
-                                          x_desc_vec_.data(),
-                                          &workspace_byte_));
-      CUDNN_CALL(cudnnGetRNNTrainingReserveSize(s->dnn_handle_,
-                                                rnn_desc_,
-                                                param_.seq_length_,
-                                                x_desc_vec_.data(),
-                                                &reserve_space_byte_));
+      CUDNN_CALL(cudnnGetRNNWorkspaceSize(
+          s->dnn_handle_, rnn_desc_, param_.seq_length_, x_desc_vec_.data(), &workspace_byte_));
+      CUDNN_CALL(cudnnGetRNNTrainingReserveSize(
+          s->dnn_handle_, rnn_desc_, param_.seq_length_, x_desc_vec_.data(), &reserve_space_byte_));
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
       reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id));
       reserve_space_.profiler_scope = "cudnn_rnn:";
-      reserve_space_.name = "reserve_space";
+      reserve_space_.name           = "reserve_space";
       profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(reserve_space_);
       // Check that number of params are correct
       size_t cudnn_param_size;
-      CUDNN_CALL(cudnnGetRNNParamsSize(s->dnn_handle_,
-                                       rnn_desc_,
-                                       x_desc_vec_[0],
-                                       &cudnn_param_size,
-                                       dtype_));
+      CUDNN_CALL(cudnnGetRNNParamsSize(
+          s->dnn_handle_, rnn_desc_, x_desc_vec_[0], &cudnn_param_size, dtype_));
       CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
       // Set param descriptors
       int dim_w[3] = {1, 1, 1};
-      dim_w[0] = w.shape_[0];
-      CUDNN_CALL(cudnnSetFilterNdDescriptor(w_desc_,
-                                            dtype_,
-                                            format_,
-                                            3,
-                                            dim_w));
-      CUDNN_CALL(cudnnSetFilterNdDescriptor(dw_desc_,
-                                            dtype_,
-                                            format_,
-                                            3,
-                                            dim_w));
+      dim_w[0]     = w.shape_[0];
+      CUDNN_CALL(cudnnSetFilterNdDescriptor(w_desc_, dtype_, format_, 3, dim_w));
+      CUDNN_CALL(cudnnSetFilterNdDescriptor(dw_desc_, dtype_, format_, 3, dim_w));
 
       // Query weight layout
       // cudnnFilterDescriptor_t m_desc;
@@ -1565,11 +1623,11 @@ class RNNOp {
   cudnnTensorFormat_t format_;
   cudaEvent_t dgrad_sync_event_;
   bool dgrad_sync_event_created_ = false;
-  bool dgrad_sync_needed_ = false;
+  bool dgrad_sync_needed_        = false;
 #endif  // MXNET_USE_CUDNN
-};  //  class RNNOp
+};      //  class RNNOp
 
-template<typename xpu>
+template <typename xpu>
 void RNNStatefulCompute(const OpStatePtr& state,
                         const OpContext& ctx,
                         const std::vector<TBlob>& inputs,
@@ -1603,7 +1661,7 @@ index description
 8: cy
 9: dcy
 */
-template<typename xpu>
+template <typename xpu>
 void RNNStatefulGradCompute(const OpStatePtr& state,
                             const OpContext& ctx,
                             const std::vector<TBlob>& inputs,
@@ -1612,7 +1670,7 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
   std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
   std::vector<TBlob> out_data{inputs[3]};
   std::vector<TBlob> out_grad{inputs[4]};
-  const std::vector<TBlob> &in_grad = outputs;
+  const std::vector<TBlob>& in_grad = outputs;
 
   int dtype = inputs[rnn_enum::kData].type_flag_;
 
@@ -1624,8 +1682,8 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     MSHADOW_TYPE_SWITCH(itype, IType, {
       RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
-      const RNNParam& param = op.param_;
-      int index = 5;
+      const RNNParam& param        = op.param_;
+      int index                    = 5;
       if (param.state_outputs) {
         out_data.push_back(inputs[index++]);
         out_grad.push_back(inputs[index++]);
@@ -1639,10 +1697,9 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
         }
       }
 
-
       if (param.use_sequence_length) {
         size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-        if  (param.mode != rnn_enum::kLstm) {
+        if (param.mode != rnn_enum::kLstm) {
           seq_len_input_idx -= 1;
         }
         in_data.push_back(outputs[seq_len_input_idx]);

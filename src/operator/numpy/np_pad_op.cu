@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_pad_op.cu
  * \brief GPU Implementation of numpy pad operations
  */
@@ -29,11 +28,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_pad)
-.set_attr<FCompute>("FCompute<gpu>", NumpyPadOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_pad).set_attr<FCompute>("FCompute<gpu>", NumpyPadOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_pad)
-.set_attr<FCompute>("FCompute<gpu>", NumpyPadOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_pad).set_attr<FCompute>("FCompute<gpu>", NumpyPadOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
