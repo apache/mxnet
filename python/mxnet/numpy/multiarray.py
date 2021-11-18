@@ -2627,7 +2627,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     def squeeze(self: ndarray, # pylint:  disable=arguments-differ
                 /,
-                axis: Union[int, Tuple[int, ...]]
+                axis: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> ndarray:  # pylint: disable=arguments-differ
         """Remove single-dimensional entries from the shape of a."""
         return squeeze(self, axis=axis)

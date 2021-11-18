@@ -217,7 +217,7 @@ As an example, we'll apply `LayerNorm` to a batch of 2 samples, each with 4 time
 
 
 ```{.python .input}
-data = mx.np.arange(start=0, stop=2*4*2).reshape(2, 4, 2)
+data = mx.np.arange(0, stop=2*4*2).reshape(2, 4, 2)
 print(data)
 ```
 
