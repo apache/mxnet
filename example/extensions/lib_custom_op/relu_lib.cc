@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file relu_lib.cu
  * \brief simple custom relu and noisy relu operator implemented using CUDA function
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file min_ex.cu
  * \brief example external operator CUDA source file
  */

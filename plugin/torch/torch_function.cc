@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file torch_base.cc
  * \brief torch_state
  * \author Junyuan Xie

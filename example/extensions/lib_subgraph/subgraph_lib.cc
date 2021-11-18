@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file subgraph_lib.cc
  * \brief subgraph operator implementation library file
  */
