@@ -258,7 +258,7 @@ static inline int get_mxnet_type(dnnl_data_type_t dtype) {
     case dnnl::memory::data_type::u8:
       return mshadow::kUint8;
     default:
-      LOG(FATAL) << "unknown oneDNN type";
+      LOG(FATAL) << "unknown oneDNN data type";
       return mshadow::kFloat32;
   }
 }
