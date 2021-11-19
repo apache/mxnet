@@ -62,13 +62,13 @@ void NDArray::ReInit(const NDArrayStorageType stype,
     if (!sparseStorage && stype != kCSRStorage)
       LOG(FATAL) << "Unknown storage type " << stype;
 
-    const auto& aux_types = (pAux_types && pAux_types->size())
-                                ? *pAux_types
-                                : std::vector<int>(sparseStorage ? 1 : 2, mshadow::kInt64);
+    const auto& aux_types = (pAux_types && pAux_types->size()) ?
+                                *pAux_types :
+                                std::vector<int>(sparseStorage ? 1 : 2, mshadow::kInt64);
 
-    const auto& aux_shapes = (pAux_shapes && pAux_shapes->size())
-                                 ? *pAux_shapes
-                                 : ShapeVector(sparseStorage ? 1 : 2, TShape(mshadow::Shape1(0)));
+    const auto& aux_shapes = (pAux_shapes && pAux_shapes->size()) ?
+                                 *pAux_shapes :
+                                 ShapeVector(sparseStorage ? 1 : 2, TShape(mshadow::Shape1(0)));
 
     mxnet::TShape storage_shape;
     if (!pStorage_shapes || !pStorage_shapes->Size()) {
@@ -2435,9 +2435,7 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync(
-        [&](RunContext rctx) {
-          common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check);
-        },
+        [&](RunContext rctx) { common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check); },
         this->ctx(),
         {this->var()},
         {},

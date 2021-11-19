@@ -160,9 +160,9 @@ The internal representation depends on register length.  So AVX512, AVX2, and SS
                                      [](const NodeAttrs& attrs) {
                                        const PrepareWeightParam& params =
                                            nnvm::get<PrepareWeightParam>(attrs.parsed);
-                                       return params.already_quantized
-                                                  ? std::vector<std::string>{"weight"}
-                                                  : std::vector<std::string>{"weight", "maxabs"};
+                                       return params.already_quantized ?
+                                                  std::vector<std::string>{"weight"} :
+                                                  std::vector<std::string>{"weight", "maxabs"};
                                      })
     .set_attr<mxnet::FInferShape>("FInferShape", PrepareWeightOpShape)
     .set_attr<nnvm::FInferType>("FInferType", PrepareWeightOpType)

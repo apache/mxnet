@@ -353,8 +353,8 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
   if (rsc_req || rsc_ex_req) {
     int ntmp           = 0;
     auto resource_reqs = rsc_ex_req ? ftmp_resource_ex[attrs.op](
-                                          attrs, static_cast<int>(ctx.dev_mask()), dispatch_mode)
-                                    : ftmp_resource[attrs.op](attrs);
+                                          attrs, static_cast<int>(ctx.dev_mask()), dispatch_mode) :
+                                      ftmp_resource[attrs.op](attrs);
     for (const auto& req : resource_reqs) {
       switch (req.type) {
         case ResourceRequest::kTempSpace:
@@ -1318,9 +1318,9 @@ inline void CreateEngineOpSeg(const nnvm::IndexedGraph& idx,
     const auto& inode = idx[nid];
     opr_names += op_name;
     opr_names += "{name=" + inode.source->attrs.name + ";";
-    const std::unordered_map<std::string, std::string> &dict = inode.source->attrs.dict;
-    auto num_dict_entries = dict.size();
-    for (auto &k : dict) {
+    const std::unordered_map<std::string, std::string>& dict = inode.source->attrs.dict;
+    auto num_dict_entries                                    = dict.size();
+    for (auto& k : dict) {
       opr_names += k.first + "=" + k.second;
       if (--num_dict_entries != 0)
         opr_names += ";";

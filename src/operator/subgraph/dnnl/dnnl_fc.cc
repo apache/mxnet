@@ -670,8 +670,8 @@ NNVM_REGISTER_OP(_sg_onednn_fully_connected)
     })
     .set_num_outputs([](const NodeAttrs& attrs) {
       auto const& full_param = nnvm::get<DNNLFCFullParam>(attrs.parsed);
-      return (full_param.dnnl_param.quantized && !full_param.dnnl_param.enable_float_output) ? 3
-                                                                                             : 1;
+      return (full_param.dnnl_param.quantized && !full_param.dnnl_param.enable_float_output) ? 3 :
+                                                                                               1;
     })
     .set_attr_parser(SgDNNLFCParamParser)
     .set_attr<nnvm::FListInputNames>("FListInputNames", SgDNNLFCListInputNames)

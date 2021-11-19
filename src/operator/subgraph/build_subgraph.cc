@@ -853,9 +853,9 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
 
   const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
   if (verbose > 1) {
-    const std::string& prop_name = subg_prop->HasAttr("property_name")
-                                       ? subg_prop->GetAttr<std::string>("property_name")
-                                       : "partition graph";
+    const std::string& prop_name = subg_prop->HasAttr("property_name") ?
+                                       subg_prop->GetAttr<std::string>("property_name") :
+                                       "partition graph";
     LOG(INFO) << "start to execute " << prop_name << ".";
   }
   // top sort NodeEntry of all the nodes' inputs

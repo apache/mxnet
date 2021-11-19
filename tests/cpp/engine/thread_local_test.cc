@@ -20,7 +20,7 @@
 /*!
  * \file engine_thread_local_test.cc
  * \brief Tests thread safety and lifetime of thread local store
-*/
+ */
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
@@ -36,44 +36,42 @@
 #include <vector>
 
 struct A {
-    std::vector<int> a;
+  std::vector<int> a;
 };
-int num_threads = 10;
+int num_threads  = 10;
 int num_elements = num_threads * 10;
 
 static int ThreadSafetyTest(int num, std::vector<int>* tmp_inputs, std::vector<int*>* res) {
-    A *ret = dmlc::ThreadLocalStore<A>::Get();
-    for (size_t i = num * 10; i < num * 10 + 10; ++i) {
-        (*tmp_inputs)[i] = i;
-    }
-    ret->a.clear();
-    ret->a.reserve(10);
-    for (size_t i = num * 10; i < num * 10 + 10; ++i) {
-        ret->a.push_back((*tmp_inputs)[i]);
-    }
-    (*res)[num] = dmlc::BeginPtr(ret->a);
-    return 0;
+  A* ret = dmlc::ThreadLocalStore<A>::Get();
+  for (size_t i = num * 10; i < num * 10 + 10; ++i) {
+    (*tmp_inputs)[i] = i;
+  }
+  ret->a.clear();
+  ret->a.reserve(10);
+  for (size_t i = num * 10; i < num * 10 + 10; ++i) {
+    ret->a.push_back((*tmp_inputs)[i]);
+  }
+  (*res)[num] = dmlc::BeginPtr(ret->a);
+  return 0;
 }
 
 TEST(ThreadLocal, VerifyThreadSafety) {
-    std::vector<int> tmp_inputs;
-    tmp_inputs.resize(num_elements);
-    std::vector<int*> outputs;
-    outputs.resize(num_threads);
-    auto func = [&](int num) {
-        ThreadSafetyTest(num, &tmp_inputs, &outputs);
-    };
-    std::vector<std::thread> worker_threads(num_threads);
-    int count = 0;
-    for (auto&& i : worker_threads) {
-        i = std::thread(func, count);
-        count++;
-    }
-    for (auto&& i : worker_threads) {
-        i.join();
-    }
+  std::vector<int> tmp_inputs;
+  tmp_inputs.resize(num_elements);
+  std::vector<int*> outputs;
+  outputs.resize(num_threads);
+  auto func = [&](int num) { ThreadSafetyTest(num, &tmp_inputs, &outputs); };
+  std::vector<std::thread> worker_threads(num_threads);
+  int count = 0;
+  for (auto&& i : worker_threads) {
+    i = std::thread(func, count);
+    count++;
+  }
+  for (auto&& i : worker_threads) {
+    i.join();
+  }
 
-    for (size_t i = 0; i < num_elements; i++) {
-        CHECK(outputs[i/10][i%10] == i);
-    }
+  for (size_t i = 0; i < num_elements; i++) {
+    CHECK(outputs[i / 10][i % 10] == i);
+  }
 }

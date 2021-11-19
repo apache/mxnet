@@ -311,12 +311,10 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 
     while (task_queue->Pop(&opr_block)) {
 #if MXNET_USE_NVTX
-      auto nvtx_name = opr_block->opr->opr_name != "" ? opr_block->opr->opr_name : "Op";
-      auto end_pos = nvtx_name.find('{');
-      auto name_prefix_len = end_pos != std::string::npos
-                             ? end_pos
-                             : nvtx_name.size();
-      auto color = common::cuda::nvtx::nameToColor(nvtx_name, name_prefix_len);
+      auto nvtx_name       = opr_block->opr->opr_name != "" ? opr_block->opr->opr_name : "Op";
+      auto end_pos         = nvtx_name.find('{');
+      auto name_prefix_len = end_pos != std::string::npos ? end_pos : nvtx_name.size();
+      auto color           = common::cuda::nvtx::nameToColor(nvtx_name, name_prefix_len);
       common::cuda::nvtx::gpuRangeStart(color, nvtx_name);
 #endif
       auto* info                  = ThreadedEngine::GPUWorkerSyncInfo::New();

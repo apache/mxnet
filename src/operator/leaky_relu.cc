@@ -181,17 +181,17 @@ The following modified ReLU Activation functions are supported:
                                      [](const NodeAttrs& attrs) {
                                        const LeakyReLUParam& param =
                                            nnvm::get<LeakyReLUParam>(attrs.parsed);
-                                       return param.act_type == leakyrelu::kPReLU
-                                                  ? std::vector<std::string>{"data", "gamma"}
-                                                  : std::vector<std::string>{"data"};
+                                       return param.act_type == leakyrelu::kPReLU ?
+                                                  std::vector<std::string>{"data", "gamma"} :
+                                                  std::vector<std::string>{"data"};
                                      })
     .set_attr<nnvm::FListOutputNames>("FListOutputNames",
                                       [](const NodeAttrs& attrs) {
                                         const LeakyReLUParam& param =
                                             nnvm::get<LeakyReLUParam>(attrs.parsed);
-                                        return param.act_type == leakyrelu::kRReLU
-                                                   ? std::vector<std::string>{"output", "mask"}
-                                                   : std::vector<std::string>{"output"};
+                                        return param.act_type == leakyrelu::kRReLU ?
+                                                   std::vector<std::string>{"output", "mask"} :
+                                                   std::vector<std::string>{"output"};
                                       })
     .set_attr<mxnet::FInferShape>("FInferShape", LeakyReLUShape)
     .set_attr<nnvm::FInferType>("FInferType", LeakyReLUType)

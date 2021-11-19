@@ -94,17 +94,17 @@ inline void DeformablePSROIPoolForwardCPU(const index_t count,
     index_t part_w   = floor(static_cast<DType>(pw) / pooled_width * part_size);
     index_t class_id = ctop / channels_each_class;
     DType trans_x =
-        no_trans
-            ? static_cast<DType>(0)
-            : bottom_trans[(((n * num_classes + class_id) * 2) * part_size + part_h) * part_size +
-                           part_w] *
-                  trans_std;
+        no_trans ?
+            static_cast<DType>(0) :
+            bottom_trans[(((n * num_classes + class_id) * 2) * part_size + part_h) * part_size +
+                         part_w] *
+                trans_std;
     DType trans_y =
-        no_trans ? static_cast<DType>(0)
-                 : bottom_trans[(((n * num_classes + class_id) * 2 + 1) * part_size + part_h) *
-                                    part_size +
-                                part_w] *
-                       trans_std;
+        no_trans ?
+            static_cast<DType>(0) :
+            bottom_trans[(((n * num_classes + class_id) * 2 + 1) * part_size + part_h) * part_size +
+                         part_w] *
+                trans_std;
 
     DType wstart = static_cast<DType>(pw) * bin_size_w + roi_start_w;
     wstart += trans_x * roi_width;
@@ -246,17 +246,17 @@ inline void DeformablePSROIPoolBackwardAccCPU(const index_t count,
     index_t part_w   = floor(static_cast<DType>(pw) / pooled_width * part_size);
     index_t class_id = ctop / channels_each_class;
     DType trans_x =
-        no_trans
-            ? static_cast<DType>(0)
-            : bottom_trans[(((n * num_classes + class_id) * 2) * part_size + part_h) * part_size +
-                           part_w] *
-                  trans_std;
+        no_trans ?
+            static_cast<DType>(0) :
+            bottom_trans[(((n * num_classes + class_id) * 2) * part_size + part_h) * part_size +
+                         part_w] *
+                trans_std;
     DType trans_y =
-        no_trans ? static_cast<DType>(0)
-                 : bottom_trans[(((n * num_classes + class_id) * 2 + 1) * part_size + part_h) *
-                                    part_size +
-                                part_w] *
-                       trans_std;
+        no_trans ?
+            static_cast<DType>(0) :
+            bottom_trans[(((n * num_classes + class_id) * 2 + 1) * part_size + part_h) * part_size +
+                         part_w] *
+                trans_std;
 
     DType wstart = static_cast<DType>(pw) * bin_size_w + roi_start_w;
     wstart += trans_x * roi_width;

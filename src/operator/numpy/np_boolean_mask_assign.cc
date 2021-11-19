@@ -262,9 +262,9 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
                                                           trailing,
                                                           inputs[2].dptr<DType>());
       } else {
-        bool need_broadcast = (vshape.ndim() == (dshape.ndim() - mshape.ndim() + 1))
-                                  ? (vshape[start_axis] == 1)
-                                  : true;
+        bool need_broadcast = (vshape.ndim() == (dshape.ndim() - mshape.ndim() + 1)) ?
+                                  (vshape[start_axis] == 1) :
+                                  true;
         Kernel<BooleanAssignCPUKernel<false>, cpu>::Launch(s,
                                                            valid_num,
                                                            data.dptr<DType>(),

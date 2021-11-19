@@ -668,7 +668,7 @@ void ConvertConcatenate(GraphProto* graph_proto,
                         const array_view<IndexedGraph::NodeEntry>& inputs) {
   NodeProto* node_proto = graph_proto->add_node();
   node_proto->set_name(node_name);
-  const auto& _param = nnvm::get<ConcatParam>(attrs.parsed);
+  const auto& _param  = nnvm::get<ConcatParam>(attrs.parsed);
   const int param_dim = _param.dim.has_value() ? _param.dim.value() : 0;
   node_proto->set_op_type("Concat");
   node_proto->set_name(attrs.name);

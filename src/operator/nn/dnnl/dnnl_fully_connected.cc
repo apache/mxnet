@@ -39,9 +39,9 @@ dnnl::inner_product_forward::primitive_desc GetFCFwdImpl(const DNNLFCFullParam& 
                                                          const dnnl::memory::desc& out_md) {
   auto engine    = CpuEngine::Get()->get_engine();
   auto data_md   = GetMemDesc(data);
-  auto weight_md = full_param.dnnl_param.quantized
-                       ? GetFCWeightDesc(weight, data.shape()[0], mshadow::kInt8)
-                       : GetFCWeightDesc(weight, data.shape()[0]);
+  auto weight_md = full_param.dnnl_param.quantized ?
+                       GetFCWeightDesc(weight, data.shape()[0], mshadow::kInt8) :
+                       GetFCWeightDesc(weight, data.shape()[0]);
   auto propagation =
       is_train ? dnnl::prop_kind::forward_training : dnnl::prop_kind::forward_scoring;
 

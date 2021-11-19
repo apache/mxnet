@@ -29,14 +29,18 @@
 using namespace mxnet::ext;
 
 // main matrix multiplication routine
-void gemm(const float* A, const float* B, float* C,
-          const unsigned n, const unsigned k, const unsigned m) {
+void gemm(const float* A,
+          const float* B,
+          float* C,
+          const unsigned n,
+          const unsigned k,
+          const unsigned m) {
   unsigned i, j, kk;
   for (i = 0; i < n; i++) {
     for (j = 0; j < m; j++) {
-      C[i*m+j] = 0;
+      C[i * m + j] = 0;
       for (kk = 0; kk < k; kk++) {
-        C[i*m+j] += A[i*k+kk] * B[kk*m+j];
+        C[i * m + j] += A[i * k + kk] * B[kk * m + j];
       }
     }
   }
@@ -46,7 +50,7 @@ void transpose(const float* A, float* At, const unsigned n, const unsigned m) {
   unsigned i, j;
   for (i = 0; i < n; i++) {
     for (j = 0; j < m; j++) {
-      At[i*m+j] = A[j*n+i];
+      At[i * m + j] = A[j * n + i];
     }
   }
 }
@@ -95,8 +99,8 @@ MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs
                        const OpResource& res) {
   // extract data pointers from tensors
   float* dC = inputs->at(0).data<float>();
-  float* A = inputs->at(1).data<float>();
-  float* B = inputs->at(2).data<float>();
+  float* A  = inputs->at(1).data<float>();
+  float* B  = inputs->at(2).data<float>();
   float* dA = outputs->at(0).data<float>();
   float* dB = outputs->at(1).data<float>();
   // set tensor shapes
@@ -105,9 +109,9 @@ MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs
   unsigned m = inputs->at(2).shape[1];
   // allocate temporary workspace memory through resource manager
   // for multiple arrays better to request a big memory pool
-  void *workspace = res.alloc_cpu((k*n + m*k) * sizeof(float));
-  float *At = static_cast<float*>(workspace);
-  float *Bt = static_cast<float*>(workspace) + (k*n);
+  void* workspace = res.alloc_cpu((k * n + m * k) * sizeof(float));
+  float* At       = static_cast<float*>(workspace);
+  float* Bt       = static_cast<float*>(workspace) + (k * n);
 
   transpose(A, At, k, n);
   transpose(B, Bt, m, k);
@@ -118,15 +122,16 @@ MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs
 }
 
 MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& attrs,
-                         int* num_in, int* num_out) {
-  *num_in = 2;
+                         int* num_in,
+                         int* num_out) {
+  *num_in  = 2;
   *num_out = 1;
   return MX_SUCCESS;
 }
 
 MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        std::vector<int> *intypes,
-                        std::vector<int> *outtypes) {
+                        std::vector<int>* intypes,
+                        std::vector<int>* outtypes) {
   // validate inputs
   if (intypes->size() != 2) {
     MX_ERROR_MSG << "Expected 2 inputs to inferType";
@@ -156,10 +161,10 @@ MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& att
     return MX_FAIL;
   }
 
-  unsigned n = inshapes->at(0)[0];
-  unsigned k = inshapes->at(0)[1];
+  unsigned n  = inshapes->at(0)[0];
+  unsigned k  = inshapes->at(0)[1];
   unsigned kk = inshapes->at(1)[0];
-  unsigned m = inshapes->at(1)[1];
+  unsigned m  = inshapes->at(1)[1];
   if (k != kk) {
     MX_ERROR_MSG << "Exected first input axis 1 equals to second input axis 0";
     return MX_FAIL;
@@ -170,24 +175,23 @@ MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& att
 }
 
 REGISTER_OP(my_gemm)
-.setForward(forward, "cpu")
-.setBackward(backward, "cpu")
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferShape(inferShape);
+    .setForward(forward, "cpu")
+    .setBackward(backward, "cpu")
+    .setParseAttrs(parseAttrs)
+    .setInferType(inferType)
+    .setInferShape(inferShape);
 
 /* ------------------------------------------------------------------------- */
 
 class MyStatefulGemm : public CustomStatefulOp {
  public:
-  explicit MyStatefulGemm(int count,
-                          std::unordered_map<std::string, std::string>  attrs)
-    : count(count), attrs_(std::move(attrs)) {}
+  explicit MyStatefulGemm(int count, std::unordered_map<std::string, std::string> attrs)
+      : count(count), attrs_(std::move(attrs)) {}
 
   ~MyStatefulGemm() override {
     std::cout << "Info: destructing MyStatefulGemm" << std::endl;
   }
-  
+
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
                         std::vector<MXTensor>* outputs,
                         const OpResource& op_res) override {
@@ -208,7 +212,7 @@ class MyStatefulGemm : public CustomStatefulOp {
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
                             const MXContext& ctx,
-                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<std::vector<unsigned int>>& in_shapes,
                             const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
@@ -226,11 +230,11 @@ MXReturnValue mutateInputs(const std::unordered_map<std::string, std::string>& a
 }
 
 REGISTER_OP(state_gemm)
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferShape(inferShape)
-.setMutateInputs(mutateInputs)
-.setCreateOpState(createOpState, "cpu");
+    .setParseAttrs(parseAttrs)
+    .setInferType(inferType)
+    .setInferShape(inferShape)
+    .setMutateInputs(mutateInputs)
+    .setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
   if (version >= 10700) {

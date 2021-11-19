@@ -68,9 +68,9 @@ NNVM_REGISTER_OP(_npi_interp)
                                      [](const NodeAttrs& attrs) {
                                        const NumpyInterpParam& param =
                                            nnvm::get<NumpyInterpParam>(attrs.parsed);
-                                       return param.x_is_scalar
-                                                  ? std::vector<std::string>{"xp", "fp"}
-                                                  : std::vector<std::string>{"xp", "fp", "x"};
+                                       return param.x_is_scalar ?
+                                                  std::vector<std::string>{"xp", "fp"} :
+                                                  std::vector<std::string>{"xp", "fp", "x"};
                                      })
     .set_attr<FCompute>("FCompute<cpu>", NumpyInterpForward<cpu, mshadow_op::mod>)
     .set_attr<FResourceRequest>("FResourceRequest",

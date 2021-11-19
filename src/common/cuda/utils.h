@@ -739,8 +739,8 @@ static inline __device__ void atomicAdd(mshadow::half::half_t* address, mshadow:
     mshadow::half::half_t hsum;
     hsum.half_ = reinterpret_cast<size_t>(address) & 2 ? (old >> 16) : (old & 0xffff);
     hsum += val;
-    old = reinterpret_cast<size_t>(address) & 2 ? (old & 0xffff) | (hsum.half_ << 16)
-                                                : (old & 0xffff0000) | hsum.half_;
+    old = reinterpret_cast<size_t>(address) & 2 ? (old & 0xffff) | (hsum.half_ << 16) :
+                                                  (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
 }

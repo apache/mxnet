@@ -674,10 +674,10 @@ struct gemm_backward {
                  const nnvm::NodeAttrs& attrs) {
     const LaMatrixMacParam& param = nnvm::get<LaMatrixMacParam>(attrs.parsed);
     bool tA(param.transpose_a), tB(param.transpose_b);
-    (tA ? gemm::op(B, dD, dA, DType(param.alpha), DType(0), tB, true, s)
-        : gemm::op(dD, B, dA, DType(param.alpha), DType(0), false, !tB, s));
-    (tB ? gemm::op(dD, A, dB, DType(param.alpha), DType(0), true, tA, s)
-        : gemm::op(A, dD, dB, DType(param.alpha), DType(0), !tA, false, s));
+    (tA ? gemm::op(B, dD, dA, DType(param.alpha), DType(0), tB, true, s) :
+          gemm::op(dD, B, dA, DType(param.alpha), DType(0), false, !tB, s));
+    (tB ? gemm::op(dD, A, dB, DType(param.alpha), DType(0), true, tA, s) :
+          gemm::op(A, dD, dB, DType(param.alpha), DType(0), !tA, false, s));
     Copy(dC, dD, s);
     using namespace mxnet_op;
     Kernel<Scale, xpu>::Launch(s, dC.MSize(), DType(param.beta), dC.dptr_);
@@ -708,10 +708,10 @@ struct gemm2_backward {
                  const nnvm::NodeAttrs& attrs) {
     const LaMatrixMultParam& param = nnvm::get<LaMatrixMultParam>(attrs.parsed);
     bool tA(param.transpose_a), tB(param.transpose_b);
-    (tA ? gemm::op(B, dC, dA, DType(param.alpha), DType(0), tB, true, s)
-        : gemm::op(dC, B, dA, DType(param.alpha), DType(0), false, !tB, s));
-    (tB ? gemm::op(dC, A, dB, DType(param.alpha), DType(0), true, tA, s)
-        : gemm::op(A, dC, dB, DType(param.alpha), DType(0), !tA, false, s));
+    (tA ? gemm::op(B, dC, dA, DType(param.alpha), DType(0), tB, true, s) :
+          gemm::op(dC, B, dA, DType(param.alpha), DType(0), false, !tB, s));
+    (tB ? gemm::op(dC, A, dB, DType(param.alpha), DType(0), true, tA, s) :
+          gemm::op(A, dC, dB, DType(param.alpha), DType(0), !tA, false, s));
   }
   template <typename xpu, int dim, typename DType>
   static void op(const Tensor<xpu, dim, DType>& dC,
@@ -824,8 +824,8 @@ struct trsm_backward {
     // Compute dA
     const bool da_left(param.rightside == param.transpose);
     DType scale(-1.0 / param.alpha);
-    (da_left ? gemm::op(dB, C, dA, scale, DType(0), param.transpose, !param.transpose, s)
-             : gemm::op(C, dB, dA, scale, DType(0), !param.transpose, param.transpose, s));
+    (da_left ? gemm::op(dB, C, dA, scale, DType(0), param.transpose, !param.transpose, s) :
+               gemm::op(C, dB, dA, scale, DType(0), !param.transpose, param.transpose, s));
     using namespace mxnet_op;
     Kernel<ZeroTriangular, xpu>::Launch(
         s, dA.MSize(), dA.size(1) * dA.stride_, dA.stride_, dA.dptr_, !param.lower);

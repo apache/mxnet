@@ -135,18 +135,18 @@ inline void CorrelationBackward(const Tensor<cpu, 4, Dtype>& out_grad,
                   if ((y1 + h - pad_size_ >= 0) && (x1 + w - pad_size_ >= 0) &&
                       (y1 + h < height + pad_size_) && (x1 + w < width + pad_size_)) {
                     Dtype sign = (tmp1[nbatch][y1 + h][x1 + w][channel] >=
-                                  tmp2[nbatch][y2 + h][x2 + w][channel])
-                                     ? Dtype(1.0)
-                                     : Dtype(-1.0);
+                                  tmp2[nbatch][y2 + h][x2 + w][channel]) ?
+                                     Dtype(1.0) :
+                                     Dtype(-1.0);
                     in_grad1[nbatch][channel][y1 + h - pad_size_][x1 + w - pad_size_] +=
                         out_grad[nbatch][top_channel][i][j] * sign / sumelems;
                   }
                   if ((y2 + h - pad_size_ >= 0) && (x2 + w - pad_size_ >= 0) &&
                       (y2 + h < height + pad_size_) && (x2 + w < width + pad_size_)) {
                     Dtype sign = (tmp1[nbatch][y1 + h][x1 + w][channel] >=
-                                  tmp2[nbatch][y2 + h][x2 + w][channel])
-                                     ? Dtype(-1.0)
-                                     : Dtype(1.0);
+                                  tmp2[nbatch][y2 + h][x2 + w][channel]) ?
+                                     Dtype(-1.0) :
+                                     Dtype(1.0);
                     in_grad2[nbatch][channel][y2 + h - pad_size_][x2 + w - pad_size_] +=
                         out_grad[nbatch][top_channel][i][j] * sign / sumelems;
                   }

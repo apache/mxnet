@@ -549,8 +549,8 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
       .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 inline bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
-                                   std::vector<int>* in_attrs,
-                                   std::vector<int>* out_attrs) {
+                                          std::vector<int>* in_attrs,
+                                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const int ltype = in_attrs->at(0);

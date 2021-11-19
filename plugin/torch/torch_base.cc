@@ -21,7 +21,7 @@
  * \file torch_base.cc
  * \brief torch_state
  * \author Junyuan Xie
-*/
+ */
 #include "./torch_base.h"
 
 namespace mxnet {
@@ -39,7 +39,7 @@ TorchState::TorchState() {
                   "require 'cudnn'\n"
 #endif  // MXNET_USE_CUDNN
 #endif  // MXNET_USE_CUDA
-                  ); // NOLINT(*)
+  );    // NOLINT(*)
   int err = lua_pcall(L, 0, 0, 0);
   CHECK_EQ(err, 0) << lua_tostring(L, -1);
 }
@@ -52,13 +52,13 @@ TorchState* TorchState::ThreadSharedLuaState() {
   return state;
 }
 
-template<>
+template <>
 void TorchState::SetStream(mshadow::Stream<mshadow::cpu>* s) {
   return;
 }
 
 #if MXNET_USE_CUDA
-template<>
+template <>
 void TorchState::SetStream(mshadow::Stream<mshadow::gpu>* s) {
   CudaState()->currentStream = mshadow::Stream<gpu>::GetStream(s);
 }

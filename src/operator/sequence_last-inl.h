@@ -181,9 +181,9 @@ class SequenceLastOp : public Operator {
     Tensor<xpu, 2, DType> out =
         out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(Shape2(batch, rest_size), s);
     Tensor<xpu, 1, IType> indices =
-        param_.use_sequence_length
-            ? in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s)
-            : ctx.requested[seq_last::kTempSpace].get_space_typed<xpu, 1, IType>(Shape1(batch), s);
+        param_.use_sequence_length ?
+            in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s) :
+            ctx.requested[seq_last::kTempSpace].get_space_typed<xpu, 1, IType>(Shape1(batch), s);
     if (!param_.use_sequence_length)
       indices = max_seq_len;
 
@@ -223,9 +223,9 @@ class SequenceLastOp : public Operator {
     Tensor<xpu, 2, DType> output_grad =
         out_grad[seq_last::kOut].get_with_shape<xpu, 2, DType>(Shape2(batch, rest_size), s);
     Tensor<xpu, 1, IType> indices =
-        param_.use_sequence_length
-            ? in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s)
-            : ctx.requested[seq_last::kTempSpace].get_space_typed<xpu, 1, IType>(Shape1(batch), s);
+        param_.use_sequence_length ?
+            in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s) :
+            ctx.requested[seq_last::kTempSpace].get_space_typed<xpu, 1, IType>(Shape1(batch), s);
 
     if (req[seq_last::kData] == kWriteTo)
       data_grad = 0.0f;

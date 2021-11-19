@@ -27,7 +27,7 @@
 
 using namespace mxnet::ext;
 
-__global__ void relu_gpu_forward(float *out, float *in, int64_t N) {
+__global__ void relu_gpu_forward(float* out, float* in, int64_t N) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < N)
     out[tid] = in[tid] > 0 ? in[tid] : 0;
@@ -37,19 +37,19 @@ MXReturnValue forwardGPU(const std::unordered_map<std::string, std::string>& att
                          std::vector<MXTensor>* inputs,
                          std::vector<MXTensor>* outputs,
                          const OpResource& res) {
-  float* in_data = inputs->at(0).data<float>();
+  float* in_data  = inputs->at(0).data<float>();
   float* out_data = outputs->at(0).data<float>();
 
   mx_stream_t cuda_stream = res.get_cuda_stream();
-  int64_t N = inputs->at(0).size();
-  int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
+  int64_t N               = inputs->at(0).size();
+  int num_block           = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
 
-  relu_gpu_forward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(out_data, in_data, N);
+  relu_gpu_forward<<<num_block, NumThreadPerBlock, 0, cuda_stream>>>(out_data, in_data, N);
 
   return MX_SUCCESS;
 }
 
-__global__ void relu_gpu_backward(float *ingrad, float *outgrad, float *indata, int64_t N) {
+__global__ void relu_gpu_backward(float* ingrad, float* outgrad, float* indata, int64_t N) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < N)
     ingrad[tid] = indata[tid] > 0 ? 1 * outgrad[tid] : 0;
@@ -60,40 +60,45 @@ MXReturnValue backwardGPU(const std::unordered_map<std::string, std::string>& at
                           std::vector<MXTensor>* outputs,
                           const OpResource& res) {
   float* out_grad = inputs->at(0).data<float>();
-  float* in_data = inputs->at(1).data<float>();
-  float* in_grad = outputs->at(0).data<float>();
+  float* in_data  = inputs->at(1).data<float>();
+  float* in_grad  = outputs->at(0).data<float>();
 
   mx_stream_t cuda_stream = res.get_cuda_stream();
-  int64_t N = inputs->at(0).size();
-  int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
-  relu_gpu_backward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(in_grad, out_grad, in_data, N);
+  int64_t N               = inputs->at(0).size();
+  int num_block           = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
+  relu_gpu_backward<<<num_block, NumThreadPerBlock, 0, cuda_stream>>>(
+      in_grad, out_grad, in_data, N);
 
   return MX_SUCCESS;
 }
 
-__global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, mx_gpu_rand_t* states, int step) {
-    // the launcher logic ensures tid less than NumGPURandomStates
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    // each thread generates unique sequence of random numbers
-    mx_gpu_rand_t thread_state = states[tid];
-    // each thread works on <step> number of calculation
-    int start = tid * step;
-    int end = start + step;
-    for (int i=start; i<end && i<N; ++i) {
-        float noise = curand_normal(&thread_state);
-        out[i] = in[i] + noise > 0 ? in[i] + noise : 0;
-    }
+__global__ void noisy_relu_gpu_forward(float* out,
+                                       float* in,
+                                       int64_t N,
+                                       mx_gpu_rand_t* states,
+                                       int step) {
+  // the launcher logic ensures tid less than NumGPURandomStates
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // each thread generates unique sequence of random numbers
+  mx_gpu_rand_t thread_state = states[tid];
+  // each thread works on <step> number of calculation
+  int start = tid * step;
+  int end   = start + step;
+  for (int i = start; i < end && i < N; ++i) {
+    float noise = curand_normal(&thread_state);
+    out[i]      = in[i] + noise > 0 ? in[i] + noise : 0;
+  }
 }
 
 MXReturnValue noisyForwardGPU(const std::unordered_map<std::string, std::string>& attrs,
                               std::vector<MXTensor>* inputs,
                               std::vector<MXTensor>* outputs,
                               const OpResource& res) {
-  float* in_data = inputs->at(0).data<float>();
+  float* in_data  = inputs->at(0).data<float>();
   float* out_data = outputs->at(0).data<float>();
 
   mx_stream_t cuda_stream = res.get_cuda_stream();
-  int64_t N = inputs->at(0).size();
+  int64_t N               = inputs->at(0).size();
 
   // below is mxnet recommended workflow to parallel random number generating
   int nthread = (N + NumRandomPerThread - 1) / NumRandomPerThread;
@@ -104,8 +109,8 @@ MXReturnValue noisyForwardGPU(const std::unordered_map<std::string, std::string>
   // this can ensure number of parallel threads less than mxnet supported random number states
   int num_block = (num_thread_need + NumThreadPerBlock - 1) / NumThreadPerBlock;
 
-  noisy_relu_gpu_forward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(
-                                out_data, in_data, N, res.get_gpu_rand_states(), step);
+  noisy_relu_gpu_forward<<<num_block, NumThreadPerBlock, 0, cuda_stream>>>(
+      out_data, in_data, N, res.get_gpu_rand_states(), step);
 
   return MX_SUCCESS;
 }

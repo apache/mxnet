@@ -55,9 +55,9 @@ void NumpyInsertSliceCompute(const nnvm::NodeAttrs& attrs,
   int axis                = param.axis.has_value() ? param.axis.value() : 0;
   TBlob arr;
   TBlob values =
-      param.val.has_value()
-          ? TBlob(nullptr, mxnet::TShape(0, 1), xpu::kDevMask, outputs[out_pos].type_flag_)
-          : inputs[val_pos];
+      param.val.has_value() ?
+          TBlob(nullptr, mxnet::TShape(0, 1), xpu::kDevMask, outputs[out_pos].type_flag_) :
+          inputs[val_pos];
   if (!param.axis.has_value()) {
     arr  = inputs[arr_pos].reshape(Shape1(inputs[arr_pos].shape_.Size()));
     ndim = 1;

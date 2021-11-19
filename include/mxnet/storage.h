@@ -31,8 +31,8 @@
 
 namespace mxnet {
 
-#define MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR  "<unk>:"
-#define MXNET_STORAGE_DEFAULT_NAME_CSTR  "unknown"
+#define MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR "<unk>:"
+#define MXNET_STORAGE_DEFAULT_NAME_CSTR           "unknown"
 
 /*!
  * \brief Storage manager across multiple devices.
@@ -70,7 +70,7 @@ class Storage {
      * \brief Id for IPC shared memory
      */
     int shared_pid{-1};
-    int shared_id {-1};
+    int shared_id{-1};
     /*!
      * \brief Attributes for tracking storage allocations.
      */
@@ -92,7 +92,7 @@ class Storage {
   Handle Alloc(size_t size, Context ctx, bool failsafe = false) {
     Handle hd;
     hd.size = size;
-    hd.ctx = ctx;
+    hd.ctx  = ctx;
     this->Alloc(&hd, failsafe);
     return hd;
   }
@@ -122,12 +122,12 @@ class Storage {
    */
   virtual void DirectFree(Handle handle) = 0;
   /*!
-  * \brief Release all memory from device if using a pooled storage manager
-  *
-  * This release all memory from pool storage managers such as
-  * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
-  * For non-pool memory managers this has no effect.
-  */
+   * \brief Release all memory from device if using a pooled storage manager
+   *
+   * This release all memory from pool storage managers such as
+   * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
+   * For non-pool memory managers this has no effect.
+   */
   virtual void ReleaseAll(Context ctx) = 0;
   /*!
    * \brief Destructor.

@@ -157,9 +157,9 @@ NNVM_REGISTER_OP(_npi_average)
                                      [](const NodeAttrs& attrs) {
                                        const auto& param =
                                            nnvm::get<NumpyWeightedAverageParam>(attrs.parsed);
-                                       return param.weighted
-                                                  ? std::vector<std::string>{"a", "weights"}
-                                                  : std::vector<std::string>{"a"};
+                                       return param.weighted ?
+                                                  std::vector<std::string>{"a", "weights"} :
+                                                  std::vector<std::string>{"a"};
                                      })
     .add_argument("a", "NDArray-or-Symbol", "The input")
     .add_argument("weights", "NDArray-or-Symbol", "The weights to calculate average")
