@@ -31,9 +31,10 @@ namespace mxnet {
 namespace op {
 
 template <>
-NumpyReduceAxesParam ConvertParamsToNumpy<ReduceAxesParam>(const ReduceAxesParam& original_param,
-                                                           const NDArray& input,
-                                                           const NDArray& output) {
+NumpyReduceAxesParam ConvertReduceParamsToNumpy<ReduceAxesParam>(
+    const ReduceAxesParam& original_param,
+    const NDArray& input,
+    const NDArray& output) {
   NumpyReduceAxesParam numpy_param;
   numpy_param.axis = dmlc::optional<mxnet::Tuple<int>>();
   if (original_param.axis.has_value()) {
@@ -61,7 +62,7 @@ NumpyReduceAxesParam ConvertParamsToNumpy<ReduceAxesParam>(const ReduceAxesParam
 }
 
 template <>
-NumpyReduceAxesParam ConvertParamsToNumpy<NumpyReduceAxesParam>(
+NumpyReduceAxesParam ConvertReduceParamsToNumpy<NumpyReduceAxesParam>(
     const NumpyReduceAxesParam& original_param,
     const NDArray& input,
     const NDArray& output) {
@@ -73,8 +74,7 @@ mxnet::Tuple<int> CanonicalizeAndSortAxes(const NDArray& input,
                                           mxnet::Tuple<int> original_axes) {
   int in_ndim = input.shape().ndim();
   mxnet::Tuple<int> axes(param.axis.value());
-  // canonicalize
-  for (index_t i = 0; i < axes.ndim(); i++) {
+  for (int i = 0; i < axes.ndim(); i++) {
     if (axes[i] < 0) {
       axes[i] += in_ndim;
     }
@@ -94,7 +94,7 @@ bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
     auto axes    = CanonicalizeAndSortAxes(input, param, param.axis.value());
     int last_dim = *(axes.end() - 1);
     if (last_dim != input.shape().ndim() - 1) {
-      // oneDNN not optimized case
+      // oneDNN (v2.3.2) not optimized case
       return false;
     } else {
       for (int i = 0; i < axes.ndim(); i++) {
@@ -106,7 +106,7 @@ bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
       }
     }
 
-    // if axis = () it's identity op and it is not supported by oneDNN
+    // if `axis = ()` it is identity op and it is not supported by oneDNN
     param_supported = param.axis.value().ndim() > 0;
   }
   // initial value not supported by oneDNN

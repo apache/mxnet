@@ -51,7 +51,7 @@ class DNNLTransposeFwd {
 DNNLTransposeFwd& GetTransposeForward(const NumpyTransposeParam& param, const NDArray& data);
 
 template <class ParamType>
-NumpyTransposeParam ConvertParamsToNumpy(const ParamType& param);
+NumpyTransposeParam ConvertTransposeParamsToNumpy(const ParamType& param);
 
 template <class ParamType>
 void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
@@ -60,7 +60,7 @@ void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
                           const OpReqType& req,
                           const NDArray& output) {
   const ParamType& org_param = nnvm::get<ParamType>(attrs.parsed);
-  auto param                 = ConvertParamsToNumpy<ParamType>(org_param);
+  auto param                 = ConvertTransposeParamsToNumpy<ParamType>(org_param);
   auto fwd                   = GetTransposeForward(param, data);
   fwd.SetNewMem(data, output);
   fwd.Execute();
