@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-#include "../batch_norm-inl.h"
+#include "operator/nn/batch_norm-inl.h"
 #include "./dnnl_base-inl.h"
 #include "./dnnl_ops-inl.h"
 

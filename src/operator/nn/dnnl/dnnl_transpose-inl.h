@@ -29,7 +29,7 @@
 #include "./dnnl_base-inl.h"
 #include "./dnnl_ops-inl.h"
 
-#include "../../numpy/np_matrix_op-inl.h"
+#include "operator/numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -19,16 +19,17 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_INL_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "../../nn/activation-inl.h"
-#include "../../nn/batch_norm-inl.h"
-#include "../../nn/convolution-inl.h"
-#include "../../nn/dnnl/dnnl_convolution-inl.h"
+#include "operator/nn/activation-inl.h"
+#include "operator/nn/batch_norm-inl.h"
+#include "operator/nn/convolution-inl.h"
+#include "operator/nn/dnnl/dnnl_convolution-inl.h"
 
 namespace mxnet {
 namespace op {

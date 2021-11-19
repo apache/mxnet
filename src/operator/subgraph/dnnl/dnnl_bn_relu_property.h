@@ -19,15 +19,17 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_BN_RELU_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_BN_RELU_PROPERTY_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_act-inl.h"
-#include "../../nn/dnnl/dnnl_batch_norm-inl.h"
-#include "../common.h"
-#include "dnnl_subgraph_base-inl.h"
+#include "operator/nn/dnnl/dnnl_act-inl.h"
+#include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
+#include "operator/subgraph/common.h"
+#include "./dnnl_subgraph_base-inl.h"
+
 namespace mxnet {
 namespace op {
 

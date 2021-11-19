@@ -22,7 +22,7 @@
 #include <atomic>
 
 #include "../../../common/exec_utils.h"
-#include "../../operator_common.h"
+#include "operator/operator_common.h"
 #include "./dnnl_base-inl.h"
 #include "./dnnl_ops-inl.h"
 

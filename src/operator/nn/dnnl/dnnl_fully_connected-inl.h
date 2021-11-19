@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-#include "../fully_connected-inl.h"
+#include "operator/nn/fully_connected-inl.h"
 #include "./dnnl_base-inl.h"
 
 namespace mxnet {

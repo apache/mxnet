@@ -25,7 +25,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "../convolution-inl.h"
+#include "operator/nn/convolution-inl.h"
 #include "./dnnl_base-inl.h"
 #include "./dnnl_convolution-inl.h"
 #include "./dnnl_ops-inl.h"

@@ -25,10 +25,12 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_COMMON_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_COMMON_H_
+
 #if MXNET_USE_ONEDNN == 1
+
 #include <vector>
 
-#include "../../numpy/np_matrix_op-inl.h"
+#include "operator/numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {

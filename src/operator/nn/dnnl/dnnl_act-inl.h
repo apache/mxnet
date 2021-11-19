@@ -30,8 +30,8 @@
 #include <utility>
 #include <vector>
 
-#include "../../leaky_relu-inl.h"
-#include "../activation-inl.h"
+#include "operator/leaky_relu-inl.h"
+#include "operator/nn/activation-inl.h"
 
 namespace mxnet {
 namespace op {

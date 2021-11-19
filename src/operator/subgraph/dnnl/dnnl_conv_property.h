@@ -19,18 +19,19 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_PROPERTY_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "../../leaky_relu-inl.h"
-#include "../../nn/activation-inl.h"
-#include "../../nn/convolution-inl.h"
-#include "../../nn/dnnl/dnnl_ops-inl.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../common.h"
-#include "dnnl_subgraph_base-inl.h"
+#include "operator/leaky_relu-inl.h"
+#include "operator/nn/activation-inl.h"
+#include "operator/nn/convolution-inl.h"
+#include "operator/nn/dnnl/dnnl_ops-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/subgraph/common.h"
+#include "./dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

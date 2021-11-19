@@ -25,7 +25,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "../../nn/dnnl/dnnl_pooling-inl.h"
+#include "operator/nn/dnnl/dnnl_pooling-inl.h"
 
 namespace mxnet {
 namespace op {

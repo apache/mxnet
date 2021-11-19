@@ -35,9 +35,9 @@
 #include <utility>
 #include <vector>
 
-#include "../../operator_common.h"
+#include "operator/operator_common.h"
 #include "./dnnl_base-inl.h"
-#include "dnnl_act-inl.h"
+#include "./dnnl_act-inl.h"
 
 namespace mxnet {
 namespace op {

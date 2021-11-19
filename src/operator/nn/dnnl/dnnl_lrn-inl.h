@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-#include "../lrn-inl.h"
+#include "operator/nn/lrn-inl.h"
 #include "./dnnl_base-inl.h"
 
 namespace mxnet {
