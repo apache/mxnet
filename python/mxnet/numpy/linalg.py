@@ -19,7 +19,8 @@
 
 from functools import reduce
 
-from typing import Optional, Tuple, Union
+from .utils import inf
+from typing import Optional, Tuple, Union, Literal
 from .multiarray import ndarray
 from ..ndarray import numpy as _mx_nd_np
 from ..util import wrap_data_api_linalg_func, wrap_np_binary_func
@@ -668,7 +669,14 @@ def norm(
     return _mx_nd_np.linalg.norm(x, ord, axis, keepdims)
 
 
-def vector_norm(x: ndarray, ord=None, axis=None, keepdims=False):
+def vector_norm(
+        x: ndarray,
+        /,
+        *,
+        ord: Union[int, float, Literal[inf, -inf]] = None,
+        axis: Optional[Union[int, Tuple[int, ...]]] = None,
+        keepdims: bool = False
+) -> Union[float, ndarray]:
     r"""
     Computes the vector norm of a vector (or batch of vectors) `x`.
 
@@ -713,7 +721,14 @@ def vector_norm(x: ndarray, ord=None, axis=None, keepdims=False):
     return _mx_nd_np.linalg.norm(x, axis=axis, keepdims=keepdims, ord=ord)
 
 
-def matrix_norm(x, ord='fro', axis=(-2, -1), keepdims=False):
+def matrix_norm(
+        x: ndarray,
+        /,
+        *,
+        ord: Optional[Union[int, float, Literal[inf, -inf, 'fro', 'nuc']]] = 'fro',
+        axis: Tuple[int, int] = (-2, -1),
+        keepdims: bool = False
+) -> Union[float, ndarray]:
     r"""
     Computes the matrix norm of a matrix (or a stack of matrices) `x`.
 
