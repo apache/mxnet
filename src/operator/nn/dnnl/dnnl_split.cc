@@ -19,7 +19,6 @@
 
 /*!
  * \file dnnl_split.cc
- * \brief
  */
 
 #if MXNET_USE_ONEDNN == 1

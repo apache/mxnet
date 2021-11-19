@@ -1202,8 +1202,9 @@ inline static bool SplitInferStorageType(const nnvm::NodeAttrs& attrs,
                                          DispatchMode* dispatch_mode,
                                          std::vector<int>* in_attrs,
                                          std::vector<int>* out_attrs) {
-  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
-  }
+  return DNNLStorageType(
+      attrs, dev_mask, /*support onednn*/ true, dispatch_mode, in_attrs, out_attrs);
+}
 #endif  // MXNET_USE_ONEDNN == 1
 
 NNVM_REGISTER_OP(_split_v2)
