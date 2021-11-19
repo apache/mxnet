@@ -95,7 +95,12 @@ struct TakeNonzeroAxisCPU {
       }
       size_t in_offset  = i * outer_dim_stride + index * axis_dim_stride;
       size_t out_offset = (i * idx_size + j) * axis_dim_stride;
-      memcpy(out_data + out_offset, in_data + in_offset, axis_dim_stride * sizeof(DType));
+      #pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+      std::memcpy(out_data + out_offset, in_data + in_offset, axis_dim_stride * sizeof(DType));
+#pragma GCC diagnostic pop
     }
   }
 };
