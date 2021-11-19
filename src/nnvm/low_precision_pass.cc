@@ -38,9 +38,19 @@ using nnvm::NodeEntry;
 using nnvm::NodeEntryEqual;
 using nnvm::ObjectPtr;
 
-static const std::unordered_map<int, std::string> dtype_str = {{mshadow::kFloat32, "float32"},
-                                                               {mshadow::kFloat16, "float16"},
-                                                               {mshadow::kBfloat16, "bfloat16"}};
+static const char* dtype_name(const int dtype) {
+  switch (dtype) {
+    case mshadow::kFloat32:
+      return "float32";
+    case mshadow::kFloat16:
+      return "float16";
+    case mshadow::kBfloat16:
+      return "bfloat16";
+    default:
+      LOG(FATAL) << "Unsupported type";
+      return "";
+  }
+}
 
 // create a node for operator : op_name with name : node_name
 static ObjectPtr CreateNode(std::string op_name, std::string node_name) {
@@ -93,7 +103,7 @@ static void AddCastNode(const nnvm::NodeEntry& e,
                         int target_dtype,
                         nnvm::NodeEntryMap<NodeEntry>* mirror_entry_map,
                         ObjectPtr curr_node) {
-  const std::string& dtype = dtype_str.at(target_dtype);
+  const std::string dtype = dtype_name(target_dtype);
   ObjectPtr cast_node =
       InsertNode("amp_cast", e.node->attrs.name + suffix + "_amp_cast_" + dtype, curr_node, input);
   cast_node->attrs.dict["dtype"] = dtype;
