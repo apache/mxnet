@@ -31,16 +31,20 @@
 namespace mxnet {
 namespace op {
 
-static const std::set<std::string> support_amp_fusion_op_name =
-    {  //"_sg_onednn_conv", - broken, waiting for a fix in oneDNN
-        "_sg_onednn_fully_connected",
-        "_sg_onednn_selfatt_qk",
-        "_sg_onednn_selfatt_valatt"};
+inline bool IsSupportedAMPFuseOp(const nnvm::Node& node) {
+  const auto& op = node.op();
+  return (op != nullptr &&
+          (
+              // op == Op::Get("_sg_onednn_conv") || - broken, waiting for a fix in oneDNN
+              op == Op::Get("_sg_onednn_fully_connected") ||
+              op == Op::Get("_sg_onednn_selfatt_qk") ||
+              op == Op::Get("_sg_onednn_selfatt_valatt")));
+};
 
 class SgDNNLPostAMPSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
-  enum SelectStatus {
+  enum class SelectStatus {
     kFail = 0,
     kStart,
     kSuccess,
@@ -52,8 +56,8 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
 
  public:
   bool Select(const nnvm::Node& n) override {
-    if (n.op() && support_amp_fusion_op_name.count(n.op()->name)) {
-      status = kStart;
+    if (IsSupportedAMPFuseOp(n)) {
+      status = SelectStatus::kStart;
       matched_list.clear();
       matched_list.push_back(&n);
       return true;
@@ -66,29 +70,31 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
   }
 
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
-    if (status == kFail || status == kSuccess || new_node.is_variable())
+    if (status == SelectStatus::kFail || new_node.is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
-      status = kFail;
+      status = SelectStatus::kFail;
+      return false;
+    }
+    if (status == SelectStatus::kSuccess) {
       return false;
     }
     if (new_node.op()->name == "amp_cast") {
       auto const& param = nnvm::get<AMPCastParam>(new_node.attrs.parsed);
-      // quantized operators cannot convert their output to bf16
-      if (param.dtype != mshadow::kBfloat16) {
+      if (param.dtype == mshadow::kFloat32) {
         matched_list.push_back(&new_node);
-        status = kSuccess;
+        status = SelectStatus::kSuccess;
         return true;
       }
-      status = kFail;
+      status = SelectStatus::kFail;
     }
     return false;
   }
 
   std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
-    if (status != kSuccess) {
+    if (status != SelectStatus::kSuccess) {
       return std::vector<nnvm::Node*>(0);
     } else {
       return candidates;
@@ -116,12 +122,9 @@ class SgDNNLPostAMPProperty : public SubgraphProperty {
     nnvm::ObjectPtr fuse_node = nullptr;
     nnvm::ObjectPtr amp_node  = nullptr;
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable())
-        return;
-      auto& op_name = node->op()->name;
-      if (support_amp_fusion_op_name.count(op_name)) {
+      if (IsSupportedAMPFuseOp(*node)) {
         fuse_node = node;
-      } else if (op_name == "amp_cast") {
+      } else if (node->op() == Op::Get("amp_cast")) {
         amp_node = node;
       }
     });
@@ -140,8 +143,7 @@ class SgDNNLPostAMPProperty : public SubgraphProperty {
   void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
                               std::vector<nnvm::NodeEntry*>* output_entries) const override {
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      auto entry_ptr = output_entries->at(i);
-      *entry_ptr     = nnvm::NodeEntry{n, entry_ptr->index, 0};
+      output_entries->at(i)->node = n;
     }
   }
 };

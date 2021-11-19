@@ -466,10 +466,14 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     """
     assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
 
-    assert target_dtype in ['float16', 'bfloat16'], \
+    if isinstance(target_dtype, np.dtype):
+        target_dtype_name = target_dtype.names[0] if target_dtype.names else target_dtype.name
+    else:
+        target_dtype_name = target_dtype
+    assert target_dtype_name in ['float16', 'bfloat16'], \
                "Only target_dtype float16 and bfloat16 are supported currently"
 
-    if target_dtype == 'bfloat16':
+    if target_dtype_name == 'bfloat16':
         target_dtype = bfloat16
 
     if target_dtype_ops is not None:
@@ -750,7 +754,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
             arg_dict[aux_name] = param._reduce()
             if attr_dict.get(name, {}).get("__dtype__", "-1") != "-1":
                 typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
-                if arg_dict[arg_name].dtype == typ:
+                if arg_dict[aux_name].dtype == typ:
                     continue
                 if typ == bfloat16:
                     arg_dict[aux_name] = _cast_symbol_NDArray(arg_dict[aux_name], 'bfloat16', isinstance(arg_dict[aux_name], numpy.ndarray))

@@ -357,7 +357,7 @@ Graph ReducePrecision(Graph&& src) {
         keep_original_node(
             old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
     } else {
-      // handle operators from BF16_FP32_FUNCS - operators that can run on bf16, but only when
+      // handle operators from LP16_FP32_FUNCS - operators that can run on lp16, but only when
       // inputs are already casted
       const bool any_lp = std::any_of(
           old_node->inputs.begin(), old_node->inputs.end(), [&](const auto& old_node_input_entry) {
