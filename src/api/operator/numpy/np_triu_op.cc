@@ -30,7 +30,7 @@ namespace mxnet {
 
 MXNET_REGISTER_API("_npi.triu").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  op::TriuParam param;
+  op::TriuParam param = {};
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npi_triu");
   // inputs

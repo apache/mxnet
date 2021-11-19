@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file gemm_lib.cc
  * \brief Sample 2D gemm custom operator implementation library file
  */

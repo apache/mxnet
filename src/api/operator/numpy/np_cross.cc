@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.cross").set_body([](runtime::MXNetArgs args, runtime::M
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npi_cross");
-  op::NumpyCrossParam param;
+  op::NumpyCrossParam param = {};
   param.axisa  = args[2].operator int();
   param.axisb  = args[3].operator int();
   param.axisc  = args[4].operator int();

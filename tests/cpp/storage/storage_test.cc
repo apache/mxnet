@@ -17,7 +17,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file storage_test.cc
  * \brief cpu/gpu storage tests
 */

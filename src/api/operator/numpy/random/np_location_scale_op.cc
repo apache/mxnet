@@ -42,7 +42,7 @@ MXNET_REGISTER_API("_npi.gumbel")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_gumbel");
-      op::NumpyLocationScaleParam param;
+      op::NumpyLocationScaleParam param = {};
       nnvm::NodeAttrs attrs;
       attrs.op = op;
       if (args[2].type_code() == kDLInt) {
@@ -96,7 +96,7 @@ MXNET_REGISTER_API("_npi.logistic")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_logistic");
-      op::NumpyLocationScaleParam param;
+      op::NumpyLocationScaleParam param = {};
       nnvm::NodeAttrs attrs;
       attrs.op = op;
       if (args[2].type_code() == kDLInt) {

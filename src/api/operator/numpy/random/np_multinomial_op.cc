@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.multinomial")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_multinomial");
       nnvm::NodeAttrs attrs;
-      op::NumpyMultinomialParam param;
+      op::NumpyMultinomialParam param = {};
       NDArray** inputs = new NDArray*[1]();
       int num_inputs   = 0;
 

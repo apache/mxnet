@@ -105,7 +105,7 @@ MXNET_REGISTER_API("_npi.pad").set_body([](runtime::MXNetArgs args, runtime::MXN
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_pad");
   nnvm::NodeAttrs attrs;
-  op::NumpyPadParam param;
+  op::NumpyPadParam param = {};
   NDArray* inputs[]    = {args[0].operator mxnet::NDArray*()};
   mxnet::TShape ashape = inputs[0]->shape();
   int ndim             = ashape.ndim();

@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.take").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
-  op::TakeParam param;
+  op::TakeParam param = {};
   NDArray* inputs[2];
 
   if (args[0].type_code() != kNull) {

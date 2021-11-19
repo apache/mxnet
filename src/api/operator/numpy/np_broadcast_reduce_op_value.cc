@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.broadcast_to")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_broadcast_to");
       nnvm::NodeAttrs attrs;
-      op::BroadcastToParam param;
+      op::BroadcastToParam param = {};
       if (args[1].type_code() == kDLInt) {
         param.shape = TShape(1, args[1].operator int64_t());
       } else {

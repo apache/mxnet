@@ -55,7 +55,7 @@ MXNET_REGISTER_API("_npx.leaky_relu")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_leaky_relu");
-      op::LeakyReLUParam param;
+      op::LeakyReLUParam param = {};
       int args_size = args.size();
       // act_type
       param.act_type = String2ActType(args[args_size - 4].operator std::string());

@@ -31,7 +31,7 @@ namespace mxnet {
 inline static void _npi_pinv(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_pinv");
-  op::PinvParam param;
+  op::PinvParam param = {};
   nnvm::NodeAttrs attrs;
   param.hermitian = args[2].operator bool();
   attrs.parsed    = param;
@@ -47,7 +47,7 @@ inline static void _npi_pinv(runtime::MXNetArgs args, runtime::MXNetRetValue* re
 inline static void _npi_pinv_scalar_rcond(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_pinv_scalar_rcond");
-  op::PinvScalarRcondParam param;
+  op::PinvScalarRcondParam param = {};
   nnvm::NodeAttrs attrs;
   param.rcond     = args[1].operator double();
   param.hermitian = args[2].operator bool();

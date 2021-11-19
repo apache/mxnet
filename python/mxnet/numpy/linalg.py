@@ -17,6 +17,7 @@
 
 """Namespace for ops used in imperative programming."""
 
+from functools import reduce
 
 from typing import Optional, Tuple, Union
 from .multiarray import ndarray
@@ -28,7 +29,8 @@ from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
-           'tensordot', 'trace', 'matrix_transpose', 'vecdot', 'svdvals']
+           'tensordot', 'trace', 'matrix_transpose', 'vecdot', 'svdvals', 'vector_norm', 'matrix_norm']
+
 __all__ += fallback_linalg.__all__
 
 
@@ -664,6 +666,86 @@ def norm(
     array(7.745967)
     """
     return _mx_nd_np.linalg.norm(x, ord, axis, keepdims)
+
+
+def vector_norm(x: ndarray, ord=None, axis=None, keepdims=False):
+    r"""
+    Computes the vector norm of a vector (or batch of vectors) `x`.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array. Should have a floating-point data type.
+    ord : {non-zero int, inf, -inf}, optional
+        Order of the norm.
+    axis : {int, n-tuple of ints, None}, optional
+        If `axis` is an integer, it specifies the axis of `x` along which to
+        compute the vector norms.  If `axis` is a n-tuple, it specifies the
+        axes along which to compute batched vector norms. If `axis` is None,
+        the norm of the whole ndarray is returned.
+    keepdims : bool, optional
+        If this is set to True, the axes which are normed over are left in the
+        result as dimensions with size one.  With this option the result will
+        broadcast correctly against the original `x`.
+
+    Returns
+    -------
+    n : float or ndarray
+        Norm of the vector(s).
+
+    Notes
+    -----
+    `vector_norm` is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-vector-norm-x-axis-none-keepdims-false-ord-2
+    instead of an official NumPy operator.
+
+    """
+    if axis is None:
+        x = x.flatten()
+        axis = 0
+    elif isinstance(axis, tuple):
+        rest = tuple(i for i in range(x.ndim) if i not in axis)
+        newshape = axis + rest
+        x = _mx_nd_np.transpose(x, newshape).\
+            reshape((reduce(lambda a, b: a * b, [x.shape[a] for a in axis]),\
+                     *[x.shape[i] for i in rest]))
+        axis = 0
+    return _mx_nd_np.linalg.norm(x, axis=axis, keepdims=keepdims, ord=ord)
+
+
+def matrix_norm(x, ord='fro', axis=(-2, -1), keepdims=False):
+    r"""
+    Computes the matrix norm of a matrix (or a stack of matrices) `x`.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array. Should have a floating-point data type.
+    ord : {non-zero int, inf, -inf, ‘fro’, ‘nuc’}, optional
+        Order of the norm.
+    axis : {2-tuple of ints}
+        a 2-tuple which specifies the axes (dimensions) defining two-dimensional
+        matrices for which to compute matrix norms.
+    keepdims : bool, optional
+        If this is set to True, the axes which are normed over are left in the
+        result as dimensions with size one.  With this option the result will
+        broadcast correctly against the original `x`.
+
+    Returns
+    -------
+    n : float or ndarray
+        Norm of the matrix.
+
+    Notes
+    -----
+    `matrix_norm` is a standard API in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-norm-x-axis-2-1-keepdims-false-ord-fro
+    instead of an official NumPy operator.
+
+    """
+    if isinstance(axis, tuple) and len(axis) == 2:
+        return _mx_nd_np.linalg.norm(x, axis=axis, keepdims=keepdims, ord=ord)
+    raise ValueError("The axis of matrix_norm must be a 2-tuple of ints")
 
 
 def svd(a: ndarray, /) -> ndarray:

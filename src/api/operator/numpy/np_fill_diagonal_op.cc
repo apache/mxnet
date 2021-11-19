@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.fill_diagonal")
       const nnvm::Op* op = Op::Get("_npi_fill_diagonal");
       nnvm::NodeAttrs attrs;
 
-      op::NumpyFillDiagonalParam param;
+      op::NumpyFillDiagonalParam param = {};
       int num_inputs    = 1;
       NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
 
