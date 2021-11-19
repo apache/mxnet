@@ -9175,7 +9175,13 @@ def ravel(x: ndarray, /, *, order: Optional[str] = 'C') -> ndarray:
 
 
 @set_module('mxnet.numpy')
-def unravel_index(indices: Union[...], shape: Tuple[int, ...], /, *, order: str = 'C') -> ndarray: # pylint: disable=redefined-outer-name
+def unravel_index(
+        indices: Union[...],
+        shape: Tuple[int, ...],
+        /,
+        *,
+        order: str = 'C'
+) -> ndarray: # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
 

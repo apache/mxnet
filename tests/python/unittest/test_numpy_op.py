@@ -6122,7 +6122,7 @@ def test_np_linalg_matrix_norm(shape, ord, axis, hybridize, itype, keepdims):
         net.hybridize()
     a = mx.np.random.uniform(-10.0, 10.0, size=shape, dtype=itype)
     if not isinstance(axis, tuple) or not len(axis) == 2:
-        assertRaises(ValueError, np.linalg.matrix_norm, a, ord, axis, keepdims)
+        assertRaises(ValueError, np.linalg.matrix_norm, a, ord=ord, axis=axis, keepdims=keepdims)
         return
     a.attach_grad()
     with mx.autograd.record():
@@ -8148,7 +8148,7 @@ def test_np_around():
 
         def forward(self, x):
             return np.around(x, decimals=self.decimals)
-
+#689198212
     shapes = [(), (1, 2, 3), (1, 0)]
     types = ['int32', 'int64', 'float32', 'float64']
     for hybridize in [True, False]:
@@ -10326,7 +10326,7 @@ def test_np_unravel_index(ishape, rshape, dtype, hybridize):
             self._order = order
 
         def forward(self, a):
-            return np.unravel_index(a, self._shape, self._order)
+            return np.unravel_index(a, self._shape, order=self._order)
 
 
     rtol = 1e-2 if dtype == np.float16 else 1e-3
