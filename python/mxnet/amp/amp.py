@@ -336,7 +336,7 @@ def init(target_dtype='float16', target_precision_ops=None,
         log_msg = "Using AMP"
         if layout_optimization:
             log_msg += "\n - layout optimization: enabled"
-            check_call(_LIB.MXInitializeALM())
+            check_call(_LIB.MXSetOptimizeLayout(ctypes.c_bool(True)))
         logging.info(log_msg)
         if target_dtype == "bfloat16":
             target_dtype = bfloat16

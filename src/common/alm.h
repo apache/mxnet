@@ -38,7 +38,7 @@ namespace mxnet {
 namespace alm {
 
 /*!
- *  \brief Struct connects MXInitializeALM function from c_api and ALM.
+ *  \brief A singleton flag, set and read by MXSetOptimizeLayout and MXGetOptimizeLayout
  */
 struct ALMParams {
   bool optimize = false;

@@ -4006,8 +4006,14 @@ int MXCUDAProfilerStop() {
   API_END();
 }
 
-int MXInitializeALM() {
+int MXSetOptimizeLayout(bool val) {
   API_BEGIN();
-  mxnet::alm::ALMParams::get().optimize = true;
+  mxnet::alm::ALMParams::get().optimize = val;
+  API_END();
+}
+
+int MXGetOptimizeLayout(bool* val) {
+  API_BEGIN();
+  *val = mxnet::alm::ALMParams::get().optimize;
   API_END();
 }
