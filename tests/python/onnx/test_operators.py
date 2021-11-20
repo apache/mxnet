@@ -24,7 +24,7 @@ import pytest
 import tempfile
 
 
-def def_model(namespace, op_name, dummy_input=False, **params):
+def def_model(namespace, op_name, dummy_input=False, *args, **kwargs):
     class Model(HybridBlock):
         def __init__(self, **kwargs):
             super(Model, self).__init__(**kwargs)
@@ -33,9 +33,9 @@ def def_model(namespace, op_name, dummy_input=False, **params):
             names = op_name.split('.')
             func = getattr(namespace, names[-1])
             if dummy_input:
-                return func(**params), inputs[0]
+                return func(*args, **kwargs), inputs[0]
             else:
-                return func(*inputs, **params)
+                return func(*inputs, *args, **kwargs)
     return Model
 
 def def_model_from_func(func, dummy_input=False, **params):
@@ -170,7 +170,7 @@ def test_onnx_export_np_arange(tmp_path, dtype, params):
         step = int(step)
         if step == 0:
             step = 1
-    M = def_model(mx.np, 'arange', dummy_input=True, start=start, stop=stop, step=step, dtype=dtype)
+    M = def_model(mx.np, 'arange', True, start, stop=stop, step=step, dtype=dtype)
     x = mx.np.array([1], dtype='float32')
     op_export_test('arange', M, [x], tmp_path, dummy_input=True)
 
