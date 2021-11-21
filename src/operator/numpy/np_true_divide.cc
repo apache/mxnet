@@ -30,7 +30,7 @@ namespace op {
 int TrueDivideOutType(int ltype, int rtype) {
   if (common::is_float(ltype) && common::is_float(rtype)) {
     // If both inputs are float, return the one with the higher precision
-    return common::get_more_precise_type(ltype, rtype);
+    return common::type_promotion(ltype, rtype);
   } else if (common::is_float(ltype) || common::is_float(rtype)) {
     // If only one of the inputs is float, return that float type
     return (common::is_float(ltype)) ? ltype : rtype;
@@ -74,6 +74,10 @@ NNVM_REGISTER_OP(_npi_true_divide)
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
                                     })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
     .set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_div"})
     .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")

@@ -3757,6 +3757,8 @@ def ceil(x, out=None, **kwargs):
     >>> a
     array(4.)
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.ceil, _np.ceil, out=out, **kwargs)
 
 
@@ -3796,6 +3798,8 @@ def floor(x, out=None, **kwargs):
     >>> a
     array(3.)
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.floor, _np.floor, out=out, **kwargs)
 
 
@@ -3941,6 +3945,8 @@ def trunc(x, out=None, **kwargs):
     >>> np.trunc(a)
     array([-1., -1., -0.,  0.,  1.,  1.,  2.])
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.trunc, _np.trunc, out=out, **kwargs)
 
 

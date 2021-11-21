@@ -419,6 +419,60 @@ struct AccType<mshadow::half::half_t> {
       LOG(FATAL) << "Unknown type enum " << type;  \
   }
 
+#define MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(type, DType, ...) \
+  switch (type) {                                             \
+    case mshadow::kFloat32: {                                 \
+      LOG(FATAL) << "This operation only support "            \
+                    "integer and bool types, not float32";    \
+    } break;                                                  \
+    case mshadow::kFloat64: {                                 \
+      LOG(FATAL) << "This operation only support "            \
+                    "integer and bool types, not float64";    \
+    } break;                                                  \
+    case mshadow::kFloat16: {                                 \
+      LOG(FATAL) << "This operation only support "            \
+                    "integer and boo; types, not float16";    \
+    } break;                                                  \
+    case mshadow::kUint8: {                                   \
+      typedef uint8_t DType;                                  \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kInt8: {                                    \
+      typedef int8_t DType;                                   \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kInt32: {                                   \
+      typedef int32_t DType;                                  \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kInt64: {                                   \
+      typedef int64_t DType;                                  \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kInt16: {                                   \
+      typedef int16_t DType;                                  \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kUint16: {                                  \
+      typedef uint16_t DType;                                 \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kUint32: {                                  \
+      typedef uint32_t DType;                                 \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kUint64: {                                  \
+      typedef uint64_t DType;                                 \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    case mshadow::kBool: {                                    \
+      typedef bool DType;                                     \
+      { __VA_ARGS__ }                                         \
+    } break;                                                  \
+    default:                                                  \
+      LOG(FATAL) << "Unknown type enum " << type;             \
+  }
+
 #define MXNET_INT_TYPE_SWITCH_EXT(type, DType, ...) \
   switch (type) {                                   \
     case mshadow::kFloat32: {                       \
@@ -466,8 +520,8 @@ struct AccType<mshadow::half::half_t> {
       { __VA_ARGS__ }                               \
     } break;                                        \
     case mshadow::kBool: {                          \
-      typedef bool DType;                           \
-      { __VA_ARGS__ }                               \
+      LOG(FATAL) << "This operation only support "  \
+                    "integer types, not bool type"; \
     } break;                                        \
     default:                                        \
       LOG(FATAL) << "Unknown type enum " << type;   \

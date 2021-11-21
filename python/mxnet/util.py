@@ -23,7 +23,7 @@ import threading
 
 from struct import calcsize
 from .base import (_LIB, check_call, c_str, py_str,
-                   numeric_types, integer_types,
+                   numeric_types, integer_types, long,
                    _MAX_VALUE_64_BIT_UNSIGNED_,
                    _MAX_VALUE_64_BIT_SIGNED_,
                    _MAX_VALUE_FLOAT32_REPRESENT_)
@@ -1339,7 +1339,7 @@ def dtype_from_number(number):
     assert isinstance(number, numeric_types),\
         "The input number should be either int for float types"
     import numpy as _np
-    if isinstance(number, integer_types):
+    if isinstance(number, (int, long)):
         if number > _MAX_VALUE_64_BIT_UNSIGNED_:
             raise OverflowError("Integer out of bounds")
         if number > _MAX_VALUE_64_BIT_SIGNED_:
@@ -1348,8 +1348,14 @@ def dtype_from_number(number):
             return _np.int64
         else:
             return _np.int32
-    else:
-        if abs(number) > _MAX_VALUE_FLOAT32_REPRESENT_:
+    elif isinstance(number, float):
+        if abs(number) > _MAX_VALUE_FLOAT32_REPRESENT_ or \
+            ((not _np.isnan(number)) and \
+                (_np.float32(number) == int(number)) and \
+                    (number != int(number))):
             return _np.float64
         else:
             return _np.float64 if is_np_default_dtype() else _np.float32
+    elif isinstance(number, _np.generic):
+        return number.dtype
+    raise TypeError('type {} not supported'.format(str(type(number))))
