@@ -203,7 +203,7 @@ def test_fc_int8_and_fp32_outputs(data_shape, flatten):
 
 
 @mx.util.use_np
-@pytest.mark.parametrize('identity_node', ['dropout', 'copy'])#DATA_SHAPE)
+@pytest.mark.parametrize('identity_node', ['dropout', 'copy'])
 def test_fc_identity_eltwise(identity_node):
   class FCIdentityEltwise(nn.HybridBlock):
     def __init__(self, identity_node, **kwargs):
