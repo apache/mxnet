@@ -89,7 +89,7 @@ class ConvBN(nn.HybridBlock):
     def forward(self, x):
         y = self.conv2d(x)
         y = self.bn(y)
-        return y * 2
+        return y * 2 + 10
 
 
 class PoolConv(nn.HybridBlock):
@@ -110,12 +110,25 @@ def test_optimize_layout(np_shape_array, amp_init, model):
     m.initialize(ctx=mx.gpu())
     m.hybridize()
     x = mx.np.ones((32, 2, 20, 20), ctx=mx.gpu())
-    y = m(x)
-    params = {k:v.data() for k, v in m.collect_params().items()}
+    m(x)
+    param_init = {k:v.data().copy() for k, v in m.collect_params().items()}
+    for v in m.collect_params().values():
+        v.data().attach_grad()
+    with mx.autograd.record():
+        y = m(x)
+    y.backward()
     with optimize_layout():
         m2 = model()
         m2.initialize(ctx=mx.gpu())
-        m2.load_dict(params, device=mx.gpu())
+        m2.load_dict(param_init, device=mx.gpu())
         m2.hybridize()
-        y2 = m2(x)
+        for v in m2.collect_params().values():
+            v.data().attach_grad()
+        with mx.autograd.record():
+            y2 = m2(x)
+        y2.backward()
     assert_allclose(y2, y)
+    for k, v in m.collect_params().items():
+        if v.grad_req == 'null':
+            continue
+        assert_allclose(m2.collect_params()[k].grad(), v.grad())
