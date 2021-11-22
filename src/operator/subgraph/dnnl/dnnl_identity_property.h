@@ -38,11 +38,8 @@ namespace mxnet {
 namespace op {
 
 class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
-  enum class InStatus { kFail = 0, kStart, kSuccess };
-
  private:
   std::vector<const BiDirectedNode*> matched_list_;
-  InStatus in_status{};
 
  public:
   bool Select(const BiDirectedNode& seed_node,
@@ -60,7 +57,6 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
     }
 
     if (status) {
-      in_status = InStatus::kStart;
       matched_list_.clear();
       matched_list_.emplace_back(&seed_node);
       return true;
@@ -69,20 +65,11 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
   }
 
   bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
-    if (in_status == InStatus::kFail || in_status == InStatus::kSuccess ||
-        input_node.node->is_variable()) {
+    if (input_node.node->is_variable()) {
       return false;
-    }
-
-    switch (in_status) {
-      case InStatus::kStart:
-        if (input_node.node->op()) {
-          in_status = InStatus::kSuccess;
-          matched_list_.emplace_back(&input_node);
-          return true;
-        }
-      default:
-        return false;
+    } else if (input_node.node->op()) {
+      matched_list_.emplace_back(&input_node);
+      return true;
     }
     return false;
   }
@@ -92,17 +79,11 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
   }
 
   std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
-    if (in_status == InStatus::kFail || in_status != InStatus::kSuccess) {
-      return std::vector<BiDirectedNode*>(0);
+    // candidates should contain only two nodes - custom node and identity node
+    if (candidates.size() == 2 && candidates.size() == matched_list_.size()) {
+      return candidates;
     } else {
-      std::vector<BiDirectedNode*> ret;
-      for (auto i : matched_list_) {
-        auto non_const_i = const_cast<BiDirectedNode*>(i);
-        if (std::find(candidates.begin(), candidates.end(), non_const_i) != candidates.end()) {
-          ret.push_back(non_const_i);
-        }
-      }
-      return ret;
+      return std::vector<BiDirectedNode*>(0);
     }
   }
 
@@ -115,7 +96,7 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
 };
 
 inline bool IsIdentityNode(const nnvm::ObjectPtr node) {
-  return node->op() == Op::Get("_npi_copy") || node->op() == Op::Get("Dropout");
+  return node->op() && (node->op() == Op::Get("_npi_copy") || node->op() == Op::Get("Dropout"));
 }
 
 class SgDNNLIdentityProperty : public SubgraphProperty {
@@ -133,9 +114,9 @@ class SgDNNLIdentityProperty : public SubgraphProperty {
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
     nnvm::NodeEntry identity_node_entry;
-    for (auto nentry : sym.outputs) {
-      if (nentry.node->op() && IsIdentityNode(nentry.node)) {
-        identity_node_entry = nentry;
+    for (auto entry : sym.outputs) {
+      if (IsIdentityNode(entry.node)) {
+        identity_node_entry = entry;
       }
     }
 
@@ -145,7 +126,7 @@ class SgDNNLIdentityProperty : public SubgraphProperty {
 
     nnvm::ObjectPtr org_node;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (!IsIdentityNode(node) && node->op()) {
+      if (!IsIdentityNode(node)) {
         org_node = node;
       }
     });
@@ -153,7 +134,7 @@ class SgDNNLIdentityProperty : public SubgraphProperty {
     // Create copy of original node
     nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs          = org_node->attrs;
-    CHECK(n->attrs.op);
+    CHECK(n->op());
     n->op()->attr_parser(&(n->attrs));
     return n;
   }
