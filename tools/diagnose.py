@@ -96,8 +96,8 @@ def check_mxnet():
         print('Version      :', mxnet.__version__)
         mx_dir = os.path.dirname(mxnet.__file__)
         print('Directory    :', mx_dir)
-        print('Branch   :', mxnet.base.get_branch())
-        print('Commit Hash   :', mxnet.base.get_commit_hash())
+        print('Branch       :', mxnet.base.get_branch())
+        print('Commit Hash  :', mxnet.base.get_commit_hash())
         print('Library      :', mxnet.libinfo.find_lib_path())
         try:
             print('Build features:')

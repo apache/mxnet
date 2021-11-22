@@ -968,3 +968,4 @@ def get_commit_hash():
     out = ctypes.c_char_p()
     check_call(_LIB.MXGetCommitHash(ctypes.byref(out)))
     return py_str(out.value)
+    
