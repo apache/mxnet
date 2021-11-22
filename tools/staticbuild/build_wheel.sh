@@ -18,7 +18,6 @@
 # under the License.
 
 # This script builds the wheel for binary distribution and performs sanity check.
-echo $(git rev-parse HEAD) >> python/mxnet/COMMIT_HASH
 cd python/
 
 # Make wheel for testing
