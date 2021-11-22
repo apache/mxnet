@@ -140,7 +140,8 @@ bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
                         std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(
+      attrs, dev_mask, /*support_dnnl*/ true, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -930,7 +931,39 @@ NNVM_REGISTER_OP(_backward_reverse)
                                 })
     .set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>);
 
+#if MXNET_USE_ONEDNN == 1
+static void StackForwardEx(const nnvm::NodeAttrs& attrs,
+                           const OpContext& op_ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs) {
+  CHECK(!inputs.empty());
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) {
+    return;
+  }
+
+  if (SupportDNNLStack(inputs)) {
+    DNNL_OPCHECK_INIT(/*is backward*/ false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLStackForward, attrs, op_ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(StackOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(StackOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  }
+}
+
+inline static bool StackInferStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif  // MXNET_USE_ONEDNN == 1
+
 NNVM_REGISTER_OP(stack)
+    .add_alias("_npi_stack")
     .describe(R"code(Join a sequence of arrays along a new axis.
 The axis parameter specifies the index of the new axis in the dimensions of the
 result. For example, if axis=0 it will be the first dimension and if axis=-1 it
@@ -965,6 +998,15 @@ Examples::
     .set_attr<mxnet::FInferShape>("FInferShape", StackOpShape)
     .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
     .set_attr<FCompute>("FCompute<cpu>", StackOpForward<cpu>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", StackForwardEx)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FInferStorageType>("FInferStorageType", StackInferStorageType)
+#endif
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_stack"})
     .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to stack")
     .add_arguments(StackParam::__FIELDS__());
