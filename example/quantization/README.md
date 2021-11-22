@@ -20,11 +20,11 @@
 
 # Model Quantization with Calibration Examples
 
-This folder contains examples of quantizing a FP32 model with Intel® oneAPI Deep Neural Network Library (oneDNN) to (U)INT8 model.
+This folder contains examples of quantizing a FP32 model with oneAPI Deep Neural Network Library (oneDNN) to (U)INT8 model.
 
-<h2 id="1">Model Quantization with Intel® oneDNN</h2>
+<h2 id="1">Model Quantization with oneDNN</h2>
 
-Intel® oneDNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html).
+oneDNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html).
 
 ```
 usage: python imagenet_gen_qsym_onednn.py [-h] [--model MODEL] [--epoch EPOCH]
@@ -38,7 +38,7 @@ usage: python imagenet_gen_qsym_onednn.py [-h] [--model MODEL] [--epoch EPOCH]
                                           [--quantized-dtype {auto,int8,uint8}]
                                           [--quiet]
 
-Generate a calibrated quantized model from a FP32 model with Intel oneDNN support
+Generate a calibrated quantized model from a FP32 model with oneDNN support
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -87,7 +87,7 @@ optional arguments:
   --quiet               suppress most of log
 ```
 
-A new benchmark script `launch_inference_onednn.sh` has been designed to launch performance benchmark for FP32 or INT8 image-classification models with Intel® oneDNN.
+A new benchmark script `launch_inference_onednn.sh` has been designed to launch performance benchmark for FP32 or INT8 image-classification models with oneDNN.
 ```
 usage: bash ./launch_inference_onednn.sh -s symbol_file [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance] [-h]
 

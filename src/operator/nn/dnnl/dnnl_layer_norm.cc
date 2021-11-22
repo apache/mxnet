@@ -112,7 +112,7 @@ inline dnnl::memory::desc GetMeanVarDesc(const dnnl::memory::data_type& dtype,
 }
 
 inline dnnl::memory GetScaleShiftMem(const NDArray& gamma, const NDArray& beta) {
-  // OneDNN takes gamma and beta as one SCALE_SHIFT tensor when both scale and shift are used. In
+  // oneDNN takes gamma and beta as one SCALE_SHIFT tensor when both scale and shift are used. In
   // mxnet scale is called gamma and shift is called beta.
   constexpr size_t gammaAndBeta = 2;
   CHECK_EQ(gamma.shape()[0], beta.shape()[0]);

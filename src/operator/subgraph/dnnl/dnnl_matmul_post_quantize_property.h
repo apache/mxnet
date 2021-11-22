@@ -136,7 +136,7 @@ class SgDNNLMatmulPostQuantizeProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL Matmul post-quantization optimization pass";
+    static const std::string& name = "oneDNN Matmul post-quantization optimization pass";
     auto property                  = std::make_shared<SgDNNLMatmulPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);

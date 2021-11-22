@@ -164,7 +164,7 @@ TEST(DNNL_NDArray, GetDataReorder) {
         printf("Init array (");
         for (size_t i = 0; i < s.ndim(); i++)
           printf("%ld, ", s[i]);
-        printf(") with DNNL memory (");
+        printf(") with oneDNN memory (");
         for (int i = 0; i < md.data.ndims; i++)
           printf("%ld, ", md.data.dims[i]);
         printf("), format: %d\n", static_cast<int>(GetDefaultFormat(md)));
