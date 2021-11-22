@@ -169,6 +169,59 @@ void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<cpu>* s,
   }
 }
 
+#if MXNET_USE_ONEDNN == 1
+void AdaptiveAvgPoolOpBackwardExCPU(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+
+  // Pooling does not currently support working with views
+  if (inputs[0].IsView() || outputs[0].IsView()) {
+    FallBackCompute(AdaptiveAvgPoolOpBackward<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+
+  if (SupportDNNLPooling(param, inputs[0])) {
+    const NDArray& out_grad  = inputs[0];
+    const NDArray* workspace = nullptr;
+    const NDArray* in_data   = nullptr;
+    if (DNNLRequireWorkspace(param)) {
+      // The first two elements are the gradient of the outputs in forward.
+      // The third is the input of forward.
+      // The fourth and the fifth are the outputs of forward.
+      CHECK_EQ(inputs.size(), 5U);
+      in_data   = &inputs[2];
+      workspace = &inputs[4];
+    } else {
+      CHECK_EQ(inputs.size(), 3U);
+      in_data = &inputs[1];
+    }
+    const NDArray& in_grad = outputs[0];
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    DNNLPoolingGradCompute(ctx, param, out_grad, *in_data, workspace, req[0], in_grad, true);
+    DNNL_OPCHECK_RUN(AdaptiveAvgPoolOpBackward<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  FallBackCompute(AdaptiveAvgPoolOpBackward<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs& attrs,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int>* in_attrs,
+                                              std::vector<int>* out_attrs) {
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), GetNumBackInputs(param));
+  CHECK_EQ(out_attrs->size(), 1);
+  bool support_dnnl_pool = SupportDNNLPooling(param);
+
+  return DNNLStorageType(
+      attrs, dev_mask, support_dnnl_pool, dispatch_mode, in_attrs, out_attrs);
+}
+#endif
+
 template <typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
                                     const std::vector<TBlob>& input,
@@ -289,11 +342,34 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
     .add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
-    .set_attr_parser(ParamParser<PoolingParam>)
     .set_num_inputs(1)
     .set_num_outputs(1)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-    .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpBackward<cpu>);
+    .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpBackward<cpu>)
+#if MXNET_USE_ONEDNN == 1
+    // Different backend requires different FInplaceOption
+    .set_attr<nnvm::FInplaceOption>(
+        "FInplaceOption",
+        [](const NodeAttrs& attrs) {
+          const PoolingParam& param = This conversation was marked as resolved by piotrwolinski -
+                                      intel Show conversation nnvm::get<PoolingParam>(attrs.parsed);
+          if (DNNLRequireWorkspace(param) && SupportDNNLPooling(param))
+            return std::vector<std::pair<int, int>>{{1, 0}};
+        })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FInferStorageType>("FInferStorageType", BackwardPoolingStorageType)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", AdaptiveAvgPoolOpBackwardExCPU)
+#else
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>();
+                                    })
+#endif
+    .set_attr_parser(ParamParser<PoolingParam>);
 
 }  // namespace op
 }  // namespace mxnet
