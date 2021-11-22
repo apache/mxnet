@@ -233,17 +233,28 @@ void InitPoolingPrimitiveParams(const PoolingParam& param,
 dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& param,
                                                          const bool is_train,
                                                          const dnnl::memory::desc& data_md,
-                                                         const dnnl::memory::desc& out_md) {
-  CHECK(param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3)
-      << "Not Implemented";
+                                                         const dnnl::memory::desc& out_md,
+                                                         const bool use_adaptive_pooling) {
+  CHECK(param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3) << "Not Implemented";
 
   const int kernel_ndims = param.kernel.ndim();
   dnnl::memory::dims kernel(kernel_ndims);
   dnnl::memory::dims strides(kernel_ndims);
   dnnl::memory::dims pad_l(kernel_ndims);
   dnnl::memory::dims pad_r(kernel_ndims);
+  if (use_adaptive_pooling) {
+    key.AddSign(use_adaptive_pooling);
+  }
 
-  InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+  if (use_adaptive_pooling) {
+    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data, output);
+    dnnl::memory::validate_dims(kernel);
+    dnnl::memory::validate_dims(strides);
+    dnnl::memory::validate_dims(pad_l);
+    dnnl::memory::validate_dims(pad_r);
+  } else {
+    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+  }
 
   const dnnl::algorithm alg = GetDNNLPoolingAlgorithm(param);
   dnnl::prop_kind kind      = dnnl::prop_kind::forward_scoring;
@@ -333,7 +344,8 @@ const dnnl::pooling_backward& DNNLPoolingBwd::GetBwd() {
 DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
                               const NDArray& in_data,
                               const NDArray& in_grad,
-                              const NDArray& out_grad) {
+                              const NDArray& out_grad
+                              const bool use_adaptive_pooling) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLPoolingSignature, DNNLPoolingBwd, OpHash> pooling_bwds;
 #else
@@ -346,6 +358,9 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
   key.AddSign(in_data);
   key.AddSign(in_grad);
   key.AddSign(out_grad);
+  if (use_adaptive_pooling) {
+    key.AddSign(use_adaptive_pooling);
+  }
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
@@ -371,7 +386,15 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     dnnl::memory::dims pad_l(kernel_ndims);
     dnnl::memory::dims pad_r(kernel_ndims);
 
-    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+    if (use_adaptive_pooling) {
+      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, in_data, out_grad);
+      dnnl::memory::validate_dims(kernel);
+      dnnl::memory::validate_dims(strides);
+      dnnl::memory::validate_dims(pad_l);
+      dnnl::memory::validate_dims(pad_r);
+    } else {
+      InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+    }
 
     // use dst_md as diff_dst_md with any format
     auto bwd_desc =
@@ -390,14 +413,15 @@ void DNNLPoolingGradCompute(const OpContext& ctx,
                             const NDArray& in_data,
                             const NDArray* workspace,
                             const OpReqType req,
-                            const NDArray& in_grad) {
+                            const NDArray& in_grad,
+                            const bool use_adaptive_pooling) {
   if (req == kNullOp) {
     return;
   }
 
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
-  auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad);
+  auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad, use_adaptive_pooling);
   auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
   auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req);
   dnnl_args_map_t args = {

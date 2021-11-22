@@ -186,7 +186,8 @@ void DNNLPoolingGradCompute(const OpContext& ctx,
                             const NDArray& in_data,
                             const NDArray* workspace,
                             const OpReqType req,
-                            const NDArray& in_grad);
+                            const NDArray& in_grad,
+                            const bool use_adaptive_pooling);
 
 DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                               const bool is_train,
