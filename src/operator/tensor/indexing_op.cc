@@ -95,7 +95,7 @@ struct TakeNonzeroAxisCPU {
       }
       size_t in_offset  = i * outer_dim_stride + index * axis_dim_stride;
       size_t out_offset = (i * idx_size + j) * axis_dim_stride;
-      #pragma GCC diagnostic push
+#pragma GCC diagnostic push
 #if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
