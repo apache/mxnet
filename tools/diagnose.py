@@ -96,6 +96,8 @@ def check_mxnet():
         print('Version      :', mxnet.__version__)
         mx_dir = os.path.dirname(mxnet.__file__)
         print('Directory    :', mx_dir)
+        print('Branch   :', mxnet.base.get_branch())
+        print('Commit Hash   :', mxnet.base.get_commit_hash())
         commit_hash = os.path.join(mx_dir, 'COMMIT_HASH')
         if os.path.exists(commit_hash):
             with open(commit_hash, 'r') as f:
