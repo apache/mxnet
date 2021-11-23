@@ -291,7 +291,7 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
       workspace = &outputs[1];
     }
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
-    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
+    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, false);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
