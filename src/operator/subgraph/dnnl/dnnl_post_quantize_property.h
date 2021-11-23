@@ -121,7 +121,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
           if (n.outputs.size() > 1) {
             // check if requantize have other outputs than dequantize
             // if it has we can't fuse dequantize
-            for (const auto kv : n.outputs) {
+            for (const auto& kv : n.outputs) {
               const auto& node = kv.first;
               if (node->op() != Op::Get("_contrib_dequantize")) {
                 status = SelectStatus::kSuccess;
