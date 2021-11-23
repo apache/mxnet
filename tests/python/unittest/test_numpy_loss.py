@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as onp
 from mxnet import gluon, autograd
-from mxnet.test_utils import assert_almost_equal, default_context, use_np
+from mxnet.test_utils import assert_almost_equal, default_device, use_np
 from common import xfail_when_nonstandard_decimal_separator
 import pytest
 
@@ -217,13 +217,13 @@ def test_sdml_loss():
     # Init model and trainer
     sdml_loss = gluon.loss.SDMLLoss()
     model = gluon.nn.Dense(DIM, activation='tanh') # Simple NN encoder
-    model.initialize(mx.init.Xavier(), ctx=mx.current_context())
+    model.initialize(mx.init.Xavier(), device=mx.current_device())
     trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate' : 0.1})
 
-    for i in range(EPOCHS): # Training loop
+    for _ in range(EPOCHS): # Training loop
         data_iter.reset()
         for iter_batch in data_iter:
-            batch = [datum.as_in_ctx(mx.current_context()).as_np_ndarray() for datum in iter_batch.data]
+            batch = [datum.to_device(mx.current_device()).as_np_ndarray() for datum in iter_batch.data]
             with autograd.record():
                 data, pos = batch
                 z_data, z_pos = model(data), model(pos)

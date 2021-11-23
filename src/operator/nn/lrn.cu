@@ -18,24 +18,19 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file lrn.cu
  * \brief
  * \author Bing Xu
-*/
+ */
 
 #include "./lrn-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(LRN)
-.set_attr<FCompute>("FCompute<gpu>", LRNCompute<gpu>);
+NNVM_REGISTER_OP(LRN).set_attr<FCompute>("FCompute<gpu>", LRNCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_LRN)
-.set_attr<FCompute>("FCompute<gpu>", LRNGradCompute<gpu>);
+NNVM_REGISTER_OP(_backward_LRN).set_attr<FCompute>("FCompute<gpu>", LRNGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-
-

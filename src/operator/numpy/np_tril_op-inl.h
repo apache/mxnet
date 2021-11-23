@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_tril_op-inl.h
  * \brief Function definition of the tril (lower triangle of an array) op
  */
@@ -40,12 +39,11 @@ namespace op {
 struct TrilParam : public dmlc::Parameter<TrilParam> {
   int k;
   DMLC_DECLARE_PARAMETER(TrilParam) {
-    DMLC_DECLARE_FIELD(k)
-      .set_default(0)
-      .describe("Diagonal in question. The default is 0. "
-                "Use k>0 for diagonals above the main diagonal, "
-                "and k<0 for diagonals below the main diagonal. "
-                "If input has shape (S0 S1) k must be between -S0 and S1");
+    DMLC_DECLARE_FIELD(k).set_default(0).describe(
+        "Diagonal in question. The default is 0. "
+        "Use k>0 for diagonals above the main diagonal, "
+        "and k<0 for diagonals below the main diagonal. "
+        "If input has shape (S0 S1) k must be between -S0 and S1");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream k_s;
@@ -55,8 +53,8 @@ struct TrilParam : public dmlc::Parameter<TrilParam> {
 };
 
 inline bool TrilOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector* in_attrs,
-                             mxnet::ShapeVector* out_attrs) {
+                        mxnet::ShapeVector* in_attrs,
+                        mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -82,11 +80,14 @@ inline bool TrilOpShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
-template<int req>
+template <int req>
 struct tril1Dforward {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* data,
-                                  mshadow::Shape<2> oshape, int k) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out,
+                                  const DType* data,
+                                  mshadow::Shape<2> oshape,
+                                  int k) {
     using namespace mxnet_op;
 
     const index_t row_id = i / oshape[1];
@@ -99,15 +100,18 @@ struct tril1Dforward {
   }
 };
 
-template<int req>
+template <int req>
 struct tril1Dbackward {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* data,
-                                  mshadow::Shape<1> oshape, int k) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out,
+                                  const DType* data,
+                                  mshadow::Shape<1> oshape,
+                                  int k) {
     using namespace mxnet_op;
-    auto m = oshape[0];
+    auto m     = oshape[0];
     auto start = (i > k) ? (i - k) : 0;
-    DType res = 0;
+    DType res  = 0;
     for (auto y = start; y < m; y++) {
       res += data[y * m + i];
     }
@@ -115,11 +119,14 @@ struct tril1Dbackward {
   }
 };
 
-template<int req>
+template <int req>
 struct tril2D {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* data,
-                                  mshadow::Shape<2> oshape, int k) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out,
+                                  const DType* data,
+                                  mshadow::Shape<2> oshape,
+                                  int k) {
     using namespace mxnet_op;
 
     const index_t row_id = i / oshape[1];
@@ -132,11 +139,14 @@ struct tril2D {
   }
 };
 
-template<int req>
+template <int req>
 struct tril3D {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* data,
-                                  mshadow::Shape<3> oshape, int k) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out,
+                                  const DType* data,
+                                  mshadow::Shape<3> oshape,
+                                  int k) {
     using namespace mxnet_op;
 
     const index_t row_id = i % (oshape[1] * oshape[2]) / oshape[2];
@@ -149,12 +159,12 @@ struct tril3D {
   }
 };
 
-template<typename xpu, bool back>
+template <typename xpu, bool back>
 void TrilOpProcess(const TBlob& in_data,
                    const TBlob& out_data,
                    index_t dsize,
                    const TrilParam& param,
-                   mxnet_op::Stream<xpu> *s,
+                   mxnet_op::Stream<xpu>* s,
                    const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow;
@@ -165,17 +175,23 @@ void TrilOpProcess(const TBlob& in_data,
   if (ishape.ndim() == 2 && oshape.ndim() == 2) {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<tril2D<req_type>, xpu>::Launch(
-            s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-            Shape2(oshape[0], oshape[1]), param.k);
+        Kernel<tril2D<req_type>, xpu>::Launch(s,
+                                              dsize,
+                                              out_data.dptr<DType>(),
+                                              in_data.dptr<DType>(),
+                                              Shape2(oshape[0], oshape[1]),
+                                              param.k);
       });
     });
   } else if (ishape.ndim() > 2) {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<tril3D<req_type>, xpu>::Launch(
-            s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-            oshape.FlatTo3D(oshape.ndim() - 2), param.k);
+        Kernel<tril3D<req_type>, xpu>::Launch(s,
+                                              dsize,
+                                              out_data.dptr<DType>(),
+                                              in_data.dptr<DType>(),
+                                              oshape.FlatTo3D(oshape.ndim() - 2),
+                                              param.k);
       });
     });
   } else {
@@ -183,19 +199,21 @@ void TrilOpProcess(const TBlob& in_data,
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         if (back) {
           Kernel<tril1Dbackward<req_type>, xpu>::Launch(
-              s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-              Shape1(oshape[0]), param.k);
+              s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(), Shape1(oshape[0]), param.k);
         } else {
-          Kernel<tril1Dforward<req_type>, xpu>::Launch(
-              s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-              Shape2(oshape[0], oshape[1]), param.k);
+          Kernel<tril1Dforward<req_type>, xpu>::Launch(s,
+                                                       dsize,
+                                                       out_data.dptr<DType>(),
+                                                       in_data.dptr<DType>(),
+                                                       Shape2(oshape[0], oshape[1]),
+                                                       param.k);
         }
       });
     });
   }
 }
 
-template<typename xpu>
+template <typename xpu>
 void TrilOpForward(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
@@ -206,15 +224,15 @@ void TrilOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
+  Stream<xpu>* s         = ctx.get_stream<xpu>();
+  const TBlob& in_data   = inputs[0];
+  const TBlob& out_data  = outputs[0];
   const TrilParam& param = nnvm::get<TrilParam>(attrs.parsed);
 
   TrilOpProcess<xpu, false>(in_data, out_data, out_data.Size(), param, s, req);
 }
 
-template<typename xpu>
+template <typename xpu>
 void TrilOpBackward(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
                     const std::vector<TBlob>& inputs,
@@ -224,10 +242,10 @@ void TrilOpBackward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
 
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
+  const TBlob& in_data   = inputs[0];
+  const TBlob& out_data  = outputs[0];
   const TrilParam& param = nnvm::get<TrilParam>(attrs.parsed);
 
   TrilOpProcess<xpu, true>(in_data, out_data, out_data.Size(), param, s, req);

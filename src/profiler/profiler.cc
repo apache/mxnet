@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file profiler.cc
  * \brief implements profiler
  */
@@ -44,10 +43,10 @@ namespace profiler {
 ProfileDomain ProfileOperator::domain_("operator");
 
 Profiler::Profiler()
-  : state_(kNotRunning)
-    , enable_output_(false)
-    , filename_("profile.json")
-    , profile_dump_count_(0) {
+    : state_(kNotRunning),
+      enable_output_(false),
+      filename_("profile.json"),
+      profile_dump_count_(0) {
   this->init_time_ = ProfileStat::NowInMicrosec();
 
   this->cpu_num_ = 0;
@@ -62,7 +61,7 @@ Profiler::Profiler()
   }
 #if MXNET_USE_CUDA
   int kMaxNumGpus = 32;
-  this->gpu_num_ = kMaxNumGpus;
+  this->gpu_num_  = kMaxNumGpus;
 #else
   this->gpu_num_ = 0;
 #endif
@@ -80,7 +79,7 @@ Profiler::Profiler()
 
   this->mode_ = dmlc::GetEnv("MXNET_PROFILER_MODE", this->mode_);
   if (dmlc::GetEnv("MXNET_PROFILER_AUTOSTART", 0)) {
-    this->state_ = ProfilerState::kRunning;
+    this->state_         = ProfilerState::kRunning;
     this->enable_output_ = true;
     // Since we want to avoid interfering with pure-VTune analysis runs, for not set,
     // vtune will be recording based upon whether "Start" or "STart Paused" was selected
@@ -97,7 +96,7 @@ Profiler::~Profiler() {
   }
 }
 
-Profiler* Profiler::Get(std::shared_ptr<Profiler> *sp) {
+Profiler* Profiler::Get(std::shared_ptr<Profiler>* sp) {
   static std::mutex mtx;
   static std::shared_ptr<Profiler> prof = nullptr;
   if (!prof) {
@@ -131,7 +130,7 @@ void Profiler::SetConfig(int mode,
                          bool aggregate_stats) {
   CHECK(!continuous_dump || dump_period > 0);
   std::lock_guard<std::recursive_mutex> lock{this->m_};
-  this->mode_ = mode;
+  this->mode_     = mode;
   this->filename_ = output_filename;
   // Remove the output file to start
   if (!this->filename_.empty()) {
@@ -152,9 +151,9 @@ void Profiler::SetConfig(int mode,
  * Docs for tracing format:
  * https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
  */
-void Profiler::EmitPid(std::ostream *os, const std::string& name, size_t pid) {
+void Profiler::EmitPid(std::ostream* os, const std::string& name, size_t pid) {
   (*os) << "        {\n"
-        << R"(            "ph": ")" << static_cast<char>(ProfileStat::kMetadata) <<  "\",\n"
+        << R"(            "ph": ")" << static_cast<char>(ProfileStat::kMetadata) << "\",\n"
         << "            \"args\": {\n"
         << R"(                "name": ")" << name << "\"\n"
         << "            },\n"
@@ -173,11 +172,11 @@ void Profiler::DumpProfile(bool perform_cleanup) {
   }
   std::ofstream file;
   const bool first_pass = ++profile_dump_count_ == 1;
-  const bool last_pass = perform_cleanup || !continuous_dump_;
+  const bool last_pass  = perform_cleanup || !continuous_dump_;
   if (!first_pass && continuous_dump_) {
-    file.open(filename_, std::ios::app|std::ios::out);
+    file.open(filename_, std::ios::app | std::ios::out);
   } else {
-    file.open(filename_, std::ios::trunc|std::ios::out);
+    file.open(filename_, std::ios::trunc | std::ios::out);
   }
   if (first_pass || !continuous_dump_) {
     file << "{" << std::endl;
@@ -188,10 +187,10 @@ void Profiler::DumpProfile(bool perform_cleanup) {
 
   if (first_pass) {
     for (uint32_t pid = 0; pid < dev_num; ++pid) {
-       if (pid) {
-         file << ",\n";
-       }
-      const DeviceStats &d = profile_stat[pid];
+      if (pid) {
+        file << ",\n";
+      }
+      const DeviceStats& d = profile_stat[pid];
       this->EmitPid(&file, d.dev_name_, pid);
       process_ids_.emplace(pid);
     }
@@ -199,11 +198,11 @@ void Profiler::DumpProfile(bool perform_cleanup) {
 
   // Hold ref in case SetConfig() resets aggregate_stats_
   // If aggregate stats aren't enabled, this won't cause a locked instruction
-  std::shared_ptr<AggregateStats> ptr_aggregate_stats = aggregate_stats_.get()
-                                                        ? aggregate_stats_ : nullptr;
+  std::shared_ptr<AggregateStats> ptr_aggregate_stats =
+      aggregate_stats_.get() ? aggregate_stats_ : nullptr;
   for (uint32_t i = 0; i < dev_num; ++i) {
-    DeviceStats &d = profile_stat[i];
-    ProfileStat *_opr_stat;
+    DeviceStats& d = profile_stat[i];
+    ProfileStat* _opr_stat;
     while (d.opr_exec_stats_->try_dequeue(_opr_stat)) {
       CHECK_NOTNULL(_opr_stat);
       std::unique_ptr<ProfileStat> opr_stat(_opr_stat);  // manage lifecycle
@@ -218,7 +217,7 @@ void Profiler::DumpProfile(bool perform_cleanup) {
   }
 
   // Now do the non-device items
-  ProfileStat *_profile_stat;
+  ProfileStat* _profile_stat;
   while (general_stats_.opr_exec_stats_->try_dequeue(_profile_stat)) {
     CHECK_NOTNULL(_profile_stat);
     file << ",";
@@ -229,8 +228,8 @@ void Profiler::DumpProfile(bool perform_cleanup) {
     if (iter == category_to_pid_.end()) {
       static std::hash<std::string> hash_fn;
       const size_t this_pid = hash_fn(profile_stat->categories_.c_str());
-      iter = category_to_pid_.emplace(std::make_pair(profile_stat->categories_.c_str(),
-                                                     this_pid)).first;
+      iter = category_to_pid_.emplace(std::make_pair(profile_stat->categories_.c_str(), this_pid))
+                 .first;
       EmitPid(&file, profile_stat->categories_.c_str(), iter->second);
       file << ",\n";
     }
@@ -261,7 +260,7 @@ void Profiler::SetContinuousProfileDump(bool continuous_dump, float delay_in_sec
     this->continuous_dump_ = true;  // Continuous doesn't make sense without append mode
     DumpProfile(false);
     std::shared_ptr<dmlc::ThreadGroup::Thread> old_thread =
-      thread_group_->thread_by_name(TIMER_THREAD_NAME);
+        thread_group_->thread_by_name(TIMER_THREAD_NAME);
     if (old_thread && old_thread->is_shutdown_requested()) {
       // This should never happen unless someone is doing something malicious
       // At any rate, wait for its shutdown to complete
@@ -275,18 +274,17 @@ void Profiler::SetContinuousProfileDump(bool continuous_dump, float delay_in_sec
       old_thread.reset();
     }
     if (!old_thread) {
-      dmlc::CreateTimer(
-        TIMER_THREAD_NAME,
-        std::chrono::milliseconds(static_cast<size_t>(delay_in_seconds * 1000.0f)),
-        thread_group_.get(),
-        [this]() -> int {
-          DumpProfile(false);
-          return 0;
-        });
+      dmlc::CreateTimer(TIMER_THREAD_NAME,
+                        std::chrono::milliseconds(static_cast<size_t>(delay_in_seconds * 1000.0f)),
+                        thread_group_.get(),
+                        [this]() -> int {
+                          DumpProfile(false);
+                          return 0;
+                        });
     }
   } else {
     std::shared_ptr<dmlc::ThreadGroup::Thread> old_thread =
-      thread_group_->thread_by_name(TIMER_THREAD_NAME);
+        thread_group_->thread_by_name(TIMER_THREAD_NAME);
     if (old_thread) {
       // Signal it to finish asynchronously
       old_thread->request_shutdown();

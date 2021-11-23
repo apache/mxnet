@@ -281,12 +281,18 @@ __global__ void reduce_lines_kernel(const index_t N, const index_t M,
 }
 )code";
 
-void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
-                const TBlob& big, const Tensor<gpu, 1, char>& workspace,
-                const ReduceImplConfig& config, const int ndim,
-                const std::string &common_code, int dev_id,
-                const TBlob *lhs = nullptr, const TBlob *rhs = nullptr,
-                const bool use_index = false) {
+void RTCReduceImpl(Stream<gpu>* s,
+                   const TBlob& small,
+                   const bool addto,
+                   const TBlob& big,
+                   const Tensor<gpu, 1, char>& workspace,
+                   const ReduceImplConfig& config,
+                   const int ndim,
+                   const std::string& common_code,
+                   int dev_id,
+                   const TBlob* lhs     = nullptr,
+                   const TBlob* rhs     = nullptr,
+                   const bool use_index = false) {
   using namespace common::cuda::rtc;
   void* small_dptr = small.dptr_;
   if (config.Mnext > 1) {
@@ -298,55 +304,49 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
     CHECK_GE(workspace.size(0), config.workspace_size);
   }
 
-  const int by = (config.kernel_1.do_transpose) ?
-    config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
-  const bool do_unroll = (config.M / (by*config.Mnext) >= unroll_reduce);
-  std::string code = common_code +
-                     "#define UNROLL " +
-                     (do_unroll ? std::to_string(unroll_reduce) : "1") +
-                     "\n"
-                     "const bool do_transpose = " +
-                     (config.kernel_1.do_transpose ? "true" : "false") +
-                     ";\n"
-                     "using InputType0 = " +
-                     common::mshadow_type_info(big.type_flag_).name +
-                     ";\n"
-                     "using OutputType0 = " +
-                     common::mshadow_type_info(small.type_flag_).name +
-                     ";\n"
-                     "using InputType1 = " +
-                     ((lhs != nullptr)
-                     ? common::mshadow_type_info(lhs->type_flag_).name
-                     : "float32") +
-                     ";\n"
-                     "using InputType2 = " +
-                     ((rhs != nullptr)
-                     ? common::mshadow_type_info(rhs->type_flag_).name
-                     : "float32") +
-                     ";\n";
+  const int by =
+      (config.kernel_1.do_transpose) ? config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
+  const bool do_unroll = (config.M / (by * config.Mnext) >= unroll_reduce);
+  std::string code =
+      common_code + "#define UNROLL " + (do_unroll ? std::to_string(unroll_reduce) : "1") +
+      "\n"
+      "const bool do_transpose = " +
+      (config.kernel_1.do_transpose ? "true" : "false") +
+      ";\n"
+      "using InputType0 = " +
+      common::mshadow_type_info(big.type_flag_).name +
+      ";\n"
+      "using OutputType0 = " +
+      common::mshadow_type_info(small.type_flag_).name +
+      ";\n"
+      "using InputType1 = " +
+      ((lhs != nullptr) ? common::mshadow_type_info(lhs->type_flag_).name : "float32") +
+      ";\n"
+      "using InputType2 = " +
+      ((rhs != nullptr) ? common::mshadow_type_info(rhs->type_flag_).name : "float32") + ";\n";
   if (lhs != nullptr) {
     code += "const bool use_input = true;";
   } else {
     code += "const bool use_input = false;";
   }
 
-  reduce_kernel_params param {};
+  reduce_kernel_params param{};
   for (int i = 0; i < ndim; ++i) {
-    param.big_shape[i] = big.shape_[i];
+    param.big_shape[i]   = big.shape_[i];
     param.small_shape[i] = small.shape_[i];
-    param.rshape[i] = config.rshape[i];
-    param.rstride[i] = config.rstride[i];
+    param.rshape[i]      = config.rshape[i];
+    param.rstride[i]     = config.rstride[i];
     if (lhs != nullptr) {
       param.lhs_shape0[i] = lhs->shape_[i];
       param.rhs_shape0[i] = rhs->shape_[i];
-      param.lhs_shape[i] = config.lhs_shape[i];
-      param.rhs_shape[i] = config.rhs_shape[i];
+      param.lhs_shape[i]  = config.lhs_shape[i];
+      param.rhs_shape[i]  = config.rhs_shape[i];
       param.lhs_stride[i] = config.lhs_stride[i];
       param.rhs_stride[i] = config.rhs_stride[i];
     }
   }
 
-  void *null_ptr = nullptr;
+  void* null_ptr = nullptr;
   std::vector<const void*> args;
   args.emplace_back(&config.N);
   args.emplace_back(&config.M);
@@ -362,17 +362,18 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
   args.emplace_back(&param);
   args.emplace_back(&config.Mnext);
 
-  const auto &function_code = (lhs == nullptr)
-                            ? (use_index ? reduce_function_index_code : reduce_function_code)
-                            : reduce_function_use_input_code;
-  const auto& kernel_name = (config.Mnext > 1) ? "reduce_kernel_multi" : "reduce_kernel_single";
-  auto reduce_kernel_func = get_function(code + function_code,
-                                         kernel_name,
-                                         reduce_kernel_code,
-                                         dev_id);
-  launch(reduce_kernel_func, config.kernel_1.gridDim,
+  const auto& function_code = (lhs == nullptr) ?
+                                  (use_index ? reduce_function_index_code : reduce_function_code) :
+                                  reduce_function_use_input_code;
+  const auto& kernel_name   = (config.Mnext > 1) ? "reduce_kernel_multi" : "reduce_kernel_single";
+  auto reduce_kernel_func =
+      get_function(code + function_code, kernel_name, reduce_kernel_code, dev_id);
+  launch(reduce_kernel_func,
+         config.kernel_1.gridDim,
          config.kernel_1.blockDim,
-         config.kernel_1.shMemSize, s, &args);
+         config.kernel_1.shMemSize,
+         s,
+         &args);
 
   if (config.Mnext > 1) {
     args.resize(0);
@@ -382,12 +383,10 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
     args.emplace_back(&small_dptr);
     args.emplace_back(&small.dptr_);
 
-    auto reduce_lines_kernel_func = get_function(code + function_code,
-                                                 "reduce_lines_kernel",
-                                                 reduce_lines_kernel_code,
-                                                 dev_id);
-    launch(reduce_lines_kernel_func, config.kernel_2.gridSize,
-           config.kernel_2.blockSize, 0, s, &args);
+    auto reduce_lines_kernel_func =
+        get_function(code + function_code, "reduce_lines_kernel", reduce_lines_kernel_code, dev_id);
+    launch(
+        reduce_lines_kernel_func, config.kernel_2.gridSize, config.kernel_2.blockSize, 0, s, &args);
   }
 }
 
@@ -445,39 +444,38 @@ __global__ void reduce_kernel_M1(const int N,
 }
 )code";
 
-void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
-                     const TBlob *lhs, const TBlob *rhs,
-                     const ReduceImplConfig &config, const int ndim,
-                     const std::string &common_code, int dev_id,
+void RTCReduceM1Impl(Stream<gpu>* s,
+                     const TBlob& small,
+                     const TBlob& big,
+                     const TBlob* lhs,
+                     const TBlob* rhs,
+                     const ReduceImplConfig& config,
+                     const int ndim,
+                     const std::string& common_code,
+                     int dev_id,
                      const bool use_index = false) {
   using namespace common::cuda::rtc;
 
-  std::string code = common_code +
-                     "using InputType0 = " +
-                     common::mshadow_type_info(big.type_flag_).name +
-                     ";\n"
-                     "using InputType1 = " +
-                     ((lhs != nullptr)
-                     ? common::mshadow_type_info(lhs->type_flag_).name
-                     : "float32") +
-                     ";\n"
-                     "using InputType2 = " +
-                     ((rhs != nullptr)
-                     ? common::mshadow_type_info(rhs->type_flag_).name
-                     : "float32") +
-                     ";\n"
-                     "using OutputType0 = " +
-                     common::mshadow_type_info(small.type_flag_).name +
-                     ";\n";
+  std::string code =
+      common_code + "using InputType0 = " + common::mshadow_type_info(big.type_flag_).name +
+      ";\n"
+      "using InputType1 = " +
+      ((lhs != nullptr) ? common::mshadow_type_info(lhs->type_flag_).name : "float32") +
+      ";\n"
+      "using InputType2 = " +
+      ((rhs != nullptr) ? common::mshadow_type_info(rhs->type_flag_).name : "float32") +
+      ";\n"
+      "using OutputType0 = " +
+      common::mshadow_type_info(small.type_flag_).name + ";\n";
   if (lhs != nullptr) {
     code += "const bool use_input = true;";
   } else {
     code += "const bool use_input = false;";
   }
 
-  reduce_kernel_M1_params param {};
+  reduce_kernel_M1_params param{};
   for (int i = 0; i < ndim; ++i) {
-    param.big_shape[i] = big.shape_[i];
+    param.big_shape[i]   = big.shape_[i];
     param.small_shape[i] = small.shape_[i];
     if (lhs != nullptr) {
       param.lhs_shape[i] = lhs->shape_[i];
@@ -485,7 +483,7 @@ void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
     }
   }
 
-  void *null_ptr = nullptr;
+  void* null_ptr = nullptr;
   std::vector<const void*> args;
   args.emplace_back(&config.N);
   args.emplace_back(&big.dptr_);
@@ -499,16 +497,12 @@ void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
   args.emplace_back(&small.dptr_);
   args.emplace_back(&param);
 
-  const auto &function_code = (lhs == nullptr)
-                            ? (use_index ? reduce_function_index_code : reduce_function_code)
-                            : reduce_function_use_input_code;
-  auto reduce_kernel_M1_func = get_function(code + function_code,
-                                            "reduce_kernel_M1",
-                                            reduce_kernel_M1_code,
-                                            dev_id);
-  launch(reduce_kernel_M1_func, config.kernel_1.gridDim,
-         config.kernel_1.blockDim,
-         0, s, &args);
+  const auto& function_code = (lhs == nullptr) ?
+                                  (use_index ? reduce_function_index_code : reduce_function_code) :
+                                  reduce_function_use_input_code;
+  auto reduce_kernel_M1_func =
+      get_function(code + function_code, "reduce_kernel_M1", reduce_kernel_M1_code, dev_id);
+  launch(reduce_kernel_M1_func, config.kernel_1.gridDim, config.kernel_1.blockDim, 0, s, &args);
 }
 
 }  // namespace
@@ -523,11 +517,11 @@ void RTCReduce(const OpContext& ctx,
                const std::string& OP,
                const bool use_index) {
   using namespace mxnet::common::cuda::rtc;
-  if (req == kNullOp) return;
-  Stream<gpu> *s = ctx.get_stream<gpu>();
+  if (req == kNullOp)
+    return;
+  Stream<gpu>* s = ctx.get_stream<gpu>();
   ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr);
-  std::string common_code = std::string("const OpReqType req = ") +
-                            util::to_string(req) +
+  std::string common_code = std::string("const OpReqType req = ") + util::to_string(req) +
                             ";\n"
                             "#define OP op::" +
                             OP +
@@ -536,16 +530,31 @@ void RTCReduce(const OpContext& ctx,
                             reducer +
                             "\n"
                             "const int ndim = " +
-                            std::to_string(ndim) +
-                            ";\n";
+                            std::to_string(ndim) + ";\n";
   if (config.M == 1) {
-    RTCReduceM1Impl(s, small, big, nullptr, nullptr, config,
-                    ndim, common_code, ctx.run_ctx.ctx.dev_id,
+    RTCReduceM1Impl(s,
+                    small,
+                    big,
+                    nullptr,
+                    nullptr,
+                    config,
+                    ndim,
+                    common_code,
+                    ctx.run_ctx.ctx.dev_id,
                     use_index);
   } else {
-    RTCReduceImpl(s, small, req == kAddTo, big, workspace, config,
-                  ndim, common_code, ctx.run_ctx.ctx.dev_id,
-                  nullptr, nullptr, use_index);
+    RTCReduceImpl(s,
+                  small,
+                  req == kAddTo,
+                  big,
+                  workspace,
+                  config,
+                  ndim,
+                  common_code,
+                  ctx.run_ctx.ctx.dev_id,
+                  nullptr,
+                  nullptr,
+                  use_index);
   }
 }
 
@@ -554,18 +563,18 @@ void RTCReduce(const OpContext& ctx,
                const OpReqType req,
                const Tensor<gpu, 1, char>& workspace,
                const TBlob& big,
-               const TBlob &lhs,
-               const TBlob &rhs,
+               const TBlob& lhs,
+               const TBlob& rhs,
                const std::string& reducer,
                int ndim,
                const std::string& OP1,
                const std::string& OP2) {
   using namespace mxnet::common::cuda::rtc;
-  if (req == kNullOp) return;
-  Stream<gpu> *s = ctx.get_stream<gpu>();
+  if (req == kNullOp)
+    return;
+  Stream<gpu>* s = ctx.get_stream<gpu>();
   ReduceImplConfig config(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_);
-  std::string common_code = std::string("const OpReqType req = ") +
-                            util::to_string(req) +
+  std::string common_code = std::string("const OpReqType req = ") + util::to_string(req) +
                             ";\n"
                             "#define OP1 op::" +
                             OP1 +
@@ -577,13 +586,21 @@ void RTCReduce(const OpContext& ctx,
                             reducer +
                             "\n"
                             "const int ndim = " +
-                            std::to_string(ndim) +
-                            ";\n";
+                            std::to_string(ndim) + ";\n";
   if (config.M == 1) {
     RTCReduceM1Impl(s, small, big, &lhs, &rhs, config, ndim, common_code, ctx.run_ctx.ctx.dev_id);
   } else {
-    RTCReduceImpl(s, small, req == kAddTo, big, workspace, config,
-                  ndim, common_code, ctx.run_ctx.ctx.dev_id, &lhs, &rhs);
+    RTCReduceImpl(s,
+                  small,
+                  req == kAddTo,
+                  big,
+                  workspace,
+                  config,
+                  ndim,
+                  common_code,
+                  ctx.run_ctx.ctx.dev_id,
+                  &lhs,
+                  &rhs);
   }
 }
 

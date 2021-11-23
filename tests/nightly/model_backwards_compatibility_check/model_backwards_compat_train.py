@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from common import *
+from .common import *
 
 
 def train_lenet_gluon_save_params_api():

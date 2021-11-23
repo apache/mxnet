@@ -27,20 +27,20 @@ using namespace std;
  * Test that different Context have different hash values
  */
 TEST(ContextHashTest, ContextHashUnique) {
-    set<size_t> hashes;
-    size_t collision_count = 0;
-    size_t total = 0;
-    for (size_t dev_type = 0; dev_type < 32; ++dev_type) {
-        for (size_t dev_id = 0; dev_id < 64; ++dev_id) {
-            auto ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
-            size_t res = std::hash<Context>()(ctx);
-            auto insert_res = hashes.insert(res);
-            if (!insert_res.second)
-                ++collision_count;
-            ++total;
-        }
+  set<size_t> hashes;
+  size_t collision_count = 0;
+  size_t total           = 0;
+  for (size_t dev_type = 0; dev_type < 32; ++dev_type) {
+    for (size_t dev_id = 0; dev_id < 64; ++dev_id) {
+      auto ctx        = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+      size_t res      = std::hash<Context>()(ctx);
+      auto insert_res = hashes.insert(res);
+      if (!insert_res.second)
+        ++collision_count;
+      ++total;
     }
-    double collision = collision_count / static_cast<double>(total);
-    cout << "mxnet::Context std::hash collision ratio: " << collision << endl;
-    EXPECT_LE(collision, 0.04);
+  }
+  double collision = collision_count / static_cast<double>(total);
+  cout << "mxnet::Context std::hash collision ratio: " << collision << endl;
+  EXPECT_LE(collision, 0.04);
 }

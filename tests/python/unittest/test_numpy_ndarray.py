@@ -21,6 +21,7 @@ from __future__ import division
 import itertools
 import os
 import pytest
+import operator
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
@@ -63,18 +64,18 @@ def test_np_empty():
         (4, 5),
         (1, 1, 1, 1),
     ]
-    ctxes = [npx.current_context(), None]
+    devices = [npx.current_device(), None]
     for dtype, expected_dtype in dtype_pairs:
         for shape in shapes:
             for order in orders:
-                for ctx in ctxes:
+                for device in devices:
                     if order == 'C':
-                        ret = np.empty(shape, dtype, order, ctx)
+                        ret = np.empty(shape, dtype=dtype, order=order, device=device)
                         assert ret.dtype == expected_dtype
                         assert ret.shape == shape if isinstance(shape, tuple) else (shape,)
-                        assert ret.ctx == npx.current_context()
+                        assert ret.device == npx.current_device()
                     else:
-                        assert_exception(np.empty, NotImplementedError, shape, dtype, order, ctx)
+                        assert_exception(np.empty, NotImplementedError, shape, dtype=dtype, order=order, device=device)
 
 
 @use_np
@@ -92,7 +93,7 @@ def test_np_array_creation():
     for dtype in dtypes:
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
-            assert mx_arr.ctx == mx.current_context()
+            assert mx_arr.device == mx.current_device()
             if dtype is None:
                 dtype = src.dtype if isinstance(src, _np.ndarray) else _np.float32
             if isinstance(src, mx.nd.NDArray):
@@ -114,7 +115,7 @@ def test_np_zeros():
             self._dtype = dtype
 
         def forward(self, x, *args, **kwargs):
-            return x + np.zeros(shape, dtype)
+            return x + np.zeros(shape, dtype=dtype)
 
     class TestZerosOutputType(HybridBlock):
         def forward(self, x, *args, **kwargs):
@@ -167,7 +168,7 @@ def test_np_ones():
             self._dtype = dtype
 
         def forward(self, x, *args, **kwargs):
-            return x * np.ones(shape, dtype)
+            return x * np.ones(shape, dtype=dtype)
 
     class TestOnesOutputType(HybridBlock):
         def forward(self, x, *args, **kwargs):
@@ -609,19 +610,19 @@ def test_formatting():
         b = np.arange(8).reshape(2,2,2)
         assert '{}'.format(a) == '{}'.format(_a)
 
-    context = mx.context.current_context()
-    if str(context)[:3] != 'gpu':
+    device = mx.device.current_device()
+    if str(device)[:3] != 'gpu':
         test_0d()
         test_nd_format()
         test_nd_no_format()
-    # if the program is running in GPU, the formatted string would be appended with context notation
+    # if the program is running in GPU, the formatted string would be appended with device notation
     # for exmpale, if a = np.array([np.pi]), the return value of '{}'.format(a) is '[3.1415927] @gpu(0)'
 
 
 @use_np
 @pytest.mark.serial
 def test_np_ndarray_indexing():
-    def np_int(index, int_type=np.int32):
+    def np_int(index, int_type=_np.int32):
         """
         Helper function for testing indexing that converts slices to slices of ints or None, and tuples to
         tuples of ints or None.
@@ -800,70 +801,70 @@ def test_np_ndarray_indexing():
         # Basic indexing
         # Single int as index
         0,
-        np.int32(0),
-        np.int64(0),
+        _np.int32(0),
+        _np.int64(0),
         np.array(0, dtype='int32'),
         np.array(0, dtype='int64'),
         5,
-        np.int32(5),
-        np.int64(5),
+        _np.int32(5),
+        _np.int64(5),
         np.array(5, dtype='int32'),
         np.array(5, dtype='int64'),
         -1,
-        np.int32(-1),
-        np.int64(-1),
+        _np.int32(-1),
+        _np.int64(-1),
         np.array(-1, dtype='int32'),
         np.array(-1, dtype='int64'),
         # Slicing as index
         slice(5),
-        np_int(slice(5), np.int32),
-        np_int(slice(5), np.int64),
+        np_int(slice(5), _np.int32),
+        np_int(slice(5), _np.int64),
         slice(1, 5),
-        np_int(slice(1, 5), np.int32),
-        np_int(slice(1, 5), np.int64),
+        np_int(slice(1, 5), _np.int32),
+        np_int(slice(1, 5), _np.int64),
         slice(1, 5, 2),
         slice(1, 2, 2),
-        np_int(slice(1, 5, 2), np.int32),
-        np_int(slice(1, 5, 2), np.int64),
+        np_int(slice(1, 5, 2), _np.int32),
+        np_int(slice(1, 5, 2), _np.int64),
         slice(7, 0, -1),
         np_int(slice(7, 0, -1)),
-        np_int(slice(7, 0, -1), np.int64),
+        np_int(slice(7, 0, -1), _np.int64),
         slice(None, 6),
         np_int(slice(None, 6)),
-        np_int(slice(None, 6), np.int64),
+        np_int(slice(None, 6), _np.int64),
         slice(None, 6, 3),
         np_int(slice(None, 6, 3)),
-        np_int(slice(None, 6, 3), np.int64),
+        np_int(slice(None, 6, 3), _np.int64),
         slice(1, None),
         np_int(slice(1, None)),
-        np_int(slice(1, None), np.int64),
+        np_int(slice(1, None), _np.int64),
         slice(1, None, 3),
         np_int(slice(1, None, 3)),
-        np_int(slice(1, None, 3), np.int64),
+        np_int(slice(1, None, 3), _np.int64),
         slice(None, None, 2),
         np_int(slice(None, None, 2)),
-        np_int(slice(None, None, 2), np.int64),
+        np_int(slice(None, None, 2), _np.int64),
         slice(None, None, -1),
         np_int(slice(None, None, -1)),
-        np_int(slice(None, None, -1), np.int64),
+        np_int(slice(None, None, -1), _np.int64),
         slice(None, None, -2),
-        np_int(slice(None, None, -2), np.int32),
-        np_int(slice(None, None, -2), np.int64),
+        np_int(slice(None, None, -2), _np.int32),
+        np_int(slice(None, None, -2), _np.int64),
         # Multiple ints as indices
         (1, 2, 3),
         np_int((1, 2, 3)),
-        np_int((1, 2, 3), np.int64),
+        np_int((1, 2, 3), _np.int64),
         (-1, -2, -3),
         np_int((-1, -2, -3)),
-        np_int((-1, -2, -3), np.int64),
+        np_int((-1, -2, -3), _np.int64),
         (1, 2, 3, 4),
         np_int((1, 2, 3, 4)),
-        np_int((1, 2, 3, 4), np.int64),
+        np_int((1, 2, 3, 4), _np.int64),
         (-4, -3, -2, -1),
         (-4, mx.np.array(-3, dtype='int32'), -2, -1),
         (-4, mx.np.array(-3, dtype='int64'), -2, -1),
         np_int((-4, -3, -2, -1)),
-        np_int((-4, -3, -2, -1), np.int64),
+        np_int((-4, -3, -2, -1), _np.int64),
         # slice(None) as indices
         (slice(None), slice(None), 1, 8),
         (slice(None), slice(None), np.array(1, dtype='int32'), 8),
@@ -872,26 +873,26 @@ def test_np_ndarray_indexing():
         (slice(None), slice(None), 1, -8),
         (slice(None), slice(None), -1, -8),
         np_int((slice(None), slice(None), 1, 8)),
-        np_int((slice(None), slice(None), 1, 8), np.int64),
+        np_int((slice(None), slice(None), 1, 8), _np.int64),
         (slice(None), slice(None), 1, 8),
         np_int((slice(None), slice(None), -1, -8)),
-        np_int((slice(None), slice(None), -1, -8), np.int64),
+        np_int((slice(None), slice(None), -1, -8), _np.int64),
         (slice(None), 2, slice(1, 5), 1),
         np_int((slice(None), 2, slice(1, 5), 1)),
-        np_int((slice(None), 2, slice(1, 5), 1), np.int64),
+        np_int((slice(None), 2, slice(1, 5), 1), _np.int64),
         # Mixture of ints and slices as indices
         (slice(None, None, -1), 2, slice(1, 5), 1),
         np_int((slice(None, None, -1), 2, slice(1, 5), 1)),
-        np_int((slice(None, None, -1), 2, slice(1, 5), 1), np.int64),
+        np_int((slice(None, None, -1), 2, slice(1, 5), 1), _np.int64),
         (slice(None, None, -1), 2, slice(1, 7, 2), 1),
         np_int((slice(None, None, -1), 2, slice(1, 7, 2), 1)),
-        np_int((slice(None, None, -1), 2, slice(1, 7, 2), 1), np.int64),
+        np_int((slice(None, None, -1), 2, slice(1, 7, 2), 1), _np.int64),
         (slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)),
         np_int((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3))),
-        np_int((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)), np.int64),
+        np_int((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)), _np.int64),
         (slice(1, 8, 2), 1, slice(3, 8), 2),
         np_int((slice(1, 8, 2), 1, slice(3, 8), 2)),
-        np_int((slice(1, 8, 2), 1, slice(3, 8), 2), np.int64),
+        np_int((slice(1, 8, 2), 1, slice(3, 8), 2), _np.int64),
         # Test Ellipsis ('...')
         (1, Ellipsis, -1),
         (slice(2), Ellipsis, None, 0),
@@ -1129,7 +1130,7 @@ def test_np_multinomial():
             if pvals_mx_np_array:
                 pvals = mx.np.array(pvals)
             x = np.random.multinomial(small_exp, pvals)
-            for i in range(total_exp // small_exp):
+            for _ in range(total_exp // small_exp):
                 x = x + np.random.multinomial(20, pvals)
         freq = (x.asnumpy() / _np.float32(total_exp)).reshape((-1, len(pvals)))
         for i in range(freq.shape[0]):
@@ -1321,7 +1322,7 @@ def test_np_get_dtype():
     for dtype in dtypes:
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
-            assert mx_arr.ctx == mx.current_context()
+            assert mx_arr.device == mx.current_device()
             if isinstance(src, mx.nd.NDArray):
                 np_arr = _np.array(src.asnumpy(), dtype=dtype if dtype is not None else _np.float32)
             else:
@@ -1418,7 +1419,7 @@ def test_mixed_array_types_share_memory():
     assert _np.may_share_memory(np_array_slice, mx_array)
     assert _np.shares_memory(np_array_slice, mx_array)
 
-    mx_pinned_array = mx_array.as_in_ctx(mx.cpu_pinned(0))
+    mx_pinned_array = mx_array.to_device(mx.cpu_pinned(0))
     assert not _np.may_share_memory(np_array, mx_pinned_array)
     assert not _np.shares_memory(np_array, mx_pinned_array)
 
@@ -1426,3 +1427,34 @@ def test_mixed_array_types_share_memory():
 def test_save_load_empty(tmp_path):
     mx.npx.savez(str(tmp_path / 'params.npz'))
     mx.npx.load(str(tmp_path / 'params.npz'))
+
+@use_np
+@pytest.mark.parametrize('shape', [
+    (),
+    (1,),
+    (1,2)
+])
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'bool', 'int32'])
+def test_index_operator(shape, dtype):
+    if len(shape) >= 1 or not _np.issubdtype(dtype, _np.integer):
+        x = np.ones(shape=shape, dtype=dtype)
+        pytest.raises(TypeError, operator.index, x)
+    else:
+        assert operator.index(np.ones(shape=shape, dtype=dtype)) == \
+            operator.index(_np.ones(shape=shape, dtype=dtype))
+
+
+@pytest.mark.parametrize('api_version, raise_exception', [
+    (None, False),
+    ('2021.10', False),
+    ('2020.09', True),
+    ('2021.24', True),
+])
+def test_array_namespace(api_version, raise_exception):
+    x = np.array([1, 2, 3], dtype="float64")
+    if raise_exception:
+        pytest.raises(ValueError, x.__array_namespace__, api_version)
+    else:
+        xp = x.__array_namespace__(api_version)
+        y = xp.array([1, 2, 3], dtype="float64")
+        assert same(x, y)

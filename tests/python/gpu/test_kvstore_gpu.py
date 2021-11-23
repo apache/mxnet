@@ -21,7 +21,7 @@ import os
 import mxnet as mx
 import numpy as np
 import pytest
-from mxnet.test_utils import assert_almost_equal, default_context, environment
+from mxnet.test_utils import assert_almost_equal, default_device, environment
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 
@@ -39,10 +39,10 @@ def init_kv_with_str(stype='default', kv_type='local'):
     return kv
 
 # 1. Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
-# 2. Test seed 1155716252 (module seed 1032824746) resulted in py3-mkldnn-gpu have error
-# src/operator/nn/mkldnn/mkldnn_base.cc:567: Check failed: similar
+# 2. Test seed 1155716252 (module seed 1032824746) resulted in py3-dnnl-gpu have error
+# src/operator/nn/dnnl/dnnl_base.cc:567: Check failed: similar
 # Both of them are not reproducible, so this test is back on random seeds.
-@pytest.mark.skipif(mx.context.num_gpus() < 2, reason="test_rsp_push_pull needs more than 1 GPU")
+@pytest.mark.skipif(mx.device.num_gpus() < 2, reason="test_rsp_push_pull needs more than 1 GPU")
 @pytest.mark.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14189")
 @pytest.mark.serial
 def test_rsp_push_pull():
@@ -65,7 +65,7 @@ def test_rsp_push_pull():
                 total_row_ids = mx.nd.array(np.random.randint(num_rows, size=count*num_rows))
                 row_ids = [total_row_ids[i*num_rows : (i+1)*num_rows] for i in range(count)]
             else:
-                for i in range(count):
+                for _ in range(count):
                     row_id = np.random.randint(num_rows, size=num_rows)
                     row_ids.append(mx.nd.array(row_id))
             row_ids_to_pull = row_ids[0] if (len(row_ids) == 1 or is_same_rowid) else row_ids

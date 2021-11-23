@@ -63,9 +63,9 @@ class KVStoreNCCL : public KVStoreLocal {
  public:
   KVStoreNCCL() : KVStoreLocal() {
     // Due to aggregation, we do not use the Comm interface
-    comm_ = nullptr;
+    comm_       = nullptr;
     pinned_ctx_ = Context::CPUPinned(0);
-    inited_ = false;
+    inited_     = false;
   }
 
   virtual ~KVStoreNCCL() {
@@ -76,11 +76,9 @@ class KVStoreNCCL : public KVStoreLocal {
   }
 
  private:
-  void InitImpl(const std::vector<int>& keys,
-                const std::vector<NDArray>& values) override {
+  void InitImpl(const std::vector<int>& keys, const std::vector<NDArray>& values) override {
     for (size_t i = 0; i < keys.size(); ++i) {
-      CHECK(local_.find(keys[i]) == local_.end())
-          << "duplicate init of key " << keys[i];
+      CHECK(local_.find(keys[i]) == local_.end()) << "duplicate init of key " << keys[i];
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       InitKey(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
@@ -90,7 +88,7 @@ class KVStoreNCCL : public KVStoreLocal {
                 const std::vector<NDArray>& values,
                 int priority) override {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray> > grouped_vals;
+    std::vector<std::vector<NDArray>> grouped_vals;
     // nccl kvstore doesn't support sparse ndarray
     GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals, true);
 
@@ -106,13 +104,12 @@ class KVStoreNCCL : public KVStoreLocal {
         // We issued NCCL kernels, need to synchronize
         nccl_called = true;
       }
-      auto& merged = *(merged_ptrs[i]);
+      auto& merged   = *(merged_ptrs[i]);
       NDArray& local = local_[key];
       if (updater_ != nullptr) {
         CHECK(!local.is_none()) << "key " << key << " has not been inited";
         // if merged is on gpu, we may need copy weight from cpu to gpu
-        if (merged.ctx().dev_mask() != cpu::kDevMask &&
-            local.ctx().dev_mask() == cpu::kDevMask) {
+        if (merged.ctx().dev_mask() != cpu::kDevMask && local.ctx().dev_mask() == cpu::kDevMask) {
           local = local.Copy(merged.ctx());
         }
       }
@@ -125,8 +122,8 @@ class KVStoreNCCL : public KVStoreLocal {
     }
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      int key = uniq_keys[i];
-      auto& merged = *(merged_ptrs[i]);
+      int key        = uniq_keys[i];
+      auto& merged   = *(merged_ptrs[i]);
       NDArray& local = *(local_ptrs[i]);
       if (updater_ != nullptr) {
         // call the updater with string keys
@@ -134,10 +131,10 @@ class KVStoreNCCL : public KVStoreLocal {
         // otherwise fallback to updater_ which uses int key interface
         if (key_type_ == kStringKey && str_updater_ != nullptr) {
           // after all language bindings picks up string interface changes
-          const std::string &str_key = reverse_str_key_dict_[key];
-          str_updater_(str_key, merged,  &local);
+          const std::string& str_key = reverse_str_key_dict_[key];
+          str_updater_(str_key, merged, &local);
         } else {
-          updater_(key, merged,  &local);
+          updater_(key, merged, &local);
         }
       } else {
         local = merged;
@@ -147,16 +144,17 @@ class KVStoreNCCL : public KVStoreLocal {
 
   void PullImpl(const std::vector<int>& keys,
                 const std::vector<NDArray*>& values,
-                int priority, bool ignore_sparse) override {
+                int priority,
+                bool ignore_sparse) override {
     CHECK(ignore_sparse) << "nccl kvstore pull doesn't support ignore_sparse=False";
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray*> > grouped_vals;
+    std::vector<std::vector<NDArray*>> grouped_vals;
     GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals, true);
     std::vector<NDArray> locals;
     bool nccl_called = false;
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      int key = uniq_keys[i];
+      int key              = uniq_keys[i];
       const NDArray& local = local_[key];
       locals.push_back(local_[key]);
       CHECK(!local.is_none()) << "key " << key << " has not been inited";
@@ -180,8 +178,8 @@ class KVStoreNCCL : public KVStoreLocal {
     LOG(FATAL) << "NCCL kvstore does not support sparse storage type";
   }
 
-  void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
-                                      & kwargs) override {
+  void SetGradientCompression(
+      const std::vector<std::pair<std::string, std::string>>& kwargs) override {
     LOG(FATAL) << "NCCL kvstore does not support gradient compression";
   }
 
@@ -192,15 +190,16 @@ class KVStoreNCCL : public KVStoreLocal {
   template <typename T>
   void GroupKVPairsHelper(const std::vector<int>& keys,
                           const std::vector<T>& values,
-                          std::vector<int> *uniq_keys,
-                          std::vector<std::vector<T>> *grouped_vals,
+                          std::vector<int>* uniq_keys,
+                          std::vector<std::vector<T>>* grouped_vals,
                           bool ignore_sparse) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const T nd, bool ignore_sparse) -> bool {
       CHECK(ignore_sparse) << "nccl kvstore pull doesn't support ignore_sparse=False";
       auto stype = ptr(nd)->storage_type();
       // valid NDArray
-      if (stype == kDefaultStorage) return true;
+      if (stype == kDefaultStorage)
+        return true;
       // invalid NDArray, abort
       LOG(FATAL) << "NCCL kvstore does not support sparse storage type";
       return false;
@@ -221,8 +220,8 @@ class KVStoreNCCL : public KVStoreLocal {
     std::vector<Engine::VarHandle> mutate_vars;
 
     for (size_t k = 0; k < keys.size(); ++k) {
-      auto& key = keys[k];
-      auto& src = srcs[k];
+      auto& key     = keys[k];
+      auto& src     = srcs[k];
       auto& root_id = root_ids[k];
 
       // avoid extra copy for single device, but it may bring problems for
@@ -250,10 +249,10 @@ class KVStoreNCCL : public KVStoreLocal {
       CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
 
       auto& buf = merge_buf_[key];
-      int root = buf.merged.ctx().dev_id;
-      root_id = FindRootId(src, root);
+      int root  = buf.merged.ctx().dev_id;
+      root_id   = FindRootId(src, root);
 
-      auto& reduce = buf.merged;
+      auto& reduce      = buf.merged;
       (*merged_ptrs)[k] = &reduce;
       // Need to pass NDArrays by value to the engine
       reduces[k] = reduce;
@@ -264,70 +263,73 @@ class KVStoreNCCL : public KVStoreLocal {
       mutate_vars.push_back(reduce.var());
     }
 
-    Engine::Get()->PushSync([srcs, reduces, root_ids, this](RunContext rctx) {
-        std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+    Engine::Get()->PushSync(
+        [srcs, reduces, root_ids, this](RunContext rctx) {
+          std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
-        ncclGroupStart();
-#endif
-        for (size_t k = 0; k < srcs.size(); ++k) {
-          auto& src = srcs[k];
-          auto& root_id = root_ids[k];
-          auto& reduce = reduces[k];
-          if (src.size() <= 1) {
-            continue;
-          }
-          int root = nccl_data_[src[root_id].ctx().dev_id].rank;
           ncclGroupStart();
-          for (size_t i = 0; i < src.size(); ++i) {
-            NCCLEntry cur = nccl_data_[src[i].ctx().dev_id];
-            if (i == root_id) {
-            MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
-            ncclReduce(src[i].data().dptr<DType>(),
-                              reduce.data().dptr<DType>(),
-                              src[i].shape().Size(),
-                              GetNCCLType(src[i].dtype()),
-                              ncclSum,
-                              root,
-                              cur.comm,
-                              cur.stream););
-            } else {
-            MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
-            ncclReduce(src[i].data().dptr<DType>(),
-                              nullptr,
-                              src[i].shape().Size(),
-                              GetNCCLType(src[i].dtype()),
-                              ncclSum,
-                              root,
-                              cur.comm,
-                              cur.stream););
-            }
-          }
-          ncclGroupEnd();
-        }
-#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
-        ncclGroupEnd();
 #endif
-      },
-      Context::CPU(),
-      const_vars,
-      mutate_vars,
-      FnProperty::kCPUPrioritized,
-      priority,
-      "KVStoreReduce");
+          for (size_t k = 0; k < srcs.size(); ++k) {
+            auto& src     = srcs[k];
+            auto& root_id = root_ids[k];
+            auto& reduce  = reduces[k];
+            if (src.size() <= 1) {
+              continue;
+            }
+            int root = nccl_data_[src[root_id].ctx().dev_id].rank;
+            ncclGroupStart();
+            for (size_t i = 0; i < src.size(); ++i) {
+              NCCLEntry cur = nccl_data_[src[i].ctx().dev_id];
+              if (i == root_id) {
+                MSHADOW_TYPE_SWITCH(src[i].dtype(),
+                                    DType,
+                                    ncclReduce(src[i].data().dptr<DType>(),
+                                               reduce.data().dptr<DType>(),
+                                               src[i].shape().Size(),
+                                               GetNCCLType(src[i].dtype()),
+                                               ncclSum,
+                                               root,
+                                               cur.comm,
+                                               cur.stream););
+              } else {
+                MSHADOW_TYPE_SWITCH(src[i].dtype(),
+                                    DType,
+                                    ncclReduce(src[i].data().dptr<DType>(),
+                                               nullptr,
+                                               src[i].shape().Size(),
+                                               GetNCCLType(src[i].dtype()),
+                                               ncclSum,
+                                               root,
+                                               cur.comm,
+                                               cur.stream););
+              }
+            }
+            ncclGroupEnd();
+          }
+#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
+          ncclGroupEnd();
+#endif
+        },
+        Context::CPU(),
+        const_vars,
+        mutate_vars,
+        FnProperty::kCPUPrioritized,
+        priority,
+        "KVStoreReduce");
   }
 
   virtual void Broadcast(const std::vector<int> keys,
-      const std::vector<NDArray>& srcs,
-      const std::vector<std::vector<NDArray*>>& dsts,
-      int priority) {
+                         const std::vector<NDArray>& srcs,
+                         const std::vector<std::vector<NDArray*>>& dsts,
+                         int priority) {
     std::vector<size_t> root_ids(keys.size());
     std::vector<Engine::VarHandle> const_vars;
     std::vector<Engine::VarHandle> mutable_vars;
 
     for (size_t k = 0; k < keys.size(); ++k) {
-      auto& key = keys[k];
-      auto& src = srcs[k];
-      auto& dst = dsts[k];
+      auto& key     = keys[k];
+      auto& src     = srcs[k];
+      auto& dst     = dsts[k];
       auto& root_id = root_ids[k];
 
       if (!inited_) {
@@ -341,7 +343,7 @@ class KVStoreNCCL : public KVStoreLocal {
         }
       } else {
         auto& buf = merge_buf_[key];
-        int root = src.ctx().dev_id;
+        int root  = src.ctx().dev_id;
         assert(root == buf.merged.ctx().dev_id);
         root_id = FindRootId(dst, root);
 
@@ -357,7 +359,7 @@ class KVStoreNCCL : public KVStoreLocal {
         // On root perform simple copy to the output
         CopyFromTo(src, *dst[root_id], priority);
         for (size_t i = 0; i < dst.size(); ++i) {
-          if ( i != root_id)
+          if (i != root_id)
             mutable_vars.push_back(dst[i]->var());
         }
         const_vars.push_back(src.var());
@@ -380,44 +382,46 @@ class KVStoreNCCL : public KVStoreLocal {
       }
     }
 
-    Engine::Get()->PushSync([srcs, broadcasts, root_ids, this](RunContext rctx) {
-        std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+    Engine::Get()->PushSync(
+        [srcs, broadcasts, root_ids, this](RunContext rctx) {
+          std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
-        ncclGroupStart();
-#endif
-        for (size_t k = 0; k < srcs.size(); ++k) {
-          auto& src = srcs[k];
-          auto& dst = broadcasts[k];
-          auto& root_id = root_ids[k];
-          if (dst.size() <= 1) {
-            continue;
-          }
-
-          int root = nccl_data_[src.ctx().dev_id].rank;
           ncclGroupStart();
-          for (size_t i = 0; i < dst.size(); ++i) {
-            auto& bcast = (i == root_id) ? src : dst[i];
-            NCCLEntry cur = nccl_data_[bcast.ctx().dev_id];
-            MSHADOW_TYPE_SWITCH(bcast.dtype(), DType,
-                ncclBcast(bcast.data().dptr<DType>(),
-                  bcast.shape().Size(),
-                  GetNCCLType(bcast.dtype()),
-                  root,
-                  cur.comm,
-                  cur.stream););
-          }
-          ncclGroupEnd();
-        }
-#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
-        ncclGroupEnd();
 #endif
-      },
-      Context::CPU(),
-      const_vars,
-      mutable_vars,
-      FnProperty::kCPUPrioritized,
-      priority,
-      "KVStoreBCast");
+          for (size_t k = 0; k < srcs.size(); ++k) {
+            auto& src     = srcs[k];
+            auto& dst     = broadcasts[k];
+            auto& root_id = root_ids[k];
+            if (dst.size() <= 1) {
+              continue;
+            }
+
+            int root = nccl_data_[src.ctx().dev_id].rank;
+            ncclGroupStart();
+            for (size_t i = 0; i < dst.size(); ++i) {
+              auto& bcast   = (i == root_id) ? src : dst[i];
+              NCCLEntry cur = nccl_data_[bcast.ctx().dev_id];
+              MSHADOW_TYPE_SWITCH(bcast.dtype(),
+                                  DType,
+                                  ncclBcast(bcast.data().dptr<DType>(),
+                                            bcast.shape().Size(),
+                                            GetNCCLType(bcast.dtype()),
+                                            root,
+                                            cur.comm,
+                                            cur.stream););
+            }
+            ncclGroupEnd();
+          }
+#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
+          ncclGroupEnd();
+#endif
+        },
+        Context::CPU(),
+        const_vars,
+        mutable_vars,
+        FnProperty::kCPUPrioritized,
+        priority,
+        "KVStoreBCast");
   }
 
   // Function that waits for NCCL collective to complete
@@ -425,26 +429,29 @@ class KVStoreNCCL : public KVStoreLocal {
   void CommSync(const std::vector<T>& dst, int priority) {
     std::vector<Engine::VarHandle> mutate_vars;
     for (size_t i = 0; i < dst.size(); ++i) {
-        mutate_vars.push_back(ptr(dst[i])->var());
+      mutate_vars.push_back(ptr(dst[i])->var());
     }
-    Engine::Get()->PushSync([this](RunContext rctx) {
-        mxnet::common::cuda::DeviceStore device_store;
-        for (auto cur : nccl_data_) {
-          device_store.SetDevice(cur.second.dev_id);
-          CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
-        }
-      },
-      Context::CPU(),
-      {},
-      mutate_vars,
-      FnProperty::kCPUPrioritized,
-      priority,
-      "KVStoreStreamSync");
+    Engine::Get()->PushSync(
+        [this](RunContext rctx) {
+          mxnet::common::cuda::DeviceStore device_store;
+          for (auto cur : nccl_data_) {
+            device_store.SetDevice(cur.second.dev_id);
+            CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
+          }
+        },
+        Context::CPU(),
+        {},
+        mutate_vars,
+        FnProperty::kCPUPrioritized,
+        priority,
+        "KVStoreStreamSync");
   }
 
   // Initialize single key
-  void InitKey(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
-            int dtype = mshadow::kFloat32) {
+  void InitKey(int key,
+               const NDArrayStorageType stype,
+               const mxnet::TShape& shape,
+               int dtype = mshadow::kFloat32) {
     if (stype == kDefaultStorage) {
       key_attrs_.push_back(std::make_tuple(key, shape, dtype));
     } else {
@@ -484,8 +491,8 @@ class KVStoreNCCL : public KVStoreLocal {
     for (size_t i = 0; i < devs.size(); ++i) {
       NCCLEntry e;
       e.dev_id = device_ids_[i];
-      e.comm = comms[i];
-      e.rank = i;
+      e.comm   = comms[i];
+      e.rank   = i;
       device_store.SetDevice(e.dev_id);
       cudaStreamCreate(&(e.stream));
       nccl_data_[device_ids_[i]] = e;
@@ -495,10 +502,10 @@ class KVStoreNCCL : public KVStoreLocal {
   using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   void InitMergeBuffer(const std::vector<Context>& devs) {
     for (size_t i = 0; i < key_attrs_.size(); ++i) {
-      int key  = std::get<0>(key_attrs_[i]);
+      int key         = std::get<0>(key_attrs_[i]);
       mxnet::TShape s = std::get<1>(key_attrs_[i]);
-      int type = std::get<2>(key_attrs_[i]);
-      auto& buf = merge_buf_[key];
+      int type        = std::get<2>(key_attrs_[i]);
+      auto& buf       = merge_buf_[key];
       // always use devs[0] as root
       buf.merged = NDArray(s, devs[0], false, type);
     }
@@ -507,11 +514,15 @@ class KVStoreNCCL : public KVStoreLocal {
 
   // Functions that enable templates to work on both references
   // and pointers
-  template<typename T>
-  const T * ptr(const T & obj) { return &obj; }
+  template <typename T>
+  const T* ptr(const T& obj) {
+    return &obj;
+  }
 
-  template<typename T>
-  const T * ptr(T * obj) { return obj; }
+  template <typename T>
+  const T* ptr(T* obj) {
+    return obj;
+  }
 
   // Find which element of the vector
   // corresponds to root dev_id

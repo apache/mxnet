@@ -45,22 +45,22 @@ Usually, our unit of work is an epoch (a full pass through the dataset) and the 
 import mxnet as mx
 
 # Set seed for reproducibility
-mx.random.seed(42)
+mx.np.random.seed(42)
 
 class Learner():
-    def __init__(self, net, data_loader, ctx):
+    def __init__(self, net, data_loader, device):
         """
         :param net: network (mx.gluon.Block)
         :param data_loader: training data loader (mx.gluon.data.DataLoader)
-        :param ctx: context (mx.gpu or mx.cpu)
+        :param device: device (mx.gpu or mx.cpu)
         """
         self.net = net
         self.data_loader = data_loader
-        self.ctx = ctx
+        self.device = device
         # So we don't need to be in `for batch in data_loader` scope
         # and can call for next batch in `iteration`
         self.data_loader_iter = iter(self.data_loader)
-        self.net.initialize(mx.init.Xavier(), ctx=self.ctx)
+        self.net.initialize(mx.init.Xavier(), device=self.device)
         self.loss_fn = mx.gluon.loss.SoftmaxCrossEntropyLoss()
         self.trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': .001})
 
@@ -73,10 +73,10 @@ class Learner():
         # Update learning rate if different this iteration
         if lr and (lr != self.trainer.learning_rate):
             self.trainer.set_learning_rate(lr)
-        # Get next batch, and move context (e.g. to GPU if set)
+        # Get next batch, and move device (e.g. to GPU if set)
         data, label = next(self.data_loader_iter)
-        data = data.as_in_context(self.ctx)
-        label = label.as_in_context(self.ctx)
+        data = data.to_device(self.device)
+        label = label.to_device(self.device)
         # Standard forward and backward pass
         with mx.autograd.record():
             output = self.net(data)
@@ -85,7 +85,7 @@ class Learner():
         # Update parameters
         if take_step: self.trainer.step(data.shape[0])
         # Set and return loss.
-        self.iteration_loss = mx.nd.mean(loss).asscalar()
+        self.iteration_loss = mx.np.mean(loss).item()
         return self.iteration_loss
 
     def close(self):
@@ -172,7 +172,7 @@ class LRFinder():
                 break
             lr = lr * lr_multiplier
         # Restore params (as finder changed them)
-        self.learner.net.load_parameters("lr_finder.params", ctx=self.learner.ctx)
+        self.learner.net.load_parameters("lr_finder.params", device=self.learner.device)
         self.learner.trainer.load_states("lr_finder.state")
         return self.results
 
@@ -231,9 +231,9 @@ Using a Pre-activation ResNet-18 from the Gluon model zoo, we instantiate our Le
 
 
 ```{.python .input}
-ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
+device = mx.gpu() if mx.device.num_gpus() else mx.cpu()
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
-learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
+learner = Learner(net=net, data_loader=data_loader, device=device)
 lr_finder = LRFinder(learner)
 lr_finder.find(lr_start=1e-6)
 lr_finder.plot()
@@ -274,8 +274,8 @@ And now we have a baseline, let's see what happens when we train with a learning
 
 ```{.python .input}
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
-learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_parameters("net.params", ctx=ctx)
+learner = Learner(net=net, data_loader=data_loader, device=device)
+learner.net.load_parameters("net.params", device=device)
 lr = 0.5
 
 for iter_idx in range(300):
@@ -302,8 +302,8 @@ And lastly, we see how the model trains with a more conservative learning rate o
 
 ```{.python .input}
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
-learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_parameters("net.params", ctx=ctx)
+learner = Learner(net=net, data_loader=data_loader, device=device)
+learner.net.load_parameters("net.params", device=device)
 lr = 0.005
 
 for iter_idx in range(300):

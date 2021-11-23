@@ -60,8 +60,8 @@ namespace op {
  * \tparam DType
  */
 template <typename DType, typename AccReal>
-class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
-                              , public OperatorExecutorTiming {
+class LegacyOperatorExecutor : public OperatorDataInitializer<DType>,
+                               public OperatorExecutorTiming {
  public:
   typedef DType DataType;
   typedef AccReal AccRealType;
@@ -69,14 +69,17 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   /*! \brief Manage test blobs and context */
   LegacyOperatorExecutor(const bool isGPU, const mxnet::ShapeVector& topShapes)
 #if !MXNET_USE_CUDA
-    : isGPU_(false)
+      : isGPU_(false)
 #else
-    : isGPU_(isGPU)
+      : isGPU_(isGPU)
 #endif
-    , initializeForward_(0)   // unit testing may call inits in any order based
-      , initializeBackward_(0)  // upon its use-case (ie may not want to run forward pass first)
-      , initializeCallback_(0) {
-    opContext_.is_train = true;
+        ,
+        initializeForward_(0)  // unit testing may call inits in any order based
+        ,
+        initializeBackward_(0)  // upon its use-case (ie may not want to run forward pass first)
+        ,
+        initializeCallback_(0) {
+    opContext_.is_train       = true;
     opContext_.run_ctx.stream = nullptr;
     CHECK(!topShapes.empty());
     shape_input_vec_ = topShapes;
@@ -93,14 +96,14 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   virtual void resetBackward() {}
 
   /*! \brief Initialize auxiliary and output blobs */
-  template<typename OperatorPropertyType>
-  bool initForward(const OperatorPropertyType &opProp, std::vector<int> *in_type) {
+  template <typename OperatorPropertyType>
+  bool initForward(const OperatorPropertyType& opProp, std::vector<int>* in_type) {
     if (!initializeForward_++) {
       shape_input_vec_.resize(opProp.ListArguments().size());
       op_.reset(opProp.CreateOperatorEx(getContext(), &shape_input_vec_, in_type));
       if (op_) {
         const size_t output_count = opProp.ListOutputs().size();
-        const size_t aux_count = opProp.ListAuxiliaryStates().size();
+        const size_t aux_count    = opProp.ListAuxiliaryStates().size();
         // Figure out what sort of blobs we need to allocate
         mxnet::ShapeVector out_shape, aux_shape;
         out_shape.resize(output_count);
@@ -150,19 +153,23 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   }
 
   /*! \brief Initialize auxiliary and output blobs */
-  template<typename OperatorPropertyType>
-  bool initBackward(const OperatorPropertyType &opProp, std::vector<int> *in_type) {
+  template <typename OperatorPropertyType>
+  bool initBackward(const OperatorPropertyType& opProp, std::vector<int>* in_type) {
     initForward(opProp, in_type);
     if (!initializeBackward_++) {
       for (size_t x = 0, n = static_cast<size_t>(opProp.NumVisibleOutputs()); x < n; ++x) {
         CHECK_LT(x, c_.blob_output_vec_.size());
-        allocateBlob(&c_.blob_out_grad_, c_.blob_output_vec_[x].shape_,
-                     false, c_.blob_output_vec_[x].type_flag_);
+        allocateBlob(&c_.blob_out_grad_,
+                     c_.blob_output_vec_[x].shape_,
+                     false,
+                     c_.blob_output_vec_[x].type_flag_);
       }
 
       for (size_t x = 0, n = c_.blob_input_vec_.size(); x < n; ++x) {
-        allocateBlob(&c_.blob_in_grad_,  c_.blob_input_vec_[x].shape_,
-                     false, c_.blob_input_vec_[x].type_flag_);
+        allocateBlob(&c_.blob_in_grad_,
+                     c_.blob_input_vec_[x].shape_,
+                     false,
+                     c_.blob_input_vec_[x].type_flag_);
       }
 
       // Get the resource of temporal space
@@ -180,18 +187,14 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   void forward(const size_t count = 1) {
     const std::vector<OpReqType> req(c_.blob_output_vec_.size(), kWriteTo);
     // Possibly move data to/from CPU and GPU (outside of timing scope)
-    MXNET_CUDA_ONLY(std::unique_ptr<GPUOpData> gpuData(isGPU_ ?
-                      new GPUOpData(c_, &opContext_) : nullptr));
-    perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), Forward,
-                           "Forward", count);
+    MXNET_CUDA_ONLY(
+        std::unique_ptr<GPUOpData> gpuData(isGPU_ ? new GPUOpData(c_, &opContext_) : nullptr));
+    perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), Forward, "Forward", count);
     if (!isGPU_) {
       mxnet::profiler::vtune::VTuneResume profile;  // VTune sample only this scope
       for (size_t x = 0; x < count; ++x) {
-        op()->Forward(opContext_,
-                      c_.blob_input_vec_,
-                      req,
-                      c_.blob_output_vec_,
-                      c_.blob_aux_states_);
+        op()->Forward(
+            opContext_, c_.blob_input_vec_, req, c_.blob_output_vec_, c_.blob_aux_states_);
       }
     } else {
       for (size_t x = 0; x < count; ++x) {
@@ -208,10 +211,9 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   void backward(const size_t count = 1) {
     const std::vector<OpReqType> req(c_.blob_in_grad_.size(), kWriteTo);
     // Possibly move data to/from CPU and GPU (outside of timing scope)
-    MXNET_CUDA_ONLY(std::unique_ptr<GPUOpData> gpuData(isGPU_ ?
-                      new GPUOpData(c_, &opContext_) : nullptr));
-    perf::TimingItem timeB(&OperatorExecutorTiming::GetTiming(), Backward,
-                           "Backward", count);
+    MXNET_CUDA_ONLY(
+        std::unique_ptr<GPUOpData> gpuData(isGPU_ ? new GPUOpData(c_, &opContext_) : nullptr));
+    perf::TimingItem timeB(&OperatorExecutorTiming::GetTiming(), Backward, "Backward", count);
     if (!isGPU_) {
       mxnet::profiler::vtune::VTuneResume profile;  // VTune sample only this scope
       for (size_t x = 0; x < count; ++x) {
@@ -240,25 +242,26 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
    * \brief Test if operator has a backward pass
    * \return true if this operator has a backward pass
    */
-  MSHADOW_CINLINE bool HasBackward() const { return true; }
+  MSHADOW_CINLINE bool HasBackward() const {
+    return true;
+  }
 
   /*! \brief Getter functions for the operator */
-  inline Operator *op() { return op_.get(); }
-  inline const Operator *op() const { return op_.get(); }
+  inline Operator* op() {
+    return op_.get();
+  }
+  inline const Operator* op() const {
+    return op_.get();
+  }
 
-  enum BlobVectorType {
-    kInput,
-    kOutput,
-    kAux,
-    kInGrad,
-    kOutGrad,
-    kBlobVectorTypeCount
-  };
+  enum BlobVectorType { kInput, kOutput, kAux, kInGrad, kOutGrad, kBlobVectorTypeCount };
 
-#define CASE_STR(__v$) case (__v$): return #__v$
+#define CASE_STR(__v$) \
+  case (__v$):         \
+    return #__v$
 
   /*! \brief Convert BlobVectorType enum into a string */
-  static inline const char *bvt2String(const BlobVectorType bvt) {
+  static inline const char* bvt2String(const BlobVectorType bvt) {
     switch (bvt) {
       CASE_STR(kInput);
       CASE_STR(kOutput);
@@ -298,11 +301,11 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
    * After that, you can compare with the "actual" operator state (BasicOperatorData) of
    * the operator that you are testing.
    */
-  template<typename Stream>
-  inline void dumpC(Stream *_os, const std::string& label) {
+  template <typename Stream>
+  inline void dumpC(Stream* _os, const std::string& label) {
     Stream& os = *_os;
-    os << "static const std::vector< std::vector< std::vector<float> > > ___"
-       << label << "_data_shape_";
+    os << "static const std::vector< std::vector< std::vector<float> > > ___" << label
+       << "_data_shape_";
     const mxnet::TShape& shape = shape_input_vec_[0];
     for (size_t i = 0, n = shape.ndim(); i < n; ++i) {
       os << shape[i] << "_";
@@ -329,10 +332,12 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     os << "};" << std::endl;
   }
 
-  static inline void copy(const TBlob& blob, const DType array[],
-                          const size_t start, const size_t end) {
+  static inline void copy(const TBlob& blob,
+                          const DType array[],
+                          const size_t start,
+                          const size_t end) {
     const size_t blobSize = blob.Size();
-    DType *p = blob.dptr<DType>();
+    DType* p              = blob.dptr<DType>();
     for (size_t i = 0, n = end - start; i < n; ++i) {
       CHECK_LT(i, blobSize);
       p[i] = array[i + start];
@@ -342,63 +347,75 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   /*! \brief Runtime load of the C++ data code generated by dumpC() */
   void load(const std::vector<std::vector<std::vector<DType>>>& cData) {
     for (size_t i = 0, ni = cData.size(); i < ni; ++i) {
-      for (size_t j = 0, nj = cData[i].size(); j < nj; ++j)  {
-        const TBlob& blob = getBlobVect(BlobVectorType(i))[j];
+      for (size_t j = 0, nj = cData[i].size(); j < nj; ++j) {
+        const TBlob& blob           = getBlobVect(BlobVectorType(i))[j];
         const size_t sourceDataSize = cData[i][j].size();
         CHECK_EQ(sourceDataSize, blob.Size());
-        const DType *sourceData = &cData[i][j][0];
+        const DType* sourceData = &cData[i][j][0];
         copy(blob, sourceData, 0, sourceDataSize);
       }
     }
   }
 
   /*! \brief Runtime load of the C++ data code generated by dumpC() */
-  void load(const std::vector<std::vector<std::vector<DType>>>& cData,
-            const BlobVectorType type) {
+  void load(const std::vector<std::vector<std::vector<DType>>>& cData, const BlobVectorType type) {
     CHECK_LT(type, cData.size());
-    for (size_t j = 0, nj = cData[type].size(); j < nj; ++j)  {
-      const TBlob& blob = getBlobVect(type)[j];
+    for (size_t j = 0, nj = cData[type].size(); j < nj; ++j) {
+      const TBlob& blob           = getBlobVect(type)[j];
       const size_t sourceDataSize = cData[type][j].size();
       CHECK_EQ(sourceDataSize, blob.Size());
-      const DType *sourceData = &cData[type][j][0];
+      const DType* sourceData = &cData[type][j][0];
       copy(blob, sourceData, 0, sourceDataSize);
     }
   }
 
   /*! \brief Runtime load of the C++ data code generated by dumpC() */
   void load(const std::vector<std::vector<std::vector<DType>>>& cData,
-            const BlobVectorType type, const int idx) {
+            const BlobVectorType type,
+            const int idx) {
     CHECK_LT(type, cData.size());
     CHECK_LT(idx, cData[type].size());
-    const TBlob& blob = getBlobVect(type)[idx];
+    const TBlob& blob           = getBlobVect(type)[idx];
     const size_t sourceDataSize = cData[type][idx].size();
     CHECK_EQ(sourceDataSize, blob.Size());
-    const DType *sourceData = &cData[type][idx][0];
+    const DType* sourceData = &cData[type][idx][0];
     copy(blob, sourceData, 0, sourceDataSize);
   }
 
-//  void FillRandom() {
-//    for (size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
-//      std::vector<TBlob> *data_vect = this->c_.all_blob_vects_[j];
-//      if (data_vect) {
-//        for (size_t i = 0, n = data_vect->size(); i < n; ++i) {
-//          OperatorDataInitializer<DType>::FillRandom((*data_vect)[i]);
-//        }
-//      }
-//    }
-//  }
+  //  void FillRandom() {
+  //    for (size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
+  //      std::vector<TBlob> *data_vect = this->c_.all_blob_vects_[j];
+  //      if (data_vect) {
+  //        for (size_t i = 0, n = data_vect->size(); i < n; ++i) {
+  //          OperatorDataInitializer<DType>::FillRandom((*data_vect)[i]);
+  //        }
+  //      }
+  //    }
+  //  }
 
-  std::vector<TBlob>& inputs() { return c_.blob_input_vec_; }
-  const std::vector<TBlob>& inputs() const { return c_.blob_input_vec_; }
-  std::vector<TBlob>& outputs() { return c_.blob_output_vec_; }
-  const std::vector<TBlob>& outputs() const { return c_.blob_output_vec_; }
-  std::vector<TBlob>& bwd_inputs() { return c_.blob_out_grad_; }
-  std::vector<TBlob>& bwd_outputs() { return c_.blob_in_grad_; }
+  std::vector<TBlob>& inputs() {
+    return c_.blob_input_vec_;
+  }
+  const std::vector<TBlob>& inputs() const {
+    return c_.blob_input_vec_;
+  }
+  std::vector<TBlob>& outputs() {
+    return c_.blob_output_vec_;
+  }
+  const std::vector<TBlob>& outputs() const {
+    return c_.blob_output_vec_;
+  }
+  std::vector<TBlob>& bwd_inputs() {
+    return c_.blob_out_grad_;
+  }
+  std::vector<TBlob>& bwd_outputs() {
+    return c_.blob_in_grad_;
+  }
 
   /*! \brief Input and output blobs */
-  OpContext                 opContext_;
+  OpContext opContext_;
 
-  mxnet::ShapeVector       shape_input_vec_;
+  mxnet::ShapeVector shape_input_vec_;
 
   struct OpData {
     std::vector<TBlob> blob_input_vec_;
@@ -407,7 +424,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     std::vector<TBlob> blob_in_grad_;
     std::vector<TBlob> blob_out_grad_;  // Remaining err (loss) pushing back upstream
 
-    std::vector<std::vector<TBlob> *> all_blob_vects_;
+    std::vector<std::vector<TBlob>*> all_blob_vects_;
     inline OpData() {
       all_blob_vects_.emplace_back(&blob_input_vec_);
       all_blob_vects_.emplace_back(&blob_output_vec_);
@@ -420,31 +437,30 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
 
 #if MXNET_USE_CUDA
   class GPUOpData : public OpData {
-    GPUOpData() = delete;
+    GPUOpData()                   = delete;
     GPUOpData(const GPUOpData& o) = delete;
 
    public:
-    inline GPUOpData(const OpData& cpuData, OpContext *opContext)
-    : cpuData_(cpuData)
-      , allocGPUStream_(opContext) {
+    inline GPUOpData(const OpData& cpuData, OpContext* opContext)
+        : cpuData_(cpuData), allocGPUStream_(opContext) {
       // Copy CPU->GPU
       CHECK_EQ(gpuBlobs_.size(), 0U);
       CHECK_EQ(cpuData_.all_blob_vects_.size(), this->all_blob_vects_.size());
       for (size_t bvt = 0, nbvt = cpuData_.all_blob_vects_.size(); bvt < nbvt; ++bvt) {
-        std::vector<TBlob>& bv_src = *cpuData_.all_blob_vects_[bvt];
+        std::vector<TBlob>& bv_src   = *cpuData_.all_blob_vects_[bvt];
         std::vector<TBlob>& bvt_dest = *this->all_blob_vects_[bvt];
         for (size_t i = 0, n = bv_src.size(); i < n; ++i) {
           const TBlob& srcBlob = bv_src[i];
-          TBlob *destBlob = allocateBlob(&gpuBlobs_, &bvt_dest, srcBlob.shape_,
-                                         true, srcBlob.type_flag_);
+          TBlob* destBlob =
+              allocateBlob(&gpuBlobs_, &bvt_dest, srcBlob.shape_, true, srcBlob.type_flag_);
 
           Context cpu_ctx, gpu_ctx;
           cpu_ctx.dev_type = Context::kCPU;
           gpu_ctx.dev_type = Context::kGPU;
           cpu_ctx.dev_id = gpu_ctx.dev_id = 0;
 
-          mxnet::ndarray::Copy<cpu, gpu>(srcBlob, destBlob, cpu_ctx,
-                                         gpu_ctx, allocGPUStream_.opContext_.run_ctx);
+          mxnet::ndarray::Copy<cpu, gpu>(
+              srcBlob, destBlob, cpu_ctx, gpu_ctx, allocGPUStream_.opContext_.run_ctx);
         }
       }
       cudaDeviceSynchronize();
@@ -453,19 +469,19 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
       // Copy GPU->CPU
       cudaDeviceSynchronize();
       for (size_t bvt = 0, nbvt = this->all_blob_vects_.size(); bvt < nbvt; ++bvt) {
-        std::vector<TBlob>& bv_src = *this->all_blob_vects_[bvt];
+        std::vector<TBlob>& bv_src   = *this->all_blob_vects_[bvt];
         std::vector<TBlob>& bvt_dest = *cpuData_.all_blob_vects_[bvt];
         for (size_t i = 0, n = bv_src.size(); i < n; ++i) {
           const TBlob& srcBlob = bv_src[i];
-          TBlob *destBlob = &bvt_dest[i];
+          TBlob* destBlob      = &bvt_dest[i];
 
           Context cpu_ctx, gpu_ctx;
           cpu_ctx.dev_type = Context::kCPU;
           gpu_ctx.dev_type = Context::kGPU;
           cpu_ctx.dev_id = gpu_ctx.dev_id = 0;
 
-          mxnet::ndarray::Copy<gpu, cpu>(srcBlob, destBlob, gpu_ctx,
-                                         cpu_ctx, allocGPUStream_.opContext_.run_ctx);
+          mxnet::ndarray::Copy<gpu, cpu>(
+              srcBlob, destBlob, gpu_ctx, cpu_ctx, allocGPUStream_.opContext_.run_ctx);
         }
       }
       gpuBlobs_.clear();  // Force deallocation of the GPU blob data
@@ -483,7 +499,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
 #endif  // MXNET_USE_CUDA
 
  protected:
-  OpData                    c_;
+  OpData c_;
 
   /*! \brief Allocate the operator's resource requests */
   void allocateResources(const std::vector<ResourceRequest>& reqs) {
@@ -491,7 +507,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
 
     Context ctx;
     ctx.dev_type = isGPU_ ? Context::kGPU : Context::kCPU;
-    ctx.dev_id = 0;
+    ctx.dev_id   = 0;
 
     for (const ResourceRequest& req : reqs) {
       switch (req.type) {
@@ -513,7 +529,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
           Resource rm = ResourceManager::Get()->Request(ctx, req);
           if (ctx.dev_mask() == Context::kCPU) {
             common::random::RandGenerator<cpu, DType>::AllocState(
-              rm.get_parallel_random<cpu, DType>());
+                rm.get_parallel_random<cpu, DType>());
           }
           opContext_.requested.emplace_back(rm);
           break;
@@ -531,47 +547,46 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob>> *standalone_blobs,
-                             std::vector<TBlob> *dest,
+  static TBlob* allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob>>* standalone_blobs,
+                             std::vector<TBlob>* dest,
                              const mxnet::TShape& shape,
                              const bool isGPU,
                              const int dtype) {
-    test::StandaloneBlob *blob = new test::StandaloneBlob(shape, isGPU, dtype);
-    CHECK_NE(blob, static_cast<TBlob *>(nullptr));
+    test::StandaloneBlob* blob = new test::StandaloneBlob(shape, isGPU, dtype);
+    CHECK_NE(blob, static_cast<TBlob*>(nullptr));
     standalone_blobs->emplace_back(std::unique_ptr<test::StandaloneBlob>(blob));
     (*dest).emplace_back(*blob);
     return blob;
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  inline TBlob *allocateBlob(std::vector<TBlob> *dest, const mxnet::TShape& shape,
-                             const bool isGPU, const int dtype) {
+  inline TBlob* allocateBlob(std::vector<TBlob>* dest,
+                             const mxnet::TShape& shape,
+                             const bool isGPU,
+                             const int dtype) {
     return allocateBlob(&standalone_blobs_, dest, shape, isGPU, dtype);
   }
 
   /*! \brief Performance timing categories */
-  enum TimingId {
-    Forward,
-    Backward
-  };
+  enum TimingId { Forward, Backward };
 
   /*! \brief The operator */
-  std::unique_ptr<Operator>   op_;
+  std::unique_ptr<Operator> op_;
   /*! \brief Is this for a GPU? */
-  const bool                  isGPU_;
+  const bool isGPU_;
   /*! \brief Assure that the Forward initialized only once */
-  std::atomic<int>            initializeForward_;
+  std::atomic<int> initializeForward_;
   /*! \brief Assure that the Forward initialized only once */
-  std::atomic<int>            initializeBackward_;
+  std::atomic<int> initializeBackward_;
   /*! \brief Assure that the callback is initialized only once */
-  std::atomic<int>            initializeCallback_;
+  std::atomic<int> initializeCallback_;
   /*! \brief scoped lifecycle management of allocated blobs */
   std::list<std::unique_ptr<test::StandaloneBlob>> standalone_blobs_;
 };
 
-template<typename OperatorProp, typename DType, typename AccReal>
+template <typename OperatorProp, typename DType, typename AccReal>
 using LegacyOpRunner =
-mxnet::test::OperatorRunner<OperatorProp, LegacyOperatorExecutor<DType, AccReal>>;
+    mxnet::test::OperatorRunner<OperatorProp, LegacyOperatorExecutor<DType, AccReal>>;
 
 }  // namespace op
 }  // namespace test

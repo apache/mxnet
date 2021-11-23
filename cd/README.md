@@ -1,36 +1,39 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  ~
+-->
 
 # MXNet Continuous Delivery
 
 ## Introduction
 
-MXNet aims to support a variety of frontends, e.g. Python, Java, Perl, R, etc. as well as environments (Windows, Linux, Mac, with or without GPU, with or without ONEDNN support, etc.). This package contains a small continuous delivery (CD) framework used to automate the delivery nightly and release builds across our delivery channels.
+MXNet aims to support a variety of frontends, e.g. Python, Java, Perl, R, etc. as well as environments (Windows, Linux, Mac, with or without GPU, with or without oneDNN support, etc.). This package contains a small continuous delivery (CD) framework used to automate the delivery nightly and release builds across our delivery channels.
 
 <!-- TODO: Add links to the actual jobs, once this is live on PROD -->
 
 The CD process is driven by the [CD pipeline job](Jenkinsfile_cd_pipeline), which orchestrates the order in which the artifacts are delivered. For instance, first publish the libmxnet library before publishing the pip package. It does this by triggering the [release job](Jenkinsfile_release_job) with a specific set of parameters for each delivery channel. The release job executes the specific release pipeline for a delivery channel across all MXNet *variants*.
 
-A variant is a specific environment or features for which MXNet is compiled. For instance CPU, GPU with CUDA v10.1, CUDA v10.2 with ONEDNN support, etc.
+A variant is a specific environment or features for which MXNet is compiled. For instance CPU, GPU with CUDA v10.1, CUDA v10.2 with oneDNN support, etc.
 
-Currently, below variants are supported. All of these variants except native have ONEDNN backend enabled.
+Currently, below variants are supported. All of these variants except native have oneDNN backend enabled.
 
 * *cpu*: CPU
-* *native*: CPU without ONEDNN
+* *native*: CPU without oneDNN
 * *cu101*: CUDA 10.1
 * *cu102*: CUDA 10.2
 * *cu110*: CUDA 11.0

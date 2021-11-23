@@ -44,7 +44,7 @@ def test_box_nms_op():
         op = mx.contrib.sym.box_nms(in_var, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
                                     coord_start=coord, score_index=score, id_index=cid, background_id=bid,
                                     force_suppress=force, in_format=in_format, out_format=out_format)
-        exe = op._bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
+        exe = op._bind(ctx=default_device(), args=[arr_data], args_grad=[arr_grad])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(grad))
         assert_almost_equal(arr_grad.asnumpy(), expected)
@@ -269,9 +269,9 @@ def test_bipartite_matching_op():
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
 
 def test_multibox_target_op():
-    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], ctx=default_context()).reshape((1, -1, 4))
-    cls_pred = mx.nd.array(list(range(10)), ctx=default_context()).reshape((1, -1, 2))
-    label = mx.nd.array([1, 0.1, 0.1, 0.5, 0.6], ctx=default_context()).reshape((1, -1, 5))
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], ctx=default_device()).reshape((1, -1, 4))
+    cls_pred = mx.nd.array(list(range(10)), ctx=default_device()).reshape((1, -1, 2))
+    label = mx.nd.array([1, 0.1, 0.1, 0.5, 0.6], ctx=default_device()).reshape((1, -1, 5))
 
     loc_target, loc_mask, cls_target = \
         mx.nd.contrib.MultiBoxTarget(anchors, label, cls_pred,
@@ -354,7 +354,7 @@ def test_box_decode_op():
         [0.13240421, 0.17859563, 0.93759584, 1.1174043 ]]]), atol=1e-5, rtol=1e-5)
 
 def test_op_mrcnn_mask_target():
-    if default_context().device_type != 'gpu':
+    if default_device().device_type != 'gpu':
         return
 
     num_rois = 2
@@ -425,7 +425,7 @@ def test_dynamic_reshape():
         args_grad = {
             'data': mx.nd.empty(src_shape)
         }
-        exe = net._bind(default_context(), args, args_grad)
+        exe = net._bind(default_device(), args, args_grad)
         exe.forward(is_train=True)
         assert np.square(exe.outputs[0].asnumpy() - dat_npy.reshape(dst_shape)).mean() < 1E-7
         exe.backward(out_grads=mx.nd.array(grad_npy))

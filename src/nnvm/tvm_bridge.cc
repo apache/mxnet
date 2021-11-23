@@ -65,30 +65,26 @@ class TVMFunctor {
     values_.clear();
     type_codes_.clear();
     values_.insert(values_.end(), args.values, args.values + args.size());
-    type_codes_.insert(
-        type_codes_.end(), args.type_codes, args.type_codes + args.size());
+    type_codes_.insert(type_codes_.end(), args.type_codes, args.type_codes + args.size());
 
     size_t const_loc_ptr = 0;
     for (int i = 0; i < args.size(); ++i) {
       if (args.type_codes[i] == kTVMNDArrayTypeCode) {
-        const NDArray& nd =
-            static_cast<NDArray*>(args.values[i].v_handle)[0];
+        const NDArray& nd = static_cast<NDArray*>(args.values[i].v_handle)[0];
         // We cannot set the value until
         type_codes_[i] = kTVMDLTensorHandle;
         array_data_.push_back(nd);
         array_loc_.push_back(i);
         // check if there is read or mutate
         // by default assume we mutate the array.
-        if (const_loc_ptr < const_loc.size() &&
-            i == const_loc[const_loc_ptr]) {
+        if (const_loc_ptr < const_loc.size() && i == const_loc[const_loc_ptr]) {
           const_vars->push_back(nd.var());
           ++const_loc_ptr;
         } else {
           mutate_vars->push_back(nd.var());
         }
       } else {
-        CHECK_LT(args.type_codes[i], kTVMDataType)
-            << "Only allow POD type in mxnet async call";
+        CHECK_LT(args.type_codes[i], kTVMDataType) << "Only allow POD type in mxnet async call";
       }
     }
   }
@@ -100,8 +96,7 @@ class TVMFunctor {
   void Run(const RunContext& rctx) {
     // setup DLTensor
     for (size_t i = 0; i < array_loc_.size(); ++i) {
-      values_[array_loc_[i]].v_handle =
-          const_cast<DLTensor*>(&(array_data_[i].data().dltensor()));
+      values_[array_loc_[i]].v_handle = const_cast<DLTensor*>(&(array_data_[i].data().dltensor()));
     }
     // run the packed function
     TVMRetValue rv;
@@ -109,7 +104,7 @@ class TVMFunctor {
     if (ctx().dev_type == Context::kGPU) {
 #if MXNET_USE_CUDA
       // pass stream via last argument.
-      void* strm = static_cast<void*>(rctx.get_stream<gpu>()->stream_);
+      void* strm   = static_cast<void*>(rctx.get_stream<gpu>()->stream_);
       int dev_type = kDLGPU;
       fset_stream_(dev_type, rctx.ctx.dev_id, strm);
       func_.CallPacked(args, &rv);
@@ -137,14 +132,13 @@ class TVMFunctor {
   std::vector<int> array_loc_;
 };
 
-
 // Wrap a TVM function to a function that invokes MXNet's Engine
 // It does two things: call the engine properly
 // set up the NDArray to DLTensor during invocation.
 void WrapAsyncCall(TVMArgs wrap_args, TVMRetValue* wrap_rv) {
-  PackedFunc f = wrap_args[0];
-  PackedFunc fset_stream =  wrap_args[1];
-  int num_const = wrap_args[2];
+  PackedFunc f           = wrap_args[0];
+  PackedFunc fset_stream = wrap_args[1];
+  int num_const          = wrap_args[2];
 
   // sorted position of constant arguments
   std::vector<int> const_loc;
@@ -156,15 +150,13 @@ void WrapAsyncCall(TVMArgs wrap_args, TVMRetValue* wrap_rv) {
   // wrapped function
   // This is the function that called by the user.
   auto wrapped = [f, fset_stream, const_loc](TVMArgs args, TVMRetValue* rv) {
-    std::shared_ptr<TVMFunctor> func =
-      std::make_shared<TVMFunctor>(f, fset_stream);
+    std::shared_ptr<TVMFunctor> func = std::make_shared<TVMFunctor>(f, fset_stream);
     std::vector<Engine::VarHandle> const_vars, mutate_vars;
     func->Init(args, const_loc, &const_vars, &mutate_vars);
-    Engine *engine = Engine::Get();
+    Engine* engine = Engine::Get();
     engine->DeduplicateVarHandle(&const_vars, &mutate_vars);
-    engine->PushSync([func](RunContext ctx) {
-        func->Run(ctx);
-      }, func->ctx(), const_vars, mutate_vars);
+    engine->PushSync(
+        [func](RunContext ctx) { func->Run(ctx); }, func->ctx(), const_vars, mutate_vars);
   };
   *wrap_rv = PackedFunc(wrapped);
 }
@@ -175,8 +167,7 @@ void WrapAsyncCall(TVMArgs wrap_args, TVMRetValue* wrap_rv) {
 // the WrapAsyncCall function.
 extern "C" MXNET_DLL int MXTVMBridge(TVMFunctionHandle pregister) {
   using tvm::runtime::PackedFunc;
-  const PackedFunc& fregister =
-      *static_cast<PackedFunc*>(pregister);
+  const PackedFunc& fregister = *static_cast<PackedFunc*>(pregister);
   fregister("WrapAsyncCall", PackedFunc(mxnet::WrapAsyncCall));
   return 0;
 }

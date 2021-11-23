@@ -56,7 +56,7 @@ def test_np_exponential():
 @use_np
 def test_np_uniform():
     types = [None, "float32", "float64"]
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     samples = 1000000
     # Generation test
     trials = 8
@@ -67,7 +67,7 @@ def test_np_uniform():
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), num_buckets)
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: mx.np.random.uniform(low, high, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            generator_mx_np = lambda x: mx.np.random.uniform(low, high, size=x, device=device, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
@@ -106,7 +106,7 @@ def test_np_gumbel():
 @use_np
 def test_np_normal():
     types = [None, "float32", "float64"]
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     samples = 1000000
     # Generation test
     trials = 8
@@ -117,7 +117,7 @@ def test_np_normal():
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(ss.norm.cdf(buckets[i][1], loc, scale) -
                       ss.norm.cdf(buckets[i][0], loc, scale)) for i in range(num_buckets)]
-            generator_mx_np = lambda x: mx.np.random.normal(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            generator_mx_np = lambda x: mx.np.random.normal(loc, scale, size=x, device=device, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
@@ -125,23 +125,23 @@ def test_np_normal():
 @use_np
 def test_np_gamma():
     types = [None, "float32", "float64"]
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     samples = 1000000
     # Generation test
     trials = 8
     num_buckets = 5
-    for dtype in types:
+    for _ in types:
         for alpha, beta in [(2.0, 3.0), (0.5, 1.0)]:
             buckets, probs = gen_buckets_probs_with_ppf(
                 lambda x: ss.gamma.ppf(x, a=alpha, loc=0, scale=beta), num_buckets)
             buckets = np.array(buckets).tolist()
             def generator_mx(x): return np.random.gamma(
-                alpha, beta, size=samples, ctx=ctx).asnumpy()
+                alpha, beta, size=samples, device=device).asnumpy()
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs,
                              nsamples=samples, nrepeat=trials)
             generator_mx_same_seed =\
                 lambda x: _np.concatenate(
-                    [np.random.gamma(alpha, beta, size=(x // 10), ctx=ctx).asnumpy()
+                    [np.random.gamma(alpha, beta, size=(x // 10), device=device).asnumpy()
                         for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs,
                              nsamples=samples, nrepeat=trials)
@@ -151,7 +151,7 @@ def test_np_gamma():
 @use_np
 def test_np_laplace():
     types = [None, "float32", "float64"]
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     samples = 1000000
     # Generation test
     trials = 8
@@ -161,6 +161,6 @@ def test_np_laplace():
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.laplace.ppf(x, loc=loc, scale=scale), num_buckets)
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: np.random.laplace(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            generator_mx_np = lambda x: np.random.laplace(loc, scale, size=x, device=device, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 

@@ -1,19 +1,22 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  ~
+-->
 
 # MXNet Operator Performance Benchmarks
 
@@ -37,7 +40,7 @@ Benchmarks are usually done end-to-end for a given Network Architecture. For exa
 2. A standard Network Architecture like ResNet-50 is made up of many operators Ex: Convolution2D, Softmax, Dense and more. Consider the following scenarios:
     1. We improved the performance of Convolution2D operator, but due to a bug, Softmax performance went down. Overall, we may observe end to end benchmarks are running fine, we may miss out the performance degradation of a single operator which can accumulate and become untraceable.
     2. You need to see in a given network, which operator is taking maximum time and plan optimization work. With end to end benchmarks, it is hard to get more fine grained numbers at operator level.
-3. We need to know on different hardware infrastructure (Ex: CPU with ONEDNN, GPU with NVIDIA CUDA and cuDNN) how different operators performs. With these details, we can plan the optimization work at operator level, which could exponentially boost up end to end performance.
+3. We need to know on different hardware infrastructure (Ex: CPU with oneDNN, GPU with NVIDIA CUDA and cuDNN) how different operators performs. With these details, we can plan the optimization work at operator level, which could exponentially boost up end to end performance.
 4. You want to have nightly performance tests across all operators in a deep learning framework to catch regressions early. 
 5. We can integrate this framework with a CI/CD system to run per operator performance tests for PRs. Example: When a PR modifies the kernel of TransposeConv2D, we can run benchmarks of TransposeConv2D operator to verify performance.
 
@@ -171,6 +174,39 @@ Output for the above benchmark run, on a CPU machine, would look something like 
 ## Usecase 5 - Profile internal operators locally
 Currently, opperf supports operators in `mx.nd.*` namespace.
 However, locally, one can profile internal operators in `mx.nd.internal.*` namespace.
+
+## Usecase 6 - Compare performance for chosen operator from both NDArray library and its Numpy/Numpy_extension counterpart
+For example, you want to compare add operator from `mx.nd` and `mx.np`. You just run the following python script.
+
+```
+#!/usr/bin/python
+from benchmark.opperf.utils.benchmark_utils import run_benchmark_operator
+
+run_benchmark_operator(name = "add", run_backward=True)
+```
+
+Output for the above benchmark run, on a CPU machine, would look something like below:
+
+```
+<module 'mxnet.ndarray'>
+[{'add': [{'inputs': {'lhs': (128, 128), 'rhs': (128, 128)},
+           'max_storage_mem_alloc_cpu/0': 32.768,
+           'avg_time_forward_add': 0.0496,
+           'avg_time_backward_add': 0.0793}]}]
+<module 'mxnet.numpy'>
+[{'add': [{'inputs': {'x1': (128, 128), 'x2': (128, 128)},
+           'max_storage_mem_alloc_cpu/0': 32.768,
+           'avg_time_forward_add': 0.0484,
+           'avg_time_backward_add': 0.0898}]}]
+
+```
+This function uses `run_performance_test` function mentioned in Usecase 3 and Usecase 4 and it is possible to change all parameters from it.
+All arguments that are of type NDArray will be automatically provided with shape that is passed as `size`.
+If any fuction requires more arguments or different shaped NDArrays, provide those arguments as `additional_inputs` as it is shown below:
+```
+run_benchmark_operator(name = "pick", size = (128,128), additional_inputs = {"index": (128,1)})
+```
+
 
 #### Changes
 Remove the hasattr check for `op.__name__` to be in `mx.nd`

@@ -18,10 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file l2_normalization.cc
  * \brief l2 normalization operator
-*/
+ */
 #include "./l2_normalization-inl.h"
 
 /* VisualStudio only supports openmp 2.0 */
@@ -32,31 +31,31 @@
 namespace mxnet {
 namespace op {
 
-template<typename DType>
+template <typename DType>
 class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
  public:
-  explicit L2NormalizationOpCPU(L2NormalizationParam p)
-      : L2NormalizationOp<cpu, DType>(p) {}
-  void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_args) override {
+  explicit L2NormalizationOpCPU(L2NormalizationParam p) : L2NormalizationOp<cpu, DType>(p) {}
+  void Forward(const OpContext& ctx,
+               const std::vector<TBlob>& in_data,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& out_data,
+               const std::vector<TBlob>& aux_args) override {
     using namespace mshadow;
     using namespace mshadow::expr;
-    if (req[l2_normalization::kOut] == kNullOp) return;
+    if (req[l2_normalization::kOut] == kNullOp)
+      return;
     CHECK_EQ(req[l2_normalization::kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), 2U);
-    Stream<cpu> *s = ctx.get_stream<cpu>();
+    Stream<cpu>* s           = ctx.get_stream<cpu>();
     mxnet::TShape orig_shape = in_data[l2_normalization::kData].shape_;
-    auto omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    auto omp_threads         = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (this->param_.mode == l2_normalization::kInstance) {
-      Shape<2> dshape = Shape2(orig_shape[0],
-        orig_shape.ProdShape(1, orig_shape.ndim()));
-      Tensor<cpu, 2, DType> data = in_data[l2_normalization::kData]
-        .get_with_shape<cpu, 2, DType>(dshape, s);
-      Tensor<cpu, 2, DType> out = out_data[l2_normalization::kOut]
-        .get_with_shape<cpu, 2, DType>(dshape, s);
+      Shape<2> dshape = Shape2(orig_shape[0], orig_shape.ProdShape(1, orig_shape.ndim()));
+      Tensor<cpu, 2, DType> data =
+          in_data[l2_normalization::kData].get_with_shape<cpu, 2, DType>(dshape, s);
+      Tensor<cpu, 2, DType> out =
+          out_data[l2_normalization::kOut].get_with_shape<cpu, 2, DType>(dshape, s);
       Tensor<cpu, 1, DType> norm = out_data[l2_normalization::kNorm].get<cpu, 1, DType>(s);
 #pragma omp parallel for num_threads(omp_threads)
       for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
@@ -71,15 +70,15 @@ class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
       }
     } else if (this->param_.mode == l2_normalization::kChannel) {
       CHECK_GE(orig_shape.ndim(), 3);
-      Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
-        orig_shape.ProdShape(2, orig_shape.ndim()));
-      Tensor<cpu, 3, DType> data = in_data[l2_normalization::kData]
-        .get_with_shape<cpu, 3, DType>(dshape, s);
-      Tensor<cpu, 3, DType> out = out_data[l2_normalization::kOut]
-        .get_with_shape<cpu, 3, DType>(dshape, s);
+      Shape<3> dshape =
+          Shape3(orig_shape[0], orig_shape[1], orig_shape.ProdShape(2, orig_shape.ndim()));
+      Tensor<cpu, 3, DType> data =
+          in_data[l2_normalization::kData].get_with_shape<cpu, 3, DType>(dshape, s);
+      Tensor<cpu, 3, DType> out =
+          out_data[l2_normalization::kOut].get_with_shape<cpu, 3, DType>(dshape, s);
       Shape<2> norm_shape = Shape2(dshape[0], dshape[2]);
-      Tensor<cpu, 2, DType> norm = out_data[l2_normalization::kNorm]
-        .get_with_shape<cpu, 2, DType>(norm_shape, s);
+      Tensor<cpu, 2, DType> norm =
+          out_data[l2_normalization::kNorm].get_with_shape<cpu, 2, DType>(norm_shape, s);
 #pragma omp parallel for num_threads(omp_threads) collapse(2)
       for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
         for (int shape2 = 0; shape2 < static_cast<int>(dshape[2]); shape2++) {
@@ -95,15 +94,15 @@ class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
       }
     } else if (this->param_.mode == l2_normalization::kSpatial) {
       CHECK_GE(orig_shape.ndim(), 3);
-      Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
-        orig_shape.ProdShape(2, orig_shape.ndim()));
-      Tensor<cpu, 3, DType> data = in_data[l2_normalization::kData]
-        .get_with_shape<cpu, 3, DType>(dshape, s);
-      Tensor<cpu, 3, DType> out = out_data[l2_normalization::kOut]
-        .get_with_shape<cpu, 3, DType>(dshape, s);
+      Shape<3> dshape =
+          Shape3(orig_shape[0], orig_shape[1], orig_shape.ProdShape(2, orig_shape.ndim()));
+      Tensor<cpu, 3, DType> data =
+          in_data[l2_normalization::kData].get_with_shape<cpu, 3, DType>(dshape, s);
+      Tensor<cpu, 3, DType> out =
+          out_data[l2_normalization::kOut].get_with_shape<cpu, 3, DType>(dshape, s);
       Shape<2> norm_shape = Shape2(dshape[0], dshape[1]);
-      Tensor<cpu, 2, DType> norm = out_data[l2_normalization::kNorm]
-        .get_with_shape<cpu, 2, DType>(norm_shape, s);
+      Tensor<cpu, 2, DType> norm =
+          out_data[l2_normalization::kNorm].get_with_shape<cpu, 2, DType>(norm_shape, s);
 #pragma omp parallel for num_threads(omp_threads) collapse(2)
       for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
         for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
@@ -123,25 +122,24 @@ class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
   }
 };
 
-template<>
+template <>
 Operator* CreateOp<cpu>(L2NormalizationParam param, int dtype) {
   Operator* op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new L2NormalizationOpCPU<DType>(param);
-  });
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new L2NormalizationOpCPU<DType>(param); });
   return op;
 }
 
 // DO_BIND_DISPATCH comes from static_operator_common.h
-Operator* L2NormalizationProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                                                std::vector<int> *in_type) const {
+Operator* L2NormalizationProp::CreateOperatorEx(Context ctx,
+                                                mxnet::ShapeVector* in_shape,
+                                                std::vector<int>* in_type) const {
   DO_BIND_DISPATCH(CreateOp, this->param_, in_type->at(0));
 }
 
 DMLC_REGISTER_PARAMETER(L2NormalizationParam);
 
 MXNET_REGISTER_OP_PROPERTY(L2Normalization, L2NormalizationProp)
-.describe(R"code(Normalize the input array using the L2 norm.
+    .describe(R"code(Normalize the input array using the L2 norm.
 
 For 1-D NDArray, it computes::
 
@@ -194,7 +192,7 @@ Example::
      [ 0.6401844   0.76822126]]]
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input array to normalize.")
-.add_arguments(L2NormalizationParam::__FIELDS__());
+    .add_argument("data", "NDArray-or-Symbol", "Input array to normalize.")
+    .add_arguments(L2NormalizationParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

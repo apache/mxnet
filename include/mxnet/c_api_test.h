@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file c_api_test.h
  * \brief C API of mxnet for ease of testing backend in Python
  */
@@ -39,10 +38,10 @@ extern "C" {
  * used only for the testing purpose.
  */
 MXNET_DLL int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
-                                        const char* prop_name,
-                                        const uint32_t num_ops,
-                                        const char** op_names,
-                                        SymbolHandle* ret_sym_handle);
+                                       const char* prop_name,
+                                       const uint32_t num_ops,
+                                       const char** op_names,
+                                       SymbolHandle* ret_sym_handle);
 
 /*!
  * \brief Given a subgraph property name, use the provided op names
@@ -61,8 +60,8 @@ MXNET_DLL int MXSetSubgraphPropertyOpNames(const char* prop_name,
  * op_names to the backend property.
  */
 MXNET_DLL int MXSetSubgraphPropertyOpNamesV2(const char* prop_name,
-                                           const uint32_t num_ops,
-                                           const char** op_names);
+                                             const uint32_t num_ops,
+                                             const char** op_names);
 /*!
  * \brief Given a subgraph property name, delete the op name set
  * in the SubgraphPropertyOpNameSet.
@@ -74,22 +73,26 @@ MXNET_DLL int MXRemoveSubgraphPropertyOpNames(const char* prop_name);
  */
 MXNET_DLL int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name);
 
-
 /*!
  * \brief Get the value of an environment variable as seen by the backend.
  * \param name The name of the environment variable
  * \param value The returned value of the environment variable
  */
-MXNET_DLL int MXGetEnv(const char* name,
-                       const char** value);
+MXNET_DLL int MXGetEnv(const char* name, const char** value);
 
 /*!
  * \brief Set the value of an environment variable from the backend.
  * \param name The name of the environment variable
  * \param value The desired value to set the environment variable `name`
  */
-MXNET_DLL int MXSetEnv(const char* name,
-                       const char* value);
+MXNET_DLL int MXSetEnv(const char* name, const char* value);
+
+/*!
+ * \brief Get the maximum SM architecture supported by the nvrtc compiler
+ * \param max_arch The maximum supported architecture (e.g. would be 80, if Ampere)
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXGetMaxSupportedArch(uint32_t* max_arch);
 
 #ifdef __cplusplus
 }

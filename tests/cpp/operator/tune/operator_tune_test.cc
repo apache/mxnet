@@ -33,7 +33,7 @@ using namespace mxnet;
  */
 TEST(OMP_TUNING, ShowAllTunedOps) {
   const std::unordered_set<std::string>& op_names =
-    mxnet::op::OperatorTune<float>::TunedOperatorNames();
+      mxnet::op::OperatorTune<float>::TunedOperatorNames();
   for (auto iter = op_names.begin(), e_iter = op_names.end(); iter != e_iter; ++iter) {
     std::cout << *iter << std::endl;
   }
@@ -45,21 +45,19 @@ static std::vector<mxnet::ShapeVector> tuning_shapes() {
   std::vector<mxnet::ShapeVector> shapes;
   if (test::performance_run || test::csv) {
     shapes = {
-      {{1,  1, 28,  28}},
-      {{1,  3, 28,  28}},
-      {{50, 1, 18,  32}},
-      {{25, 3, 64,  64}},
-      {{10, 3, 128, 128}},
-      {{20, 3, 128, 128}},
-      {{30, 3, 128, 128}},
-      {{30, 3, 256, 128}},
+        {{1, 1, 28, 28}},
+        {{1, 3, 28, 28}},
+        {{50, 1, 18, 32}},
+        {{25, 3, 64, 64}},
+        {{10, 3, 128, 128}},
+        {{20, 3, 128, 128}},
+        {{30, 3, 128, 128}},
+        {{30, 3, 256, 128}},
     };
   } else {
-    shapes = {
-      // Non-performance dataset acts as a sanity test
-      {{1,  1, 28, 28}},
-      {{50, 3, 18, 32}}
-    };
+    shapes = {// Non-performance dataset acts as a sanity test
+              {{1, 1, 28, 28}},
+              {{50, 3, 18, 32}}};
   }
   return shapes;
 }
@@ -68,8 +66,8 @@ static std::vector<mxnet::ShapeVector> tuning_shapes() {
  * \brief Generic bidirectional sanity test
  */
 TEST(OMP_TUNING, ExecuteBidirectional) {
-  test::op::BasicRunCoreOpBidirectional(false, true, {}, {tuning_shapes()[0]},
-                                        "elemwise_add", "_backward_add");
+  test::op::BasicRunCoreOpBidirectional(
+      false, true, {}, {tuning_shapes()[0]}, "elemwise_add", "_backward_add");
 }
 
 /* Some test results:
@@ -93,26 +91,20 @@ TEST(OMP_TUNING, ExecuteBidirectional) {
  * \brief Rune a tuning evaluation
  * \tparam DType Data type for which to evaluate tuning
  */
-template<typename DType>
+template <typename DType>
 static float EvaluateTune(const bool verbose = true) {
   std::vector<std::pair<std::string, std::string>> binary_operators;
   if (test::csv) {
-    binary_operators = {
-      {"elemwise_add", COREOP_BWD_OP_NAME_VALUE_NONE}
-    };
+    binary_operators = {{"elemwise_add", COREOP_BWD_OP_NAME_VALUE_NONE}};
   } else if (test::performance_run) {
-    binary_operators = {
-      {"relu",         ""},  // Code can figure out what the backward op is for some
-      {"sigmoid",      ""},
-      {"sqrt",         ""},
-      {"elemwise_add", "_backward_add"},
-      {"elemwise_mul", "_backward_mul"},
-      {"elemwise_div", "_backward_div"}
-    };
+    binary_operators = {{"relu", ""},  // Code can figure out what the backward op is for some
+                        {"sigmoid", ""},
+                        {"sqrt", ""},
+                        {"elemwise_add", "_backward_add"},
+                        {"elemwise_mul", "_backward_mul"},
+                        {"elemwise_div", "_backward_div"}};
   } else {
-    binary_operators = {
-      {"elemwise_add", "_backward_add"}
-    };
+    binary_operators = {{"elemwise_add", "_backward_add"}};
   }
   std::vector<float> rates;
   for (size_t i = 0, n = binary_operators.size(); i < n; ++i) {
@@ -120,18 +112,15 @@ static float EvaluateTune(const bool verbose = true) {
     tuningTester.set_calls_per_iteration(10);
     tuningTester.set_total_iterations(5);
     std::cout << "******************************" << std::endl;
-    std::cout << "Operators: " << binary_operators[i].first
-              << ", " << binary_operators[i].second
-              << " for type: " << test::type_name<DType>()
-              << std::endl;
+    std::cout << "Operators: " << binary_operators[i].first << ", " << binary_operators[i].second
+              << " for type: " << test::type_name<DType>() << std::endl;
     std::cout << "******************************" << std::endl;
 
     // Do the performance runs
     std::vector<mxnet::ShapeVector> shapes = tuning_shapes();
 
-    tuningTester.TestTunedOperator({}, verbose, shapes,
-                                   binary_operators[i].first.c_str(),
-                                   binary_operators[i].second.c_str());
+    tuningTester.TestTunedOperator(
+        {}, verbose, shapes, binary_operators[i].first.c_str(), binary_operators[i].second.c_str());
     rates.push_back(tuningTester.CalculateSuccessRate());
   }
   return std::accumulate(rates.begin(), rates.end(), 0.0f) / rates.size();
@@ -175,4 +164,3 @@ TEST(OMP_TUNING, EvaluateTuneTestInt64) {
 }
 
 #endif  // MXNET_USE_OPERATOR_TUNING
-

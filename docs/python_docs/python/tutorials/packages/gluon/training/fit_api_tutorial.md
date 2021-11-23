@@ -21,7 +21,7 @@ In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.ap
 
 With the Fit API, you can train a deep learning model with a minimal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches (often called as 'training loop'). Advanced users can train with bespoke training loops, and many of these use cases will be covered by the Fit API.
 
-To demonstrate the Fit API, you will train an image classification model using the [ResNet-18](https://arxiv.org/abs/1512.03385) neural network architecture. The model will be trained using the [Fashion-MNIST dataset](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/).
+To demonstrate the Fit API, you will train an image classification model using the [ResNet-18](https://arxiv.org/abs/1512.03385) neural network architecture. The model will be trained using the [Fashion-MNIST dataset](https://github.com/zalandoresearch/fashion-mnist).
 
 ## Prerequisites
 
@@ -38,13 +38,13 @@ from mxnet.gluon.model_zoo import vision
 from mxnet.gluon.contrib.estimator import estimator
 from mxnet.gluon.contrib.estimator.event_handler import TrainBegin, TrainEnd, EpochEnd, CheckpointHandler
 
-gpu_count = mx.context.num_gpus()
-ctx = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
+gpu_count = mx.device.num_gpus()
+device = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
 ```
 
 ## Dataset
 
-[Fashion-MNIST](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/) dataset consists of fashion items divided into ten categories: t-shirt/top, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag and ankle boot.
+[Fashion-MNIST](https://github.com/zalandoresearch/fashion-mnist) dataset consists of fashion items divided into ten categories: t-shirt/top, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag and ankle boot.
 
 - It has 60,000 grayscale images of size 28 * 28 for training.
 - It has 10,000 grayscale images of size 28 * 28 for testing/validation.
@@ -94,7 +94,7 @@ Let's load the resnet-18 model architecture from [Gluon Model Zoo](../../../../a
 
 ```{.python .input}
 resnet_18_v1 = vision.resnet18_v1(pretrained=False, classes = 10)
-resnet_18_v1.initialize(init = mx.init.Xavier(), ctx=ctx)
+resnet_18_v1.initialize(init = mx.init.Xavier(), device=device)
 ```
 
 We will be using `SoftmaxCrossEntropyLoss` as the loss function since this is a multi-class classification problem. We will be using `sgd` (Stochastic Gradient Descent) as the optimizer.
@@ -125,14 +125,14 @@ In the basic usage example, with just 2 lines of code, we will set up our model 
 
 
 ```{.python .input}
-train_acc = mx.metric.Accuracy() # Metric to monitor
+train_acc = mx.gluon.metric.Accuracy() # Metric to monitor
 
-# Define the estimator, by passing to it the model, loss function, metrics, trainer object and context
+# Define the estimator, by passing to it the model, loss function, metrics, trainer object and device
 est = estimator.Estimator(net=resnet_18_v1,
                           loss=loss_fn,
-                          metrics=train_acc,
+                          train_metrics=train_acc,
                           trainer=trainer,
-                          context=ctx)
+                          device=device)
 
 # ignore warnings for nightly test on CI only
 import warnings
@@ -194,7 +194,7 @@ class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
         for metric in estimator.train_metrics:
             # look for train Loss in training metrics
             # we wrapped loss value as a metric to record it
-            if isinstance(metric, mx.metric.Loss):
+            if isinstance(metric, mx.gluon.metric.Loss):
                 loss_name, loss_val = metric.get()
                 # append loss value for this epoch
                 self.loss_history.setdefault(loss_name, []).append(loss_val)
@@ -204,20 +204,20 @@ class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
 ```{.python .input}
 # Let's reset the model, trainer and accuracy objects from above
 
-resnet_18_v1.initialize(force_reinit=True, init = mx.init.Xavier(), ctx=ctx)
+resnet_18_v1.initialize(force_reinit=True, init = mx.init.Xavier(), device=device)
 trainer = gluon.Trainer(resnet_18_v1.collect_params(),
                         'sgd', {'learning_rate': learning_rate})
-train_acc = mx.metric.Accuracy()
+train_acc = mx.gluon.metric.Accuracy()
 ```
 
 
 ```{.python .input}
-# Define the estimator, by passing to it the model, loss function, metrics, trainer object and context
+# Define the estimator, by passing to it the model, loss function, metrics, trainer object and device
 est = estimator.Estimator(net=resnet_18_v1,
                           loss=loss_fn,
-                          metrics=train_acc,
+                          train_metrics=train_acc,
                           trainer=trainer,
-                          context=ctx)
+                          device=device)
 
 # Define the handlers, let's say in built Checkpointhandler
 checkpoint_handler = CheckpointHandler(model_dir='./',
@@ -257,7 +257,7 @@ You can load the saved model, by using the `load_parameters` API in Gluon. For m
 
 ```{.python .input}
 resnet_18_v1 = vision.resnet18_v1(pretrained=False, classes=10)
-resnet_18_v1.load_parameters('./my_model-best.params', ctx=ctx)
+resnet_18_v1.load_parameters('./my_model-best.params', device=device)
 ```
 
 ## Next Steps

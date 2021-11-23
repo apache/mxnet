@@ -28,7 +28,7 @@ import numpy as _np
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import np, npx, context
+from ... import np, npx, device as _device
 from ...util import use_np
 from ..parameter import Parameter
 
@@ -223,9 +223,9 @@ class Dense(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        ctx = x.ctx
-        act = npx.fully_connected(x, self.weight.data(ctx),
-                                  self.bias.data(ctx) if self.bias is not None else None,
+        device = x.device
+        act = npx.fully_connected(x, self.weight.data(device),
+                                  self.bias.data(device) if self.bias is not None else None,
                                   no_bias=self.bias is None,
                                   num_hidden=self._units, flatten=self._flatten, name='fwd')
         if self.act is not None:
@@ -382,16 +382,16 @@ class _BatchNorm(HybridBlock):
         super(_BatchNorm, self).cast(dtype)
 
     def forward(self, x):
-        ctx = x.ctx
+        device = x.device
         if self.fuse_relu:
-            return npx.batch_norm_with_relu(x, self.gamma.data(ctx), self.beta.data(ctx),
-                                            self.running_mean.data(ctx),
-                                            self.running_var.data(ctx),
+            return npx.batch_norm_with_relu(x, self.gamma.data(device), self.beta.data(device),
+                                            self.running_mean.data(device),
+                                            self.running_var.data(device),
                                             name='fwd', **self._kwargs)
         else:
-            return npx.batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
-                                  self.running_mean.data(ctx),
-                                  self.running_var.data(ctx),
+            return npx.batch_norm(x, self.gamma.data(device), self.beta.data(device),
+                                  self.running_mean.data(device),
+                                  self.running_var.data(device),
                                   name='fwd', **self._kwargs)
 
     def infer_shape(self, x, *args):
@@ -550,7 +550,7 @@ class Embedding(HybridBlock):
         AdaGrad and Adam. By default lazy updates is turned on, which may perform
         differently from standard updates. For more details, please check the
         Optimization API at:
-        https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
+        https://mxnet.apache.org/versions/master/api/python/docs/api/optimizer/index.html
 
     Parameters
     ----------
@@ -583,8 +583,8 @@ class Embedding(HybridBlock):
                                 allow_deferred_init=True, grad_stype=grad_stype)
 
     def forward(self, x):
-        ctx = x.ctx
-        return npx.embedding(x, self.weight.data(ctx), name='fwd', **self._kwargs)
+        device = x.device
+        return npx.embedding(x, self.weight.data(device), name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{block_name}({input_dim} -> {output_dim}, {dtype})'
@@ -671,7 +671,7 @@ class InstanceNorm(HybridBlock):
     ...                 [[ 3.3,  4.4]]])
     >>> # Instance normalization is calculated with the above formula
     >>> layer = InstanceNorm()
-    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer.initialize(device=mx.cpu(0))
     >>> layer(x)
     [[[-0.99998355  0.99998331]]
      [[-0.99998319  0.99998361]]]
@@ -691,12 +691,12 @@ class InstanceNorm(HybridBlock):
                               allow_deferred_init=True)
 
     def forward(self, x):
-        ctx = x.ctx
+        device = x.device
         if self._axis == 1:
-            return npx.instance_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+            return npx.instance_norm(x, self.gamma.data(device), self.beta.data(device),
                                      name='fwd', eps=self._epsilon)
         x = x.swapaxes(1, self._axis)
-        return npx.instance_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+        return npx.instance_norm(x, self.gamma.data(device), self.beta.data(device),
                                  name='fwd', eps=self._epsilon).swapaxes(1, self._axis)
 
     def infer_shape(self, x, *args):
@@ -762,7 +762,7 @@ class LayerNorm(HybridBlock):
     >>> x = mx.np.array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
     >>> # Layer normalization is calculated with the above formula
     >>> layer = LayerNorm()
-    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer.initialize(device=mx.cpu(0))
     >>> layer(x)
     [[-1.41421    -0.707105    0.          0.707105    1.41421   ]
      [-1.2247195  -1.2247195   0.81647956  0.81647956  0.81647956]]
@@ -784,9 +784,9 @@ class LayerNorm(HybridBlock):
                               allow_deferred_init=True)
 
     def forward(self, data):
-        ctx = data.ctx
-        return npx.layer_norm(data, gamma=self.gamma.data(ctx),
-                              beta=self.beta.data(ctx), axis=self._axis, eps=self._epsilon)
+        device = data.device
+        return npx.layer_norm(data, gamma=self.gamma.data(device),
+                              beta=self.beta.data(device), axis=self._axis, eps=self._epsilon)
 
     def infer_shape(self, data, *args):
         channel_axis = self._axis if self._axis >= 0 else self._axis + data.ndim
@@ -856,7 +856,7 @@ class GroupNorm(HybridBlock):
                           [20, 21, 22, 23]]])
     >>> # Group normalization is calculated with the above formula
     >>> layer = GroupNorm()
-    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer.initialize(device=mx.cpu(0))
     >>> layer(x)
     [[[-1.5932543 -1.3035717 -1.0138891 -0.7242065]
       [-0.4345239 -0.1448413  0.1448413  0.4345239]
@@ -882,8 +882,8 @@ class GroupNorm(HybridBlock):
                               allow_deferred_init=True)
 
     def forward(self, data):
-        ctx = data.ctx
-        norm_data = npx.group_norm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
+        device = data.device
+        norm_data = npx.group_norm(data, gamma=self.gamma.data(device), beta=self.beta.data(device),
                                    num_groups=self._num_groups, eps=self._epsilon)
         return norm_data
 
@@ -1160,12 +1160,12 @@ class SyncBatchNorm(BatchNorm):
         warnings.warn("Caution using SyncBatchNorm: "
                       "if not using all the GPUs, please mannually set num_devices",
                       UserWarning)
-        num_devices = context.num_gpus()
+        num_devices = _device.num_gpus()
         num_devices = num_devices if num_devices > 0 else 1
         return num_devices
 
     def forward(self, x):
-        ctx = x.ctx
-        return npx.sync_batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
-                                   self.running_mean.data(ctx), self.running_var.data(ctx),
+        device = x.device
+        return npx.sync_batch_norm(x, self.gamma.data(device), self.beta.data(device),
+                                   self.running_mean.data(device), self.running_var.data(device),
                                    name='fwd', **self._kwargs)

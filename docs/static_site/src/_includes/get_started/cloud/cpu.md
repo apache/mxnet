@@ -13,4 +13,4 @@ the [Download page](https://mxnet.apache.org/get_started/download).
 * **Amazon Web Services**
 - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled
 Conda environments
-for Python 2 or 3 with MXNet and ONEDNN.
+for Python 2 or 3 with MXNet and oneDNN.

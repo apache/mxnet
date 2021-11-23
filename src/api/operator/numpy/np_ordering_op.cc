@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -28,61 +28,60 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.sort")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.sort").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_sort");
   nnvm::NodeAttrs attrs;
-  op::SortParam param;
+  op::SortParam param = {};
 
   if (args[1].type_code() == kNull) {
     param.axis = dmlc::nullopt;
   } else {
     param.axis = args[1].operator int();
   }
-  param.is_ascend = true;
+  param.is_ascend = args[2].operator bool();
 
   attrs.parsed = std::move(param);
-  attrs.op = op;
+  attrs.op     = op;
 
-  int num_inputs = 1;
+  int num_inputs    = 1;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
 
   int num_outputs = 0;
   SetAttrDict<op::SortParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  *ret           = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 });
 
 MXNET_REGISTER_API("_npi.argsort")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_argsort");
-  nnvm::NodeAttrs attrs;
-  op::ArgSortParam param;
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_argsort");
+      nnvm::NodeAttrs attrs;
+      op::ArgSortParam param = {};
 
-  if (args[1].type_code() == kNull) {
-    param.axis = dmlc::nullopt;
-  } else {
-    param.axis = args[1].operator int();
-  }
-  param.is_ascend = true;
-  if (args[3].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
-  }
+      if (args[1].type_code() == kNull) {
+        param.axis = dmlc::nullopt;
+      } else {
+        param.axis = args[1].operator int();
+      }
+      param.is_ascend = args[2].operator bool();
+      if (args[3].type_code() == kNull) {
+        param.dtype = mshadow::kFloat32;
+      } else {
+        param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
+      }
 
-  attrs.parsed = std::move(param);
-  attrs.op = op;
+      attrs.parsed = std::move(param);
+      attrs.op     = op;
 
-  int num_inputs = 1;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+      int num_inputs    = 1;
+      NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
 
-  int num_outputs = 0;
-  SetAttrDict<op::ArgSortParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
-});
+      int num_outputs = 0;
+      SetAttrDict<op::ArgSortParam>(&attrs);
+      auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+      *ret           = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+    });
 
 }  // namespace mxnet

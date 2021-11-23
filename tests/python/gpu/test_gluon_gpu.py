@@ -20,7 +20,7 @@ import os
 import time
 import mxnet as mx
 import multiprocessing as mp
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, environment
+from mxnet.test_utils import check_consistency, set_default_device, assert_almost_equal, rand_ndarray, environment
 import numpy as _np
 import math
 from mxnet import autograd
@@ -34,11 +34,11 @@ from test_loss import *
 from test_numpy_loss import *
 from test_gluon_rnn import *
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))
 
 
 def check_rnn_layer(layer):
-    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(device=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
         x = mx.np.ones((10, 16, 30))
         states = layer.begin_state(16)
@@ -55,7 +55,7 @@ def check_rnn_layer(layer):
 
 
 def check_rnn_layer_w_rand_inputs(layer):
-    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(device=[mx.cpu(0), mx.gpu(0)])
     x = mx.np.random.uniform(size=(10, 16, 30))
     with mx.gpu(0):
         x = x.copyto(mx.gpu(0))
@@ -79,9 +79,9 @@ def test_lstmp():
     rtol, atol = 1e-2, 1e-2
     batch_size, seq_len = 7, 11
     input_size = 5
-    ctx = mx.gpu(0)
+    device = mx.gpu(0)
     lstm_input = mx.np.random.uniform(
-        size=(seq_len, batch_size, input_size), ctx=ctx)
+        size=(seq_len, batch_size, input_size), device=device)
     shapes = {'i2h_weight': (hidden_size * 4, input_size),
               'h2h_weight': (hidden_size * 4, projection_size),
               'i2h_bias': (hidden_size * 4,),
@@ -93,13 +93,19 @@ def test_lstmp():
     lstm_cell = gluon.rnn.LSTMPCell(hidden_size=hidden_size,
                                     projection_size=projection_size,
                                     input_size=input_size)
-    lstm_layer.initialize(ctx=ctx)
-    lstm_cell.initialize(ctx=ctx)
+    lstm_layer.initialize(device=device)
+    lstm_cell.initialize(device=device)
     layer_params = lstm_layer.collect_params()
     cell_params = lstm_cell.collect_params()
+    params = (weights['{}_{}'.format(g, t)].reshape(-1)
+              for t in ['weight', 'bias']
+              for g in ['i2h', 'h2h', 'h2r']
+              if g != 'h2r' or t != 'bias')
+
+    net_params_concat = mx.np.concatenate(params)
+    layer_params['rnn_param'].set_data(net_params_concat)
     for k, v in weights.items():
-        layer_params['l0_' + k].set_data(v.copy())
-        cell_params[k].set_data(v.copy())
+        cell_params[k].set_data(v)
     with autograd.record():
         layer_output = lstm_layer(lstm_input.copy())
         cell_output = lstm_cell.unroll(seq_len, lstm_input.copy(), layout='TNC',
@@ -108,20 +114,22 @@ def test_lstmp():
     assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
-    for k, v in weights.items():
-        layer_grad = layer_params['l0_' + k].grad()
+    layer_params_split = split_rnn_params(layer_params['rnn_param'].grad(),\
+        'lstm', 1, input_size, hidden_size, False, projection_size=projection_size)
+    for k, _ in weights.items():
+        layer_grad = layer_params_split['l0_' + k]
         cell_grad = cell_params[k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
         assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
     check_rnn_layer_forward(gluon.rnn.LSTM(
-        10, 2, projection_size=5), mx.np.ones((8, 3, 20)), ctx=ctx)
+        10, 2, projection_size=5), mx.np.ones((8, 3, 20)), device=device)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5, bidirectional=True), mx.np.ones(
-        (8, 3, 20)), [mx.np.ones((4, 3, 5)), mx.np.ones((4, 3, 10))], ctx=ctx)
+        (8, 3, 20)), [mx.np.ones((4, 3, 5)), mx.np.ones((4, 3, 10))], device=device)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5, projection_size=5), mx.np.ones((8, 3, 20)),
-                            run_only=True, ctx=ctx)
+                            run_only=True, device=device)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5, projection_size=5),
                             mx.np.ones((8, 3, 20)),
-                            [mx.np.ones((4, 3, 5)), mx.np.ones((4, 3, 10))], run_only=True, ctx=ctx)
+                            [mx.np.ones((4, 3, 5)), mx.np.ones((4, 3, 10))], run_only=True, device=device)
     lstm_layer.save_parameters('gpu_tmp.params')
     lstm_layer.load_parameters('gpu_tmp.params')
 
@@ -134,16 +142,16 @@ def test_lstm_clip():
     input_size = 50
     clip_min, clip_max, clip_nan = -5, 5, True
     lstm_input = mx.np.random.uniform(
-        size=(seq_len, batch_size, input_size), ctx=mx.gpu(0))
-    lstm_states = [mx.np.random.uniform(size=(2, batch_size, projection_size), ctx=mx.gpu(0)),
-                   mx.np.random.uniform(size=(2, batch_size, hidden_size), ctx=mx.gpu(0))]
+        size=(seq_len, batch_size, input_size), device=mx.gpu(0))
+    lstm_states = [mx.np.random.uniform(size=(2, batch_size, projection_size), device=mx.gpu(0)),
+                   mx.np.random.uniform(size=(2, batch_size, hidden_size), device=mx.gpu(0))]
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
                                 input_size=input_size,
                                 bidirectional=True,
                                 state_clip_min=clip_min,
                                 state_clip_max=clip_max,
                                 state_clip_nan=clip_nan)
-    lstm_layer.initialize(ctx=mx.gpu(0))
+    lstm_layer.initialize(device=mx.gpu(0))
     with autograd.record():
         _, layer_output_states = lstm_layer(lstm_input, lstm_states)
     cell_states = layer_output_states[0]
@@ -196,6 +204,39 @@ def check_layer_bidirectional(size, in_size, proj_size):
         weights['{}0_h2h_bias'.format(
             d)] = mx.np.random.uniform(size=(size * 4,))
 
+    if proj_size:
+        params = (weights['{}0_{}_{}'.format(d, g, t)].reshape(-1)
+                    for t in ['weight', 'bias']
+                    for d in ['l', 'r']
+                    for g in ['i2h', 'h2h', 'h2r']
+                    if g != 'h2r' or t != 'bias')
+    else:
+        params = (weights['{}0_{}_{}'.format(d, g, t)].reshape(-1)
+                  for t in ['weight', 'bias']
+                  for d in ['l', 'r']
+                  for g in ['i2h', 'h2h'])
+
+    net_params_concat = mx.np.concatenate(params)
+    if proj_size:
+        params_left = (weights['l0_{}_{}'.format(g, t)].reshape(-1)
+                       for t in ['weight', 'bias']
+                       for g in ['i2h', 'h2h', 'h2r']
+                       if g != 'h2r' or t != 'bias')
+    else:
+        params_left = (weights['l0_{}_{}'.format(g, t)].reshape(-1)
+                       for t in ['weight', 'bias']
+                       for g in ['i2h', 'h2h'])
+    if proj_size:
+        params_right = (weights['r0_{}_{}'.format(g, t)].reshape(-1)
+                        for t in ['weight', 'bias']
+                        for g in ['i2h', 'h2h', 'h2r']
+                        if g != 'h2r' or t != 'bias')
+    else:
+        params_right = (weights['r0_{}_{}'.format(g, t)].reshape(-1)
+                        for t in ['weight', 'bias']
+                        for g in ['i2h', 'h2h'])
+    net_ref_left_params = mx.np.concatenate(params_left)
+    net_ref_right_params = mx.np.concatenate(params_right)
     net = gluon.rnn.LSTM(size, projection_size=proj_size,
                          bidirectional=True)
     ref_net = RefBiLSTM(size, proj_size)
@@ -203,10 +244,9 @@ def check_layer_bidirectional(size, in_size, proj_size):
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
-    for k in weights:
-        net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace(
-            'r0', '_lstm_bwd.l0')].set_data(weights[k])
+    net_params['rnn_param'].set_data(net_params_concat)
+    ref_net_params['_lstm_fwd.rnn_param'].set_data(net_ref_left_params)
+    ref_net_params['_lstm_bwd.rnn_param'].set_data(net_ref_right_params)
 
     data = mx.np.random.uniform(size=(11, 10, in_size))
     mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
@@ -214,12 +254,7 @@ def check_layer_bidirectional(size, in_size, proj_size):
 
 
 def check_layer_bidirectional_varseqlen(size, in_size):
-    weights = {}
-    for d in ['l', 'r']:
-        weights['{}0_i2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, in_size))
-        weights['{}0_h2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, size))
-        weights['{}0_i2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
-        weights['{}0_h2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
+    weight = mx.np.random.uniform(size=(784,))
 
     net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True)
     ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False)
@@ -227,9 +262,8 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
-    for k in weights:
-        net_params[k].set_data(weights[k])
-        ref_net_params[k].set_data(weights[k])
+    net_params['rnn_param'].set_data(weight)
+    ref_net_params['rnn_param'].set_data(weight)
 
     batch_size = 10
     num_timesteps = 11
@@ -269,11 +303,10 @@ def check_layer_bidirectional_varseqlen(size, in_size):
 
     ref_net_params = ref_net.collect_params()
 
-    for k in weights:
-        net_grad = net_params[k].grad()
-        ref_net_grad = ref_net_params[k].grad()
-        assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
-                            rtol=1e-2, atol=1e-6)
+    net_grad = net_params['rnn_param'].grad()
+    ref_net_grad = ref_net_params['rnn_param'].grad()
+    assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
+                        rtol=1e-2, atol=1e-6)
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -302,11 +335,11 @@ def test_rnn_layer_begin_state_type():
 
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()
-    data = mx.np.flip(mx.np.repeat(mx.np.arange(0, 4, ctx=mx.gpu(0)), 40).reshape((2, 20, 4)), axis=0)
-    cpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.cpu(0))
-    gpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.gpu(0))
+    data = mx.np.flip(mx.np.repeat(mx.np.arange(0, 4, device=mx.gpu(0)), 40).reshape((2, 20, 4)), axis=0)
+    cpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], device=mx.cpu(0))
+    gpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], device=mx.gpu(0))
 
-    cpu_data = data.copy().as_in_context(mx.cpu(0))
+    cpu_data = data.copy().to_device(mx.cpu(0))
     cpu_data.attach_grad()
     with mx.autograd.record():
         l_cpu = loss(cpu_data, cpu_label)
@@ -323,10 +356,10 @@ def test_gluon_ctc_consistency():
 
 def test_global_norm_clip_multi_device():
     for check_isfinite in [True, False]:
-        x1 = mx.np.ones((3, 3), ctx=mx.gpu(0))
-        x2 = mx.np.ones((4, 4), ctx=mx.cpu(0))
-        x3 = mx.np.ones((7, 4), ctx=mx.gpu(0))
-        x4 = mx.np.ones((7, 4), ctx=mx.cpu(0))
+        x1 = mx.np.ones((3, 3), device=mx.gpu(0))
+        x2 = mx.np.ones((4, 4), device=mx.cpu(0))
+        x3 = mx.np.ones((7, 4), device=mx.gpu(0))
+        x4 = mx.np.ones((7, 4), device=mx.cpu(0))
         norm = gluon.utils.clip_global_norm(
             [x1, x2, x3, x4], 1.0, check_isfinite=check_isfinite)
         if check_isfinite:
@@ -349,34 +382,34 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
         raise RuntimeError('BN not found')
 
-    def _syncParameters(bn1, bn2, ctx):
-        ctx = input.context
-        bn2.gamma.set_data(bn1.gamma.data(ctx))
-        bn2.beta.set_data(bn1.beta.data(ctx))
-        bn2.running_mean.set_data(bn1.running_mean.data(ctx))
-        bn2.running_var.set_data(bn1.running_var.data(ctx))
+    def _syncParameters(bn1, bn2, device):
+        device = input.context
+        bn2.gamma.set_data(bn1.gamma.data(device))
+        bn2.beta.set_data(bn1.beta.data(device))
+        bn2.running_mean.set_data(bn1.running_mean.data(device))
+        bn2.running_var.set_data(bn1.running_var.data(device))
 
     input1 = input.copy()
     input2 = input.copy()
 
     if cuda:
-        input1 = input.as_in_context(mx.gpu(0))
-        ctx_list = [mx.gpu(i) for i in range(num_devices)]
+        input1 = input.to_device(mx.gpu(0))
+        device_list = [mx.gpu(i) for i in range(num_devices)]
     else:
-        ctx_list = [mx.cpu(0) for _ in range(num_devices)]
+        device_list = [mx.cpu(0) for _ in range(num_devices)]
 
     nch = input.shape[1]
     bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
     bn2 = mx.gluon.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
 
-    bn1.initialize(ctx=ctx_list[0])
-    bn2.initialize(ctx=ctx_list)
+    bn1.initialize(device=device_list[0])
+    bn2.initialize(device=device_list)
 
     # using the same values for gamma and beta
-    #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
+    #_syncParameters(_find_bn(bn1), _find_bn(bn2), device_list[0])
 
     input1.attach_grad()
-    inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
+    inputs2 = split_and_load(input2, device_list, batch_axis=0)
     for xi in inputs2:
         xi.attach_grad()
 
@@ -388,17 +421,17 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
 
-    output2 = mx.np.concatenate([output.as_in_context(input.context) for output in output2], axis=0)
+    output2 = mx.np.concatenate([output.to_device(input.context) for output in output2], axis=0)
     # assert forwarding
     assert_almost_equal(input1, input2, atol=1e-3, rtol=1e-3)
     assert_almost_equal(output1, output2, atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]),
-                        _find_bn(bn2).running_mean.data(ctx_list[0]),
+    assert_almost_equal(_find_bn(bn1).running_mean.data(device_list[0]),
+                        _find_bn(bn2).running_mean.data(device_list[0]),
                         atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]),
-                        _find_bn(bn2).running_var.data(ctx_list[0]),
+    assert_almost_equal(_find_bn(bn1).running_var.data(device_list[0]),
+                        _find_bn(bn2).running_var.data(device_list[0]),
                         atol=1e-3, rtol=1e-3)
-    input2grad = mx.np.concatenate([output.grad.as_in_context(input.context) for output in inputs2], axis=0)
+    input2grad = mx.np.concatenate([output.grad.to_device(input.context) for output in inputs2], axis=0)
     assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
 @mx.util.use_np
@@ -406,7 +439,7 @@ def test_sync_batchnorm():
     def get_num_devices():
         for i in range(100):
             try:
-                mx.np.zeros((1,), ctx=mx.gpu(i))
+                mx.np.zeros((1,), device=mx.gpu(i))
             except:
                 return i
     # no need to use SyncBN with 1 gpu
@@ -414,7 +447,7 @@ def test_sync_batchnorm():
         return
     ndev = 2
     # check with unsync version
-    for i in range(10):
+    for _ in range(10):
         _check_batchnorm_result(mx.np.random.uniform(size=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
 
@@ -425,13 +458,13 @@ def test_symbol_block_fp16(tmpdir):
     # 1. Load a resnet model, cast it to fp16 and export
     tmp = str(tmpdir)
     tmpfile = os.path.join(tmp, 'resnet34_fp16')
-    ctx = mx.gpu(0)
+    device = mx.gpu(0)
 
     net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(
-        pretrained=True, ctx=ctx, root=tmp)
+        pretrained=True, device=device, root=tmp)
     net_fp32.cast('float16')
     net_fp32.hybridize()
-    data = mx.np.zeros((1, 3, 224, 224), dtype='float16', ctx=ctx)
+    data = mx.np.zeros((1, 3, 224, 224), dtype='float16', device=device)
     net_fp32(data)
     symbol_file, param_file = net_fp32.export(tmpfile, 0)
 
@@ -440,7 +473,7 @@ def test_symbol_block_fp16(tmpdir):
     sm = mx.sym.load(symbol_file)
     inputs = mx.sym.var('data', dtype='float16')
     net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp16.load_parameters(param_file, ctx=ctx)
+    net_fp16.load_parameters(param_file, device=device)
     # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
     # expected to be of dtype casted, fp16.
     name = None
@@ -453,7 +486,7 @@ def test_symbol_block_fp16(tmpdir):
 
 @pytest.mark.serial
 def test_large_models():
-    ctx = default_context()
+    device = default_device()
     # Create model
     net = gluon.nn.HybridSequential()
 
@@ -461,7 +494,7 @@ def test_large_models():
     net.add(nn.Conv2D(largest_num_features, 3))
 
     net.hybridize()
-    net.initialize(mx.init.Normal(sigma=0.01), ctx=ctx)
+    net.initialize(mx.init.Normal(sigma=0.01), device=device)
 
     # Compute the height (=width) of the square tensor of the given size in bytes
     def tensor_size(big_tensor_bytes):
@@ -473,7 +506,7 @@ def test_large_models():
     # The idea is to create models with large tensors of (say) 20% of the total memory.
     # This in the past has given cudnnFind() trouble when it needed to allocate similar I/O's
     # from the area carved out by the MXNET_GPU_MEM_POOL_RESERVE setting (by default 5%).
-    (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(ctx.device_id)
+    (free_mem_bytes, total_mem_bytes) = mx.device.gpu_memory_info(device.device_id)
     # This test needs to be 'qualified' for use with each new larger memory size
     largest_supported_total_mem_GB = 32
     if (total_mem_bytes > largest_supported_total_mem_GB * 1024 * 1024 * 1024):
@@ -492,97 +525,13 @@ def test_large_models():
         sys.stderr.write(" {}x{} ".format(height, width))
         sys.stderr.flush()
         data_in = mx.np.random.uniform(low=0, high=255, size=(1, 3, height, width),
-                                       ctx=ctx, dtype="float32")
+                                       device=device, dtype="float32")
         # Evaluate model
         net(data_in).asnumpy()
 
-# isolated execution bulking test function to be invoked with different env var settings
-
 
 @mx.util.use_np
-def _test_bulking_in_process(seed, time_per_iteration):
-    # Use flip since it's a simple function with same-sized I/O unlikely to ever be fused.
-    class Flip(gluon.HybridBlock):
-        def __init__(self, **kwargs):
-            super(Flip, self).__init__(**kwargs)
-
-        def forward(self, x):
-            return mx.np.flip(x, axis=0)
-
-    def get_net(num_ops):
-        net = nn.HybridSequential()
-        for _ in range(num_ops):
-            net.add(Flip())
-        return net
-
-    data_shape = (10,)
-    num_ops = 1000
-    num_iterations = 20
-
-    # build model
-    x = mx.np.zeros(data_shape)
-    x.attach_grad()
-    dy = mx.np.ones(data_shape)
-    net = get_net(num_ops)
-    net.hybridize(static_alloc=True, static_shape=True)
-
-    # time a number of forward() and backward() executions after some warm-up iterations
-    warmups = 1
-    for i in range(num_iterations + warmups):
-        with autograd.record():
-            if i == warmups:
-                start = time.time()
-            y = net(x)
-            y.backward(dy)
-            x.grad.wait_to_read()
-
-    time_per_iteration.value = (time.time() - start) / num_iterations
-
-def _test_bulking(test_bulking_func):
-    # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
-    test_cases = [(0, 0, True), (1, 1, True), (15, 15, False),
-                  (15, 0, True), (0, 15, True), (15, 15, True)]
-    times = {}
-    times_str = ''
-    for seg_sizes in test_cases:
-        # Create shared variable to return measured time from test process
-        time_per_iteration = mp.Manager().Value('d', 0.0)
-
-        if not run_in_spawned_process(test_bulking_func,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': str(seg_sizes[0]),
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': str(seg_sizes[1]),
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN': str(seg_sizes[2])},
-                                      time_per_iteration):
-            # skip test since the python version can't run it properly.  Warning msg was logged.
-            return
-        times[seg_sizes] = time_per_iteration.value
-        times_str += \
-            '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
-                seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
-
-    fastest_non_bulked_time = min(times[(0, 0, True)], times[(1, 1, True)], times[(15, 15, False)])
-    slowest_half_bulked_time = max(times[(0, 15, True)], times[(15, 0, True)])
-    fastest_half_bulked_time = min(times[(0, 15, True)], times[(15, 0, True)])
-    fully_bulked_time = times[(15, 15, True)]
-
-    print(times_str)
-    # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
-    # slower than both half-bulked times[0,15,True] and times[15,0,True]
-    assert slowest_half_bulked_time < fastest_non_bulked_time, \
-        'A half-bulked exec time is slower than the non-bulked time by {} secs! {}' \
-        .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
-    # The fully bulked times[15,15,True] should be faster than both half-bulked runs
-    assert fully_bulked_time < fastest_half_bulked_time, \
-        'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
-        .format(fully_bulked_time - fastest_half_bulked_time, times_str)
-
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
-def test_bulking_gluon_gpu():
-    _test_bulking(_test_bulking_in_process)
-
-
-@mx.util.use_np
-def test_hybridblock_mix_ctx_raise():
+def test_hybridblock_mix_device_raise():
     class FooHybrid(gluon.HybridBlock):
         def forward(self, a, b):
             if isinstance(a, (list, tuple)):
@@ -592,19 +541,19 @@ def test_hybridblock_mix_ctx_raise():
             return a + b
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), ctx=mx.gpu()),
-                                                 mx.np.ones((10,), ctx=mx.cpu())))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), device=mx.gpu()),
+                                                 mx.np.ones((10,), device=mx.cpu())))
 
 
 @mx.util.use_np
 def test_gemms_true_fp16():
-    ctx = mx.gpu(0)
-    input = mx.np.random.uniform(size=(1, 512), dtype='float16', ctx=ctx)
-    weights = mx.np.random.uniform(size=(128, 512), ctx=ctx)
+    device = mx.gpu(0)
+    input = mx.np.random.uniform(size=(1, 512), dtype='float16', device=device)
+    weights = mx.np.random.uniform(size=(128, 512), device=device)
 
     net = nn.Dense(128, in_units=512, use_bias=False)
     net.cast('float16')
-    net.initialize(ctx=ctx)
+    net.initialize(device=device)
     net.weight.set_data(weights)
 
     with environment('MXNET_FC_TRUE_FP16', '0'):

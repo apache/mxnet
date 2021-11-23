@@ -45,22 +45,21 @@ void ReduceAxesRTCComputeImpl(const OpContext& ctx,
   Stream<gpu>* s = ctx.get_stream<gpu>();
   Tensor<gpu, 1, char> w;
   if (workspace == nullptr) {
-    size_t workspace_size = broadcast::ReduceWorkspaceSize(
-        s, dst_shape, req[0], src_shape);
-    w = ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
+    size_t workspace_size = broadcast::ReduceWorkspaceSize(s, dst_shape, req[0], src_shape);
+    w         = ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
     workspace = &w;
   }
-  const TBlob in_data = inputs[0].reshape(src_shape);
+  const TBlob in_data  = inputs[0].reshape(src_shape);
   const TBlob out_data = outputs[0].reshape(dst_shape);
   BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
     broadcast::RTCReduce(ctx, out_data, req[0], *workspace, in_data, reducer, NDim, OP);
   });
   if (normalize) {
     NumpyBinaryScalarParam p{};
-    p.scalar = static_cast<double>(src_shape.Size()/dst_shape.Size() - ddof);
+    p.scalar = static_cast<double>(src_shape.Size() / dst_shape.Size() - ddof);
     NodeAttrs a;
     a.parsed = p;
-    BinaryScalarRTCCompute {"div"}(a, ctx, {out_data}, {kWriteInplace}, {out_data});
+    BinaryScalarRTCCompute{"div"}(a, ctx, {out_data}, {kWriteInplace}, {out_data});  // NOLINT
   }
 }
 
@@ -69,13 +68,15 @@ template <typename Param>
 void PrepareReduce(const Param& param,
                    const std::vector<TBlob>& inputs,
                    const std::vector<TBlob>& outputs,
-                   mxnet::TShape* shape, int* ddof);
+                   mxnet::TShape* shape,
+                   int* ddof);
 
 template <>
 void PrepareReduce<ReduceAxesParam>(const ReduceAxesParam& param,
                                     const std::vector<TBlob>& inputs,
                                     const std::vector<TBlob>& outputs,
-                                    mxnet::TShape* small, int* ddof) {
+                                    mxnet::TShape* small,
+                                    int* ddof) {
   if (param.keepdims) {
     *small = outputs[0].shape_;
   } else {
@@ -89,7 +90,8 @@ template <>
 void PrepareReduce<NumpyReduceAxesNoDTypeParam>(const NumpyReduceAxesNoDTypeParam& param,
                                                 const std::vector<TBlob>& inputs,
                                                 const std::vector<TBlob>& outputs,
-                                                mxnet::TShape* small, int* ddof) {
+                                                mxnet::TShape* small,
+                                                int* ddof) {
   if (param.initial.has_value()) {
     LOG(FATAL) << "initial is not supported yet";
   }
@@ -106,7 +108,8 @@ template <>
 void PrepareReduce<NumpyReduceAxesParam>(const NumpyReduceAxesParam& param,
                                          const std::vector<TBlob>& inputs,
                                          const std::vector<TBlob>& outputs,
-                                         mxnet::TShape* small, int* ddof) {
+                                         mxnet::TShape* small,
+                                         int* ddof) {
   if (param.initial.has_value()) {
     LOG(FATAL) << "initial is not supported yet";
   }
@@ -123,7 +126,8 @@ template <>
 void PrepareReduce<NumpyReduceAxesBoolParam>(const NumpyReduceAxesBoolParam& param,
                                              const std::vector<TBlob>& inputs,
                                              const std::vector<TBlob>& outputs,
-                                             mxnet::TShape* small, int* ddof) {
+                                             mxnet::TShape* small,
+                                             int* ddof) {
   if (param.keepdims) {
     *small = outputs[0].shape_;
   } else {
@@ -141,32 +145,35 @@ void ReduceAxesRTCCompute<Param, init>::operator()(const nnvm::NodeAttrs& attrs,
                                                    const std::vector<TBlob>& inputs,
                                                    const std::vector<OpReqType>& req,
                                                    const std::vector<TBlob>& outputs) {
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   mxnet::TShape small;
   int ddof;
   const auto& param = nnvm::get<Param>(attrs.parsed);
   CHECK_NE(req[0], kWriteInplace) << "Reduce does not support write in-place";
   PrepareReduce(param, inputs, outputs, &small, &ddof);
-  if (outputs[0].shape_.Size() == 0U) return;  // zero-size tensor
+  if (outputs[0].shape_.Size() == 0U)
+    return;  // zero-size tensor
   if (inputs[0].shape_.Size() == 0) {
     if (normalize && mxnet::common::is_float(outputs[0].type_flag_)) {
       LOG(WARNING) << "WARNING: Mean of empty slice.";
-        NumpyBinaryScalarParam p{};
-        p.scalar = std::numeric_limits<float>::quiet_NaN();
-        NodeAttrs a;
-        a.parsed = p;
-        BinaryScalarRTCCompute {"right"} (a, ctx, outputs, {kWriteTo}, outputs);
+      NumpyBinaryScalarParam p{};
+      p.scalar = std::numeric_limits<float>::quiet_NaN();
+      NodeAttrs a;
+      a.parsed = p;
+      BinaryScalarRTCCompute{"right"}(a, ctx, outputs, {kWriteTo}, outputs);  // NOLINT
     } else {
       if (normalize) {
-        LOG(WARNING) << "WARNING: nan is outside the range of"<<
-                        "representable values of type 'int'";
+        LOG(WARNING) << "WARNING: nan is outside the range of"
+                     << "representable values of type 'int'";
       }
-      if (init == 0 && req[0] == kAddTo) return;
+      if (init == 0 && req[0] == kAddTo)
+        return;
       NumpyBinaryScalarParam p{};
       p.scalar = init;
       NodeAttrs a;
       a.parsed = p;
-      BinaryScalarRTCCompute {"right"} (a, ctx, outputs, {req[0]}, outputs);
+      BinaryScalarRTCCompute{"right"}(a, ctx, outputs, {req[0]}, outputs);  // NOLINT
     }
     return;
   }

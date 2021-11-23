@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file sequence_mask.cc
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 #include "./sequence_mask-inl.h"
 
 namespace mxnet {
@@ -32,9 +31,13 @@ namespace op {
 template <int req>
 struct SequenceMask0CPUKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int batch, DType *in, const IType *idx,
-                                  index_t max_s_len, index_t batch_size,
-                                  index_t restsize, DType value) {
+  MSHADOW_XINLINE static void Map(int batch,
+                                  DType* in,
+                                  const IType* idx,
+                                  index_t max_s_len,
+                                  index_t batch_size,
+                                  index_t restsize,
+                                  DType value) {
     const index_t seqpos = static_cast<int>(idx[batch]);
 #pragma unroll
     for (index_t s = seqpos; s < max_s_len; ++s) {
@@ -50,9 +53,13 @@ struct SequenceMask0CPUKernel {
 template <int req>
 struct SequenceMask1CPUKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int batch, DType *in, const IType *idx,
-                                  index_t max_s_len, index_t batch_size,
-                                  index_t restsize, DType value) {
+  MSHADOW_XINLINE static void Map(int batch,
+                                  DType* in,
+                                  const IType* idx,
+                                  index_t max_s_len,
+                                  index_t batch_size,
+                                  index_t restsize,
+                                  DType value) {
     const index_t seqpos = static_cast<int>(idx[batch]);
 #pragma unroll
     for (index_t s = seqpos; s < max_s_len; ++s) {
@@ -64,48 +71,45 @@ struct SequenceMask1CPUKernel {
   }
 };
 
-template<typename DType, typename IType>
-void SequenceMaskExec(
-       const mshadow::Tensor<cpu, 3, DType> &data,
-       const mshadow::Tensor<cpu, 1, IType> &indices,
-       const OpReqType req, mshadow::Stream<cpu> *const s,
-       int axis, DType val) {
+template <typename DType, typename IType>
+void SequenceMaskExec(const mshadow::Tensor<cpu, 3, DType>& data,
+                      const mshadow::Tensor<cpu, 1, IType>& indices,
+                      const OpReqType req,
+                      mshadow::Stream<cpu>* const s,
+                      int axis,
+                      DType val) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mxnet_op;
 
-  index_t batch = indices.size(0);
+  index_t batch       = indices.size(0);
   index_t max_seq_len = data.size(axis);
-  index_t restsize = data.size(2);
+  index_t restsize    = data.size(2);
 
   MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
     if (axis == 1) {
       Kernel<SequenceMask1CPUKernel<req_type>, cpu>::Launch(
-        s, batch, data.dptr_, indices.dptr_, max_seq_len, batch, restsize,
-        val);
+          s, batch, data.dptr_, indices.dptr_, max_seq_len, batch, restsize, val);
     } else {
       Kernel<SequenceMask0CPUKernel<req_type>, cpu>::Launch(
-        s, batch, data.dptr_, indices.dptr_, max_seq_len, batch, restsize,
-        val);
+          s, batch, data.dptr_, indices.dptr_, max_seq_len, batch, restsize, val);
     }
   });
 }
 
 template <>
-Operator *CreateOp<cpu>(SequenceMaskParam param, int dtype, int itype) {
-  Operator *op = nullptr;
+Operator* CreateOp<cpu>(SequenceMaskParam param, int dtype, int itype) {
+  Operator* op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceMaskOp<cpu, DType, IType>(param);
-        });
-    });
+    MSHADOW_TYPE_SWITCH(itype, IType, { op = new SequenceMaskOp<cpu, DType, IType>(param); });
+  });
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *SequenceMaskProp::CreateOperatorEx(Context ctx,
-                                             mxnet::ShapeVector *in_shape,
-                                             std::vector<int> *in_type) const {
+Operator* SequenceMaskProp::CreateOperatorEx(Context ctx,
+                                             mxnet::ShapeVector* in_shape,
+                                             std::vector<int>* in_type) const {
   if (in_type->size() >= 2 && (*in_type)[1] != -1) {
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);
   }
@@ -184,15 +188,16 @@ Example::
                   [  16.,  17.,  18.]]]
 
 )code" ADD_FILELINE)
-    .add_argument("data", "NDArray-or-Symbol",
+    .add_argument("data",
+                  "NDArray-or-Symbol",
                   "n-dimensional input array of the form [max_sequence_length,"
                   " batch_size, other_feature_dims] where n>2")
-    .add_argument("sequence_length", "NDArray-or-Symbol",
+    .add_argument("sequence_length",
+                  "NDArray-or-Symbol",
                   "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceMaskParam::__FIELDS__());
 
-NNVM_REGISTER_OP(SequenceMask)
-.add_alias("_npx_sequence_mask");
+NNVM_REGISTER_OP(SequenceMask).add_alias("_npx_sequence_mask");
 
 }  // namespace op
 }  // namespace mxnet

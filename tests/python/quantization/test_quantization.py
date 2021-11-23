@@ -42,16 +42,16 @@ def collect_block_args_aux(block, sym):
   return arg_params, aux_params
 
 def is_test_for_gpu():
-    return mx.current_context().device_type == 'gpu'
+    return mx.current_device().device_type == 'gpu'
 
 
-def is_test_for_mkldnn():
-    return (mx.current_context().device_type == 'cpu'
+def is_test_for_dnnl():
+    return (mx.current_device().device_type == 'cpu'
             and os.environ.get('ENABLE_ONEDNN_QUANTIZATION_TEST') == '1')
 
 
 def is_test_for_native_cpu():
-    return (mx.current_context().device_type == 'cpu'
+    return (mx.current_device().device_type == 'cpu'
             and os.environ.get('ENABLE_ONEDNN_QUANTIZATION_TEST') == None)
 
 
@@ -101,7 +101,7 @@ def test_dequantize_int8_to_float32():
         sym_max_range = mx.sym.Variable('max_range')
         dequant = mx.sym.contrib.dequantize(sym_data, sym_min_range,
                                             sym_max_range, out_type='float32')
-        out = dequant._bind(ctx=mx.current_context(),
+        out = dequant._bind(ctx=mx.current_device(),
                            args={'data':qdata, 'min_range':min_range, 'max_range':max_range})
         data = out.forward()[0]
         assert data.dtype == onp.float32
@@ -216,9 +216,9 @@ def test_quantized_conv():
         if is_test_for_native_cpu():
             print('skipped testing quantized_conv for native cpu since it is not supported yet')
             return
-        elif is_test_for_mkldnn():
+        elif is_test_for_dnnl():
             # (TODO)Xinyu: https://github.com/apache/incubator-mxnet/issues/16830
-            print('skipped testing quantized_conv for mkldnn cpu since it is a flaky case')
+            print('skipped testing quantized_conv for oneDNN cpu since it is a flaky case')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_conv for gpu uint8 since it is not supported yet')
@@ -291,15 +291,15 @@ def test_quantized_conv():
                     self.max_bias = mx.gluon.Parameter('max_bias', dtype='float32', shape=(1), allow_deferred_init=True)
 
             def forward(self, x):
-                ctx = x.ctx
-                weight = self.weight.data().as_in_ctx(ctx)
-                bias = self.bias.data().as_in_ctx(ctx) if self.use_bias else None
-                min_data = self.min_data.data().as_in_ctx(ctx)
-                max_data = self.max_data.data().as_in_ctx(ctx)
-                min_weight = self.min_weight.data().as_in_ctx(ctx)
-                max_weight = self.max_weight.data().as_in_ctx(ctx)
-                min_bias = self.min_bias.data().as_in_ctx(ctx) if self.use_bias else None
-                max_bias = self.max_bias.data().as_in_ctx(ctx) if self.use_bias else None
+                device = x.device
+                weight = self.weight.data().to_device(device)
+                bias = self.bias.data().to_device(device) if self.use_bias else None
+                min_data = self.min_data.data().to_device(device)
+                max_data = self.max_data.data().to_device(device)
+                min_weight = self.min_weight.data().to_device(device)
+                max_weight = self.max_weight.data().to_device(device)
+                min_bias = self.min_bias.data().to_device(device) if self.use_bias else None
+                max_bias = self.max_bias.data().to_device(device) if self.use_bias else None
                 out = npx.quantized_conv(data=x, weight=weight, bias=bias, 
                                          min_data=min_data, max_data=max_data,
                                          min_weight=min_weight, max_weight=max_weight,
@@ -655,15 +655,15 @@ def test_quantized_fc():
                     self.max_bias = mx.gluon.Parameter('max_bias', dtype='float32', shape=(1), allow_deferred_init=True)
 
             def forward(self, x):
-                ctx = x.ctx
-                weight = self.weight.data().as_in_ctx(ctx)
-                bias = self.bias.data().as_in_ctx(ctx) if self.use_bias else None
-                min_data = self.min_data.data().as_in_ctx(ctx)
-                max_data = self.max_data.data().as_in_ctx(ctx)
-                min_weight = self.min_weight.data().as_in_ctx(ctx)
-                max_weight = self.max_weight.data().as_in_ctx(ctx)
-                min_bias = self.min_bias.data().as_in_ctx(ctx) if self.use_bias else None
-                max_bias = self.max_bias.data().as_in_ctx(ctx) if self.use_bias else None
+                device = x.device
+                weight = self.weight.data().to_device(device)
+                bias = self.bias.data().to_device(device) if self.use_bias else None
+                min_data = self.min_data.data().to_device(device)
+                max_data = self.max_data.data().to_device(device)
+                min_weight = self.min_weight.data().to_device(device)
+                max_weight = self.max_weight.data().to_device(device)
+                min_bias = self.min_bias.data().to_device(device) if self.use_bias else None
+                max_bias = self.max_bias.data().to_device(device) if self.use_bias else None
                 out = npx.quantized_fully_connected(data=x, weight=weight, bias=bias, 
                                                     min_data=min_data, max_data=max_data,
                                                     min_weight=min_weight, max_weight=max_weight,
@@ -699,7 +699,7 @@ def test_quantized_fc():
             assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
 
     for qdtype in ['int8', 'uint8']:
-        if is_test_for_mkldnn():
+        if is_test_for_dnnl():
             check_quantized_fc((32, 512, 2), 100, False, qdtype, flatten=False)
             check_quantized_fc((32, 512, 2), 100, True, qdtype, flatten=False)
             check_quantized_fc((32, 512, 2, 2), 100, False, qdtype, flatten=False)
@@ -759,10 +759,10 @@ def test_quantized_embedding():
                 self.max_weight = mx.gluon.Parameter('max_weight', dtype='float32', shape=(1), allow_deferred_init=True)
 
             def forward(self, x):
-                ctx = x.ctx
-                weight = self.weight.data().as_in_ctx(ctx)
-                min_weight = self.min_weight.data().as_in_ctx(ctx)
-                max_weight = self.max_weight.data().as_in_ctx(ctx)
+                device = x.device
+                weight = self.weight.data().to_device(device)
+                min_weight = self.min_weight.data().to_device(device)
+                max_weight = self.max_weight.data().to_device(device)
                 out = npx.quantized_embedding(data=x, weight=weight,
                                               min_weight=min_weight,
                                               max_weight=max_weight,
@@ -822,8 +822,8 @@ def test_quantized_act():
         if is_test_for_native_cpu():
             print('skipped testing quantized_act for native cpu since it is not supported yet')
             return
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantized_act for mkldnn cpu int8 since it is not supported yet')
+        elif qdtype == 'int8' and is_test_for_dnnl():
+            print('skipped testing quantized_act for oneDNN cpu int8 since it is not supported yet')
             return
         elif is_test_for_gpu():
             print('skipped testing quantized_act for gpu since it is not supported yet')
@@ -933,7 +933,7 @@ def test_quantized_bn():
                                                  calib_data=calib_data,
                                                  calib_mode='naive',
                                                  num_calib_batches=1,
-                                                 ctx=mx.current_context())
+                                                 device=mx.current_device())
 
         output_int8_to_fp32 = quant_bn(data)
 
@@ -958,7 +958,7 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
+    qsym, _ = mx.contrib.quant._quantize_symbol(sym, device=mx.current_device(),
                                                 offline_params=offline_params, quantize_mode='full')
     qparams = mx.contrib.quant._quantize_params(qsym, params, min_max_dict = {})
     param_names = params.keys()
@@ -1057,8 +1057,8 @@ def test_quantize_model():
         if is_test_for_native_cpu():
             print('skipped testing quantize_model for native cpu since it is not supported yet')
             return True
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantize_model for mkldnn cpu int8 since it is not supported yet')
+        elif qdtype == 'int8' and is_test_for_dnnl():
+            print('skipped testing quantize_model for oneDNN cpu int8 since it is not supported yet')
             return True
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantize_model for gpu uint8 since it is not supported yet')
@@ -1069,8 +1069,8 @@ def test_quantize_model():
         if is_test_for_native_cpu():
             print('skipped testing quantize_model for native cpu since it is not supported yet')
             return
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantize_model for mkldnn cpu int8 since it is not supported yet')
+        elif qdtype == 'int8' and is_test_for_dnnl():
+            print('skipped testing quantize_model for oneDNN cpu int8 since it is not supported yet')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantize_model for gpu uint8 since it is not supported yet')
@@ -1096,7 +1096,7 @@ def test_quantize_model():
             qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
                                                                              arg_params=arg_params,
                                                                              aux_params=aux_params,
-                                                                             ctx=mx.current_context(),
+                                                                             device=mx.current_device(),
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='none',
                                                                              quantize_mode='full')
@@ -1108,7 +1108,7 @@ def test_quantize_model():
             qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
                                                                              arg_params=arg_params,
                                                                              aux_params=aux_params,
-                                                                             ctx=mx.current_context(),
+                                                                             device=mx.current_device(),
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
@@ -1136,7 +1136,7 @@ def test_quantize_model():
         qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
                                                                          arg_params=arg_params,
                                                                          aux_params=aux_params,
-                                                                         ctx=mx.current_context(),
+                                                                         device=mx.current_device(),
                                                                          quantized_dtype=qdtype,
                                                                          calib_mode='none',
                                                                          quantize_mode='full')
@@ -1149,7 +1149,7 @@ def test_quantize_model():
         qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
                                                                          arg_params=arg_params,
                                                                          aux_params=aux_params,
-                                                                         ctx=mx.current_context(),
+                                                                         device=mx.current_device(),
                                                                          quantized_dtype=qdtype,
                                                                          calib_mode='naive',
                                                                          calib_data=calib_data,
@@ -1180,9 +1180,9 @@ def test_quantize_gluon_with_forward():
         data_shape = (32, 3, 224, 224)
         batch_size = 1
         resnet18_v1 = vision.resnet18_v1(pretrained=True)
-        resnet18_v1.reset_ctx(mx.current_context())
+        resnet18_v1.reset_device(mx.current_device())
         excluded_names_match = []
-        if mx.current_context() == mx.gpu():
+        if mx.current_device() == mx.gpu():
             excluded_names_match += ['activation', 'relu', 'conv0']
         num_calib_batches = 1
 
@@ -1194,7 +1194,7 @@ def test_quantize_gluon_with_forward():
                                                               exclude_layers_match=excluded_names_match,
                                                               calib_mode='none',
                                                               data_shapes=[data_shape],
-                                                              ctx=mx.current_context())
+                                                              device=mx.current_device())
         quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
         quantized_resnet18_v1(random_data)
 
@@ -1208,7 +1208,7 @@ def test_quantize_gluon_with_forward():
                                                                     calib_mode=mode,
                                                                     quantize_granularity=quantize_granularity,
                                                                     num_calib_batches=num_calib_batches,
-                                                                    ctx=mx.current_context())
+                                                                    device=mx.current_device())
 
                 quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
                 quantized_resnet18_v1(random_data)
@@ -1236,7 +1236,7 @@ def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
+    qsym, _ = mx.contrib.quant._quantize_symbol(sym, device=mx.current_device(),
                                              offline_params=offline_params, quantize_mode='full')
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     min_max_dict = {'conv_output': (onp.random.uniform(low=100.0, high=200.0), onp.random.uniform(low=100.0, high=200.0)),
@@ -1274,7 +1274,7 @@ def test_quantization_net_with_different_data_inputs_options():
     quantized_net = mx.contrib.quant.quantize_net(net,
                                                   quantized_dtype='auto',
                                                   data_shapes=[data_shape],
-                                                  ctx=mx.current_context())
+                                                  device=mx.current_device())
     out = quantized_net(random_data)
     out.wait_to_read()
 
@@ -1286,7 +1286,7 @@ def test_quantization_net_with_different_data_inputs_options():
     quantized_net2 = mx.contrib.quant.quantize_net(net2,
                                                    quantized_dtype='auto',
                                                    data_shapes=[data_desc],
-                                                   ctx=mx.current_context())
+                                                   device=mx.current_device())
     out2 = quantized_net2(random_data)
     out2.wait_to_read()
 
@@ -1298,7 +1298,7 @@ def test_quantization_net_with_different_data_inputs_options():
     quantized_net3 = mx.contrib.quant.quantize_net(net3,
                                                    quantized_dtype='auto',
                                                    calib_data=data_loader,
-                                                   ctx=mx.current_context())
+                                                   device=mx.current_device())
     out3 = quantized_net3(random_data)
     out3.wait_to_read()
 
@@ -1312,7 +1312,7 @@ def test_optimal_threshold_adversarial_case():
     hist_edges = []
     min_val = -2
     max_val = 2
-    for i in range(0, 998):
+    for _ in range(0, 998):
         hist.append(0)
     for i in range(0, 999):
         hist_edges.append((max_val - min_val) / 999 * i + min_val)

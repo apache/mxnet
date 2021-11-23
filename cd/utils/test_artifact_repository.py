@@ -161,7 +161,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
     @patch('artifact_repository.get_libmxnet_features')
     def test_probe_variant_native(self, mock_features):
         """
-        Tests 'native' is returned if ONEDNN and CUDA features are OFF
+        Tests 'native' is returned if oneDNN and CUDA features are OFF
         """
         mock_features.return_value = {'ONEDNN': False, 'CUDA': False}
         self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'native')
@@ -169,7 +169,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
     @patch('artifact_repository.get_libmxnet_features')
     def test_probe_variant_cpu(self, mock_features):
         """
-        Tests 'cpu' is returned if ONEDNN is ON and CUDA is OFF
+        Tests 'cpu' is returned if oneDNN is ON and CUDA is OFF
         """
         mock_features.return_value = {'ONEDNN': True, 'CUDA': False}
         self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'cpu')
@@ -178,7 +178,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
     @patch('artifact_repository.get_cuda_version')
     def test_probe_variant_cuda(self, mock_cuda_version, mock_features):
         """
-        Tests 'cu102' is returned if ONEDNN is OFF and CUDA is ON and CUDA version is 10.2
+        Tests 'cu102' is returned if oneDNN is OFF and CUDA is ON and CUDA version is 10.2
         """
         mock_features.return_value = {'ONEDNN': True, 'CUDA': True}
         mock_cuda_version.return_value = '102'

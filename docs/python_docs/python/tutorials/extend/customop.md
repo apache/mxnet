@@ -31,11 +31,12 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon, autograd
 import os
+mx.npx.reset_np()
 ```
 
 ## Parameter-less operators
 
-This operator implements the standard sigmoid activation function. This is only for illustration purposes, in real life you would use the built-in operator `mx.nd.relu`.
+This operator implements the standard sigmoid activation function. This is only for illustration purposes, in real life you would use the built-in operator `mx.npx.relu`.
 
 ### Forward & backward implementation
 
@@ -100,7 +101,7 @@ class SigmoidProp(mx.operator.CustomOpProp):
         # return 3 lists representing inputs shapes, outputs shapes, and aux data shapes.
         return (data_shape,), (output_shape,), ()
 
-    def create_operator(self, ctx, in_shapes, in_dtypes):
+    def create_operator(self, device, in_shapes, in_dtypes):
         #  create and return the CustomOp class.
         return Sigmoid()
 ```
@@ -182,7 +183,7 @@ class DenseProp(mx.operator.CustomOpProp):
         # return 3 lists representing inputs shapes, outputs shapes, and aux data shapes.
         return (data_shape, weight_shape), (output_shape,), ()
 
-    def create_operator(self, ctx, in_shapes, in_dtypes):
+    def create_operator(self, device, in_shapes, in_dtypes):
         #  create and return the CustomOp class.
         return Dense(self._bias)
 ```
@@ -200,8 +201,8 @@ class DenseBlock(mx.gluon.Block):
         self.weight = gluon.Parameter('weight', shape=(channels, in_channels))
 
     def forward(self, x):
-        ctx = x.context
-        return mx.nd.Custom(x, self.weight.data(ctx), bias=self._bias, op_type='dense')
+        device = x.device
+        return mx.nd.Custom(x, self.weight.data(device), bias=self._bias, op_type='dense')
 ```
 
 ### Example usage
@@ -218,7 +219,7 @@ print(y)
 ## Using custom operators with fork
 In Linux systems, the default method in multiprocessing to create process is by using fork. If there are unfinished async custom operations when forking, the program will be blocked because of python GIL. Always use sync calls like `wait_to_read` or `waitall` before calling fork.
 
-```{.python .input}
+```{.python}
 x = mx.nd.array([0, 1, 2, 3])
 y = mx.nd.Custom(x, op_type='sigmoid')
 # unfinished async sigmoid operation will cause blocking
@@ -227,7 +228,7 @@ os.fork()
 
 Correctly handling this will make mxnet depend upon libpython, so the workaround now is to ensure that all custom operations are executed before forking process.
 
-```{.python .input}
+```{.python}
 x = mx.nd.array([0, 1, 2, 3])
 y = mx.nd.Custom(x, op_type='sigmoid')
 # force execution by reading y

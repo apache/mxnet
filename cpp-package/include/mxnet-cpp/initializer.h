@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file initializer.h
  * \brief random initializer
  * \author Zhang Chen
@@ -38,16 +37,12 @@ namespace cpp {
 
 class Initializer {
  public:
-  static bool StringStartWith(const std::string& name,
-                              const std::string& check_str) {
-    return (name.size() >= check_str.size() &&
-            name.substr(0, check_str.size()) == check_str);
+  static bool StringStartWith(const std::string& name, const std::string& check_str) {
+    return (name.size() >= check_str.size() && name.substr(0, check_str.size()) == check_str);
   }
-  static bool StringEndWith(const std::string& name,
-                            const std::string& check_str) {
+  static bool StringEndWith(const std::string& name, const std::string& check_str) {
     return (name.size() >= check_str.size() &&
-            name.substr(name.size() - check_str.size(), check_str.size()) ==
-                check_str);
+            name.substr(name.size() - check_str.size(), check_str.size()) == check_str);
   }
   virtual void operator()(const std::string& name, NDArray* arr) {
     if (StringStartWith(name, "upsampling")) {
@@ -85,20 +80,30 @@ class Initializer {
   virtual void InitBilinear(NDArray* arr) {
     Shape shape(arr->GetShape());
     std::vector<float> weight(shape.Size(), 0);
-    int f = std::ceil(shape[3] / 2.0);
+    int f   = std::ceil(shape[3] / 2.0);
     float c = (2 * f - 1 - f % 2) / (2. * f);
     for (size_t i = 0; i < shape.Size(); ++i) {
-      int x = i % shape[3];
-      int y = (i / shape[3]) % shape[2];
+      int x     = i % shape[3];
+      int y     = (i / shape[3]) % shape[2];
       weight[i] = (1 - std::abs(x / f - c)) * (1 - std::abs(y / f - c));
     }
     (*arr).SyncCopyFromCPU(weight);
   }
-  virtual void InitZero(NDArray* arr) { (*arr) = 0.0f; }
-  virtual void InitOne(NDArray* arr) { (*arr) = 1.0f; }
-  virtual void InitBias(NDArray* arr) { (*arr) = 0.0f; }
-  virtual void InitGamma(NDArray* arr) { (*arr) = 1.0f; }
-  virtual void InitBeta(NDArray* arr) { (*arr) = 0.0f; }
+  virtual void InitZero(NDArray* arr) {
+    (*arr) = 0.0f;
+  }
+  virtual void InitOne(NDArray* arr) {
+    (*arr) = 1.0f;
+  }
+  virtual void InitBias(NDArray* arr) {
+    (*arr) = 0.0f;
+  }
+  virtual void InitGamma(NDArray* arr) {
+    (*arr) = 1.0f;
+  }
+  virtual void InitBeta(NDArray* arr) {
+    (*arr) = 0.0f;
+  }
   virtual void InitWeight(NDArray* arr) {}
   virtual void InitQuantizedWeight(NDArray* arr) {
     std::default_random_engine generator;
@@ -113,32 +118,30 @@ class Initializer {
 
 class Constant : public Initializer {
  public:
-  explicit Constant(float value)
-    : value(value) {}
-  void operator()(const std::string &name, NDArray *arr) override {
+  explicit Constant(float value) : value(value) {}
+  void operator()(const std::string& name, NDArray* arr) override {
     (*arr) = value;
   }
+
  protected:
   float value;
 };
 
 class Zero : public Constant {
  public:
-  Zero(): Constant(0.0f) {}
+  Zero() : Constant(0.0f) {}
 };
 
 class One : public Constant {
  public:
-  One(): Constant(1.0f) {}
+  One() : Constant(1.0f) {}
 };
 
 class Uniform : public Initializer {
  public:
-  explicit Uniform(float scale)
-    : Uniform(-scale, scale) {}
-  Uniform(float begin, float end)
-    : begin(begin), end(end) {}
-  void operator()(const std::string &name, NDArray *arr) override {
+  explicit Uniform(float scale) : Uniform(-scale, scale) {}
+  Uniform(float begin, float end) : begin(begin), end(end) {}
+  void operator()(const std::string& name, NDArray* arr) override {
     if (StringEndWith(name, "weight_quantize")) {
       InitQuantizedWeight(arr);
       return;
@@ -149,15 +152,15 @@ class Uniform : public Initializer {
     }
     NDArray::SampleUniform(begin, end, arr);
   }
+
  protected:
   float begin, end;
 };
 
 class Normal : public Initializer {
  public:
-  Normal(float mu, float sigma)
-    : mu(mu), sigma(sigma) {}
-  void operator()(const std::string &name, NDArray *arr) override {
+  Normal(float mu, float sigma) : mu(mu), sigma(sigma) {}
+  void operator()(const std::string& name, NDArray* arr) override {
     if (StringEndWith(name, "weight_quantize")) {
       InitQuantizedWeight(arr);
       return;
@@ -168,6 +171,7 @@ class Normal : public Initializer {
     }
     NDArray::SampleGaussian(mu, sigma, arr);
   }
+
  protected:
   float mu, sigma;
 };
@@ -175,7 +179,7 @@ class Normal : public Initializer {
 class Bilinear : public Initializer {
  public:
   Bilinear() {}
-  void operator()(const std::string &name, NDArray *arr) override {
+  void operator()(const std::string& name, NDArray* arr) override {
     if (StringEndWith(name, "weight_quantize")) {
       InitQuantizedWeight(arr);
       return;
@@ -190,21 +194,15 @@ class Bilinear : public Initializer {
 
 class Xavier : public Initializer {
  public:
-  enum RandType {
-    gaussian,
-    uniform
-  } rand_type;
-  enum FactorType {
-    avg,
-    in,
-    out
-  } factor_type;
+  enum RandType { gaussian, uniform } rand_type;
+  enum FactorType { avg, in, out } factor_type;
   float magnitude;
-  Xavier(RandType rand_type = gaussian, FactorType factor_type = avg,
-         float magnitude = 3)
+  Xavier(RandType rand_type     = gaussian,  // NOLINT
+         FactorType factor_type = avg,       // NOLINT
+         float magnitude        = 3)                // NOLINT
       : rand_type(rand_type), factor_type(factor_type), magnitude(magnitude) {}
 
-  void operator()(const std::string &name, NDArray* arr) override {
+  void operator()(const std::string& name, NDArray* arr) override {
     if (StringEndWith(name, "weight_quantize")) {
       InitQuantizedWeight(arr);
       return;

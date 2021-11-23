@@ -29,12 +29,12 @@
 
 namespace mxnet {
 
-#define MXNET_REGISTER_UNARY_API(op_name)                                      \
-MXNET_REGISTER_API("_npi." #op_name)                                           \
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {           \
-  const nnvm::Op* op = Op::Get("_npi_" #op_name);                              \
-  UFuncHelper(args, ret, op);                                                  \
-})
+#define MXNET_REGISTER_UNARY_API(op_name)                                  \
+  MXNET_REGISTER_API("_npi." #op_name)                                     \
+      .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) { \
+        const nnvm::Op* op = Op::Get("_npi_" #op_name);                    \
+        UFuncHelper(args, ret, op);                                        \
+      })
 
 MXNET_REGISTER_UNARY_API(negative);
 MXNET_REGISTER_UNARY_API(reciprocal);
@@ -72,18 +72,18 @@ MXNET_REGISTER_UNARY_API(radians);
 #if MXNET_USE_TVM_OP
 MXNET_REGISTER_UNARY_API(rad2deg);  // from src/operator/contrib/tvmop/ufunc.cc
 MXNET_REGISTER_UNARY_API(deg2rad);  // from src/operator/contrib/tvmop/ufunc.cc
-#else  // MXNET_USE_TVM_OP
+#else                               // MXNET_USE_TVM_OP
 MXNET_REGISTER_API("_npi.rad2deg")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  const nnvm::Op* op = Op::Get("_npi_degrees");
-  UFuncHelper(args, ret, op);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      const nnvm::Op* op = Op::Get("_npi_degrees");
+      UFuncHelper(args, ret, op);
+    });
 MXNET_REGISTER_API("_npi.deg2rad")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  const nnvm::Op* op = Op::Get("_npi_radians");
-  UFuncHelper(args, ret, op);
-});
-#endif  // MXNET_USE_TVM_OP
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      const nnvm::Op* op = Op::Get("_npi_radians");
+      UFuncHelper(args, ret, op);
+    });
+#endif                              // MXNET_USE_TVM_OP
 MXNET_REGISTER_UNARY_API(sinh);
 MXNET_REGISTER_UNARY_API(cosh);
 MXNET_REGISTER_UNARY_API(tanh);
@@ -92,39 +92,38 @@ MXNET_REGISTER_UNARY_API(arccosh);
 MXNET_REGISTER_UNARY_API(arctanh);
 
 MXNET_REGISTER_API("_npi.around")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_around");
-  nnvm::NodeAttrs attrs;
-  op::AroundParam param;
-  param.decimals = args[1].operator int64_t();
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::AroundParam>(&attrs);
-  int num_inputs = 1;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  NDArray* out = args[2].operator mxnet::NDArray*();
-  NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  if (out) {
-    *ret = PythonArg(2);
-  } else {
-    *ret = ndoutputs[0];
-  }
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_around");
+      nnvm::NodeAttrs attrs;
+      op::AroundParam param = {};
+      param.decimals = args[1].operator int64_t();
+      attrs.parsed   = param;
+      attrs.op       = op;
+      SetAttrDict<op::AroundParam>(&attrs);
+      int num_inputs    = 1;
+      NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+      NDArray* out      = args[2].operator mxnet::NDArray*();
+      NDArray** outputs = out == nullptr ? nullptr : &out;
+      int num_outputs   = out != nullptr;
+      auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+      if (out) {
+        *ret = PythonArg(2);
+      } else {
+        *ret = ndoutputs[0];
+      }
+    });
 
-MXNET_REGISTER_API("_npi.copy")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.copy").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_copy");
   nnvm::NodeAttrs attrs;
-  attrs.op = op;
+  attrs.op          = op;
   NDArray* inputs[] = {args[0].operator NDArray*()};
-  int num_inputs = 1;
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
+  int num_inputs    = 1;
+  int num_outputs   = 0;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret              = ndoutputs[0];
 });
 
 }  // namespace mxnet

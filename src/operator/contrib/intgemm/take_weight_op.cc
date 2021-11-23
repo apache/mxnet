@@ -37,15 +37,15 @@ namespace mxnet {
 namespace op {
 
 inline bool TakeWeightOpShape(const nnvm::NodeAttrs& shape,
-                             mxnet::ShapeVector* in_shape,
-                             mxnet::ShapeVector* out_shape) {
+                              mxnet::ShapeVector* in_shape,
+                              mxnet::ShapeVector* out_shape) {
   // 0 is weight, 1 is indices.
   CHECK_EQ(in_shape->size(), 2U);
   CHECK_EQ(out_shape->size(), 1U);
 
-  mxnet::TShape &weight = (*in_shape)[0];
-  mxnet::TShape &indices = (*in_shape)[1];
-  mxnet::TShape &out = (*out_shape)[0];
+  mxnet::TShape& weight  = (*in_shape)[0];
+  mxnet::TShape& indices = (*in_shape)[1];
+  mxnet::TShape& out     = (*out_shape)[0];
 
   // weight matrices should be 2-dimensional by now.
   SHAPE_ASSIGN_CHECK(*in_shape, 0, mxnet::TShape(2, -1));
@@ -101,46 +101,44 @@ void TakeWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK(indices.CheckContiguous());
   CHECK(out.CheckContiguous());
   size_t B_cols = indices.shape_[0];
-  size_t inner = weight.shape_[weight.shape_.ndim() - 1];
-  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) <<
-    "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
-  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) <<
-    "For efficiency, intgemm requires there to be a multiple of " <<
-    ::intgemm::Int8::tile_info.b_cols << " indices.";
+  size_t inner  = weight.shape_[weight.shape_.ndim() - 1];
+  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0)
+      << "intgemm requires the inner dimension be a multiple of "
+      << ::intgemm::Int8::tile_info.b_rows;
+  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0)
+      << "For efficiency, intgemm requires there to be a multiple of "
+      << ::intgemm::Int8::tile_info.b_cols << " indices.";
   // mxnet doesn't have a uint32_t type so we'll just pointer cast. But check the sizes are the
   // same.  Ideally this should be static.
   assert(sizeof(int32_t) == sizeof(::intgemm::Index));
-  const ::intgemm::Index *index =
-    reinterpret_cast<const ::intgemm::Index*>(indices.dptr<int32_t>());
+  const ::intgemm::Index* index =
+      reinterpret_cast<const ::intgemm::Index*>(indices.dptr<int32_t>());
 
   ::intgemm::Int8::SelectColumnsB(
-      weight.dptr<int8_t>(),
-      out.dptr<int8_t>(),
-      inner,
-      index,
-      index + B_cols);
+      weight.dptr<int8_t>(), out.dptr<int8_t>(), inner, index, index + B_cols);
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_take_weight)
-.add_alias("_npx_intgemm_take_weight")
-.describe(R"code(Index a weight matrix stored in intgemm's weight format.
+    .add_alias("_npx_intgemm_take_weight")
+    .describe(R"code(Index a weight matrix stored in intgemm's weight format.
 The indices select the outputs of matrix multiplication, not the inner dot product dimension.
 )code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"weight", "indices"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", TakeWeightOpShape)
-.set_attr<nnvm::FInferType>("FInferType", TakeWeightOpType)
-.set_attr<FInferStorageType>("FInferStorageType", TakeWeightOpStorageType)
-.set_attr<FCompute>("FCompute<cpu>", TakeWeightOpForwardCPU)
-.add_argument(
-    "weight",
-    "NDArray-or-Symbol",
-    "Tensor already in intgemm weight format to select from")
-.add_argument("indices", "NDArray-or-Symbol", "indices to select on the 0th dimension of weight");
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"weight", "indices"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", TakeWeightOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", TakeWeightOpType)
+    .set_attr<FInferStorageType>("FInferStorageType", TakeWeightOpStorageType)
+    .set_attr<FCompute>("FCompute<cpu>", TakeWeightOpForwardCPU)
+    .add_argument("weight",
+                  "NDArray-or-Symbol",
+                  "Tensor already in intgemm weight format to select from")
+    .add_argument("indices",
+                  "NDArray-or-Symbol",
+                  "indices to select on the 0th dimension of weight");
 
 }  // namespace op
 }  // namespace mxnet

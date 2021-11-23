@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file libinfo.h
  * \author larroy
  * \brief get features of the MXNet library at runtime
@@ -75,13 +74,11 @@
 #endif
 
 /*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
-#define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
-
+#define MXNET_GPU_NOT_ENABLED_ERROR "GPU is not enabled"
 
 #ifndef MXNET_USE_TENSORRT
 #define MXNET_USE_TENSORRT 0
 #endif
-
 
 #ifndef MXNET_USE_BLAS_ATLAS
 #define MXNET_USE_BLAS_ATLAS 0
@@ -155,7 +152,6 @@ enum : unsigned {
   CPU_AVX,
   CPU_AVX2,
 
-
   // Multiprocessing / CPU / System
   OPENMP,
   SSE,
@@ -193,7 +189,6 @@ enum : unsigned {
   MAX_FEATURES
 };
 
-
 struct EnumNames {
   static const std::vector<std::string> names;
 };
@@ -204,9 +199,10 @@ struct LibInfo {
   const std::array<LibFeature, MAX_FEATURES>& getFeatures() {
     return m_lib_features;
   }
+
  private:
   std::array<LibFeature, MAX_FEATURES> m_lib_features;
-  static std::unique_ptr<LibInfo>  m_inst;
+  static std::unique_ptr<LibInfo> m_inst;
 };
 
 /*!

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -30,39 +30,39 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npi.randint")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_random_randint");
-  nnvm::NodeAttrs attrs;
-  op::SampleRandIntParam param;
-  int num_inputs = 0;
-  param.low = args[0].operator int();
-  param.high = args[1].operator int();
-  if (args[2].type_code() == kDLInt) {
-    param.shape = TShape(1, args[2].operator int64_t());
-  } else {
-    param.shape = TShape(args[2].operator ObjectRef());
-  }
-  if (args[3].type_code() == kNull) {
-    param.dtype = mxnet::common::GetDefaultDtype();
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
-  }
-  attrs.parsed = param;
-  attrs.op = op;
-  if (args[4].type_code() != kNull) {
-    attrs.dict["ctx"] = args[4].operator std::string();
-  }
-  NDArray* out = args[5].operator mxnet::NDArray*();
-  NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  SetAttrDict<op::SampleRandIntParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, nullptr, &num_outputs, outputs);
-  if (out) {
-    *ret = PythonArg(5);
-  } else {
-    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
-  }
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_random_randint");
+      nnvm::NodeAttrs attrs;
+      op::SampleRandIntParam param = {};
+      int num_inputs = 0;
+      param.low      = args[0].operator int();
+      param.high     = args[1].operator int();
+      if (args[2].type_code() == kDLInt) {
+        param.shape = TShape(1, args[2].operator int64_t());
+      } else {
+        param.shape = TShape(args[2].operator ObjectRef());
+      }
+      if (args[3].type_code() == kNull) {
+        param.dtype = mxnet::common::GetDefaultDtype();
+      } else {
+        param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
+      }
+      attrs.parsed = param;
+      attrs.op     = op;
+      if (args[4].type_code() != kNull) {
+        attrs.dict["ctx"] = args[4].operator std::string();
+      }
+      NDArray* out      = args[5].operator mxnet::NDArray*();
+      NDArray** outputs = out == nullptr ? nullptr : &out;
+      int num_outputs   = out != nullptr;
+      SetAttrDict<op::SampleRandIntParam>(&attrs);
+      auto ndoutputs = Invoke(op, &attrs, num_inputs, nullptr, &num_outputs, outputs);
+      if (out) {
+        *ret = PythonArg(5);
+      } else {
+        *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+      }
+    });
 
 }  // namespace mxnet

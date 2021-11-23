@@ -1,4 +1,4 @@
-  /*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,23 +18,20 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file initialize.h
  * \brief Library initialization
  */
 
 #include <cstdlib>
-#include <string>
 #include <map>
-#include "dmlc/io.h"
+#include <string>
 
+#include "dmlc/io.h"
 
 #ifndef MXNET_INITIALIZE_H_
 #define MXNET_INITIALIZE_H_
 
 namespace mxnet {
-
-
 
 void pthread_atfork_prepare();
 void pthread_atfork_parent();
@@ -64,12 +61,11 @@ class LibraryInitializer {
    */
   bool was_forked() const;
 
-
   // Library loading
   bool lib_is_loaded(const std::string& path) const;
   void* lib_load(const char* path);
   void lib_close(void* handle);
-  static void get_sym(void* handle, void** func, char* name);
+  static void get_sym(void* handle, void** func, const char* name);
 
   /**
    * Original pid of the process which first loaded and initialized the library
@@ -97,6 +93,11 @@ class LibraryInitializer {
   void install_pthread_atfork_handlers();
 
   /**
+   * Sets the interface and threading layer for Intel® oneAPI MKL at run time.
+   * Use with the Single Dynamic Library.
+   */
+  void init_mkl_dynamic_library();
+  /**
    * Install signal handlers (UNIX). Has no effect on Windows.
    */
   void install_signal_handlers();
@@ -113,8 +114,8 @@ class LibraryInitializer {
  * \param func_name function name to search for in the library
  * \return func a function pointer
  */
-template<typename T>
-T get_func(void *lib, char *func_name) {
+template <typename T>
+T get_func(void* lib, const char* func_name) {
   T func;
   LibraryInitializer::Get()->get_sym(lib, reinterpret_cast<void**>(&func), func_name);
   if (!func)

@@ -37,7 +37,7 @@ namespace runtime {
 class EllipsisObj : public Object {
  public:
   static constexpr const uint32_t _type_index = TypeIndex::kEllipsis;
-  static constexpr const char* _type_key = "MXNet.Ellipsis";
+  static constexpr const char* _type_key      = "MXNet.Ellipsis";
   MXNET_DECLARE_FINAL_OBJECT_INFO(EllipsisObj, Object)
 };
 
@@ -53,23 +53,23 @@ class SliceObj : public Object {
   int64_t step;
 
   static constexpr const uint32_t _type_index = TypeIndex::kSlice;
-  static constexpr const char* _type_key = "MXNet.Slice";
+  static constexpr const char* _type_key      = "MXNet.Slice";
   MXNET_DECLARE_FINAL_OBJECT_INFO(SliceObj, Object)
 };
 
 class Slice : public ObjectRef {
  public:
-  explicit inline Slice(int64_t start, int64_t stop, int64_t step,
+  explicit inline Slice(int64_t start,
+                        int64_t stop,
+                        int64_t step,
                         ObjectPtr<SliceObj>&& data = make_object<SliceObj>()) {
     data->start = start;
-    data->stop = stop;
-    data->step = step;
-    data_ = std::move(data);
+    data->stop  = stop;
+    data->step  = step;
+    data_       = std::move(data);
   }
 
-  explicit inline Slice(int64_t stop)
-      : Slice(kNoneValue, stop, kNoneValue) {
-  }
+  explicit inline Slice(int64_t stop) : Slice(kNoneValue, stop, kNoneValue) {}
 
   // constant to represent None.
   static constexpr int64_t kNoneValue = std::numeric_limits<int64_t>::min();
@@ -81,38 +81,36 @@ int64_t inline SliceNoneValue() {
   return Slice::kNoneValue;
 }
 
-class IntegerObj: public Object {
+class IntegerObj : public Object {
  public:
   int64_t value;
   static constexpr const uint32_t _type_index = TypeIndex::kInteger;
-  static constexpr const char* _type_key = "MXNet.Integer";
+  static constexpr const char* _type_key      = "MXNet.Integer";
   MXNET_DECLARE_FINAL_OBJECT_INFO(IntegerObj, Object)
 };
 
-class Integer: public ObjectRef {
+class Integer : public ObjectRef {
  public:
-  explicit Integer(int64_t value,
-                   ObjectPtr<IntegerObj>&& data = make_object<IntegerObj>()) {
+  explicit Integer(int64_t value, ObjectPtr<IntegerObj>&& data = make_object<IntegerObj>()) {
     data->value = value;
-    data_ = std::move(data);
+    data_       = std::move(data);
   }
   MXNET_DEFINE_OBJECT_REF_METHODS(Integer, ObjectRef, IntegerObj)
 };
 
-class FloatObj: public Object {
+class FloatObj : public Object {
  public:
   double value;
   static constexpr const uint32_t _type_index = TypeIndex::kFloat;
-  static constexpr const char* _type_key = "MXNet.Float";
+  static constexpr const char* _type_key      = "MXNet.Float";
   MXNET_DECLARE_FINAL_OBJECT_INFO(FloatObj, Object)
 };
 
-class Float: public ObjectRef {
+class Float : public ObjectRef {
  public:
-  explicit Float(double value,
-                 ObjectPtr<FloatObj>&& data = make_object<FloatObj>()) {
+  explicit Float(double value, ObjectPtr<FloatObj>&& data = make_object<FloatObj>()) {
     data->value = value;
-    data_ = std::move(data);
+    data_       = std::move(data);
   }
   MXNET_DEFINE_OBJECT_REF_METHODS(Float, ObjectRef, FloatObj)
 };

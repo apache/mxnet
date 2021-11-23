@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor_gpu-inl.h
  * \brief implementation of GPU host code
  * \author Bing Xu, Tianqi Chen

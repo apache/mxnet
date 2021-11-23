@@ -29,23 +29,26 @@
 
 namespace mxnet {
 
-template<>
+template <>
 void SetAttrDict<double>(nnvm::NodeAttrs* attrs) {
   if (Imperative::Get()->is_recording()) {
     attrs->dict["scalar"] = std::to_string(::dmlc::get<double>(attrs->parsed));
   }
 }
 
-void UFuncHelper(NDArray* lhs, NDArray* rhs, NDArray* out,
-                 runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+void UFuncHelper(NDArray* lhs,
+                 NDArray* rhs,
+                 NDArray* out,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  attrs.op = op;
+  attrs.op          = op;
   NDArray* inputs[] = {lhs, rhs};
-  int num_inputs = 2;
+  int num_inputs    = 2;
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(2);
   } else {
@@ -53,43 +56,24 @@ void UFuncHelper(NDArray* lhs, NDArray* rhs, NDArray* out,
   }
 }
 
-void UFuncHelper(NDArray* lhs, NDArray* rhs, NDArray* out,
-                 runtime::MXNetRetValue* ret, const nnvm::Op* op, bool in_place) {
+void UFuncHelper(NDArray* lhs,
+                 int64_t rhs,
+                 NDArray* out,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryParam param;
-  param.in_place = in_place;
-  attrs.op = op;
-  attrs.parsed = param;
-  SetAttrDict<op::NumpyBinaryParam>(&attrs);
-  attrs.op = op;
-  NDArray* inputs[] = {lhs, rhs};
-  int num_inputs = 2;
-  NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  if (outputs) {
-    *ret = PythonArg(2);
-  } else {
-    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
-  }
-}
-
-void UFuncHelper(NDArray* lhs, int64_t rhs, NDArray* out,
-                 runtime::MXNetRetValue* ret, const nnvm::Op* op) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = rhs;
   param.is_int = true;
-  attrs.op = op;
+  attrs.op     = op;
   attrs.parsed = param;
   SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
-  NDArray** inputs = &lhs;
-  int num_inputs = 1;
+  NDArray** inputs  = &lhs;
+  int num_inputs    = 1;
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(2);
   } else {
@@ -97,21 +81,24 @@ void UFuncHelper(NDArray* lhs, int64_t rhs, NDArray* out,
   }
 }
 
-void UFuncHelper(NDArray* lhs, double rhs, NDArray* out,
-                 runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+void UFuncHelper(NDArray* lhs,
+                 double rhs,
+                 NDArray* out,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = rhs;
   param.is_int = false;
-  attrs.op = op;
+  attrs.op     = op;
   attrs.parsed = param;
   SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
-  NDArray** inputs = &lhs;
-  int num_inputs = 1;
+  NDArray** inputs  = &lhs;
+  int num_inputs    = 1;
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(2);
   } else {
@@ -119,21 +106,24 @@ void UFuncHelper(NDArray* lhs, double rhs, NDArray* out,
   }
 }
 
-void UFuncHelper(int64_t lhs, NDArray* rhs, NDArray* out,
-                 runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+void UFuncHelper(int64_t lhs,
+                 NDArray* rhs,
+                 NDArray* out,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = lhs;
   param.is_int = true;
-  attrs.op = op;
+  attrs.op     = op;
   attrs.parsed = param;
   SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
-  NDArray** inputs = &rhs;
-  int num_inputs = 1;
+  NDArray** inputs  = &rhs;
+  int num_inputs    = 1;
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(2);
   } else {
@@ -141,21 +131,24 @@ void UFuncHelper(int64_t lhs, NDArray* rhs, NDArray* out,
   }
 }
 
-void UFuncHelper(double lhs, NDArray* rhs, NDArray* out,
-                 runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+void UFuncHelper(double lhs,
+                 NDArray* rhs,
+                 NDArray* out,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = lhs;
   param.is_int = false;
-  attrs.op = op;
+  attrs.op     = op;
   attrs.parsed = param;
   SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
-  NDArray** inputs = &rhs;
-  int num_inputs = 1;
+  NDArray** inputs  = &rhs;
+  int num_inputs    = 1;
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(2);
   } else {
@@ -189,26 +182,30 @@ void UFuncHelper(runtime::MXNetArgs args,
       UFuncHelper(args[0].operator NDArray*(), args[1].operator double(), out, ret, lfn_scalar);
     }
   } else if (args[0].type_code() == kDLInt) {
-    UFuncHelper(args[0].operator int64_t(), args[1].operator NDArray*(), out, ret,
+    UFuncHelper(args[0].operator int64_t(),
+                args[1].operator NDArray*(),
+                out,
+                ret,
                 rfn_scalar ? rfn_scalar : lfn_scalar);
   } else {
-    UFuncHelper(args[0].operator double(), args[1].operator NDArray*(), out, ret,
+    UFuncHelper(args[0].operator double(),
+                args[1].operator NDArray*(),
+                out,
+                ret,
                 rfn_scalar ? rfn_scalar : lfn_scalar);
   }
 }
 
-void UFuncHelper(runtime::MXNetArgs args,
-                 runtime::MXNetRetValue* ret,
-                 const nnvm::Op* op) {
+void UFuncHelper(runtime::MXNetArgs args, runtime::MXNetRetValue* ret, const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  attrs.op = op;
+  attrs.op          = op;
   NDArray* inputs[] = {args[0].operator NDArray*()};
-  NDArray* out = args[1].operator NDArray*();
+  NDArray* out      = args[1].operator NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_inputs = 1;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_inputs    = 1;
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(1);
   } else {

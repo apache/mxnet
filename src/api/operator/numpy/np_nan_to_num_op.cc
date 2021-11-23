@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -29,44 +29,44 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npi.nan_to_num")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_nan_to_num");
-  nnvm::NodeAttrs attrs;
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_nan_to_num");
+      nnvm::NodeAttrs attrs;
 
-  op::NumpyNanToNumParam param;
-  int num_inputs = 1;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+      op::NumpyNanToNumParam param = {};
+      int num_inputs    = 1;
+      NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
 
-  param.copy = args[1].operator bool();
-  param.nan = args[2].operator double();
+      param.copy = args[1].operator bool();
+      param.nan  = args[2].operator double();
 
-  if (args[3].type_code() == kNull) {
-    param.posinf = dmlc::nullopt;
-  } else {
-    param.posinf = args[3].operator double();
-  }
+      if (args[3].type_code() == kNull) {
+        param.posinf = dmlc::nullopt;
+      } else {
+        param.posinf = args[3].operator double();
+      }
 
-  if (args[4].type_code() == kNull) {
-    param.neginf = dmlc::nullopt;
-  } else {
-    param.neginf = args[4].operator double();
-  }
+      if (args[4].type_code() == kNull) {
+        param.neginf = dmlc::nullopt;
+      } else {
+        param.neginf = args[4].operator double();
+      }
 
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::NumpyNanToNumParam>(&attrs);
+      attrs.parsed = param;
+      attrs.op     = op;
+      SetAttrDict<op::NumpyNanToNumParam>(&attrs);
 
-  NDArray* out = args[5].operator mxnet::NDArray*();
-  NDArray** outputs = out == nullptr ? nullptr : &out;
-  // set the number of outputs provided by the `out` arugment
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  if (out) {
-    *ret = PythonArg(5);
-  } else {
-    *ret = ndoutputs[0];
-  }
-});
+      NDArray* out      = args[5].operator mxnet::NDArray*();
+      NDArray** outputs = out == nullptr ? nullptr : &out;
+      // set the number of outputs provided by the `out` arugment
+      int num_outputs = out != nullptr;
+      auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+      if (out) {
+        *ret = PythonArg(5);
+      } else {
+        *ret = ndoutputs[0];
+      }
+    });
 
 }  // namespace mxnet

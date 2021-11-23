@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file quantize_v2.cu
  * \brief
  */
@@ -28,7 +27,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_quantize_v2)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", QuantizeV2Forward<gpu>);
+    .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", QuantizeV2Forward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

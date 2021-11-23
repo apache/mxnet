@@ -114,11 +114,11 @@ We get the symbol and parameter objects
 sym, arg_params, aux_params = onnx_mxnet.import_model(onnx_path)
 ```
 
-We pick a context, CPU is fine for inference, switch to mx.gpu() if you want to use your GPU.
+We pick a device, CPU is fine for inference, switch to mx.gpu() if you want to use your GPU.
 
 
 ```{.python .input}
-ctx = mx.cpu()
+device = mx.cpu()
 ```
 
 We obtain the data names of the inputs to the model by using the model metadata API:
@@ -148,13 +148,13 @@ with warnings.catch_warnings():
 net_params = net.collect_params()
 for param in arg_params:
     if param in net_params:
-        net_params[param]._load_init(arg_params[param], ctx=ctx)
+        net_params[param]._load_init(arg_params[param], device=device)
 for param in aux_params:
     if param in net_params:
-        net_params[param]._load_init(aux_params[param], ctx=ctx)
+        net_params[param]._load_init(aux_params[param], device=device)
 ```
 
-We can now cache the computational graph through [hybridization](https://mxnet.apache.org/tutorials/gluon/hybrid.html) to gain some performance
+We can now cache the computational graph through [hybridization](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html) to gain some performance
 
 
 
@@ -215,7 +215,7 @@ images = image_net_images + caltech101_images
 And run them as a batch through the network to get the predictions
 
 ```{.python .input}
-batch = nd.array(np.concatenate([transform(img) for img in images], axis=0), ctx=ctx)
+batch = nd.array(np.concatenate([transform(img) for img in images], axis=0), device=device)
 result = run_batch(net, [batch])
 ```
 
@@ -248,6 +248,6 @@ Lucky for us, the [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datas
 We show that in our next tutorial:
 
 
-- [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](http://mxnet.apache.org/tutorials/onnx/fine_tuning_gluon.html)
+- [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/packages/onnx/fine_tuning_gluon.html)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

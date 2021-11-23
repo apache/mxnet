@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_sum_value.cu
  * \brief GPU Implementation of broadcast and reduce sum (and related) functions based on value.
  */
@@ -27,26 +26,27 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(sum)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
-                                                                           "red::sum{}", false});
+NNVM_REGISTER_OP(sum).set_attr<FCompute>("FCompute<gpu>",
+                                         ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
+                                                                                  "red::sum{}",
+                                                                                  false});
 
-NNVM_REGISTER_OP(_backward_sum)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu>);
+NNVM_REGISTER_OP(_backward_sum).set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu>);
 
-NNVM_REGISTER_OP(mean)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
-                                                                           "red::sum{}", true});
+NNVM_REGISTER_OP(mean).set_attr<FCompute>("FCompute<gpu>",
+                                          ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
+                                                                                   "red::sum{}",
+                                                                                   true});
 
 NNVM_REGISTER_OP(_backward_mean)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu, true>);
+    .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu, true>);
 
-NNVM_REGISTER_OP(nansum)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
-                                                                           "red::nansum{}", false});
+NNVM_REGISTER_OP(nansum).set_attr<FCompute>(
+    "FCompute<gpu>",
+    ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity", "red::nansum{}", false});
 
 NNVM_REGISTER_OP(_backward_nansum)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nansum_grad>);
+    .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nansum_grad>);
 
 }  // namespace op
 }  // namespace mxnet

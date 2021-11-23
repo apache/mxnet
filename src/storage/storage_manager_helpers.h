@@ -24,7 +24,7 @@
 #include <cuda_runtime.h>
 #include "../common/cuda/utils.h"
 #include "../profiler/storage_profiler.h"
-typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
+typedef mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // MXNET_USE_CUDA
 
 #ifndef _WIN32
@@ -52,18 +52,28 @@ namespace storage {
  */
 class ContextHelper {
  public:
-  virtual ~ContextHelper()                              {}
+  virtual ~ContextHelper() {}
 
-  inline void set_initilal_context(const Context &ctx)  { initilal_context_ = ctx; }
-  inline const Context &initilal_context() const        { return initilal_context_; }
+  inline void set_initilal_context(const Context& ctx) {
+    initilal_context_ = ctx;
+  }
+  inline const Context& initilal_context() const {
+    return initilal_context_;
+  }
   virtual std::tuple<size_t, size_t> getMemoryInfo() const = 0;
-  virtual int Malloc(void **ppNtr, size_t size) const = 0;
-  virtual void Free(void *dptr) const = 0;
-  inline size_t freeMemorySize() const                  { return std::get<0>(getMemoryInfo()); }
+  virtual int Malloc(void** ppNtr, size_t size) const      = 0;
+  virtual void Free(void* dptr) const                      = 0;
+  inline size_t freeMemorySize() const {
+    return std::get<0>(getMemoryInfo());
+  }
 
 #if MXNET_USE_CUDA
-  virtual bool contextGPU() const                       { return false; }
-  virtual const CudaDeviceStore *SetCurrentDevice(const Context &/*ctx*/) const { return nullptr; }
+  virtual bool contextGPU() const {
+    return false;
+  }
+  virtual const CudaDeviceStore* SetCurrentDevice(const Context& /*ctx*/) const {
+    return nullptr;
+  }
 #endif
 
  private:
@@ -86,22 +96,22 @@ class ContextHelperCPU : public ContextHelper {
     vm_size_t page_size;
     vm_statistics64_data_t vm_stats;
 
-    mach_port_t mach_port = mach_host_self();
+    mach_port_t mach_port        = mach_host_self();
     mach_msg_type_number_t count = sizeof(vm_stats) / sizeof(natural_t);
     if (KERN_SUCCESS != host_page_size(mach_port, &page_size) ||
-        KERN_SUCCESS != host_statistics64(mach_port, HOST_VM_INFO,
-                                          (host_info64_t)&vm_stats, &count)) {
+        KERN_SUCCESS !=
+            host_statistics64(mach_port, HOST_VM_INFO, (host_info64_t)&vm_stats, &count)) {
       LOG(FATAL) << "Cannot get memory information";
     }
 
     const size_t free_memory = (uint64_t)vm_stats.free_count * (uint64_t)page_size;
 
     const size_t used_memory = ((uint64_t)vm_stats.active_count +
-                                (uint64_t)vm_stats.inactive_count +
-                                (uint64_t)vm_stats.wire_count) *  (uint64_t)page_size;
+                                (uint64_t)vm_stats.inactive_count + (uint64_t)vm_stats.wire_count) *
+                               (uint64_t)page_size;
 
     return std::make_tuple(free_memory, used_memory + free_memory);
-#else   // Linux
+#else  // Linux
     struct sysinfo info = {};
     if (sysinfo(&info) < 0)
       LOG(FATAL) << "Error: sysinfo failed";
@@ -110,20 +120,20 @@ class ContextHelperCPU : public ContextHelper {
 #endif
   }
 
-  int Malloc(void **ppNtr, size_t size) const override {
+  int Malloc(void** ppNtr, size_t size) const override {
     bool success = mxnet::common::AlignedMemAlloc(ppNtr, size, alignment_);
     return success ? 0 : -1;
   }
 
-  void Free(void *dptr) const override {
+  void Free(void* dptr) const override {
     mxnet::common::AlignedMemFree(dptr);
   }
 
  private:
 #if MXNET_USE_ONEDNN == 1 || MXNET_USE_INTGEMM == 1
-  // MKLDNN requires special alignment. 64 is used by the MKLDNN library in
+  // DNNL requires special alignment. 64 is used by the DNNL library in
   // memory allocation.
-  static constexpr size_t alignment_ = kMKLDNNAlign;
+  static constexpr size_t alignment_ = kDNNLAlign;
 #else
   static constexpr size_t alignment_ = 16;
 #endif
@@ -143,11 +153,17 @@ class ContextHelperGPU : public ContextHelper {
     return std::make_tuple(free, total);
   }
 
-  bool contextGPU() const override                      { return true; }
-  int Malloc(void **ppPntr, size_t size) const override { return cudaMalloc(ppPntr, size); }
-  void Free(void *dptr) const override                  { CUDA_CALL(cudaFree(dptr)); }
+  bool contextGPU() const override {
+    return true;
+  }
+  int Malloc(void** ppPntr, size_t size) const override {
+    return cudaMalloc(ppPntr, size);
+  }
+  void Free(void* dptr) const override {
+    CUDA_CALL(cudaFree(dptr));
+  }
 
-  const CudaDeviceStore *SetCurrentDevice(const Context &ctx) const override {
+  const CudaDeviceStore* SetCurrentDevice(const Context& ctx) const override {
     return new CudaDeviceStore(ctx.real_dev_id(), true);
   }
 };
@@ -158,15 +174,17 @@ class ContextHelperGPU : public ContextHelper {
  */
 class ContextHelperPinned : public ContextHelperGPU {
  public:
-  int Malloc(void **ppPntr, size_t size) const override {
+  int Malloc(void** ppPntr, size_t size) const override {
     // make the memory available across all devices
     return cudaHostAlloc(ppPntr, size, cudaHostAllocPortable);
   }
-  void Free(void *dptr) const override                  { CUDA_CALL(cudaFreeHost(dptr)); }
+  void Free(void* dptr) const override {
+    CUDA_CALL(cudaFreeHost(dptr));
+  }
 };
 
 #else
-typedef  ContextHelperCPU ContextHelperPinned;
+typedef ContextHelperCPU ContextHelperPinned;
 #endif
 }  // namespace storage
 }  // namespace mxnet

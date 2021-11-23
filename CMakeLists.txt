@@ -16,11 +16,11 @@ set(CMAKE_CXX_EXTENSIONS ON)  # GNU extensions used by src/operator/random/shuff
 # some compilers claim they support c++17 without actually implementing crucial
 # parts of the standard leading to hard to understand compilation errors.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)
     message(FATAL_ERROR "MXNet 2 requires a C++17 compatible compiler. Please update to GCC version 7 or newer.")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
     message(FATAL_ERROR "MXNet 2 requires a C++17 compatible compiler. Please update to Clang version 6 or newer.")
   endif()
 endif()
@@ -62,9 +62,9 @@ option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects supp
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_LAYERNORM "Use layer normalization from MKL, which is currently slower than internal. No effect unless USE_BLAS=MKL (or mkl)." OFF)
 if((NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
-  option(USE_ONEDNN "Build with ONEDNN support" ON)
+  option(USE_ONEDNN "Build with oneDNN support" ON)
 else()
-  option(USE_ONEDNN "Build with ONEDNN support" OFF)
+  option(USE_ONEDNN "Build with oneDNN support" OFF)
 endif()
 cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
 if(NOT MSVC)
@@ -90,6 +90,7 @@ option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
 cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
 option(BUILD_EXTENSION_PATH "Path to extension to build" "")
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
+option(COLORIZE_OUTPUT "Colorize output during compilation" ON)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
@@ -111,12 +112,11 @@ if(MXNET_FORCE_SHARED_CRT)
 endif()
 
 message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-project(mxnet C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
   include(CheckLanguage)
   check_language(CUDA)
-  if (NOT CMAKE_CUDA_COMPILER AND UNIX AND EXISTS "/usr/local/cuda/bin/nvcc")
+  if(NOT CMAKE_CUDA_COMPILER AND UNIX AND EXISTS "/usr/local/cuda/bin/nvcc")
     set(ENV{CUDACXX} "/usr/local/cuda/bin/nvcc")
     message(WARNING "CMAKE_CUDA_COMPILER guessed: " $ENV{CUDACXX} "\n"
       "Please fix your cuda installation: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-post")
@@ -177,6 +177,18 @@ add_definitions(-DDMLC_USE_CXX11)
 add_definitions(-DDMLC_STRICT_CXX11)
 add_definitions(-DDMLC_USE_CXX14)
 add_definitions(-DMSHADOW_IN_CXX11)
+
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  if(${COLORIZE_OUTPUT})
+    string(APPEND CMAKE_CXX_FLAGS " -fcolor-diagnostics")
+  endif()
+endif()
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+  if(${COLORIZE_OUTPUT})
+    string(APPEND CMAKE_CXX_FLAGS " -fdiagnostics-color=always")
+  endif()
+endif()
+
 if(MSVC)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -274,16 +286,16 @@ if(USE_ONEDNN)
   endif()
 
   function(load_onednn)
-    set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
-    set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
-    set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
+    set(DNNL_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+    set(DNNL_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
+    set(DNNL_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
     set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
     set(DNNL_ENABLE_PRIMITIVE_CACHE ON CACHE INTERNAL "" FORCE)
 
     if(NOT USE_OPENMP)
-      set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
+      set(DNNL_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
     endif()
 
     set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/onednn")
@@ -550,7 +562,7 @@ if(USE_OPERATOR_TUNING AND USE_OPENMP)
   add_definitions(-DMXNET_USE_OPERATOR_TUNING=1)
 endif()
 
-if (NOT (EXTRA_OPERATORS STREQUAL ""))
+if(NOT (EXTRA_OPERATORS STREQUAL ""))
     mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
     mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
     FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
@@ -586,11 +598,11 @@ if(USE_CUDA)
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
-  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand nvrtc cuda_driver
+  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand nvrtc
     OPTIONAL_COMPONENTS nvToolsExt)
 
   list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand
-                                CUDA::nvrtc CUDA::cuda_driver)
+                                CUDA::nvrtc)
   list(APPEND SOURCE ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
 
@@ -760,16 +772,16 @@ elseif(MSVC)
             PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
       else()
         target_compile_options(
-          mxnet_${arch} 
+          mxnet 
           PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
         target_compile_options(
-          mxnet_${arch}
+          mxnet
           PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
       endif()
     endif(USE_SPLIT_ARCH_DLL)
@@ -806,7 +818,7 @@ if(USE_CUDA)
   target_include_directories(customop_gpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op)
 endif()
 if(UNIX)
-  if (USE_CUDA)
+  if(USE_CUDA)
     target_compile_options(customop_gpu_lib PUBLIC -shared)
   endif()
 elseif(MSVC)
@@ -866,6 +878,11 @@ if(USE_TVM_OP)
   BuildTVMOP()
   find_package(Python3 REQUIRED)
   set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")
+  if(UNIX AND NOT APPLE)
+    set(LD_LIBRARY_PATH "LD_LIBRARY_PATH")
+  elseif(APPLE)
+    set(LD_LIBRARY_PATH "DYLD_LIBRARY_PATH")
+  endif()
   if(USE_CUDA)
     set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "\"${CUDA_ARCH_FLAGS}\"")
   endif()
@@ -873,7 +890,7 @@ if(USE_TVM_OP)
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env
     PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
-    LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
+    ${LD_LIBRARY_PATH}=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{${LD_LIBRARY_PATH}}
     ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
   )
 endif()
@@ -931,11 +948,11 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/include/ DESTIN
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/mshadow/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mshadow)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mxnet)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/nnvm/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-if (INSTALL_EXAMPLES)
+if(INSTALL_EXAMPLES)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
 endif()
 
-if (USE_SIGNAL_HANDLER)
+if(USE_SIGNAL_HANDLER)
     add_definitions(-DMXNET_USE_SIGNAL_HANDLER=1)
 endif()
 

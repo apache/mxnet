@@ -586,7 +586,7 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
             trainer_file = os.path.join(self.model_dir, trainer_file)
             assert os.path.exists(param_file), "Failed to load checkpoint, %s does not exist" % param_file
             assert os.path.exists(trainer_file), "Failed to load checkpoint, %s does not exist" % trainer_file
-            estimator.net.load_parameters(param_file, ctx=estimator.context)
+            estimator.net.load_parameters(param_file, ctx=estimator.device)
             estimator.trainer.load_states(trainer_file)
             estimator.logger.warning(msg)
 

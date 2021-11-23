@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_qr.cc
  * \brief CPU implementation of the QR Operator
  */
@@ -69,14 +68,13 @@ inline bool NumpyLaQrShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NumpyLaQrType(const nnvm::NodeAttrs& attrs,
-                        std::vector<int>* in_attrs,
-                        std::vector<int>* out_attrs) {
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 2U);
   int a_type = in_attrs->at(0);
   // unsupport float16
-  CHECK_NE(a_type, mshadow::kFloat16)
-    << "array type float16 is unsupported in linalg";
+  CHECK_NE(a_type, mshadow::kFloat16) << "array type float16 is unsupported in linalg";
   if (mshadow::kFloat32 == a_type) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
     TYPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(0));
@@ -88,26 +86,32 @@ inline bool NumpyLaQrType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_qr)
-.describe(R"code()code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"A"}; })
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyLaQrShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyLaQrType)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<FCompute>("FCompute<cpu>", NumpyLaQrForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_qr"})
-.add_argument("A", "NDArray-or-Symbol", "Input matrices to be factorized");
+    .describe(R"code()code" ADD_FILELINE)
+    .set_num_inputs(1)
+    .set_num_outputs(2)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyLaQrShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyLaQrType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyLaQrForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_qr"})
+    .add_argument("A", "NDArray-or-Symbol", "Input matrices to be factorized");
 
 NNVM_REGISTER_OP(_backward_npi_qr)
-.set_num_inputs(5)
-.set_num_outputs(1)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NumpyLaQrBackward<cpu>);
+    .set_num_inputs(5)
+    .set_num_outputs(1)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyLaQrBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

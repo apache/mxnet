@@ -37,6 +37,10 @@ using uint8 = unsigned char;
 using int8 = char;
 using int32 = int;
 using int64 = long long;
+using int16 = short;
+using uint16 = unsigned short;
+using uint32 = unsigned int;
+using uint64 = unsigned long long;
 
 static_assert(sizeof(float32) == 4, "Size of float32 is expected to be 4B");
 static_assert(sizeof(float64) == 8, "Size of float64 is expected to be 8B");
@@ -45,14 +49,18 @@ static_assert(sizeof(uint8) == 1, "Size of uint8 is expected to be 1B");
 static_assert(sizeof(int8) == 1, "Size of int8 is expected to be 1B");
 static_assert(sizeof(int32) == 4, "Size of int32 is expected to be 4B");
 static_assert(sizeof(int64) == 8, "Size of int64 is expected to be 8B");
+static_assert(sizeof(int16) == 2, "Size of int16 is expected to be 2B");
+static_assert(sizeof(uint16) == 2, "Size of uint16 is expected to be 2B");
+static_assert(sizeof(uint32) == 4, "Size of uint32 is expected to be 4B");
+static_assert(sizeof(uint64) == 8, "Size of uint64 is expected to be 8B");
 
 )code"
 #if MSHADOW_INT64_TENSOR_SIZE == 1
-"typedef int64 index_t;\n"
+                                   "typedef int64 index_t;\n"
 #else
-"typedef int32 index_t;\n"
+                                   "typedef int32 index_t;\n"
 #endif
-R"code(
+                                   R"code(
 // bool and int8 need to be accumulated in index_t
 // but bool needs to be treated in the special way
 // for ops like bitwise_not
@@ -129,7 +137,11 @@ struct true_type {
 // is_integral
 template <typename T> struct is_integral : false_type {};
 template <> struct is_integral<uint8> : true_type {};
+template <> struct is_integral<uint16> : true_type {};
+template <> struct is_integral<uint32> : true_type {};
+template <> struct is_integral<uint64> : true_type {};
 template <> struct is_integral<int8>  : true_type {};
+template <> struct is_integral<int16>  : true_type {};
 template <> struct is_integral<int32> : true_type {};
 template <> struct is_integral<int64> : true_type {};
 template <> struct is_integral<bool>  : true_type {};
@@ -138,6 +150,9 @@ template <> struct is_integral<bool_t>  : true_type {};
 // is_unsigned
 template <typename T> struct is_unsigned : false_type {};
 template <> struct is_unsigned<uint8> : true_type {};
+template <> struct is_unsigned<uint16> : true_type {};
+template <> struct is_unsigned<uint32> : true_type {};
+template <> struct is_unsigned<uint64> : true_type {};
 template <> struct is_unsigned<bool>  : true_type {};
 template <> struct is_unsigned<bool_t>  : true_type {};
 
@@ -211,17 +226,139 @@ struct mixed_type_helper<float16, T, typename enable_if<is_integral<T>::value>::
 template <typename T, typename U>
 struct mixed_type_helper<T, U, typename enable_if<is_integral<T>::value &&
                                                   is_integral<U>::value &&
+                                                  is_unsigned<T>::value &&
+                                                  is_unsigned<U>::value &&
                                                   !is_same<U, bool_t>::value &&
-                                                  sizeof(T) <= sizeof(U)>::type> {
+                                                  sizeof(T) < sizeof(U)>::type> {
+  using type = U;
+};
+
+template <typename T, typename U>
+struct mixed_type_helper<T, U, typename enable_if<is_integral<T>::value &&
+                                                  is_integral<U>::value &&
+                                                  !is_unsigned<T>::value &&
+                                                  !is_unsigned<U>::value &&
+                                                  !is_same<U, bool_t>::value &&
+                                                  sizeof(T) < sizeof(U)>::type> {
+  using type = U;
+};
+
+template <typename T, typename U>
+struct mixed_type_helper<T, U, typename enable_if<is_integral<T>::value &&
+                                                  is_integral<U>::value &&
+                                                  is_unsigned<T>::value &&
+                                                  !is_unsigned<U>::value &&
+                                                  !is_same<U, bool_t>::value &&
+                                                  sizeof(T) < sizeof(U)>::type> {
   using type = U;
 };
 
 template <typename T, typename U>
 struct mixed_type_helper<U, T, typename enable_if<is_integral<T>::value &&
                                                   is_integral<U>::value &&
+                                                  is_unsigned<T>::value &&
+                                                  is_unsigned<U>::value &&
                                                   !is_same<U, bool_t>::value &&
                                                   sizeof(T) < sizeof(U)>::type> {
   using type = U;
+};
+
+template <typename T, typename U>
+struct mixed_type_helper<U, T, typename enable_if<is_integral<T>::value &&
+                                                  is_integral<U>::value &&
+                                                  !is_unsigned<T>::value &&
+                                                  !is_unsigned<U>::value &&
+                                                  !is_same<U, bool_t>::value &&
+                                                  sizeof(T) < sizeof(U)>::type> {
+  using type = U;
+};
+
+template <typename T, typename U>
+struct mixed_type_helper<U, T, typename enable_if<is_integral<T>::value &&
+                                                  is_integral<U>::value &&
+                                                  is_unsigned<T>::value &&
+                                                  !is_unsigned<U>::value &&
+                                                  !is_same<U, bool_t>::value &&
+                                                  sizeof(T) < sizeof(U)>::type> {
+  using type = U;
+};
+
+template <typename T, typename U>
+struct mixed_type_helper<T, U, typename enable_if<is_integral<T>::value &&
+                                                  is_integral<U>::value &&
+                                                  !is_same<U, bool_t>::value &&
+                                                  is_same<T, U>::value>::type> {
+  using type = U;
+};
+
+template<>
+struct mixed_type_helper<int8, uint8> {
+  using type = int16;
+};
+
+template<>
+struct mixed_type_helper<uint8, int8> {
+  using type = int16;
+};
+
+template<>
+struct mixed_type_helper<int8, uint16> {
+  using type = int32;
+};
+
+template<>
+struct mixed_type_helper<uint16, int8> {
+  using type = int32;
+};
+
+template<>
+struct mixed_type_helper<int8, uint32> {
+  using type = int64;
+};
+
+template<>
+struct mixed_type_helper<uint32, int8> {
+  using type = int64;
+};
+
+template<>
+struct mixed_type_helper<int16, uint16> {
+  using type = int32;
+};
+
+template<>
+struct mixed_type_helper<uint16, int16> {
+  using type = int32;
+};
+
+template<>
+struct mixed_type_helper<int16, uint32> {
+  using type = int64;
+};
+
+template<>
+struct mixed_type_helper<uint32, int16> {
+  using type = int64;
+};
+
+template<>
+struct mixed_type_helper<int32, uint32> {
+  using type = int64;
+};
+
+template<>
+struct mixed_type_helper<uint32, int32> {
+  using type = int64;
+};
+
+template<>
+struct mixed_type_helper<uint64, index_t> {
+  using type = index_t;
+};
+
+template<>
+struct mixed_type_helper<index_t, uint64> {
+  using type = index_t;
 };
 
 template <typename T>
@@ -238,6 +375,13 @@ struct mixed_type_helper<bool_t, T, typename enable_if<is_integral<T>::value &&
 
 template <typename T>
 struct mixed_type_helper<T, bool_t, typename enable_if<is_integral<T>::value &&
+                                                       sizeof(T) == sizeof(bool_t)>::type> {
+  using type = T;
+};
+
+template <typename T>
+struct mixed_type_helper<bool_t, T, typename enable_if<is_integral<T>::value &&
+                                                       !is_same<T, bool_t>::value &&
                                                        sizeof(T) == sizeof(bool_t)>::type> {
   using type = T;
 };
@@ -472,10 +616,30 @@ template<>
 __device__ inline uint8 MinValue<uint8>(void) {
   return 0;
 }
+/*! \brief minimum value of uint16 */
+template<>
+__device__ inline uint16 MinValue<uint16>(void) {
+  return 0;
+}
+/*! \brief minimum value of uint32 */
+template<>
+__device__ inline uint32 MinValue<uint32>(void) {
+  return 0;
+}
+/*! \brief minimum value of uint64 */
+template<>
+__device__ inline uint64 MinValue<uint64>(void) {
+  return 0;
+}
 /*! \brief minimum value of int8_t */
 template<>
 __device__ inline int8 MinValue<int8>(void) {
   return -128;
+}
+/*! \brief minimum value of int16 */
+template<>
+__device__ inline int16 MinValue<int16>(void) {
+  return -32768;
 }
 /*! \brief minimum value of int32 */
 template<>
@@ -538,10 +702,30 @@ template<>
 __device__ inline uint8 MaxValue<uint8>(void) {
   return 255;
 }
+/*! \brief maximum value of uint16 */
+template<>
+__device__ inline uint16 MaxValue<uint16>(void) {
+  return 65535;
+}
+/*! \brief maximum value of uint32 */
+template<>
+__device__ inline uint32 MaxValue<uint32>(void) {
+  return 4294967295;
+}
+/*! \brief maximum value of uint64 */
+template<>
+__device__ inline uint64 MaxValue<uint64>(void) {
+  return 18446744073709551615LL;
+}
 /*! \brief maximum value of int8 */
 template<>
 __device__ inline int8 MaxValue<int8>(void) {
   return 127;
+}
+/*! \brief maximum value of int16 */
+template<>
+__device__ inline int16 MaxValue<int16>(void) {
+  return 32767;
 }
 /*! \brief maximum value of int32 */
 template<>

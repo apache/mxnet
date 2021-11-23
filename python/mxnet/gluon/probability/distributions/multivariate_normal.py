@@ -72,8 +72,7 @@ class MultivariateNormal(Distribution):
         L = flip(Cholesky(flip(P))).T
         """
         L_flip_inv_T = np.linalg.cholesky(np.flip(P, (-1, -2)))
-        L = np.linalg.inv(np.swapaxes(
-            np.flip(L_flip_inv_T, (-1, -2)), -1, -2))
+        L = np.linalg.inv(np.flip(L_flip_inv_T, (-1, -2)).mT)
         return L
 
     @cached_property
@@ -87,8 +86,7 @@ class MultivariateNormal(Distribution):
     def cov(self):
         # pylint: disable=method-hidden
         if 'scale_tril' in self.__dict__:
-            scale_triu = np.swapaxes(self.scale_tril, -1, -2)
-            return np.matmul(self.scale_tril, scale_triu)
+            return np.matmul(self.scale_tril, self.scale_tril.mT)
         return np.linalg.inv(self.precision)
 
     @cached_property
@@ -97,8 +95,7 @@ class MultivariateNormal(Distribution):
         if 'cov' in self.__dict__:
             return np.linalg.inv(self.cov)
         scale_tril_inv = np.linalg.inv(self.scale_tril)
-        scale_triu_inv = np.swapaxes(scale_tril_inv, -1, -2)
-        return np.matmul(scale_triu_inv, scale_tril_inv)
+        return np.matmul(scale_tril_inv.mT, scale_tril_inv)
 
     @property
     def mean(self):
@@ -115,8 +112,8 @@ class MultivariateNormal(Distribution):
             if isinstance(size, int):
                 size = (size,)
             shape_tensor = np.broadcast_to(shape_tensor, size + (-2,))
-        noise = np.random.normal(np.zeros_like(
-            shape_tensor), np.ones_like(shape_tensor))
+        noise = np.random.normal(np.zeros_like(  # pylint: disable=too-many-function-args
+            shape_tensor), np.ones_like(shape_tensor))  # pylint: disable=too-many-function-args
         samples = self.loc + \
             np.einsum('...jk,...j->...k', self.scale_tril, noise)
         return samples
@@ -128,7 +125,7 @@ class MultivariateNormal(Distribution):
         shape_tensor = self.loc + self.scale_tril[..., 0]
         if isinstance(size, int):
             size = (size,)
-        noise = np.random.normal(np.zeros_like(shape_tensor), np.ones_like(shape_tensor),
+        noise = np.random.normal(np.zeros_like(shape_tensor), np.ones_like(shape_tensor),  # pylint: disable=too-many-function-args
                                  (-2,) + size)
         samples = self.loc + \
             np.einsum('...jk,...j->...k', self.scale_tril, noise)

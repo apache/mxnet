@@ -24,7 +24,7 @@ import ctypes
 from numbers import Number, Integral
 import numpy as onp
 
-from ...base import get_last_ffi_error, _LIB, check_call
+from ...base import get_last_ffi_error, _LIB, check_call, _MAX_VALUE_64_BIT_SIGNED_, _MAX_VALUE_64_BIT_UNSIGNED_
 from ..base import c_str
 from .types import MXNetValue, TypeCode
 from .types import RETURN_SWITCH
@@ -63,8 +63,14 @@ def _make_mxnet_args(args, temp_args):
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.NDARRAYHANDLE
         elif isinstance(arg, Integral):
-            values[i].v_int64 = arg
-            type_codes[i] = TypeCode.INT
+            if arg > _MAX_VALUE_64_BIT_UNSIGNED_:
+                raise OverflowError("Integer out of bounds")
+            if arg > _MAX_VALUE_64_BIT_SIGNED_:
+                values[i].v_uint64 = arg
+                type_codes[i] = TypeCode.UINT
+            else:
+                values[i].v_int64 = arg
+                type_codes[i] = TypeCode.INT
         elif isinstance(arg, ObjectBase):
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE

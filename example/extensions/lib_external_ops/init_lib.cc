@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file init_lib.cc
  * \brief initialize function implementation library file
  */

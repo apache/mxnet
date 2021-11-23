@@ -18,11 +18,10 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
-* \file kvstore.h
-* \brief definition of kvstore
-* \author Chuntao Hong
-*/
+ * \file kvstore.h
+ * \brief definition of kvstore
+ * \author Chuntao Hong
+ */
 
 #ifndef MXNET_CPP_KVSTORE_H_
 #define MXNET_CPP_KVSTORE_H_
@@ -45,15 +44,17 @@ class KVStore {
   static void Push(int key, const NDArray& val, int priority = 0);
   static void Push(const std::string& key, const NDArray& val, int priority = 0);
   static void Push(const std::vector<int>& keys,
-                   const std::vector<NDArray>& vals, int priority = 0);
+                   const std::vector<NDArray>& vals,
+                   int priority = 0);
   static void Push(const std::vector<std::string>& keys,
-                   const std::vector<NDArray>& vals, int priority = 0);
+                   const std::vector<NDArray>& vals,
+                   int priority = 0);
   static void Pull(int key, NDArray* out, int priority = 0);
   static void Pull(const std::string& key, NDArray* out, int priority = 0);
-  static void Pull(const std::vector<int>& keys,
-                   std::vector<NDArray>* outs, int priority = 0);
+  static void Pull(const std::vector<int>& keys, std::vector<NDArray>* outs, int priority = 0);
   static void Pull(const std::vector<std::string>& keys,
-                   std::vector<NDArray>* outs, int priority = 0);
+                   std::vector<NDArray>* outs,
+                   int priority = 0);
   // TODO(lx): put lr in optimizer or not?
   static void SetOptimizer(std::unique_ptr<Optimizer> optimizer, bool local = false);
   static std::string GetType();

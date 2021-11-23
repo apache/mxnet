@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file dequantize.cu
  * \brief
  */
@@ -28,7 +27,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_dequantize)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DequantizeForward<gpu>);
+    .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DequantizeForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

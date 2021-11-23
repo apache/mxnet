@@ -105,8 +105,7 @@ class InplaceArrayBase {
    * \brief Destroy the Inplace Array Base object
    */
   ~InplaceArrayBase() {
-    if (!(std::is_standard_layout<ElemType>::value &&
-          std::is_trivial<ElemType>::value)) {
+    if (!(std::is_standard_layout<ElemType>::value && std::is_trivial<ElemType>::value)) {
       size_t size = Self()->GetSize();
       for (size_t i = 0; i < size; ++i) {
         ElemType* fp = reinterpret_cast<ElemType*>(AddressOf(i));
@@ -150,14 +149,14 @@ class InplaceArrayBase {
    * \return Raw pointer to the element.
    */
   void* AddressOf(size_t idx) const {
-    static_assert(alignof(ArrayType) % alignof(ElemType) == 0 &&
-                      sizeof(ArrayType) % alignof(ElemType) == 0,
-                  "The size and alignment of ArrayType should respect "
-                  "ElemType's alignment.");
+    static_assert(
+        alignof(ArrayType) % alignof(ElemType) == 0 && sizeof(ArrayType) % alignof(ElemType) == 0,
+        "The size and alignment of ArrayType should respect "
+        "ElemType's alignment.");
 
     size_t kDataStart = sizeof(ArrayType);
-    ArrayType* self = Self();
-    char* data_start = reinterpret_cast<char*>(self) + kDataStart;
+    ArrayType* self   = Self();
+    char* data_start  = reinterpret_cast<char*>(self) + kDataStart;
     return data_start + idx * sizeof(ElemType);
   }
 };
@@ -171,7 +170,7 @@ class ADTObj : public Object, public InplaceArrayBase<ADTObj, ObjectRef> {
   uint32_t size{0};
   // The fields of the structure follows directly in memory.
 
-  static constexpr const char* _type_key = "MXNet.ADT";
+  static constexpr const char* _type_key      = "MXNet.ADT";
   static constexpr const uint32_t _type_index = TypeIndex::kMXNetADT;
   MXNET_DECLARE_FINAL_OBJECT_INFO(ADTObj, Object)
 
@@ -179,7 +178,9 @@ class ADTObj : public Object, public InplaceArrayBase<ADTObj, ObjectRef> {
   /*!
    * \return The number of elements in the array.
    */
-  size_t GetSize() const { return size; }
+  size_t GetSize() const {
+    return size;
+  }
 
   /*!
    * \brief Initialize the elements in the array.
@@ -191,8 +192,8 @@ class ADTObj : public Object, public InplaceArrayBase<ADTObj, ObjectRef> {
   template <typename Iterator>
   void Init(Iterator begin, Iterator end) {
     size_t num_elems = std::distance(begin, end);
-    this->size = 0;
-    auto it = begin;
+    this->size       = 0;
+    auto it          = begin;
     for (size_t i = 0; i < num_elems; ++i) {
       InplaceArrayBase::EmplaceInit(i, *it++);
       // Only increment size after the initialization succeeds
@@ -213,8 +214,7 @@ class ADT : public ObjectRef {
    * \param fields The fields of the ADT object.
    * \return The constructed ADT object reference.
    */
-  ADT(uint32_t tag, std::vector<ObjectRef> fields)
-      : ADT(tag, fields.begin(), fields.end()){};
+  ADT(uint32_t tag, std::vector<ObjectRef> fields) : ADT(tag, fields.begin(), fields.end()){};
 
   /*!
    * \brief construct an ADT object reference.
@@ -226,8 +226,8 @@ class ADT : public ObjectRef {
   template <typename Iterator>
   ADT(uint32_t tag, Iterator begin, Iterator end) {
     size_t num_elems = std::distance(begin, end);
-    auto ptr = make_inplace_array_object<ADTObj, ObjectRef>(num_elems);
-    ptr->tag = tag;
+    auto ptr         = make_inplace_array_object<ADTObj, ObjectRef>(num_elems);
+    ptr->tag         = tag;
     ptr->Init(begin, end);
     data_ = std::move(ptr);
   }
@@ -238,8 +238,7 @@ class ADT : public ObjectRef {
    * \param init The initializer list of fields.
    * \return The constructed ADT object reference.
    */
-  ADT(uint32_t tag, std::initializer_list<ObjectRef> init)
-      : ADT(tag, init.begin(), init.end()){};
+  ADT(uint32_t tag, std::initializer_list<ObjectRef> init) : ADT(tag, init.begin(), init.end()){};
 
   /*!
    * \brief Access element at index.
@@ -254,12 +253,16 @@ class ADT : public ObjectRef {
   /*!
    * \brief Return the ADT tag.
    */
-  size_t tag() const { return operator->()->tag; }
+  size_t tag() const {
+    return operator->()->tag;
+  }
 
   /*!
    * \brief Return the number of fields.
    */
-  size_t size() const { return operator->()->size; }
+  size_t size() const {
+    return operator->()->size;
+  }
 
   /*!
    * \brief Construct a tuple object.

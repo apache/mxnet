@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file native_op-inl.h
  * \brief
  * \author Junyuan Xie
-*/
+ */
 
 #ifndef MXNET_OPERATOR_CUSTOM_CUSTOM_INL_H_
 #define MXNET_OPERATOR_CUSTOM_CUSTOM_INL_H_
@@ -51,7 +50,7 @@ namespace custom {
 
 class CustomOperator {
  public:
-  void Register(const std::string &op_type, CustomOpPropCreator creator) {
+  void Register(const std::string& op_type, CustomOpPropCreator creator) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (registry_.find(op_type) != registry_.end()) {
       LOG(WARNING) << "New registration is overriding existing custom operator " << op_type;
@@ -59,10 +58,11 @@ class CustomOperator {
     registry_[op_type] = creator;
   }
 
-  CustomOpPropCreator Find(const std::string &op_type) {
+  CustomOpPropCreator Find(const std::string& op_type) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = registry_.find(op_type);
-    if (it != registry_.end()) return it->second;
+    if (it != registry_.end())
+      return it->second;
     return nullptr;
   }
 
@@ -73,8 +73,11 @@ class CustomOperator {
   // outputs ndarrays as args and updating the inputs and outputs ndarray
   // chunk pointers to be same as the copied ndarrays.
   template <typename Func>
-  void Push(const Func& func, const OpContext& ctx, bool recording,
-            bool training, const std::vector<NDArray>& arrs,
+  void Push(const Func& func,
+            const OpContext& ctx,
+            bool recording,
+            bool training,
+            const std::vector<NDArray>& arrs,
             const std::vector<int>& tags,
             const std::unordered_set<int>& output_tags,
             const std::vector<NDArray>& outputs,
@@ -102,7 +105,7 @@ class CustomOperator {
     std::unique_lock<std::mutex> lock(mutex_);
     q_.push([=]() mutable {
       bool prev_recording = Imperative::Get()->set_is_recording(recording);
-      bool prev_training = Imperative::Get()->set_is_training(training);
+      bool prev_training  = Imperative::Get()->set_is_training(training);
 
       try {
         if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kImperative)) {
@@ -113,8 +116,7 @@ class CustomOperator {
           func();
         }
       } catch (dmlc::Error& e) {
-        exception_ =
-            std::make_shared<std::exception_ptr>(std::current_exception());
+        exception_ = std::make_shared<std::exception_ptr>(std::current_exception());
       }
 
       Imperative::Get()->set_is_training(prev_training);
@@ -125,8 +127,7 @@ class CustomOperator {
       for (const auto& i : arrs) {
         vars.push_back(i.var());
         if (output_tags.count(tags[idx]) > 0) {
-          if (i.storage_type() == kDefaultStorage ||
-              i.storage_type() == kUndefinedStorage)
+          if (i.storage_type() == kDefaultStorage || i.storage_type() == kUndefinedStorage)
             continue;
           vars2.push_back(i.var());
           idx++;
@@ -140,7 +141,7 @@ class CustomOperator {
               for (const auto& i : arrs) {
                 Engine::Get()->Throw(i.var());
               }
-            } catch(dmlc::Error& err) {
+            } catch (dmlc::Error& err) {
               ctx.async_on_complete(&err);
               return;
             }
@@ -157,7 +158,12 @@ class CustomOperator {
 
             ctx.async_on_complete();
           },
-          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNoSkip, 0, "CustomOperatorWait");
+          ctx.run_ctx.ctx,
+          vars,
+          vars2,
+          FnProperty::kNoSkip,
+          0,
+          "CustomOperatorWait");
     });
     // increase num_threads if there is not enough threads to execute custom operator
     if (q_.size() > num_free_threads_)
@@ -172,22 +178,23 @@ class CustomOperator {
 
   void Start() {
     num_free_threads_ = 0;
-    destructing_ = false;
-    naive_engine_ = true;
-    exception_ = nullptr;
+    destructing_      = false;
+    naive_engine_     = true;
+    exception_        = nullptr;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
       naive_engine_ = false;
     }
   }
 
   void Stop() {
-    if (naive_engine_) return;
+    if (naive_engine_)
+      return;
     {
       std::unique_lock<std::mutex> lock(mutex_);
       destructing_ = true;
       cv_.notify_all();
     }
-    for (auto &worker : workers_)
+    for (auto& worker : workers_)
       worker.join();
     workers_.clear();
   }
@@ -195,7 +202,7 @@ class CustomOperator {
   inline void Throw() {
     if (exception_ && *exception_) {
       std::exception_ptr tmp = *exception_;
-      exception_ = nullptr;
+      exception_             = nullptr;
       std::rethrow_exception(tmp);
     }
   }
@@ -207,7 +214,7 @@ class CustomOperator {
   void ThreadTarget() {
     std::unique_lock<std::mutex> lock(mutex_);
     while (!q_.empty() || !destructing_) {
-      cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
+      cv_.wait(lock, [&] { return !q_.empty() || destructing_; });
       while (!q_.empty()) {
         --num_free_threads_;
         auto fn = q_.front();
@@ -221,7 +228,7 @@ class CustomOperator {
   }
   void SetNumThreads(int num_threads) {
     for (int i = workers_.size(); i < num_threads; ++i) {
-      workers_.emplace_back(std::thread([this]{this->ThreadTarget();}));
+      workers_.emplace_back(std::thread([this] { this->ThreadTarget(); }));
       ++num_free_threads_;
     }
   }

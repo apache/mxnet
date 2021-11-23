@@ -18,10 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file multi_threaded_inference.cc
  * \brief Multi Threaded inference example with CachedOp
-*/
+ */
 
 #include <mxnet/ndarray.h>
 
@@ -38,17 +37,14 @@
 
 const float DEFAULT_MEAN = 117.0;
 
-
 // Code to load image, PrintOutput results, helper functions for the same obtained from:
 // https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/predict-cpp/
 
-static std::string trim(const std::string &input) {
+static std::string trim(const std::string& input) {
   auto not_space = [](int ch) { return !std::isspace(ch); };
-  auto output = input;
-  output.erase(output.begin(),
-               std::find_if(output.begin(), output.end(), not_space));
-  output.erase(std::find_if(output.rbegin(), output.rend(), not_space).base(),
-               output.end());
+  auto output    = input;
+  output.erase(output.begin(), std::find_if(output.begin(), output.end(), not_space));
+  output.erase(std::find_if(output.rbegin(), output.rend(), not_space).base(), output.end());
   return output;
 }
 
@@ -78,24 +74,25 @@ void PrintOutputResult(const float* data, size_t size, const std::vector<std::st
     std::cerr << "Result data and synset size do not match!" << std::endl;
   }
 
-  float best_accuracy = 0.0;
+  float best_accuracy  = 0.0;
   std::size_t best_idx = 0;
 
   for (std::size_t i = 0; i < size; ++i) {
     if (data[i] > best_accuracy) {
       best_accuracy = data[i];
-      best_idx = i;
+      best_idx      = i;
     }
   }
 
-  std::cout << "Best Result: " << trim(synset[best_idx]) << " (id=" << best_idx << ", " <<
-            "accuracy=" << std::setprecision(8) << best_accuracy << ")" << std::endl;
+  std::cout << "Best Result: " << trim(synset[best_idx]) << " (id=" << best_idx << ", "
+            << "accuracy=" << std::setprecision(8) << best_accuracy << ")" << std::endl;
 }
 
-
 // Read Image data into a float array
-void GetImageFile(const std::string &image_file, float *image_data,
-                  int channels, cv::Size resize_size) {
+void GetImageFile(const std::string& image_file,
+                  float* image_data,
+                  int channels,
+                  cv::Size resize_size) {
   // Read all kinds of file into a BGR color 3 channels image
   cv::Mat im_ori = cv::imread(image_file, cv::IMREAD_COLOR);
 
@@ -128,17 +125,17 @@ void GetImageFile(const std::string &image_file, float *image_data,
   }
 }
 
-void prepare_input_data(const mxnet::cpp::Shape& shape, const mxnet::cpp::Context& ctx,
+void prepare_input_data(const mxnet::cpp::Shape& shape,
+                        const mxnet::cpp::Context& ctx,
                         int num_threads,
                         std::vector<mxnet::cpp::NDArray>* data_arr,
                         bool random_uniform = false) {
   for (size_t i = 0; i < num_threads; ++i) {
     data_arr->emplace_back(shape, ctx, false, 0);
     int begin = i * 100;
-    int end = begin + 100;
+    int end   = begin + 100;
     if (random_uniform) {
-      mxnet::cpp::Operator("_random_uniform")(begin, end)
-          .Invoke((*data_arr)[i]);
+      mxnet::cpp::Operator("_random_uniform")(begin, end).Invoke((*data_arr)[i]);
     }
     mxnet::cpp::NDArray::WaitAll();
   }
@@ -147,46 +144,48 @@ void prepare_input_data(const mxnet::cpp::Shape& shape, const mxnet::cpp::Contex
 // Run inference on a model
 void run_inference(const std::string& model_name,
                    const std::vector<mxnet::cpp::NDArray>& input_arrs,
-                   std::vector<mxnet::NDArray*> *output_mx_arr,
-                   int num_inf_per_thread = 1, bool random_sleep = false,
-                   int num_threads = 1, bool static_alloc = false,
-                   bool static_shape = false,
-                   bool is_gpu = false) {
-    LOG(INFO) << "Running inference for " + model_name +
-                 " num_threads: " + std::to_string(num_threads) +
-                 " num_inf_per_thread: " + std::to_string(num_inf_per_thread) +
-                 " random_sleep: " + std::to_string(random_sleep) +
-                 " static_alloc: " + std::to_string(static_alloc) +
-                 " static_shape: " + std::to_string(static_shape);
-  std::string json_file = model_name + "-symbol.json";
-  std::string param_file = model_name + "-0000.params";
-  auto out = mxnet::cpp::Symbol::Load(json_file);
+                   std::vector<mxnet::NDArray*>* output_mx_arr,
+                   int num_inf_per_thread = 1,
+                   bool random_sleep      = false,
+                   int num_threads        = 1,
+                   bool static_alloc      = false,
+                   bool static_shape      = false,
+                   bool is_gpu            = false) {
+  LOG(INFO) << "Running inference for " + model_name +
+                   " num_threads: " + std::to_string(num_threads) +
+                   " num_inf_per_thread: " + std::to_string(num_inf_per_thread) +
+                   " random_sleep: " + std::to_string(random_sleep) +
+                   " static_alloc: " + std::to_string(static_alloc) +
+                   " static_shape: " + std::to_string(static_shape);
+  std::string json_file        = model_name + "-symbol.json";
+  std::string param_file       = model_name + "-0000.params";
+  auto out                     = mxnet::cpp::Symbol::Load(json_file);
   std::string static_alloc_str = static_alloc ? "true" : "false";
   std::string static_shape_str = static_shape ? "true" : "false";
 
   // Prepare context
-# if MXNET_USE_CUDA == 1
+#if MXNET_USE_CUDA == 1
   mxnet::Context backend_ctx;
   mxnet::cpp::Context ctx = mxnet::cpp::Context::cpu(0);
   if (is_gpu) {
     backend_ctx = mxnet::Context::GPU(0);
-    ctx = mxnet::cpp::Context::gpu(0);
+    ctx         = mxnet::cpp::Context::gpu(0);
   } else {
     backend_ctx = mxnet::Context::CPU(0);
-    ctx = mxnet::cpp::Context::cpu(0);
+    ctx         = mxnet::cpp::Context::cpu(0);
   }
-# else
+#else
   mxnet::Context backend_ctx = mxnet::Context::CPU(0);
-  mxnet::cpp::Context ctx = mxnet::cpp::Context::cpu(0);
+  mxnet::cpp::Context ctx    = mxnet::cpp::Context::cpu(0);
 #endif
 
   // Prepare input data and parameters
   std::vector<mxnet::cpp::NDArray> data_arr(num_threads);
   std::vector<mxnet::cpp::NDArray> softmax_arr;
   std::vector<mxnet::cpp::NDArray> params;
-  mxnet::cpp::Shape data_shape = mxnet::cpp::Shape(1, 3, 224, 224);
+  mxnet::cpp::Shape data_shape    = mxnet::cpp::Shape(1, 3, 224, 224);
   mxnet::cpp::Shape softmax_shape = mxnet::cpp::Shape(1);
-  int num_inputs = out.ListInputs().size();
+  int num_inputs                  = out.ListInputs().size();
 
   for (size_t i = 0; i < data_arr.size(); ++i) {
     data_arr[i] = input_arrs[i].Copy(ctx);
@@ -208,16 +207,15 @@ void run_inference(const std::string& model_name,
 
   CachedOpHandle hdl = CachedOpHandle();
 
-  std::vector<std::string> flag_keys{"data_indices", "param_indices",
-                                     "static_alloc", "static_shape"};
+  std::vector<std::string> flag_keys{
+      "data_indices", "param_indices", "static_alloc", "static_shape"};
   std::string param_indices = "[";
   for (size_t i = 1; i < num_inputs; ++i) {
     param_indices += std::to_string(i);
     param_indices += std::string(", ");
   }
   param_indices += "]";
-  std::vector<std::string> flag_vals{"[0]", param_indices, static_alloc_str,
-                                     static_shape_str};
+  std::vector<std::string> flag_vals{"[0]", param_indices, static_alloc_str, static_shape_str};
   std::vector<const char*> flag_key_cstrs, flag_val_cstrs;
   flag_key_cstrs.reserve(flag_keys.size());
   for (size_t i = 0; i < flag_keys.size(); ++i) {
@@ -227,15 +225,14 @@ void run_inference(const std::string& model_name,
     flag_val_cstrs.emplace_back(flag_vals[i].c_str());
   }
 
-  int ret1 = MXCreateCachedOp(out.GetHandle(), flag_keys.size(),
-                              flag_key_cstrs.data(), flag_val_cstrs.data(),
-                              &hdl, true);
+  int ret1 = MXCreateCachedOp(
+      out.GetHandle(), flag_keys.size(), flag_key_cstrs.data(), flag_val_cstrs.data(), &hdl, true);
   if (ret1 < 0) {
     LOG(FATAL) << MXGetLastError();
   }
 
   // Prepare data structures and lambda to run in different threads
-  std::vector<NDArrayHandle *> cached_op_handles(num_threads);
+  std::vector<NDArrayHandle*> cached_op_handles(num_threads);
 
   std::vector<std::vector<NDArrayHandle>> arr_handles(num_threads);
   for (size_t i = 0; i < num_threads; ++i) {
@@ -256,32 +253,37 @@ void run_inference(const std::string& model_name,
       std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
     }
     int num_output = 0;
-    const int *stypes;
-    int ret = MXInvokeCachedOp(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                               ctx.GetDeviceType(), 0, &num_output,
-                               &(cached_op_handles[num]), &stypes);
+    const int* stypes;
+    int ret = MXInvokeCachedOp(hdl,
+                               arr_handles[num].size(),
+                               arr_handles[num].data(),
+                               ctx.GetDeviceType(),
+                               0,
+                               &num_output,
+                               &(cached_op_handles[num]),
+                               &stypes);
     if (ret < 0) {
       LOG(FATAL) << MXGetLastError();
     }
-    (*output_mx_arr)[num] = static_cast<mxnet::NDArray *>(*cached_op_handles[num]);
+    (*output_mx_arr)[num] = static_cast<mxnet::NDArray*>(*cached_op_handles[num]);
   };
 
   // Spawn multiple threads, join and wait for threads to complete
   std::vector<std::thread> worker_threads(num_threads);
   int count = 0;
-  for (auto &&i : worker_threads) {
+  for (auto&& i : worker_threads) {
     i = std::thread(func, count);
     count++;
   }
 
-  for (auto &&i : worker_threads) {
+  for (auto&& i : worker_threads) {
     i.join();
   }
 
   mxnet::cpp::NDArray::WaitAll();
 
   std::string synset_file = "synset.txt";
-  auto synset = LoadSynset(synset_file);
+  auto synset             = LoadSynset(synset_file);
   std::vector<mxnet::NDArray> tmp(num_threads);
   for (size_t i = 0; i < num_threads; i++) {
     tmp[i] = (*output_mx_arr)[i]->Copy(mxnet::Context::CPU(0));
@@ -289,8 +291,9 @@ void run_inference(const std::string& model_name,
     (*output_mx_arr)[i] = &tmp[i];
   }
   for (size_t i = 0; i < num_threads; ++i) {
-    PrintOutputResult(static_cast<float *>((*output_mx_arr)[i]->data().dptr_),
-                      (*output_mx_arr)[i]->shape().Size(), synset);
+    PrintOutputResult(static_cast<float*>((*output_mx_arr)[i]->data().dptr_),
+                      (*output_mx_arr)[i]->shape().Size(),
+                      synset);
   }
   int ret2 = MXFreeCachedOp(hdl);
   if (ret2 < 0) {
@@ -299,11 +302,10 @@ void run_inference(const std::string& model_name,
   mxnet::cpp::NDArray::WaitAll();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   if (argc < 4) {
     std::cout << "Please provide a model name, is_gpu, test_image" << std::endl
-              << "Usage: ./multi_threaded_inference [model_name] [is_gpu] [file_names]"
-              << std::endl
+              << "Usage: ./multi_threaded_inference [model_name] [is_gpu] [file_names]" << std::endl
               << "Example: ./.multi_threaded_inference imagenet1k-inception-bn 0 apple.jpg"
               << std::endl
               << "NOTE: Thread number ordering will be based on the ordering of file inputs"
@@ -312,21 +314,20 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
   std::string model_name = std::string(argv[1]);
-  bool is_gpu = std::atoi(argv[2]);
+  bool is_gpu            = std::atoi(argv[2]);
   CHECK(argc >= 4) << "Number of files provided should be atleast 1";
   int num_threads = argc - 3;
   std::vector<std::string> test_files;
   for (size_t i = 0; i < argc - 3; ++i) {
     test_files.emplace_back(argv[3 + i]);
   }
-  int epoch = 0;
+  int epoch         = 0;
   bool static_alloc = true;
   bool static_shape = true;
 
-
   // Image size and channels
-  size_t width = 224;
-  size_t height = 224;
+  size_t width    = 224;
+  size_t height   = 224;
   size_t channels = 3;
 
   size_t image_size = width * height * channels;
@@ -338,18 +339,24 @@ int main(int argc, char *argv[]) {
   mxnet::cpp::Shape input_shape = mxnet::cpp::Shape(1, 3, 224, 224);
   for (size_t i = 0; i < files.size(); i++) {
     files[i].resize(image_size);
-    GetImageFile(test_files[i], files[i].data(), channels,
-                 cv::Size(width, height));
-    input_arrs.emplace_back(mxnet::cpp::NDArray(files[i].data(),
-                            input_shape, mxnet::cpp::Context::cpu(0)));
+    GetImageFile(test_files[i], files[i].data(), channels, cv::Size(width, height));
+    input_arrs.emplace_back(
+        mxnet::cpp::NDArray(files[i].data(), input_shape, mxnet::cpp::Context::cpu(0)));
   }
 
   // load symbol
   std::string static_alloc_str = static_alloc ? "true" : "false";
   std::string static_shape_str = static_shape ? "true" : "false";
   std::vector<mxnet::NDArray*> output_mx_arr(num_threads);
-  run_inference(model_name, input_arrs, &output_mx_arr, 1, false, num_threads,
-                static_alloc, static_shape, is_gpu);
+  run_inference(model_name,
+                input_arrs,
+                &output_mx_arr,
+                1,
+                false,
+                num_threads,
+                static_alloc,
+                static_shape,
+                is_gpu);
   mxnet::cpp::NDArray::WaitAll();
 
   return 0;

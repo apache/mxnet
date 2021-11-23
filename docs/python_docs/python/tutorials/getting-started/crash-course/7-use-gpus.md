@@ -36,11 +36,11 @@ npx.num_gpus() #This command provides the number of GPUs MXNet can access
 
 ## Allocate data to a GPU
 
-MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `context` attribute specifieing which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
+MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `device` attribute specifieing which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
 
 ```{.python .input}
 gpu = npx.gpu() if npx.num_gpus() > 0 else npx.cpu()
-x = np.ones((3,4), ctx=gpu)
+x = np.ones((3,4), device=gpu)
 x
 ```
 
@@ -63,7 +63,7 @@ If you have multiple GPUs on your machine, MXNet can access each of them through
 To perform an operation on a particular GPU, you only need to guarantee that the input of an operation is already on that GPU. The output is allocated on the same GPU as well. Almost all operators in the `np` and `npx` module support running on a GPU.
 
 ```{.python .input}
-y = np.random.uniform(size=(3,4), ctx=gpu)
+y = np.random.uniform(size=(3,4), device=gpu)
 x + y
 ```
 
@@ -115,16 +115,17 @@ class LeafNetwork(nn.HybridBlock):
         return batch
 ```
 
-Load the saved parameters onto GPU 0 directly as shown below; additionally, you could use `net.collect_params().reset_ctx(gpu)` to change the device.
+Load the saved parameters onto GPU 0 directly as shown below; additionally, you could use `net.collect_params().reset_device(gpu)` to change the device.
 
 ```{.python .input}
-net.load_parameters('leaf_models.params', ctx=gpu)
+net = LeafNetwork()
+net.load_parameters('leaf_models.params', device=gpu)
 ```
 
 Use the following command to create input data on GPU 0. The forward function will then run on GPU 0.
 
 ```{.python .input}
-x = np.random.uniform(size=(1, 3, 128, 128), ctx=gpu)
+x = np.random.uniform(size=(1, 3, 128, 128), device=gpu)
 net(x)
 ```
 
@@ -160,6 +161,11 @@ validation_transformer = transforms.Compose([
     transforms.Normalize(mean, std)
 ])
 
+# Use ImageFolderDataset to create a Dataset object from directory structure
+train_dataset = gluon.data.vision.ImageFolderDataset('./datasets/train')
+val_dataset = gluon.data.vision.ImageFolderDataset('./datasets/validation')
+test_dataset = gluon.data.vision.ImageFolderDataset('./datasets/test')
+
 # Create data loaders
 batch_size = 4
 train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True, try_nopython=True)
@@ -172,13 +178,14 @@ This is the same test function defined previously in the **Step 6**.
 
 ```{.python .input}
 # Function to return the accuracy for the validation and test set
-def test(val_data):
+def test(val_data, devices):
     acc = gluon.metric.Accuracy()
     for batch in val_data:
-        data = batch[0]
-        labels = batch[1]
-        outputs = model(data)
-        acc.update([labels], [outputs])
+        data, label = batch[0], batch[1]
+        data_list = gluon.utils.split_and_load(data, devices)
+        label_list = gluon.utils.split_and_load(label, devices)
+        outputs = [net(X) for X in data_list]
+        acc.update(label_list, outputs)
 
     _, accuracy = acc.get()
     return accuracy
@@ -194,7 +201,7 @@ devices = available_gpus[:num_gpus]
 print('Using {} GPUs'.format(len(devices)))
 
 # Diff 2: reinitialize the parameters and place them on multiple GPUs
-net.initialize(force_reinit=True, ctx=devices)
+net.initialize(force_reinit=True, device=devices)
 
 # Loss and trainer are the same as before
 loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -206,7 +213,7 @@ epochs = 2
 accuracy = gluon.metric.Accuracy()
 log_interval = 5
 
-for epoch in range(10):
+for epoch in range(epochs):
     train_loss = 0.
     tic = time.time()
     btic = time.time()
@@ -242,7 +249,7 @@ for epoch in range(10):
 
     _, acc = accuracy.get()
 
-    acc_val = test(validation_loader)
+    acc_val = test(validation_loader, devices)
     print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
     print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
     print(f"[Epoch {epoch + 1}] validation: validation accuracy={acc_val}")

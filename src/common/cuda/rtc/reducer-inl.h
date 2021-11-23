@@ -27,7 +27,6 @@ namespace common {
 namespace cuda {
 namespace rtc {
 
-
 const char reducer[] = R"code(
 namespace red {
 
@@ -617,4 +616,3 @@ struct argmin {
 #endif  // MXNET_USE_CUDA
 
 #endif  // MXNET_COMMON_CUDA_RTC_REDUCER_INL_H_
-

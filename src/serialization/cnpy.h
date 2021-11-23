@@ -38,14 +38,14 @@ namespace npy {
 void save_array(const std::string& fname, const NDArray& array);
 NDArray load_array(const std::string& fname);
 
-}
+}  // namespace npy
 
 namespace npz {
 
 void save_array(mz_zip_archive* archive, const std::string& array_name, const NDArray& array);
 
-std::pair<std::vector<NDArray>, std::vector<std::string>>  load_arrays(const std::string& fname);
+std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std::string& fname);
 
-}
+}  // namespace npz
 }  // namespace mxnet
 #endif  // MXNET_SERIALIZATION_CNPY_H_

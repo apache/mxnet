@@ -40,7 +40,7 @@ from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
 from ..base import c_array_buf, mx_real_t, integer_types
 from ..base import NDArrayHandle, check_call
-from ..context import Context, current_context
+from ..device import Device, current_device
 from . import _internal
 from . import op
 try:
@@ -255,7 +255,7 @@ class BaseSparseNDArray(NDArray):
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
                 return False
             return _internal._copyto(self, out=other)
-        elif isinstance(other, Context):
+        elif isinstance(other, Device):
             hret = _ndarray_cls(_new_alloc_handle(self.stype, self.shape, other,
                                                   True, self.dtype, self._aux_types))
             return _internal._copyto(self, out=hret)
@@ -539,7 +539,7 @@ class CSRNDArray(BaseSparseNDArray):
             The copied array. If ``other`` is an ``NDArray`` or ``CSRNDArray``, then the return
             value and ``other`` will point to the same ``NDArray`` or ``CSRNDArray``.
         """
-        if isinstance(other, Context):
+        if isinstance(other, Device):
             return super(CSRNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
@@ -786,7 +786,7 @@ class RowSparseNDArray(BaseSparseNDArray):
             The copied array. If ``other`` is an ``NDArray`` or ``RowSparseNDArray``, then the
             return value and ``other`` will point to the same ``NDArray`` or ``RowSparseNDArray``.
         """
-        if isinstance(other, Context):
+        if isinstance(other, Device):
             return super(RowSparseNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
@@ -998,7 +998,7 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     # pylint: disable= no-member, protected-access
     storage_type = 'csr'
     # context
-    ctx = current_context() if ctx is None else ctx
+    ctx = current_device() if ctx is None else ctx
     # types
     dtype = _prepare_default_dtype(data, dtype)
     indptr_type = _STORAGE_AUX_TYPES[storage_type][0] if indptr_type is None else indptr_type
@@ -1161,7 +1161,7 @@ def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
     """Create a `RowSparseNDArray` based on data and indices"""
     storage_type = 'row_sparse'
     # context
-    ctx = current_context() if ctx is None else ctx
+    ctx = current_device() if ctx is None else ctx
     # types
     dtype = _prepare_default_dtype(data, dtype)
     indices_type = _STORAGE_AUX_TYPES[storage_type][0] if indices_type is None else indices_type
@@ -1550,7 +1550,7 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     if stype == 'default':
         return _zeros_ndarray(shape, ctx=ctx, dtype=dtype, **kwargs)
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     dtype = mx_real_t if dtype is None else dtype
     if stype in ('row_sparse', 'csr'):
         aux_types = _STORAGE_AUX_TYPES[stype]
@@ -1583,7 +1583,7 @@ def empty(stype, shape, ctx=None, dtype=None):
     if isinstance(shape, int):
         shape = (shape, )
     if ctx is None:
-        ctx = current_context()
+        ctx = current_device()
     if dtype is None:
         dtype = mx_real_t
     assert(stype is not None)
@@ -1624,7 +1624,7 @@ def array(source_array, ctx=None, dtype=None):
     >>> mx.nd.sparse.array(mx.nd.sparse.zeros('row_sparse', (3, 2)))
     <RowSparseNDArray 3x2 @cpu(0)>
     """
-    ctx = current_context() if ctx is None else ctx
+    ctx = current_device() if ctx is None else ctx
     if isinstance(source_array, NDArray):
         assert(source_array.stype != 'default'), \
                "Please use `tostype` to create RowSparseNDArray or CSRNDArray from an NDArray"

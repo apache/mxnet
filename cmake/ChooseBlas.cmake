@@ -23,10 +23,12 @@ set(INTEL_OPT_ROOT "/opt/intel" CACHE PATH "Folder contains root-installed intel
 
 if(DEFINED USE_BLAS)
   set(BLAS "${USE_BLAS}")
-else()
-  # Setting up BLAS_mkl_MKLROOT for non-Ubuntu 20.04 OSes
-  find_path(BLAS_mkl_MKLROOT mkl PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT} ${INTEL_OPT_ROOT})
-  if(NOT BLAS_mkl_MKLROOT STREQUAL "BLAS_mkl_MKLROOT-NOTFOUND")
+endif()
+if(USE_BLAS MATCHES "MKL" OR USE_BLAS MATCHES "mkl" OR NOT DEFINED USE_BLAS)
+  find_path(MKL_INCLUDE_DIR mkl_version.h
+    PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT}/mkl ${INTEL_OPT_ROOT}/mkl ${INTEL_OPT_ROOT}/oneapi/mkl/latest
+    PATH_SUFFIXES mkl latest include)
+  if(NOT MKL_INCLUDE_DIR STREQUAL "MKL_INCLUDE_DIR-NOTFOUND")
     set(BLAS "MKL")
   endif()
 endif()
@@ -122,15 +124,26 @@ set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
   endif()
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
   # ---[ MKL Options
+  file(STRINGS ${MKL_INCLUDE_DIR}/mkl_version.h MKL_VERSION_DEF REGEX "INTEL_MKL_VERSION")
+  string(REGEX MATCH "([0-9]+)" MKL_VERSION ${MKL_VERSION_DEF})
   if(UNIX)
     # Single dynamic library interface leads to conflicts between intel omp and llvm omp
     # https://github.com/apache/incubator-mxnet/issues/17641
-    option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" OFF)
+    # Fixed in oneMKL 2021.3: [MKLD-11109] MKL is opening libgomp.so instead of
+    # libgomp.so.1 while SDL=1 & MKL_THREADING_LAYER=GNU
+    cmake_dependent_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON
+      "NOT BLA_STATIC;MKL_VERSION GREATER_EQUAL 20210003" OFF)
   else()
     option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
   endif()
   cmake_dependent_option(BLA_STATIC "Use static libraries" ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
-  cmake_dependent_option(MKL_MULTI_THREADED  "Use multi-threading"  ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
+  option(MKL_MULTI_THREADED  "Use multi-threading" ON)
+
+  if(BLA_VENDOR)
+      message(FATAL_ERROR "Do not set BLA_VENDOR manually. MKL version (BLA_VENDOR) is selected based on MKL_USE_SINGLE_DYNAMIC_LIBRARY, "
+                          "MKL_MULTI_THREADED and USE_INT64_TENSOR_SIZE flags. If you want to select specific MKL library version "
+                          "please set the above-mentioned flags instead.")
+  endif()
 
   if(MKL_USE_SINGLE_DYNAMIC_LIBRARY)
     set(BLA_VENDOR Intel10_64_dyn)
@@ -154,15 +167,23 @@ elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
       endif()
     endif()
   endif()
-  # Setting up BLAS_mkl_MKLROOT for non-Ubuntu 20.04 OSes
-  find_path(BLAS_mkl_MKLROOT mkl PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT} ${INTEL_OPT_ROOT})
+  # In case of oneAPI 2021.3 if MKL_INCLUDE_DIR points to the subdirectory 'include',
+  # use the parent directory 'latest' instead
+  file(TO_CMAKE_PATH "${MKL_INCLUDE_DIR}" BLAS_mkl_MKLROOT)
+  get_filename_component(BLAS_mkl_MKLROOT_LAST_DIR "${BLAS_mkl_MKLROOT}" NAME)
+  if(BLAS_mkl_MKLROOT_LAST_DIR STREQUAL "include")
+      get_filename_component(BLAS_mkl_MKLROOT "${BLAS_mkl_MKLROOT}" DIRECTORY)
+  endif()
   find_package(BLAS)
-  find_path(MKL_INCLUDE_DIR mkl.h HINTS ${INTEL_HOME_ROOT}/mkl ${INTEL_OPT_ROOT}/mkl PATHS ENV MKLROOT PATH_SUFFIXES include mkl REQUIRED)
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})
   list(APPEND mshadow_LINKER_LIBS ${BLAS_LIBRARIES})
+  if(USE_INT64_TENSOR_SIZE)
+    add_definitions(-DUSE_INT64_TENSOR_SIZE=1)
+  endif()
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
   add_definitions(-DMXNET_USE_BLAS_MKL=1)
+  message("-- Found MKL (version: ${MKL_VERSION})")
 elseif(BLAS STREQUAL "apple")
   find_package(Accelerate REQUIRED)
   include_directories(SYSTEM ${Accelerate_INCLUDE_DIR})

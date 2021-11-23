@@ -41,7 +41,7 @@ def test_create_np_param():
             net.hybridize()
         net(x)
         params = net.collect_params()
-        for k, v in params.items():
+        for _, v in params.items():
             assert type(v.data()) is expected_type
 
     @use_np
@@ -51,8 +51,8 @@ def test_create_np_param():
             self.w = gluon.Parameter('w', shape=(K, N), allow_deferred_init=True)
 
         def forward(self, x):
-            ctx = x.ctx
-            return np.dot(x, self.w.data(ctx))
+            device = x.device
+            return np.dot(x, self.w.data(device))
 
     x = mx.np.random.uniform(size=(M, K))
     for initializer in [mx.initializer.Uniform, mx.initializer.Normal]:
@@ -71,10 +71,10 @@ def test_optimizer_with_np_ndarrays():
                                       allow_deferred_init=True)
 
         def forward(self, x):
-            ctx = x.ctx
-            h = x.dot(self.w1.data(ctx))  # equivalent to np.dot(x, w1)
+            device = x.device
+            h = x.dot(self.w1.data(device))  # equivalent to np.dot(x, w1)
             h_relu = npx.relu(h)  # equivalent to npx.relu(h) but generating np.ndarray
-            y_pred = h_relu.dot(self.w2.data(ctx))  # equivalent to np.dot(h_relu, w2)
+            y_pred = h_relu.dot(self.w2.data(device))  # equivalent to np.dot(h_relu, w2)
             return y_pred
         
         def infer_shape(self, x, *args):
@@ -101,7 +101,7 @@ def test_optimizer_with_np_ndarrays():
                             'sgd',
                             {'learning_rate': 1e-3, 'momentum': 0.9})
 
-    for t in range(2):
+    for _ in range(2):
         with autograd.record():
             output = regressor(x)  # output is a type of np.ndarray because np.dot is the last op in the network
             loss = total_loss(output, y)  # loss is a scalar np.ndarray
@@ -160,8 +160,8 @@ def test_np_get_constant():
             self.weight = gluon.Constant(const_arr)
 
         def forward(self, x):
-            ctx = x.ctx
-            return x + self.weight.data(ctx).astype(np.float32)
+            device = x.device
+            return x + self.weight.data(device).astype(np.float32)
 
     x = np.random.uniform(size=const_arr.shape, dtype=const_arr.dtype)
     for hybridize in [False, True]:
@@ -434,7 +434,7 @@ def test_optimize_for():
 
     out = net(a)
     b = net.collect_params().pop('d.weight').data()
-    net.optimize_for(a, b, backend="MKLDNN")
+    net.optimize_for(a, b, backend="ONEDNN")
     out2 = net(a)
 
 

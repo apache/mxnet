@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from common import *
+from .common import *
 
 def test_lenet_gluon_load_params_api():
     model_name = 'lenet_gluon_save_params_api'

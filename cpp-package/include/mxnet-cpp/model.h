@@ -18,11 +18,10 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
-* \file model.h
-* \brief MXNET.cpp model module
-* \author Zhang Chen
-*/
+ * \file model.h
+ * \brief MXNET.cpp model module
+ * \author Zhang Chen
+ */
 
 #ifndef MXNET_CPP_MODEL_H_
 #define MXNET_CPP_MODEL_H_
@@ -39,9 +38,9 @@ namespace cpp {
 struct FeedForwardConfig {
   Symbol symbol;
   std::vector<Context> ctx = {Context::cpu()};
-  int num_epoch = 0;
-  int epoch_size = 0;
-  std::string optimizer = "sgd";
+  int num_epoch            = 0;
+  int epoch_size           = 0;
+  std::string optimizer    = "sgd";
   // TODO(zhangchen-qinyinghua) More implement
   // initializer=Uniform(0.01),
   // numpy_batch_size=128,
@@ -49,12 +48,12 @@ struct FeedForwardConfig {
   // allow_extra_params=False,
   // begin_epoch=0,
   // **kwargs):
-  FeedForwardConfig(const FeedForwardConfig &other) {}
+  FeedForwardConfig(const FeedForwardConfig& other) {}
   FeedForwardConfig() {}
 };
 class FeedForward {
  public:
-  explicit FeedForward(const FeedForwardConfig &conf) : conf_(conf) {}
+  explicit FeedForward(const FeedForwardConfig& conf) : conf_(conf) {}
   void Predict();
   void Score();
   void Fit();
@@ -74,4 +73,3 @@ class FeedForward {
 }  // namespace mxnet
 
 #endif  // MXNET_CPP_MODEL_H_
-

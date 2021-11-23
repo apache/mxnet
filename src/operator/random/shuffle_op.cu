@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file shuffle_op.cc
  * \brief Operator to shuffle elements of an NDArray
  */
@@ -35,9 +34,12 @@ namespace op {
 namespace {
 
 struct CopyForShuffle {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* const in, DType* out,
-                                  const index_t* indices, const index_t stride) {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  const DType* const in,
+                                  DType* out,
+                                  const index_t* indices,
+                                  const index_t stride) {
     out[i] = in[indices[i / stride] * stride + i % stride];
   }
 };
@@ -55,37 +57,37 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
   }
   CHECK_NE(req[0], kAddTo) << "Shuffle does not support AddTo";
   const mxnet::TShape& input_shape = inputs[0].shape_;
-  const index_t size = inputs[0].Size();
-  const index_t first_axis_len = input_shape[0];
-  const index_t stride = size / first_axis_len;
-  Stream<gpu> *s = ctx.get_stream<gpu>();
+  const index_t size               = inputs[0].Size();
+  const index_t first_axis_len     = input_shape[0];
+  const index_t stride             = size / first_axis_len;
+  Stream<gpu>* s                   = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    using KeyType = uint32_t;
-    Tensor<gpu, 1, DType> in = inputs[0].get_with_shape<gpu, 1, DType>(Shape1(size), s);
-    Tensor<gpu, 1, DType> out = outputs[0].get_with_shape<gpu, 1, DType>(Shape1(size), s);
-    Random<gpu, KeyType> *prnd = ctx.requested[0].get_random<gpu, KeyType>(s);
+    using KeyType              = uint32_t;
+    Tensor<gpu, 1, DType> in   = inputs[0].get_with_shape<gpu, 1, DType>(Shape1(size), s);
+    Tensor<gpu, 1, DType> out  = outputs[0].get_with_shape<gpu, 1, DType>(Shape1(size), s);
+    Random<gpu, KeyType>* prnd = ctx.requested[0].get_random<gpu, KeyType>(s);
     if (input_shape.ndim() == 1) {
       if (req[0] != kWriteInplace) {
         Copy(out, in, s);
       }
       Tensor<gpu, 1, KeyType> keys =
-        ctx.requested[1].get_space_typed<gpu, 1, KeyType>(Shape1(size), s);
+          ctx.requested[1].get_space_typed<gpu, 1, KeyType>(Shape1(size), s);
       prnd->GetRandInt(keys);
       SortByKey(keys, out, true);
     } else {
-      const size_t tmp_space_size = req[0] == kWriteInplace ?
-        2 * first_axis_len * sizeof(index_t) + size * sizeof(DType) :
-        2 * first_axis_len * sizeof(index_t);
+      const size_t tmp_space_size =
+          req[0] == kWriteInplace ? 2 * first_axis_len * sizeof(index_t) + size * sizeof(DType) :
+                                    2 * first_axis_len * sizeof(index_t);
       Tensor<gpu, 1, char> tmp_space =
-        ctx.requested[1].get_space_typed<gpu, 1, char>(Shape1(tmp_space_size), s);
+          ctx.requested[1].get_space_typed<gpu, 1, char>(Shape1(tmp_space_size), s);
       char* tmp_space_ptr = tmp_space.dptr_;
-      Tensor<gpu, 1, index_t> indices(reinterpret_cast<index_t*>(tmp_space_ptr),
-                                      Shape1(first_axis_len), s);
+      Tensor<gpu, 1, index_t> indices(
+          reinterpret_cast<index_t*>(tmp_space_ptr), Shape1(first_axis_len), s);
       tmp_space_ptr += sizeof(index_t) * first_axis_len;
-      Kernel<range_fwd, gpu>::Launch(s, static_cast<int>(first_axis_len),
-                                     1, index_t(0), index_t(1), kWriteTo, indices.dptr_);
-      Tensor<gpu, 1, KeyType> keys(reinterpret_cast<KeyType*>(tmp_space_ptr),
-                                   Shape1(first_axis_len), s);
+      Kernel<range_fwd, gpu>::Launch(
+          s, static_cast<int>(first_axis_len), 1, index_t(0), index_t(1), kWriteTo, indices.dptr_);
+      Tensor<gpu, 1, KeyType> keys(
+          reinterpret_cast<KeyType*>(tmp_space_ptr), Shape1(first_axis_len), s);
       tmp_space_ptr += sizeof(KeyType) * first_axis_len;
       prnd->GetRandInt(keys);
       SortByKey(keys, indices, true);
@@ -100,8 +102,7 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
   });
 }
 
-NNVM_REGISTER_OP(_shuffle)
-.set_attr<FCompute>("FCompute<gpu>", ShuffleForwardGPU);
+NNVM_REGISTER_OP(_shuffle).set_attr<FCompute>("FCompute<gpu>", ShuffleForwardGPU);
 
 }  // namespace op
 }  // namespace mxnet

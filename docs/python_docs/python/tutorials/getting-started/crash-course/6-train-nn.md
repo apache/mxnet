@@ -45,7 +45,7 @@ import numpy as np
 
 from prepare_dataset import process_dataset #utility code to rearrange the data
 
-mx.random.seed(42)
+mx.np.random.seed(42)
 ```
 
 ```{.python .input}
@@ -322,13 +322,13 @@ hybridize the model.
 
 ```{.python .input}
 # Create the model based on the blueprint provided and initialize the parameters
-ctx = mx.cpu()
+device = mx.gpu()
 
 initializer = mx.initializer.Xavier()
 
 model = LeafNetwork()
-model.initialize(initializer, ctx=ctx)
-model.summary(mx.nd.random.uniform(shape=(4, 3, 128, 128)))
+model.initialize(initializer, device=device)
+model.summary(mx.np.random.uniform(size=(4, 3, 128, 128), device=device))
 model.hybridize()
 ```
 
@@ -368,7 +368,7 @@ def test(val_data):
     for batch in val_data:
         data = batch[0]
         labels = batch[1]
-        outputs = model(data)
+        outputs = model(data.to_device(device))
         acc.update([labels], [outputs])
 
     _, accuracy = acc.get()
@@ -396,8 +396,8 @@ for epoch in range(epochs):
         data = batch[0]
         label = batch[1]
         with mx.autograd.record():
-            outputs = model(data)
-            loss = loss_fn(outputs, label)
+            outputs = model(data.to_device(device))
+            loss = loss_fn(outputs, label.to_device(device))
         mx.autograd.backward(loss)
         trainer.step(batch_size)
         accuracy.update([label], [outputs])
@@ -405,7 +405,7 @@ for epoch in range(epochs):
             _, acc = accuracy.get()
 
             print(f"""Epoch[{epoch + 1}] Batch[{idx + 1}] Speed: {batch_size / (time.time() - btic)} samples/sec \
-                  batch loss = {loss.mean().asscalar()} | accuracy = {acc}""")
+                  batch loss = {loss.mean().item()} | accuracy = {acc}""")
             btic = time.time()
 
     _, acc = accuracy.get()

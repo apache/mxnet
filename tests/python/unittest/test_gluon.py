@@ -23,12 +23,12 @@ from mxnet import gluon
 from mxnet import init
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
-from mxnet.test_utils import assert_almost_equal, default_context, assert_allclose
+from mxnet.test_utils import assert_almost_equal, default_device, assert_allclose
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 from common import assertRaises, assert_raises_cudnn_not_satisfied, \
-    xfail_when_nonstandard_decimal_separator, environment
+    xfail_when_nonstandard_decimal_separator, environment, with_environment
 import numpy as onp
 from numpy.testing import assert_array_equal
 import pytest
@@ -42,7 +42,7 @@ mx.npx.reset_np()
 
 def test_parameter():
     p = gluon.Parameter('weight', shape=(10, 10))
-    p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    p.initialize(init='xavier', device=[mx.cpu(0), mx.cpu(1)])
     assert len(p.list_data()) == 2
     assert len(p.list_grad()) == 2
     assert p.data(mx.cpu(1)).context == mx.cpu(1)
@@ -50,8 +50,8 @@ def test_parameter():
     assert p.grad(mx.cpu(0)).stype == 'default'
     assert p.data(mx.cpu(0)).stype == 'default'
 
-    p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
-    assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
+    p.reset_device(device=[mx.cpu(1), mx.cpu(2)])
+    assert p.list_device() == [mx.cpu(1), mx.cpu(2)]
 
 def test_invalid_parameter_stype():
     with pytest.raises(AssertionError):
@@ -63,8 +63,8 @@ def test_invalid_parameter_grad_stype():
 
 def test_sparse_parameter():
     p = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
-    p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    row_id = mx.np.arange(0, 10, ctx=mx.cpu(1))
+    p.initialize(init='xavier', device=[mx.cpu(0), mx.cpu(1)])
+    row_id = mx.np.arange(0, 10, device=mx.cpu(1))
     assert len(p.list_grad()) == 2
     # getting row_sparse data without trainer throws an exception
     assertRaises(RuntimeError, p.list_row_sparse_data, row_id)
@@ -77,19 +77,19 @@ def test_sparse_parameter():
     assert p.var().attr('__storage_type__') == str(_STORAGE_TYPE_STR_TO_ID['row_sparse'])
     assert p.grad(mx.cpu(0)).stype == 'row_sparse'
 
-    p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
-    assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
+    p.reset_device(device=[mx.cpu(1), mx.cpu(2)])
+    assert p.list_device() == [mx.cpu(1), mx.cpu(2)]
 
 def test_parameter_invalid_access():
     # cannot call data on row_sparse parameters
     p0 = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
-    p0.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    p0.initialize(init='xavier', device=[mx.cpu(0), mx.cpu(1)])
     assertRaises(RuntimeError, p0.data)
     assertRaises(RuntimeError, p0.list_data)
     row_id = mx.np.arange(0, 10)
     # cannot call row_sparse_data on dense parameters
     p1 = gluon.Parameter('weight', shape=(10, 10))
-    p1.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    p1.initialize(init='xavier', device=[mx.cpu(0), mx.cpu(1)])
     assertRaises(RuntimeError, p1.row_sparse_data, row_id.copyto(mx.cpu(0)))
     assertRaises(RuntimeError, p1.list_row_sparse_data, row_id)
 
@@ -375,8 +375,8 @@ def test_hybrid_block_hybrid_no_hybrid():
     pytest.raises(TypeError, lambda: foo_hybrid(mx.np.ones((10,)), mx.sym.var('a')))
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), ctx=mx.cpu(1)),
-                                                 mx.np.ones((10,), ctx=mx.cpu(2))))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), device=mx.cpu(1)),
+                                                 mx.np.ones((10,), device=mx.cpu(2))))
 
 
 def check_layer_forward(layer, dshape):
@@ -425,52 +425,67 @@ def test_conv(layer, shape):
     (nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4), (1, 10, 10, 4)),
     # (nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4), (1, 10, 10, 10, 4)),
 ])
-@pytest.mark.skipif(mx.context.current_context().device_type!='gpu' or
+@pytest.mark.skipif(mx.device.current_device().device_type!='gpu' or
                     not mx.runtime.Features().is_enabled('CUDNN'),
                     reason='nhwc/ndhwc layout is only supported with CUDNN.')
 def test_conv_nhwc(layer, shape):
     check_layer_forward(layer, shape)
 
 
-def test_deconv():
-    # layers1d = [
-    #     nn.Conv1DTranspose(16, 3, in_channels=4),
-    #     nn.Conv1DTranspose(16, 3, groups=2, in_channels=4),
-    #     nn.Conv1DTranspose(16, 3, strides=3, groups=2, in_channels=4),
-    #     ]
-    # for layer in layers1d:
-    #     check_layer_forward(layer, (1, 4, 10))
+@pytest.mark.parametrize('layer,shape', [
+    (nn.Conv1DTranspose(16, 3, in_channels=4), (1, 4, 10)),
+    (nn.Conv1DTranspose(16, 3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv1DTranspose(16, 3, strides=3, groups=2, in_channels=4, output_padding=2), (1, 4, 10)),
+    (nn.Conv2DTranspose(16, (3, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2DTranspose(16, (5, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2DTranspose(16, (3, 4), groups=2, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2DTranspose(16, (3, 4), strides=4, in_channels=4, output_padding=3), (1, 4, 20, 20)),
+    (nn.Conv2DTranspose(16, (3, 4), dilation=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2DTranspose(16, (3, 4), padding=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv3DTranspose(16, (1, 8, 4), in_channels=4, activation='relu'), (1, 4, 10, 10, 10)),
+    (nn.Conv3DTranspose(16, (5, 4, 3), in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3DTranspose(16, (3, 3, 3), groups=2, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3DTranspose(16, 4, strides=4, in_channels=4, output_padding=3), (1, 4, 10, 10, 10)),
+    (nn.Conv3DTranspose(16, (3, 3, 3), padding=4, in_channels=4), (1, 4, 10, 10, 10)),
+])
+def test_deconv(layer, shape):
+    if len(shape) == 5 and mx.current_device().device_type == 'gpu':
+        pytest.skip('Skipping Conv3DTranspose tests for GPU')
+    check_layer_forward(layer, shape)
 
 
-    layers2d = [
-        nn.Conv2DTranspose(16, (3, 4), in_channels=4),
-        nn.Conv2DTranspose(16, (5, 4), in_channels=4),
-        nn.Conv2DTranspose(16, (3, 4), groups=2, in_channels=4),
-        nn.Conv2DTranspose(16, (3, 4), strides=4, in_channels=4),
-        nn.Conv2DTranspose(16, (3, 4), dilation=4, in_channels=4),
-    #   nn.Conv2DTranspose(16, (3, 4), padding=4, in_channels=4),
-        nn.Conv2DTranspose(16, (3, 4), strides=4, output_padding=3, in_channels=4),
-        ]
-    for layer in layers2d:
-        check_layer_forward(layer, (1, 4, 20, 20))
+@use_np
+def test_deconv_dilation():
+    data = mx.np.array([[[[0, 0, 0],
+                         [0, 1, 0],
+                         [0, 0, 0]]],
+                        [[[0, 0, 0],
+                         [0, 2, 0],
+                         [0, 0, 0]]]])
 
+    weight = mx.np.array([[[[1, 2, 3],
+                          [4, 5, 6],
+                          [7, 8, 9]]]])
 
-    # layers3d = [
-    #     nn.Conv3DTranspose(16, (1, 8, 4), in_channels=4),
-    #     nn.Conv3DTranspose(16, (5, 4, 3), in_channels=4),
-    #     nn.Conv3DTranspose(16, (3, 3, 3), groups=2, in_channels=4),
-    #     nn.Conv3DTranspose(16, 4, strides=4, in_channels=4),
-    #     nn.Conv3DTranspose(16, (3, 3, 3), padding=4, in_channels=4),
-    #     ]
-    # for layer in layers3d:
-    #     check_layer_forward(layer, (1, 4, 10, 10, 10))
-    #
-    #
-    # layer = nn.Conv2DTranspose(16, (3, 3), layout='NHWC', in_channels=4)
-    # # check_layer_forward(layer, (1, 10, 10, 4))
-    #
-    # layer = nn.Conv3DTranspose(16, (3, 3, 3), layout='NDHWC', in_channels=4)
-    # # check_layer_forward(layer, (1, 10, 10, 10, 4))
+    layer = nn.Conv2DTranspose(in_channels=1, channels=1,
+                               kernel_size=(3, 3), padding=(1, 1),
+                               strides=(1, 1), dilation=(2, 2))
+    layer.initialize()
+    layer.weight.set_data(weight)
+    out = layer(data)
+    expected = mx.np.array(
+        [[[[1., 0., 2., 0., 3.],
+           [0., 0., 0., 0., 0.],
+           [4., 0., 5., 0., 6.],
+           [0., 0., 0., 0., 0.],
+           [7., 0., 8., 0., 9.]]],
+         [[[2., 0., 4., 0., 6.],
+           [0., 0., 0., 0., 0.],
+           [8., 0., 10., 0., 12.],
+           [0., 0., 0., 0., 0.],
+           [14., 0., 16., 0., 18.]]]
+         ])
+    assert_almost_equal(out, expected)
 
 
 def test_pool():
@@ -551,13 +566,13 @@ def test_batchnorm_backward_synchronization(variable):
     Tests if synchronization of BatchNorm running variables is done correctly.
     If not, the test sometimes fails - depending on the timing.
     """
-    ctx = mx.test_utils.default_context()
+    device = mx.test_utils.default_device()
 
     for _ in range(20):
         layer = nn.BatchNorm()
-        layer.initialize(ctx=ctx)
+        layer.initialize(device=device)
         for _ in range(3):
-            data = mx.np.random.normal(loc=10, scale=2, size=(1, 3, 10, 10), ctx=ctx)
+            data = mx.np.random.normal(loc=10, scale=2, size=(1, 3, 10, 10), device=device)
             with mx.autograd.record():
                 out = layer(data)
             out.backward()
@@ -589,35 +604,35 @@ def test_sync_batchnorm():
 
             raise RuntimeError('BN not found')
 
-        def _syncParameters(bn1, bn2, ctx):
-            ctx = input.context
-            bn2.gamma.set_data(bn1.gamma.data(ctx))
-            bn2.beta.set_data(bn1.beta.data(ctx))
-            bn2.running_mean.set_data(bn1.running_mean.data(ctx))
-            bn2.running_var.set_data(bn1.running_var.data(ctx))
+        def _syncParameters(bn1, bn2, device):
+            device = input.context
+            bn2.gamma.set_data(bn1.gamma.data(device))
+            bn2.beta.set_data(bn1.beta.data(device))
+            bn2.running_mean.set_data(bn1.running_mean.data(device))
+            bn2.running_var.set_data(bn1.running_var.data(device))
 
         input1 = input.copy()
         input2 = input.copy()
 
         if cuda:
             input1 = input.as_in_context(mx.gpu(0))
-            ctx_list = [mx.gpu(i) for i in range(num_devices)]
+            device_list = [mx.gpu(i) for i in range(num_devices)]
         else:
-            ctx_list = [mx.cpu(0) for _ in range(num_devices)]
+            device_list = [mx.cpu(0) for _ in range(num_devices)]
 
         nch = input.shape[1] if input.ndim > 1 else 1
         bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
         bn2 = mx.gluon.nn.SyncBatchNorm(
             in_channels=nch, num_devices=num_devices)
 
-        bn1.initialize(ctx=ctx_list[0])
-        bn2.initialize(ctx=ctx_list)
+        bn1.initialize(device=device_list[0])
+        bn2.initialize(device=device_list)
 
         # using the same values for gamma and beta
-        #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
+        #_syncParameters(_find_bn(bn1), _find_bn(bn2), device_list[0])
 
         input1.attach_grad()
-        inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
+        inputs2 = split_and_load(input2, device_list, batch_axis=0)
         for xi in inputs2:
             xi.attach_grad()
 
@@ -637,8 +652,8 @@ def test_sync_batchnorm():
         epsilon = 1e-5
         axis = 1
         data = input1
-        running_mean = mx.np.zeros(nch, ctx=data.context)
-        running_var = mx.np.ones(nch, ctx=data.context)
+        running_mean = mx.np.zeros(nch, device=data.context)
+        running_var = mx.np.ones(nch, device=data.context)
 
         axes = list(range(data.ndim))
         del axes[axis]
@@ -660,10 +675,10 @@ def test_sync_batchnorm():
         rtol = 1e-2
         assert_almost_equal(output1.asnumpy(), target_output.asnumpy(),
                             atol=atol, rtol=rtol)
-        assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
+        assert_almost_equal(_find_bn(bn1).running_mean.data(device_list[0]).asnumpy(),
                             running_mean.asnumpy(),
                             atol=atol, rtol=rtol)
-        assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
+        assert_almost_equal(_find_bn(bn1).running_var.data(device_list[0]).asnumpy(),
                             running_var.asnumpy(),
                             atol=atol, rtol=rtol)
         # assert forwarding
@@ -671,19 +686,19 @@ def test_sync_batchnorm():
                             atol=atol, rtol=rtol)
         assert_almost_equal(output1.asnumpy(),
                             output2.asnumpy(), atol=atol, rtol=rtol)
-        assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
-                            _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
+        assert_almost_equal(_find_bn(bn1).running_mean.data(device_list[0]).asnumpy(),
+                            _find_bn(bn2).running_mean.data(device_list[0]).asnumpy(),
                             atol=atol, rtol=rtol)
-        assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
-                            _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
+        assert_almost_equal(_find_bn(bn1).running_var.data(device_list[0]).asnumpy(),
+                            _find_bn(bn2).running_var.data(device_list[0]).asnumpy(),
                             atol=atol, rtol=rtol)
         input2grad = mx.np.concatenate(
-            [output.grad.as_in_context(input.ctx) for output in inputs2], axis=0)
+            [output.grad.as_in_context(input.device) for output in inputs2], axis=0)
         assert_almost_equal(input1.grad.asnumpy(),
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
     cfgs = [(1, False)]
-    num_gpus = 0 if default_context().device_type != 'gpu' else mx.context.num_gpus()
+    num_gpus = 0 if default_device().device_type != 'gpu' else mx.device.num_gpus()
     batch_size = 24
     for i in range(1, num_gpus + 1):
         if batch_size % i == 0:
@@ -692,9 +707,9 @@ def test_sync_batchnorm():
         # check with unsync version
         for shape in [(batch_size, 2), (batch_size, 3, 4), (batch_size, 4, 4, 4), (batch_size, 5, 6, 4, 4)]:
             print(str((ndev, cuda, shape)))
-            for i in range(10):
+            for _ in range(10):
                 _check_batchnorm_result(mx.np.random.uniform(size=shape,
-                                                             ctx=mx.cpu(0)),
+                                                             device=mx.cpu(0)),
                                         num_devices=ndev, cuda=cuda)
 
 
@@ -1001,9 +1016,9 @@ def test_embedding():
 
 def test_export(tmpdir):
     tmpfile = os.path.join(str(tmpdir), 'gluon')
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     model = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=False)
+        device=device, pretrained=False)
     model.initialize()
     model.hybridize()
     data = mx.np.random.normal(size=(1, 3, 32, 32))
@@ -1015,9 +1030,9 @@ def test_export(tmpdir):
 
 @use_np
 def test_import():
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     net1 = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=False)
+        device=device, pretrained=False)
     net1.initialize()
     net1.hybridize()
     data = mx.np.random.normal(size=(1, 3, 32, 32))
@@ -1026,7 +1041,7 @@ def test_import():
     net1.export('net1', epoch=1)
 
     net2 = gluon.SymbolBlock.imports(
-        'net1-symbol.json', ['data'], 'net1-0001.params', ctx)
+        'net1-symbol.json', ['data'], 'net1-0001.params', device)
     out2 = net2(data)
     lines = str(net2).splitlines()
 
@@ -1136,15 +1151,15 @@ def test_dtype():
     mx.npx.waitall()
 
 def test_fill_shape_load():
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
     net1 = nn.HybridSequential()
     net1.add(nn.Conv2D(64, kernel_size=2, padding=1),
              nn.BatchNorm(),
              nn.Dense(10))
     net1
     net1.hybridize()
-    net1.initialize(ctx=ctx)
-    net1(mx.np.ones((2,3,5,7), ctx=ctx))
+    net1.initialize(device=device)
+    net1(mx.np.ones((2,3,5,7), device=device))
     net1.save_parameters('net_fill.params')
 
     net2 = nn.HybridSequential()
@@ -1153,7 +1168,7 @@ def test_fill_shape_load():
              nn.Dense(10))
     net2.hybridize()
     net2.initialize()
-    net2.load_parameters('net_fill.params', ctx)
+    net2.load_parameters('net_fill.params', device)
     assert net2[0].weight.shape[1] == 3, net2[0].weight.shape[1]
     assert net2[1].gamma.shape[0] == 64, net2[1].gamma.shape[0]
     assert net2[2].weight.shape[1] == 3072, net2[2].weight.shape[1]
@@ -1347,7 +1362,7 @@ def test_save_load(tmpdir):
                 x = self.encoders[i](x)
             return x
     net = Network()
-    net.initialize(mx.init.Xavier(), ctx=mx.cpu())
+    net.initialize(mx.init.Uniform(), device=mx.cpu())
     net.hybridize()
     x = onp.random.rand(32, 10, 10)
     x = mx.np.array(x).as_in_context(mx.cpu())
@@ -1401,17 +1416,17 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
 
 def test_hybrid_multi_context():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
-    net.initialize(ctx=[mx.cpu(0), mx.cpu(1)])
+    net.initialize(device=[mx.cpu(0), mx.cpu(1)])
     net.hybridize()
-    net(mx.np.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
+    net(mx.np.zeros((1, 3, 32, 32), device=mx.cpu(0))).asnumpy()
 
 def test_zero_grad():
-    def _test_grad_reset(ctx, dtype='float32', sparse=False, embeddingType=None):
-        data = mx.np.random.uniform(size=(3,3), dtype=dtype, ctx=ctx)
+    def _test_grad_reset(device, dtype='float32', sparse=False, embeddingType=None):
+        data = mx.np.random.uniform(size=(3,3), dtype=dtype, device=device)
         if embeddingType is None:
             embeddingType = dtype
         net = nn.Embedding(3, 4, sparse_grad=sparse, dtype=embeddingType)
-        net.initialize(ctx=ctx)
+        net.initialize(device=device)
         with mx.autograd.record():
             l = net(data)
             l.backward()
@@ -1419,7 +1434,7 @@ def test_zero_grad():
         grad = net.collect_params()['weight'].grad()
         assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
-    def _test_multi_reset(nArrays, dtype, ctx):
+    def _test_multi_reset(nArrays, dtype, device):
         # Construct the list of non-zeros arrays with random shapes
         arr = []
         for _ in range(nArrays):
@@ -1427,7 +1442,7 @@ def test_zero_grad():
             shape = ()
             for _ in range(onp.random.randint(1, 5)):
                 shape = shape + (onp.random.randint(1, 10),)
-            arr.append(mx.nd.random.uniform(shape=shape, dtype=arrType, ctx=ctx))
+            arr.append(mx.nd.random.uniform(shape=shape, dtype=arrType, ctx=device))
 
         # Reset all arrays
         mx.nd.reset_arrays(*arr, num_arrays=len(arr))
@@ -1439,18 +1454,18 @@ def test_zero_grad():
 
 
     # Setting context for current test
-    ctx = mx.context.current_context()
+    device = mx.device.current_device()
 
     # Launching _test_multi_reset 10 times with different types & randomly chosen nArrays
     testedTypes = ['float16', 'float32', 'float64']
     for _ in range(10):
         for type in [testedTypes] + testedTypes:
-            _test_multi_reset(onp.random.randint(1, 50), type, ctx)
+            _test_multi_reset(onp.random.randint(1, 50), type, device)
 
     with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
         for type in ['float16', 'float32', 'float64']:
             for embType in ['float32', 'float64']:
-                _test_grad_reset(ctx, dtype=type, sparse=False, embeddingType=embType)
+                _test_grad_reset(device, dtype=type, sparse=False, embeddingType=embType)
 
 
 @pytest.mark.parametrize('static_alloc', [False, True])
@@ -1462,7 +1477,7 @@ def test_hybrid_static_memory(static_alloc, static_shape):
     x.attach_grad()
 
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=False, ctx=mx.context.current_context())
+        1, 18, pretrained=False, device=mx.device.current_device())
     net.initialize()
     net(x)
 
@@ -1490,7 +1505,7 @@ def test_hybrid_static_memory_switching(static_alloc, static_shape):
     if static_shape and not static_alloc:
         pytest.skip()
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=False, ctx=mx.context.current_context())
+        1, 18, pretrained=False, device=mx.device.current_device())
     net.initialize()
     net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
 
@@ -1705,7 +1720,7 @@ def test_sparse_hybrid_block():
 
 def test_hybrid_static_memory_recording():
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=False, ctx=mx.context.current_context())
+        1, 18, pretrained=False, device=mx.device.current_device())
     net.initialize()
     net.hybridize(static_alloc=True)
 
@@ -1741,7 +1756,7 @@ def test_share_inputs_outputs():
     for param in params:
         t = TestIOForward()
         t.hybridize(**param)
-        for i in range(5):
+        for _ in range(5):
             d1.attach_grad()
             out_grad = mx.np.random.uniform(size=(10))
             res = t(d1)
@@ -1751,7 +1766,7 @@ def test_share_inputs_outputs():
     for param in params:
         t = TestIOBackward()
         t.hybridize(**param)
-        for i in range(5):
+        for _ in range(5):
             d1.attach_grad()
             d2.attach_grad()
             out_grad = mx.np.random.uniform(size=(10))
@@ -1817,6 +1832,7 @@ def test_conv2d_16c(chn_num, kernel):
 @use_np
 @pytest.mark.parametrize('grp', [16])
 @pytest.mark.parametrize('kernel_size', [1, 3])
+@with_environment('MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES', '5')  # eng:5 causes test failure on M60
 def test_group_conv2d_16c(grp, kernel_size):
     input_size_list = onp.random.randint(low=3, high=65, size=10).tolist()
     batch_size = 4
@@ -1946,13 +1962,13 @@ def test_concat():
                      **kwargs):
             super(Net, self).__init__(**kwargs)
             self.concat = nn.HybridConcatenate(axis=check_dim)
-            for i in range(input_num):
+            for _ in range(input_num):
                 self.concat.add(gluon.nn.Conv2D(chn_num, (kernel, kernel)))
 
         def forward(self, x):
             return self.concat(x)
 
-    for s in range(len(shape_list)):
+    for _ in range(len(shape_list)):
         shape = (batch_size,) + (3,) + shape_list[i]
         x = mx.np.random.uniform(-1.0, 1.0, size=shape)
         for i in range(len(chn_list)):
@@ -2958,8 +2974,8 @@ def test_DeformableConvolution():
     currently this layer only supports gpu
     """
     try:
-        ctx = mx.gpu()
-        _ = mx.np.array([0], ctx=ctx)
+        device = mx.gpu()
+        _ = mx.np.array([0], device=device)
     except mx.base.MXNetError:
         pytest.skip("deformable_convolution only supports GPU")
     net = nn.HybridSequential()
@@ -2977,10 +2993,10 @@ def test_DeformableConvolution():
         nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
     )
 
-    net.initialize(force_reinit=True, ctx=ctx)
+    net.initialize(force_reinit=True, device=device)
     net.hybridize()
 
-    x = mx.np.random.uniform(size=(8, 5, 30, 31), ctx=ctx)
+    x = mx.np.random.uniform(size=(8, 5, 30, 31), device=device)
     with mx.autograd.record():
         y = net(x)
         y.backward()
@@ -3008,11 +3024,11 @@ def test_ModulatedDeformableConvolution():
         nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
     )
 
-    ctx = default_context()
-    net.initialize(force_reinit=True, ctx=ctx)
+    device = default_device()
+    net.initialize(force_reinit=True, device=device)
     net.hybridize()
 
-    x = mx.np.random.uniform(size=(8, 5, 30, 31), ctx=ctx)
+    x = mx.np.random.uniform(size=(8, 5, 30, 31), device=device)
     with mx.autograd.record():
         y = net(x)
 

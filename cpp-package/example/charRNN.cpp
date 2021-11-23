@@ -125,7 +125,8 @@ Symbol LSTMUnroll(int num_lstm_layer, int sequence_length, int input_dim,
     hidden_all.push_back(hidden);
   }
 
-  auto hidden_concat = isTrain? Concat(hidden_all, hidden_all.size(), 0) : hidden_all[0];
+  auto hidden_concat =
+      isTrain ? Concat(hidden_all, hidden_all.size(), dmlc::optional<int>(0)) : hidden_all[0];
   auto cls_weight = Symbol::Variable("cls_weight");
   auto cls_bias = Symbol::Variable("cls_bias");
   auto pred = FullyConnected("pred", hidden_concat, cls_weight, cls_bias, input_dim);
