@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.repeats")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_repeats");
       nnvm::NodeAttrs attrs;
-      op::RepeatsParam param;
+      op::RepeatsParam param = {};
       param.repeats = Tuple<int>(args[1].operator ObjectRef());
       if (args[2].type_code() == kNull) {
         param.axis = dmlc::optional<int>();

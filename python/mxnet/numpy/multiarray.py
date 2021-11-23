@@ -624,6 +624,8 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         remaining_dims = shape[key_ndim:]
         data = _reshape_view(self, -1, *remaining_dims)
         key = _reshape_view(key, -1)
+        if data.size == 0 and key.size == 0:
+            return data
         return _reshape_view(_npi.boolean_mask(data, key), -1, *remaining_dims)
 
     def _set_np_boolean_indexing(self, key, value):
@@ -13324,34 +13326,50 @@ def asarray(obj, dtype=None, device=None, copy=None):
 
     Examples
     --------
-    >>> a = np.arange(4).reshape(2,2)
-    >>> a
-    array([[0, 1],
-        [2, 3]])
-    >>> np.diagonal(a)
-    array([0, 3])
-    >>> np.diagonal(a, 1)
-    array([1])
+    >>> np.asarray([1, 2, 3])
+    array([1., 2., 3.])
 
-    >>> a = np.arange(8).reshape(2,2,2)
-    >>>a
-    array([[[0, 1],
-            [2, 3]],
-            [[4, 5],
-            [6, 7]]])
-    >>> np.diagonal(a, 0, 0, 1)
-    array([[0, 6],
-            [1, 7]])
+    >>> np.asarray([[1, 2], [3, 4]], dtype=np.int32)
+    array([[1, 2],
+           [3, 4]], dtype=int32)
+
+    >>> np.asarray([1.2], device=mx.gpu())
+    array([1.2], device=gpu(0))
     """
     if isinstance(obj, numeric_types):
         dtype = dtype_from_number(obj) if dtype is None else dtype
         obj = _np.asarray(obj, dtype=dtype)
     elif isinstance(obj, _np.ndarray):
-        dtype = obj.dtype if dtype is None else dtype
+        if is_np_default_dtype():
+            dtype = obj.dtype if dtype is None else dtype
+        else:
+            dtype = _np.float32 if dtype is None or obj.dtype is _np.float64 else dtype
     elif isinstance(obj, ndarray):
-        dtype = obj.dtype if dtype is None else dtype
-    array = _as_mx_np_array(obj, device=device, zero_copy=copy)
-    return array.astype(dtype)
+        if dtype is not None:
+            obj = obj.astype(dtype, copy=copy)
+        if device is not None:
+            obj = obj.to_device(device)
+        return obj
+    elif hasattr(obj, '__dlpack__'):
+        return from_dlpack(obj)
+    else:
+        if dtype is None:
+            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
+            dtype = obj.dtype if hasattr(obj, "dtype") else default_dtype
+        try:
+            obj = _np.array(obj, dtype=dtype)
+        except Exception as e:
+            # printing out the error raised by official NumPy's array function
+            # for transparency on users' side
+            raise TypeError('{}'.format(str(e)))
+    if device is None:
+        device = current_device()
+    ret = empty(obj.shape, dtype=dtype, device=device)
+    if len(obj.shape) == 0:
+        ret[()] = obj
+    else:
+        ret[:] = obj
+    return ret
 
 
 # pylint: disable=redefined-outer-name

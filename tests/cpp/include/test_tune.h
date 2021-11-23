@@ -21,7 +21,7 @@
  * \file test_tune.h
  * \brief operator tuning tester
  * \author Chris Olivier
-*/
+ */
 
 #ifndef TEST_TUNE_H_
 #define TEST_TUNE_H_
@@ -60,19 +60,19 @@ namespace tune {
  *       trunk unless you've verified the performance characteristics for that chunk of code
  * \tparam DType Data type to test
  */
-template<typename DType>
+template <typename DType>
 class TuningTester {
  public:
   using kwargs_t = test::op::kwargs_t;
 
   using bool_mode_pair = std::pair<bool, ::mxnet::op::tune::TuningMode>;
 
-  using shape_vect = mxnet::ShapeVector;
+  using shape_vect            = mxnet::ShapeVector;
   using shape_vec_to_bool_map = std::map<shape_vect, bool_mode_pair, test::less_shapevect>;
 
  private:
   using ShapesToPerfTimingMap =
-  std::map<shape_vect, test::perf::timing_map_t, test::less_shapevect>;
+      std::map<shape_vect, test::perf::timing_map_t, test::less_shapevect>;
 
   /*!
    * \brief Run timing test on various data shapes and sizes
@@ -83,13 +83,13 @@ class TuningTester {
    * \return ShapesToPerfTimingMap map holsing timing data for shapes
    */
   ShapesToPerfTimingMap RunCoreOpTimingTest(const bool isGPU,
-                                            const kwargs_t &op_kwargs,
+                                            const kwargs_t& op_kwargs,
                                             const std::vector<shape_vect>& shapes,
-                                            const char *op_name,
-                                            const char *backward_op_name = "") {
+                                            const char* op_name,
+                                            const char* backward_op_name = "") {
     ShapesToPerfTimingMap res;
-    const kwargs_t kwargs = test::op::CoreOpExecutor<DType>::ArgsWithOpName(
-      op_kwargs, op_name, backward_op_name);
+    const kwargs_t kwargs =
+        test::op::CoreOpExecutor<DType>::ArgsWithOpName(op_kwargs, op_name, backward_op_name);
 
     // prime code and cache before the performance runs
     test::op::CoreOperatorRunner<DType> runner;
@@ -98,11 +98,14 @@ class TuningTester {
     runner.RunBidirectional(false, {{10, 3, 18, 128}}, kwargs, 1);
 
     // Do the performance runs
-    const char *pu = isGPU ? "GPU" : "CPU";
-    for (const mxnet::ShapeVector &this_run_shapes : shapes) {
+    const char* pu = isGPU ? "GPU" : "CPU";
+    for (const mxnet::ShapeVector& this_run_shapes : shapes) {
       test::perf::timing_map_t tmap = runner.TimingTest(std::string(op_name) + " Operator " + pu,
-                                                        isGPU, false, kwargs,
-                                                        0, calls_per_iteration_,
+                                                        isGPU,
+                                                        false,
+                                                        kwargs,
+                                                        0,
+                                                        calls_per_iteration_,
                                                         this_run_shapes);
       CHECK(res.find(this_run_shapes) == res.end());
       res[this_run_shapes] = tmap;
@@ -110,9 +113,9 @@ class TuningTester {
     return res;
   }
 
-  using tuned_timing_t = std::map<
-    shape_vect,
-    std::map<::mxnet::op::tune::TuningMode, test::perf::timing_map_t>, test::less_shapevect>;
+  using tuned_timing_t = std::map<shape_vect,
+                                  std::map<::mxnet::op::tune::TuningMode, test::perf::timing_map_t>,
+                                  test::less_shapevect>;
 
   using modesort_t = std::multimap<double, ::mxnet::op::tune::TuningMode>;
 
@@ -125,7 +128,7 @@ class TuningTester {
    *         have made the correct decision, and the TuningMode which was closest in timing to
    *         the Auto mode.
    */
-  static bool_mode_pair CheckCorrectTuning(const modesort_t &mode_sort,
+  static bool_mode_pair CheckCorrectTuning(const modesort_t& mode_sort,
                                            const double closeness_factor = 0.25) {
     CHECK_EQ(mode_sort.size(), 3U);
 
@@ -145,9 +148,9 @@ class TuningTester {
     for (auto i = mode_sort.begin(), e = mode_sort.end(); i != e; ++i) {
       mode2time[i->second] = i->first;
     }
-    const double time_auto = mode2time[::mxnet::op::tune::kAuto];
+    const double time_auto   = mode2time[::mxnet::op::tune::kAuto];
     const double time_no_omp = mode2time[::mxnet::op::tune::kNeverOMP];
-    const double time_omp = mode2time[::mxnet::op::tune::kAlwaysOMP];
+    const double time_omp    = mode2time[::mxnet::op::tune::kAlwaysOMP];
 
     // Figure out which one we are closest to and return that to help in the analysis
     ::mxnet::op::tune::TuningMode closest_to;
@@ -160,11 +163,10 @@ class TuningTester {
     // If difference between OMP and no OMP is < closeness_factor of largest of the two,
     // then we just want to make sure we are close to both of these
     const double fastest_standard_time = std::min(time_no_omp, time_omp);
-    const double allowed_difference = closeness_factor * fastest_standard_time;
-    const double mustbe_asfast = fastest_standard_time + allowed_difference;
+    const double allowed_difference    = closeness_factor * fastest_standard_time;
+    const double mustbe_asfast         = fastest_standard_time + allowed_difference;
 
-    return { time_auto <= mustbe_asfast || closest_to == fastest_standard_mode,
-             closest_to };
+    return {time_auto <= mustbe_asfast || closest_to == fastest_standard_mode, closest_to};
   }
 
  public:
@@ -183,38 +185,37 @@ class TuningTester {
     }
     shape_vec_to_bool_map results;
     // Incredibly inefficient method of grouping the results
-    for (const auto &i : timing_) {
+    for (const auto& i : timing_) {
       // print shapes
-      const shape_vect &shapes = i.first;
+      const shape_vect& shapes = i.first;
       if (verbose || test::csv) {
         if (!test::csv) {
           for (size_t x = 0, n = shapes.size(); x < n; ++x) {
-            const mxnet::TShape &shape = shapes[x];
+            const mxnet::TShape& shape = shapes[x];
             if (x) {
               std::cout << ", ";
             }
             std::cout << shape;
           }
-          const mxnet::TShape &lhs_shape = shapes[0];
+          const mxnet::TShape& lhs_shape = shapes[0];
           std::cout << " lhs=" << test::pretty_num(lhs_shape.Size()) << " items";
           std::cout << "\t(" << TimingDirectionAsString(direction) << ")" << std::endl;
         } else {
           std::cout << test::pretty_num(shapes[0].Size()) << ",";
         }
       }
-      const auto &mode2timing = i.second;
+      const auto& mode2timing = i.second;
       modesort_t mode_sort;
-      for (const auto &j : mode2timing) {
+      for (const auto& j : mode2timing) {
         const ::mxnet::op::tune::TuningMode mode = j.first;
-        const test::perf::timing_map_t &tm = j.second;
+        const test::perf::timing_map_t& tm       = j.second;
         if (tm.find(direction) != tm.end()) {
-          const test::perf::TimingInstrument::Info &info = tm.find(direction)->second;
-          double duration = info.TimeEach();
+          const test::perf::TimingInstrument::Info& info = tm.find(direction)->second;
+          double duration                                = info.TimeEach();
           mode_sort.insert({duration, mode});
           if (test::csv) {
             std::cout << TimingDirectionAsString(direction) << ","
-                      << ::mxnet::op::tune::TuningModeToString(mode) << ","
-                      << duration << ",";
+                      << ::mxnet::op::tune::TuningModeToString(mode) << "," << duration << ",";
           }
         }
       }
@@ -225,9 +226,9 @@ class TuningTester {
         // Now we have modes sorted by performance, fastest to slowest
         const bool_mode_pair result = CheckCorrectTuning(mode_sort);
         if (verbose && !test::csv) {
-          for (const auto &k : mode_sort) {
-            std::cout << "\t" << ::mxnet::op::tune::TuningModeToString(k.second)
-                      << ": " << k.first << " ms";
+          for (const auto& k : mode_sort) {
+            std::cout << "\t" << ::mxnet::op::tune::TuningModeToString(k.second) << ": " << k.first
+                      << " ms";
             if (k.second == ::mxnet::op::tune::kAuto) {
               std::cout << " (" << ::mxnet::op::tune::TuningModeToString(result.second) << ")";
             }
@@ -251,34 +252,31 @@ class TuningTester {
    * \param op_name Name by which the operator is registered with nnvm
    * \param backward_op_name Backward operator name
    */
-  void TestTunedOperator(const kwargs_t &kwargs,
+  void TestTunedOperator(const kwargs_t& kwargs,
                          const bool verbose,
                          const std::vector<shape_vect>& shapevec_vectors,
-                         const char *op_name,
-                         const char *backward_op_name = COREOP_BWD_OP_NAME_VALUE_NONE) {
+                         const char* op_name,
+                         const char* backward_op_name = COREOP_BWD_OP_NAME_VALUE_NONE) {
     timing_.clear();
     using namespace mxnet::op;
     tuned_timing_t timing;
     for (int x = 0; x < 1; ++x) {
       for (auto mode : {::mxnet::op::tune::kNeverOMP,
                         ::mxnet::op::tune::kAuto,
-                        ::mxnet::op::tune::kAlwaysOMP
-                        }) {
+                        ::mxnet::op::tune::kAlwaysOMP}) {
         if (verbose && !test::csv) {
-          std::cout << std::endl << ::mxnet::op::tune::TuningModeToString(mode)
-                    << std::endl << std::flush;
+          std::cout << std::endl
+                    << ::mxnet::op::tune::TuningModeToString(mode) << std::endl
+                    << std::flush;
         }
 
         mxnet::op::OperatorTune<DType>::set_tuning_mode(mode);
-        const ShapesToPerfTimingMap shapes2perfmap = RunCoreOpTimingTest(false,
-                                                                         kwargs,
-                                                                         shapevec_vectors,
-                                                                         op_name,
-                                                                         backward_op_name);
-        for (const auto &item : shapes2perfmap) {
-          const shape_vect &shapes = item.first;
-          const test::perf::timing_map_t &tm = item.second;
-          timing_[shapes][mode] = tm;
+        const ShapesToPerfTimingMap shapes2perfmap =
+            RunCoreOpTimingTest(false, kwargs, shapevec_vectors, op_name, backward_op_name);
+        for (const auto& item : shapes2perfmap) {
+          const shape_vect& shapes           = item.first;
+          const test::perf::timing_map_t& tm = item.second;
+          timing_[shapes][mode]              = tm;
         }
       }
     }
@@ -292,14 +290,14 @@ class TuningTester {
    * \return Success rate ratio (#success/#TOTAL) (0.0-1.0)
    */
   float CalculateSuccessRate(std::vector<test::op::TimingDirection> directions = {},
-                             bool verbose = true) const {
+                             bool verbose                                      = true) const {
     size_t count = 0, success = 0;
     if (directions.empty()) {
       directions = {test::op::kForward, test::op::kBackward};
     }
     for (const test::op::TimingDirection direction : directions) {
       typename test::tune::TuningTester<DType>::shape_vec_to_bool_map res_fwd =
-        CalculateModeSort(direction, verbose);
+          CalculateModeSort(direction, verbose);
       for (auto iter = res_fwd.begin(), e = res_fwd.end(); iter != e; ++iter) {
         ++count;
         if (iter->second.first) {
@@ -319,16 +317,20 @@ class TuningTester {
   size_t calls_per_iteration(size_t calls_per_iterations) const {
     return calls_per_iteration_;
   }
-  void set_total_iterations(size_t iterations) { total_iterations_ = iterations; }
-  size_t total_iterations(size_t iterations) const { return total_iterations_; }
+  void set_total_iterations(size_t iterations) {
+    total_iterations_ = iterations;
+  }
+  size_t total_iterations(size_t iterations) const {
+    return total_iterations_;
+  }
 
  private:
   /*! \brief Number of iterations */
-  size_t          total_iterations_ = 10;
+  size_t total_iterations_ = 10;
   /*! \brief Calls per iteration */
-  size_t          calls_per_iteration_ = 50;
+  size_t calls_per_iteration_ = 50;
   /*! \brief Raw timing data */
-  tuned_timing_t  timing_;
+  tuned_timing_t timing_;
 };
 
 }  // namespace tune

@@ -237,6 +237,43 @@ void BinaryBroadcastIntCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template <typename xpu, typename OP>
+void BinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<TBlob>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0U)
+    return;
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
+  int ndim = BinaryBroadcastShapeCompact(
+      inputs[0].shape_, inputs[1].shape_, outputs[0].shape_, &new_lshape, &new_rshape, &new_oshape);
+  if (!ndim) {
+    ElemwiseBinaryOp::ComputeIntWithBool<xpu, OP>(attrs, ctx, inputs, req, outputs);
+  } else {
+    if (req[0] == kNullOp)
+      return;
+    mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        mshadow::Shape<NDim> oshape  = new_oshape.get<NDim>();
+        mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+        mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+        mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::template LaunchEx(
+            s,
+            new_oshape.Size(),
+            req[0],
+            lstride,
+            rstride,
+            oshape,
+            inputs[0].dptr<DType>(),
+            inputs[1].dptr<DType>(),
+            outputs[0].dptr<DType>());
+      });
+    });
+  }
+}
+
+template <typename xpu, typename OP>
 void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const std::vector<TBlob>& inputs,
@@ -256,7 +293,7 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     if (outputs[0].type_flag_ == mshadow::kBool) {
       LOG(FATAL) << "Operator " << attrs.op->name << " does not support boolean type";
     }
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
         broadcast::BinaryBroadcastComputeImpl<NDim, DType, OP>(s,
                                                                req[0],

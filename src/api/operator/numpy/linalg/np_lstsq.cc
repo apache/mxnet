@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.lstsq").set_body([](runtime::MXNetArgs args, runtime::M
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_lstsq");
   nnvm::NodeAttrs attrs;
-  op::LstsqParam param;
+  op::LstsqParam param = {};
   if (args[2].type_code() == kNull) {
     param.rcond = static_cast<double>(1);
   } else if (args[2].type_code() == kStr) {

@@ -35,7 +35,7 @@ MXNET_REGISTER_API("_npi.zeros").set_body([](runtime::MXNetArgs args, runtime::M
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_zeros");
   nnvm::NodeAttrs attrs;
-  op::InitOpParam param;
+  op::InitOpParam param = {};
   if (args[0].type_code() == kDLInt) {
     param.shape = TShape(1, args[0].operator int64_t());
   } else {
@@ -62,7 +62,7 @@ MXNET_REGISTER_API("_npi.full_like")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_full_like");
       nnvm::NodeAttrs attrs;
-      op::FullLikeOpParam param;
+      op::FullLikeOpParam param = {};
       param.fill_value = args[1].operator double();
       if (args[2].type_code() == kNull) {
         param.dtype = dmlc::nullopt;
@@ -93,7 +93,7 @@ MXNET_REGISTER_API("_npi.indices")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_indices");
       nnvm::NodeAttrs attrs;
-      op::IndicesOpParam param;
+      op::IndicesOpParam param = {};
       // param.dimensions
       if (args[0].type_code() == kDLInt) {
         param.dimensions = TShape(1, args[0].operator int64_t());
@@ -124,7 +124,7 @@ MXNET_REGISTER_API("_npi.atleast_1d")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_atleast_1d");
       nnvm::NodeAttrs attrs;
-      op::AtleastNDParam param;
+      op::AtleastNDParam param = {};
       int args_size  = args.size();
       param.num_args = args_size;
       attrs.parsed   = param;
@@ -151,7 +151,7 @@ MXNET_REGISTER_API("_npi.atleast_2d")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_atleast_2d");
       nnvm::NodeAttrs attrs;
-      op::AtleastNDParam param;
+      op::AtleastNDParam param = {};
       int args_size  = args.size();
       param.num_args = args_size;
       attrs.parsed   = param;
@@ -178,7 +178,7 @@ MXNET_REGISTER_API("_npi.atleast_3d")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_atleast_3d");
       nnvm::NodeAttrs attrs;
-      op::AtleastNDParam param;
+      op::AtleastNDParam param = {};
       int args_size  = args.size();
       param.num_args = args_size;
       attrs.parsed   = param;
@@ -205,7 +205,7 @@ MXNET_REGISTER_API("_npi.arange")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_arange");
       nnvm::NodeAttrs attrs;
-      op::RangeParam param;
+      op::RangeParam param = {};
       param.start = args[0].operator double();
       if (args[1].type_code() == kNull) {
         param.stop = dmlc::nullopt;
@@ -236,7 +236,7 @@ MXNET_REGISTER_API("_npi.eye").set_body([](runtime::MXNetArgs args, runtime::MXN
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_eye");
   nnvm::NodeAttrs attrs;
-  op::NumpyEyeParam param;
+  op::NumpyEyeParam param = {};
   param.N = args[0].operator nnvm::dim_t();
   if (args[1].type_code() == kNull) {
     param.M = dmlc::nullopt;
@@ -317,7 +317,7 @@ MXNET_REGISTER_API("_npi.logspace")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_logspace");
       nnvm::NodeAttrs attrs;
-      op::LogspaceParam param;
+      op::LogspaceParam param = {};
       param.start = args[0].operator double();
       param.stop  = args[1].operator double();
       if (features::is_enabled(features::INT64_TENSOR_SIZE))
@@ -354,7 +354,7 @@ MXNET_REGISTER_API("_npi.ones").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_ones");
   nnvm::NodeAttrs attrs;
-  op::InitOpParam param;
+  op::InitOpParam param = {};
   if (args[0].type_code() == kDLInt) {
     param.shape = TShape(1, args[0].operator int64_t());
   } else {
@@ -380,7 +380,7 @@ MXNET_REGISTER_API("_npi.full").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_full");
   nnvm::NodeAttrs attrs;
-  op::NumpyInitOpWithScalarParam param;
+  op::NumpyInitOpWithScalarParam param = {};
   if (args[0].type_code() == kDLInt) {
     param.shape = TShape(1, args[0].operator int64_t());
   } else {
@@ -423,7 +423,7 @@ MXNET_REGISTER_API("_npi.identity")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_identity");
       nnvm::NodeAttrs attrs;
-      op::InitOpParam param;
+      op::InitOpParam param = {};
       param.shape = TShape(args[0].operator ObjectRef());
       if (args[1].type_code() == kNull) {
         param.dtype = mxnet::common::GetDefaultDtype();

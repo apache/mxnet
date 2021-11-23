@@ -46,9 +46,9 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
     dnnl::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
     if (data.IsView() && data.IsDNNLData())
       data = data.Reorder2Default();
-    const auto i_mem            = data.GetDNNLData();
-    const size_t i_ndim         = data.shape().ndim();
-    dnnl::memory::dims i_dims   = dnnl::memory::dims(i_ndim);
+    const auto i_mem          = data.GetDNNLData();
+    const size_t i_ndim       = data.shape().ndim();
+    dnnl::memory::dims i_dims = dnnl::memory::dims(i_ndim);
     for (size_t i = 0; i < i_ndim; i++) {
       i_dims[i] = static_cast<int>(data.shape()[i]);
     }
@@ -94,9 +94,9 @@ static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs,
     auto data = inputs[i];
     if (data.IsView() && data.IsDNNLData())
       data = data.Reorder2Default();
-    const auto i_mem            = data.GetDNNLData();
-    const size_t i_ndim         = data.shape().ndim();
-    dnnl::memory::dims i_dims   = dnnl::memory::dims(i_ndim);
+    const auto i_mem          = data.GetDNNLData();
+    const size_t i_ndim       = data.shape().ndim();
+    dnnl::memory::dims i_dims = dnnl::memory::dims(i_ndim);
     for (size_t j = 0; j < i_ndim; j++) {
       i_dims[j] = static_cast<int>(data.shape()[j]);
     }

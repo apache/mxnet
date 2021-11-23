@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.all").set_body([](runtime::MXNetArgs args, runtime::MXN
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_all");
   nnvm::NodeAttrs attrs;
-  op::NumpyReduceAxesBoolParam param;
+  op::NumpyReduceAxesBoolParam param = {};
 
   NDArray* out      = args[3].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;

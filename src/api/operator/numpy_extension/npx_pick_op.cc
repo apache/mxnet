@@ -45,7 +45,7 @@ MXNET_REGISTER_API("_npx.pick").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npx_pick");
-  op::PickParam param;
+  op::PickParam param = {};
   // axis
   if (args[2].type_code() == kNull) {
     param.axis = dmlc::nullopt;

@@ -81,9 +81,9 @@ NNVM_REGISTER_OP(_npi_delete)
                                        const NumpyDeleteParam& params =
                                            nnvm::get<NumpyDeleteParam>(attrs.parsed);
                                        return (params.step.has_value() ||
-                                               params.int_ind.has_value())
-                                                  ? std::vector<std::string>{"arr"}
-                                                  : std::vector<std::string>{"arr", "obj"};
+                                               params.int_ind.has_value()) ?
+                                                  std::vector<std::string>{"arr"} :
+                                                  std::vector<std::string>{"arr", "obj"};
                                      })
     .set_attr<nnvm::FInferType>("FInferType", NumpyDeleteType)
     .set_attr<mxnet::FComputeEx>("FComputeEx<cpu>", NumpyDeleteCompute<cpu>)

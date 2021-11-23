@@ -400,17 +400,17 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = A
       // Type 2, 3.
       arr = NDArray(shape, Context());
       if (shape.ndim() == md.data.ndims && IsSameShape(md, shape) && types & ArrayTypes::DNNL) {
-        desc_str = "DNNL NDArray";
+        desc_str = "oneDNN NDArray";
         InitDNNLArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr, desc_str);
       } else if (shape.ndim() == md.data.ndims && !IsSameShape(md, shape) &&
                  types & ArrayTypes::DNNLDiffShape) {
-        desc_str = "DNNL NDArray with different shape";
+        desc_str = "oneDNN NDArray with different shape";
         InitDNNLArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr, desc_str);
       } else if (shape.ndim() != md.data.ndims && types & ArrayTypes::DNNLDiffDim) {
         std::stringstream ss;
-        ss << "DNNL NDArray with different dim " << shape.ndim() << "/" << md.data.ndims;
+        ss << "oneDNN NDArray with different dim " << shape.ndim() << "/" << md.data.ndims;
         desc_str = ss.str();
         InitDNNLArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr, desc_str);
@@ -420,17 +420,17 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = A
       arr = NDArray(shape, Context());
       if (shape.ndim() == md.data.ndims && IsSameShape(md, shape) &&
           types & ArrayTypes::DNNLReshaped) {
-        desc_str = "Reshaped DNNL NDArray";
+        desc_str = "Reshaped oneDNN NDArray";
         InitDNNLArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc_str);
       } else if (shape.ndim() == md.data.ndims && !IsSameShape(md, shape) &&
                  types & ArrayTypes::DNNLReshapedDiffShape) {
-        desc_str = "Reshaped DNNL NDArray with different shape";
+        desc_str = "Reshaped oneDNN NDArray with different shape";
         InitDNNLArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc_str);
       } else if (shape.ndim() != md.data.ndims && types & ArrayTypes::DNNLReshapedDiffDim) {
         std::stringstream ss;
-        ss << "DNNL NDArray with different dim " << shape.ndim() << "/" << md.data.ndims;
+        ss << "oneDNN NDArray with different dim " << shape.ndim() << "/" << md.data.ndims;
         desc_str = ss.str();
         InitDNNLArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc_str);
@@ -532,10 +532,10 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(const mxnet::TShape& shp,
 
     // Type 2, 3.
     arr      = NDArray(shape, Context());
-    desc_str = "DNNL NDArray";
+    desc_str = "oneDNN NDArray";
     if (shape.ndim() != md.data.ndims) {
       std::stringstream ss;
-      ss << "DNNL NDArray with different memory layout " << shape.ndim() << "/" << md.data.ndims;
+      ss << "oneDNN NDArray with different memory layout " << shape.ndim() << "/" << md.data.ndims;
       desc_str = ss.str();
     }
 
@@ -552,10 +552,10 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(const mxnet::TShape& shp,
     NDArray arr = NDArray(s, Context());
     arr         = arr.AsArray(shape, arr.dtype());
     InitDNNLArray(&arr, md, rand, max);
-    desc_str = "Reused DNNL NDArray";
+    desc_str = "Reused oneDNN NDArray";
     if (shape.ndim() != md.data.ndims) {
       std::stringstream ss;
-      ss << "Reused DNNL NDArray with different memory layout " << shape.ndim() << "/"
+      ss << "Reused oneDNN NDArray with different memory layout " << shape.ndim() << "/"
          << md.data.ndims;
       desc_str = ss.str();
     }

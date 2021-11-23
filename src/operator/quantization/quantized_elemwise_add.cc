@@ -84,8 +84,8 @@ void QuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
                                  const std::vector<TBlob>& in_data,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<TBlob>& out_data) {
-  LOG(FATAL) << "Not supported for MXNet built without DNNL. "
-                "Please install DNNL enabled MXNet.";
+  LOG(FATAL) << "Not supported for MXNet built without oneDNN. "
+                "Please install oneDNN enabled MXNet.";
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)

@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.laplace")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_laplace");
       nnvm::NodeAttrs attrs;
-      op::NumpyLaplaceParam param;
+      op::NumpyLaplaceParam param = {};
 
       NDArray** inputs = new NDArray*[2]();
       int num_inputs   = 0;

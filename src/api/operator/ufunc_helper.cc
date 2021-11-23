@@ -62,7 +62,7 @@ void UFuncHelper(NDArray* lhs,
                  const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = rhs;
   param.is_int = true;
   attrs.op     = op;
@@ -87,7 +87,7 @@ void UFuncHelper(NDArray* lhs,
                  const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = rhs;
   param.is_int = false;
   attrs.op     = op;
@@ -112,7 +112,7 @@ void UFuncHelper(int64_t lhs,
                  const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = lhs;
   param.is_int = true;
   attrs.op     = op;
@@ -137,7 +137,7 @@ void UFuncHelper(double lhs,
                  const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyBinaryScalarParam param;
+  op::NumpyBinaryScalarParam param = {};
   param.scalar = lhs;
   param.is_int = false;
   attrs.op     = op;

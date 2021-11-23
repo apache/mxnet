@@ -58,7 +58,7 @@ static void DNNLQuantizeComputeKer(const std::vector<NDArray>& inputs,
     *outputs[1].data().dptr<float>() = -real_range;
     *outputs[2].data().dptr<float>() = real_range;
   } else {
-    LOG(FATAL) << "dnnl quantize op only supports int8 and uint8 as output type";
+    LOG(FATAL) << "oneDNN quantize op only supports int8 and uint8 as output type";
   }
   float scale = quantized_range / real_range;
   dnnl::primitive_attr attr;
@@ -101,7 +101,7 @@ static void DNNLQuantizeCompute(const nnvm::NodeAttrs& attrs,
   } else if (param.out_type == mshadow::kInt8) {
     DNNLQuantizeComputeKer<float, int8_t>(inputs, outputs, param, req);
   } else {
-    LOG(FATAL) << "dnnl quantize op only supports int8 and uint8 as output type";
+    LOG(FATAL) << "oneDNN quantize op only supports int8 and uint8 as output type";
   }
 }
 

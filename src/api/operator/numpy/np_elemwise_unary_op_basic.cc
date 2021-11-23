@@ -96,7 +96,7 @@ MXNET_REGISTER_API("_npi.around")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_around");
       nnvm::NodeAttrs attrs;
-      op::AroundParam param;
+      op::AroundParam param = {};
       param.decimals = args[1].operator int64_t();
       attrs.parsed   = param;
       attrs.op       = op;

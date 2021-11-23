@@ -210,8 +210,8 @@ Let's zoom in to check the time taken by operators
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
-### Profiling ONEDNN Operators
-Reagrding ONEDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `DNNL_VERBOSE=1` to enable internal profiler.
+### Profiling oneDNN Operators
+Reagrding oneDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `DNNL_VERBOSE=1` to enable internal profiler.
 
 `$ DNNL_VERBOSE=1 python my_script.py > dnnl_verbose.log`
 

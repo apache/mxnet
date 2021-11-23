@@ -745,7 +745,7 @@ class NDArray {
    */
   explicit NDArray(const dnnl::memory::desc& md);
   /*
-   * Test if the data is stored in one of special DNNL format.
+   * Test if the data is stored in one of special DNNL formats.
    */
   bool IsDNNLData() const {
     return ptr_->IsDNNL();

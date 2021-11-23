@@ -34,7 +34,7 @@ namespace storage {
 // consider change storage as a pure abstract class
 class StorageImpl : public Storage {
  public:
-  void Alloc(Handle* handle) override;
+  void Alloc(Handle* handle, bool failsafe) override;
   void Free(Handle handle) override;
   void DirectFree(Handle handle) override;
   void ReleaseAll(Context ctx) override {
@@ -90,7 +90,7 @@ StorageManager* CreateStorageManager(const Context& ctx,
   return ptr;
 }
 
-void StorageImpl::Alloc(Storage::Handle* handle) {
+void StorageImpl::Alloc(Storage::Handle* handle, bool failsafe) {
   // Set dptr to nullptr when handle size is 0.
   if (handle->size == 0) {
     handle->dptr = nullptr;
@@ -204,8 +204,9 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
     return ptr;
   });
 
-  manager->Alloc(handle);
-  profiler_.OnAlloc(*handle);
+  manager->Alloc(handle, failsafe);
+  if (!failsafe || handle->dptr != nullptr)
+    profiler_.OnAlloc(*handle);
 }
 
 void StorageImpl::Free(Storage::Handle handle) {

@@ -80,7 +80,7 @@ class Registry {
    * \tparam FType the signature of the function.
    * \tparam FLambda The type of f.
    */
-  template<typename FType, typename FLambda>
+  template <typename FType, typename FLambda>
   Registry& set_body_typed(FLambda f) {
     return set_body(TypedPackedFunc<FType>(f).packed());
   }
@@ -89,7 +89,8 @@ class Registry {
    * \brief set the body of the function to the given function pointer.
    *        Note that this doesn't work with lambdas, you need to
    *        explicitly give a type for those.
-   *        Note that this will ignore default arg values and always require all arguments to be provided.
+   *        Note that this will ignore default arg values and always require all arguments to be
+   * provided.
    *
    * \code
    *
@@ -106,14 +107,15 @@ class Registry {
    * \tparam R the return type of the function (inferred).
    * \tparam Args the argument types of the function (inferred).
    */
-  template<typename R, typename ...Args>
+  template <typename R, typename... Args>
   Registry& set_body_typed(R (*f)(Args...)) {
     return set_body(TypedPackedFunc<R(Args...)>(f));
   }
 
   /*!
    * \brief set the body of the function to be the passed method pointer.
-   *        Note that this will ignore default arg values and always require all arguments to be provided.
+   *        Note that this will ignore default arg values and always require all arguments to be
+   * provided.
    *
    * \code
    *
@@ -131,7 +133,7 @@ class Registry {
    * \tparam R the return type of the function (inferred).
    * \tparam Args the argument types of the function (inferred).
    */
-  template<typename T, typename R, typename ...Args>
+  template <typename T, typename R, typename... Args>
   Registry& set_body_method(R (T::*f)(Args...)) {
     return set_body_typed<R(T, Args...)>([f](T target, Args... params) -> R {
       // call method pointer
@@ -141,7 +143,8 @@ class Registry {
 
   /*!
    * \brief set the body of the function to be the passed method pointer.
-   *        Note that this will ignore default arg values and always require all arguments to be provided.
+   *        Note that this will ignore default arg values and always require all arguments to be
+   * provided.
    *
    * \code
    *
@@ -159,7 +162,7 @@ class Registry {
    * \tparam R the return type of the function (inferred).
    * \tparam Args the argument types of the function (inferred).
    */
-  template<typename T, typename R, typename ...Args>
+  template <typename T, typename R, typename... Args>
   Registry& set_body_method(R (T::*f)(Args...) const) {
     return set_body_typed<R(T, Args...)>([f](const T target, Args... params) -> R {
       // call method pointer
@@ -170,7 +173,8 @@ class Registry {
   /*!
    * \brief set the body of the function to be the passed method pointer.
    *        Used when calling a method on a Node subclass through a ObjectRef subclass.
-   *        Note that this will ignore default arg values and always require all arguments to be provided.
+   *        Note that this will ignore default arg values and always require all arguments to be
+   * provided.
    *
    * \code
    *
@@ -197,8 +201,11 @@ class Registry {
    * \tparam R the return type of the function (inferred).
    * \tparam Args the argument types of the function (inferred).
    */
-  template<typename TObjectRef, typename TNode, typename R, typename ...Args,
-    typename = typename std::enable_if<std::is_base_of<ObjectRef, TObjectRef>::value>::type>
+  template <typename TObjectRef,
+            typename TNode,
+            typename R,
+            typename... Args,
+            typename = typename std::enable_if<std::is_base_of<ObjectRef, TObjectRef>::value>::type>
   Registry& set_body_method(R (TNode::*f)(Args...)) {
     return set_body_typed<R(TObjectRef, Args...)>([f](TObjectRef ref, Args... params) {
       TNode* target = ref.operator->();
@@ -210,7 +217,8 @@ class Registry {
   /*!
    * \brief set the body of the function to be the passed method pointer.
    *        Used when calling a method on a Node subclass through a ObjectRef subclass.
-   *        Note that this will ignore default arg values and always require all arguments to be provided.
+   *        Note that this will ignore default arg values and always require all arguments to be
+   * provided.
    *
    * \code
    *
@@ -237,8 +245,11 @@ class Registry {
    * \tparam R the return type of the function (inferred).
    * \tparam Args the argument types of the function (inferred).
    */
-  template<typename TObjectRef, typename TNode, typename R, typename ...Args,
-    typename = typename std::enable_if<std::is_base_of<ObjectRef, TObjectRef>::value>::type>
+  template <typename TObjectRef,
+            typename TNode,
+            typename R,
+            typename... Args,
+            typename = typename std::enable_if<std::is_base_of<ObjectRef, TObjectRef>::value>::type>
   Registry& set_body_method(R (TNode::*f)(Args...) const) {
     return set_body_typed<R(TObjectRef, Args...)>([f](TObjectRef ref, Args... params) {
       const TNode* target = ref.operator->();
@@ -292,10 +303,10 @@ class Registry {
 #endif
 
 #define MXNET_STR_CONCAT_(__x, __y) __x##__y
-#define MXNET_STR_CONCAT(__x, __y) MXNET_STR_CONCAT_(__x, __y)
+#define MXNET_STR_CONCAT(__x, __y)  MXNET_STR_CONCAT_(__x, __y)
 
-#define MXNET_FUNC_REG_VAR_DEF                                            \
-  static MXNET_ATTRIBUTE_UNUSED ::mxnet::runtime::Registry& __mk_ ## MXNET
+#define MXNET_FUNC_REG_VAR_DEF \
+  static MXNET_ATTRIBUTE_UNUSED ::mxnet::runtime::Registry& __mk_##MXNET
 
 /*!
  * \brief Register a function globally.
@@ -305,8 +316,8 @@ class Registry {
  *   });
  * \endcode
  */
-#define MXNET_REGISTER_GLOBAL(OpName)                              \
-  MXNET_STR_CONCAT(MXNET_FUNC_REG_VAR_DEF, __COUNTER__) =            \
+#define MXNET_REGISTER_GLOBAL(OpName)                     \
+  MXNET_STR_CONCAT(MXNET_FUNC_REG_VAR_DEF, __COUNTER__) = \
       ::mxnet::runtime::Registry::Register(OpName)
 
 }  // namespace runtime

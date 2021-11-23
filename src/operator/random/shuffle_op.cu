@@ -76,8 +76,8 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
       SortByKey(keys, out, true);
     } else {
       const size_t tmp_space_size =
-          req[0] == kWriteInplace ? 2 * first_axis_len * sizeof(index_t) + size * sizeof(DType)
-                                  : 2 * first_axis_len * sizeof(index_t);
+          req[0] == kWriteInplace ? 2 * first_axis_len * sizeof(index_t) + size * sizeof(DType) :
+                                    2 * first_axis_len * sizeof(index_t);
       Tensor<gpu, 1, char> tmp_space =
           ctx.requested[1].get_space_typed<gpu, 1, char>(Shape1(tmp_space_size), s);
       char* tmp_space_ptr = tmp_space.dptr_;

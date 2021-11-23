@@ -368,7 +368,7 @@ class ThreadedEngine : public Engine {
           new profiler::ProfileOperator(threaded_opr->opr_name.c_str(), attrs.release()));
       opr_block->opr_profile->startForDevice(ctx.dev_type, ctx.dev_id);
     }
-    const bool debug_info       = (engine_info_ && debug_push_opr_ == opr_block);
+    const bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
     if (debug_info) {
       LOG(INFO) << "ExecuteOprBlock " << opr_block << "shutdown_phase=" << shutdown_phase_;
     }

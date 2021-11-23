@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file min_ex.cu
  * \brief example external operator CUDA source file
  */
@@ -28,8 +27,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(min_ex)
-.set_attr<FCompute>("FCompute<gpu>", MinExForward<gpu>);
+NNVM_REGISTER_OP(min_ex).set_attr<FCompute>("FCompute<gpu>", MinExForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

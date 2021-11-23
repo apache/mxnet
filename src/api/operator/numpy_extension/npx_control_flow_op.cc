@@ -35,7 +35,7 @@ MXNET_REGISTER_API("_npx.foreach")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_foreach");
-      op::NPXForeachParam param;
+      op::NPXForeachParam param = {};
       int args_size  = args.size();
       int num_inputs = args_size - 7;
       // inputs
@@ -94,7 +94,7 @@ MXNET_REGISTER_API("_npx.while_loop")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_while_loop");
-      op::NPXWhileLoopParam param;
+      op::NPXWhileLoopParam param = {};
       int args_size  = args.size();
       int num_inputs = args_size - 8;
       // inputs
@@ -151,7 +151,7 @@ MXNET_REGISTER_API("_npx.cond").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npx_cond");
-  op::NPXCondParam param;
+  op::NPXCondParam param = {};
   int args_size  = args.size();
   int num_inputs = args_size - 7;
   // inputs

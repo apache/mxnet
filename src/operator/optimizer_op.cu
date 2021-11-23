@@ -163,8 +163,8 @@ struct AdamStdDnsRspDnsKernel<req, gpu> {
     const bool non_zero =
         (row_id == 0) ? prefix_sum[0] > 0 : prefix_sum[row_id] > prefix_sum[row_id - 1];
     const RType grad_offset = (prefix_sum[row_id] - 1) * row_length + col_id;
-    DType grad_rescaled     = non_zero ? static_cast<DType>(grad_data[grad_offset] * rescale_grad)
-                                       : static_cast<DType>(0);
+    DType grad_rescaled     = non_zero ? static_cast<DType>(grad_data[grad_offset] * rescale_grad) :
+                                     static_cast<DType>(0);
     if (clip_gradient >= 0.0f) {
       grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }

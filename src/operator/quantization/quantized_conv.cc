@@ -41,7 +41,7 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   if (param.layout.has_value()) {
 #if MXNET_USE_ONEDNN == 1
     CHECK(param.layout.value() == mshadow::kNCHW || param.layout.value() == mshadow::kNCDHW)
-        << "dnnl quantized_conv now supports NCHW or NCDHW for now";
+        << "oneDNN quantized_conv only supports NCHW and NCDHW for now";
 #else
     CHECK_EQ(param.layout.value(), mshadow::kNCHW) << "quantized_conv only supports NCHW for now";
 #endif
@@ -55,9 +55,9 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_ONEDNN == 1
   CHECK(kernel_ndims == 2U || kernel_ndims == 3U)
-      << "dnnl quantized_conv only supports 2d or 3d kernel for now";
+      << "oneDNN quantized_conv only supports 2d and 3d kernel for now";
   CHECK(data_ndims == 4U || data_ndims == 5U)
-      << "dnnl quantized_conv only supports 4d or 5d layout for now";
+      << "oneDNN quantized_conv only supports 4d and 5d layout for now";
 #else
   CHECK_EQ(kernel_ndims, 2U) << "quantized_conv only supports 2D convolution for now";
   CHECK(param.dilate.ndim() == 0U || param.dilate.Size() == 1U)

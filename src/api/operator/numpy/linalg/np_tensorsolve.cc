@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.tensorsolve")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_tensorsolve");
       nnvm::NodeAttrs attrs;
-      op::TensorsolveParam param;
+      op::TensorsolveParam param = {};
       if (args[2].type_code() == kNull) {
         param.a_axes = Tuple<int>();
       } else {

@@ -62,13 +62,13 @@ void NDArray::ReInit(const NDArrayStorageType stype,
     if (!sparseStorage && stype != kCSRStorage)
       LOG(FATAL) << "Unknown storage type " << stype;
 
-    const auto& aux_types = (pAux_types && pAux_types->size())
-                                ? *pAux_types
-                                : std::vector<int>(sparseStorage ? 1 : 2, mshadow::kInt64);
+    const auto& aux_types = (pAux_types && pAux_types->size()) ?
+                                *pAux_types :
+                                std::vector<int>(sparseStorage ? 1 : 2, mshadow::kInt64);
 
-    const auto& aux_shapes = (pAux_shapes && pAux_shapes->size())
-                                 ? *pAux_shapes
-                                 : ShapeVector(sparseStorage ? 1 : 2, TShape(mshadow::Shape1(0)));
+    const auto& aux_shapes = (pAux_shapes && pAux_shapes->size()) ?
+                                 *pAux_shapes :
+                                 ShapeVector(sparseStorage ? 1 : 2, TShape(mshadow::Shape1(0)));
 
     mxnet::TShape storage_shape;
     if (!pStorage_shapes || !pStorage_shapes->Size()) {
@@ -603,7 +603,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
   } else {
-    LOG(FATAL) << "DNNL doesn't support " << shape.ndim() << " dimensions";
+    LOG(FATAL) << "oneDNN doesn't support " << shape.ndim() << " dimensions";
   }
   dnnl::memory::format_tag layout = dnnl::memory::format_tag::undef;
   switch (dims.size()) {
@@ -626,7 +626,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
       layout = dnnl::memory::format_tag::abcdef;
       break;
     default:
-      LOG(FATAL) << "Not implemented dimension (" << dims.size() << ") for DNNL";
+      LOG(FATAL) << "Not implemented dimension (" << dims.size() << ") for oneDNN";
   }
   dnnl::memory::desc data_md{dims, get_dnnl_type(dtype), layout};
   if (shandle.dptr == nullptr) {
@@ -639,7 +639,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
 
 const dnnl::memory* NDArray::GetDNNLData(const dnnl::memory::desc& desc) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested DNNL memory desc";
+    LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc";
     return nullptr;
   }
   const dnnl::memory* mem  = GetDNNLData();
@@ -705,7 +705,7 @@ NDArray NDArray::Reorder2Default() const {
   if (!ptr_->dnnl_mem_->IsDNNL())
     return *this;
 
-  // create new ndarray from  dnnl layout
+  // create new ndarray from dnnl layout
   dnnl::memory::desc from_desc = ptr_->dnnl_mem_->GetDesc();
   mxnet::TShape tshape(from_desc.data.ndims, -1);
   for (int i = 0; i < from_desc.data.ndims; i++)
@@ -863,7 +863,7 @@ void NDArray::CopyFrom(const dnnl::memory& mem) {
     return;
 
   CHECK(mem.get_desc().get_size() == shape().Size() * GetTypeSize(dtype_))
-      << "The size of NDArray doesn't match the requested DNNL memory desc";
+      << "The size of NDArray doesn't match the requested oneDNN memory desc";
   // If this array uses DNNL layout, we have to make sure it's not a view.
   // Otherwise, we'll have to change the layout inside the array.
 
@@ -876,8 +876,8 @@ void NDArray::CopyFrom(const dnnl::memory& mem) {
 
 dnnl::memory* NDArray::CreateDNNLData(const dnnl::memory::desc& desc) {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested DNNL memory desc. "
-               << "DNNL memory requests for " << desc.get_size() << " bytes, but got "
+    LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc. "
+               << "oneDNN memory requests for " << desc.get_size() << " bytes, but got "
                << shape().Size() * GetTypeSize(dtype_) << " bytes from NDArray";
     return nullptr;
   }
@@ -937,7 +937,7 @@ void NDArray::SetTBlob() const {
   auto stype          = storage_type();
   if (stype == kDefaultStorage) {
 #if MXNET_USE_ONEDNN == 1
-    CHECK(!IsDNNLData()) << "We can't generate TBlob for DNNL data. "
+    CHECK(!IsDNNLData()) << "We can't generate TBlob for oneDNN data. "
                          << "Please use Reorder2Default() to generate a new NDArray first";
 #endif
     dptr += byte_offset_;
@@ -2435,9 +2435,7 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync(
-        [&](RunContext rctx) {
-          common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check);
-        },
+        [&](RunContext rctx) { common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check); },
         this->ctx(),
         {this->var()},
         {},

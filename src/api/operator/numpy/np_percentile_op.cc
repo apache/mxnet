@@ -52,7 +52,7 @@ MXNET_REGISTER_API("_npi.percentile")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_percentile");
       nnvm::NodeAttrs attrs;
-      op::NumpyPercentileParam param;
+      op::NumpyPercentileParam param = {};
 
       NDArray* out      = args[5].operator mxnet::NDArray*();
       NDArray** outputs = out == nullptr ? nullptr : &out;

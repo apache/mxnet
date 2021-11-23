@@ -192,7 +192,7 @@ class TensorrtSelector : public SubgraphSelector {
     }
 
     if (op_name == "Concat") {
-      const auto& param = nnvm::get<ConcatParam>(n.attrs.parsed);
+      const auto& param   = nnvm::get<ConcatParam>(n.attrs.parsed);
       const int param_dim = param.dim.has_value() ? param.dim.value() : 0;
       return (param_dim != 0);
     }

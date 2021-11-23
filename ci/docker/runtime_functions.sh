@@ -703,9 +703,16 @@ sanity_check() {
     set -ex
     sanity_clang
     sanity_license
+    sanity_cmakelint
     sanity_tutorial
     sanity_python_prospector
     sanity_cpp
+}
+
+sanity_cmakelint() {
+    set -exu
+    
+    git ls-files -z -- bootstrap '*.cmake' '*.cmake.in' '*CMakeLists.txt' | grep -E -z -v '^(3rdparty)|cmake/Modules/|cmake/upstream/' | xargs -0 cmakelint --config=.cmakelintrc --quiet
 }
 
 sanity_tutorial() {
@@ -872,10 +879,27 @@ unittest_array_api_standardization() {
     # when cython is enabled
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=100
-    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_creation_functions.py
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_indexing.py
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_elementwise_functions.py
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_constants.py
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_broadcasting.py
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
         array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
-    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_creation_functions.py
-    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_indexing.py
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_promoted_type_promotion
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_one_arg_bool
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_one_arg_type_promotion
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_operator_one_arg_type_promotion
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_operator_two_arg_bool_promotion
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_operator_two_arg_promoted_promotion
+    python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
+        array_api_tests/test_type_promotion.py::test_operator_inplace_two_arg_promoted_promotion
     popd
 }
 
@@ -1404,7 +1428,7 @@ build_static_libmxnet() {
 # Tests CD PyPI packaging in CI
 ci_package_pypi() {
     set -ex
-    # copies onednn header files to 3rdparty/onednn/include/oneapi/dnnl/ as in CD
+    # copies oneDNN header files to 3rdparty/onednn/include/oneapi/dnnl/ as in CD
     mkdir -p 3rdparty/onednn/include/oneapi/dnnl
     cp include/onednn/oneapi/dnnl/dnnl_version.h 3rdparty/onednn/include/oneapi/dnnl/.
     cp include/onednn/oneapi/dnnl/dnnl_config.h 3rdparty/onednn/include/oneapi/dnnl/.

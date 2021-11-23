@@ -64,8 +64,8 @@ static constexpr char func_logical_xor_gpu[]   = "logical_xor_gpu";
 #pragma clang diagnostic pop
 
 inline bool NumpyBinaryLogicOpType(const nnvm::NodeAttrs& attrs,
-                            std::vector<int>* in_attrs,
-                            std::vector<int>* out_attrs) {
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   if (in_attrs->at(0) == -1 && in_attrs->at(1) == -1)
@@ -260,17 +260,17 @@ struct GetBinaryBroadcastCompute {
 
 #if MXNET_USE_CUDA
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                                     \
-  NNVM_REGISTER_OP(_npi_##name)                                                               \
-  .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"np_" #name})
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name) \
+  NNVM_REGISTER_OP(_npi_##name)                           \
+      .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"np_" #name})
 
 #endif  // MXNET_USE_CUDA
 
 #endif  // MXNET_USE_TVM_OP
 
 inline bool NumpyBinaryScalarLogicOpType(const nnvm::NodeAttrs& attrs,
-                                  std::vector<int>* in_attrs,
-                                  std::vector<int>* out_attrs) {
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   if (in_attrs->at(0) == -1)
@@ -342,7 +342,6 @@ struct TVMBinaryBroadcastScalarCompute {
       .add_argument("data", "NDArray-or-Symbol", "First input to the function")           \
       .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
 static constexpr char func_equal_scalar_cpu[]         = "equal_scalar_cpu";
@@ -393,9 +392,9 @@ static constexpr char func_logical_xor_scalar_gpu[]   = "logical_xor_scalar_gpu"
 
 #if MXNET_USE_CUDA
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                               \
-  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
-  .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"np_" #name})
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name) \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                         \
+      .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"np_" #name})
 
 #endif  // MXNET_USE_CUDA
 

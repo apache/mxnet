@@ -27,9 +27,28 @@
 namespace mxnet {
 namespace op {
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_logaddexp)
-    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logaddexp>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_logaddexp"});
+NNVM_REGISTER_OP(_npi_logaddexp)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"x1", "x2"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedFloatingType)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        NumpyBinaryMixedFloatingCompute<cpu, mshadow_op::logaddexp>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_logaddexp"})
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}};
+                                    })
+    .add_argument("x1", "NDArray-or-Symbol", "The input array")
+    .add_argument("x2", "NDArray-or-Symbol", "The input array");
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_logaddexp_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::logaddexp>)
@@ -49,7 +68,7 @@ NNVM_REGISTER_OP(_backward_npi_logaddexp)
                                 })
     .set_attr<FCompute>(
         "FCompute<cpu>",
-        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::logaddexp_grad, mshadow_op::logaddexp_rgrad>);
+        NumpyBinaryBackwardUseIn<cpu, mshadow_op::logaddexp_grad, mshadow_op::logaddexp_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_logaddexp_scalar)
     .add_arguments(NumpyBinaryScalarParam::__FIELDS__())

@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.cumsum")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npi_cumsum");
-      op::CumsumParam param;
+      op::CumsumParam param = {};
       // axis
       if (args[1].type_code() == kNull) {
         param.axis = dmlc::nullopt;

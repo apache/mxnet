@@ -31,7 +31,7 @@ MXNET_REGISTER_API("_npi.tri").set_body([](runtime::MXNetArgs args, runtime::MXN
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tri");
   nnvm::NodeAttrs attrs;
-  op::TriParam param;
+  op::TriParam param = {};
   param.N = args[0].operator nnvm::dim_t();
   if (args[1].type_code() == kNull) {
     param.M = dmlc::nullopt;
@@ -39,9 +39,9 @@ MXNET_REGISTER_API("_npi.tri").set_body([](runtime::MXNetArgs args, runtime::MXN
     param.M = args[1].operator nnvm::dim_t();
   }
   param.k     = args[2].operator int();
-  param.dtype = args[3].type_code() == kNull
-                    ? mshadow::kFloat32
-                    : String2MXNetTypeWithBool(args[3].operator std::string());
+  param.dtype = args[3].type_code() == kNull ?
+                    mshadow::kFloat32 :
+                    String2MXNetTypeWithBool(args[3].operator std::string());
   if (args[4].type_code() != kNull) {
     attrs.dict["ctx"] = args[4].operator std::string();
   }

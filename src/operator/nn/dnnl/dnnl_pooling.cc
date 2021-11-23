@@ -48,7 +48,7 @@ void DNNLPoolingFwd::Init(const mxnet::NDArray& input,
   if (alg_kind != dnnl::algorithm::pooling_max && alg_kind != dnnl::algorithm::pooling_avg &&
       alg_kind != dnnl::algorithm::pooling_avg_include_padding &&
       alg_kind != dnnl::algorithm::pooling_avg_exclude_padding) {
-    LOG(FATAL) << "DNNL Pooling: algorithm is not supported";
+    LOG(FATAL) << "oneDNN Pooling: algorithm is not supported";
   }
 
   dnnl::prop_kind prop = dnnl::prop_kind::forward_scoring;
@@ -56,7 +56,7 @@ void DNNLPoolingFwd::Init(const mxnet::NDArray& input,
     prop = dnnl::prop_kind::forward_training;
   }
   if (is_train && prop == dnnl::prop_kind::forward_scoring) {
-    LOG(INFO) << "DNNL Pooling: training with prop_kind is forward_scoring";
+    LOG(INFO) << "oneDNN Pooling: training with prop_kind is forward_scoring";
   }
 
   const auto fwd_desc =
@@ -87,7 +87,7 @@ void DNNLPoolingFwd::Execute(const NDArray& in_data,
     auto engine = CpuEngine::Get()->get_engine();
 
     if (workspace == nullptr) {
-      LOG(FATAL) << "DNNL Pooling: incorrect workspace input";
+      LOG(FATAL) << "oneDNN Pooling: incorrect workspace input";
     }
 
     auto ws = std::make_shared<dnnl::memory>(
@@ -99,7 +99,7 @@ void DNNLPoolingFwd::Execute(const NDArray& in_data,
     CommitOutput(out_data, output_mem_t_);
     DNNLStream::Get()->Submit();
   } else {
-    LOG(FATAL) << "DNNL Pooling: forward primitive is nullptr";
+    LOG(FATAL) << "oneDNN Pooling: forward primitive is nullptr";
   }
 }
 
@@ -116,7 +116,7 @@ dnnl::algorithm GetDNNLPoolAlgo(const PoolingParam& param) {
       }
       break;
     default:
-      LOG(FATAL) << "DNNL Pooling: Unknown pooling method.";
+      LOG(FATAL) << "oneDNN Pooling: Unknown pooling method.";
       return dnnl::algorithm::pooling_max;
   }
 }
