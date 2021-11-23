@@ -3117,11 +3117,11 @@ MXNET_DLL int MXPushStreamDep(NDArrayHandle handle, int stream);
 MXNET_DLL int MXGetCurrentStream(int device_id, int* stream);
 
 /*!
-  * \brief Push a new NVTX range. Requires building with CUDA and NVTX.
-  * \param name Name of the range.
-  * \param color Color used to display the range in the visual profiling tools.
-  *              Encoded as 256*256*R + 256*G + B.
-  */
+ * \brief Push a new NVTX range. Requires building with CUDA and NVTX.
+ * \param name Name of the range.
+ * \param color Color used to display the range in the visual profiling tools.
+ *              Encoded as 256*256*R + 256*G + B.
+ */
 MXNET_DLL int MXNVTXRangePush(const char* name, mx_uint color);
 
 /*!
