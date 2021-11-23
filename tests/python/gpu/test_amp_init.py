@@ -70,46 +70,51 @@ def test_npi_concatenate_multicast(np_shape_array, amp_init):
     assert out.dtype == np.float32
 
 
+CONV = {1: nn.Conv1D, 2: nn.Conv2D, 3: nn.Conv3D}
+MAX_POOL = {1: nn.MaxPool1D, 2: nn.MaxPool2D, 3: nn.MaxPool3D}
+
+
 class Conv(nn.HybridBlock):
-    def __init__(self, **kwargs):
+    def __init__(self, ndim, **kwargs):
         super().__init__(**kwargs)
-        self.conv2d = nn.Conv2D(10, 3)
+        self.conv = CONV[ndim](10, 3)
 
     def forward(self, x):
-        y = self.conv2d(x)
+        y = self.conv(x)
         return y * 2
 
 
 class ConvBN(nn.HybridBlock):
-    def __init__(self, **kwargs):
+    def __init__(self, ndim, **kwargs):
         super().__init__(**kwargs)
-        self.conv2d = nn.Conv2D(10, 3)
+        self.conv = CONV[ndim](10, 3)
         self.bn = nn.BatchNorm()
 
     def forward(self, x):
-        y = self.conv2d(x)
+        y = self.conv(x)
         y = self.bn(y)
         return y * 2 + 10
 
 
 class PoolConv(nn.HybridBlock):
-    def __init__(self, **kwargs):
+    def __init__(self, ndim, **kwargs):
         super().__init__(**kwargs)
-        self.pool = nn.MaxPool2D()
-        self.conv2d = nn.Conv2D(10, 3)
+        self.pool = MAX_POOL[ndim]()
+        self.conv = CONV[ndim](10, 3)
 
     def forward(self, x):
         y = self.pool(x)
-        y = self.conv2d(y)
+        y = self.conv(y)
         return y * 2
 
 
+@pytest.mark.parametrize('ndim', [1, 2, 3])
 @pytest.mark.parametrize('model', [Conv, ConvBN, PoolConv])
-def test_optimize_layout(np_shape_array, amp_init, model):
-    m = model()
+def test_optimize_layout(np_shape_array, amp_init, model, ndim):
+    m = model(ndim)
     m.initialize(ctx=mx.gpu())
     m.hybridize()
-    x = mx.np.ones((32, 2, 20, 20), ctx=mx.gpu())
+    x = mx.np.random.uniform(low=0, high=10, size=(32, 2, 17, 15, 12)[:ndim + 2], ctx=mx.gpu())
     m(x)
     param_init = {k:v.data().copy() for k, v in m.collect_params().items()}
     for v in m.collect_params().values():
@@ -118,7 +123,7 @@ def test_optimize_layout(np_shape_array, amp_init, model):
         y = m(x)
     y.backward()
     with optimize_layout():
-        m2 = model()
+        m2 = model(ndim)
         m2.initialize(ctx=mx.gpu())
         m2.load_dict(param_init, device=mx.gpu())
         m2.hybridize()
@@ -127,8 +132,10 @@ def test_optimize_layout(np_shape_array, amp_init, model):
         with mx.autograd.record():
             y2 = m2(x)
         y2.backward()
-    assert_allclose(y2, y)
+    rtol = 1e-2
+    atol = 1e-2
+    assert_allclose(y2, y, rtol=rtol, atol=atol)
     for k, v in m.collect_params().items():
         if v.grad_req == 'null':
             continue
-        assert_allclose(m2.collect_params()[k].grad(), v.grad())
+        assert_allclose(m2.collect_params()[k].grad(), v.grad(), rtol=rtol, atol=atol)
