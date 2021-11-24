@@ -39,7 +39,7 @@ inline bool IsSupportedAMPFuseOp(const nnvm::Node& node) {
               op == Op::Get("_sg_onednn_fully_connected") ||
               op == Op::Get("_sg_onednn_selfatt_qk") ||
               op == Op::Get("_sg_onednn_selfatt_valatt")));
-};
+}
 
 class SgDNNLPostAMPSelector : public SubgraphSelector {
  public:

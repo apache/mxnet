@@ -136,5 +136,3 @@ def test_bf16_casting():
     exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2),
                                 data3=(1, 2))
     assert exe.arg_arrays[2].dtype == np.float32
-
-test_bf16_casting()

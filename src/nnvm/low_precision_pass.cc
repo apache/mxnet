@@ -170,10 +170,10 @@ bool keep_original_input_or_cast_it_to_f32(
     const ObjectPtr& new_node,
     const NodeEntry& old_node_input_entry,
     const std::unordered_map<Node*, ObjectPtr>& mirror_map,
-    nnvm::NodeEntryMap<NodeEntry>& mirror_fp32_map,
+    nnvm::NodeEntryMap<NodeEntry>* mirror_fp32_map,
     const nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
-  if (mirror_fp32_map.count(old_node_input_entry)) {
-    new_node->inputs.emplace_back(mirror_fp32_map[old_node_input_entry]);
+  if (mirror_fp32_map->count(old_node_input_entry)) {
+    new_node->inputs.emplace_back(mirror_fp32_map->at(old_node_input_entry));
     return false;
   } else if (mirror_target_dtype_map.count(old_node_input_entry) &&
              mirror_target_dtype_map.at(old_node_input_entry).node->op() != Op::Get("amp_cast") &&
@@ -188,7 +188,7 @@ bool keep_original_input_or_cast_it_to_f32(
                 suffix,
                 new_node_input_node_entry,
                 mshadow::kFloat32,
-                &mirror_fp32_map,
+                mirror_fp32_map,
                 new_node);
     return false;
   } else {
@@ -204,7 +204,7 @@ bool keep_original_input_or_cast_it_to_f32(
 void keep_original_node(const ObjectPtr& old_node,
                         const ObjectPtr& new_node,
                         const std::unordered_map<Node*, ObjectPtr>& mirror_map,
-                        nnvm::NodeEntryMap<NodeEntry>& mirror_fp32_map,
+                        nnvm::NodeEntryMap<NodeEntry>* mirror_fp32_map,
                         const nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
   for (const auto& old_node_input_entry : old_node->inputs) {
     keep_original_input_or_cast_it_to_f32(
@@ -216,8 +216,8 @@ bool try_low_precision(const ObjectPtr& old_node,
                        const ObjectPtr& new_node,
                        const int target_dtype,
                        const std::unordered_map<Node*, ObjectPtr>& mirror_map,
-                       nnvm::NodeEntryMap<NodeEntry>& mirror_fp32_map,
-                       nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
+                       nnvm::NodeEntryMap<NodeEntry>* mirror_fp32_map,
+                       nnvm::NodeEntryMap<NodeEntry>* mirror_target_dtype_map) {
   static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
 
@@ -244,8 +244,8 @@ bool try_low_precision(const ObjectPtr& old_node,
   for (size_t i = 0; i < old_node->inputs.size(); ++i) {
     const auto& old_node_input_entry = old_node->inputs[i];
     if (in_types[i] == target_dtype) {
-      if (mirror_target_dtype_map.count(old_node_input_entry)) {
-        new_node->inputs.emplace_back(mirror_target_dtype_map[old_node_input_entry]);
+      if (mirror_target_dtype_map->count(old_node_input_entry)) {
+        new_node->inputs.emplace_back(mirror_target_dtype_map->at(old_node_input_entry));
       } else {
         const ObjectPtr& mirror_node = mirror_map.at(old_node_input_entry.node.get());
         const NodeEntry& mirror_entry =
@@ -255,7 +255,7 @@ bool try_low_precision(const ObjectPtr& old_node,
                     suffix,
                     mirror_entry,
                     target_dtype,
-                    &mirror_target_dtype_map,
+                    mirror_target_dtype_map,
                     new_node);
       }
     } else {
@@ -263,7 +263,7 @@ bool try_low_precision(const ObjectPtr& old_node,
                                                   old_node_input_entry,
                                                   mirror_map,
                                                   mirror_fp32_map,
-                                                  mirror_target_dtype_map) ||
+                                                  *mirror_target_dtype_map) ||
             in_types[i] == mshadow::kFloat32 || in_types[i] == -1);
     }
   }
@@ -271,7 +271,7 @@ bool try_low_precision(const ObjectPtr& old_node,
   for (size_t i = 0; i < old_node->num_outputs(); ++i) {
     const auto out_entry = NodeEntry(old_node, i, 0);
     if (out_types[i] == target_dtype) {
-      mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
+      (*mirror_target_dtype_map)[out_entry] = NodeEntry(new_node, i, 0);
     }
   }
 
@@ -282,7 +282,7 @@ bool try_widest_dtype_node(const ObjectPtr& old_node,
                            const ObjectPtr& new_node,
                            const int target_dtype,
                            const std::unordered_map<Node*, ObjectPtr>& mirror_map,
-                           nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
+                           nnvm::NodeEntryMap<NodeEntry>* mirror_target_dtype_map) {
   static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
 
@@ -292,8 +292,8 @@ bool try_widest_dtype_node(const ObjectPtr& old_node,
   }
 
   const auto& is_lp = [&](const NodeEntry& input) {
-    return mirror_target_dtype_map.count(input) &&
-           mirror_target_dtype_map[input].node->op() != Op::Get("amp_cast");
+    return mirror_target_dtype_map->count(input) &&
+           mirror_target_dtype_map->at(input).node->op() != Op::Get("amp_cast");
   };
 
   if (!std::any_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
@@ -301,7 +301,7 @@ bool try_widest_dtype_node(const ObjectPtr& old_node,
   }
   if (std::all_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
     for (const NodeEntry& old_node_input_entry : old_node->inputs) {
-      new_node->inputs.emplace_back(mirror_target_dtype_map[old_node_input_entry]);
+      new_node->inputs.emplace_back(mirror_target_dtype_map->at(old_node_input_entry));
     }
     // if we cannot infer the output type correctly, we cannot assume it is lp16
     std::vector<int> in_types(old_node->inputs.size(), target_dtype);
@@ -310,8 +310,8 @@ bool try_widest_dtype_node(const ObjectPtr& old_node,
       if (infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == true) {
         for (size_t i = 0; i < old_node->num_outputs(); ++i) {
           if (out_types[i] == target_dtype) {
-            const auto out_entry               = NodeEntry(old_node, i, 0);
-            mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
+            const auto out_entry                  = NodeEntry(old_node, i, 0);
+            (*mirror_target_dtype_map)[out_entry] = NodeEntry(new_node, i, 0);
           }
         }
       }
@@ -359,22 +359,22 @@ Graph ReducePrecision(Graph&& src) {
     if ((!old_node->is_variable() && fp32_ops.count(old_node->op()->name) > 0) ||
         (excluded_syms.count(old_node->attrs.name) > 0) ||
         CheckConditionalFP32(conditional_fp32_ops, excluded_syms, old_node)) {
-      keep_original_node(old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
+      keep_original_node(old_node, new_node, mirror_map, &mirror_fp32_map, mirror_target_dtype_map);
     } else if (!old_node->is_variable() && target_dtype_ops.count(old_node->op()->name) > 0) {
       if (!try_low_precision(old_node,
                              new_node,
                              target_dtype,
                              mirror_map,
-                             mirror_fp32_map,
-                             mirror_target_dtype_map)) {
+                             &mirror_fp32_map,
+                             &mirror_target_dtype_map)) {
         keep_original_node(
-            old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
+            old_node, new_node, mirror_map, &mirror_fp32_map, mirror_target_dtype_map);
       }
     } else if (!old_node->is_variable() && widest_dtype_ops.count(old_node->op()->name) > 0) {
       if (!try_widest_dtype_node(
-              old_node, new_node, target_dtype, mirror_map, mirror_target_dtype_map))
+              old_node, new_node, target_dtype, mirror_map, &mirror_target_dtype_map))
         keep_original_node(
-            old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
+            old_node, new_node, mirror_map, &mirror_fp32_map, mirror_target_dtype_map);
     } else {
       bool try_lp = std::any_of(
           old_node->inputs.begin(), old_node->inputs.end(), [&](const auto& old_node_input_entry) {
@@ -407,11 +407,11 @@ Graph ReducePrecision(Graph&& src) {
                                                    new_node,
                                                    target_dtype,
                                                    mirror_map,
-                                                   mirror_fp32_map,
-                                                   mirror_target_dtype_map);
+                                                   &mirror_fp32_map,
+                                                   &mirror_target_dtype_map);
       if (!runs_lp16) {
         keep_original_node(
-            old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
+            old_node, new_node, mirror_map, &mirror_fp32_map, mirror_target_dtype_map);
       }
     }
     mirror_map[old_node.get()] = std::move(new_node);
