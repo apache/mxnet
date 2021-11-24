@@ -53,6 +53,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   dmlc::optional<int> p_value;
   dmlc::optional<bool> count_include_pad;
   dmlc::optional<int> layout;
+  dmlc::optional<mxnet::Tuple<int>> output_size;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(kernel)
         .set_default(mxnet::TShape(0, 0))  // add default value here
@@ -113,6 +114,12 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
         .describe(
             "Set layout for input and output. Empty for\n    "
             "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
+
+    DMLC_DECLARE_FIELD(output_size)
+        .set_default(dmlc::optional<mxnet::Tuple<int>>())
+        .describe(
+            "Only used for Adaptive Pooling. int (output size) or a tuple of int for output "
+            "(height, width).");
   }
 
   bool operator==(const PoolingParam& other) const {
@@ -121,7 +128,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->pooling_convention == other.pooling_convention &&
            this->global_pool == other.global_pool && this->cudnn_off == other.cudnn_off &&
            this->p_value == other.p_value && this->count_include_pad == other.count_include_pad &&
-           this->layout == other.layout;
+           this->layout == other.layout && this->output_size == other.output_size;
   }
 
   // Extract layout from param, or supply default layout based on provided input dimension.
@@ -296,9 +303,9 @@ class PoolingOp {
       }
       stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
-    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value())
-                            ? param_.p_value.value()
-                            : 1;
+    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
+                            param_.p_value.value() :
+                            1;
     const bool count_include_pad =
         (param_.count_include_pad.has_value()) ? param_.count_include_pad.value() : true;
     switch (p_value) {
@@ -377,9 +384,9 @@ class PoolingOp {
       stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
 
-    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value())
-                            ? param_.p_value.value()
-                            : 1;
+    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
+                            param_.p_value.value() :
+                            1;
     const bool count_include_pad =
         (param_.count_include_pad.has_value()) ? param_.count_include_pad.value() : true;
     switch (p_value) {

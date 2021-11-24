@@ -163,7 +163,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<size_t> in_verIDs, out_verIDs;
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
-  std::vector<NDArray> conv_mkl;  // converted NDArrays from DNNL format
+  std::vector<NDArray> conv_dnnl;  // converted NDArrays from DNNL format
 
   // Extra data for sparse inputs and outputs.
   std::vector<int> in_stypes(inputs.size(), 0), out_stypes(outputs.size(), 0);
@@ -179,8 +179,8 @@ void CustomFComputeDispatcher(const std::string op_name,
     // reorder data if in DNNL format
     if (in_nd->IsDNNLData()) {
       // convert from DNNL
-      conv_mkl.push_back(in_nd->Reorder2Default());
-      in_nd = &(conv_mkl.back());
+      conv_dnnl.push_back(in_nd->Reorder2Default());
+      in_nd = &(conv_dnnl.back());
     }
 #endif
     // pull out parts to pass over to library
@@ -2822,8 +2822,8 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle* out) {
   // TODO(tianjun) make label 1D when label_width=0
   mxnet::TShape shape = no_label ? TShape({
                                        1,
-                                   })
-                                 : db.data[1].shape();
+                                   }) :
+                                   db.data[1].shape();
   if (no_label || shape.Size() < 1) {
     // it's possible that label is not available and not required
     // but we need to bypass the invalid copy
@@ -3947,7 +3947,7 @@ int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
   API_END_HANDLE_ERROR(delete ret);
 }
 
-int MXNVTXRangePush(const char * name, mx_uint color) {
+int MXNVTXRangePush(const char* name, mx_uint color) {
   API_BEGIN();
 #if MXNET_USE_CUDA && MXNET_USE_NVTX
   mxnet::common::cuda::nvtx::gpuRangeStart(color, name);

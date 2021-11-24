@@ -44,12 +44,12 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_ONEDNN == 1
   CHECK(data_ndims == 4U || data_ndims == 5U)
-      << "DNNL QuantizedPoolingOp only supports 4D/5D layout yet, input should be 4D in"
+      << "oneDNN QuantizedPoolingOp only supports 4D/5D layout for now, input should be 4D in "
       << "(batch, channel, y, x) or 5D in (batch, channel, d, y, x)";
   CHECK(layout == mshadow::kNCHW || layout == mshadow::kNCDHW)
-      << "DNNL QuantizedPoolingOp only supports NCHW/NCDHW layout for now, saw " << layout;
+      << "oneDNN QuantizedPoolingOp only supports NCHW/NCDHW layout for now, saw " << layout;
   CHECK(kernel_ndims == 2U || kernel_ndims == 3U)
-      << "DNNL QuantizedPoolingOp only supports 2D/3D pooling for now, saw" << kernel_ndims;
+      << "oneDNN QuantizedPoolingOp only supports 2D/3D pooling for now, saw" << kernel_ndims;
 #else
   CHECK_EQ(data_ndims, 4U) << "quantized_pooling: Input data should be 4D in "
                            << "(batch, channel, y, x)";

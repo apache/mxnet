@@ -95,9 +95,9 @@ NNVM_REGISTER_OP(_npi_percentile)
                                      [](const NodeAttrs& attrs) {
                                        const NumpyPercentileParam& param =
                                            nnvm::get<NumpyPercentileParam>(attrs.parsed);
-                                       return param.q_scalar.has_value()
-                                                  ? std::vector<std::string>{"a"}
-                                                  : std::vector<std::string>{"a", "q"};
+                                       return param.q_scalar.has_value() ?
+                                                  std::vector<std::string>{"a"} :
+                                                  std::vector<std::string>{"a", "q"};
                                      })
     .set_attr<FCompute>("FCompute<cpu>", NumpyPercentileForward<cpu>)
     .set_attr<FResourceRequest>("FResourceRequest",

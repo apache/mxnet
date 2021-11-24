@@ -207,7 +207,7 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
 #if MXNET_USE_CUDA
             dev_type_ == Context::kGPU ? cudaGetErrorString(static_cast<cudaError_t>(e)) :
 #endif
-                                       std::strerror(errno));
+                                         std::strerror(errno));
 
         LOG(FATAL) << "Memory allocation failed " << err;
       }

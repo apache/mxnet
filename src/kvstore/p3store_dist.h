@@ -88,7 +88,7 @@ class P3StoreDist : public KVStoreDist {
       char* data        = static_cast<char*>(send_buf.data().dptr_);
       // do push. false means no delete
       ps::SArray<char> vals(data, size, false);
-      int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
+      int cmd      = GetCommandType(RequestType::kDefaultPushPull, dtype);
       size_t off   = 0;
       auto counter = new std::atomic<int>(pskv.keys.size());
       for (size_t idx = 0; idx < pskv.keys.size(); idx++) {

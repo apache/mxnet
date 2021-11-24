@@ -54,3 +54,35 @@ jobs:
           python3 -m pytest -n 4 --durations=50 --verbose tests/python/unittest/ -k 'not test_operator and not (test_subgraph or test_custom_op or test_external_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'not serial'
           MXNET_ENGINE_TYPE=NaiveEngine python3 -m pytest -n 4 --durations=50 --verbose tests/python/unittest/ -k 'test_operator and not (test_subgraph or test_custom_op or test_external_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'not serial'
           python3 -m pytest --durations=50 --verbose tests/python/unittest/ -k 'not (test_subgraph or test_custom_op or test_external_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'serial'
+
+      - name: Test Array API
+        env:
+          MXNET_ENFORCE_CYTHON: 0
+        run: |
+          cd ..
+          git clone https://github.com/data-apis/array-api-tests.git
+          cd array-api-tests
+          git checkout c1dba80a196a03f880d2e0a998a272fb3867b720
+          export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
+          export DMLC_LOG_STACK_TRACE_DEPTH=100
+          python3 -m pytest --reruns 3 --durations=50 --verbose array_api_tests/test_creation_functions.py
+          python3 -m pytest --reruns 3 --durations=50 --verbose array_api_tests/test_indexing.py
+          python3 -m pytest --reruns 3 --durations=50 --verbose array_api_tests/test_constants.py
+          python3 -m pytest --reruns 3 --durations=50 --verbose array_api_tests/test_elementwise_functions.py
+          python3 -m pytest --reruns 3 --durations=50 --verbose array_api_tests/test_broadcasting.py
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_promoted_type_promotion
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_elementwise_function_one_arg_bool
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_elementwise_function_one_arg_type_promotion
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_operator_one_arg_type_promotion
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_operator_two_arg_bool_promotion
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_operator_two_arg_promoted_promotion
+          python3 -m pytest --reruns 3 --durations=50 --verbose \
+              array_api_tests/test_type_promotion.py::test_operator_inplace_two_arg_promoted_promotion

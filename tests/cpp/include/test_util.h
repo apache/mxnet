@@ -21,7 +21,7 @@
  * \file test_util.h
  * \brief unit test performance analysis functions
  * \author Chris Olivier
-*/
+ */
 #ifndef TEST_UTIL_H_
 #define TEST_UTIL_H_
 
@@ -49,7 +49,7 @@ extern bool performance_run;
 extern bool csv;
 extern bool thread_safety_force_cpu;
 
-template<typename DType>
+template <typename DType>
 inline size_t shapeMemorySize(const mxnet::TShape& shape) {
   return shape.Size() * sizeof(DType);
 }
@@ -62,11 +62,11 @@ class BlobMemory {
   inline ~BlobMemory() {
     Free();
   }
-  void *Alloc(const size_t size) {
+  void* Alloc(const size_t size) {
     CHECK_GT(size, 0U);  // You've probably made a mistake
     mxnet::Context context = isGPU_ ? mxnet::Context::GPU(0) : mxnet::Context{};
-    Storage *storage = mxnet::Storage::Get();
-    handle_ = storage->Alloc(size, context);
+    Storage* storage       = mxnet::Storage::Get();
+    handle_                = storage->Alloc(size, context);
     return handle_.dptr;
   }
   void Free() {
@@ -79,17 +79,17 @@ class BlobMemory {
   }
 
  private:
-  const bool      isGPU_;
+  const bool isGPU_;
   Storage::Handle handle_;
 };
 
 class StandaloneBlob : public TBlob {
  public:
   inline StandaloneBlob(const mxnet::TShape& shape, const bool isGPU, const int dtype)
-    : TBlob(nullptr, shape, isGPU ? gpu::kDevMask : cpu::kDevMask, dtype)
-      , memory_(std::make_shared<BlobMemory>(isGPU)) {
-    MSHADOW_TYPE_SWITCH(dtype, DType, {
-      this->dptr_ = memory_->Alloc(shapeMemorySize<DType>(shape)); });
+      : TBlob(nullptr, shape, isGPU ? gpu::kDevMask : cpu::kDevMask, dtype),
+        memory_(std::make_shared<BlobMemory>(isGPU)) {
+    MSHADOW_TYPE_SWITCH(
+        dtype, DType, { this->dptr_ = memory_->Alloc(shapeMemorySize<DType>(shape)); });
   }
   inline ~StandaloneBlob() {
     this->dptr_ = nullptr;
@@ -100,7 +100,7 @@ class StandaloneBlob : public TBlob {
 
  private:
   /*! \brief Locally allocated memory block for this blob */
-  std::shared_ptr<BlobMemory>  memory_;
+  std::shared_ptr<BlobMemory> memory_;
 };
 
 /*!
@@ -111,16 +111,14 @@ class StandaloneBlob : public TBlob {
 class CAccessAsCPU {
  public:
   CAccessAsCPU(const RunContext& run_ctx, const TBlob& src, bool copy_back_result = true)
-  : run_ctx_(run_ctx)
-    , src_(src)
-    , copy_back_result_(copy_back_result) {
+      : run_ctx_(run_ctx), src_(src), copy_back_result_(copy_back_result) {
 #if MXNET_USE_CUDA
     if (run_ctx.ctx.dev_type == Context::kCPU) {
       blob_ = src;
     } else {
       Context cpu_ctx, gpu_ctx = run_ctx.ctx;
       cpu_ctx.dev_type = Context::kCPU;
-      cpu_ctx.dev_id = 0;
+      cpu_ctx.dev_id   = 0;
       NDArray on_cpu(src.shape_, cpu_ctx, false, src_.type_flag_);
       on_cpu.CheckAndAlloc();
       blob_ = on_cpu.data();
@@ -140,7 +138,7 @@ class CAccessAsCPU {
       if (run_ctx_.ctx.dev_type == Context::kGPU) {
         Context cpu_ctx, gpu_ctx = run_ctx_.ctx;
         cpu_ctx.dev_type = Context::kCPU;
-        cpu_ctx.dev_id = 0;
+        cpu_ctx.dev_id   = 0;
         run_ctx_.get_stream<gpu>()->Wait();
         mxnet::ndarray::Copy<cpu, gpu>(blob_, &src_, gpu_ctx, cpu_ctx, run_ctx_);
         run_ctx_.get_stream<gpu>()->Wait();
@@ -148,7 +146,7 @@ class CAccessAsCPU {
     }
 #endif
   }
-  inline const TBlob& operator ()() const {
+  inline const TBlob& operator()() const {
     return blob_;
   }
 
@@ -168,16 +166,14 @@ class CAccessAsCPU {
  * \param cb Callback Function to call with CPU-data NDArray
  */
 template <typename CallbackFunction>
-inline void AccessAsCPU(const NDArray &src,
-                               const RunContext &run_ctx,
-                               CallbackFunction cb) {
+inline void AccessAsCPU(const NDArray& src, const RunContext& run_ctx, CallbackFunction cb) {
 #if MXNET_USE_CUDA
   if (src.ctx().dev_type == Context::kCPU) {
     cb(src);
   } else {
     Context cpu_ctx, gpu_ctx = src.ctx();
     cpu_ctx.dev_type = Context::kCPU;
-    cpu_ctx.dev_id = 0;
+    cpu_ctx.dev_id   = 0;
     NDArray on_cpu(src.shape(), cpu_ctx, false, src.dtype());
     on_cpu.CheckAndAlloc();
     TBlob tmp1 = on_cpu.data();
@@ -202,9 +198,7 @@ inline void AccessAsCPU(const NDArray &src,
  * \param cb Callback Function to call with CPU-data TBlob
  */
 template <typename CallbackFunction>
-inline void AccessAsCPU(const TBlob& src,
-                               const RunContext &run_ctx,
-                               CallbackFunction cb) {
+inline void AccessAsCPU(const TBlob& src, const RunContext& run_ctx, CallbackFunction cb) {
 #if MXNET_USE_CUDA
   if (run_ctx.ctx.dev_type == Context::kCPU) {
     cb(src);
@@ -217,11 +211,11 @@ inline void AccessAsCPU(const TBlob& src,
 }
 
 constexpr const size_t MPRINT_PRECISION = 5;
-template<typename DType>
-inline void fill(const RunContext &run_ctx, const TBlob& _blob, const DType val) {
+template <typename DType>
+inline void fill(const RunContext& run_ctx, const TBlob& _blob, const DType val) {
   AccessAsCPU(_blob, run_ctx, [val](const TBlob& blob) {
     MSHADOW_TYPE_SWITCH(blob.type_flag_, DTypeX, {
-      DTypeX *p1 = blob.dptr<DTypeX>();
+      DTypeX* p1 = blob.dptr<DTypeX>();
       for (size_t i = 0, n = blob.Size(); i < n; ++i) {
         *p1++ = val;
       }
@@ -229,16 +223,16 @@ inline void fill(const RunContext &run_ctx, const TBlob& _blob, const DType val)
   });
 }
 
-template<typename DType>
-inline void try_fill(const RunContext &run_ctx, const TBlob *blob, const DType val) {
+template <typename DType>
+inline void try_fill(const RunContext& run_ctx, const TBlob* blob, const DType val) {
   if (blob) {
     fill(run_ctx, *blob, val);
   }
 }
 
-template<typename DType, typename Stream>
-inline void dump(Stream *os, const TBlob& blob, const char *suffix = "f") {
-  DType *p1 = blob.dptr<DType>();
+template <typename DType, typename Stream>
+inline void dump(Stream* os, const TBlob& blob, const char* suffix = "f") {
+  DType* p1 = blob.dptr<DType>();
   for (size_t i = 0, n = blob.Size(); i < n; ++i) {
     if (i) {
       *os << ", ";
@@ -256,7 +250,6 @@ inline void dump(Stream *os, const TBlob& blob, const char *suffix = "f") {
     *os << ss << suffix;
   }
 }
-
 
 /*! \brief Return reference to data at position indexes */
 inline index_t getMult(const mxnet::TShape& shape, const index_t axis) {
@@ -279,18 +272,19 @@ inline index_t offset(const mxnet::TShape& shape, const std::vector<size_t>& ind
 }
 
 /*! \brief Return reference to data at position indexes */
-template<typename DType>
-inline const DType& data_at(const TBlob *blob, const std::vector<size_t>& indices) {
+template <typename DType>
+inline const DType& data_at(const TBlob* blob, const std::vector<size_t>& indices) {
   return blob->dptr<DType>()[offset(blob->shape_, indices)];
 }
 
 /*! \brief Set data at position indexes */
-template<typename DType>
-inline DType& data_ref(const TBlob *blob, const std::vector<size_t>& indices) {
+template <typename DType>
+inline DType& data_ref(const TBlob* blob, const std::vector<size_t>& indices) {
   return blob->dptr<DType>()[offset(blob->shape_, indices)];
 }
 
-inline std::string repeatedStr(const char *s, const signed int count,
+inline std::string repeatedStr(const char* s,
+                               const signed int count,
                                const bool trailSpace = false) {
   if (count <= 0) {
     return std::string();
@@ -311,9 +305,11 @@ inline std::string repeatedStr(const char *s, const signed int count,
 }
 
 /*! \brief Pretty print a shape with optional label */
-template<typename StreamType>
-inline StreamType& print_shape(StreamType *_os, const std::string& label,
-                               const mxnet::TShape& shape, const bool add_endl = true) {
+template <typename StreamType>
+inline StreamType& print_shape(StreamType* _os,
+                               const std::string& label,
+                               const mxnet::TShape& shape,
+                               const bool add_endl = true) {
   if (!label.empty()) {
     *_os << label << ": ";
   }
@@ -334,21 +330,21 @@ inline StreamType& print_shape(StreamType *_os, const std::string& label,
 }
 
 /*! \brief Pretty print a 1D, 2D, or 3D blob */
-template<typename DType, typename StreamType>
+template <typename DType, typename StreamType>
 inline StreamType& print_blob_(const RunContext& ctx,
-                               StreamType *_os,
-                               const TBlob &blob,
+                               StreamType* _os,
+                               const TBlob& blob,
                                const bool doChannels = true,
-                               const bool doBatches = true,
-                               const bool add_endl = true) {
+                               const bool doBatches  = true,
+                               const bool add_endl   = true) {
 #if MXNET_USE_CUDA
   if (blob.dev_mask() == gpu::kDevMask) {
-    return print_blob_<DType>(ctx, _os, CAccessAsCPU(ctx, blob, false)(), doChannels,
-                              doBatches, add_endl);
+    return print_blob_<DType>(
+        ctx, _os, CAccessAsCPU(ctx, blob, false)(), doChannels, doBatches, add_endl);
   }
 #endif  // MXNET_USE_CUDA
 
-  StreamType &os = *_os;
+  StreamType& os   = *_os;
   const size_t dim = static_cast<size_t>(blob.ndim());
 
   if (dim == 1) {
@@ -372,9 +368,9 @@ inline StreamType& print_blob_(const RunContext& ctx,
   const size_t batchSize = blob.size(0);
 
   size_t channels = 1;
-  size_t depth = 1;
-  size_t height = 1;
-  size_t width = 1;
+  size_t depth    = 1;
+  size_t height   = 1;
+  size_t width    = 1;
   if (dim > 1) {
     channels = blob.size(1);
     if (dim > 2) {
@@ -382,7 +378,7 @@ inline StreamType& print_blob_(const RunContext& ctx,
         width = blob.size(2);
       } else if (dim == 4) {
         height = blob.size(2);
-        width = blob.size(3);
+        width  = blob.size(3);
       } else {
         depth = blob.size(2);
         if (dim > 3) {
@@ -434,8 +430,8 @@ inline StreamType& print_blob_(const RunContext& ctx,
                 break;
             }
             os << repeatedStr("(", dd);
-            os << std::fixed << std::setw(7) << std::setprecision(MPRINT_PRECISION)
-               << std::right << val << " ";
+            os << std::fixed << std::setw(7) << std::setprecision(MPRINT_PRECISION) << std::right
+               << val << " ";
             os << repeatedStr(")", dd, true);
           }
         }
@@ -447,7 +443,7 @@ inline StreamType& print_blob_(const RunContext& ctx,
       if (!doBatches) {
         break;
       } else {
-        os << " |" << std::flush;;
+        os << " |" << std::flush;
       }
     }
     if (r < height - 1) {
@@ -468,34 +464,38 @@ inline StreamType& print_blob_(const RunContext& ctx,
   return os;
 }
 
-template<typename StreamType>
+template <typename StreamType>
 inline StreamType& print(const RunContext& ctx,
-                         StreamType *_os,
-                         const TBlob &blob,
+                         StreamType* _os,
+                         const TBlob& blob,
                          const bool doChannels = true,
-                         const bool doBatches = true,
-                         const bool add_endl = true) {
+                         const bool doBatches  = true,
+                         const bool add_endl   = true) {
   MSHADOW_TYPE_SWITCH(blob.type_flag_, DType, {
     print_blob_<DType>(ctx, _os, blob, doChannels, doBatches, add_endl);
   });
   return *_os;
 }
 
-template<typename StreamType>
-inline StreamType& print(const RunContext& ctx, StreamType *_os, const std::string &label,
-                         const TBlob &blob,
+template <typename StreamType>
+inline StreamType& print(const RunContext& ctx,
+                         StreamType* _os,
+                         const std::string& label,
+                         const TBlob& blob,
                          const bool doChannels = true,
-                         bool doBatches = true,
-                         const bool add_endl = true) {
+                         bool doBatches        = true,
+                         const bool add_endl   = true) {
   if (!label.empty()) {
     *_os << label << ": ";
   }
   return print(ctx, _os, blob, doChannels, doBatches, add_endl);
 }
 
-template<typename StreamType>
-inline StreamType& print(const RunContext& ctx, StreamType *_os,
-                         const std::string& label, const NDArray& arr) {
+template <typename StreamType>
+inline StreamType& print(const RunContext& ctx,
+                         StreamType* _os,
+                         const std::string& label,
+                         const NDArray& arr) {
   if (!label.empty()) {
     *_os << label << ": ";
   }
@@ -505,7 +505,7 @@ inline StreamType& print(const RunContext& ctx, StreamType *_os,
       const mxnet::TShape& shape = arr.shape();
       print_shape(_os, "[row_sparse] main shape", shape, false);
       const mxnet::TShape& storage_shape = arr.storage_shape();
-      const bool is_one_row = storage_shape[0] < 2;
+      const bool is_one_row              = storage_shape[0] < 2;
       print_shape(_os, "storage shape", storage_shape, false);
       print(ctx, _os, arr.data(), true, true, !is_one_row);
 
@@ -520,7 +520,7 @@ inline StreamType& print(const RunContext& ctx, StreamType *_os,
       const mxnet::TShape& shape = arr.shape();
       print_shape(_os, "[CSR] main shape", shape, false);
       const mxnet::TShape& storage_shape = arr.storage_shape();
-      const bool is_one_row = storage_shape[0] < 2;
+      const bool is_one_row              = storage_shape[0] < 2;
       print_shape(_os, "storage shape", storage_shape, false);
       print(ctx, _os, arr.data(), true, true, !is_one_row);
 
@@ -539,7 +539,7 @@ inline StreamType& print(const RunContext& ctx, StreamType *_os,
     case kDefaultStorage: {
       // data
       const mxnet::TShape& shape = arr.shape();
-      const bool is_one_row = shape[0] < 2;
+      const bool is_one_row      = shape[0] < 2;
       print_shape(_os, "[dense] main shape", shape, !is_one_row);
       print(ctx, _os, arr.data(), true, true, !is_one_row) << std::endl;
       break;
@@ -575,26 +575,30 @@ inline void print(const RunContext& ctx,
   }
 }
 
-inline std::string demangle(const char *name) {
+inline std::string demangle(const char* name) {
 #if defined(__GLIBCXX__) || defined(_LIBCPP_VERSION)
   int status = -4;  // some arbitrary value to eliminate the compiler warning
-  std::unique_ptr<char, void(*)(void*)> res {
-    abi::__cxa_demangle(name, nullptr, nullptr, &status),
-    &std::free
-  };
+  std::unique_ptr<char, void (*)(void*)> res{abi::__cxa_demangle(name, nullptr, nullptr, &status),
+                                             &std::free};
   return status ? name : res.get();
 #else
   return name;
 #endif
 }
 
-template<typename T>
-inline std::string type_name() { return demangle(typeid(T).name()); }
+template <typename T>
+inline std::string type_name() {
+  return demangle(typeid(T).name());
+}
 
-#define PRINT_NDARRAYS(__ctx$, __var)  test::print(__ctx$, __FUNCTION__, #__var, __var)
-#define PRINT_OP_AND_ARRAYS(__ctx$, __op, __var)  test::print(__ctx$, __FUNCTION__, \
-  static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
-  "<" << type_name<__op>() << ">"))->str(), __var)
+#define PRINT_NDARRAYS(__ctx$, __var) test::print(__ctx$, __FUNCTION__, #__var, __var)
+#define PRINT_OP_AND_ARRAYS(__ctx$, __op, __var)                                       \
+  test::print(__ctx$,                                                                  \
+              __FUNCTION__,                                                            \
+              static_cast<std::stringstream*>(                                         \
+                  &(std::stringstream() << #__var << "<" << type_name<__op>() << ">")) \
+                  ->str(),                                                             \
+              __var)
 #define PRINT_OP2_AND_ARRAYS(__ctx$, __op1, __op2, __var)  test::print(__ctx$, __FUNCTION__, \
   static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
   "<" << type_name<__op1>().name()) << ", " \
@@ -606,18 +610,18 @@ inline std::string type_name() { return demangle(typeid(T).name()); }
  *  2D: batch item -> channel -> row -> col
  *  3D: batch item -> channel -> col
  */
-template<typename GetNextData>
+template <typename GetNextData>
 static inline void patternFill(const RunContext& run_ctx,
-                               const TBlob *_blob,
+                               const TBlob* _blob,
                                GetNextData getNextData) {
   AccessAsCPU(*_blob, run_ctx, [getNextData](const TBlob& blob) {
     const size_t dim = static_cast<size_t>(blob.ndim());
     CHECK_LE(dim, 5U) << "Will need to handle above 3 dimensions (another for loop)";
-    const size_t num = blob.size(0);
-    const size_t channels = dim > 1 ? blob.size(1) : 1;
-    const size_t depth = dim > 2 ? blob.size(2) : 1;
-    const size_t height = dim > 3 ? blob.size(3) : 1;
-    const size_t width = dim > 4 ? blob.size(4) : 1;
+    const size_t num             = blob.size(0);
+    const size_t channels        = dim > 1 ? blob.size(1) : 1;
+    const size_t depth           = dim > 2 ? blob.size(2) : 1;
+    const size_t height          = dim > 3 ? blob.size(3) : 1;
+    const size_t width           = dim > 4 ? blob.size(4) : 1;
     const size_t numberOfIndexes = blob.shape_.Size();
     for (size_t n = 0; n < num; ++n) {
       if (dim > 1) {
@@ -632,8 +636,8 @@ static inline void patternFill(const RunContext& run_ctx,
                         const size_t idx = test::offset(blob.shape_, {n, ch, d, row, col});
                         CHECK_LT(idx, numberOfIndexes);
                         MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
-                          ThisDataType &f = blob.dptr<ThisDataType>()[idx];
-                          f = getNextData();
+                          ThisDataType& f = blob.dptr<ThisDataType>()[idx];
+                          f               = getNextData();
                         });
                       } else {
                         CHECK(dim <= 5) << "Unimplemented dimension: " << dim;
@@ -643,8 +647,8 @@ static inline void patternFill(const RunContext& run_ctx,
                     const size_t idx = test::offset(blob.shape_, {n, ch, d, row});
                     CHECK_LT(idx, numberOfIndexes);
                     MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
-                      ThisDataType &f = blob.dptr<ThisDataType>()[idx];
-                      f = getNextData();
+                      ThisDataType& f = blob.dptr<ThisDataType>()[idx];
+                      f               = getNextData();
                     });
                   }
                 }
@@ -652,8 +656,8 @@ static inline void patternFill(const RunContext& run_ctx,
                 const size_t idx = test::offset(blob.shape_, {n, ch, d});
                 CHECK_LT(idx, numberOfIndexes);
                 MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
-                  ThisDataType &f = blob.dptr<ThisDataType>()[idx];
-                  f = getNextData();
+                  ThisDataType& f = blob.dptr<ThisDataType>()[idx];
+                  f               = getNextData();
                 });
               }
             }
@@ -661,8 +665,8 @@ static inline void patternFill(const RunContext& run_ctx,
             const size_t idx = test::offset(blob.shape_, {n, ch});
             CHECK_LT(idx, numberOfIndexes);
             MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
-              ThisDataType &f = blob.dptr<ThisDataType>()[idx];
-              f = getNextData();
+              ThisDataType& f = blob.dptr<ThisDataType>()[idx];
+              f               = getNextData();
             });
           }
         }
@@ -670,8 +674,8 @@ static inline void patternFill(const RunContext& run_ctx,
         const size_t idx = test::offset(blob.shape_, {n});
         CHECK_LT(idx, numberOfIndexes);
         MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
-          ThisDataType &f = blob.dptr<ThisDataType>()[idx];
-          f = getNextData();
+          ThisDataType& f = blob.dptr<ThisDataType>()[idx];
+          f               = getNextData();
         });
       }
     }
@@ -679,12 +683,10 @@ static inline void patternFill(const RunContext& run_ctx,
 }
 
 /*! \brief Return a random number within a given range (inclusive) */
-template<class ScalarType>
+template <class ScalarType>
 inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
-  uint64_t num_bins = static_cast<uint64_t>(max + 1),
-    num_rand = static_cast<uint64_t>(RAND_MAX),
-    bin_size = num_rand / num_bins,
-    defect   = num_rand % num_bins;
+  uint64_t num_bins = static_cast<uint64_t>(max + 1), num_rand = static_cast<uint64_t>(RAND_MAX),
+           bin_size = num_rand / num_bins, defect = num_rand % num_bins;
   ScalarType x;
   do {
     x = std::rand();
@@ -700,7 +702,7 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
  * \param s2 Second shape
  * \return true if s1 is less than s2
  */
-inline bool operator < (const mxnet::TShape &s1, const mxnet::TShape &s2) {
+inline bool operator<(const mxnet::TShape& s1, const mxnet::TShape& s2) {
   if (s1.Size() == s2.Size()) {
     if (s1.ndim() == s2.ndim()) {
       for (size_t i = 0, n = s1.ndim(); i < n; ++i) {
@@ -723,8 +725,7 @@ inline bool operator < (const mxnet::TShape &s1, const mxnet::TShape &s2) {
  * \param v2 Second vector of shapes
  * \return true if v1 is less than v2
  */
-inline bool operator < (const std::vector<mxnet::TShape>& v1,
-                        const std::vector<mxnet::TShape>& v2) {
+inline bool operator<(const std::vector<mxnet::TShape>& v1, const std::vector<mxnet::TShape>& v2) {
   if (v1.size() == v2.size()) {
     for (size_t i = 0, n = v1.size(); i < n; ++i) {
       if (v1[i] == v2[i]) {
@@ -774,25 +775,23 @@ inline std::string pretty_num(uint64_t val) {
 }
 
 /*! \brief Change a value during the scope of this declaration */
-template<typename T>
+template <typename T>
 struct ScopeSet {
-  inline ScopeSet(T *var, const T tempValue)
-    : var_(*var)
-      , saveValue_(var) {
+  inline ScopeSet(T* var, const T tempValue) : var_(*var), saveValue_(var) {
     *var = tempValue;
   }
   inline ~ScopeSet() {
     var_ = saveValue_;
   }
   T& var_;
-  T  saveValue_;
+  T saveValue_;
 };
 
-
-static void AssertEqual(const std::vector<NDArray *> &in_arrs,
-                 const std::vector<NDArray *> &out_arrs,
-                 float rtol = 1e-5, float atol = 1e-8,
-                 bool test_first_only = false) {
+static void AssertEqual(const std::vector<NDArray*>& in_arrs,
+                        const std::vector<NDArray*>& out_arrs,
+                        float rtol           = 1e-5,
+                        float atol           = 1e-8,
+                        bool test_first_only = false) {
   for (size_t j = 0; j < in_arrs.size(); ++j) {
     // When test_all is fir
     if (test_first_only && j == 1) {
@@ -811,12 +810,10 @@ static void AssertEqual(const std::vector<NDArray *> &in_arrs,
     tmp2 = tmp2.Reorder2Default();
 #endif
     EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
-    TBlob blob1 = tmp1.data();
-    TBlob blob2 = tmp2.data();
-    mshadow::default_real_t *d1 =
-        static_cast<mshadow::default_real_t *>(blob1.dptr_);
-    mshadow::default_real_t *d2 =
-        static_cast<mshadow::default_real_t *>(blob2.dptr_);
+    TBlob blob1                 = tmp1.data();
+    TBlob blob2                 = tmp2.data();
+    mshadow::default_real_t* d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
+    mshadow::default_real_t* d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
     for (int i = 0; i < tmp1.shape().Size(); i++) {
       float abs_err = fabs((d1[i]) - (d2[i]));
       ASSERT_LE(abs_err, (atol + rtol * fabs(d2[i])))
@@ -824,8 +821,6 @@ static void AssertEqual(const std::vector<NDArray *> &in_arrs,
     }
   }
 }
-
-
 
 }  // namespace test
 }  // namespace mxnet
@@ -836,7 +831,7 @@ inline void usleep(__int64 usec) {
   LARGE_INTEGER ft;
 
   // Convert to 100 nanosecond interval, negative value indicates relative time
-  ft.QuadPart = -(10*usec);
+  ft.QuadPart = -(10 * usec);
 
   timer = CreateWaitableTimer(NULL, TRUE, NULL);
   SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);

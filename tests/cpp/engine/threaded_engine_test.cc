@@ -20,7 +20,7 @@
 /*!
  * \file threaded_engine_test.cc
  * \brief threaded engine tests
-*/
+ */
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>
@@ -56,9 +56,12 @@ static uint32_t seed_ = 0xdeadbeef;
 /**
  * generate a list of workloads
  */
-void GenerateWorkload(int num_workloads, int num_var,
-                      int min_read, int max_read,
-                      int min_time, int max_time,
+void GenerateWorkload(int num_workloads,
+                      int num_var,
+                      int min_read,
+                      int max_read,
+                      int min_time,
+                      int max_time,
                       std::vector<Workload>* workloads) {
   workloads->clear();
   workloads->resize(num_workloads);
@@ -67,8 +70,8 @@ void GenerateWorkload(int num_workloads, int num_var,
   std::uniform_int_distribution<int> distribution_time(min_time, max_time - 1);
   std::uniform_int_distribution<int> distribution_read(min_read, max_read - 1);
   for (int i = 0; i < num_workloads; ++i) {
-    auto& wl = workloads->at(i);
-    wl.write = distribution_var(generator);
+    auto& wl     = workloads->at(i);
+    wl.write     = distribution_var(generator);
     int num_read = distribution_read(generator);
     for (int j = 0; j < num_read; ++j) {
       wl.reads.push_back(distribution_var(generator));
@@ -82,7 +85,8 @@ void GenerateWorkload(int num_workloads, int num_var,
  */
 void EvaluateWorkload(const Workload& wl, std::vector<double>* data) {
   double tmp = 0;
-  for (int i : wl.reads) tmp += data->at(i);
+  for (int i : wl.reads)
+    tmp += data->at(i);
   data->at(wl.write) = tmp / (wl.reads.size() + 1);
   if (wl.time > 0) {
     std::this_thread::sleep_for(std::chrono::microseconds(wl.time));
@@ -105,7 +109,8 @@ double EvaluateWorkloads(const std::vector<Workload>& workloads,
   }
 
   for (const auto& wl : workloads) {
-    if (wl.reads.size() == 0) continue;
+    if (wl.reads.size() == 0)
+      continue;
     if (engine == nullptr) {
       EvaluateWorkload(wl, data);
     } else {
@@ -118,7 +123,8 @@ double EvaluateWorkloads(const std::vector<Workload>& workloads,
       };
       std::vector<Engine::VarHandle> reads;
       for (auto i : wl.reads) {
-        if (i != wl.write) reads.push_back(vars[i]);
+        if (i != wl.write)
+          reads.push_back(vars[i]);
       }
       engine->PushAsync(func, Context::CPU(), reads, {vars[wl.write]});
     }
@@ -133,9 +139,9 @@ double EvaluateWorkloads(const std::vector<Workload>& workloads,
 TEST(Engine, start_stop) {
   const int num_engine = 3;
   std::vector<mxnet::Engine*> engine(num_engine);
-  engine[0] = mxnet::engine::CreateNaiveEngine();
-  engine[1] = mxnet::engine::CreateThreadedEnginePooled();
-  engine[2] = mxnet::engine::CreateThreadedEnginePerDevice();
+  engine[0]                 = mxnet::engine::CreateNaiveEngine();
+  engine[1]                 = mxnet::engine::CreateThreadedEnginePooled();
+  engine[2]                 = mxnet::engine::CreateThreadedEnginePerDevice();
   std::string type_names[3] = {"NaiveEngine", "ThreadedEnginePooled", "ThreadedEnginePerDevice"};
 
   for (int i = 0; i < num_engine; ++i) {
@@ -149,7 +155,7 @@ TEST(Engine, start_stop) {
 
 TEST(Engine, RandSumExpr) {
   std::vector<Workload> workloads;
-  int num_repeat = 5;
+  int num_repeat       = 5;
   const int num_engine = 4;
 
   std::vector<double> t(num_engine, 0.0);
@@ -171,19 +177,21 @@ TEST(Engine, RandSumExpr) {
     }
 
     for (int i = 1; i < num_engine; ++i) {
-      for (int j = 0; j < num_var; ++j) EXPECT_EQ(data[0][j], data[i][j]);
+      for (int j = 0; j < num_var; ++j)
+        EXPECT_EQ(data[0][j], data[i][j]);
     }
     LOG(INFO) << "data: " << data[0][1] << " " << data[0][2] << "...";
   }
 
-
-  LOG(INFO) << "baseline\t\t"  << t[0] << " sec";
-  LOG(INFO) << "NaiveEngine\t\t"  << t[1] << " sec";
+  LOG(INFO) << "baseline\t\t" << t[0] << " sec";
+  LOG(INFO) << "NaiveEngine\t\t" << t[1] << " sec";
   LOG(INFO) << "ThreadedEnginePooled\t" << t[2] << " sec";
   LOG(INFO) << "ThreadedEnginePerDevice\t" << t[3] << " sec";
 }
 
-void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
+void Foo(mxnet::RunContext, int i) {
+  printf("The fox says %d\n", i);
+}
 
 void FooAsyncFunc(void*, void*, void* cb_ptr, void* param) {
   if (param == nullptr) {
@@ -221,7 +229,7 @@ TEST(Engine, PushFunc) {
 
   // Test #1
   LOG(INFO) << "===== Test #1: PushAsync param and deleter =====";
-  int* a = new int(100);
+  int* a  = new int(100);
   int res = MXEnginePushAsync(FooAsyncFunc, a, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
   EXPECT_EQ(res, 0);
 
@@ -243,7 +251,7 @@ TEST(Engine, PushFunc) {
   // Test #5
   LOG(INFO) << "===== Test #5: PushSync param and deleter =====";
   int* b = new int(101);
-  res = MXEnginePushSync(FooSyncFunc, b, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+  res    = MXEnginePushSync(FooSyncFunc, b, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
   EXPECT_EQ(res, 0);
 
   // Test #6
@@ -267,82 +275,121 @@ TEST(Engine, PushFuncND) {
   std::vector<mxnet::NDArray*> nds;
   const int num_nds = 5;
   for (int i = 0; i < num_nds; ++i) {
-      mxnet::NDArray *pnd = new mxnet::NDArray(ctx);
-      nds.push_back(pnd);
+    mxnet::NDArray* pnd = new mxnet::NDArray(ctx);
+    nds.push_back(pnd);
   }
   for (int num_const_nds = 0; num_const_nds <= num_nds; ++num_const_nds) {
-      int num_mutable_nds = num_nds - num_const_nds;
-      void** const_nds_handle = num_const_nds > 0 ?
-          reinterpret_cast<void**>(nds.data()) : nullptr;
-      void** mutable_nds_handle = num_mutable_nds > 0 ?
-          reinterpret_cast<void**>(nds.data() + num_const_nds) : nullptr;
+    int num_mutable_nds     = num_nds - num_const_nds;
+    void** const_nds_handle = num_const_nds > 0 ? reinterpret_cast<void**>(nds.data()) : nullptr;
+    void** mutable_nds_handle =
+        num_mutable_nds > 0 ? reinterpret_cast<void**>(nds.data() + num_const_nds) : nullptr;
 
-      // Test #1
-      LOG(INFO) << "===== Test #1: PushAsyncND param and deleter =====";
-      int* a = new int(100);
-      int res = MXEnginePushAsyncND(FooAsyncFunc, a, FooFuncDeleter, &ctx,
-              const_nds_handle, num_const_nds,
-              mutable_nds_handle, num_mutable_nds);
-      EXPECT_EQ(res, 0);
+    // Test #1
+    LOG(INFO) << "===== Test #1: PushAsyncND param and deleter =====";
+    int* a  = new int(100);
+    int res = MXEnginePushAsyncND(FooAsyncFunc,
+                                  a,
+                                  FooFuncDeleter,
+                                  &ctx,
+                                  const_nds_handle,
+                                  num_const_nds,
+                                  mutable_nds_handle,
+                                  num_mutable_nds);
+    EXPECT_EQ(res, 0);
 
-      // Test #2
-      LOG(INFO) << "===== Test #2: PushAsyncND NULL param and NULL deleter =====";
-      res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds,
-              mutable_nds_handle, num_mutable_nds);
-      EXPECT_EQ(res, 0);
+    // Test #2
+    LOG(INFO) << "===== Test #2: PushAsyncND NULL param and NULL deleter =====";
+    res = MXEnginePushAsyncND(FooAsyncFunc,
+                              nullptr,
+                              nullptr,
+                              &ctx,
+                              const_nds_handle,
+                              num_const_nds,
+                              mutable_nds_handle,
+                              num_mutable_nds);
+    EXPECT_EQ(res, 0);
 
-      // Test #3
-      LOG(INFO) << "===== Test #3: PushAsyncND invalid number of const nds =====";
-      res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, -1,
-              mutable_nds_handle, num_mutable_nds);
-      EXPECT_EQ(res, -1);
+    // Test #3
+    LOG(INFO) << "===== Test #3: PushAsyncND invalid number of const nds =====";
+    res = MXEnginePushAsyncND(FooAsyncFunc,
+                              nullptr,
+                              nullptr,
+                              &ctx,
+                              const_nds_handle,
+                              -1,
+                              mutable_nds_handle,
+                              num_mutable_nds);
+    EXPECT_EQ(res, -1);
 
-      // Test #4
-      LOG(INFO) << "===== Test #4: PushAsyncND invalid number of mutable nds =====";
-      res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds,
-              mutable_nds_handle, -1);
-      EXPECT_EQ(res, -1);
+    // Test #4
+    LOG(INFO) << "===== Test #4: PushAsyncND invalid number of mutable nds =====";
+    res = MXEnginePushAsyncND(FooAsyncFunc,
+                              nullptr,
+                              nullptr,
+                              &ctx,
+                              const_nds_handle,
+                              num_const_nds,
+                              mutable_nds_handle,
+                              -1);
+    EXPECT_EQ(res, -1);
 
-      // Test #5
-      LOG(INFO) << "===== Test #5: PushSyncND param and deleter =====";
-      int* b = new int(101);
-      res = MXEnginePushSyncND(FooSyncFunc, b, FooFuncDeleter, &ctx,
-              const_nds_handle, num_const_nds,
-              mutable_nds_handle, num_mutable_nds);
-      EXPECT_EQ(res, 0);
+    // Test #5
+    LOG(INFO) << "===== Test #5: PushSyncND param and deleter =====";
+    int* b = new int(101);
+    res    = MXEnginePushSyncND(FooSyncFunc,
+                             b,
+                             FooFuncDeleter,
+                             &ctx,
+                             const_nds_handle,
+                             num_const_nds,
+                             mutable_nds_handle,
+                             num_mutable_nds);
+    EXPECT_EQ(res, 0);
 
-      // Test #6
-      LOG(INFO) << "===== Test #6: PushSyncND NULL param and NULL deleter =====";
-      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds,
-              mutable_nds_handle, num_mutable_nds);
-      EXPECT_EQ(res, 0);
+    // Test #6
+    LOG(INFO) << "===== Test #6: PushSyncND NULL param and NULL deleter =====";
+    res = MXEnginePushSyncND(FooSyncFunc,
+                             nullptr,
+                             nullptr,
+                             &ctx,
+                             const_nds_handle,
+                             num_const_nds,
+                             mutable_nds_handle,
+                             num_mutable_nds);
+    EXPECT_EQ(res, 0);
 
-      // Test #7
-      LOG(INFO) << "===== Test #7: PushSyncND invalid number of const nds =====";
-      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, -1,
-              mutable_nds_handle, num_mutable_nds);
-      EXPECT_EQ(res, -1);
+    // Test #7
+    LOG(INFO) << "===== Test #7: PushSyncND invalid number of const nds =====";
+    res = MXEnginePushSyncND(FooSyncFunc,
+                             nullptr,
+                             nullptr,
+                             &ctx,
+                             const_nds_handle,
+                             -1,
+                             mutable_nds_handle,
+                             num_mutable_nds);
+    EXPECT_EQ(res, -1);
 
-      // Test #8
-      LOG(INFO) << "===== Test #8: PushSyncND invalid number of mutable nds =====";
-      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds,
-              mutable_nds_handle, -1);
-      EXPECT_EQ(res, -1);
+    // Test #8
+    LOG(INFO) << "===== Test #8: PushSyncND invalid number of mutable nds =====";
+    res = MXEnginePushSyncND(FooSyncFunc,
+                             nullptr,
+                             nullptr,
+                             &ctx,
+                             const_nds_handle,
+                             num_const_nds,
+                             mutable_nds_handle,
+                             -1);
+    EXPECT_EQ(res, -1);
   }
   for (mxnet::NDArray* pnd : nds) {
-      delete pnd;
+    delete pnd;
   }
 }
 
 TEST(Engine, basics) {
   auto&& engine = mxnet::Engine::Get();
-  auto&& var = engine->NewVariable();
+  auto&& var    = engine->NewVariable();
   std::vector<mxnet::Engine::OprHandle> oprs;
 
   // Test #1
@@ -459,9 +506,9 @@ TEST(Engine, basics) {
 TEST(Engine, VarVersion) {
   const size_t num_engines = 3;
   std::vector<mxnet::Engine*> engines(num_engines);
-  engines[0] = mxnet::engine::CreateNaiveEngine();
-  engines[1] = mxnet::engine::CreateThreadedEnginePooled();
-  engines[2] = mxnet::engine::CreateThreadedEnginePerDevice();
+  engines[0]                = mxnet::engine::CreateNaiveEngine();
+  engines[1]                = mxnet::engine::CreateThreadedEnginePooled();
+  engines[2]                = mxnet::engine::CreateThreadedEnginePerDevice();
   std::string type_names[3] = {"NaiveEngine", "ThreadedEnginePooled", "ThreadedEnginePerDevice"};
   for (size_t k = 0; k < num_engines; ++k) {
     auto engine = engines[k];
@@ -533,7 +580,7 @@ struct TestSaveAndRestoreOMPState {
     omp_set_dynamic(dynamic_);
   }
   const int nthreads_ = omp_get_max_threads();
-  const int dynamic_ = omp_get_dynamic();
+  const int dynamic_  = omp_get_dynamic();
 };
 
 /*!
@@ -541,8 +588,8 @@ struct TestSaveAndRestoreOMPState {
  */
 TEST(Engine, omp_threading_count_scope) {
   TestSaveAndRestoreOMPState omp_state;
-  const int THREAD_COUNT = 10;
-  std::shared_ptr<dmlc::ManualEvent> ready = std::make_shared<dmlc::ManualEvent>();
+  const int THREAD_COUNT                     = 10;
+  std::shared_ptr<dmlc::ManualEvent> ready   = std::make_shared<dmlc::ManualEvent>();
   std::shared_ptr<dmlc::ThreadGroup> threads = std::make_shared<dmlc::ThreadGroup>();
   std::atomic<int> counter(0), correct(0);
   omp_set_dynamic(0);
@@ -550,24 +597,27 @@ TEST(Engine, omp_threading_count_scope) {
     std::string name = "thread: ";
     name += std::to_string(x + 1);
     ++counter;
-    threads->create(name, false,
-                    [x, &counter, &correct](std::shared_ptr<dmlc::ManualEvent> ready_ptr) -> int {
-                      const int thread_count = x + 1;
-                      omp_set_num_threads(thread_count);
-                      --counter;
-                      ready_ptr->wait();
-                      CHECK_EQ(omp_get_max_threads(), thread_count);
-                      #pragma omp parallel for
-                      for (int i = 0; i < 100; ++i) {
-                        if (i == 50) {
-                          const int current_threads = omp_get_num_threads();
-                          if (current_threads == thread_count) {
-                            ++correct;
-                          }
-                        }
-                      }
-                      return 0;
-                    }, ready);
+    threads->create(
+        name,
+        false,
+        [x, &counter, &correct](std::shared_ptr<dmlc::ManualEvent> ready_ptr) -> int {
+          const int thread_count = x + 1;
+          omp_set_num_threads(thread_count);
+          --counter;
+          ready_ptr->wait();
+          CHECK_EQ(omp_get_max_threads(), thread_count);
+#pragma omp parallel for
+          for (int i = 0; i < 100; ++i) {
+            if (i == 50) {
+              const int current_threads = omp_get_num_threads();
+              if (current_threads == thread_count) {
+                ++correct;
+              }
+            }
+          }
+          return 0;
+        },
+        ready);
   }
   while (counter.load() > 0) {
     usleep(100);

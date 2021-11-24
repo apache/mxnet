@@ -30,38 +30,38 @@
 
 using namespace mxnet::ext;
 
-#define NumThreadPerBlock 256 // mxnet recommended cuda thread number per block
-#define NumRandomPerThread 64 // mxnet recommended random numbers generated per thread
+#define NumThreadPerBlock  256  // mxnet recommended cuda thread number per block
+#define NumRandomPerThread 64   // mxnet recommended random numbers generated per thread
 
 class MyStatefulReluCPU : public CustomStatefulOp {
-  public:
-   explicit MyStatefulReluCPU(const std::unordered_map<std::string, std::string>& attrs);
+ public:
+  explicit MyStatefulReluCPU(const std::unordered_map<std::string, std::string>& attrs);
 
-   MXReturnValue Forward(std::vector<MXTensor>* inputs,
+  MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                        std::vector<MXTensor>* outputs,
+                        const OpResource& op_res);
+  MXReturnValue Backward(std::vector<MXTensor>* inputs,
                          std::vector<MXTensor>* outputs,
                          const OpResource& op_res);
-   MXReturnValue Backward(std::vector<MXTensor>* inputs,
-                          std::vector<MXTensor>* outputs,
-                          const OpResource& op_res);
 
-  private:
-    const std::unordered_map<std::string, std::string> attrs_;
+ private:
+  const std::unordered_map<std::string, std::string> attrs_;
 };
 
 class MyStatefulReluGPU : public CustomStatefulOp {
-  public:
-   explicit MyStatefulReluGPU(const std::unordered_map<std::string, std::string>& attrs);
+ public:
+  explicit MyStatefulReluGPU(const std::unordered_map<std::string, std::string>& attrs);
 
-    MXReturnValue Forward(std::vector<MXTensor>* inputs,
-                          std::vector<MXTensor>* outputs,
-                          const OpResource& op_res);
-    
-    MXReturnValue Backward(std::vector<MXTensor>* inputs,
-                           std::vector<MXTensor>* outputs,
-                           const OpResource& op_res);
-    
-  private:
-    const std::unordered_map<std::string, std::string> attrs_;
+  MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                        std::vector<MXTensor>* outputs,
+                        const OpResource& op_res);
+
+  MXReturnValue Backward(std::vector<MXTensor>* inputs,
+                         std::vector<MXTensor>* outputs,
+                         const OpResource& op_res);
+
+ private:
+  const std::unordered_map<std::string, std::string> attrs_;
 };
 
 MXReturnValue forwardGPU(const std::unordered_map<std::string, std::string>& attrs,

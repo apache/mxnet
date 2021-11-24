@@ -72,9 +72,9 @@ __global__ void KernelStep1(const MultiLANSKernelParam<DType, MPDType> kernel_pa
     for (int ii = 0; ii < ILP_LAMB; ii++) {
       int load_pos = i + ii * blockDim.x;
       if (load_pos < stop_pos && load_pos < kernel_params.sizes[tensor_id]) {
-        r_weight[ii] = has_mixed_precision
-                           ? kernel_params.weights32[tensor_id][load_pos]
-                           : static_cast<MPDType>(kernel_params.weights[tensor_id][load_pos]);
+        r_weight[ii] = has_mixed_precision ?
+                           kernel_params.weights32[tensor_id][load_pos] :
+                           static_cast<MPDType>(kernel_params.weights[tensor_id][load_pos]);
         r_grad[ii]   = static_cast<MPDType>(kernel_params.grads[tensor_id][load_pos]);
         r_mean[ii]   = kernel_params.mean[tensor_id][load_pos];
         r_var[ii]    = kernel_params.var[tensor_id][load_pos];
@@ -160,9 +160,9 @@ __global__ void KernelStep2(const MultiLANSKernelParam<DType, MPDType> kernel_pa
     for (int ii = 0; ii < ILP_LAMB; ii++) {
       int load_pos = i + ii * blockDim.x;
       if (load_pos < stop_pos && load_pos < kernel_params.sizes[tensor_id]) {
-        r_weight[ii] = has_mixed_precision
-                           ? kernel_params.weights32[tensor_id][load_pos]
-                           : static_cast<MPDType>(kernel_params.weights[tensor_id][load_pos]);
+        r_weight[ii] = has_mixed_precision ?
+                           kernel_params.weights32[tensor_id][load_pos] :
+                           static_cast<MPDType>(kernel_params.weights[tensor_id][load_pos]);
         r_m[ii]      = temp_m[kernel_params.tensor2temp_g[tensor_id] + load_pos];
         r_g[ii]      = temp_g[kernel_params.tensor2temp_g[tensor_id] + load_pos];
       }

@@ -402,7 +402,7 @@ void EvalRandom<cpu, GenNegBinomialDistribution>(const real_t& mu,
 template <>
 void Eval<DEVICE>(const real_t& rhs, TBlob* ret, RunContext ctx) {
   mshadow::Stream<DEVICE>* s = ctx.get_stream<DEVICE>();
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(
       ret->type_flag_, DType, { ret->FlatTo2D<DEVICE, DType>(s) = DType(rhs); });
 }
 

@@ -187,8 +187,8 @@ __global__ void split_tensor_kernel(size_t input_size,
       LType* out_aligned  = reinterpret_cast<LType*>(params.outputs[section]);
       size_t section_size_aligned =
           entries_per_load > 0 ? section_size / entries_per_load : section_size;
-      size_t index_aligned = entries_per_load > 0 ? params.indices[section] / entries_per_load
-                                                  : params.indices[section];
+      size_t index_aligned = entries_per_load > 0 ? params.indices[section] / entries_per_load :
+                                                    params.indices[section];
       size_t output_offset_leading = (blockIdx.x / blocks_last_axis) * section_size_aligned;
       size_t output_position = output_offset_leading + position_last_axis_aligned - index_aligned;
       out_aligned[output_position] = input_data;
@@ -330,9 +330,9 @@ inline void SplitOpForwardGPU(const nnvm::NodeAttrs& attrs,
           if (splitting_last_axis) {
             // may not be possible to include whole axis if too many sections
             last_axis_elements =
-                entries_per_load > 0
-                    ? ((params.indices[params.num_sections] - params.indices[0]) / entries_per_load)
-                    : 0;
+                entries_per_load > 0 ?
+                    ((params.indices[params.num_sections] - params.indices[0]) / entries_per_load) :
+                    0;
           }
           while (block_size < last_axis_elements && (block_size < max_threads_block)) {
             block_size += 32;

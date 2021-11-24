@@ -113,14 +113,14 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu>* s,
 
       // Indices
       const Tensor<cpu, 1, IType> indices_l =
-          lhs_is_dense ? Tensor<cpu, 1, IType>()
-                       : lhs.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>(s);
+          lhs_is_dense ? Tensor<cpu, 1, IType>() :
+                         lhs.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>(s);
       const Tensor<cpu, 1, IType> indices_r =
-          rhs_is_dense ? Tensor<cpu, 1, IType>()
-                       : rhs.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>(s);
+          rhs_is_dense ? Tensor<cpu, 1, IType>() :
+                         rhs.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>(s);
       Tensor<cpu, 1, IType> indices_out =
-          is_dense_result ? Tensor<cpu, 1, IType>()
-                          : output.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>(s);
+          is_dense_result ? Tensor<cpu, 1, IType>() :
+                            output.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>(s);
 
       // Data
       // TODO(cjolivier01): Change to get_with_shape() calls
@@ -565,8 +565,8 @@ struct ElemwiseDnsCsrCsrKernel {
       for (int j = csr_indptr[i]; j < csr_indptr[i + 1]; ++j) {
         KERNEL_ASSIGN(out[j],
                       req,
-                      reverse ? OP::Map(dns_data[i * num_cols + csr_indices[j]], csr_data[j])
-                              : OP::Map(csr_data[j], dns_data[i * num_cols + csr_indices[j]]));
+                      reverse ? OP::Map(dns_data[i * num_cols + csr_indices[j]], csr_data[j]) :
+                                OP::Map(csr_data[j], dns_data[i * num_cols + csr_indices[j]]));
       }
     }
   }

@@ -20,7 +20,7 @@
 /*!
  * \file engine_shutdown_test.cc
  * \brief Tests engine shutdown for possible crashes
-*/
+ */
 #include <gtest/gtest.h>
 
 #include "../src/engine/engine_impl.h"
@@ -28,13 +28,14 @@
 
 /**
  * This test will help ensure we don't crash during engine shutdown.
- * The crash happens during a static destructor call, so this test may pass and then cause a test-run process crash.
+ * The crash happens during a static destructor call, so this test may pass and then cause a
+ * test-run process crash.
  */
 TEST(EngineShutdown, stop_without_crashing) {
-    static std::unique_ptr<mxnet::NDArray> ndArray;
-    {
-        auto engine = mxnet::Engine::_GetSharedRef();
-        ndArray = std::make_unique<mxnet::NDArray>(mxnet::Context::CPU());
-        engine->Stop();
-    }
+  static std::unique_ptr<mxnet::NDArray> ndArray;
+  {
+    auto engine = mxnet::Engine::_GetSharedRef();
+    ndArray     = std::make_unique<mxnet::NDArray>(mxnet::Context::CPU());
+    engine->Stop();
+  }
 }

@@ -168,7 +168,7 @@ Notice: in `interactive_print()`, you could also do value dumping with command "
 
 ### Test Coverage and Limitations
 
-This utility has been tested on Mac and Ubuntu with and without CUDNN and ONEDNN. Supports for `Tensor`, `TBlob`, and `NDArray`, as well as for CPU and GPU have been manually tested. 
+This utility has been tested on Mac and Ubuntu with and without CUDNN and oneDNN. Supports for `Tensor`, `TBlob`, and `NDArray`, as well as for CPU and GPU have been manually tested. 
 
 Currently, this utility only supports non-empty tensors and tensors with known shapes i.e. `tb_.ndim() > 0`. Also, this utility only supports dense `NDArray` objects, i.e. when the type is `kDefaultStorage`. 
 
