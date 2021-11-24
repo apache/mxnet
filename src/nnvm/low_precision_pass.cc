@@ -282,36 +282,44 @@ bool try_widest_dtype_node(const ObjectPtr& old_node,
                            const int target_dtype,
                            const std::unordered_map<Node*, ObjectPtr>& mirror_map,
                            nnvm::NodeEntryMap<NodeEntry>& mirror_target_dtype_map) {
-  static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
 
-  const auto& is_lp = [&](const NodeEntry& input) { return mirror_target_dtype_map.count(input); };
+  if (fmutate_inputs.count(old_node->op()) != 0 &&
+      fmutate_inputs[old_node->op()](old_node->attrs).size() != 0) {
+    return false;
+  }
 
-  if (std::any_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
-    if (std::all_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
-      for (const NodeEntry& old_node_input_entry : old_node->inputs) {
-        new_node->inputs.emplace_back(mirror_target_dtype_map[old_node_input_entry]);
-      }
-      // if we cannot infer the output type correctly, we cannot assume it is lp16
-      // In the worst case, there will be an additional amp_cast node
-      std::vector<int> in_types(old_node->inputs.size(), target_dtype);
-      std::vector<int> out_types(old_node->num_outputs(), -1);
-      if (infertype.count(old_node->op())) {
-        if (infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == true) {
-          for (size_t i = 0; i < old_node->num_outputs(); ++i) {
-            if (out_types[i] == target_dtype) {
-              const auto out_entry               = NodeEntry(old_node, i, 0);
-              mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
-            }
+  const auto& is_lp = [&](const NodeEntry& input) {
+    return mirror_target_dtype_map.count(input) &&
+           mirror_target_dtype_map[input].node->op() != Op::Get("amp_cast");
+  };
+
+  if (!std::any_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
+    return false;
+  }
+  if (std::all_of(old_node->inputs.begin(), old_node->inputs.end(), is_lp)) {
+    for (const NodeEntry& old_node_input_entry : old_node->inputs) {
+      new_node->inputs.emplace_back(mirror_target_dtype_map[old_node_input_entry]);
+    }
+    // if we cannot infer the output type correctly, we cannot assume it is lp16
+    std::vector<int> in_types(old_node->inputs.size(), target_dtype);
+    std::vector<int> out_types(old_node->num_outputs(), -1);
+    if (infertype.count(old_node->op())) {
+      if (infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == true) {
+        for (size_t i = 0; i < old_node->num_outputs(); ++i) {
+          if (out_types[i] == target_dtype) {
+            const auto out_entry               = NodeEntry(old_node, i, 0);
+            mirror_target_dtype_map[out_entry] = NodeEntry(new_node, i, 0);
           }
         }
       }
-    } else {
-      const std::string& suffix = GetSuffix(old_node->inputs[0], mirror_map);
-      AddMultiCastNode(old_node->inputs, suffix, mirror_map, new_node);
     }
-    return true;
+  } else {
+    const std::string& suffix = GetSuffix(old_node->inputs[0], mirror_map);
+    AddMultiCastNode(old_node->inputs, suffix, mirror_map, new_node);
   }
-  return false;
+  return true;
 }
 
 Graph ReducePrecision(Graph&& src) {
