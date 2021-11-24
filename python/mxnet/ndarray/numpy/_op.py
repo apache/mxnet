@@ -535,7 +535,7 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
     if shape is not None:
         raise NotImplementedError("Assigning new shape is not supported at this moment")
     try:
-        dtype = dtype if isinstance(dtype, str) else dtype_list[dtype]
+        dtype = dtype if isinstance(dtype, str) else _np.dtype(dtype).name
     except:
         raise NotImplementedError("Do not support this dtype at this moment")
     return _npi.empty_like_fallback(prototype, dtype=dtype, order=order, subok=subok, shape=shape)
