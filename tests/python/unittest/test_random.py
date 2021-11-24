@@ -499,7 +499,7 @@ def test_random_seed_setting_for_context():
         samples_imp = []
         samples_sym = []
         # Collect random number samples from the generators of all devices, each seeded with the same number.
-        for dev_id in range(0, mx.context.num_gpus() if dev_type == 'gpu' else 1):
+        for dev_id in range(0, mx.device.num_gpus() if dev_type == 'gpu' else 1):
             with mx.Context(dev_type, dev_id):
                 ctx = mx.context.current_context()
                 seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
