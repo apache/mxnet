@@ -1958,13 +1958,13 @@ int MXGetVersion(int* out) {
   API_END();
 }
 
-int MXGetBranch(const char **out) {
+int MXGetBranch(const char** out) {
   API_BEGIN();
   *out = MXNET_BRANCH;
   API_END();
 }
 
-int MXGetCommitHash(const char **out) {
+int MXGetCommitHash(const char** out) {
   API_BEGIN();
   *out = MXNET_COMMIT_HASH;
   API_END();

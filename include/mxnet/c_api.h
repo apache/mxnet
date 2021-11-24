@@ -555,14 +555,14 @@ MXNET_DLL int MXGetVersion(int* out);
  * \param pointer to the string holding the branch name
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXGetBranch(const char **out);
+MXNET_DLL int MXGetBranch(const char** out);
 
 /*!
  * \brief get the MXNet library commit hash at build time, usually provided by cmake
  * \param pointer to the string holding the commit hash
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXGetCommitHash(const char **out);
+MXNET_DLL int MXGetCommitHash(const char** out);
 
 /*!
  * \brief Load TVM operator from the binary library
