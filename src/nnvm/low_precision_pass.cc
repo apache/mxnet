@@ -165,7 +165,7 @@ static bool CheckConditionalFP32(
   }
 }
 
-// returns whether original node was used, or it had to be casted to f32
+// returns true when the original node was used, and false when it had to be cast to f32
 bool keep_original_input_or_cast_it_to_f32(
     const ObjectPtr& new_node,
     const NodeEntry& old_node_input_entry,
@@ -176,8 +176,10 @@ bool keep_original_input_or_cast_it_to_f32(
     new_node->inputs.emplace_back(mirror_fp32_map[old_node_input_entry]);
     return false;
   } else if (mirror_target_dtype_map.count(old_node_input_entry) &&
-             mirror_target_dtype_map.at(old_node_input_entry).node->op() != nullptr &&
-             mirror_target_dtype_map.at(old_node_input_entry).node->op()->name != "amp_cast") {
+             mirror_target_dtype_map.at(old_node_input_entry).node->op() != Op::Get("amp_cast") &&
+             old_node_input_entry.node->is_variable() == false) {
+    // we never cast variables to f32 (even the ones with lp16 dtype), as they are the part of the
+    // original graph. We only cast the nodes, that we cast to lp16 ourself
     const ObjectPtr new_node_input_node = mirror_map.at(old_node_input_entry.node.get());
     const NodeEntry new_node_input_node_entry =
         NodeEntry{new_node_input_node, old_node_input_entry.index, old_node_input_entry.version};
@@ -198,8 +200,7 @@ bool keep_original_input_or_cast_it_to_f32(
   }
 }
 
-// Here we assume, that this node works on f32 inputs (this only matters for inputs that could have
-// been cast to low precision, ie. some other operator. For the rest, we can use the original nodes)
+// Here we assume, that the nodes that are already cast to low precision, originally had f32 output
 void keep_original_node(const ObjectPtr& old_node,
                         const ObjectPtr& new_node,
                         const std::unordered_map<Node*, ObjectPtr>& mirror_map,
@@ -242,7 +243,7 @@ bool try_low_precision(const ObjectPtr& old_node,
 
   for (size_t i = 0; i < old_node->inputs.size(); ++i) {
     const auto& old_node_input_entry = old_node->inputs[i];
-    if ((in_types[i] == target_dtype)) {
+    if (in_types[i] == target_dtype) {
       if (mirror_target_dtype_map.count(old_node_input_entry)) {
         new_node->inputs.emplace_back(mirror_target_dtype_map[old_node_input_entry]);
       } else {
@@ -263,7 +264,7 @@ bool try_low_precision(const ObjectPtr& old_node,
                                                   mirror_map,
                                                   mirror_fp32_map,
                                                   mirror_target_dtype_map) ||
-            in_types[i] == mshadow::kFloat32);
+            in_types[i] == mshadow::kFloat32 || in_types[i] == -1);
     }
   }
 
@@ -375,32 +376,54 @@ Graph ReducePrecision(Graph&& src) {
         keep_original_node(
             old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
     } else {
-      // handle operators from LP16_FP32_FUNCS - operators that can run on lp16, but only when
-      // inputs are already casted
-      const bool any_lp = std::any_of(
+      bool try_lp = std::any_of(
           old_node->inputs.begin(), old_node->inputs.end(), [&](const auto& old_node_input_entry) {
             return mirror_target_dtype_map.count(old_node_input_entry);
           });
-      if (!any_lp || !try_low_precision(old_node,
-                                        new_node,
-                                        target_dtype,
-                                        mirror_map,
-                                        mirror_fp32_map,
-                                        mirror_target_dtype_map)) {
+
+      const NodeEntry new_node_entry = NodeEntry(new_node, 0, 0);
+      if (old_node->op() == Op::Get("amp_cast")) {
+        const op::AMPCastParam& param = nnvm::get<op::AMPCastParam>(old_node->attrs.parsed);
+        if (param.dtype == target_dtype) {
+          if (mirror_target_dtype_map.count(old_node->inputs[0]) == 0) {
+            mirror_target_dtype_map[old_node->inputs[0]] = new_node_entry;
+          }
+          mirror_target_dtype_map[NodeEntry(old_node, 0, 0)] = new_node_entry;
+        } else if (try_lp && param.dtype == mshadow::kFloat32 &&
+                   mirror_fp32_map.count(old_node->inputs[0]) == 0) {
+          mirror_fp32_map[old_node->inputs[0]] = new_node_entry;
+        }
+        try_lp = false;
+      } else if ((old_node->is_variable() && old_node->attrs.dict.count("__dtype__") > 0 &&
+                  old_node->attrs.dict.at("__dtype__") == std::to_string(target_dtype)) ||
+                 (data_name_types.count(old_node->attrs.name) &&
+                  data_name_types.at(old_node->attrs.name) == target_dtype)) {
+        mirror_target_dtype_map[NodeEntry(old_node, 0, 0)] = new_node_entry;
+      }
+
+      // handle operators from LP16_FP32_FUNCS - operators that can run on lp16, but only when
+      // inputs are already cast
+      bool runs_lp16 = try_lp && try_low_precision(old_node,
+                                                   new_node,
+                                                   target_dtype,
+                                                   mirror_map,
+                                                   mirror_fp32_map,
+                                                   mirror_target_dtype_map);
+      if (!runs_lp16) {
         keep_original_node(
             old_node, new_node, mirror_map, mirror_fp32_map, mirror_target_dtype_map);
-        if (old_node->op() != nullptr && old_node->op()->name == "amp_cast") {
-          const op::AMPCastParam& param = nnvm::get<op::AMPCastParam>(old_node->attrs.parsed);
-          if (param.dtype == target_dtype) {
-            mirror_target_dtype_map[old_node->inputs[0]]       = NodeEntry(new_node, 0, 0);
-            mirror_target_dtype_map[NodeEntry(old_node, 0, 0)] = NodeEntry(new_node, 0, 0);
-          }
-        }
       }
     }
     mirror_map[old_node.get()] = std::move(new_node);
     for (const NodeEntry& old_node_input_entry : old_node->inputs) {
-      if (old_node_input_entry.node->is_variable()) {
+      const auto& old_node_input_node = old_node_input_entry.node;
+      if (old_node_input_node->op() == Op::Get("amp_cast") &&
+          old_node_input_node->inputs[0].node->is_variable() &&
+          nnvm::get<op::AMPCastParam>(old_node_input_node->attrs.parsed).dtype == target_dtype) {
+        output_nodes_of_variable[old_node_input_node->inputs[0]].push_back(old_node.get());
+      } else if (old_node_input_node->is_variable() &&
+                 (old_node->op() != Op::Get("amp_cast") ||
+                  nnvm::get<op::AMPCastParam>(old_node->attrs.parsed).dtype != target_dtype)) {
         output_nodes_of_variable[old_node_input_entry].push_back(old_node.get());
       }
     }
@@ -422,23 +445,20 @@ Graph ReducePrecision(Graph&& src) {
   std::vector<NodeEntry> known_node_entry_types;
   if (cast_optional_params) {
     for (auto& kv : output_nodes_of_variable) {
-      NodeEntry src_variable_node_entry = kv.first;
-      if (!mirror_target_dtype_map.count(src_variable_node_entry)) {
+      NodeEntry old_variable_node_entry = kv.first;
+      if (!mirror_target_dtype_map.count(old_variable_node_entry)) {
         continue;
       }
 
-      bool is_used_with_and_without_cast         = false;
-      const ObjectPtr& dst_variable_node         = mirror_map[src_variable_node_entry.node.get()];
-      std::vector<Node*>& variable_out_src_nodes = kv.second;
-      for (Node* src_node : variable_out_src_nodes) {
-        if (src_node->op()->name == "amp_cast" || src_node->op()->name == "amp_multicast") {
-          continue;
-        }
-        Node* dst_node = mirror_map[src_node].get();
-        for (NodeEntry dst_node_input_entry : dst_node->inputs) {
-          // if input of this node is directly the variable, and not the amp_cast, then this
-          // variable cannot be casted offline
-          if (dst_node_input_entry.node == dst_variable_node) {
+      bool is_used_with_and_without_cast    = false;
+      const ObjectPtr& new_variable_node    = mirror_map[old_variable_node_entry.node.get()];
+      std::vector<Node*>& old_variable_outs = kv.second;
+      for (Node* const old_node : old_variable_outs) {
+        Node* const new_node = mirror_map[old_node].get();
+        for (const NodeEntry new_node_input_entry : new_node->inputs) {
+          // if input of this node is directly the variable, and not the amp_cast or amp_multicast,
+          // then this variable cannot be cast offline
+          if (new_node_input_entry.node == new_variable_node) {
             is_used_with_and_without_cast = true;
             break;
           }
@@ -449,19 +469,20 @@ Graph ReducePrecision(Graph&& src) {
       }
 
       if (is_used_with_and_without_cast ||
-          data_name_types.count(src_variable_node_entry.node->attrs.name)) {
+          data_name_types.count(old_variable_node_entry.node->attrs.name)) {
         continue;
       }
 
-      NodeEntryEqual is_equal;
-      NodeEntry dst_variable_node_entry = NodeEntry{
-          dst_variable_node, src_variable_node_entry.index, src_variable_node_entry.version};
-      known_node_entry_types.push_back(dst_variable_node_entry);
-      for (Node* src_node : variable_out_src_nodes) {
-        Node* dst_node = mirror_map[src_node].get();
-        for (NodeEntry& dst_node_input_entry : dst_node->inputs) {
-          if (is_equal(dst_node_input_entry, mirror_target_dtype_map[src_variable_node_entry])) {
-            dst_node_input_entry = dst_variable_node_entry;
+      const NodeEntryEqual is_equal;
+      const NodeEntry new_variable_node_entry = NodeEntry{
+          new_variable_node, old_variable_node_entry.index, old_variable_node_entry.version};
+      known_node_entry_types.push_back(new_variable_node_entry);
+      for (Node* const old_node : old_variable_outs) {
+        Node* const new_node = mirror_map[old_node].get();
+        for (NodeEntry& new_node_input_entry : new_node->inputs) {
+          if (new_node_input_entry.node->op() == Op::Get("amp_cast") &&
+              is_equal(new_node_input_entry.node->inputs[0], new_variable_node_entry)) {
+            new_node_input_entry = new_variable_node_entry;
             break;
           }
         }
@@ -474,8 +495,8 @@ Graph ReducePrecision(Graph&& src) {
 
   const nnvm::IndexedGraph& idx = ret.indexed_graph();
   nnvm::DTypeVector known_types(idx.num_node_entries(), -1);
-  for (const auto& dst_entry : known_node_entry_types) {
-    auto id         = idx.entry_id(dst_entry);
+  for (const auto& new_entry : known_node_entry_types) {
+    auto id         = idx.entry_id(new_entry);
     known_types[id] = target_dtype;
   }
   ret.attrs["dtype"] = std::make_shared<dmlc::any>(std::move(known_types));
