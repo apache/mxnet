@@ -118,7 +118,7 @@ class NaiveEngine final : public Engine {
     NaiveOpr* opr                = op->Cast<NaiveOpr>();
     opr->profiling = profiling && profiler->IsProfiling(profiler::Profiler::kSymbolic);
     this->PushAsync(
-        [&](RunContext ctx, CallbackOnComplete on_complete) {
+        [&](RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
           if (opr->profiling) {
             std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
             if (profiler->AggregateEnabled()) {
@@ -128,7 +128,7 @@ class NaiveEngine final : public Engine {
                 std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(), attrs.release());
             opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
           }
-          opr->fn(ctx, on_complete);
+          opr->fn(ctx, on_start, on_complete);
           if (opr->profiling) {
             opr->opr_profile->stop();
           }
@@ -156,6 +156,7 @@ class NaiveEngine final : public Engine {
                  bool wait            = false) override {
     std::promise<void> promise;
     std::future<void> future     = promise.get_future();
+    CallbackOnStart on_start     = CreateOnStart(NaiveEngine::OnStart, &promise);
     CallbackOnComplete callback  = CreateCallback(NaiveEngine::OnComplete, &promise);
     profiler::Profiler* profiler = profiler::Profiler::Get();
     auto opr_deleter             = [this](NaiveOpr* p) { this->DeleteOperator(p); };
@@ -189,12 +190,12 @@ class NaiveEngine final : public Engine {
         streams_[dev_id]     = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
         aux_streams_[dev_id] = new GPUAuxStream(streams_[dev_id]);
       }
-      exec_fun(RunContext{exec_ctx, streams_[dev_id], aux_streams_[dev_id], false}, callback);
+      exec_fun(RunContext{exec_ctx, streams_[dev_id], aux_streams_[dev_id]}, on_start, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
     } else {
-      exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr, false}, callback);
+      exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr}, on_start, callback);
     }
     future.wait();
     // increment mutable var version
@@ -209,7 +210,9 @@ class NaiveEngine final : public Engine {
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
     NaiveVar* naive_var = NaiveVar::CastFromBase(var);
     this->PushAsync(
-        [delete_fn, naive_var](RunContext ctx, CallbackOnComplete on_complete) mutable {
+        [delete_fn, naive_var](
+            RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) mutable {
+          on_start();
           delete_fn(ctx);
           NaiveVar::Delete(naive_var);
           on_complete();
@@ -233,6 +236,8 @@ class NaiveEngine final : public Engine {
   }
 
  private:
+  // onstart
+  static void OnStart(Engine* engine, void* param, const dmlc::Error* error) {}
   // callback to oncomplete
   static void OnComplete(Engine* engine, void* param, const dmlc::Error* error) {
     static_cast<std::promise<void>*>(param)->set_value();
@@ -249,8 +254,8 @@ class NaiveEngine final : public Engine {
 #endif
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
-   * See also #309 (https://github.com/apache/mxnet/issues/309) and similar fix in threaded_engine.h.
-   * Without this, segfaults seen on CentOS7 in
+   * See also #309 (https://github.com/apache/mxnet/issues/309) and similar fix in
+   * threaded_engine.h. Without this, segfaults seen on CentOS7 in
    * test_operator_gpu.py:test_convolution_multiple_streams
    */
   std::shared_ptr<common::ObjectPool<NaiveOpr> > objpool_opr_ref_;

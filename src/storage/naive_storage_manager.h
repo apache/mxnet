@@ -43,7 +43,7 @@ class NaiveStorageManager final : public StorageManager {
    * \brief Default destructor.
    */
   ~NaiveStorageManager() = default;
-  void Alloc(Storage::Handle* handle) override;
+  void Alloc(Storage::Handle* handle, bool failsafe) override;
   void Free(Storage::Handle handle) override;
 
   void DirectFree(Storage::Handle handle) override {
@@ -55,8 +55,8 @@ class NaiveStorageManager final : public StorageManager {
 };  // class NaiveStorageManager
 
 template <class DeviceStorage>
-void NaiveStorageManager<DeviceStorage>::Alloc(Storage::Handle* handle) {
-  DeviceStorage::Alloc(handle);
+void NaiveStorageManager<DeviceStorage>::Alloc(Storage::Handle* handle, bool failsafe) {
+  DeviceStorage::Alloc(handle, failsafe);
 }
 
 template <class DeviceStorage>

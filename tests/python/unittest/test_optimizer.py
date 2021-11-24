@@ -587,7 +587,7 @@ def test_rms():
             compare_optimizer(opt1(use_fused_step=False, **kwarg),
                               opt2(use_fused_step=True, **kwarg), shapes, dtype,
                               rtol=rtol, atol=atol)
-            if default_context() == mx.cpu():
+            if default_device() == mx.cpu():
                 compare_optimizer(opt1(use_fused_step=False, **kwarg),
                                   opt2(use_fused_step=True, **kwarg),
                                   shapes, dtype, g_stype='row_sparse', rtol=rtol, atol=atol)

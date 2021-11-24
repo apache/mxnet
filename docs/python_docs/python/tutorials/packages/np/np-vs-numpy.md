@@ -33,19 +33,19 @@ In addition, an operator might not contain all arguments available in NumPy. For
 
 ## Extra functionalities
 
-The `mxnet.np` module aims to mimic NumPy.  Most extra functionalities that enhance NumPy for deep learning use are available on other modules, such as `npx` for operators used in deep learning and `autograd` for automatic differentiation. The `np` module API is not complete. One notable change is GPU support. Creating routines accepts a `ctx` argument:
+The `mxnet.np` module aims to mimic NumPy.  Most extra functionalities that enhance NumPy for deep learning use are available on other modules, such as `npx` for operators used in deep learning and `autograd` for automatic differentiation. The `np` module API is not complete. One notable change is GPU support. Creating routines accepts a `device` argument:
 
 ```{.python .input}
 gpu = npx.gpu() if npx.num_gpus() > 0 else npx.cpu()
-a = np.array(1, ctx=gpu)
-b = np.random.uniform(ctx=gpu)
-(a, b.context)
+a = np.array(1, device=gpu)
+b = np.random.uniform(device=gpu)
+(a, b.device)
 ```
 
 Methods to move data across devices.
 
 ```{.python .input}
-a.copyto(npx.cpu()), b.as_in_context(npx.cpu())
+a.copyto(npx.cpu()), b.to_device(npx.cpu())
 ```
 
 ## Default data types
@@ -99,7 +99,7 @@ format, whereas `npx.savez` can save a collection of both dense and sparse
 arrays to the `.npz` format.
 
 ```{.python .input}
-a = np.array(1, ctx=gpu)
+a = np.array(1, device=gpu)
 npx.save('a', a)
 npx.load('a')
 npx.savez('a', a=a, b=a*2)

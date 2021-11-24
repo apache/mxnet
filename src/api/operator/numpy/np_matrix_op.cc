@@ -36,7 +36,7 @@ MXNET_REGISTER_API("_npi.transpose")
       using namespace runtime;
       static const nnvm::Op* op = Op::Get("_npi_transpose");
       nnvm::NodeAttrs attrs;
-      op::NumpyTransposeParam param;
+      op::NumpyTransposeParam param = {};
       if (args[1].type_code() == kNull) {
         param.axes = TShape(-1, 0);
       } else if (args[1].type_code() == kDLInt) {
@@ -59,7 +59,7 @@ MXNET_REGISTER_API("_npi.expand_dims")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_expand_dims");
       nnvm::NodeAttrs attrs;
-      op::ExpandDimParam param;
+      op::ExpandDimParam param = {};
       param.axis = args[1].operator int();
 
       // we directly copy ExpandDimParam, which is trivially-copyable
@@ -78,7 +78,7 @@ MXNET_REGISTER_API("_npi.stack").set_body([](runtime::MXNetArgs args, runtime::M
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_stack");
   nnvm::NodeAttrs attrs;
-  op::StackParam param;
+  op::StackParam param = {};
 
   int i          = 0;
   int num_inputs = 0;
@@ -109,7 +109,7 @@ MXNET_REGISTER_API("_npi.flip").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_flip");
   nnvm::NodeAttrs attrs;
-  op::FlipParam param;
+  op::FlipParam param = {};
 
   NDArray* out      = args[2].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
@@ -139,17 +139,17 @@ MXNET_REGISTER_API("_npi.concatenate")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_concatenate");
       nnvm::NodeAttrs attrs;
-      op::NumpyConcatenateParam param;
+      op::ConcatParam param = {};
       int arg_size   = args.num_args;
       param.num_args = arg_size - 2;
       if (args[arg_size - 2].type_code() == kNull) {
-        param.axis = dmlc::nullopt;
+        param.dim = dmlc::nullopt;
       } else {
-        param.axis = args[arg_size - 2].operator int();
+        param.dim = args[arg_size - 2].operator int();
       }
       attrs.parsed = param;
       attrs.op     = op;
-      SetAttrDict<op::NumpyConcatenateParam>(&attrs);
+      SetAttrDict<op::ConcatParam>(&attrs);
       int num_inputs = arg_size - 2;
       std::vector<NDArray*> inputs;
       inputs.reserve(num_inputs);
@@ -172,7 +172,7 @@ MXNET_REGISTER_API("_npi.dstack")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_dstack");
       nnvm::NodeAttrs attrs;
-      op::ConcatParam param;
+      op::ConcatParam param = {};
       int args_size = args.size();
       // param.num_args
       param.num_args = args_size;
@@ -198,7 +198,7 @@ MXNET_REGISTER_API("_npi.split").set_body([](runtime::MXNetArgs args, runtime::M
   int num_inputs     = 1;
   NDArray* inputs[]  = {args[0].operator mxnet::NDArray*()};
   nnvm::NodeAttrs attrs;
-  op::SplitParam param;
+  op::SplitParam param = {};
   param.axis         = args[2].operator int();
   param.squeeze_axis = false;
   if (args[1].type_code() == kDLInt) {
@@ -235,7 +235,7 @@ MXNET_REGISTER_API("_npi.roll").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   static const nnvm::Op* op = Op::Get("_npi_roll");
   nnvm::NodeAttrs attrs;
-  op::NumpyRollParam param;
+  op::NumpyRollParam param = {};
   if (args[1].type_code() == kNull) {
     param.shift = dmlc::nullopt;
   } else if (args[1].type_code() == kDLInt) {
@@ -264,7 +264,7 @@ MXNET_REGISTER_API("_npi.rot90").set_body([](runtime::MXNetArgs args, runtime::M
   using namespace runtime;
   static const nnvm::Op* op = Op::Get("_npi_rot90");
   nnvm::NodeAttrs attrs;
-  op::NumpyRot90Param param;
+  op::NumpyRot90Param param = {};
   param.k = args[1].operator int();
   if (args[2].type_code() == kNull) {
     param.axes = dmlc::nullopt;
@@ -288,7 +288,7 @@ MXNET_REGISTER_API("_npi.column_stack")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_column_stack");
       nnvm::NodeAttrs attrs;
-      op::NumpyColumnStackParam param;
+      op::NumpyColumnStackParam param = {};
       param.num_args = args.size();
 
       attrs.parsed = param;
@@ -309,7 +309,7 @@ MXNET_REGISTER_API("_npi.hstack")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_hstack");
       nnvm::NodeAttrs attrs;
-      op::ConcatParam param;
+      op::ConcatParam param = {};
       param.num_args = args.size();
 
       attrs.parsed = param;
@@ -330,7 +330,7 @@ MXNET_REGISTER_API("_npi.array_split")
       using namespace runtime;
       static const nnvm::Op* op = Op::Get("_npi_array_split");
       nnvm::NodeAttrs attrs;
-      op::SplitParam param;
+      op::SplitParam param = {};
       param.axis         = args[2].operator int();
       param.squeeze_axis = false;
       if (args[1].type_code() == kDLInt) {
@@ -369,7 +369,7 @@ MXNET_REGISTER_API("_npi.dsplit")
       CHECK_GE(inputs[0]->shape().ndim(), 3)
           << "ValueError: dsplit only works on arrays of 3 or more dimensions";
       nnvm::NodeAttrs attrs;
-      op::SplitParam param;
+      op::SplitParam param = {};
       param.axis         = 2;
       param.squeeze_axis = false;
       if (args[1].type_code() == kDLInt) {
@@ -408,7 +408,7 @@ MXNET_REGISTER_API("_npi.hsplit")
       CHECK_GE(inputs[0]->shape().ndim(), 1)
           << "ValueError: hsplit only works on arrays of 1 or more dimensions";
       nnvm::NodeAttrs attrs;
-      op::SplitParam param;
+      op::SplitParam param = {};
       param.axis         = 0;
       param.squeeze_axis = false;
       if (args[1].type_code() == kDLInt) {
@@ -445,7 +445,7 @@ MXNET_REGISTER_API("_npi.vsplit")
       CHECK_GE(inputs[0]->shape().ndim(), 2)
           << "ValueError: vsplit only works on arrays of 2 or more dimensions";
       nnvm::NodeAttrs attrs;
-      op::SplitParam param;
+      op::SplitParam param = {};
       param.axis         = 0;
       param.squeeze_axis = false;
       if (args[1].type_code() == kDLInt) {
@@ -479,7 +479,7 @@ MXNET_REGISTER_API("_npi.diag").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_diag");
   nnvm::NodeAttrs attrs;
-  op::NumpyDiagParam param;
+  op::NumpyDiagParam param = {};
   if (features::is_enabled(features::INT64_TENSOR_SIZE))
     param.k = args[1].operator int64_t();
   else
@@ -499,7 +499,7 @@ MXNET_REGISTER_API("_npi.rollaxis")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_rollaxis");
       nnvm::NodeAttrs attrs;
-      op::NumpyRollaxisParam param;
+      op::NumpyRollaxisParam param = {};
       param.axis   = args[1].operator int();
       param.start  = args[2].operator int();
       attrs.parsed = param;
@@ -517,7 +517,7 @@ MXNET_REGISTER_API("_npi.reshape")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_reshape");
       nnvm::NodeAttrs attrs;
-      op::NumpyXReshapeParam param;
+      op::NumpyXReshapeParam param = {};
       if (args[1].type_code() == kNull) {
         param.newshape = TShape(-1, 0);
       } else if (args[1].type_code() == kDLInt) {
@@ -542,7 +542,7 @@ MXNET_REGISTER_API("_npi.moveaxis")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_moveaxis");
       nnvm::NodeAttrs attrs;
-      op::NumpyMoveaxisParam param;
+      op::NumpyMoveaxisParam param = {};
       if (args[1].type_code() == kNull) {
         param.source = TShape(-1, 0);
       } else if (args[1].type_code() == kDLInt) {
@@ -572,7 +572,7 @@ MXNET_REGISTER_API("_npi.diagonal")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_diagonal");
       nnvm::NodeAttrs attrs;
-      op::NumpyDiagonalParam param;
+      op::NumpyDiagonalParam param = {};
       if (features::is_enabled(features::INT64_TENSOR_SIZE))
         param.offset = args[1].operator int64_t();
       else
@@ -607,7 +607,7 @@ MXNET_REGISTER_API("_npi.diagflat")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_diagflat");
       nnvm::NodeAttrs attrs;
-      op::NumpyDiagflatParam param;
+      op::NumpyDiagflatParam param = {};
       param.k         = args[1].operator int();
       int num_inputs  = 1;
       int num_outputs = 0;
@@ -624,7 +624,7 @@ MXNET_REGISTER_API("_npi.squeeze")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_squeeze");
       nnvm::NodeAttrs attrs;
-      op::SqueezeParam param;
+      op::SqueezeParam param = {};
       if (args[1].type_code() == kNull) {
         param.axis = dmlc::optional<mxnet::Tuple<int>>();
       } else if (args[1].type_code() == kDLInt) {
@@ -647,7 +647,7 @@ MXNET_REGISTER_API("_npi.tril_indices")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_tril_indices");
       nnvm::NodeAttrs attrs;
-      op::NumpyTrilindicesParam param;
+      op::NumpyTrilindicesParam param = {};
       if (features::is_enabled(features::INT64_TENSOR_SIZE)) {
         param.n = args[0].operator int64_t();
         param.k = args[1].operator int64_t();
@@ -677,7 +677,7 @@ MXNET_REGISTER_API("_npi.vstack")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_vstack");
       nnvm::NodeAttrs attrs;
-      op::NumpyVstackParam param;
+      op::NumpyVstackParam param = {};
       param.num_args = args.size();
 
       attrs.parsed = param;

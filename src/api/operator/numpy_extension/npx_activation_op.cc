@@ -57,7 +57,7 @@ MXNET_REGISTER_API("_npx.activation")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_activation");
-      op::ActivationParam param;
+      op::ActivationParam param = {};
       // act_type
       param.act_type = String2MXNetActType(args[1].operator std::string());
       attrs.parsed   = param;

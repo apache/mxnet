@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.tensorinv")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_tensorinv");
       nnvm::NodeAttrs attrs;
-      op::TensorinvParam param;
+      op::TensorinvParam param = {};
       param.ind    = args[1].operator int();
       attrs.parsed = param;
       attrs.op     = op;

@@ -645,11 +645,15 @@ static_assert(CUDNN_PATCHLEVEL < 100 && CUDNN_MINOR < 10,
       "Compiled-against cuDNN version " CUDNN_VERSION_AS_STRING \
       " is too old, please upgrade system to version " QUOTEVALUE(min_version) " or later.")
 
-#define CUDNN_CALL(func)                                                      \
-  {                                                                           \
-    cudnnStatus_t e = (func);                                                 \
-    CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
+#define CUDNN_CALL_S(f, s)                                       \
+  {                                                              \
+    cudnnStatus_t unclash_cxx_e = (f);                           \
+    if (unclash_cxx_e != CUDNN_STATUS_SUCCESS)                   \
+      LOG(s) << "cuDNN: " << cudnnGetErrorString(unclash_cxx_e); \
   }
+
+#define CUDNN_CALL(f)          CUDNN_CALL_S(f, FATAL)
+#define CUDNN_CALL_NONFATAL(f) CUDNN_CALL_S(f, WARNING)
 
 #define CUTENSOR_CALL(func)                                                            \
   {                                                                                    \
@@ -735,8 +739,8 @@ static inline __device__ void atomicAdd(mshadow::half::half_t* address, mshadow:
     mshadow::half::half_t hsum;
     hsum.half_ = reinterpret_cast<size_t>(address) & 2 ? (old >> 16) : (old & 0xffff);
     hsum += val;
-    old = reinterpret_cast<size_t>(address) & 2 ? (old & 0xffff) | (hsum.half_ << 16)
-                                                : (old & 0xffff0000) | hsum.half_;
+    old = reinterpret_cast<size_t>(address) & 2 ? (old & 0xffff) | (hsum.half_ << 16) :
+                                                  (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
 }

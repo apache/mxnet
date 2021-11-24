@@ -161,9 +161,9 @@ Example::
                                      [](const NodeAttrs& attrs) {
                                        const HistogramParam& params =
                                            nnvm::get<HistogramParam>(attrs.parsed);
-                                       return params.bin_cnt.has_value()
-                                                  ? std::vector<std::string>{"data"}
-                                                  : std::vector<std::string>{"data", "bins"};
+                                       return params.bin_cnt.has_value() ?
+                                                  std::vector<std::string>{"data"} :
+                                                  std::vector<std::string>{"data", "bins"};
                                      })
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {

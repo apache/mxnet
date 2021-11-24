@@ -52,29 +52,29 @@ kv = mx.kv.create(args.name)
 my_rank = kv.rank
 my_num_workers = kv.num_workers
 
-has_gpu = mx.context.num_gpus() > 0
+has_gpu = mx.device.num_gpus() > 0
 
-def get_current_context(device=False):
+def get_current_device(device=False):
     if has_gpu and device==True:
         return mx.gpu(kv.local_rank)
     else:
-        return mx.current_context()
+        return mx.current_device()
 
 def test_pushpull():
     def check_default_keys(nrepeat=3):
         # init kv dns keys
-        kv.broadcast('3', mx.nd.ones(shape, ctx=get_current_context(device=True)), mx.nd.ones(shape, ctx=get_current_context(device=True)))
-        kv.broadcast('99', mx.nd.ones(big_shape, ctx=get_current_context(device=True)), mx.nd.ones(big_shape, ctx=get_current_context(device=True)))
+        kv.broadcast('3', mx.nd.ones(shape, ctx=get_current_device(device=True)), mx.nd.ones(shape, ctx=get_current_device(device=True)))
+        kv.broadcast('99', mx.nd.ones(big_shape, ctx=get_current_device(device=True)), mx.nd.ones(big_shape, ctx=get_current_device(device=True)))
         for _ in range(nrepeat):
             scale = my_rank + 1
             num = (my_num_workers + 1) * my_num_workers / 2
 
-            arr = mx.nd.ones(shape, ctx=get_current_context(device=True)) * scale
+            arr = mx.nd.ones(shape, ctx=get_current_device(device=True)) * scale
             # inplace
             kv.pushpull('3', arr)
             check_diff_to_scalar(arr, num)
 
-            big_arr = mx.nd.ones(big_shape, ctx=get_current_context(device=True)) * scale
+            big_arr = mx.nd.ones(big_shape, ctx=get_current_device(device=True)) * scale
             # inplace
             kv.pushpull('99', big_arr)
             check_diff_to_scalar(big_arr, num)
@@ -85,7 +85,7 @@ def test_pushpull():
 def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
         print("check_broadcast: {}, {}, {}, {}".format(kv, cur_keys, cur_shape, device))
-        ctx = get_current_context(device=device)
+        ctx = get_current_device(device=device)
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
             expected = i

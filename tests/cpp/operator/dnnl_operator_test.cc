@@ -559,8 +559,8 @@ void TestConcatOp(const OpAttrs& attrs, VerifyFunc verify_fn, bool backwards = f
       int dim             = std::stoi(str_dim);
       if (dim >= in_arr.arr.shape().ndim())
         continue;
-      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs)
-                              : static_cast<float>(attrs.num_inputs);
+      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
+                                static_cast<float>(attrs.num_inputs);
 
       std::vector<float> scale_vector(in_arr.arr.shape().ndim());
       for (int i = 0; i < in_arr.arr.shape().ndim(); i++)

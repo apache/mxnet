@@ -186,9 +186,9 @@ class CuDNNConvolutionOp {
     DType* gdata_ptr = GetNdPtr(in_grad[conv::kData], param_.kernel.ndim() + 2, s);
 
     size_t backward_workspace_byte =
-        parallelize_backward_kernels_
-            ? back_workspace_byte_dgrad_ + back_workspace_byte_wgrad_
-            : std::max(back_workspace_byte_dgrad_, back_workspace_byte_wgrad_);
+        parallelize_backward_kernels_ ?
+            back_workspace_byte_dgrad_ + back_workspace_byte_wgrad_ :
+            std::max(back_workspace_byte_dgrad_, back_workspace_byte_wgrad_);
     Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, backward_workspace_byte);
     size_t workspace_size           = TensorSizeBytes(workspace);
     DType* workspace_dptr_wgrad     = workspace.dptr_;
@@ -481,9 +481,9 @@ class CuDNNConvolutionOp {
     // Forward Algorithm Find/Get() v7
     std::vector<cudnnConvolutionFwdAlgoPerf_t> fwd_results(MaxForwardAlgos(s->dnn_handle_));
     int actual_fwd_algos     = 0;
-    auto fwd_algo_discoverer = param_.cudnn_tune.value() == conv::kOff
-                                   ? cudnnGetConvolutionForwardAlgorithm_v7
-                                   : cudnnFindConvolutionForwardAlgorithm;
+    auto fwd_algo_discoverer = param_.cudnn_tune.value() == conv::kOff ?
+                                   cudnnGetConvolutionForwardAlgorithm_v7 :
+                                   cudnnFindConvolutionForwardAlgorithm;
     CUDNN_CALL((*fwd_algo_discoverer)(s->dnn_handle_,
                                       in_desc_,
                                       filter_desc_,
@@ -502,9 +502,9 @@ class CuDNNConvolutionOp {
     int actual_bwd_filter_algos = 0;
     // In cudnn v7.1.4, find() returned wgrad algos that could fail for large c if we
     // were summing into the output (i.e. beta != 0).  Get() returned OK algos though.
-    auto bwd_filter_algo_discoverer = param_.cudnn_tune.value() == conv::kOff
-                                          ? cudnnGetConvolutionBackwardFilterAlgorithm_v7
-                                          : cudnnFindConvolutionBackwardFilterAlgorithm;
+    auto bwd_filter_algo_discoverer = param_.cudnn_tune.value() == conv::kOff ?
+                                          cudnnGetConvolutionBackwardFilterAlgorithm_v7 :
+                                          cudnnFindConvolutionBackwardFilterAlgorithm;
     CUDNN_CALL((*bwd_filter_algo_discoverer)(s->dnn_handle_,
                                              in_desc_,
                                              out_desc_,
@@ -521,9 +521,9 @@ class CuDNNConvolutionOp {
     auto max_bwd_data_algos = MaxBackwardDataAlgos(s->dnn_handle_);
     std::vector<cudnnConvolutionBwdDataAlgoPerf_t> bwd_data_results(max_bwd_data_algos);
     int actual_bwd_data_algos     = 0;
-    auto bwd_data_algo_discoverer = param_.cudnn_tune.value() == conv::kOff
-                                        ? cudnnGetConvolutionBackwardDataAlgorithm_v7
-                                        : cudnnFindConvolutionBackwardDataAlgorithm;
+    auto bwd_data_algo_discoverer = param_.cudnn_tune.value() == conv::kOff ?
+                                        cudnnGetConvolutionBackwardDataAlgorithm_v7 :
+                                        cudnnFindConvolutionBackwardDataAlgorithm;
     CUDNN_CALL((*bwd_data_algo_discoverer)(s->dnn_handle_,
                                            filter_desc_,
                                            out_desc_,

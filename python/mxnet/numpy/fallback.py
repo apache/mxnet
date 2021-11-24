@@ -94,7 +94,6 @@ fallbacks = [
     'pv',
     'rate',
     'real',
-    'result_type',
     'roots',
     'searchsorted',
     'select',

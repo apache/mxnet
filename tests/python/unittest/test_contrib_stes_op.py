@@ -18,7 +18,7 @@
 from common import xfail_when_nonstandard_decimal_separator
 import mxnet as mx
 from mxnet import nd, autograd, gluon
-from mxnet.test_utils import default_context
+from mxnet.test_utils import default_device
 
 
 @mx.util.use_np
@@ -37,11 +37,11 @@ class RoundSTENET(gluon.HybridBlock):
 
     def forward(self, x):
         # Simple forward function: round_ste(w*x)*w
-        out = self.w.data(x.ctx) * x
+        out = self.w.data(x.device) * x
         out = mx.npx.round_ste(out)
         # Uncomment to see how test fails with round
         # out = F.round(out)
-        out = out * self.w.data(x.ctx)
+        out = out * self.w.data(x.device)
         return out
 
 
@@ -61,25 +61,25 @@ class SignSTENET(gluon.HybridBlock):
 
     def forward(self, x):
         # Simple forward function: sign_ste(w*x)*w
-        out = self.w.data(x.ctx) * x
+        out = self.w.data(x.device) * x
         out = mx.npx.sign_ste(out)
         # Uncomment to see how test fails with sign
         # out = F.sign(out)
-        out = out * self.w.data(x.ctx)
+        out = out * self.w.data(x.device)
         return out
 
 
-def check_ste(net_type_str, w_init, hybridize, in_data, ctx=None):
-    ctx = ctx or default_context()
+def check_ste(net_type_str, w_init, hybridize, in_data, device=None):
+    device = device or default_device()
 
     net = eval(net_type_str)(w_init=w_init)
     if hybridize:
         net.hybridize()
     # Init
-    net.initialize(mx.init.Constant([w_init]), ctx=ctx)
+    net.initialize(mx.init.Constant([w_init]), device=device)
 
     # Test:
-    in_data = in_data.as_in_context(ctx)
+    in_data = in_data.to_device(device)
     with mx.autograd.record():
         out = net(in_data)
     assert all(out == net.expected_output(in_data, w_init)), net_type_str + " output is " + str(out) + ", but" + \

@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.nan_to_num")
       const nnvm::Op* op = Op::Get("_npi_nan_to_num");
       nnvm::NodeAttrs attrs;
 
-      op::NumpyNanToNumParam param;
+      op::NumpyNanToNumParam param = {};
       int num_inputs    = 1;
       NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
 

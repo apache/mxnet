@@ -150,11 +150,11 @@ def construct_net():
     return net
 
 # construct and initialize network.
-ctx =  mx.gpu() if mx.context.num_gpus() else mx.cpu()
+device =  mx.gpu() if mx.device.num_gpus() else mx.cpu()
 
 net = construct_net()
 net.hybridize()
-net.initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), device=device)
 # define loss and trainer.
 criterion = gluon.loss.SoftmaxCrossEntropyLoss()
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
@@ -166,11 +166,11 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 epochs = 5
 for epoch in range(epochs):
     # training loop (with autograd and trainer steps, etc.)
-    cumulative_train_loss = mx.np.zeros(1, ctx=ctx)
+    cumulative_train_loss = mx.np.zeros(1, device=device)
     training_samples = 0
     for batch_idx, (data, label) in enumerate(train_data_loader):
-        data = data.as_in_ctx(ctx).reshape((-1, 784)) # 28*28=784
-        label = label.as_in_ctx(ctx)
+        data = data.to_device(device).reshape((-1, 784)) # 28*28=784
+        label = label.to_device(device)
         with autograd.record():
             output = net(data)
             loss = criterion(output, label)
@@ -181,11 +181,11 @@ for epoch in range(epochs):
     train_loss = cumulative_train_loss.item()/training_samples
 
     # validation loop
-    cumulative_valid_loss = mx.np.zeros(1, ctx=ctx)
+    cumulative_valid_loss = mx.np.zeros(1, device=device)
     valid_samples = 0
     for batch_idx, (data, label) in enumerate(valid_data_loader):
-        data = data.as_in_ctx(ctx).reshape((-1, 784)) # 28*28=784
-        label = label.as_in_ctx(ctx)
+        data = data.to_device(device).reshape((-1, 784)) # 28*28=784
+        label = label.to_device(device)
         output = net(data)
         loss = criterion(output, label)
         cumulative_valid_loss += mx.np.sum(loss)

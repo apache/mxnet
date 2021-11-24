@@ -30,36 +30,45 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyBinaryScalarParam);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_subtract_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::minus>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::minus>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rsubtract_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rminus>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rminus>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_multiply_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::mul>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mul_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::mul>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mul_scalar"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_mod_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::mod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mod_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::mod>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mod_scalar"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rmod_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rmod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rmod_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rmod>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rmod_scalar"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_power_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::power>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_power_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::power>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_power_scalar"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rpower_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rpower>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_rpower_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rpower>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_rpower_scalar"});
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_floor_divide_scalar)
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::floor_divide>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rfloor_divide_scalar)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryScalarOp::Compute<cpu, op::mshadow_op::rfloor_divide>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet

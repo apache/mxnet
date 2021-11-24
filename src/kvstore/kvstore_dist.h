@@ -421,7 +421,9 @@ class KVStoreDist : public KVStoreLocal {
     }
     gradient_compression_->Quantize(comm_buf, &small_buf, &res_buf, priority);
     auto push_to_servers = [this, key, dtype, pskv, small_buf](RunContext rctx,
+                                                               Engine::CallbackOnStart on_start,
                                                                Engine::CallbackOnComplete cb) {
+      on_start();
       size_t size = small_buf.shape().Size() * mshadow::mshadow_sizeof(dtype);
       char* data  = static_cast<char*>(small_buf.data().dptr_);
       // do push. false means no delete
@@ -442,7 +444,9 @@ class KVStoreDist : public KVStoreLocal {
 
   virtual void PushDefault(int key, const NDArray& send_buf, const PSKV& pskv, int priority) {
     auto push_to_servers = [this, key, pskv, send_buf](RunContext rctx,
+                                                       Engine::CallbackOnStart on_start,
                                                        Engine::CallbackOnComplete cb) {
+      on_start();
       const int dtype = send_buf.dtype();
       // convert to ps keys
       const size_t size = send_buf.shape().Size() * mshadow::mshadow_sizeof(dtype);
@@ -464,7 +468,10 @@ class KVStoreDist : public KVStoreLocal {
   // push row sparse gradient
   virtual void PushRowSparse(int key, const NDArray& send_buf, int priority) {
     using namespace rowsparse;
-    auto push_to_servers = [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+    auto push_to_servers = [this, key, send_buf](RunContext rctx,
+                                                 Engine::CallbackOnStart on_start,
+                                                 Engine::CallbackOnComplete cb) {
+      on_start();
       char* data             = static_cast<char*>(send_buf.data().dptr_);
       const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
       const auto offsets     = send_buf.aux_data(kIdx).dptr<int64_t>();
@@ -492,22 +499,25 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   virtual void PullDefault(int key, const NDArray& recv_buf, int priority) {
-    auto pull_from_servers = [this, key, recv_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+    auto pull_from_servers = [this, key, recv_buf](RunContext rctx,
+                                                   Engine::CallbackOnStart on_start,
+                                                   Engine::CallbackOnComplete cb) {
+      on_start();
       // convert to ps keys
       size_t size         = recv_buf.shape().Size();
       const int dtype     = recv_buf.dtype();
       const int num_bytes = mshadow::mshadow_sizeof(dtype);
-      PSKV& pskv          = (gradient_compression_->get_type() == CompressionType::kNone)
-                                ? EncodeDefaultKey(key, size, num_bytes)
-                                : EncodeCompressedKey(key, size, false, num_bytes);
-      char* data          = static_cast<char*>(recv_buf.data().dptr_);
+      PSKV& pskv          = (gradient_compression_->get_type() == CompressionType::kNone) ?
+                       EncodeDefaultKey(key, size, num_bytes) :
+                       EncodeCompressedKey(key, size, false, num_bytes);
+      char* data = static_cast<char*>(recv_buf.data().dptr_);
       // false means not to delete data when SArray is deleted
       auto vals = new ps::SArray<char>(data, size * num_bytes, false);
       // issue pull
-      RequestType mode = (gradient_compression_->get_type() != CompressionType::kNone)
-                             ? RequestType::kCompressedPushPull
-                             : RequestType::kDefaultPushPull;
-      const int cmd    = GetCommandType(mode, dtype);
+      RequestType mode = (gradient_compression_->get_type() != CompressionType::kNone) ?
+                             RequestType::kCompressedPushPull :
+                             RequestType::kDefaultPushPull;
+      const int cmd = GetCommandType(mode, dtype);
       CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, cmd, [vals, cb]() {
         delete vals;
         cb();
@@ -531,7 +541,9 @@ class KVStoreDist : public KVStoreLocal {
                               int priority) {
     using namespace rowsparse;
     auto pull_from_servers = [this, key, recv_buf, indices](RunContext rctx,
+                                                            Engine::CallbackOnStart on_start,
                                                             Engine::CallbackOnComplete cb) {
+      on_start();
       // allocate memory for the buffer
       CHECK_EQ(indices.dtype(), mshadow::kInt64);
       const TBlob idx_data  = indices.data();
@@ -573,7 +585,10 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   virtual void PushPullDefault(int key, const NDArray& comm_buf, int priority) {
-    auto pushpull = [this, key, comm_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+    auto pushpull = [this, key, comm_buf](RunContext rctx,
+                                          Engine::CallbackOnStart on_start,
+                                          Engine::CallbackOnComplete cb) {
+      on_start();
       size_t size         = comm_buf.shape().Size();
       const int dtype     = comm_buf.dtype();
       const int num_bytes = mshadow::mshadow_sizeof(dtype);

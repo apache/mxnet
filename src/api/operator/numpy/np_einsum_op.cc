@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.einsum")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_einsum");
       nnvm::NodeAttrs attrs;
-      op::NumpyEinsumParam param;
+      op::NumpyEinsumParam param = {};
       int args_size = args.size();
       // param.num_args
       param.num_args = args_size - 3;

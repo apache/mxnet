@@ -35,7 +35,7 @@ from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array
 from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int64
 from ..base import NDArrayHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
-from ..context import Context, current_context
+from ..device import Device, current_device
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
 from ..executor import Executor
@@ -1537,8 +1537,8 @@ class Symbol(SymbolBase):
             aux_handle, aux_ = self._get_ndarray_inputs('aux_states', aux,
                                                         self.list_auxiliary_states(), True)
         if ctx is None:
-            ctx = current_context()
-        assert isinstance(ctx, Context)
+            ctx = current_device()
+        assert isinstance(ctx, Device)
 
 
         # parse input data shape dict
@@ -1943,7 +1943,7 @@ class Symbol(SymbolBase):
         the result will be a list with one element.
         """
         if ctx is None:
-            ctx = current_context()
+            ctx = current_device()
         return self._bind(ctx, kwargs).forward()
 
     def reshape(self, *args, **kwargs):

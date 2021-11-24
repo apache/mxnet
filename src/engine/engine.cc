@@ -25,6 +25,7 @@
 #include <memory>
 #include <cstdlib>
 #include "./engine_impl.h"
+#include "../common/cuda/utils.h"
 
 namespace mxnet {
 namespace engine {
@@ -34,6 +35,13 @@ inline Engine* CreateEngine() {
   if (type == nullptr)
     type = "ThreadedEnginePerDevice";
   std::string stype = type;
+
+  // The async tag is used later to determine if we use the GPU dependecy engine
+  std::string async_engine_tag = "Async";
+  auto tag_pos                 = stype.find(async_engine_tag);
+  if (tag_pos != std::string::npos && tag_pos + async_engine_tag.length() == stype.length()) {
+    stype = stype.substr(0, tag_pos);
+  }
 
   Engine* ret = nullptr;
 #if MXNET_PREDICT_ONLY == 0
@@ -56,9 +64,27 @@ inline Engine* CreateEngine() {
   }
   return ret;
 }
+
+#if MXNET_USE_CUDA
+CUDAEvent::CUDAEvent(Context const& ctx)
+    : event_(std::make_shared<cudaEvent_t>()), dev_id_(ctx.dev_id) {
+  cudaEvent_t ev;
+  common::cuda::DeviceStore device_store(dev_id_);
+  CUDA_CALL(cudaEventCreateWithFlags(&ev, cudaEventDisableTiming));
+  *event_ = ev;
+}
+
+CUDAEvent::~CUDAEvent() {
+  if (event_ && *event_ != nullptr) {
+    common::cuda::DeviceStore device_store(dev_id_);
+    CUDA_CALL(cudaEventSynchronize(*event_));
+    CUDA_CALL(cudaEventDestroy(*event_));
+  }
+}
+#endif
 }  // namespace engine
 
-std::shared_ptr<Engine> Engine::_GetSharedRef() {
+const std::shared_ptr<Engine>& Engine::_GetSharedRef() {
   static std::shared_ptr<Engine> sptr(engine::CreateEngine());
   return sptr;
 }

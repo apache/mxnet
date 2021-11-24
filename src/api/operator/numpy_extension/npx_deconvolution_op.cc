@@ -68,7 +68,7 @@ MXNET_REGISTER_API("_npx.deconvolution")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_deconvolution");
-      op::DeconvolutionParam param;
+      op::DeconvolutionParam param = {};
       int args_size = args.size();
       // no_bias
       if (args[args_size - 4].type_code() == kNull) {
@@ -173,7 +173,7 @@ MXNET_REGISTER_API("_npx.deconvolution")
       // num_group
       param.num_group = (uint32_t)(args[num_inputs + 7].operator int());
       // workspace
-      param.workspace = args[num_inputs + 8].operator uint64_t();
+      param.workspace = args[num_inputs + 8].operator int64_t();
       // cudnn_tune
       if (args[num_inputs + 10].type_code() == kNull) {
         param.cudnn_tune = dmlc::nullopt;

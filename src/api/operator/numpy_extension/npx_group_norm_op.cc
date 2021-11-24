@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npx.group_norm")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_group_norm");
-      op::GroupNormParam param;
+      op::GroupNormParam param = {};
       // num_groups
       param.num_groups = args[3];
       // eps

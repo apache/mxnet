@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.histogram")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npi_histogram");
-      op::HistogramParam param;
+      op::HistogramParam param = {};
       // parse bin_cnt
       if (args[2].type_code() == kNull) {
         param.bin_cnt = dmlc::nullopt;

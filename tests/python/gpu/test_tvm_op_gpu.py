@@ -16,11 +16,11 @@
 # under the License.
 
 import mxnet as mx
-from mxnet.test_utils import set_default_context
+from mxnet.test_utils import set_default_device
 import os
 import sys
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_tvm_op import *
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))

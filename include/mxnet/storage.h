@@ -26,18 +26,30 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include "./base.h"
 
 namespace mxnet {
 
-#define MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR  "<unk>:"
-#define MXNET_STORAGE_DEFAULT_NAME_CSTR  "unknown"
+#define MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR "<unk>:"
+#define MXNET_STORAGE_DEFAULT_NAME_CSTR           "unknown"
 
 /*!
  * \brief Storage manager across multiple devices.
  */
 class Storage {
  public:
+  /*!
+   * \brief Storage sync object.
+   */
+  struct SyncObj {
+#if MXNET_USE_CUDA
+    /*!
+     * \brief All the events from the engine variable.
+     */
+    std::vector<std::weak_ptr<cudaEvent_t>> events;
+#endif
+  };
   /*!
    * \brief Storage handle.
    */
@@ -58,31 +70,37 @@ class Storage {
      * \brief Id for IPC shared memory
      */
     int shared_pid{-1};
-    int shared_id {-1};
+    int shared_id{-1};
     /*!
      * \brief Attributes for tracking storage allocations.
      */
     std::string profiler_scope{MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR};
     std::string name{MXNET_STORAGE_DEFAULT_NAME_CSTR};
+    /*!
+     * \brief Used to pass events back and forth between the engine Var
+     * and the storage manager.
+     */
+    SyncObj sync_obj;
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.
    * \param size Total size of memory in bytes.
    * \param ctx Context information about the device and ID.
+   * \param failsafe Return a handle with a null dptr if out of memory, rather than exit.
    * \return Handle struct.
    */
-  Handle Alloc(size_t size, Context ctx) {
+  Handle Alloc(size_t size, Context ctx, bool failsafe = false) {
     Handle hd;
     hd.size = size;
-    hd.ctx = ctx;
-    this->Alloc(&hd);
+    hd.ctx  = ctx;
+    this->Alloc(&hd, failsafe);
     return hd;
   }
   /*!
    * \brief Allocate a new contiguous memory for a given size.
    * \param handle handle initialized with size and ctx
    */
-  virtual void Alloc(Handle* handle) = 0;
+  virtual void Alloc(Handle* handle, bool failsafe = false) = 0;
   /*!
    * \brief Increase ref counter on shared memory.
    * \param handle handle to shared memory.
@@ -104,12 +122,12 @@ class Storage {
    */
   virtual void DirectFree(Handle handle) = 0;
   /*!
-  * \brief Release all memory from device if using a pooled storage manager
-  *
-  * This release all memory from pool storage managers such as
-  * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
-  * For non-pool memory managers this has no effect.
-  */
+   * \brief Release all memory from device if using a pooled storage manager
+   *
+   * This release all memory from pool storage managers such as
+   * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
+   * For non-pool memory managers this has no effect.
+   */
   virtual void ReleaseAll(Context ctx) = 0;
   /*!
    * \brief Destructor.
@@ -137,7 +155,7 @@ class Storage {
    *
    * \return A shared pointer to Storage singleton.
    */
-  static std::shared_ptr<Storage> _GetSharedRef();
+  static const std::shared_ptr<Storage>& _GetSharedRef();
 
  private:
   std::mutex cpu_mutex_;

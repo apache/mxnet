@@ -136,17 +136,17 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
     def group_by_ctx(arr_list):
         groups = collections.defaultdict(list)
         for arr in arr_list:
-            ctx = arr.ctx
+            ctx = arr.device
             groups[ctx].append(arr)
         return groups
     def multi_sum_sq(*args, ctx=None):
-        sum = _mx_np.array([0], ctx=ctx)
+        sum = _mx_np.array([0], device=ctx)
         for arg in args:
             sum += _mx_np.square(arg).sum().item()
         return sum
     arrays_groups = group_by_ctx(arrays)
     all_ctx_sum = _mx_np.array([0])
-    ctx = arrays[0].ctx
+    ctx = arrays[0].device
     for group in arrays_groups:
         sum_sq = multi_sum_sq(*arrays_groups[group], ctx=ctx)
         all_ctx_sum += sum_sq
@@ -158,7 +158,7 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
                 UserWarning('nan or inf is detected. '
                             'Clipping results will be undefined.'), stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
-    scale = _mx_np.min(_mx_np.concatenate([scale, _mx_np.ones(1, ctx=ctx)], axis=0))
+    scale = _mx_np.min(_mx_np.concatenate([scale, _mx_np.ones(1, device=ctx)], axis=0))
     for arr in arrays:
         arr *= scale.item()
     if check_isfinite:

@@ -47,6 +47,10 @@ namespace engine {
 class ThreadedEnginePooled : public ThreadedEngine {
  public:
   ThreadedEnginePooled() {
+#if MXNET_USE_CUDA
+    // Make sure that the pool is not destroyed before the engine
+    objpool_gpu_sync_ref_ = common::ObjectPool<ThreadedEngine::GPUWorkerSyncInfo>::_GetSharedRef();
+#endif
     this->Start();
   }
 
@@ -55,14 +59,14 @@ class ThreadedEnginePooled : public ThreadedEngine {
   }
 
   void StopNoWait() {
-    streams_->Finalize();
     task_queue_->SignalForKill();
     io_task_queue_->SignalForKill();
     task_queue_     = nullptr;
     io_task_queue_  = nullptr;
     thread_pool_    = nullptr;
     io_thread_pool_ = nullptr;
-    streams_        = nullptr;
+    streams_->Finalize();
+    streams_ = nullptr;
   }
 
   void Stop() override {
@@ -150,9 +154,30 @@ class ThreadedEnginePooled : public ThreadedEngine {
     }
     bool is_copy = (opr_block->opr->prop == FnProperty::kCopyFromGPU ||
                     opr_block->opr->prop == FnProperty::kCopyToGPU);
-    auto&& rctx  = is_copy ? streams_->GetIORunContext(opr_block->ctx)
-                           : streams_->GetRunContext(opr_block->ctx);
-    this->ExecuteOprBlock(rctx, opr_block);
+    auto&& rctx  = is_copy ? streams_->GetIORunContext(opr_block->ctx) :
+                            streams_->GetRunContext(opr_block->ctx);
+#if MXNET_USE_CUDA
+    CallbackOnStart on_start;
+    CallbackOnComplete callback;
+    if (opr_block->ctx.dev_mask() == Context::kCPU) {
+      on_start = this->CreateOnStart(ThreadedEngine::OnStartCPU, opr_block);
+      callback = this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
+    } else {
+      CHECK_EQ(opr_block->ctx.dev_mask(), Context::kGPU);
+      auto stream      = rctx.get_stream<gpu>();
+      auto event_pool  = static_cast<CUDAEventPool*>(rctx.event_pool);
+      auto* info       = ThreadedEngine::GPUWorkerSyncInfo::New();
+      info->opr_block  = opr_block;
+      info->stream     = stream;
+      info->event_pool = event_pool;
+      on_start         = this->CreateOnStart(ThreadedEngine::OnStartGPU, info);
+      callback         = this->CreateCallback(ThreadedEngine::OnCompleteGPU, info);
+    }
+#else   // MXNET_USE_CUDA
+    CallbackOnStart on_start = this->CreateOnStart(ThreadedEngine::OnStartStatic, opr_block);
+    CallbackOnComplete callback = this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
+#endif  // MXNET_USE_CUDA
+    this->ExecuteOprBlock(rctx, opr_block, on_start, callback);
   }
   /*!
    * \brief Push the operation to the queue.

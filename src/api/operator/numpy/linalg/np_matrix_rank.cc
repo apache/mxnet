@@ -31,7 +31,7 @@ namespace mxnet {
 inline static void _npi_matrix_rank_none_tol(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_matrix_rank_none_tol");
-  op::MatrixRankNoneTolParam param;
+  op::MatrixRankNoneTolParam param = {};
   nnvm::NodeAttrs attrs;
   param.hermitian  = args[2].operator bool();
   param.finfoEps32 = args[3].operator double();
@@ -49,7 +49,7 @@ inline static void _npi_matrix_rank_none_tol(runtime::MXNetArgs args, runtime::M
 inline static void _npi_matrix_rank(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_matrix_rank");
-  op::MatrixRankParam param;
+  op::MatrixRankParam param = {};
   nnvm::NodeAttrs attrs;
   param.hermitian = args[2].operator bool();
   attrs.parsed    = param;

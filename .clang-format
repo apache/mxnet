@@ -38,3 +38,4 @@ AlwaysBreakTemplateDeclarations: true
 BinPackArguments: false
 BinPackParameters: false
 SortIncludes: false
+BreakBeforeTernaryOperators: false

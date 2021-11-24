@@ -431,6 +431,12 @@ class Optimizer(object):
         self.wd_mult.update(args_wd_mult)
 
     def _set_current_context(self, device_id):
+        """This function has been deprecated. Please refer to ``Optimizer._set_current_context``."""
+        warnings.warn('Optimizer._set_current_context has been renamed to'
+                      ' Optimizer._set_current_device', DeprecationWarning)
+        return self._set_current_device(device_id)
+
+    def _set_current_device(self, device_id):
         """Sets the number of the currently handled device.
 
         Parameters

@@ -195,8 +195,8 @@ class BinaryScalarOp : public UnaryOp {
         // Split up into blocks of contiguous data and do those together
         const size_t row_item_start_iter = row_starts_ptr[i];
         const size_t input_items_this_row =
-            !last_row ? static_cast<size_t>(row_starts_ptr[i + 1]) - row_item_start_iter
-                      : item_count - row_item_start_iter;
+            !last_row ? static_cast<size_t>(row_starts_ptr[i + 1]) - row_item_start_iter :
+                        item_count - row_item_start_iter;
         if (input_items_this_row) {
           const IType* this_row_column_indexes = column_indexes_ptr + row_item_start_iter;
           const DType* row_data_start          = in + row_item_start_iter;
@@ -344,7 +344,7 @@ class BinaryScalarOp : public UnaryOp {
     } else {
       temp_tblob = inputs[0];
     }
-    MSHADOW_TYPE_SWITCH_WITH_BOOL(temp_tblob.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(temp_tblob.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
             s, inputs[0].Size(), outputs[0].dptr<bool>(), temp_tblob.dptr<DType>(), DType(alpha));

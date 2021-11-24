@@ -28,10 +28,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_subtract)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_sub)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "negone"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "negone"});
 
 }  // namespace op
 }  // namespace mxnet

@@ -34,13 +34,14 @@ Cython==0.29.24
 
 # Development dependencies
 cpplint==1.3.0
-pylint==2.3.1  # pylint and astroid need to be aligned
-astroid==2.3.3  # pylint and astroid need to be aligned
+pylint<3,>=2.8.3 # pylint and astroid need to be aligned
+astroid<2.9,>=2.8.0  # pylint and astroid need to be aligned
 pytest==6.1.2
 pytest-env==0.6.2
 pytest-cov==2.10.1
 pytest-xdist==2.1.0
 pytest-timeout==1.4.2
+pytest-rerunfailures==10.2
 flaky==3.7.0
 setuptools==49.6.0  # https://github.com/pypa/setuptools/issues/2352
 wheel
@@ -54,3 +55,12 @@ h5py==2.10.0
 
 # Array API Standardization requirements
 hypothesis==6.14.0
+
+# Static code checker for CMake files
+cmakelint==1.4.1
+
+# Prospector - Python Static Analysis
+prospector==1.5.1
+
+# pyflakes - passive checker of Python programs
+pyflakes<2.4.0,>=2.2.0

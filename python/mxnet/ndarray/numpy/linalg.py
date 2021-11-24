@@ -450,9 +450,15 @@ def svd(a):
     return tuple(_api_internal.svd(a))
 
 
-def cholesky(a):
+def cholesky(a, upper=False):
     r"""
     Cholesky decomposition.
+
+    Notes
+    -----
+    `upper` param is requested by API standardization in
+    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-cholesky-x-upper-false
+    instead of parameter in official NumPy operator.
 
     Return the Cholesky decomposition, `L * L.T`, of the square matrix `a`,
     where `L` is lower-triangular and .T is the transpose operator. `a` must be
@@ -463,6 +469,10 @@ def cholesky(a):
     ----------
     a : (..., M, M) ndarray
         Symmetric, positive-definite input matrix.
+    upper : bool
+        If `True`, the result must be the upper-triangular Cholesky factor.
+        If `False`, the result must be the lower-triangular Cholesky factor.
+        Default: `False`.
 
     Returns
     -------
@@ -506,7 +516,7 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    return _api_internal.cholesky(a, True)
+    return _api_internal.cholesky(a, not upper)
 
 
 def qr(a, mode='reduced'):

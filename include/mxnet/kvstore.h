@@ -45,9 +45,7 @@ namespace mxnet {
  * kPause allows pausing and resuming of profiler
  * kDump asks profiler to dump output
  */
-enum class KVStoreServerProfilerCommand {
-  kSetConfig, kState, kPause, kDump
-};
+enum class KVStoreServerProfilerCommand { kSetConfig, kState, kPause, kDump };
 
 /*!
  * \brief distributed key-value store
@@ -70,20 +68,22 @@ class KVStore {
    *   - 'dist_*' : multi-machines
    * \return a new created KVStore.
    */
-  static KVStore *Create(const char *type = "local");
+  static KVStore* Create(const char* type = "local");
 
   /**
    * \brief return the type
    */
-  inline const std::string& type() { return type_; }
+  inline const std::string& type() {
+    return type_;
+  }
 
   /**
    * \brief Set parameters to use low-bit compressed gradients
    * \param compression_type type of compression
    * \param threshold threshold for 2bit compression
    */
-  virtual void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
-                                      & kwargs) = 0;
+  virtual void SetGradientCompression(
+      const std::vector<std::pair<std::string, std::string>>& kwargs) = 0;
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
@@ -101,8 +101,7 @@ class KVStore {
    * \param keys a list of unique keys
    * \param values a list of values
    */
-  virtual void Init(const std::vector<int>& keys,
-                    const std::vector<NDArray>& values) = 0;
+  virtual void Init(const std::vector<int>& keys, const std::vector<NDArray>& values) = 0;
   /*!
    * \brief Initialize a list of key-value pair to the store.
    * \param keys a list of unique keys in string format
@@ -148,7 +147,7 @@ class KVStore {
    */
   virtual void Push(const std::vector<int>& keys,
                     const std::vector<NDArray>& values,
-                    int priority = 0)  = 0;
+                    int priority = 0) = 0;
 
   /*!
    * \brief push a list of key-value pairs into the store
@@ -158,7 +157,7 @@ class KVStore {
    */
   virtual void Push(const std::vector<std::string>& str_keys,
                     const std::vector<NDArray>& values,
-                    int priority = 0)  = 0;
+                    int priority = 0) = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
    *
@@ -185,7 +184,8 @@ class KVStore {
    */
   virtual void Pull(const std::vector<int>& keys,
                     const std::vector<NDArray*>& values,
-                    int priority = 0, bool ignore_sparse = true) = 0;
+                    int priority       = 0,
+                    bool ignore_sparse = true) = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
    * \param keys the list of keys in string format
@@ -195,7 +195,8 @@ class KVStore {
    */
   virtual void Pull(const std::vector<std::string>& str_keys,
                     const std::vector<NDArray*>& values,
-                    int priority = 0, bool ignore_sparse = true) = 0;
+                    int priority       = 0,
+                    bool ignore_sparse = true) = 0;
 
   /*!
    * \brief broadcast a list of key-value pairs from the store
@@ -214,10 +215,9 @@ class KVStore {
   /*!
    * \brief broadcast a list of key-value pairs from the store
    * \param vkeys the list of keys to be pushed in string format
-   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in vkeys.
-   * \param values the list of values to be pushed
-   * \param outs the list of buffers for the pulled data, they should be preallocated
-   * \param priority Priority of the action.
+   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in
+   * vkeys. \param values the list of values to be pushed \param outs the list of buffers for the
+   * pulled data, they should be preallocated \param priority Priority of the action.
    */
   virtual void Broadcast(const std::vector<std::string>& str_vkeys,
                          const std::vector<std::string>& str_okeys,
@@ -242,10 +242,9 @@ class KVStore {
   /*!
    * \brief push and pull a list of key-value pairs from the store
    * \param vkeys the list of keys to be pushed in string format
-   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in vkeys.
-   * \param values the list of values to be pushed
-   * \param outs the list of buffers for the pulled data, they should be preallocated
-   * \param priority Priority of the action.
+   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in
+   * vkeys. \param values the list of values to be pushed \param outs the list of buffers for the
+   * pulled data, they should be preallocated \param priority Priority of the action.
    */
   virtual void PushPull(const std::vector<std::string>& str_vkeys,
                         const std::vector<std::string>& str_okeys,
@@ -358,7 +357,8 @@ class KVStore {
 
   void set_barrier_before_exit(const bool barrier_before_exit) {
 #if MXNET_USE_DIST_KVSTORE
-    if (!IsWorkerNode()) LOG(FATAL) << "barrier_before_exit takes effect only on worker nodes";
+    if (!IsWorkerNode())
+      LOG(FATAL) << "barrier_before_exit takes effect only on worker nodes";
     barrier_before_exit_ = barrier_before_exit;
 #else
     LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to enable barrier";
@@ -415,7 +415,7 @@ class KVStore {
    * all of them are reached this point. It doesn't guarantee that all
    * operations issued before are actually finished, such as \ref Push and \ref Pull.
    */
-  virtual void Barrier() { }
+  virtual void Barrier() {}
 
   /**
    * \brief Send a command to all server nodes
@@ -428,7 +428,7 @@ class KVStore {
    * \param cmd_id the head of the command
    * \param cmd_body the body of the command
    */
-  virtual void SendCommandToServers(int cmd_id, const std::string& cmd_body) { }
+  virtual void SendCommandToServers(int cmd_id, const std::string& cmd_body) {}
 
   /**
    * \brief Sends server profiler commands to all server nodes
@@ -462,7 +462,7 @@ class KVStore {
    *
    * \param controller the user-defined server controller
    */
-  virtual void RunServer(const Controller& controller) { }
+  virtual void RunServer(const Controller& controller) {}
 
  protected:
   /**

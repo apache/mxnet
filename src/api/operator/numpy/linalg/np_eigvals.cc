@@ -46,7 +46,7 @@ MXNET_REGISTER_API("_npi.eigvalsh")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_eigvalsh");
       nnvm::NodeAttrs attrs;
-      op::EigvalshParam param;
+      op::EigvalshParam param = {};
       param.UPLO   = *((args[1].operator std::string()).c_str());
       attrs.parsed = param;
       attrs.op     = op;

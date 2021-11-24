@@ -436,8 +436,8 @@ struct numpy_einsum {
     AType sum                      = 0;
     do {
       AType tmp =
-          back ? static_cast<AType>(out_grad[dot(oidx, ostride[nop]) + dot(ridx, rstride[nop])])
-               : (AType)1;
+          back ? static_cast<AType>(out_grad[dot(oidx, ostride[nop]) + dot(ridx, rstride[nop])]) :
+                 (AType)1;
       for (int iop = 0; iop < nop; ++iop) {
         if (iop != iop0) {
           index_t k = dot(oidx, ostride[iop]) + dot(ridx, rstride[iop]);

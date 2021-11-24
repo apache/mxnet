@@ -127,8 +127,8 @@ initialized parameters.
 
 ```{.python .input}
 gpus = mx.test_utils.list_gpus()
-ctx =  mx.gpu() if gpus else [mx.cpu(0), mx.cpu(1)]
-net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+device =  mx.gpu() if gpus else [mx.cpu(0), mx.cpu(1)]
+net.initialize(mx.init.Xavier(magnitude=2.24), device=device)
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.02})
 ```
 
@@ -163,9 +163,9 @@ for i in range(epoch):
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
-                z = net(x.as_in_ctx(ctx))
+                z = net(x.to_device(device))
                 # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y.as_in_ctx(ctx))
+                loss = softmax_cross_entropy_loss(z, y.to_device(device))
                 # Backpropagate the error for one iteration.
                 loss.backward()
                 outputs.append(z)
@@ -192,7 +192,7 @@ metric = mx.gluon.metric.Accuracy()
 for batch_num, (data, label) in enumerate(val_data):
     outputs = []
     for x in data:
-        outputs.append(net(x.as_in_ctx(ctx)))
+        outputs.append(net(x.to_device(device)))
     # Updates internal evaluation
     metric.update(label, outputs)
 print('validation acc: %s=%f'%metric.get())
@@ -259,9 +259,9 @@ Training and prediction can be done in the similar way as we did for MLP.
 We will initialize the network parameters as follows:
 
 ```{.python .input}
-# set the context on GPU is available otherwise CPU
-ctx = [mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()]
-net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+# set the device on GPU is available otherwise CPU
+device = [mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()]
+net.initialize(mx.init.Xavier(magnitude=2.24), device=device)
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
 ```
 
@@ -279,9 +279,9 @@ for i in range(epoch):
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
-                z = net(x.as_in_ctx(ctx))
+                z = net(x.to_device(device))
                 # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y.as_in_ctx(ctx))
+                loss = softmax_cross_entropy_loss(z, y.to_device(device))
                 # Backpropogate the error for one iteration.
                 loss.backward()
                 outputs.append(z)
@@ -308,7 +308,7 @@ metric = mx.gluon.metric.Accuracy()
 for batch_num, (data, label) in enumerate(val_data):
     outputs = []
     for x in data:
-        outputs.append(net(x.as_in_ctx(ctx)))
+        outputs.append(net(x.to_device(device)))
     # Updates internal evaluation
     metric.update(label, outputs)
 print('validation acc: %s=%f'%metric.get())

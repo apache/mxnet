@@ -272,7 +272,8 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
   deps.insert(deps.end(), threaded_opr->const_vars.begin(), threaded_opr->const_vars.end());
   deps.insert(deps.end(), threaded_opr->mutable_vars.begin(), threaded_opr->mutable_vars.end());
   this->PushAsync(
-      [threaded_opr](RunContext, CallbackOnComplete on_complete) {
+      [threaded_opr](RunContext, CallbackOnStart on_start, CallbackOnComplete on_complete) {
+        on_start();
         ThreadedOpr::Delete(threaded_opr);
         on_complete();
       },
@@ -349,7 +350,8 @@ void ThreadedEngine::PushSync(SyncFn exec_fn,
                               const char* opr_name) {
   if (!bulk_size() || prop != FnProperty::kNormal || priority) {
     this->PushAsync(
-        [exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
+        [exec_fn](RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
+          on_start();
           exec_fn(ctx);
           on_complete();
         },
@@ -371,9 +373,11 @@ void ThreadedEngine::PushSync(SyncFn exec_fn,
 void ThreadedEngine::DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) {
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   this->PushAsync(
-      [delete_fn, threaded_var](RunContext ctx, CallbackOnComplete on_complete) {
+      [delete_fn, threaded_var](
+          RunContext ctx, CallbackOnStart on_start, CallbackOnComplete on_complete) {
         // Mark variable as orphan,
         // so during `ThreadedEngine::OnComplete` it could be recycled.
+        on_start();
         threaded_var->SetToDelete();
         delete_fn(ctx);
         on_complete();
@@ -399,7 +403,8 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   }
   std::atomic<bool> done{false};
   this->PushAsync(
-      [this, &done](RunContext, CallbackOnComplete on_complete) {
+      [this, &done](RunContext, CallbackOnStart on_start, CallbackOnComplete on_complete) {
+        on_start();
         if (engine_info_) {
           LOG(INFO) << "Sync is executed";
         }
@@ -480,6 +485,14 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
       }
     });
     if (to_delete) {
+#if MXNET_USE_CUDA
+      auto& sync_obj = i->sync_object;
+      {
+        std::lock_guard<std::mutex> l(sync_obj.mutex);
+        sync_obj.reader_events.clear();
+        sync_obj.writer_event.clear();
+      }
+#endif
       ThreadedVar::Delete(i);
     }
   }
@@ -532,6 +545,207 @@ void ThreadedEngine::OnCompleteStatic(Engine* engine, void* opr_block_, const dm
   static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);
   OprBlock::Delete(opr_block);
 }
+
+void ThreadedEngine::OnStartStatic(Engine* engine, void* opr_block, const dmlc::Error* error) {
+  // no-op
+}
+
+#if MXNET_USE_CUDA
+static inline void AddEventHelper(std::unordered_map<cudaStream_t, EventInfo>* events_per_stream,
+                                  const EventInfo& cuda_event) {
+  auto event_stream = cuda_event.stream;
+  if (events_per_stream->count(event_stream) > 0) {
+    if ((*events_per_stream)[event_stream].pool_index < cuda_event.pool_index) {
+      (*events_per_stream)[event_stream] = cuda_event;
+    }
+  } else {
+    (*events_per_stream).emplace(event_stream, cuda_event);
+  }
+}
+
+static inline bool IsEngineAsync() {
+  std::string type = dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string(""));
+  std::string async_engine_tag("Async");
+  auto tag_pos = type.find(async_engine_tag);
+  return tag_pos != std::string::npos;
+}
+
+void ThreadedEngine::OnStartCPU(Engine* engine, void* opr_block, const dmlc::Error* error) {
+  static bool use_new_dep_engine = IsEngineAsync();
+  if (!use_new_dep_engine) {
+    return;
+  }
+  ThreadedOpr* threaded_opr = static_cast<OprBlock*>(opr_block)->opr;
+  std::unordered_map<cudaStream_t, EventInfo> event_per_stream;
+  for (auto* read_var : threaded_opr->const_vars) {
+    auto& sync_obj = read_var->sync_object;
+    std::lock_guard<std::mutex> l(sync_obj.mutex);
+    auto& reader_events = sync_obj.reader_events;
+    // check for expired events and delete them
+    reader_events.erase(std::remove_if(reader_events.begin(),
+                                       reader_events.end(),
+                                       [&](const EventInfo e_i) { return e_i.event.expired(); }),
+                        reader_events.end());
+    for (auto& cuda_event : reader_events) {
+      AddEventHelper(&event_per_stream, cuda_event);
+    }
+    if (!sync_obj.writer_event.empty()) {
+      if (sync_obj.writer_event[0].event.expired()) {
+        sync_obj.writer_event.clear();
+      } else {
+        AddEventHelper(&event_per_stream, sync_obj.writer_event[0]);
+      }
+    }
+  }
+
+  for (auto* write_var : threaded_opr->mutable_vars) {
+    auto& sync_obj = write_var->sync_object;
+    std::lock_guard<std::mutex> l(sync_obj.mutex);
+    auto& reader_events = sync_obj.reader_events;
+    // check for expired events and delete them
+    reader_events.erase(std::remove_if(reader_events.begin(),
+                                       reader_events.end(),
+                                       [&](const EventInfo e_i) { return e_i.event.expired(); }),
+                        reader_events.end());
+    for (auto& cuda_event : reader_events) {
+      AddEventHelper(&event_per_stream, cuda_event);
+    }
+    if (!sync_obj.writer_event.empty()) {
+      if (sync_obj.writer_event[0].event.expired()) {
+        sync_obj.writer_event.clear();
+      } else {
+        AddEventHelper(&event_per_stream, sync_obj.writer_event[0]);
+      }
+    }
+  }
+  for (auto event : event_per_stream) {
+    auto ev = event.second.event.lock();
+    MSHADOW_CUDA_CALL(cudaEventSynchronize(*ev));
+  }
+}
+
+void ThreadedEngine::OnStartGPU(Engine* engine, void* sync_info, const dmlc::Error* error) {
+  static bool use_new_dep_engine = IsEngineAsync();
+  if (!use_new_dep_engine) {
+    return;
+  }
+  auto* info = reinterpret_cast<GPUWorkerSyncInfo*>(sync_info);
+  CHECK(info->stream != nullptr);
+  auto* worker_stream       = reinterpret_cast<mshadow::Stream<gpu>*>(info->stream);
+  ThreadedOpr* threaded_opr = static_cast<OprBlock*>(info->opr_block)->opr;
+  std::unordered_map<cudaStream_t, EventInfo> event_per_stream;
+  for (auto* read_var : threaded_opr->const_vars) {
+    auto& sync_obj = read_var->sync_object;
+    std::lock_guard<std::mutex> l(sync_obj.mutex);
+    auto& reader_events = sync_obj.reader_events;
+    // check for expired events and delete them
+    reader_events.erase(std::remove_if(reader_events.begin(),
+                                       reader_events.end(),
+                                       [&](const EventInfo e_i) { return e_i.event.expired(); }),
+                        reader_events.end());
+    for (auto& writer : sync_obj.writer_event) {
+      if (writer.event.expired()) {
+        sync_obj.writer_event.clear();
+        break;
+      }
+      if (writer.stream != worker_stream->stream_) {
+        // if there is already a reader on the same stream as us,
+        // it already synced with that writer and we can rely on
+        // the ongoing sync
+        bool found = false;
+        for (const auto& reader : reader_events) {
+          if (reader.stream == worker_stream->stream_) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          AddEventHelper(&event_per_stream, writer);
+        }
+      }
+    }
+  }
+  for (auto* write_var : threaded_opr->mutable_vars) {
+    auto& sync_obj = write_var->sync_object;
+    std::lock_guard<std::mutex> l(sync_obj.mutex);
+    // check for expired events and delete them
+    auto& reader_events = sync_obj.reader_events;
+    reader_events.erase(std::remove_if(reader_events.begin(),
+                                       reader_events.end(),
+                                       [&](const EventInfo e_i) { return e_i.event.expired(); }),
+                        reader_events.end());
+    // if there are some readers, we wait for them
+    for (auto& cuda_event : reader_events) {
+      if (worker_stream->stream_ != cuda_event.stream) {
+        AddEventHelper(&event_per_stream, cuda_event);
+      }
+    }
+    if (!sync_obj.writer_event.empty()) {
+      if (sync_obj.writer_event[0].event.expired()) {
+        sync_obj.writer_event.clear();
+      } else {
+        if (worker_stream->stream_ != sync_obj.writer_event[0].stream) {
+          AddEventHelper(&event_per_stream, sync_obj.writer_event[0]);
+        }
+      }
+    }
+  }
+  for (auto event : event_per_stream) {
+    auto ev = event.second.event.lock();
+    MSHADOW_CUDA_CALL(cudaStreamWaitEvent(worker_stream->stream_, *ev, 0));
+  }
+}
+
+void ThreadedEngine::OnCompleteGPU(Engine* engine, void* sync_info, const dmlc::Error* error) {
+  auto* info = reinterpret_cast<GPUWorkerSyncInfo*>(sync_info);
+  CHECK(info->stream != nullptr);
+
+  auto* worker_stream            = reinterpret_cast<mshadow::Stream<gpu>*>(info->stream);
+  static bool use_new_dep_engine = IsEngineAsync();
+
+  if (!use_new_dep_engine) {
+    worker_stream->Wait();
+    ThreadedEngine::OnCompleteStatic(engine, info->opr_block, error);
+    GPUWorkerSyncInfo::Delete(info);
+    return;
+  }
+
+  ThreadedOpr* threaded_opr    = static_cast<OprBlock*>(info->opr_block)->opr;
+  auto* event_pool             = static_cast<CUDAEventPool*>(info->event_pool);
+  auto [event, event_pool_idx] = event_pool->GetNextEvent();  // NOLINT(*)
+  auto ev                      = event.lock();
+  MSHADOW_CUDA_CALL(cudaEventRecord(*ev, worker_stream->stream_));
+  for (auto* read_var : threaded_opr->const_vars) {
+    auto& sync_obj = read_var->sync_object;
+    std::lock_guard<std::mutex> l(sync_obj.mutex);
+    // If some reader event is already recorded on the same stream,
+    // we want to replace ourselves by it
+    int i;
+    for (i = 0; i < sync_obj.reader_events.size(); ++i) {
+      auto stream = sync_obj.reader_events[i].stream;
+      if (stream == worker_stream->stream_) {
+        sync_obj.reader_events[i].event      = event;
+        sync_obj.reader_events[i].pool_index = event_pool_idx;
+        break;
+      }
+    }
+    if (i == sync_obj.reader_events.size()) {
+      sync_obj.reader_events.push_back({event, worker_stream->stream_, event_pool_idx});
+    }
+  }
+
+  for (auto* write_var : threaded_opr->mutable_vars) {
+    auto& sync_obj = write_var->sync_object;
+    std::lock_guard<std::mutex> l(sync_obj.mutex);
+    sync_obj.reader_events.clear();
+    sync_obj.writer_event.clear();
+    sync_obj.writer_event.push_back({event, worker_stream->stream_, event_pool_idx});
+  }
+
+  ThreadedEngine::OnCompleteStatic(engine, info->opr_block, error);
+  GPUWorkerSyncInfo::Delete(info);
+}
+#endif
 
 }  // namespace engine
 }  // namespace mxnet

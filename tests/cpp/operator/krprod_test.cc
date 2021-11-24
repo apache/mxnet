@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  *  \file krprod_test.cc
  *  \brief Test Khatri-Rao product
  *  \author Jencir Lee
@@ -36,16 +35,16 @@ using namespace mshadow;
 using namespace mshadow::expr;
 using DType = double;
 
-#define EXPECT_DOUBLE_EQ_MATRIX(expected, actual) \
-{                                                \
-  for (int i = 0; i < static_cast<int>(actual.size(0)); ++i) \
-    for (int j = 0; j < static_cast<int>(actual.size(1)); ++j) \
-      EXPECT_LE(std::abs(actual[i][j] - expected[i][j]), 1e-10); \
-} \
+#define EXPECT_DOUBLE_EQ_MATRIX(expected, actual)                  \
+  {                                                                \
+    for (int i = 0; i < static_cast<int>(actual.size(0)); ++i)     \
+      for (int j = 0; j < static_cast<int>(actual.size(1)); ++j)   \
+        EXPECT_LE(std::abs(actual[i][j] - expected[i][j]), 1e-10); \
+  }
 
 TEST(row_wise_kronecker, OneInputMatrix) {
   // Input matrices of shape (2, 4) which is also the expected result
-  DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
+  DType mat[8]{1, 2, 3, 4, 5, 6, 7, 8};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -64,12 +63,12 @@ TEST(row_wise_kronecker, OneInputMatrix) {
 
 TEST(row_wise_kronecker, TwoInputMatrices) {
   // Input matrices of shape (2, 3) and (2, 4)
-  DType mat1[6] {1, 2, 3, 4, 5, 6};
-  DType mat2[8] {1, 2, 3, 4, 5, 6, 7, 8};
+  DType mat1[6]{1, 2, 3, 4, 5, 6};
+  DType mat2[8]{1, 2, 3, 4, 5, 6, 7, 8};
 
   // Expect result of shape (2, 12)
-  DType expected[24] {1, 2, 3, 4, 2, 4, 6, 8, 3, 6, 9, 12,
-                      20, 24, 28, 32, 25, 30, 35, 40, 30, 36, 42, 48};
+  DType expected[24]{1,  2,  3,  4,  2,  4,  6,  8,  3,  6,  9,  12,
+                     20, 24, 28, 32, 25, 30, 35, 40, 30, 36, 42, 48};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -90,11 +89,11 @@ TEST(row_wise_kronecker, TwoInputMatrices) {
 
 TEST(row_wise_kronecker, TwoInputMatrices2) {
   // Input matrices of shape (2, 3) and (2, 1)
-  DType mat1[6] {1, 2, 3, 4, 5, 6};
-  DType mat2[2] {1, 2};
+  DType mat1[6]{1, 2, 3, 4, 5, 6};
+  DType mat2[2]{1, 2};
 
   // Expect result of shape (2, 3)
-  DType expected[6] {1, 2, 3, 8, 10, 12};
+  DType expected[6]{1, 2, 3, 8, 10, 12};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -117,9 +116,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
-  Tensor<cpu, 2, DType> in1(Shape2(3, 4)), in2(Shape2(3, 2)),
-    in3(Shape2(3, 3)), kr12(Shape2(3, 8)), kr13(Shape2(3, 24)),
-    result(Shape2(3, 24));
+  Tensor<cpu, 2, DType> in1(Shape2(3, 4)), in2(Shape2(3, 2)), in3(Shape2(3, 3)), kr12(Shape2(3, 8)),
+      kr13(Shape2(3, 24)), result(Shape2(3, 24));
   AllocSpace(&in1);
   AllocSpace(&in2);
   AllocSpace(&in3);
@@ -127,8 +125,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices) {
   AllocSpace(&kr13);
   AllocSpace(&result);
 
-  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3};
-  for (auto & in : ts_arr) {
+  std::vector<Tensor<cpu, 2, DType> > ts_arr{in1, in2, in3};
+  for (auto& in : ts_arr) {
     for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
       for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
         in[i][j] = distribution(generator);
@@ -139,7 +137,7 @@ TEST(row_wise_kronecker, ThreeInputMatrices) {
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
-  for (auto & in : ts_arr)
+  for (auto& in : ts_arr)
     FreeSpace(&in);
   FreeSpace(&kr12);
   FreeSpace(&kr13);
@@ -150,9 +148,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices2) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
-  Tensor<cpu, 2, DType> in1(Shape2(3, 4)), in2(Shape2(3, 1)),
-    in3(Shape2(3, 3)), kr12(Shape2(3, 4)), kr13(Shape2(3, 12)),
-    result(Shape2(3, 12));
+  Tensor<cpu, 2, DType> in1(Shape2(3, 4)), in2(Shape2(3, 1)), in3(Shape2(3, 3)), kr12(Shape2(3, 4)),
+      kr13(Shape2(3, 12)), result(Shape2(3, 12));
   AllocSpace(&in1);
   AllocSpace(&in2);
   AllocSpace(&in3);
@@ -160,8 +157,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices2) {
   AllocSpace(&kr13);
   AllocSpace(&result);
 
-  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3};
-  for (auto & in : ts_arr) {
+  std::vector<Tensor<cpu, 2, DType> > ts_arr{in1, in2, in3};
+  for (auto& in : ts_arr) {
     for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
       for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
         in[i][j] = distribution(generator);
@@ -172,7 +169,7 @@ TEST(row_wise_kronecker, ThreeInputMatrices2) {
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
-  for (auto & in : ts_arr)
+  for (auto& in : ts_arr)
     FreeSpace(&in);
   FreeSpace(&kr12);
   FreeSpace(&kr13);
@@ -183,9 +180,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices3) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
-  Tensor<cpu, 2, DType> in1(Shape2(3, 1)), in2(Shape2(3, 4)),
-    in3(Shape2(3, 3)), kr12(Shape2(3, 4)), kr13(Shape2(3, 12)),
-    result(Shape2(3, 12));
+  Tensor<cpu, 2, DType> in1(Shape2(3, 1)), in2(Shape2(3, 4)), in3(Shape2(3, 3)), kr12(Shape2(3, 4)),
+      kr13(Shape2(3, 12)), result(Shape2(3, 12));
   AllocSpace(&in1);
   AllocSpace(&in2);
   AllocSpace(&in3);
@@ -193,8 +189,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices3) {
   AllocSpace(&kr13);
   AllocSpace(&result);
 
-  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3};
-  for (auto & in : ts_arr) {
+  std::vector<Tensor<cpu, 2, DType> > ts_arr{in1, in2, in3};
+  for (auto& in : ts_arr) {
     for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
       for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
         in[i][j] = distribution(generator);
@@ -205,7 +201,7 @@ TEST(row_wise_kronecker, ThreeInputMatrices3) {
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
-  for (auto & in : ts_arr)
+  for (auto& in : ts_arr)
     FreeSpace(&in);
   FreeSpace(&kr12);
   FreeSpace(&kr13);
@@ -216,10 +212,9 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
-  Tensor<cpu, 2, DType> in1(Shape2(3, 47)), in2(Shape2(3, 1)),
-    in3(Shape2(3, 5)), in4(Shape2(3, 2173)), kr12(Shape2(3, 47)),
-    kr13(Shape2(3, 47 * 5)), kr14(Shape2(3, 47 * 5 * 2173)),
-    result(Shape2(3, 47 * 5 * 2173));
+  Tensor<cpu, 2, DType> in1(Shape2(3, 47)), in2(Shape2(3, 1)), in3(Shape2(3, 5)),
+      in4(Shape2(3, 2173)), kr12(Shape2(3, 47)), kr13(Shape2(3, 47 * 5)),
+      kr14(Shape2(3, 47 * 5 * 2173)), result(Shape2(3, 47 * 5 * 2173));
   AllocSpace(&in1);
   AllocSpace(&in2);
   AllocSpace(&in3);
@@ -229,8 +224,8 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   AllocSpace(&kr14);
   AllocSpace(&result);
 
-  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3, in4};
-  for (auto & in : ts_arr) {
+  std::vector<Tensor<cpu, 2, DType> > ts_arr{in1, in2, in3, in4};
+  for (auto& in : ts_arr) {
     for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
       for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
         in[i][j] = distribution(generator);
@@ -242,7 +237,7 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr14, result);
 
-  for (auto & in : ts_arr)
+  for (auto& in : ts_arr)
     FreeSpace(&in);
   FreeSpace(&kr12);
   FreeSpace(&kr13);
@@ -250,11 +245,10 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   FreeSpace(&result);
 }
 
-
 #if MXNET_USE_LAPACK == 1
 TEST(khatri_rao, OneInputMatrix) {
   // Input matrices of shape (2, 4) which is also the expected result
-  DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
+  DType mat[8]{1, 2, 3, 4, 5, 6, 7, 8};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -273,12 +267,12 @@ TEST(khatri_rao, OneInputMatrix) {
 
 TEST(khatri_rao, TwoInputMatrices) {
   // Input matrices of shape (3, 2) and (4, 2)
-  DType mat1[6] {1, 4, 2, 5, 3, 6};
-  DType mat2[8] {1, 5, 2, 6, 3, 7, 4, 8};
+  DType mat1[6]{1, 4, 2, 5, 3, 6};
+  DType mat2[8]{1, 5, 2, 6, 3, 7, 4, 8};
 
   // Expect result of shape (12, 2)
-  DType expected[24] {1, 20, 2, 24, 3, 28, 4, 32, 2, 25, 4, 30,
-                      6, 35, 8, 40, 3, 30, 6, 36, 9, 42, 12, 48};
+  DType expected[24]{1, 20, 2, 24, 3, 28, 4, 32, 2, 25, 4,  30,
+                     6, 35, 8, 40, 3, 30, 6, 36, 9, 42, 12, 48};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -301,9 +295,8 @@ TEST(khatri_rao, ThreeInputMatrices) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
-  Tensor<cpu, 2, DType> in1(Shape2(4, 3)), in2(Shape2(2, 3)),
-    in3(Shape2(3, 3)), kr12(Shape2(8, 3)), kr13(Shape2(24, 3)),
-    result(Shape2(24, 3));
+  Tensor<cpu, 2, DType> in1(Shape2(4, 3)), in2(Shape2(2, 3)), in3(Shape2(3, 3)), kr12(Shape2(8, 3)),
+      kr13(Shape2(24, 3)), result(Shape2(24, 3));
   AllocSpace(&in1);
   AllocSpace(&in2);
   AllocSpace(&in3);
@@ -311,8 +304,8 @@ TEST(khatri_rao, ThreeInputMatrices) {
   AllocSpace(&kr13);
   AllocSpace(&result);
 
-  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3};
-  for (auto & in : ts_arr) {
+  std::vector<Tensor<cpu, 2, DType> > ts_arr{in1, in2, in3};
+  for (auto& in : ts_arr) {
     for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
       for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
         in[i][j] = distribution(generator);
@@ -323,7 +316,7 @@ TEST(khatri_rao, ThreeInputMatrices) {
   khatri_rao(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
-  for (auto & in : ts_arr)
+  for (auto& in : ts_arr)
     FreeSpace(&in);
   FreeSpace(&kr12);
   FreeSpace(&kr13);
@@ -331,7 +324,7 @@ TEST(khatri_rao, ThreeInputMatrices) {
 }
 
 TEST(inv_khatri_rao, OneInputMatrixTransposed) {
-  DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
+  DType mat[8]{1, 2, 3, 4, 5, 6, 7, 8};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -354,8 +347,8 @@ TEST(inv_khatri_rao, OneInputMatrixTransposed) {
 
 TEST(inv_khatri_rao, TwoInputMatrices) {
   // Input matrices of shape (3, 2) and (4, 2)
-  DType mat1[6] {1, 4, 2, 5, 3, 6};
-  DType mat2[8] {1, 5, 2, 6, 3, 7, 4, 8};
+  DType mat1[6]{1, 4, 2, 5, 3, 6};
+  DType mat2[8]{1, 5, 2, 6, 3, 7, 4, 8};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -382,8 +375,8 @@ TEST(inv_khatri_rao, TwoInputMatrices) {
 
 TEST(inv_khatri_rao, TwoInputMatricesTransposed) {
   // Transposed input matrices of shape (2, 3) and (2, 4)
-  DType mat1[6] {1, 2, 3, 4, 5, 6};
-  DType mat2[8] {1, 2, 3, 4, 5, 6, 7, 8};
+  DType mat1[6]{1, 2, 3, 4, 5, 6};
+  DType mat2[8]{1, 2, 3, 4, 5, 6, 7, 8};
 
   // Make input tensors
   std::vector<Tensor<cpu, 2, DType> > ts_arr;
@@ -413,14 +406,13 @@ TEST(inv_khatri_rao, ThreeInputMatricesTranposed) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
-  Tensor<cpu, 2, DType> in1(Shape2(3, 4)), in2(Shape2(3, 2)),
-    in3(Shape2(3, 3));
+  Tensor<cpu, 2, DType> in1(Shape2(3, 4)), in2(Shape2(3, 2)), in3(Shape2(3, 3));
   AllocSpace(&in1);
   AllocSpace(&in2);
   AllocSpace(&in3);
 
-  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3};
-  for (auto & in : ts_arr) {
+  std::vector<Tensor<cpu, 2, DType> > ts_arr{in1, in2, in3};
+  for (auto& in : ts_arr) {
     for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
       for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
         in[i][j] = distribution(generator);
@@ -440,7 +432,7 @@ TEST(inv_khatri_rao, ThreeInputMatricesTranposed) {
   actual_dot = implicit_dot(implicit_dot(inv_kr, kr_t.T()), inv_kr);
   EXPECT_DOUBLE_EQ_MATRIX(inv_kr, actual_dot);
 
-  for (auto & in : ts_arr)
+  for (auto& in : ts_arr)
     FreeSpace(&in);
   FreeSpace(&inv_kr);
   FreeSpace(&kr_t);

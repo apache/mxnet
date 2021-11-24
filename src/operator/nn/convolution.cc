@@ -126,9 +126,9 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     Shape<3> oshape;
     oshape[0] = dshape[0];
     oshape[1] = param_.num_filter;
-    oshape[2] = dshape[2] != -1
-                    ? (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_x) / param_.stride[0] + 1
-                    : -1;
+    oshape[2] = dshape[2] != -1 ?
+                    (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_x) / param_.stride[0] + 1 :
+                    -1;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
     // Perform incomplete shape inference. Fill in the missing values in data shape.
     // 1) We can always fill in the batch_size.
@@ -177,12 +177,12 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     Shape<4> oshape;
     oshape[0] = dshape[0];
     oshape[1] = param_.num_filter;
-    oshape[2] = dshape[2] != -1
-                    ? (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_y) / param_.stride[0] + 1
-                    : -1;
-    oshape[3] = dshape[3] != -1
-                    ? (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_x) / param_.stride[1] + 1
-                    : -1;
+    oshape[2] = dshape[2] != -1 ?
+                    (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_y) / param_.stride[0] + 1 :
+                    -1;
+    oshape[3] = dshape[3] != -1 ?
+                    (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_x) / param_.stride[1] + 1 :
+                    -1;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
     // Perform incomplete shape inference. Fill in the missing values in data shape.
     // 1) We can always fill in the batch_size.
@@ -239,15 +239,15 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     Shape<5> oshape;
     oshape[0] = dshape[0];
     oshape[1] = param_.num_filter;
-    oshape[2] = dshape[2] != -1
-                    ? (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_d) / param_.stride[0] + 1
-                    : -1;
-    oshape[3] = dshape[3] != -1
-                    ? (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_y) / param_.stride[1] + 1
-                    : -1;
-    oshape[4] = dshape[4] != -1
-                    ? (AddPad(dshape[4], param_.pad[2]) - dilated_ksize_x) / param_.stride[2] + 1
-                    : -1;
+    oshape[2] = dshape[2] != -1 ?
+                    (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_d) / param_.stride[0] + 1 :
+                    -1;
+    oshape[3] = dshape[3] != -1 ?
+                    (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_y) / param_.stride[1] + 1 :
+                    -1;
+    oshape[4] = dshape[4] != -1 ?
+                    (AddPad(dshape[4], param_.pad[2]) - dilated_ksize_x) / param_.stride[2] + 1 :
+                    -1;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
     // Perform incomplete shape inference. Fill in the missing values in data shape.
     // 1) We can always fill in the batch_size.

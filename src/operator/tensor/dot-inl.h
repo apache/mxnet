@@ -251,8 +251,8 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool rhs_rsp_or_dns     = rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage;
   bool hint_has_value     = param.forward_stype.has_value();
   NDArrayStorageType target_stype =
-      hint_has_value ? static_cast<NDArrayStorageType>(param.forward_stype.value())
-                     : kUndefinedStorage;
+      hint_has_value ? static_cast<NDArrayStorageType>(param.forward_stype.value()) :
+                       kUndefinedStorage;
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
     target_stype = hint_has_value ? target_stype : kDefaultStorage;
@@ -1341,13 +1341,13 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
       L[0] = mshadow::Shape1(lshape[0]);
       L[1] = lshape.ndim() > 1 ? mxnet::TShape(&lshape[1], lshape.end()) : mxnet::TShape(1, 1);
     } else {
-      L[0] = lshape.ndim() > 1 ? mxnet::TShape(&lshape[0], &lshape[lshape.ndim() - 1])
-                               : mxnet::TShape(1, 1);
+      L[0] = lshape.ndim() > 1 ? mxnet::TShape(&lshape[0], &lshape[lshape.ndim() - 1]) :
+                                 mxnet::TShape(1, 1);
       L[1] = mshadow::Shape1(lshape[lshape.ndim() - 1]);
     }
     if (Tb) {
-      R[0] = rshape.ndim() > 1 ? mxnet::TShape(&rshape[0], &rshape[rshape.ndim() - 1])
-                               : mxnet::TShape(1, 1);
+      R[0] = rshape.ndim() > 1 ? mxnet::TShape(&rshape[0], &rshape[rshape.ndim() - 1]) :
+                                 mxnet::TShape(1, 1);
       R[1] = mshadow::Shape1(rshape[rshape.ndim() - 1]);
     } else {
       R[0] = mshadow::Shape1(rshape[0]);
@@ -1516,14 +1516,15 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template <typename ParamType>
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector* in_attrs,
                           mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  mxnet::TShape& lshape = (*in_attrs)[0];
-  mxnet::TShape& rshape = (*in_attrs)[1];
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  mxnet::TShape& lshape  = (*in_attrs)[0];
+  mxnet::TShape& rshape  = (*in_attrs)[1];
   // return false if lhs and rhs both have fully unknown shape
   if (!ndim_is_known(lshape) || !ndim_is_known(rshape))
     return false;
@@ -1564,16 +1565,4 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-namespace std {
-template <>
-struct hash<mxnet::op::DotParam> {
-  size_t operator()(const mxnet::op::DotParam& val) {
-    size_t ret = 0;
-    ret        = dmlc::HashCombine(ret, val.transpose_a);
-    ret        = dmlc::HashCombine(ret, val.transpose_b);
-    ret        = dmlc::HashCombine(ret, val.forward_stype);
-    return ret;
-  }
-};
-}  // namespace std
 #endif  // MXNET_OPERATOR_TENSOR_DOT_INL_H_

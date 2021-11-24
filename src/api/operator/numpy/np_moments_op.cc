@@ -32,7 +32,7 @@ namespace mxnet {
 MXNET_REGISTER_API("_npi.std").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_std");
-  op::NumpyMomentsParam param;
+  op::NumpyMomentsParam param = {};
   nnvm::NodeAttrs attrs;
   attrs.op = op;
 
@@ -86,7 +86,7 @@ MXNET_REGISTER_API("_npi.std").set_body([](runtime::MXNetArgs args, runtime::MXN
 MXNET_REGISTER_API("_npi.var").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_var");
-  op::NumpyMomentsParam param;
+  op::NumpyMomentsParam param = {};
   nnvm::NodeAttrs attrs;
   attrs.op = op;
 
@@ -141,7 +141,7 @@ MXNET_REGISTER_API("_npi.average")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_average");
-      op::NumpyWeightedAverageParam param;
+      op::NumpyWeightedAverageParam param = {};
       nnvm::NodeAttrs attrs;
       attrs.op = op;
 

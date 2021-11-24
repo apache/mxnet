@@ -122,7 +122,7 @@ def check_quantize(net_original, data_shape, out_type, name='conv',
 
   net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
   min_value = -1 if out_type != 'uint8' else 0
-  data = mx.np.random.uniform(min_value, 1.0, size=data_shape, dtype='float32', ctx=mx.current_context())
+  data = mx.np.random.uniform(min_value, 1.0, size=data_shape, dtype='float32', ctx=mx.current_device())
 
   outputs = net_original(data)
   for output in outputs:
@@ -132,7 +132,7 @@ def check_quantize(net_original, data_shape, out_type, name='conv',
   calib_data = mx.gluon.data.DataLoader(data, batch_size=1)
   for quantize_granularity in quantize_granularity_list:
     qnet = quantization.quantize_net(net_original,
-                                     ctx=mx.current_context(),
+                                     ctx=mx.current_device(),
                                      exclude_layers=None,
                                      exclude_operators=None,
                                      quantized_dtype=out_type,
@@ -159,7 +159,7 @@ def check_fusion(net_original, data_shape, attrs_dict, check_fp32_fusion=True, c
                  out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True):
   net_original.initialize()
   net_original.hybridize(static_alloc=False, static_shape=False)
-  data = mx.np.random.uniform(size=data_shape, dtype='float32', ctx=mx.current_context())
+  data = mx.np.random.uniform(size=data_shape, dtype='float32', ctx=mx.current_device())
   net_original(data)
   net_fusion = copy.copy(net_original)
   sym, params = net_original.export(None)

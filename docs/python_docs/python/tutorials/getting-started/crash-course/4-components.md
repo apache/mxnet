@@ -35,7 +35,7 @@ import mxnet as mx
 from mxnet.gluon import nn
 npx.set_np()
 
-ctx = mx.cpu()
+device = mx.cpu()
 ```
 
 ## Initialization
@@ -103,7 +103,7 @@ To initialize your network using different built-in types, you have to use the
 from mxnet import init
 
 # Constant init initializes the weights to be a constant value for all the params
-net.initialize(init=init.Constant(3), ctx=ctx)
+net.initialize(init=init.Constant(3), device=device)
 print(net[0].weight.data()[0])
 ```
 
@@ -113,7 +113,7 @@ already initialized the weight but want to reinitialize the weight, set the
 `force_reinit` flag to `True`.
 
 ```{.python .input}
-net.initialize(init=init.Normal(sigma=0.2), force_reinit=True, ctx=ctx)
+net.initialize(init=init.Normal(sigma=0.2), force_reinit=True, device=device)
 print(net[0].weight.data()[0])
 ```
 

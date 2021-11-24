@@ -34,7 +34,7 @@ inline static void SetNumpyWindowsParam(runtime::MXNetArgs args,
                                         const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
-  op::NumpyWindowsParam param;
+  op::NumpyWindowsParam param = {};
   if (args[0].type_code() == kNull) {
     param.M = dmlc::nullopt;
   } else {

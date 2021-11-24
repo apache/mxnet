@@ -26,7 +26,7 @@ import scipy.sparse as sp
 import mxnet as mx
 import numpy as np
 import numpy.random as rnd
-from mxnet.test_utils import rand_ndarray, set_default_context, assert_almost_equal, get_bz2_data
+from mxnet.test_utils import rand_ndarray, set_default_device, assert_almost_equal, get_bz2_data
 from mxnet.base import check_call, _LIB
 from util import estimate_density
 
@@ -267,7 +267,7 @@ def test_dot_synthetic(data_dict):
     # Benchmark MXNet and Scipys dot operator
     def bench_dot(lhs_shape, rhs_shape, lhs_stype, rhs_stype,
                   lhs_den, rhs_den, trans_lhs, ctx, num_repeat=10, fw="mxnet", distribution="uniform"):
-        set_default_context(ctx)
+        set_default_device(ctx)
         assert fw == "mxnet" or fw == "scipy"
         # Set funcs
         dot_func_sparse = mx.nd.sparse.dot if fw == "mxnet" else sp.spmatrix.dot

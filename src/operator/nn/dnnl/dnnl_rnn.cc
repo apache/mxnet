@@ -184,9 +184,9 @@ RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
   memory::data_type data_type   = get_dnnl_type(data.dtype());
   memory::data_type weight_type = get_dnnl_type(params.dtype());
   const prop_kind prop = is_train ? prop_kind::forward_training : prop_kind::forward_inference;
-  const rnn_direction dnnl_rnn_direction = layer_param.bidirectional
-                                               ? rnn_direction::bidirectional_concat
-                                               : rnn_direction::unidirectional;
+  const rnn_direction dnnl_rnn_direction = layer_param.bidirectional ?
+                                               rnn_direction::bidirectional_concat :
+                                               rnn_direction::unidirectional;
 
   auto src_layer_desc    = memory::desc(layer_param.src_dims, data_type, tag::tnc);
   auto weight_layer_desc = memory::desc(layer_param.weight_layer_dims, weight_type, tag::any);
@@ -196,15 +196,15 @@ RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
   auto src_state_desc    = memory::desc(layer_param.state_dims, data_type, tag::ldnc);
   auto src_cell_desc     = memory::desc(layer_param.cell_dims, data_type, tag::ldnc);
   auto weight_peep_desc  = memory::desc();
-  auto weight_proj_desc  = layer_param.proj_size > 0
-                              ? memory::desc(layer_param.weight_proj_dims, weight_type, tag::any)
-                              : memory::desc();
-  auto dst_state_desc = layer_param.state_outputs
-                            ? memory::desc(layer_param.state_dims, data_type, tag::ldnc)
-                            : memory::desc();
-  auto dst_cell_desc = layer_param.state_outputs
-                           ? memory::desc(layer_param.cell_dims, data_type, tag::ldnc)
-                           : memory::desc();
+  auto weight_proj_desc  = layer_param.proj_size > 0 ?
+                              memory::desc(layer_param.weight_proj_dims, weight_type, tag::any) :
+                              memory::desc();
+  auto dst_state_desc = layer_param.state_outputs ?
+                            memory::desc(layer_param.state_dims, data_type, tag::ldnc) :
+                            memory::desc();
+  auto dst_cell_desc = layer_param.state_outputs ?
+                           memory::desc(layer_param.cell_dims, data_type, tag::ldnc) :
+                           memory::desc();
 
   auto fwd = RnnPrimitive();
   switch (mode) {
@@ -265,8 +265,9 @@ RnnBwdPrimitive GetRnnBwdPrim(const DNNLRnnForwardTraining& fwd,
   memory::data_type data_type          = get_dnnl_type(data.dtype());
   memory::data_type weight_type        = get_dnnl_type(params.dtype());
   const prop_kind prop                 = prop_kind::backward;
-  rnn_direction dnnl_rnn_direction = layer_param.bidirectional ? rnn_direction::bidirectional_concat
-                                                               : rnn_direction::unidirectional;
+  rnn_direction dnnl_rnn_direction     = layer_param.bidirectional ?
+                                         rnn_direction::bidirectional_concat :
+                                         rnn_direction::unidirectional;
 
   auto src_layer_desc    = memory::desc(layer_param.src_dims, data_type, tag::tnc);
   auto weight_layer_desc = memory::desc(layer_param.weight_layer_dims, weight_type, tag::any);
@@ -274,9 +275,9 @@ RnnBwdPrimitive GetRnnBwdPrim(const DNNLRnnForwardTraining& fwd,
   auto bias_desc         = memory::desc(layer_param.bias_dims, data_type, tag::ldgo);
   auto dst_layer_desc    = memory::desc(layer_param.dst_dims, data_type, tag::tnc);
   auto src_state_desc    = memory::desc(layer_param.state_dims, data_type, tag::ldnc);
-  auto dst_state_desc    = layer_param.state_outputs
-                            ? memory::desc(layer_param.state_dims, data_type, tag::ldnc)
-                            : memory::desc();
+  auto dst_state_desc    = layer_param.state_outputs ?
+                            memory::desc(layer_param.state_dims, data_type, tag::ldnc) :
+                            memory::desc();
 
   const void* fwd_pd = fwd.GetPrimDesc();
   auto bwd           = RnnBwdPrimitive();
@@ -1125,9 +1126,9 @@ void DNNLRnnOp::Forward(const OpContext& ctx,
   const int seq_length = default_param.seq_length_;
   const int batch_size = default_param.batch_size_;
   const int state_size = default_param.state_size;
-  const int iter_size  = default_param.projection_size.has_value()
-                            ? default_param.projection_size.value()
-                            : default_param.state_size;
+  const int iter_size  = default_param.projection_size.has_value() ?
+                            default_param.projection_size.value() :
+                            default_param.state_size;
   const int directions = default_param.bidirectional ? 2 : 1;
   dnnl::memory::desc dst_desc({seq_length, batch_size, directions * iter_size},
                               get_dnnl_type(data_dtype),

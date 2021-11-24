@@ -79,9 +79,9 @@ inline void TVMOpReduce(const OpContext& ctx,
       << "TVMOpReduce only supports ndim <= " << max_reduce_ndim;
 
   const TBlob expanded_output =
-      (input.ndim() == output.ndim()
-           ? output
-           : output.reshape(NumpyReduceAxesShapeImpl(input.shape_, axis, true)));
+      (input.ndim() == output.ndim() ?
+           output :
+           output.reshape(NumpyReduceAxesShapeImpl(input.shape_, axis, true)));
   CHECK_EQ(input.ndim(), expanded_output.ndim());
   int reduce1st_dim = 0;
   if (input.ndim() > 0 && input.size(0) != expanded_output.size(0)) {

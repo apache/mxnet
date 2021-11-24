@@ -45,7 +45,7 @@ MXNET_REGISTER_API("_npi.eigh").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_eigh");
   nnvm::NodeAttrs attrs;
-  op::EighParam param;
+  op::EighParam param = {};
   param.UPLO   = *((args[1].operator std::string()).c_str());
   attrs.parsed = param;
   attrs.op     = op;

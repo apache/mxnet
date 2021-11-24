@@ -743,8 +743,8 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
 
         arrays.push_back(array);
         return_names.emplace_back(dirname.size() ?  // Exclude "/"
-                                      dirname.substr(0, dirname.size() - 1)
-                                                 : dirname);
+                                      dirname.substr(0, dirname.size() - 1) :
+                                      dirname);
 
       } else {
         throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");
@@ -881,8 +881,8 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
 
         arrays.push_back(array);
         return_names.emplace_back(dirname.size() ?  // Exclude "/"
-                                      dirname.substr(0, dirname.size() - 1)
-                                                 : dirname);
+                                      dirname.substr(0, dirname.size() - 1) :
+                                      dirname);
 
       } else {
         throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");

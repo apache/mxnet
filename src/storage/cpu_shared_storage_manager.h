@@ -58,7 +58,7 @@ class CPUSharedStorageManager final : public StorageManager {
 #endif
   }
 
-  void Alloc(Storage::Handle* handle) override;
+  void Alloc(Storage::Handle* handle, bool failsafe) override;
   void Free(Storage::Handle handle) override {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     pool_.erase(handle.dptr);
@@ -105,7 +105,7 @@ class CPUSharedStorageManager final : public StorageManager {
   DISALLOW_COPY_AND_ASSIGN(CPUSharedStorageManager);
 };  // class CPUSharedStorageManager
 
-void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
+void CPUSharedStorageManager::Alloc(Storage::Handle* handle, bool /* failsafe */) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
   int fid = -1;
