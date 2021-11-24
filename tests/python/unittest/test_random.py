@@ -425,16 +425,16 @@ def test_random_seed_setting():
     num_samples = 100000
     for dtype in ['float16', 'float32', 'float64']:
         seed = set_seed_variously(1, num_temp_seeds, seed_to_test)
-        samples1 = mx.nd.random.multinomial(n=mx.nd.array([100]), p=mx.nd.array([probs]), ctx=ctx,
-                                            dtype=dtype, shape=num_samples)
+        samples1 = mx.nd.random.categorical(data=mx.nd.array(probs, ctx=ctx, dtype=dtype),
+                                            shape=num_samples)
         seed = set_seed_variously(seed, num_temp_seeds, seed_to_test)
-        samples2 = mx.nd.random.multinomial(n=mx.nd.array([100]), p=mx.nd.array([probs]), ctx=ctx,
-                                            dtype=dtype, shape=num_samples)
+        samples2 = mx.nd.random.categorical(data=mx.nd.array(probs, ctx=ctx, dtype=dtype),
+                                            shape=num_samples)
         samples1np = samples1.asnumpy()
         set_seed_variously(seed, num_temp_seeds, seed_to_test+1)
         samples2np = samples2.asnumpy()
         assert same(samples1np, samples2np), \
-            "seed-setting test: `multinomial` should give the same result with the same seed"
+            "seed-setting test: `categorical` should give the same result with the same seed"
 
 
 # Tests that seed setting of parallel rng is synchronous w.r.t. rng use before and after.
@@ -492,31 +492,29 @@ def set_seed_variously_for_context(ctx, init_seed, num_init_seeds, final_seed):
 def test_random_seed_setting_for_context():
     seed_to_test = 1234
     num_temp_seeds = 25
-    n = mx.nd.array([1])
-    probs = mx.nd.array([[0.125, 0.25, 0.25, 0.0625, 0.125, 0.1875]])
+    probs = [0.125, 0.25, 0.25, 0.0625, 0.125, 0.1875]
     num_samples = 100000
     dev_type = mx.context.current_context().device_type
     for dtype in ['float16', 'float32', 'float64']:
         samples_imp = []
         samples_sym = []
         # Collect random number samples from the generators of all devices, each seeded with the same number.
-        for dev_id in range(0, mx.device.num_gpus() if dev_type == 'gpu' else 1):
+        for dev_id in range(0, mx.context.num_gpus() if dev_type == 'gpu' else 1):
             with mx.Context(dev_type, dev_id):
                 ctx = mx.context.current_context()
                 seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
 
-                # Check imperative. `multinomial` uses non-parallel rng.
-                rnds = mx.nd.random.multinomial(n=n, p=probs, dtype=dtype, shape=num_samples)
-                samples_imp.append(rnds[0].asnumpy())
+                # Check imperative. `categorical` uses non-parallel rng.
+                rnds = mx.nd.random.categorical(data=mx.nd.array(probs, dtype=dtype), shape=num_samples)
+                samples_imp.append(rnds.asnumpy())
 
-                # Check symbolic. `multinomial` uses non-parallel rng.
-                N = mx.sym.Variable("N")
+                # Check symbolic. `categorical` uses non-parallel rng.
                 P = mx.sym.Variable("P")
-                X = mx.sym.random.multinomial(n=N, p=P, shape=num_samples, dtype=dtype)
-                exe = X._bind(ctx, {"N": n, "P": probs})
+                X = mx.sym.random.categorical(data=P, shape=num_samples, get_prob=False)
+                exe = X._bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
                 set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
                 exe.forward()
-                samples_sym.append(exe.outputs[0][0].asnumpy())
+                samples_sym.append(exe.outputs[0].asnumpy())
         # The samples should be identical across different gpu devices.
         for i in range(1, len(samples_imp)):
             assert same(samples_imp[i - 1], samples_imp[i])
@@ -564,6 +562,40 @@ def test_parallel_random_seed_setting_for_context():
             assert same(samples_imp[i - 1], samples_imp[i])
         for i in range(1, len(samples_sym)):
             assert same(samples_sym[i - 1], samples_sym[i])
+
+@pytest.mark.parametrize('dtype', ['uint8', 'int32', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('x', [[[0,1,2,3,4],[4,3,2,1,0]], [0,1,2,3,4]])
+@pytest.mark.serial
+def test_sample_categorical(dtype, x):
+    x = mx.nd.array(x) / 10.0
+    dx = mx.nd.ones_like(x)
+    mx.autograd.mark_variables([x], [dx])
+    # Adding rtol and increasing samples needed to pass with seed 2951820647
+    samples = 10000
+    with mx.autograd.record():
+        y, prob = mx.nd.random.categorical(x, shape=samples, get_prob=True, dtype=dtype)
+        r = prob * 5
+        r.backward()
+
+    assert(np.dtype(dtype) == y.dtype)
+    y = y.asnumpy()
+    x = x.asnumpy()
+    dx = dx.asnumpy()
+    if len(x.shape) is 1:
+        x = x.reshape((1, x.shape[0]))
+        dx = dx.reshape(1, dx.shape[0])
+        y = y.reshape((1, y.shape[0]))
+        prob = prob.reshape((1, prob.shape[0]))
+    for i in range(x.shape[0]):
+        freq = np.bincount(y[i,:].astype('int32'), minlength=5)/np.float32(samples)*x[i,:].sum()
+        assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
+        rprob = x[i][y[i].astype('int32')]/x[i].sum()
+        assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
+
+        real_dx = np.zeros((5,))
+        for j in range(samples):
+            real_dx[int(y[i][j])] += 5.0 / rprob[j]
+        assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
 
 # Test the generators with the chi-square testing
 @pytest.mark.serial
@@ -700,14 +732,71 @@ def test_negative_binomial_generator():
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
 @pytest.mark.serial
-def test_multinomial_generator():
+def test_categorical_generator():
+    # This test fails with dtype float16 if the probabilities themselves cannot be
+    # well-represented in float16.  When the float16 random picks are assigned to buckets,
+    # only certain bucket-probabilities are possible.  Here we map the desired probabilites
+    # (e.g. 0.1) to nearby float16 probabilities (e.g. 0.10009766) that are achievable.
+    def quantize_probs(probs, dtype):
+        if dtype == 'float16':
+            # float16 has a 10-bit fraction plus an implicit leading 1, so all probabilities
+            # of the form N/2^11 (where N is an integer) are representable.
+            num_quanta = 2048.0
+            quantized_probs = np.rint(np.array(probs) * num_quanta) / num_quanta
+            # Ensure probabilities add to 1
+            quantized_probs[0] += 1.0 - quantized_probs.sum()
+        else:
+            # no need to quantize probs with this data precision
+            quantized_probs = np.array(probs)
+        return quantized_probs
+
     ctx = mx.context.current_context()
-    n = mx.nd.array([1])
+    probs = [0.1, 0.2, 0.3, 0.05, 0.15, 0.2]
+    samples = 1000000
+    trials = 5
+    buckets = list(range(6))
+    for dtype in ['float16', 'float32', 'float64']:
+        quantized_probs = quantize_probs(probs, dtype)
+        generator_mx = lambda x: mx.nd.random.categorical(data=mx.nd.array(quantized_probs, ctx=ctx, dtype=dtype),
+                                                          shape=x).asnumpy()
+        # success_rate was set to 0.15 since PR #13498 and became flaky
+        # both of previous issues(#14457, #14158) failed with success_rate 0.25
+        # In func verify_generator inside test_utilis.py
+        # it raise the error when success_num(1) < nrepeat(5) * success_rate(0.25)
+        # by changing the 0.25 -> 0.2 solve these edge case but still have strictness
+        verify_generator(generator=generator_mx, buckets=buckets, probs=quantized_probs,
+                         nsamples=samples, nrepeat=trials, success_rate=0.20)
+        generator_mx_same_seed = \
+            lambda x: np.concatenate(
+                [mx.nd.random.categorical(data=mx.nd.array(quantized_probs, ctx=ctx, dtype=dtype),
+                                                          shape=x // 10).asnumpy()
+                 for _ in range(10)])
+        verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=quantized_probs,
+                         nsamples=samples, nrepeat=trials, success_rate=0.20)
+
+
+@pytest.mark.serial
+def test_multinomial_generator():
+    def repeat_i(arr):
+        """
+        Return an array containing ordered values from 0 to arr.size()-1,
+        where each value i is repeated arr[i] times.
+
+        Example:
+        >>> repeat_i([3, 1, 2, 1])
+        [0, 0, 0, 1, 2, 2, 3]
+        """
+        ind = mx.nd.expand_dims(mx.nd.cumsum(mx.nd.concat(mx.nd.array([0]), arr[:arr.size-1], dim=0)), axis=0)
+        data = mx.nd.ones((arr.size,))
+        shape = (int(mx.nd.sum(arr).asscalar()),)
+        return mx.nd.cumsum(mx.nd.scatter_nd(data, ind, shape)) - 1
+
+    ctx = mx.context.current_context()
     probs = np.array([0.1, 0.2, 0.3, 0.05, 0.15, 0.2])
 
     buckets = list(range(6))
     for dtype in ['float16', 'float32', 'float64']:
-        generator_mx = lambda x: mx.nd.op.argmax(mx.nd.random.multinomial(n=n, p=mx.nd.array([probs]), ctx=ctx, shape=x), axis=-1)[0].asnumpy()
+        generator_mx = lambda x: repeat_i(mx.nd.random.multinomial(n=mx.nd.array([x]), p=mx.nd.array([probs]), ctx=ctx)[0]).asnumpy()
         verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
 
         generator_mx_same_seed = \
@@ -977,6 +1066,18 @@ def test_randint_generator():
 def test_randint_without_dtype():
     a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
     assert a.dtype == np.int32
+
+
+@pytest.mark.serial
+def test_sample_categorical_num_outputs():
+    ctx = mx.context.current_context()
+    probs = [[0.125, 0.25, 0.25], [0.0625, 0.125, 0.1875]]
+    out = mx.nd.random.categorical(data=mx.nd.array(probs, ctx=ctx), shape=10000, get_prob=False)
+    assert isinstance(out, mx.nd.NDArray)
+    out = mx.nd.random.categorical(data=mx.nd.array(probs, ctx=ctx), shape=10000, get_prob=True)
+    assert isinstance(out, list)
+    assert len(out) == 2
+
 
 @use_np
 def test_dirichlet_zero_size_dim():

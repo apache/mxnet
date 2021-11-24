@@ -24,7 +24,7 @@ from .ndarray import NDArray
 
 
 __all__ = ['uniform', 'normal', 'randn', 'poisson', 'exponential', 'gamma', 'binomial',
-           'multinomial', 'negative_binomial', 'generalized_negative_binomial',
+           'categorical', 'multinomial', 'negative_binomial', 'generalized_negative_binomial',
            'shuffle', 'randint']
 
 
@@ -548,6 +548,70 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
     return _random_helper(_internal._random_generalized_negative_binomial,
                           _internal._sample_generalized_negative_binomial,
                           [mu, alpha], shape, dtype, ctx, out, kwargs)
+
+def categorical(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kwargs):
+    """Concurrent sampling from multiple categorical distributions.
+
+    .. note:: The input distribution must be normalized, i.e. `data` must sum to
+              1 along its last dimension.
+
+    Parameters
+    ----------
+    data : NDArray
+        An *n* dimensional array whose last dimension has length `k`, where
+        `k` is the number of possible outcomes of each categorical distribution.
+        For example, data with shape `(m, n, k)` specifies `m*n` categorical
+        distributions each with `k` possible outcomes.
+    shape : int or tuple of ints, optional
+        The number of samples to draw from each distribution. If shape is empty
+        one sample will be drawn from each distribution.
+    get_prob : bool, optional
+        If true, a second array containing log likelihood of the drawn
+        samples will also be returned.
+        This is usually used for reinforcement learning, where you can provide
+        reward as head gradient w.r.t. this array to estimate gradient.
+    out : NDArray, optional
+        Store output to an existing NDArray.
+    dtype : str or numpy.dtype, optional
+        Data type of the sample output array. The default is int32.
+        Note that the data type of the log likelihood array is the same with that of `data`.
+
+    Returns
+    -------
+    List, or NDArray
+        For input `data` with `n` dimensions and shape `(d1, d2, ..., dn-1, k)`, and input
+        `shape` with shape `(s1, s2, ..., sx)`, returns an NDArray with shape
+        `(d1, d2, ... dn-1, s1, s2, ..., sx)`. The `s1, s2, ... sx` dimensions of the
+        returned NDArray consist of 0-indexed values sampled from each respective categorical
+        distribution provided in the `k` dimension of `data`.
+
+        For the case `n`=1, and `x`=1 (one shape dimension), returned NDArray has shape `(s1,)`.
+
+        If `get_prob` is set to True, this function returns a list of format:
+        `[ndarray_output, log_likelihood_output]`, where `log_likelihood_output` is an NDArray of the
+        same shape as the sampled outputs.
+
+    Examples
+    --------
+    >>> probs = mx.nd.array([0, 0.1, 0.2, 0.3, 0.4])
+    >>> mx.nd.random.categorical(probs)
+    [3]
+    <NDArray 1 @cpu(0)>
+    >>> probs = mx.nd.array([[0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0]])
+    >>> mx.nd.random.categorical(probs)
+    [3 1]
+    <NDArray 2 @cpu(0)>
+    >>> mx.nd.random.categorical(probs, shape=2)
+    [[4 4]
+     [1 2]]
+    <NDArray 2x2 @cpu(0)>
+    >>> mx.nd.random.categorical(probs, get_prob=True)
+    [3 2]
+    <NDArray 2 @cpu(0)>
+    [-1.20397282 -1.60943794]
+    <NDArray 2 @cpu(0)>
+    """
+    return _internal._sample_categorical(data, shape, get_prob, out=out, dtype=dtype, **kwargs)
 
 
 def multinomial(n=[1], p=[[1.0]], shape=_Null, dtype='float32', ctx=None, out=None, **kwargs):

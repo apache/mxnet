@@ -22,7 +22,7 @@ from . import _internal
 from .symbol import Symbol
 
 
-__all__ = ['uniform', 'normal', 'randn', 'poisson', 'exponential', 'gamma', 'multinomial',
+__all__ = ['uniform', 'normal', 'randn', 'poisson', 'exponential', 'gamma', 'categorical', 'multinomial',
            'binomial', 'negative_binomial', 'generalized_negative_binomial', 'shuffle', 'randint']
 
 
@@ -341,6 +341,50 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, **kwa
     return _random_helper(_internal._random_generalized_negative_binomial,
                           _internal._sample_generalized_negative_binomial,
                           [mu, alpha], shape, dtype, kwargs)
+
+
+def categorical(data, shape=_Null, get_prob=True, dtype='int32', **kwargs):
+    """Concurrent sampling from multiple categorical distributions.
+
+    .. note:: The input distribution must be normalized, i.e. `data` must sum to
+              1 along its last dimension.
+
+    Parameters
+    ----------
+    data : Symbol
+        An *n* dimensional array whose last dimension has length `k`, where
+        `k` is the number of possible outcomes of each categorical distribution.
+        For example, data with shape `(m, n, k)` specifies `m*n` categorical
+        distributions each with `k` possible outcomes.
+    shape : int or tuple of ints, optional
+        The number of samples to draw from each distribution. If shape is empty
+        one sample will be drawn from each distribution.
+    get_prob : bool, optional
+        If true, a second array containing log likelihood of the drawn
+        samples will also be returned.
+        This is usually used for reinforcement learning, where you can provide
+        reward as head gradient w.r.t. this array to estimate gradient.
+    dtype : str or numpy.dtype, optional
+        Data type of the sample output array. The default is int32.
+        Note that the data type of the log likelihood array is the same with that of `data`.
+
+    Returns
+    -------
+    Symbol
+        For input `data` with `n` dimensions and shape `(d1, d2, ..., dn-1, k)`, and input
+        `shape` with shape `(s1, s2, ..., sx)`, returns a Symbol that resovles to shape
+        `(d1, d2, ... dn-1, s1, s2, ..., sx)`. The `s1, s2, ... sx` dimensions of the
+        returned Symbol's resolved value will consist of 0-indexed values sampled from each
+        respective categorical distribution provided in the `k` dimension of `data`.
+
+        For the case `n`=1, and `x`=1 (one shape dimension), returned Symbol will resolve to
+        shape `(s1,)`.
+
+        If `get_prob` is set to True, this function returns a Symbol that will resolve to a list of
+        outputs: `[ndarray_output, log_likelihood_output]`, where `log_likelihood_output` will resolve
+        to the same shape as the sampled outputs in ndarray_output.
+    """
+    return _internal._sample_categorical(data, shape, get_prob, dtype=dtype, **kwargs)
 
 
 def multinomial(n=[1], p=[[1.0]], shape=_Null, dtype='float32', **kwargs):

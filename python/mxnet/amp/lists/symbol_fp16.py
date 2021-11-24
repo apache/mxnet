@@ -357,6 +357,7 @@ FP16_FP32_FUNCS = [
     '_sample_gamma',
     '_sample_binomial',
     '_sample_generalized_negative_binomial',
+    '_sample_categorical',
     '_sample_multinomial',
     '_sample_negative_binomial',
     '_sample_normal',

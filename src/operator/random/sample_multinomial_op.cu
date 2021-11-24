@@ -26,8 +26,26 @@
 namespace mxnet {
 namespace op {
 
+NNVM_REGISTER_OP(_sample_categorical)
+    .set_attr<FCompute>("FCompute<gpu>", SampleCategoricalForward<gpu>);
+
 NNVM_REGISTER_OP(_sample_multinomial)
     .set_attr<FCompute>("FCompute<gpu>", SampleMultinomialForward<gpu>);
+
+struct SampleCategoricalBackwardGPUKernel {
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void
+  Map(int i, index_t K, index_t M, DType* ograd, DType* dist, IType* out, DType* igrad) {
+    for (index_t j = 0; j < M; ++j) {
+      atomicAdd(&igrad[i * K + static_cast<size_t>(out[i * M + j])],
+                ograd[i * M + j] / dist[i * K + static_cast<size_t>(out[i * M + j])]);
+    }
+  }
+};
+
+NNVM_REGISTER_OP(_backward_sample_categorical)
+    .set_attr<FCompute>("FCompute<gpu>",
+                        SampleCategoricalBackward<SampleCategoricalBackwardGPUKernel, gpu>);
 
 }  // namespace op
 }  // namespace mxnet
