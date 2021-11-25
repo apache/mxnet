@@ -24,7 +24,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "./dnnl_layer_norm-inl.h"
+#include "dnnl_layer_norm-inl.h"
 
 namespace mxnet {
 namespace op {

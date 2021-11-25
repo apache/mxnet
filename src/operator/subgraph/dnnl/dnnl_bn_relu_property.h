@@ -28,7 +28,7 @@
 #include "operator/nn/dnnl/dnnl_act-inl.h"
 #include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
 #include "operator/subgraph/common.h"
-#include "./dnnl_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

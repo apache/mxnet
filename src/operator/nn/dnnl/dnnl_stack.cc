@@ -21,11 +21,11 @@
  * \file dnnl_stack.cc
  */
 
-#include "./dnnl_base-inl.h"
-#include "./dnnl_concat-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "dnnl_base-inl.h"
+#include "dnnl_concat-inl.h"
+#include "dnnl_ops-inl.h"
 
-#include "../../tensor/matrix_op-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
 
 #if MXNET_USE_ONEDNN == 1
 namespace mxnet {

@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "operator/nn/fully_connected-inl.h"
-#include "./dnnl_base-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {

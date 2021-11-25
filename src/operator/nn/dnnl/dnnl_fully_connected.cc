@@ -24,7 +24,7 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "./dnnl_fully_connected-inl.h"
+#include "dnnl_fully_connected-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "operator/nn/dnnl/dnnl_fully_connected-inl.h"
-#include "./dnnl.hpp"
+#include "dnnl.hpp"
 
 namespace mxnet {
 namespace op {

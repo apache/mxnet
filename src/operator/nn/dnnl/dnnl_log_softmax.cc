@@ -23,8 +23,8 @@
  */
 
 #include "operator/nn/softmax-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "dnnl_base-inl.h"
+#include "dnnl_ops-inl.h"
 
 #if MXNET_USE_ONEDNN == 1
 namespace mxnet {

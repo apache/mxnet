@@ -30,7 +30,7 @@
 #include <utility>
 
 #include "operator/nn/pooling-inl.h"
-#include "./dnnl_base-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -27,7 +27,7 @@
 
 #include "operator/tensor/dot-inl.h"
 #include "operator/subgraph/common.h"
-#include "./dnnl_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

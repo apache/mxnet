@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "operator/rnn-inl.h"
-#include "./dnnl_base-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {

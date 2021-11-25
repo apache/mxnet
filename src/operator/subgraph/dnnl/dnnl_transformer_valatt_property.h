@@ -31,9 +31,9 @@
 #include "operator/swapaxis-inl.h"
 #include "operator/tensor/matrix_op-inl.h"
 #include "operator/subgraph/common.h"
-#include "./dnnl_common.h"
-#include "./dnnl_subgraph_base-inl.h"
-#include "./dnnl_transformer-inl.h"
+#include "dnnl_common.h"
+#include "dnnl_subgraph_base-inl.h"
+#include "dnnl_transformer-inl.h"
 
 /*
                  custom_op

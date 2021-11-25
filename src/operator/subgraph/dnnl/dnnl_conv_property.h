@@ -31,7 +31,7 @@
 #include "operator/nn/dnnl/dnnl_ops-inl.h"
 #include "operator/tensor/matrix_op-inl.h"
 #include "operator/subgraph/common.h"
-#include "./dnnl_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -30,6 +30,7 @@
 #include "operator/nn/dnnl/dnnl_convolution-inl.h"
 #include "operator/tensor/matrix_op-inl.h"
 #include "operator/quantization/quantization_utils.h"
+
 namespace mxnet {
 namespace op {
 

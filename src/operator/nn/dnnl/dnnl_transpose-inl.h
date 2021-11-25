@@ -26,8 +26,8 @@
 #define MXNET_OPERATOR_NN_DNNL_DNNL_TRANSPOSE_INL_H_
 #if MXNET_USE_ONEDNN == 1
 
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "dnnl_base-inl.h"
+#include "dnnl_ops-inl.h"
 
 #include "operator/numpy/np_matrix_op-inl.h"
 

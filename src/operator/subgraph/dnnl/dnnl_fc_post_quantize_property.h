@@ -35,7 +35,7 @@
 #include "operator/nn/fully_connected-inl.h"
 #include "operator/quantization/requantize-inl.h"
 #include "operator/subgraph/common.h"
-#include "./dnnl_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

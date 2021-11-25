@@ -27,7 +27,7 @@
 
 #include <numeric>
 
-#include "./dnnl_rnn-inl.h"
+#include "dnnl_rnn-inl.h"
 
 namespace mxnet {
 namespace op {

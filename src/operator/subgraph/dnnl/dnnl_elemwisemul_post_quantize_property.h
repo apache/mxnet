@@ -35,7 +35,7 @@
 #include "operator/quantization/requantize-inl.h"
 #include "operator/tensor/elemwise_binary_op-inl.h"
 #include "operator/subgraph/common.h"
-#include "./dnnl_subgraph_base-inl.h"
+#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

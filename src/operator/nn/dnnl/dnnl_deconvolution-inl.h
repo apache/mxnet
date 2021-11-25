@@ -42,8 +42,8 @@
 #include <vector>
 
 #include "operator/nn/deconvolution-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "dnnl_base-inl.h"
+#include "dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {

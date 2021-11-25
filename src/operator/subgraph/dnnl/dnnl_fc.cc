@@ -36,8 +36,8 @@
 #include "operator/quantization/quantization_utils.h"
 #include "operator/tensor/matrix_op-inl.h"
 #include "operator/subgraph/common.h"
-#include "./dnnl_common.h"
-#include "./dnnl_fc-inl.h"
+#include "dnnl_common.h"
+#include "dnnl_fc-inl.h"
 
 namespace mxnet {
 namespace op {
