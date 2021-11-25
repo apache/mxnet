@@ -88,7 +88,6 @@ DNNLSplitFwd::DNNLSplitFwd(const Tensors& tensors, const TShape& split_pts, cons
   const auto& dtype     = get_dnnl_type(input.dtype());
   const auto format_tag = static_cast<dnnl::memory::format_tag>(GetDefaultFormat(ishape.ndim()));
 
-
   dnnl::memory::dims strides(ishape.ndim(), 1);
   // last dim stride = 1, start loop from the penultimate
   for (int i = ishape.ndim() - 2; i >= 0; --i) {
@@ -129,7 +128,7 @@ void DNNLSplitFwd::Execute(const Tensors& tensors,
   }
 
   int out_idx = 0, primitive_idx = 0;
-  int axis_offset = strides[split_axis] * GetTypeSize(input_tensor.dtype());
+  int axis_offset      = strides[split_axis] * GetTypeSize(input_tensor.dtype());
   std::byte* input_ptr = reinterpret_cast<std::byte*>(input_tensor.data().dptr_);
 
   for (const auto& out : tensors.outputs) {
@@ -138,9 +137,7 @@ void DNNLSplitFwd::Execute(const Tensors& tensors,
       continue;
     }
     int offset  = split_pts[out_idx] * axis_offset;
-    auto in_mem = dnnl::memory(split_pds[primitive_idx].src_desc(),
-                               cpu_engine,
-                               input_ptr + offset);
+    auto in_mem = dnnl::memory(split_pds[primitive_idx].src_desc(), cpu_engine, input_ptr + offset);
 
     auto out_mem = CreateDNNLMem(out, split_pds[primitive_idx].dst_desc(), req[out_idx]);
     DNNLStream::Get()->RegisterPrimArgs(split_fwds[primitive_idx],

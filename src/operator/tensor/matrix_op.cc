@@ -1193,7 +1193,7 @@ static void SplitForwardEx(const nnvm::NodeAttrs& attrs,
     DNNLRun(DNNLSplitForward, attrs, op_ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
   } else {
-      FallBackCompute(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+    FallBackCompute(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
   }
 }
 
