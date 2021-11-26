@@ -927,9 +927,9 @@ def test_sign():
     assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
-    out_grad[:] = 2;
+    out_grad[:] = 2
     npout_grad = out_grad.asnumpy()
-    npout_grad = 0;
+    npout_grad = 0
     exe_test.backward(out_grad)
     assert_almost_equal(arr_grad, npout_grad)
 
@@ -1076,7 +1076,7 @@ def test_abs():
     assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
-    out_grad[:] = 2;
+    out_grad[:] = 2
     npout_grad = out_grad.asnumpy()
     npout_grad = npout_grad * np.sign(data_tmp)
     exe_test.backward(out_grad)
@@ -1915,7 +1915,11 @@ def gen_broadcast_data(idx):
         [[1, 1, 65, 2, 22], [1, 1, 65, 1, 1]],
         [[1, 24, 103, 17, 18], [1, 24, 1, 1, 1]],
         [[1, 1, 1, 1, 2], [1, 24, 194, 50, 1]],
-        [[1, 1, 107, 84, 9], [1, 1, 1, 1, 1]]])
+        [[1, 1, 107, 84, 9], [1, 1, 1, 1, 1]],
+        [[8, 1, 6, 1], [7, 1, 5]], [[5, 4], [1]],
+        [[256, 256, 3], [3]], [[5, 4], [4]],
+        [[15, 3, 5], [3, 5]], [[15, 3, 5], [1, 5]],
+        [[15, 3, 5], [3, 1]]])
     if idx < binary_op_data_shape.shape[0]:
         l_shape = binary_op_data_shape[idx][0]
         r_shape = binary_op_data_shape[idx][1]
@@ -1939,7 +1943,7 @@ def gen_broadcast_data(idx):
 
 
 def gen_broadcast_data_int(idx):
-    d = gen_broadcast_data(idx);
+    d = gen_broadcast_data(idx)
     return [np.round(d[0]*100).astype(int), np.round(d[1]*100).astype(int)]
 
 
@@ -1951,7 +1955,7 @@ def gen_binary_data(dummy):
 
 
 def gen_binary_data_int(dummy):
-    d = gen_binary_data(dummy);
+    d = gen_binary_data(dummy)
     return [np.round(d[0]*100).astype(int), np.round(d[1]*100).astype(int)]
 
 
@@ -2012,10 +2016,16 @@ def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
             if shape == x.shape:
                 return x
             keepdims_shape = list(x.shape)
+            #calculate difference between output and input ndims
+            # to include cases where inputs' ndims are not equal
+            ndim_diff = len(x.shape) - len(shape)
+            for i in range(ndim_diff):
+                keepdims_shape[i] = 1
+                x = np.sum(x, axis=i).reshape(keepdims_shape)
             for i in range(len(shape)):
-                if x.shape[i] != shape[i]:
-                    keepdims_shape[i] = 1
-                    x = np.sum(x, axis=i).reshape(keepdims_shape)
+                if x.shape[ndim_diff + i] != shape[i]:
+                    keepdims_shape[ndim_diff + i] = 1
+                    x = np.sum(x, axis=ndim_diff + i).reshape(keepdims_shape)
             return x
 
         baseline_grad1, baseline_grad2 = baseline(out, d[0], d[1])

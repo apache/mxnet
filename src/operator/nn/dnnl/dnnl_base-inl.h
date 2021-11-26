@@ -198,6 +198,7 @@ bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& outp
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs);
 bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
+bool SupportDNNLBinary(const std::vector<NDArray>& inputs);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

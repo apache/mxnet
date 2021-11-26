@@ -91,8 +91,13 @@ inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype      = out_attrs->at(0);
   bool dispatched     = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+#if MXNET_USE_ONEDNN == 1
+    dispatched =
+        storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
+#else
     dispatched =
         storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+#endif  // MXNET_USE_ONEDNN == 1
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) {
     dispatched =
@@ -116,8 +121,13 @@ inline bool BinaryBroadcastAddStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype      = out_attrs->at(0);
   bool dispatched     = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+#if MXNET_USE_ONEDNN == 1
+    dispatched =
+        storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
+#else
     dispatched =
         storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+#endif  // MXNET_USE_ONEDNN == 1
   }
   if (!dispatched && ((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
                       (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage))) {
@@ -787,6 +797,35 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     });
   }
 }
+
+#if MXNET_USE_ONEDNN == 1
+template <dnnl::algorithm alg>
+void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs);
+
+// template struct converting op::mshadow_op to dnnl::algorithm
+template <typename OP>
+struct GetDNNLAlgorithm {};
+template <>
+struct GetDNNLAlgorithm<op::mshadow_op::plus> {
+  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_add;
+};
+template <>
+struct GetDNNLAlgorithm<op::mshadow_op::minus> {
+  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_sub;
+};
+template <>
+struct GetDNNLAlgorithm<op::mshadow_op::mul> {
+  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_mul;
+};
+template <>
+struct GetDNNLAlgorithm<op::mshadow_op::div> {
+  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_div;
+};
+#endif  // MXNET_USE_ONEDNN == 1
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                                            \
   NNVM_REGISTER_OP(name)                                                                          \
