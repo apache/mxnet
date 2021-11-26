@@ -25,15 +25,15 @@
 #ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_
 #define MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_
 
+#include "../mshadow_op.h"
+#include "../mxnet_op.h"
+#include "../tensor/broadcast_reduce_op.h"
+#include "./quantization_utils.h"
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mshadow/tensor.h>
 #include <mxnet/operator_util.h>
 #include <vector>
-#include "../mshadow_op.h"
-#include "../mxnet_op.h"
-#include "../tensor/broadcast_reduce_op.h"
-#include "./quantization_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -44,21 +44,23 @@ struct QuantizeAsymParam : public dmlc::Parameter<QuantizeAsymParam> {
 
   DMLC_DECLARE_PARAMETER(QuantizeAsymParam) {
     DMLC_DECLARE_FIELD(min_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The minimum scalar value in the form of float32. If present, it will be used to "
-              "quantize the fp32 data.");
+        .set_default(dmlc::optional<float>())
+        .describe("The minimum scalar value in the form of float32. If "
+                  "present, it will be used to "
+                  "quantize the fp32 data.");
     DMLC_DECLARE_FIELD(max_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The maximum scalar value in the form of float32. If present, it will be used to "
-              "quantize the fp32 data.");
+        .set_default(dmlc::optional<float>())
+        .describe("The maximum scalar value in the form of float32. If "
+                  "present, it will be used to "
+                  "quantize the fp32 data.");
   }
 };
 
 // quantize float to uint8_t
 struct quantize_asymmetric {
-  template<typename DstDType, typename SrcDType>
-  MSHADOW_XINLINE static void Map(int i, DstDType* out, float* oscale,
-                                  float* oshift, const SrcDType* in,
+  template <typename DstDType, typename SrcDType>
+  MSHADOW_XINLINE static void Map(int i, DstDType *out, float *oscale,
+                                  float *oshift, const SrcDType *in,
                                   const float scale, const float shift) {
     out[i] = static_cast<DstDType>(in[i] * scale + shift + 0.5);
     *oscale = scale;
@@ -66,15 +68,13 @@ struct quantize_asymmetric {
   }
 };
 
-template <typename xpu>
-class QuantizeAsymOp {
- public:
-  explicit QuantizeAsymOp(const nnvm::NodeAttrs& attrs) : attrs_(attrs) { }
+template <typename xpu> class QuantizeAsymOp {
+public:
+  explicit QuantizeAsymOp(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
 
-  void Forward(const OpContext& ctx,
-               const std::vector<TBlob>& inputs,
-               const std::vector<OpReqType>& req,
-               const std::vector<TBlob>& outputs) {
+  void Forward(const OpContext &ctx, const std::vector<TBlob> &inputs,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &outputs) {
     using namespace mshadow;
     using namespace mxnet_op;
     using mshadow::red::limits::MaxValue;
@@ -92,63 +92,73 @@ class QuantizeAsymOp {
       const float scale = 1;
       const float shift = 128;
       Kernel<quantize_asymmetric, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
-          outputs[2].dptr<float>(), inputs[0].dptr<int8_t>(), scale, shift);
+          s, outputs[0].Size(), outputs[0].dptr<uint8_t>(),
+          outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+          inputs[0].dptr<int8_t>(), scale, shift);
     } else if (input_data_dtype == mshadow::kFloat32) {
-      const QuantizeAsymParam& param = nnvm::get<QuantizeAsymParam>(attrs_.parsed);
-      if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-        const float scale = MaxValue<uint8_t>() /
+      const QuantizeAsymParam &param =
+          nnvm::get<QuantizeAsymParam>(attrs_.parsed);
+      if (param.min_calib_range.has_value() &&
+          param.max_calib_range.has_value()) {
+        const float scale =
+            MaxValue<uint8_t>() /
             (param.max_calib_range.value() - param.min_calib_range.value());
-        const float shift = MaxValue<uint8_t>() - param.max_calib_range.value() * scale;
+        const float shift =
+            MaxValue<uint8_t>() - param.max_calib_range.value() * scale;
         Kernel<quantize_asymmetric, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
-          outputs[2].dptr<float>(), inputs[0].dptr<float>(),
-          scale, shift);
+            s, outputs[0].Size(), outputs[0].dptr<uint8_t>(),
+            outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+            inputs[0].dptr<float>(), scale, shift);
       } else {
         mxnet::TShape src_shape, dst_shape;
         const size_t float_bytes = sizeof(float);
         const size_t temp_reduce_size = ConfigReduce<xpu, float>(
             s, inputs[0].shape_, mxnet::TShape(1, 1), &src_shape, &dst_shape);
-        Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
-            Shape1(2 * float_bytes + temp_reduce_size), s);
+        Tensor<xpu, 1, char> temp_space =
+            ctx.requested[0].get_space_typed<xpu, 1, char>(
+                Shape1(2 * float_bytes + temp_reduce_size), s);
         const int dev_id = ctx.run_ctx.ctx.dev_id;
-        TBlob in_min_t(reinterpret_cast<float*>(temp_space.dptr_), Shape1(1), xpu::kDevMask,
-                       dev_id);
-        TBlob in_max_t(reinterpret_cast<float*>(temp_space.dptr_) + 1, Shape1(1), xpu::kDevMask,
-                       dev_id);
+        TBlob in_min_t(reinterpret_cast<float *>(temp_space.dptr_), Shape1(1),
+                       xpu::kDevMask, dev_id);
+        TBlob in_max_t(reinterpret_cast<float *>(temp_space.dptr_) + 1,
+                       Shape1(1), xpu::kDevMask, dev_id);
         Tensor<xpu, 1, char> workspace(temp_space.dptr_ + 2 * float_bytes,
-                                      Shape1(temp_reduce_size), s);
+                                       Shape1(temp_reduce_size), s);
         broadcast::Reduce<red::minimum, 2, float, mshadow::op::identity>(
-            s, in_min_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
+            s, in_min_t.reshape(dst_shape), kWriteTo, workspace,
+            inputs[0].reshape(src_shape));
         broadcast::Reduce<red::maximum, 2, float, mshadow::op::identity>(
-            s, in_max_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
-        const float scale =
-            MaxValue<uint8_t>() / (*in_max_t.dptr<float>() - *in_min_t.dptr<float>());
-        const float shift = MaxValue<uint8_t>() - *in_max_t.dptr<float>() * scale;
+            s, in_max_t.reshape(dst_shape), kWriteTo, workspace,
+            inputs[0].reshape(src_shape));
+        const float scale = MaxValue<uint8_t>() /
+                            (*in_max_t.dptr<float>() - *in_min_t.dptr<float>());
+        const float shift =
+            MaxValue<uint8_t>() - *in_max_t.dptr<float>() * scale;
         Kernel<quantize_asymmetric, xpu>::Launch(
-            s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
-            outputs[2].dptr<float>(), inputs[0].dptr<float>(), scale, shift);
+            s, outputs[0].Size(), outputs[0].dptr<uint8_t>(),
+            outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+            inputs[0].dptr<float>(), scale, shift);
       }
     } else {
-      LOG(FATAL) << "Asymmetric quantizaiton only supports int8, uint8 and float inputs";
+      LOG(FATAL) << "Asymmetric quantizaiton only supports int8, uint8 and "
+                    "float inputs";
     }
   }
 
- private:
+private:
   nnvm::NodeAttrs attrs_;
 };
 
 template <typename xpu>
-void QuantizeAsymForward(const OpStatePtr& state_ptr,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
-  QuantizeAsymOp<xpu>& op = state_ptr.get_state<QuantizeAsymOp<xpu>>();
+void QuantizeAsymForward(const OpStatePtr &state_ptr, const OpContext &ctx,
+                         const std::vector<TBlob> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<TBlob> &outputs) {
+  QuantizeAsymOp<xpu> &op = state_ptr.get_state<QuantizeAsymOp<xpu>>();
   op.Forward(ctx, inputs, req, outputs);
 }
 
-}  // namespace op
-}  // namespace mxnet
+} // namespace op
+} // namespace mxnet
 
-#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_
+#endif // MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_

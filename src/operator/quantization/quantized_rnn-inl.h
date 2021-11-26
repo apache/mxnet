@@ -22,7 +22,7 @@
  * \file quantized_rnn-inl.h
  * \brief Common functions for quantized recurrent neural network
  * \author Zixuan Wei
-*/
+ */
 
 #ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_
 #define MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_
@@ -31,12 +31,12 @@ namespace mxnet {
 namespace op {
 
 namespace quantized_rnn {
-  enum QuantizedRnnInputs {kData, kParams, kState, kStateCell};
-  enum QuantizedRnnInputMinMax {kDataScale, kDataShift};
-  enum QuantizedRnnOutputs {kOut, kStateOut, kStateCellOut};
-}
+enum QuantizedRnnInputs { kData, kParams, kState, kStateCell };
+enum QuantizedRnnInputMinMax { kDataScale, kDataShift };
+enum QuantizedRnnOutputs { kOut, kStateOut, kStateCellOut };
+} // namespace quantized_rnn
 
-}  // namespace op
-}  // namespace mxnet
+} // namespace op
+} // namespace mxnet
 
-#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_
+#endif // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_
