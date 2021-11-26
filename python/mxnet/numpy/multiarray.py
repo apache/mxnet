@@ -13982,6 +13982,10 @@ def matrix_transpose(x: ndarray, /) -> ndarray:
     out : ndarray
         an array containing the transpose for each matrix and having shape (..., N, M) . The
         returned array must have the same data type as x .
+
+    Notes
+    -------
+    This function is required by array-api-standard instead of official Numpy api
     """
     if x.ndim < 2:
         raise ValueError("x must be at least 2-dimensional for matrix_transpose")
@@ -13989,7 +13993,7 @@ def matrix_transpose(x: ndarray, /) -> ndarray:
 
 
 def astype(
-        self: ndarray,
+        x: ndarray,
         /,
         dtype: Union[str, dtype], # pylint: disable=undefined-variable
         *,
@@ -14003,6 +14007,8 @@ def astype(
 
     Parameters
     ----------
+    x : ndarray
+        the oringin ndarray to be cast.
     dtype : str or dtype
         Typecode or data-type to which the array is cast.
     order : {'C', 'F', 'A', 'K'}, optional
@@ -14040,6 +14046,8 @@ def astype(
 
     Notes
     -----
+    astype is array method, Currently we add an operator for it.
+
     This function differs from the official `ndarray`'s ``astype`` function in the following
     aspects:
         * `order` only supports 'C' and 'K'.
@@ -14054,7 +14062,7 @@ def astype(
         raise ValueError('subok must be equal to True')
     if dtype is None:
         dtype = _np.float32
-    if not copy and _np.dtype(dtype) == self.dtype:
-        return self
+    if not copy and _np.dtype(dtype) == x.dtype:
+        return x
 
-    return _npi.cast(self, dtype=dtype)
+    return _npi.cast(x, dtype=dtype)

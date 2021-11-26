@@ -523,11 +523,6 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
     array([[4.9e-324, 9.9e-324, 1.5e-323], # uninitialized
            [2.0e-323, 2.5e-323, 3.0e-323]])
     """
-    dtype_list = {_np.float16: 'float16', _np.float32: 'float32', _np.float64: 'float64',
-                  float: 'float64', _np.int8: 'int8', _np.int16: 'int16', _np.int32: 'int32',
-                  _np.int64: 'int64', int:'int64', _np.uint8: 'uint8', _np.uint16: 'uint16',
-                  _np.uint32: 'uint32', _np.uint64: 'uint64', _np.bool: 'bool',
-                  _np.bool_: 'bool_', bool: 'bool', None: 'None'}
     if order != 'C':
         raise NotImplementedError("Only support C-order at this moment")
     if subok:
@@ -535,7 +530,12 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
     if shape is not None:
         raise NotImplementedError("Assigning new shape is not supported at this moment")
     try:
-        dtype = dtype if isinstance(dtype, str) else _np.dtype(dtype).name
+        if isinstance(dtype, str):
+            dtype = dtype
+        elif dtype == None:
+            dtype = None
+        else:
+            _np.dtype(dtype).name
     except:
         raise NotImplementedError("Do not support this dtype at this moment")
     return _npi.empty_like_fallback(prototype, dtype=dtype, order=order, subok=subok, shape=shape)

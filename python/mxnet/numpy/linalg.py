@@ -30,7 +30,7 @@ from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
            'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank', 'cross', 'diagonal', 'outer',
-           'tensordot', 'trace', 'matrix_transpose', 'vecdot', 'svdvals', 'vector_norm', 'matrix_norm']
+           'tensordot', 'trace', 'matrix_transpose', 'vecdot', 'svdvals', 'vector_norm', 'matrix_norm', 'matmul']
 
 __all__ += fallback_linalg.__all__
 
@@ -1603,6 +1603,7 @@ def matmul(a: ndarray, b: ndarray, /, *, out: Optional[ndarray] = None, **kwargs
     einsum : Einstein summation convention.
 
     .. note::
+       'matmul' in linalg is required by array-api-standard instead of official numpy
 
        The behavior depends on the arguments in the following way.
 
