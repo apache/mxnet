@@ -55,13 +55,19 @@ class MKLDNNQuantizedRnnOp {
   shared_mkldnn_attr_t rnn_attr_;
   MKLDNNRnnFullParam full_param_;
   MKLDNNRnnMemMgr mgr_;
-  std::vector<MKLDNNRnnForward> rnn_layers_;              // forward inference layers
+  std::vector<MKLDNNRnnForward> fwd_inf_vec_;              // forward inference layers
 
+  // Used to store the intermediate results of multi-layer
+  std::vector<mkldnn::memory*> dst_;
   // According to https://intel.github.io/mkl-dnn/dev_guide_int8_computations.html, the
   // non-symmetric quantization is assumed by LSTM primitive. Namely, the formula is:
   //                    data_f32 = (data_u8 - shift) / scale
   float cached_data_shift_{0.0};
   float cached_data_scale_{0.0};
+  void Init(const OpContext& ctx,
+          const std::vector<NDArray>& inputs,
+          const std::vector<OpReqType>& req,
+          const std::vector<NDArray>& outputs);
 };
 
 }  // namespace op
