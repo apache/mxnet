@@ -90,8 +90,7 @@ NNVM_REGISTER_OP(_npi_true_divide)
                                 })
     .set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<FComputeEx>("FComputeEx<cpu>",
-                          NumpyBinaryOperatorComputeExCPU<cpu, op::mshadow_op::div>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", NumpyBinaryOperatorComputeExCPU<op::mshadow_op::div>)
     .set_attr<FInferStorageType>("FInferStorageType", NumpyBinaryBroadcastStorageType)
 #endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_div"})

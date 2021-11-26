@@ -869,7 +869,7 @@ void NumpyDivideBroadcastComputeCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<TBlob>& outputs);
 
-template <typename xpu, typename OP>
+template <typename OP>
 void NumpyBinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
                                      const OpContext& ctx,
                                      const std::vector<mxnet::NDArray>& inputs,

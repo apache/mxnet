@@ -60,15 +60,13 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
     new_inputs  = {inputs[0], inputs[1]};
     new_outputs = {outputs[0]};
   }
-  auto i0 = inputs[0];
-  auto i1 = inputs[1];
 
   DNNLBinaryOpFwd& fwd = DNNLBinaryOpFwd::GetBinaryOpForward<alg>(attrs, new_inputs, new_outputs);
   fwd.Execute(new_inputs, req, new_outputs);
 }
 #endif
 
-template <typename xpu, typename OP>
+template <typename OP>
 static void BinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
                                        const OpContext& ctx,
                                        const std::vector<NDArray>& inputs,
@@ -82,17 +80,17 @@ static void BinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
     } else {
       std::vector<mxnet::TBlob> in_data  = {inputs[0].data(), inputs[1].data()};
       std::vector<mxnet::TBlob> out_data = {outputs[0].data()};
-      BinaryBroadcastCompute<xpu, OP>(attrs, ctx, in_data, req, out_data);
+      BinaryBroadcastCompute<cpu, OP>(attrs, ctx, in_data, req, out_data);
     }
     return;
   }
 #endif  // MXNET_USE_ONEDNN == 1
   if (std::is_same<OP, op::mshadow_op::plus>::value ||
       std::is_same<OP, op::mshadow_op::minus>::value) {
-    BinaryBroadcastComputeDenseEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    BinaryBroadcastComputeDenseEx<cpu, OP>(attrs, ctx, inputs, req, outputs);
   } else if (std::is_same<OP, op::mshadow_op::mul>::value ||
              std::is_same<OP, op::mshadow_op::div>::value) {
-    BinaryBroadcastComputeSparseEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    BinaryBroadcastComputeSparseEx<cpu, OP>(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -125,7 +123,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<cpu, op::mshadow_op::plus>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::plus>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
@@ -174,7 +172,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<cpu, op::mshadow_op::minus>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::minus>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
@@ -215,7 +213,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<cpu, op::mshadow_op::mul>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::mul>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 
@@ -255,7 +253,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<cpu, op::mshadow_op::div>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::div>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"});
 
