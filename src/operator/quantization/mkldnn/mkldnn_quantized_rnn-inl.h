@@ -29,16 +29,16 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <vector>
 #include "../../nn/mkldnn/mkldnn_rnn-inl.h"
 #include "../../rnn-inl.h"
 #include "../quantized_rnn-inl.h"
-#include <vector>
 
 namespace mxnet {
 namespace op {
 
 class MKLDNNQuantizedRnnOp {
-public:
+ public:
   explicit MKLDNNQuantizedRnnOp(const nnvm::NodeAttrs &attrs, const int seq_len,
                                 const int batch_size, const int input_size)
       : initialized_(false), weights_ver_(0),
@@ -50,13 +50,13 @@ public:
                const std::vector<OpReqType> &req,
                const std::vector<NDArray> &outputs);
 
-private:
+ private:
   bool initialized_;
   size_t weights_ver_;
   shared_mkldnn_attr_t rnn_attr_;
   MKLDNNRnnFullParam full_param_;
   MKLDNNRnnMemMgr mgr_;
-  std::vector<MKLDNNRnnForward> fwd_inf_vec_; // forward inference layers
+  std::vector<MKLDNNRnnForward> fwd_inf_vec_;  // forward inference layers
 
   // Used to store the intermediate results of multi-layer
   std::vector<mkldnn::memory *> dst_;
@@ -72,8 +72,8 @@ private:
             const std::vector<NDArray> &outputs);
 };
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_USE_MKLDNN == 1
-#endif // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_RNN_INL_H_
+#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_RNN_INL_H_

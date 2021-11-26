@@ -68,9 +68,9 @@ GetMKLDNNRnnWeightsQParams(const MKLDNNRnnFullParam &full_param, float *w_ptr) {
     }
   }
   std::vector<float> w_max(4 * layer_param0.state_size, 0.0);
-  const index_t input_size = layer_param0.input_size;      // input
-  const index_t state_size = layer_param0.state_size;      // state
-  const index_t gates_nblks = 4 * layer_param0.state_size; // gates * state
+  const index_t input_size = layer_param0.input_size;       // input
+  const index_t state_size = layer_param0.state_size;       // state
+  const index_t gates_nblks = 4 * layer_param0.state_size;  // gates * state
   for (index_t go = 0; go < gates_nblks; ++go) {
     float tmp_max = w_max[go];
     for (index_t i = 0; i < input_size; ++i) {
@@ -141,12 +141,12 @@ void MKLDNNQuantizedRnnOp::Init(const OpContext &ctx,
 
   const size_t num_fusion = full_param_.layer_params.size();
   if (fwd_inf_vec_.size() < num_fusion) {
-    size_t buffer_size = 0; // Element number, instead of bytes, in the buffer
+    size_t buffer_size = 0;  // Element number, instead of bytes, in the buffer
     for (auto &layer_param : full_param_.layer_params) {
       buffer_size += layer_param.workspace_size + layer_param.reserve_size;
     }
     buffer_size += outputs[rnn_enum::kOut].data().Size() * (num_fusion - 1);
-    buffer_size += kMKLDNNAlign * num_fusion * 5; // Add margin for alignment
+    buffer_size += kMKLDNNAlign * num_fusion * 5;  // Add margin for alignment
 
     for (auto &layer_param : full_param_.layer_params) {
       fwd_inf_vec_.emplace_back(layer_param, false, inputs[rnn_enum::kData],
@@ -164,7 +164,7 @@ void MKLDNNQuantizedRnnOp::Init(const OpContext &ctx,
     size_t directions = fwd_layer.GetParam().bidirectional ? 2 : 1;
     size_t layer_weights_bytes = single_w_bytes * directions;
     size_t layer_bias_bytes =
-        single_b_bytes * directions; // Native MXNet has double bias
+        single_b_bytes * directions;  // Native MXNet has double bias
 
     if (!fwd_layer.IsInitialized())
       fwd_layer.SetWeightsMem(&(this->mgr_), weights_ptr, bias_ptr, false,
@@ -289,9 +289,9 @@ void MKLDNNQuantizedRnnOp::Forward(const OpContext &op_ctx,
   char *src = static_cast<char *>(inputs[rnn_enum::kData].data().dptr_);
   char *src_state = static_cast<char *>(inputs[rnn_enum::kState].data().dptr_);
   char *dst = static_cast<char *>(out_mem.second->get_data_handle());
-  char *dst_state = nullptr;      // Output state
-  char *src_state_cell = nullptr; // Used in LSTM for cell state
-  char *dst_state_cell = nullptr; // Used in LSTM for cell state
+  char *dst_state = nullptr;       // Output state
+  char *src_state_cell = nullptr;  // Used in LSTM for cell state
+  char *dst_state_cell = nullptr;  // Used in LSTM for cell state
   const size_t cell_bytes =
       (default_param.bidirectional + 1) * default_param.batch_size_ *
       default_param.state_size * mshadow::mshadow_sizeof(data_dtype);
@@ -368,7 +368,7 @@ void MKLDNNQuantizedRnnOp::Forward(const OpContext &op_ctx,
   MKLDNNStream::Get()->Submit();
 }
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 1

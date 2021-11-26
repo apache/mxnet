@@ -25,15 +25,16 @@
 #ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_
 #define MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_
 
-#include "../mshadow_op.h"
-#include "../mxnet_op.h"
-#include "../tensor/broadcast_reduce_op.h"
-#include "./quantization_utils.h"
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mshadow/tensor.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+
+#include "../mshadow_op.h"
+#include "../mxnet_op.h"
+#include "../tensor/broadcast_reduce_op.h"
+#include "./quantization_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -69,7 +70,7 @@ struct quantize_asymmetric {
 };
 
 template <typename xpu> class QuantizeAsymOp {
-public:
+ public:
   explicit QuantizeAsymOp(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &inputs,
@@ -145,7 +146,7 @@ public:
     }
   }
 
-private:
+ private:
   nnvm::NodeAttrs attrs_;
 };
 
@@ -158,7 +159,7 @@ void QuantizeAsymForward(const OpStatePtr &state_ptr, const OpContext &ctx,
   op.Forward(ctx, inputs, req, outputs);
 }
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZE_ASYM_INL_H_

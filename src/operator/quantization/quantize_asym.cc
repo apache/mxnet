@@ -158,5 +158,5 @@ where `scale = uint8_range / (max_range - min_range)` and
                   "A ndarray/symbol of type `float32`")
     .add_arguments(QuantizeAsymParam::__FIELDS__());
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet

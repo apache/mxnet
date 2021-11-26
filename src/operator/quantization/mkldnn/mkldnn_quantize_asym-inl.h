@@ -26,16 +26,16 @@
 #define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_ASYM_INL_H_
 #if MXNET_USE_MKLDNN == 1
 
-#include "../../nn/mkldnn/mkldnn_base-inl.h"
-#include "../quantize_asym-inl.h"
 #include <memory>
 #include <vector>
+#include "../../nn/mkldnn/mkldnn_base-inl.h"
+#include "../quantize_asym-inl.h"
 
 namespace mxnet {
 namespace op {
 
 class MKLDNNQuantizeAsymOp {
-public:
+ public:
   explicit MKLDNNQuantizeAsymOp(const nnvm::NodeAttrs &attrs)
       : param_(nnvm::get<QuantizeAsymParam>(attrs.parsed)) {}
 
@@ -43,7 +43,7 @@ public:
                const std::vector<OpReqType> &req,
                const std::vector<NDArray> &outputs);
 
-private:
+ private:
   QuantizeAsymParam param_;
   bool initialized_{false};
   float cached_scale_{0.f};
@@ -159,8 +159,8 @@ void MKLDNNQuantizeAsymForward(const OpStatePtr &state_ptr,
   }
 }
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_USE_MKLDNN == 1
-#endif // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_ASYM_INL_H_
+#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_ASYM_INL_H_

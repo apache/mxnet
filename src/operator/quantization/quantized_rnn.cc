@@ -24,12 +24,14 @@
  * \author Zixuan Wei
  */
 
-#include "../rnn-inl.h"
-#include "./quantization_utils.h"
-#include "./quantized_rnn-inl.h"
 #include <dmlc/logging.h>
 #include <utility>
 #include <vector>
+
+#include "../rnn-inl.h"
+#include "./quantization_utils.h"
+#include "./quantized_rnn-inl.h"
+
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_quantized_rnn-inl.h"
 #endif
@@ -115,13 +117,13 @@ bool QuantizedRnnShape(const nnvm::NodeAttrs &attrs,
 
   out_shape->clear();
   out_shape->push_back({dshape[0], batch_size,
-                        directions * state_size}); // output dim: [T, N, C]
+                        directions * state_size});  // output dim: [T, N, C]
   if (param.state_outputs) {
     out_shape->push_back(
-        {total_lyrs, batch_size, state_size}); // state dim: [L*D, N, C]
+        {total_lyrs, batch_size, state_size});  // state dim: [L*D, N, C]
     if (param.mode == rnn_enum::kLstm)
       out_shape->push_back(
-          {total_lyrs, batch_size, state_size}); // cell dim: [L*D, N, C]
+          {total_lyrs, batch_size, state_size});  // cell dim: [L*D, N, C]
   }
   return true;
 }
@@ -250,7 +252,7 @@ void QuantizedRnnForwardCPUEx(const OpStatePtr &state_ptr, const OpContext &ctx,
   MKLDNNQuantizedRnnOp &op = state_ptr.get_state<MKLDNNQuantizedRnnOp>();
   op.Forward(ctx, in_data, req, out_data);
 }
-#endif // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 1
 
 bool NeedAsymQuantizeRnnInput(const NodeAttrs &attrs,
                               const size_t index_to_check) {
@@ -352,7 +354,7 @@ NNVM_REGISTER_OP(RNN)
     LOG(INFO) << "Quantized RNN is not supported by this MXNet release. Please enable MKL-DNN to "
               << "use the feature.";
     return QuantizeType::kNone;
-#endif // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 1
                             })
     .set_attr<FQuantizedOp>("FQuantizedOp",
                             [](const NodeAttrs &attrs) {
@@ -373,5 +375,5 @@ NNVM_REGISTER_OP(RNN)
     .set_attr<FAvoidDequantizeOutput>("FAvoidDequantizeOutput",
                                       AvoidRnnDequantizeOutput);
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet

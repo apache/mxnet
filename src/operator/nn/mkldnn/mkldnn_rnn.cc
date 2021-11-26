@@ -135,7 +135,7 @@ MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const NodeAttrs& attrs,
   // Set dims, workspace size, state_outputs, quantized and enable_u8_output flag
   for (auto& layer_param : layer_params) {
     layer_param.SetDims();
-    layer_param.state_outputs = rnn_param.state_outputs;  
+    layer_param.state_outputs = rnn_param.state_outputs;
     layer_param.quantized = full_param.mkldnn_param.quantized;
     layer_param.enable_u8_output = true;
   }
@@ -472,28 +472,6 @@ void MKLDNNRnnForward::SetNewDataMem(void* x,
   }
 }
 
-// inline void MKLDNNMemoryReorder(const mkldnn::memory& src, const mkldnn::memory& dst) {
-// #if DMLC_CXX11_THREAD_LOCAL
-//   static thread_local std::unordered_map<OpSignature, mkldnn::reorder, OpHash> reorderPrimitives;
-// #else
-//   static MX_THREAD_LOCAL std::unordered_map<OpSignature, mkldnn::reorder, OpHash> reorderPrimitives;
-// #endif
-//   OpSignature key{};
-//   key.AddSign(src);
-//   key.AddSign(dst);
-
-//   auto it = reorderPrimitives.find(key);
-//   if (it == reorderPrimitives.end()) {
-//     auto reorder = mkldnn::reorder(src, dst);
-//     it           = AddToCache(&reorderPrimitives, key, reorder);
-//   }
-
-//   mkldnn_args_map_t net_args;
-//   net_args.emplace(MKLDNN_ARG_SRC, src);
-//   net_args.emplace(MKLDNN_ARG_DST, dst);
-//   MKLDNNStream::Get()->RegisterPrimArgs(it->second, net_args);
-// }
-
 /*
  * Reorder the concatenated weights memory to a efficient memory block
  * with primitive-prefered format.
@@ -621,7 +599,7 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr,
   // convert void* to char* for arithmetic operations
   char* weights_ptr = static_cast<char*>(w_ptr);
   size_t wx_bytes   = GetRnnGatesNum(param_.mode) * param_.state_size * param_.input_size *
-                    dtype_bytes;  //* DIMS: ngates x state_size x input_size               
+                    dtype_bytes;  //* DIMS: ngates x state_size x input_size
   size_t wh_bytes = GetRnnGatesNum(param_.mode) * param_.state_size * param_.state_size *
                     dtype_bytes;  //* DIMS: ngates x state_size x state_size
   char* l2r_wx = weights_ptr;
@@ -635,7 +613,7 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr,
     ConcatWeights(*weights_iter_r_, 1, {l2r_wh, r2l_wh}, format_tag::ldgoi);
   } else if (param_.num_layer == 1 && !param_.bidirectional) {
     //* single uni-directional layer, no concatenate operator needed
-   // tutttaj
+    // tutttaj
     std::memcpy(weights_layer_r_->get_data_handle(), l2r_wx, wx_bytes);
     std::memcpy(weights_iter_r_->get_data_handle(), l2r_wh, wh_bytes);
   } else if (param_.num_layer > 1 && !param_.bidirectional) {
@@ -1097,7 +1075,7 @@ void MKLDNNRnnOp::Forward(const OpContext& ctx,
     weights_version_ = inputs[rnn_enum::kParams].version();
   }
 
- if (dmlc::GetEnv("MXNET_RNN_USE_WEIGHT_CACHE", 0) && !initialized_) {
+  if (dmlc::GetEnv("MXNET_RNN_USE_WEIGHT_CACHE", 0) && !initialized_) {
     LOG(INFO) << "The current weight of RNN is assumed to be fixed and cached during "
         "the whole inference pipeline. Please set MXNET_RNN_USE_WEIGHT_CACHE=0, if "
         "the weight changed at runtime.";

@@ -246,9 +246,7 @@ class RnnPrimitive {
     return workspace_desc_;
   }
 
- const mkldnn::primitive_attr& GetPrimAttr() const {
-    return *attr_;
-  }
+  const mkldnn::primitive_attr &GetPrimAttr() const { return *attr_; }
 
  private:
   std::shared_ptr<void> fwd_pd_;

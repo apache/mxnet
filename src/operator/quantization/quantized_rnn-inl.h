@@ -34,9 +34,9 @@ namespace quantized_rnn {
 enum QuantizedRnnInputs { kData, kParams, kState, kStateCell };
 enum QuantizedRnnInputMinMax { kDataScale, kDataShift };
 enum QuantizedRnnOutputs { kOut, kStateOut, kStateCellOut };
-} // namespace quantized_rnn
+}  // namespace quantized_rnn
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_
+#endif   // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_
