@@ -133,7 +133,6 @@ Example::
                                   int dtype = in_type->at(0);
 
                                   if (dtype == -1) {
-                                    LOG(FATAL) << "input type to dropout is not specified.";
                                     return false;
                                   }
 

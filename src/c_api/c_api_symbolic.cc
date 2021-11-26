@@ -1125,13 +1125,16 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["data_name_types"]      = std::make_shared<nnvm::any>(std::move(kwargs));
   g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
   g                               = ApplyPass(std::move(g), "ReducePrecision");
-  g                               = mxnet::exec::InferType(std::move(g), {}, "");
+
+  const nnvm::IndexedGraph& idx = g.indexed_graph();
+  nnvm::DTypeVector arg_types   = g.GetAttr<nnvm::DTypeVector>("arg_types");
+  mxnet::MatchArguments(idx, kwargs, &arg_types, "InferType");
+  g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");
 
   const nnvm::DTypeVector& inferred_dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
   std::unordered_map<std::string, int> node_name_dtype_map;
   std::unordered_map<std::string, int> node_without_dtype_map;
-  _SetInputDTypes(
-      g.indexed_graph(), inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
+  _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
 
   result_sym->outputs                      = g.outputs;
   *ret_sym_handle                          = result_sym;

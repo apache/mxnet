@@ -68,12 +68,12 @@ inline bool AMPCastType(const nnvm::NodeAttrs& attrs,
     case mshadow::kFloat32:
     case mshadow::kFloat16:
     case mshadow::kBfloat16:
-    case -1:
       TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
-      return true;
+      break;
     default:
-      return false;
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   }
+  return in_attrs->at(0) != -1;
 }
 
 inline bool AMPMultiCastType(const nnvm::NodeAttrs& attrs,

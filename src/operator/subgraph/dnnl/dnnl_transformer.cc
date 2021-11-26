@@ -101,15 +101,18 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
   } else {
     CHECK_EQ(in_types->size(), 1U);
     CHECK_EQ(out_types->size(), 1U);
-    if (in_types->at(0) != mshadow::kBfloat16) {
+    if (in_types->at(0) == mshadow::kFloat32) {
       TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
-    } else {
+    } else if (in_types->at(0) == mshadow::kBfloat16) {
       if (params.amp_out_dtype.has_value()) {
         TYPE_ASSIGN_CHECK(*out_types, 0, params.amp_out_dtype.value());
       } else {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kBfloat16);
       }
+    } else {
+      CHECK_EQ(in_types->at(0), -1);
+      return false;
     }
   }
 
@@ -460,11 +463,11 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
   } else {
     CHECK_EQ(in_types->size(), 2U);
     CHECK_EQ(out_types->size(), 1U);
-    if (in_types->at(0) != mshadow::kBfloat16 && in_types->at(1) != mshadow::kBfloat16) {
+    if (in_types->at(0) == mshadow::kFloat32 || in_types->at(1) == mshadow::kFloat32) {
       TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
-    } else {
+    } else if (in_types->at(0) == mshadow::kBfloat16 || in_types->at(1) == mshadow::kBfloat16) {
       TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kBfloat16);
       TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kBfloat16);
       if (params.amp_out_dtype.has_value()) {
@@ -472,6 +475,8 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
       } else {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kBfloat16);
       }
+    } else {
+      return false;
     }
   }
 
@@ -605,7 +610,7 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
   // transpose = transposed tmp - output
   memory::desc result_md, tmp_md, transpose_md;
 
-  float oscale           = 1.0f;
+  float oscale = 1.0f;
   if (param_.quantized) {
     min_att_ = inputs[2].data().dptr<float>()[0];
     max_att_ = inputs[3].data().dptr<float>()[0];
@@ -621,7 +626,7 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
       oscale      = GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
                (att_scale_ * qkv_scale_);
     } else if (param_.enable_float_output) {
-      oscale            = 1.0f / (att_scale_ * qkv_scale_);
+      oscale = 1.0f / (att_scale_ * qkv_scale_);
     } else {
       mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
       mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(

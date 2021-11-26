@@ -419,9 +419,11 @@ Graph ReducePrecision(Graph&& src) {
       const auto& old_node_input_node = old_node_input_entry.node;
       if (old_node_input_node->op() == Op::Get("amp_cast") &&
           old_node_input_node->inputs[0].node->is_variable() &&
+          data_name_types.count(old_node_input_node->inputs[0].node->attrs.name) == 0 &&
           nnvm::get<op::AMPCastParam>(old_node_input_node->attrs.parsed).dtype == target_dtype) {
         output_nodes_of_variable[old_node_input_node->inputs[0]].push_back(old_node.get());
       } else if (old_node_input_node->is_variable() &&
+                 data_name_types.count(old_node_input_node->attrs.name) == 0 &&
                  (old_node->op() != Op::Get("amp_cast") ||
                   nnvm::get<op::AMPCastParam>(old_node->attrs.parsed).dtype != target_dtype)) {
         output_nodes_of_variable[old_node_input_entry].push_back(old_node.get());
@@ -442,17 +444,17 @@ Graph ReducePrecision(Graph&& src) {
     }
   }
 
-  std::vector<NodeEntry> known_node_entry_types;
+  std::vector<Node*> target_dtype_variable_nodes;
   if (cast_optional_params) {
     for (auto& kv : output_nodes_of_variable) {
-      NodeEntry old_variable_node_entry = kv.first;
+      const NodeEntry old_variable_node_entry = kv.first;
       if (!mirror_target_dtype_map.count(old_variable_node_entry)) {
         continue;
       }
 
-      bool is_used_with_and_without_cast    = false;
-      const ObjectPtr& new_variable_node    = mirror_map[old_variable_node_entry.node.get()];
-      std::vector<Node*>& old_variable_outs = kv.second;
+      bool is_used_with_and_without_cast          = false;
+      const ObjectPtr& new_variable_node          = mirror_map[old_variable_node_entry.node.get()];
+      const std::vector<Node*>& old_variable_outs = kv.second;
       for (Node* const old_node : old_variable_outs) {
         Node* const new_node = mirror_map[old_node].get();
         for (const NodeEntry new_node_input_entry : new_node->inputs) {
@@ -476,17 +478,20 @@ Graph ReducePrecision(Graph&& src) {
       const NodeEntryEqual is_equal;
       const NodeEntry new_variable_node_entry = NodeEntry{
           new_variable_node, old_variable_node_entry.index, old_variable_node_entry.version};
-      known_node_entry_types.push_back(new_variable_node_entry);
       for (Node* const old_node : old_variable_outs) {
-        Node* const new_node = mirror_map[old_node].get();
+        Node* const new_node  = mirror_map[old_node].get();
+        bool skipped_amp_cast = false;
         for (NodeEntry& new_node_input_entry : new_node->inputs) {
           if (new_node_input_entry.node->op() == Op::Get("amp_cast") &&
               is_equal(new_node_input_entry.node->inputs[0], new_variable_node_entry)) {
             new_node_input_entry = new_variable_node_entry;
+            skipped_amp_cast     = true;
             break;
           }
         }
+        CHECK(skipped_amp_cast);
       }
+      target_dtype_variable_nodes.push_back(new_variable_node.get());
     }
   }
 
@@ -494,12 +499,16 @@ Graph ReducePrecision(Graph&& src) {
   ret.outputs = std::move(outputs);
 
   const nnvm::IndexedGraph& idx = ret.indexed_graph();
-  nnvm::DTypeVector known_types(idx.num_node_entries(), -1);
-  for (const auto& new_entry : known_node_entry_types) {
-    auto id         = idx.entry_id(new_entry);
-    known_types[id] = target_dtype;
+  const auto& input_nodes       = idx.input_nodes();
+  nnvm::DTypeVector arg_types(input_nodes.size(), -1);
+  for (const auto& new_variable_node : target_dtype_variable_nodes) {
+    const auto id     = idx.node_id(new_variable_node);
+    const auto found  = std::find(input_nodes.begin(), input_nodes.end(), id);
+    const auto arg_id = found - input_nodes.begin();
+    CHECK(arg_id >= 0);
+    arg_types[arg_id] = target_dtype;
   }
-  ret.attrs["dtype"] = std::make_shared<dmlc::any>(std::move(known_types));
+  ret.attrs["arg_types"] = std::make_shared<dmlc::any>(std::move(arg_types));
 
   return ret;
 }

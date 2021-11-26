@@ -16,7 +16,6 @@
 # under the License.
 
 import json
-import pytest
 import mxnet as mx
 from mxnet import amp, use_np
 from mxnet.amp.amp import bfloat16
@@ -58,7 +57,7 @@ def same_graph_structure(symnet1, symnet2, expected):
           break
 
 
-def check_amp_fuse(sym_fp32, args, dtype, expected_sym=None, quantized_nodes=[],
+def check_amp_fuse(sym_fp32, any_input_name, args, dtype, expected_sym=None, quantized_nodes=[],
                    rtol=0.05, inputs_casted=True):
   args = args.copy()
   ex_ref = sym_fp32._bind(mx.cpu(), args)
@@ -68,14 +67,16 @@ def check_amp_fuse(sym_fp32, args, dtype, expected_sym=None, quantized_nodes=[],
   sym_sg_lp, args_sg_lp, _ = amp.convert_model(sym_sg_fp32, args, {}, target_dtype=dtype,
                                                excluded_sym_names=quantized_nodes,
                                                cast_optional_params=True)
-  sym_sg_lp_no_args, _, _ = amp.convert_model(sym_sg_fp32, {}, {}, target_dtype=dtype,
+  sym_sg_lp = sym_sg_lp.get_backend_symbol(AMP_SG_PASS_NAME)
+  ex_sg_lp = sym_sg_lp._bind(mx.cpu(), args_sg_lp)
+  out_sg_lp = ex_sg_lp.forward()[0]
+
+  no_input_args = args.copy()
+  no_input_args.pop(any_input_name)
+  sym_sg_lp_no_args, _, _ = amp.convert_model(sym_sg_fp32, no_input_args, {}, target_dtype=dtype,
                                               excluded_sym_names=quantized_nodes,
                                               cast_optional_params=True)
-  sym_sg_lp = sym_sg_lp.get_backend_symbol(AMP_SG_PASS_NAME)
   sym_sg_lp_no_args = sym_sg_lp_no_args.get_backend_symbol(AMP_SG_PASS_NAME)
-  ex_sg_lp = sym_sg_lp._bind(mx.cpu(), args_sg_lp)
-
-  out_sg_lp = ex_sg_lp.forward()[0]
 
   # check outputs
   assert_almost_equal(out_ref, out_sg_lp, rtol=rtol, atol=1.0)
@@ -118,7 +119,8 @@ def test_amp_fc():
                                      num_hidden=weight2_nd.shape[0])
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
 
-  check_amp_fuse(sym, args, 'bfloat16', exp_sym, ['sg_onednn_fully_connected_1'])
+  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym)
+  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_fully_connected_1'])
 
 
 def test_amp_conv():
@@ -143,13 +145,19 @@ def test_amp_conv():
 
   exp_conv1 = mx.symbol.Convolution(data=data, weight=weight1, bias=bias1, kernel=weight1_nd.shape[2:],
                                     num_filter=weight1_nd.shape[0])
-  # this should be deleted after conv is fixed in oneDNN
-  exp_amp_cast = mx.symbol.amp_cast(exp_conv1, dtype=bfloat16)
-  exp_sym = mx.symbol.Convolution(data=exp_amp_cast, weight=weight2, no_bias=True, kernel=weight2_nd.shape[2:],
+  exp_conv2 = mx.symbol.Convolution(data=exp_conv1, weight=weight2, no_bias=True, kernel=weight2_nd.shape[2:],
                                   num_filter=weight2_nd.shape[0])
-  exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
+  exp_amp_cast = mx.symbol.amp_cast(exp_conv2, dtype='float32')
+  exp_sym = exp_amp_cast.get_backend_symbol(SG_PASS_NAME)
+  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym)
 
-  check_amp_fuse(sym, args, 'bfloat16', exp_sym, ['sg_onednn_conv_1'])
+  exp_conv1 = mx.symbol.Convolution(data=data, weight=weight1, bias=bias1, kernel=weight1_nd.shape[2:],
+                                    num_filter=weight1_nd.shape[0])
+  exp_amp_cast = mx.symbol.amp_cast(exp_conv1, dtype=bfloat16)
+  exp_conv2 = mx.symbol.Convolution(data=exp_amp_cast, weight=weight2, no_bias=True, kernel=weight2_nd.shape[2:],
+                                  num_filter=weight2_nd.shape[0])
+  exp_sym = exp_conv2.get_backend_symbol(SG_PASS_NAME)
+  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_conv_1'])
 
 
 @use_np
@@ -172,8 +180,8 @@ def test_amp_transformers():
   params['data1'] = mask
   net.export('test', 0, False)
   sym, _ = net.export(None)
-  check_amp_fuse(sym, params, 'bfloat16', None)
-  check_amp_fuse(sym, params, 'bfloat16', None, ['sg_onednn_fully_connected_0'])
+  check_amp_fuse(sym, 'data0', params, 'bfloat16', None)
+  check_amp_fuse(sym, 'data0', params, 'bfloat16', None, ['sg_onednn_fully_connected_0'])
 
 
 def test_amp_common_params():
@@ -199,7 +207,7 @@ def test_amp_common_params():
 
   exp_sym = mx.symbol.amp_cast(sym, 'float32')
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
-  check_amp_fuse(sym, args, 'bfloat16', exp_sym)
+  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym)
 
   exp_amp_data = mx.symbol.amp_cast(data, dtype=bfloat16)
   exp_amp_wieght = mx.symbol.amp_cast(weight, dtype=bfloat16)
@@ -214,7 +222,7 @@ def test_amp_common_params():
   exp_sym = mx.symbol.Concat(*exp_mc[:3])
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
 
-  check_amp_fuse(sym, args, 'bfloat16', exp_sym, ['sg_onednn_fully_connected_2'],
+  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_fully_connected_2'],
                  inputs_casted=False)
 
 
