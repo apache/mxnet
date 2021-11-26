@@ -24,7 +24,7 @@ import pytest
 import tempfile
 
 
-def def_model(namespace, op_name, dummy_input=False, *args, **kwargs):
+def def_model(namespace, op_name, dummy_input=False, *args, **kwargs): # pylint: disable=keyword-arg-before-vararg
     class Model(HybridBlock):
         def __init__(self, **kwargs):
             super(Model, self).__init__(**kwargs)
