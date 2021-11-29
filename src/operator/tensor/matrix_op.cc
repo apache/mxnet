@@ -1185,9 +1185,6 @@ static void SplitForwardEx(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& outputs) {
   CHECK(!inputs.empty());
-  if (req[0] == kNullOp) {
-    return;
-  }
   if (SupportDNNLSplit(inputs[0])) {
     DNNL_OPCHECK_INIT(/*is backward*/ false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLSplitForward, attrs, op_ctx, inputs, req, outputs);
