@@ -2483,6 +2483,65 @@ void NDArray::WaitToWrite() const {
   Engine::Get()->WaitForVar(ptr_->var);
 }
 
+void NDArray::StreamSync(int stream) const {
+  if (is_none())
+    return;
+  Imperative::DCInfo::Compute(*this);
+#if MXNET_USE_CUDA
+  Engine::Get()->PushAsync(
+      [this, stream](RunContext ctx,
+                     Engine::CallbackOnStart on_start,
+                     Engine::CallbackOnComplete on_complete) {
+        on_start();
+        cudaStream_t consumer = reinterpret_cast<cudaStream_t>(stream);
+        std::unordered_map<cudaStream_t, engine::EventInfo> events_per_stream;
+        auto& sync_obj = this->var()->sync_object;
+        std::lock_guard<std::mutex> l(sync_obj.mutex);
+        auto& reader_events = sync_obj.reader_events;
+        reader_events.erase(
+            std::remove_if(reader_events.begin(),
+                           reader_events.end(),
+                           [&](const engine::EventInfo e_i) { return e_i.event.expired(); }),
+            reader_events.end());
+        for (auto& writer : sync_obj.writer_event) {
+          if (writer.event.expired()) {
+            sync_obj.writer_event.clear();
+            break;
+          }
+          if (writer.stream != consumer) {
+            bool found = false;
+            for (const auto& reader : reader_events) {
+              if (reader.stream == consumer) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              auto event_stream = writer.stream;
+              if (events_per_stream.count(event_stream) > 0) {
+                if (events_per_stream[event_stream].pool_index < writer.pool_index) {
+                  events_per_stream[event_stream] = writer;
+                }
+              } else {
+                events_per_stream.emplace(event_stream, writer);
+              }
+            }
+          }
+        }
+        for (auto event : events_per_stream) {
+          auto ev = event.second.event.lock();
+          MSHADOW_CUDA_CALL(cudaStreamWaitEvent(consumer, *ev, 0));
+        }
+        on_complete();
+      },
+      this->ctx(),
+      {},
+      {});
+#else
+  LOG(FATAL) << "GPU is not enabled";
+#endif
+}
+
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
