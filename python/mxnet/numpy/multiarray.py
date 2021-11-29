@@ -484,6 +484,45 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return (devtype_map[self.device.device_type], self.device.device_id)
 
 
+    def __dlpack__(self, stream=None):
+        """Exports the array for consumption by from_dlpack() as a DLPack capsule.
+
+        Parameters
+        ----------
+        stream : int, optional
+            A Python integer representing a pointer to a stream (CUDA or ROCm).
+            Stream is provided by the consumer to the producer to instruct the producer
+            to ensure that operations can safely be performed on the array. The pointer must
+            be positive integer or -1. If stream is -1, the value must be used by the consumer
+            to signal "producer must not perform any synchronization". 
+
+        Returns
+        -------
+        capsule : PyCapsule
+            A DLPack capsule for the array, containing a DLPackManagedTensor.
+        """
+        if stream is not None:
+            if type(stream) is not int:
+                raise TypeError('The input stream must be int or None')
+            if self.device.device_type != "gpu":
+                raise ValueError('Stream {} is not supported in current device {}'\
+                    .format(stream, self.device.device_type))
+            if stream != -1:
+                check_call(_LIB.MXPushStreamDep(self.handle, ctypes.c_int64(stream)))
+        to_dlpack_write = ndarray_to_dlpack_for_write()
+        return to_dlpack_write(self)
+
+
+    def __dlpack_device__(self):
+        """Returns device type and device ID in DLPack format"""
+        devtype_map = {'cpu': DLDeviceType.DLCPU,
+                       'gpu': DLDeviceType.DLGPU,
+                       'cpu_pinned': DLDeviceType.DLCPUPINNED}
+        if self.device.device_type not in devtype_map:
+            raise ValueError('Unkown device type {} for DLPack'.format(self.device.device_type))
+        return (devtype_map[self.device.device_type], self.device.device_id)
+
+
     def _get_np_basic_indexing(self, key):
         """
         This function indexes ``self`` with a tuple of `slice` objects only.
@@ -1759,7 +1798,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                       ' ndarray.to_device', DeprecationWarning)
         return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
 
-    def default_device(self, ctx):
+    def as_in_ctx(self, ctx):
         """This function has been deprecated. Please refer to ``ndarray.to_device``."""
         warnings.warn('ndarray.to_device has been renamed to'
                       ' ndarray.to_device', DeprecationWarning)
@@ -13779,7 +13818,6 @@ def sum(
     array(-128, dtype=int8)
     """
     return _mx_nd_np.sum(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims, initial=initial, where=where)
-# pylint: enable=redefined-outer-name, too-many-arguments
 
 
 @set_module('mxnet.numpy')

@@ -22,10 +22,7 @@
 #include "dnnl_batch_dot_property.h"
 #include "dnnl_bn_relu_property.h"
 #include "dnnl_conv_property.h"
-#include "dnnl_elemwisemul_post_quantize_property.h"
-#include "dnnl_fc_post_quantize_property.h"
 #include "dnnl_fc_property.h"
-#include "dnnl_matmul_post_quantize_property.h"
 #include "dnnl_post_quantize_align_scale_property.h"
 #include "dnnl_post_quantize_property.h"
 #include "dnnl_transformer_qk_property.h"
@@ -54,11 +51,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLTransformerValAttPropert
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLBatchDotProperty)
     .set_attr("quantize", true);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLPostQuantizeProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLFCPostQuantizeProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, ElemwiseMulPostQuantizeProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLPostQuantizeAlignScaleProperty);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLMatmulPostQuantizeProperty)
-    .set_attr("quantize", true);
 
 }  // namespace op
 }  // namespace mxnet

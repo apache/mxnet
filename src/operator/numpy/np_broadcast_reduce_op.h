@@ -71,6 +71,11 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
         .describe("Starting value for the sum.");
   }
 
+  bool operator==(const NumpyReduceAxesParam& other) const {
+    return this->axis == other.axis && this->dtype == other.dtype &&
+           this->keepdims == other.keepdims && this->initial == other.initial;
+  }
+
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream axis_s, dtype_s, keepdims_s, initial_s;
     axis_s << axis;
@@ -1274,4 +1279,18 @@ void NumpyReduceAxesNoDTypeBackward(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template <>
+struct hash<mxnet::op::NumpyReduceAxesParam> {
+  size_t operator()(const mxnet::op::NumpyReduceAxesParam& val) {
+    size_t ret = 0;
+    ret        = dmlc::HashCombine(ret, val.axis);
+    ret        = dmlc::HashCombine(ret, val.dtype);
+    ret        = dmlc::HashCombine(ret, val.keepdims);
+    ret        = dmlc::HashCombine(ret, val.initial);
+    return ret;
+  }
+};
+}  // namespace std
 #endif  // MXNET_OPERATOR_NUMPY_NP_BROADCAST_REDUCE_OP_H_

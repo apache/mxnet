@@ -7853,7 +7853,7 @@ def test_unravel_index():
         assert_array_equal(b, b_mx.asnumpy())
 
 
-def test_context_num_gpus():
+def test_device_num_gpus():
     try:
         # Note: the test is run both on GPU and CPU hosts, so that we can not assert
         # on a specific number here.
@@ -7864,6 +7864,25 @@ def test_context_num_gpus():
         if str(e).find("CUDA") == -1:
             raise e
 
+def test_context_backward_compatibility():
+    try:
+        # Note: the test is run both on GPU and CPU hosts, so that we can not assert
+        # on a specific number here.
+        assert mx.context.num_gpus() >= 0
+    except mx.MXNetError as e:
+        # Note: On a CPU only host CUDA sometimes is not able to determine the number
+        # of GPUs
+        if str(e).find("CUDA") == -1:
+            raise e
+    
+    if mx.context.num_gpus() > 0:
+        test_input = mx.np.ones((1,), ctx=mx.context.gpu())
+        assert test_input.ctx == test_input.context
+        context = test_input.ctx
+        (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(context.device_id)
+        test_input_cpu = test_input.as_in_ctx(mx.context.cpu())
+        test_input_gpu = test_input_cpu.as_in_context(mx.context.gpu())
+        assert context == test_input_gpu.context
 
 @pytest.mark.serial
 def test_op_roi_align():

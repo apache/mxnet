@@ -3125,6 +3125,20 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func,
 MXNET_DLL int MXCheckDynamicShapeOp(SymbolHandle sym_handle, bool* has_dynamic_shape);
 
 /*!
+ * \brief Synchronize the consumer stream with the producer stream where the NDArray lives.
+ * \param handle NDArray handle of producer.
+ * \param stream A pointer to a stream from consumer.
+ */
+MXNET_DLL int MXPushStreamDep(NDArrayHandle handle, int stream);
+
+/*!
+ * \brief Get current stream pointer based on current device type and id
+ * \param device_id Current device id.
+ * \param stream A pointer pointing to current stream.
+ */
+MXNET_DLL int MXGetCurrentStream(int device_id, int* stream);
+
+/*!
  * \brief Push a new NVTX range. Requires building with CUDA and NVTX.
  * \param name Name of the range.
  * \param color Color used to display the range in the visual profiling tools.
