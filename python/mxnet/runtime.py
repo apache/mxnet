@@ -116,3 +116,13 @@ class Features(collections.OrderedDict):
             raise RuntimeError("Feature '{}' is unknown, known features are: {}".format(
                 feature_name, list(self.keys())))
         return self[feature_name].enabled
+
+def get_branch():
+    out = ctypes.c_char_p()
+    check_call(_LIB.MXGetBranch(ctypes.byref(out)))
+    return out.value.decode('utf-8')
+
+def get_commit_hash():
+    out = ctypes.c_char_p()
+    check_call(_LIB.MXGetCommitHash(ctypes.byref(out)))
+    return out.value.decode('utf-8')

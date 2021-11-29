@@ -957,15 +957,3 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
             function.__doc__ = getattr(_np_op_doc, name).__doc__
         else:
             function.__doc__ = re.sub('NDArray', 'ndarray', function.__doc__)
-
-
-def get_branch():
-    out = ctypes.c_char_p()
-    check_call(_LIB.MXGetBranch(ctypes.byref(out)))
-    return py_str(out.value)
-
-def get_commit_hash():
-    out = ctypes.c_char_p()
-    check_call(_LIB.MXGetCommitHash(ctypes.byref(out)))
-    return py_str(out.value)
-    
