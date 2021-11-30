@@ -108,6 +108,8 @@ class PoolConv(nn.HybridBlock):
         return y * 2
 
 
+@pytest.mark.skipif(not mx.runtime.Features().is_enabled('CUDNN'),
+                    reason='Channel-last layouts are only supported with cuDNN.')
 @pytest.mark.parametrize('ndim', [1, 2, 3])
 @pytest.mark.parametrize('model', [Conv, ConvBN, PoolConv])
 def test_optimize_layout(np_shape_array, amp_init, model, ndim):
