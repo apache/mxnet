@@ -16,7 +16,7 @@
 # under the License.
 """Context management API of mxnet."""
 from warnings import warn
-from .device import (Device, _current, cpu, gpu, cpu_pinned,
+from .device import (Device, _current, cpu, gpu, cpu_pinned, # pylint: disable=unused-import
                      num_gpus, gpu_memory_info)  # pylint: disable=unused-import
 
 
