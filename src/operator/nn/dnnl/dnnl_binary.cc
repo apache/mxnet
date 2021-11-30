@@ -63,9 +63,11 @@ void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
 }
 
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs) {
-  auto dtype = inputs[0].dtype();
-  return inputs[0].shape().Size() != 0 && inputs[1].shape().Size() != 0 &&
-         inputs[0].shape().ndim() != 0 && inputs[1].shape().ndim() != 0 &&
+  auto dtype  = inputs[0].dtype();
+  auto ndim_0 = inputs[0].shape().ndim();
+  auto ndim_1 = inputs[1].shape().ndim();
+  return ndim_0 >= 1 && ndim_0 <= 6 && ndim_1 >= 1 && ndim_1 <= 6 &&
+         inputs[0].shape().Size() != 0 && inputs[1].shape().Size() != 0 &&
          dtype == mshadow::kFloat32 && dtype == inputs[1].dtype();
 }
 
