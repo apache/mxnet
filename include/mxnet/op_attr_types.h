@@ -350,7 +350,7 @@ using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
 
 /*!
  * \brief Register a function to determine if the input of a quantized operator
- * needs to be asymmetric quantized.
+ * needs to be quantized asymmetrically.
  */
 using FNeedAsymQuantizeInput = std::function<bool (const NodeAttrs& attrs,
                                                    const size_t index)>;

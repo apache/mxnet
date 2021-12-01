@@ -326,8 +326,6 @@ Graph QuantizeGraph(Graph &&src) {
               }
             }
 
-            // ObjectPtr quantize_node = InsertNode("_contrib_quantize_v2",
-            //   e.node->attrs.name + suffix + "_quantize", new_node, mirror_entry);
             ObjectPtr quantize_node;
             if (need_asym_quantize_map.count(node->op()) &&
                 need_asym_quantize_map[node->op()](node->attrs, i)) {
