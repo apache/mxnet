@@ -711,7 +711,6 @@ sanity_check() {
 
 sanity_cmakelint() {
     set -exu
-
     git ls-files -z -- bootstrap '*.cmake' '*.cmake.in' '*CMakeLists.txt' | grep -E -z -v '^(3rdparty)|cmake/Modules/|cmake/upstream/' | xargs -0 cmakelint --config=.cmakelintrc --quiet
 }
 
