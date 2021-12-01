@@ -18,9 +18,7 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantize_v2.cc
- * \brief
  */
 
 #include "./quantize_v2-inl.h"

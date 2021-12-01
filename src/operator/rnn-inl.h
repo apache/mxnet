@@ -18,9 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file rnn-inl.h
- * \brief
  * \author Sebastian Bodenstein, Shu Zhang
 */
 #ifndef MXNET_OPERATOR_RNN_INL_H_

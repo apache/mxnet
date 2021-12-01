@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file quantize_asym-inl.h
  * \brief implementation of asymmetric quantize operation
  */

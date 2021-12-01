@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file quantized_rnn.cc
  * \brief Common functions for quantized recurrent neural network
  * \author Zixuan Wei

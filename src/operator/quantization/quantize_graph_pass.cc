@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file quantize_graph_pass.cc
  * \brief
  */

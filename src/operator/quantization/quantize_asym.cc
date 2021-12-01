@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2020 by Contributors
  * \file quantize_asym.cc
  * \brief implementation of asymmetric quantize operation
  */
