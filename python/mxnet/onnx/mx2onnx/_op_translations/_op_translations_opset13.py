@@ -535,7 +535,6 @@ def convert_expand_dims(node, **kwargs):
 
 
 @mx_op.register("stack", OPSET_VERSION)
-@mx_op.register("_npi_stack", OPSET_VERSION)
 def convert_stack(node, **kwargs):
     """Map MXNet's stack operator to onnx operators.
     """

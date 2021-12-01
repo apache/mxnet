@@ -603,7 +603,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
   } else {
-    LOG(FATAL) << "DNNL doesn't support " << shape.ndim() << " dimensions";
+    LOG(FATAL) << "oneDNN doesn't support " << shape.ndim() << " dimensions";
   }
   dnnl::memory::format_tag layout = dnnl::memory::format_tag::undef;
   switch (dims.size()) {
@@ -626,7 +626,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
       layout = dnnl::memory::format_tag::abcdef;
       break;
     default:
-      LOG(FATAL) << "Not implemented dimension (" << dims.size() << ") for DNNL";
+      LOG(FATAL) << "Not implemented dimension (" << dims.size() << ") for oneDNN";
   }
   dnnl::memory::desc data_md{dims, get_dnnl_type(dtype), layout};
   if (shandle.dptr == nullptr) {
@@ -639,7 +639,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
 
 const dnnl::memory* NDArray::GetDNNLData(const dnnl::memory::desc& desc) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested DNNL memory desc";
+    LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc";
     return nullptr;
   }
   const dnnl::memory* mem  = GetDNNLData();
@@ -705,7 +705,7 @@ NDArray NDArray::Reorder2Default() const {
   if (!ptr_->dnnl_mem_->IsDNNL())
     return *this;
 
-  // create new ndarray from  dnnl layout
+  // create new ndarray from dnnl layout
   dnnl::memory::desc from_desc = ptr_->dnnl_mem_->GetDesc();
   mxnet::TShape tshape(from_desc.data.ndims, -1);
   for (int i = 0; i < from_desc.data.ndims; i++)
@@ -863,7 +863,7 @@ void NDArray::CopyFrom(const dnnl::memory& mem) {
     return;
 
   CHECK(mem.get_desc().get_size() == shape().Size() * GetTypeSize(dtype_))
-      << "The size of NDArray doesn't match the requested DNNL memory desc";
+      << "The size of NDArray doesn't match the requested oneDNN memory desc";
   // If this array uses DNNL layout, we have to make sure it's not a view.
   // Otherwise, we'll have to change the layout inside the array.
 
@@ -876,8 +876,8 @@ void NDArray::CopyFrom(const dnnl::memory& mem) {
 
 dnnl::memory* NDArray::CreateDNNLData(const dnnl::memory::desc& desc) {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested DNNL memory desc. "
-               << "DNNL memory requests for " << desc.get_size() << " bytes, but got "
+    LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc. "
+               << "oneDNN memory requests for " << desc.get_size() << " bytes, but got "
                << shape().Size() * GetTypeSize(dtype_) << " bytes from NDArray";
     return nullptr;
   }
@@ -937,7 +937,7 @@ void NDArray::SetTBlob() const {
   auto stype          = storage_type();
   if (stype == kDefaultStorage) {
 #if MXNET_USE_ONEDNN == 1
-    CHECK(!IsDNNLData()) << "We can't generate TBlob for DNNL data. "
+    CHECK(!IsDNNLData()) << "We can't generate TBlob for oneDNN data. "
                          << "Please use Reorder2Default() to generate a new NDArray first";
 #endif
     dptr += byte_offset_;
@@ -2481,6 +2481,65 @@ void NDArray::WaitToWrite() const {
       {},
       {ptr_->var});
   Engine::Get()->WaitForVar(ptr_->var);
+}
+
+void NDArray::StreamSync(int stream) const {
+  if (is_none())
+    return;
+  Imperative::DCInfo::Compute(*this);
+#if MXNET_USE_CUDA
+  Engine::Get()->PushAsync(
+      [this, stream](RunContext ctx,
+                     Engine::CallbackOnStart on_start,
+                     Engine::CallbackOnComplete on_complete) {
+        on_start();
+        cudaStream_t consumer = reinterpret_cast<cudaStream_t>(stream);
+        std::unordered_map<cudaStream_t, engine::EventInfo> events_per_stream;
+        auto& sync_obj = this->var()->sync_object;
+        std::lock_guard<std::mutex> l(sync_obj.mutex);
+        auto& reader_events = sync_obj.reader_events;
+        reader_events.erase(
+            std::remove_if(reader_events.begin(),
+                           reader_events.end(),
+                           [&](const engine::EventInfo e_i) { return e_i.event.expired(); }),
+            reader_events.end());
+        for (auto& writer : sync_obj.writer_event) {
+          if (writer.event.expired()) {
+            sync_obj.writer_event.clear();
+            break;
+          }
+          if (writer.stream != consumer) {
+            bool found = false;
+            for (const auto& reader : reader_events) {
+              if (reader.stream == consumer) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              auto event_stream = writer.stream;
+              if (events_per_stream.count(event_stream) > 0) {
+                if (events_per_stream[event_stream].pool_index < writer.pool_index) {
+                  events_per_stream[event_stream] = writer;
+                }
+              } else {
+                events_per_stream.emplace(event_stream, writer);
+              }
+            }
+          }
+        }
+        for (auto event : events_per_stream) {
+          auto ev = event.second.event.lock();
+          MSHADOW_CUDA_CALL(cudaStreamWaitEvent(consumer, *ev, 0));
+        }
+        on_complete();
+      },
+      this->ctx(),
+      {},
+      {});
+#else
+  LOG(FATAL) << "GPU is not enabled";
+#endif
 }
 
 #if MXNET_PREDICT_ONLY == 0

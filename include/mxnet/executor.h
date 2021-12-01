@@ -108,11 +108,14 @@ class Executor {
    *
    * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
    * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the
-   * original. \param default_ctx the default context of binding. \param ctx_map Context mapping
-   * group to context. \param provided_arg_shapes New shape for arguments. \param in_args the
-   * NDArray that stores the input arguments. \param arg_grads NDArray that is used to store the
-   * gradient output of the input arguments. \param aux_states NDArray that is used as internal
-   * states. \return a new executor.
+   *  original.
+   * \param default_ctx the default context of binding.
+   * \param ctx_map Context mapping group to context.
+   * \param provided_arg_shapes New shape for arguments.
+   * \param in_args the NDArray that stores the input arguments.
+   * \param arg_grads NDArray that is used to store the gradient output of the input arguments.
+   * \param aux_states NDArray that is used as internal states.
+   * \return a new executor.
    */
   virtual Executor* Reshape(
       const bool partial_shaping,
@@ -132,10 +135,13 @@ class Executor {
    * \param group2ctx Context mapping group to context.
    * \param symbol the symbol that specifies the output of Forward pass.
    * \param in_args the NDArray that stores the input arguments to the symbol.
-   * \param arg_grad_store NDArray that is used to store the gradient output of the input arguments.
-   * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo,
-   * kWriteTo}. \param aux_states NDArray that is used as internal state in op \param shared_exec
-   * input executor to share memory with. \return a new executor.
+   * \param arg_grad_store NDArray that is used to store the gradient
+   *  output of the input arguments.
+   * \param grad_req_type requirment type of gradient saving. Can only be in
+   *  {kNullOp, kAddTo, kWriteTo}.
+   * \param aux_states NDArray that is used as internal state in op
+   * \param shared_exec input executor to share memory with.
+   * \return a new executor.
    */
   static Executor* Bind(nnvm::Symbol symbol,
                         const Context& default_ctx,

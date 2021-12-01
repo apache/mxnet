@@ -70,7 +70,7 @@ bool QuantizedBatchNormType(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_ONEDNN == 1
   CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
-      << "QuantizedBatchNorm with DNNL backend only supports int8/uint8 input, while "
+      << "QuantizedBatchNorm with oneDNN backend only supports int8/uint8 input, while "
       << in_type->at(0) << " is given.";
 #else
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);

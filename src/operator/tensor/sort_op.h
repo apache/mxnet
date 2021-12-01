@@ -50,8 +50,9 @@ namespace op {
  * \param is_ascend whether to sort key in ascending order
  * \param begin_bit The beginning bit of the different values in keys. Default 0.
  * \param end_bit The ending bit of the different values in keys. Default to 8 * sizeof(dtype of
- * key). \param sorted_keys If specified, keys will be sorted out of place. \param sorted_values If
- * specified, values will be sorted out of place.
+ * key).
+ * \param sorted_keys If specified, keys will be sorted out of place.
+ * \param sorted_values If specified, values will be sorted out of place.
  */
 template <typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys,
@@ -123,8 +124,9 @@ inline typename std::enable_if<std::is_same<xpu, cpu>::value, size_t>::type Sort
  * \param is_ascend whether to sort key in ascending order
  * \param begin_bit The beginning bit of the different values in keys. Default 0.
  * \param end_bit The ending bit of the different values in keys. Default to 8 * sizeof(dtype of
- * key). \param sorted_keys If specified, keys will be sorted out of place. \param sorted_values If
- * specified, values will be sorted out of place.
+ * key).
+ * \param sorted_keys If specified, keys will be sorted out of place.
+ * \param sorted_values If specified, values will be sorted out of place.
  */
 template <typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys,

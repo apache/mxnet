@@ -673,7 +673,6 @@ WIDEST_TYPE_CASTS = [
     '_npi_not_equal',
     '_npi_dstack',
     '_npi_hstack',
-    '_npi_stack',
     '_npi_tensordot',
     '_npi_tensordot_int_axes',
     '_npi_vstack',

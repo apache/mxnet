@@ -50,7 +50,7 @@ class SgDNNLBatchDotSelector : public SubgraphSelector {
 class SgDNNLBatchDotProperty : public SubgraphProperty {
  public:
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "DNNL Batch Dot optimization pass";
+    static const std::string& name = "oneDNN Batch Dot optimization pass";
     auto property                  = std::make_shared<SgDNNLBatchDotProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);

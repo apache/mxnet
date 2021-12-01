@@ -313,7 +313,7 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
     if cuda_version:
         variant = 'cu{}'.format(cuda_version)
         if not mxnet_features['ONEDNN']:
-            RuntimeError('Error determining mxnet variant: ONEDNN should be enabled for cuda variants')
+            RuntimeError('Error determining mxnet variant: oneDNN should be enabled for cuda variants')
         logger.debug('variant is: {}'.format(variant))
         return variant
 
