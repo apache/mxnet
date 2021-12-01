@@ -101,7 +101,7 @@ def check_mxnet():
             commit_hash = mxnet.runtime.get_commit_hash()
             print('Branch       :', branch)
             print('Commit Hash  :', commit_hash)
-        except Exception:
+        except AttributeError:
             commit_hash = os.path.join(mx_dir, 'COMMIT_HASH')
             if os.path.exists(commit_hash):
                 with open(commit_hash, 'r') as f:
@@ -113,7 +113,7 @@ def check_mxnet():
         try:
             print('Build features:')
             print(get_build_features_str())
-        except Exception:
+        except (AttributeError, ModuleNotFoundError):
             print('No runtime build feature info available')
     except ImportError:
         print('No MXNet installed.')
