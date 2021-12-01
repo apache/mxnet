@@ -13870,6 +13870,7 @@ def asarray(
 ) -> ndarray:
     """
     Convert the input to an array.
+
     Parameters
     ----------
     obj : <array>, bool, int, float, NestedSequence[ bool | int | float ]
@@ -13888,6 +13889,7 @@ def asarray(
         and raises ValueError in case that would be necessary.
         If None, reuses existing memory buffer if possible, copies otherwise. Default: None .
         An array containing the data from obj.
+
     Examples
     --------
     >>> np.asarray([1, 2, 3])
