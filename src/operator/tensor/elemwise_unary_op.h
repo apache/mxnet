@@ -35,6 +35,7 @@
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
+#include "../../common/alm.h"
 #include "../../common/utils.h"
 #include "../../ndarray/ndarray_function.h"
 
@@ -865,6 +866,7 @@ void NumpyNanToNumOpBackward(const nnvm::NodeAttrs& attrs,
       .set_num_outputs(1)                                                                 \
       .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                   \
       .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)                       \
+      .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", ElemwiseChangeLayout)         \
       .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                   \
                                       [](const NodeAttrs& attrs) {                        \
                                         return std::vector<std::pair<int, int> >{{0, 0}}; \

@@ -24,6 +24,7 @@
  */
 
 #include "./leaky_relu-inl.h"
+#include "../common/alm.h"
 #if MXNET_USE_ONEDNN == 1
 #include "./nn/dnnl/dnnl_base-inl.h"
 #include "./nn/dnnl/dnnl_ops-inl.h"
@@ -145,6 +146,17 @@ inline static bool BackwardLeakyReLUStorageType(const nnvm::NodeAttrs& attrs,
 }
 #endif  // MXNET_USE_ONEDNN == 1
 
+static bool LRChangeLayout(nnvm::NodeAttrs* attrs,
+                           mshadow::LayoutFlag target_layout,
+                           std::vector<alm::Transpose>* in_axes,
+                           std::vector<alm::Transpose>* out_axes) {
+  CHECK_EQ(target_layout, mshadow::kUNKNOWN);
+  out_axes->assign(1, alm::FactorCommonTranspose(in_axes));
+  if (attrs->dict["act_type"] == "rrelu")
+    out_axes->resize(2);
+  return false;
+}
+
 NNVM_REGISTER_OP(LeakyReLU)
     .describe(R"code(Applies Leaky rectified linear unit activation element-wise to the input.
 
@@ -195,6 +207,7 @@ The following modified ReLU Activation functions are supported:
                                       })
     .set_attr<mxnet::FInferShape>("FInferShape", LeakyReLUShape)
     .set_attr<nnvm::FInferType>("FInferType", LeakyReLUType)
+    .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", LRChangeLayout)
     .set_attr<FCompute>("FCompute<cpu>", LeakyReLUCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsDNNL", true)
