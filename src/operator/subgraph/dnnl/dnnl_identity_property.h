@@ -41,6 +41,7 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
  private:
   std::vector<const BiDirectedNode*> matched_list_;
   bool pattern_found = false;
+
  public:
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
