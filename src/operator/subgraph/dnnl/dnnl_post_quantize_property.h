@@ -39,15 +39,15 @@ namespace op {
 namespace {
 const std::set<std::string> support_req_fusion_op = {"_contrib_quantized_elemwise_add",
                                                      "_contrib_quantized_elemwise_mul",
-                                                     "_contrib_quantized_npi_add",
+                                                     //"_contrib_quantized_npi_add",  // to be added later on
                                                      "_sg_onednn_conv",
                                                      "_sg_onednn_fully_connected",
                                                      "_sg_onednn_selfatt_qk",
                                                      "_sg_onednn_selfatt_valatt",
                                                      "_sg_onednn_batch_dot"};
 
-const std::set<const Op*> no_enable_float_output = {Op::Get("_contrib_quantized_elemwise_add"),
-                                                    Op::Get("_sg_onednn_conv")};
+const std::set<const Op*> no_enable_float_output = {
+      Op::Get("_contrib_quantized_elemwise_add")};
 }  // namespace
 
 class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
@@ -113,8 +113,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
           if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
             matched_list.emplace_back(&new_node);
             status = SelectStatus::kRequantize;
-            if ((raw_node->op() == Op::Get("_sg_onednn_conv")) ||
-                (raw_node->op() == Op::Get("_contrib_quantized_elemwise_add"))) {
+            if (no_enable_float_output.count(raw_node->op()) == 0) {
               status = SelectStatus::kSuccess;
             }
             return true;
