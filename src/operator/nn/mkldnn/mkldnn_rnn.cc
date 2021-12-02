@@ -90,15 +90,15 @@ MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const NodeAttrs& attrs,
                                             const int input_size) {
   const RNNParam& rnn_param = nnvm::get<RNNParam>(attrs.parsed);
   MKLDNNRnnFullParam full_param;
-  full_param.default_param       = rnn_param;
-    try {
+  full_param.default_param = rnn_param;
+  try {
     full_param.mkldnn_param.Init(attrs.dict, dmlc::parameter::kAllowUnknown);
-  } catch (const dmlc::ParamError &e) {
+  } catch (const dmlc::ParamError& e) {
     std::ostringstream os;
     os << e.what();
     os << ", in operator " << attrs.op->name << "("
        << "name=\"" << attrs.name << "\"";
-    for (const auto &k : attrs.dict) {
+    for (const auto& k : attrs.dict) {
       os << ", " << k.first << "=\"" << k.second << "\"";
     }
     os << ")";
@@ -135,12 +135,13 @@ MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const NodeAttrs& attrs,
   // Set dims, workspace size, state_outputs, quantized and enable_u8_output flag
   for (auto& layer_param : layer_params) {
     layer_param.SetDims();
-    layer_param.state_outputs = rnn_param.state_outputs;
-    layer_param.quantized = full_param.mkldnn_param.quantized;
+    layer_param.state_outputs    = rnn_param.state_outputs;
+    layer_param.quantized        = full_param.mkldnn_param.quantized;
     layer_param.enable_u8_output = true;
   }
   // Quantized RNN operator produces kFloat32 outputs.
-  if (full_param.mkldnn_param.quantized) layer_params.back().enable_u8_output = false;
+  if (full_param.mkldnn_param.quantized)
+    layer_params.back().enable_u8_output = false;
   return full_param;
 }
 
@@ -180,20 +181,20 @@ RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param,
                            const NDArray& params,
                            const shared_mkldnn_attr_t attr) {
   using namespace mkldnn;
-  using tag                     = mkldnn::memory::format_tag;
-  const int mode                = layer_param.mode;
+  using tag                         = mkldnn::memory::format_tag;
+  const int mode                    = layer_param.mode;
   memory::data_type src_layer_dtype = get_mkldnn_type(data.dtype());
-  memory::data_type iter_dtype = get_mkldnn_type(mshadow::kFloat32);
-  memory::data_type weight_dtype = get_mkldnn_type(
-      layer_param.quantized ? mshadow::kInt8 : params.dtype());
+  memory::data_type iter_dtype      = get_mkldnn_type(mshadow::kFloat32);
+  memory::data_type weight_dtype =
+      get_mkldnn_type(layer_param.quantized ? mshadow::kInt8 : params.dtype());
   memory::data_type bias_dtype = get_mkldnn_type(mshadow::kFloat32);
-  memory::data_type dst_layer_dtype = get_mkldnn_type(
-      (layer_param.quantized && layer_param.enable_u8_output) ?
-      mshadow::kUint8 : mshadow::kFloat32);
+  memory::data_type dst_layer_dtype =
+      get_mkldnn_type((layer_param.quantized && layer_param.enable_u8_output) ? mshadow::kUint8 :
+                                                                                mshadow::kFloat32);
   const prop_kind prop = is_train ? prop_kind::forward_training : prop_kind::forward_inference;
-  const rnn_direction mkldnn_rnn_direction = layer_param.bidirectional
-                                                 ? rnn_direction::bidirectional_concat
-                                                 : rnn_direction::unidirectional;
+  const rnn_direction mkldnn_rnn_direction = layer_param.bidirectional ?
+                                                 rnn_direction::bidirectional_concat :
+                                                 rnn_direction::unidirectional;
 
   auto src_layer_desc    = memory::desc(layer_param.src_dims, src_layer_dtype, tag::tnc);
   auto weight_layer_desc = memory::desc(layer_param.weight_layer_dims, weight_dtype, tag::any);
@@ -201,14 +202,15 @@ RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param,
   auto bias_desc         = memory::desc(layer_param.bias_dims, bias_dtype, tag::ldgo);
   auto dst_layer_desc    = memory::desc(layer_param.dst_dims, dst_layer_dtype, tag::tnc);
   auto src_state_desc    = memory::desc(layer_param.state_dims, iter_dtype, tag::ldnc);
-  auto dst_state_desc    = layer_param.state_outputs
-                               ? memory::desc(layer_param.state_dims, iter_dtype, tag::ldnc)
-                               : memory::desc();
+  auto dst_state_desc    = layer_param.state_outputs ?
+                            memory::desc(layer_param.state_dims, iter_dtype, tag::ldnc) :
+                            memory::desc();
 
   auto fwd = RnnPrimitive();
   switch (mode) {
     case rnn_enum::kLstm:
-      fwd = RnnPrimitive::Create<lstm_forward>(attr, prop,
+      fwd = RnnPrimitive::Create<lstm_forward>(attr,
+                                               prop,
                                                mkldnn_rnn_direction,
                                                src_layer_desc,
                                                src_state_desc,
@@ -221,7 +223,8 @@ RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param,
                                                dst_state_desc);
       break;
     case rnn_enum::kGru:
-      fwd = RnnPrimitive::Create<lbr_gru_forward>(attr, prop,
+      fwd = RnnPrimitive::Create<lbr_gru_forward>(attr,
+                                                  prop,
                                                   mkldnn_rnn_direction,
                                                   src_layer_desc,
                                                   src_state_desc,
@@ -233,7 +236,8 @@ RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param,
       break;
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
-      fwd = RnnPrimitive::Create<vanilla_rnn_forward>(attr,
+      fwd = RnnPrimitive::Create<vanilla_rnn_forward>(
+          attr,
           prop,
           mode == rnn_enum::kRnnTanh ? algorithm::eltwise_tanh : algorithm::eltwise_relu,
           mkldnn_rnn_direction,
@@ -449,15 +453,15 @@ void MKLDNNRnnForward::SetNewDataMem(void* x,
   int dst_dtype = dtype;
   if (param_.quantized) {
     src_dtype = mshadow::kUint8;
-    if (param_.enable_u8_output) dst_dtype = mshadow::kUint8;
+    if (param_.enable_u8_output)
+      dst_dtype = mshadow::kUint8;
   }
-
 
   RNN_HANDLE_FUNC(RNN_HANDLE_FUNC_NAME);
 
   // Set various data memory
-  RNN_FWD_SET(SRC,      param_.src_dims,   format_tag::tnc,  x,  src_dtype);
-  RNN_FWD_SET(DST,      param_.dst_dims,   format_tag::tnc,  y,  dst_dtype);
+  RNN_FWD_SET(SRC, param_.src_dims, format_tag::tnc, x, src_dtype);
+  RNN_FWD_SET(DST, param_.dst_dims, format_tag::tnc, y, dst_dtype);
   RNN_FWD_SET(SRC_ITER, param_.state_dims, format_tag::ldnc, hx, dtype);
 
   if (param_.state_outputs) {
@@ -477,21 +481,20 @@ void MKLDNNRnnForward::SetNewDataMem(void* x,
  * with primitive-prefered format.
  */
 void MKLDNNRnnForward::ReorderWeights() {
-if (param_.quantized) {
+  if (param_.quantized) {
     const mkldnn::primitive_attr& attr = this->fwd_inf_.GetPrimAttr();
-    auto ReorderWithAttr = [&](mkldnn::memory& src, mkldnn::memory& dst) {
-        auto reorder_pd = mkldnn::reorder::primitive_desc(src, dst, attr);
-        mkldnn_args_map_t net_args;
-        net_args[MKLDNN_ARG_SRC] = src;
-        net_args[MKLDNN_ARG_DST] = dst;
-        MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(reorder_pd), net_args);
-      };
+    auto ReorderWithAttr               = [&](mkldnn::memory& src, mkldnn::memory& dst) {
+      auto reorder_pd = mkldnn::reorder::primitive_desc(src, dst, attr);
+      mkldnn_args_map_t net_args;
+      net_args[MKLDNN_ARG_SRC] = src;
+      net_args[MKLDNN_ARG_DST] = dst;
+      MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(reorder_pd), net_args);
+    };
     ReorderWithAttr(*weights_layer_r_, *weights_layer_);
     ReorderWithAttr(*weights_iter_r_, *weights_iter_);
   } else {
     MKLDNNMemoryReorder(*weights_layer_r_, *weights_layer_);
     MKLDNNMemoryReorder(*weights_iter_r_, *weights_iter_);
-    // if (param_.proj_size > 0) MKLDNNMemoryReorder(*weights_proj_r_, *weights_proj_);
   }
 }
 
@@ -613,7 +616,6 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr,
     ConcatWeights(*weights_iter_r_, 1, {l2r_wh, r2l_wh}, format_tag::ldgoi);
   } else if (param_.num_layer == 1 && !param_.bidirectional) {
     //* single uni-directional layer, no concatenate operator needed
-    // tutttaj
     std::memcpy(weights_layer_r_->get_data_handle(), l2r_wx, wx_bytes);
     std::memcpy(weights_iter_r_->get_data_handle(), l2r_wh, wh_bytes);
   } else if (param_.num_layer > 1 && !param_.bidirectional) {
@@ -734,15 +736,17 @@ void MKLDNNRnnOp::Init(const OpContext& ctx,
   using format_tag = mkldnn::memory::format_tag;
 
   // Get the bytes of a real type
-  const NDArray &weights = inputs[rnn_enum::kParams];
-  int dtype = weights.dtype();
-  size_t dtype_bytes = mshadow::mshadow_sizeof(dtype);
-  const RNNParam &default_param = full_param_.default_param;
-  const size_t weights_size = weights.data().Size() -
-      GetRnnBiasSize(default_param.num_layers, default_param.state_size,
-      default_param.bidirectional + 1, default_param.mode);
-  char *weights_ptr = static_cast<char *>(weights.data().dptr_);
-  char *bias_ptr = weights_ptr + weights_size * dtype_bytes;
+  const NDArray& weights        = inputs[rnn_enum::kParams];
+  int dtype                     = weights.dtype();
+  size_t dtype_bytes            = mshadow::mshadow_sizeof(dtype);
+  const RNNParam& default_param = full_param_.default_param;
+  const size_t weights_size =
+      weights.data().Size() - GetRnnBiasSize(default_param.num_layers,
+                                             default_param.state_size,
+                                             default_param.bidirectional + 1,
+                                             default_param.mode);
+  char* weights_ptr = static_cast<char*>(weights.data().dptr_);
+  char* bias_ptr    = weights_ptr + weights_size * dtype_bytes;
 
   // In the `autograd.record()` context, RNNOp is required to run into
   // `forward_training` mode.
@@ -758,8 +762,7 @@ void MKLDNNRnnOp::Init(const OpContext& ctx,
 
     for (auto& layer_param : full_param_.layer_params) {
       fwd_inf_vec_.emplace_back(
-          layer_param, ctx.is_train, inputs[rnn_enum::kData],
-            inputs[rnn_enum::kParams], nullptr);
+          layer_param, ctx.is_train, inputs[rnn_enum::kData], inputs[rnn_enum::kParams], nullptr);
       buffer_size += fwd_inf_vec_.back().GetSize(inputs[rnn_enum::kParams].dtype());
     }
     mgr_.Init(buffer_size, ctx.run_ctx.ctx, inputs[rnn_enum::kParams].dtype());
@@ -1078,7 +1081,7 @@ void MKLDNNRnnOp::Forward(const OpContext& ctx,
   if (dmlc::GetEnv("MXNET_RNN_USE_WEIGHT_CACHE", 0) && !initialized_) {
     LOG(INFO) << "The current weight of RNN is assumed to be fixed and cached during "
         "the whole inference pipeline. Please set MXNET_RNN_USE_WEIGHT_CACHE=0, if "
-        "the weight changed at runtime.";
+        "the weight is going to be changed at runtime.";
   }
 
   // Check if weights NDArray was changed. If so, reset initialized_

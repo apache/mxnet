@@ -38,56 +38,54 @@
 namespace mxnet {
 namespace op {
 
-uint32_t QuantizedRnnNumInputs(const NodeAttrs &attrs) {
-  const RNNParam &param = nnvm::get<RNNParam>(attrs.parsed);
+uint32_t QuantizedRnnNumInputs(const NodeAttrs& attrs) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
   CHECK_EQ(param.mode, rnn_enum::kLstm)
       << "Quantized recurrent neural network only supports LSTM operator on "
          "CPU.";
   return 6U;
 }
 
-uint32_t QuantizedRnnNumOutputs(const NodeAttrs &attrs) {
-  const RNNParam &param = nnvm::get<RNNParam>(attrs.parsed);
+uint32_t QuantizedRnnNumOutputs(const NodeAttrs& attrs) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
   CHECK_EQ(param.mode, rnn_enum::kLstm)
       << "Quantized recurrent neural network only supports LSTM operator on "
          "CPU.";
   return param.state_outputs ? 3U : 1U;
 }
 
-std::vector<std::string> QuantizedRnnInputNames(const NodeAttrs &attrs) {
-  const RNNParam &param = nnvm::get<RNNParam>(attrs.parsed);
+std::vector<std::string> QuantizedRnnInputNames(const NodeAttrs& attrs) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
   CHECK_EQ(param.mode, rnn_enum::kLstm)
       << "Quantized recurrent neural network only supports LSTM operator on "
          "CPU.";
-  return std::vector<std::string>{"data",       "parameters", "state",
-                                  "state_cell", "min_data",   "max_data"};
+  return std::vector<std::string>{
+      "data", "parameters", "state", "state_cell", "min_data", "max_data"};
 }
 
-std::vector<std::string> QuantizedRnnOutputNames(const NodeAttrs &attrs) {
-  const RNNParam &param = nnvm::get<RNNParam>(attrs.parsed);
+std::vector<std::string> QuantizedRnnOutputNames(const NodeAttrs& attrs) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
   CHECK_EQ(param.mode, rnn_enum::kLstm)
       << "Quantized recurrent neural network only supports LSTM operator on "
          "CPU.";
   if (param.state_outputs) {
-    return std::vector<std::string>{"output", "state_output",
-                                    "statecell_ouput"};
+    return std::vector<std::string>{"output", "state_output", "statecell_ouput"};
   } else {
     return std::vector<std::string>{"output"};
   }
 }
 
-bool QuantizedRnnShape(const nnvm::NodeAttrs &attrs,
-                       std::vector<TShape> *in_shape,
-                       std::vector<TShape> *out_shape) {
-  const RNNParam &param = nnvm::get<RNNParam>(attrs.parsed);
-  CHECK_EQ(param.mode, rnn_enum::kLstm)
-      << "Quantized RNN operator only supports LSTM mode.";
+bool QuantizedRnnShape(const nnvm::NodeAttrs& attrs,
+                       std::vector<TShape>* in_shape,
+                       std::vector<TShape>* out_shape) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
+  CHECK_EQ(param.mode, rnn_enum::kLstm) << "Quantized RNN operator only supports LSTM mode.";
 
-  const uint32_t num_inputs = QuantizedRnnNumInputs(attrs);
+  const uint32_t num_inputs  = QuantizedRnnNumInputs(attrs);
   const uint32_t num_outputs = QuantizedRnnNumOutputs(attrs);
   CHECK_EQ(in_shape->size(), num_inputs)
-      << "Arguments' size of quantized RNN operator is mismatched. Expected "
-      << num_inputs << " argmuments but got " << in_shape->size() << ".";
+      << "Arguments' size of quantized RNN operator is mismatched. Expected " << num_inputs
+      << " argmuments but got " << in_shape->size() << ".";
   CHECK_EQ(out_shape->size(), num_outputs);
 
   const mxnet::TShape dshape = in_shape->at(quantized_rnn::kData);
@@ -100,40 +98,35 @@ bool QuantizedRnnShape(const nnvm::NodeAttrs &attrs,
   const dim_t directions = param.bidirectional ? 2 : 1;
   const dim_t total_lyrs = directions * param.num_layers;
   const dim_t state_size = param.state_size;
-  SHAPE_ASSIGN_CHECK(*in_shape, quantized_rnn::kState,
-                     Shape3(total_lyrs, batch_size, state_size));
+  SHAPE_ASSIGN_CHECK(*in_shape, quantized_rnn::kState, Shape3(total_lyrs, batch_size, state_size));
   if (param.mode == rnn_enum::kLstm)
-    SHAPE_ASSIGN_CHECK(*in_shape, quantized_rnn::kStateCell,
-                       Shape3(total_lyrs, batch_size, state_size));
+    SHAPE_ASSIGN_CHECK(
+        *in_shape, quantized_rnn::kStateCell, Shape3(total_lyrs, batch_size, state_size));
 
-  const int param_size_fp =
-      GetRnnParamSize(param.num_layers, input_size, state_size, directions,
-                      param.mode, param.projection_size);
+  const int param_size_fp = GetRnnParamSize(
+      param.num_layers, input_size, state_size, directions, param.mode, param.projection_size);
   SHAPE_ASSIGN_CHECK(*in_shape, quantized_rnn::kParams, Shape1(param_size_fp));
   const uint32_t num_base_inputs = GetRnnNumInputs(param);
   for (size_t i = num_base_inputs; i < num_inputs; ++i)
     SHAPE_ASSIGN_CHECK(*in_shape, i, Shape1(1));
 
   out_shape->clear();
-  out_shape->push_back({dshape[0], batch_size,
-                        directions * state_size});  // output dim: [T, N, C]
+  out_shape->push_back({dshape[0], batch_size, directions * state_size});  // output dim: [T, N, C]
   if (param.state_outputs) {
-    out_shape->push_back(
-        {total_lyrs, batch_size, state_size});  // state dim: [L*D, N, C]
+    out_shape->push_back({total_lyrs, batch_size, state_size});  // state dim: [L*D, N, C]
     if (param.mode == rnn_enum::kLstm)
-      out_shape->push_back(
-          {total_lyrs, batch_size, state_size});  // cell dim: [L*D, N, C]
+      out_shape->push_back({total_lyrs, batch_size, state_size});  // cell dim: [L*D, N, C]
   }
   return true;
 }
 
-bool QuantizedRnnType(const nnvm::NodeAttrs &attrs, std::vector<int> *in_type,
-                      std::vector<int> *out_type) {
-  const RNNParam &param = nnvm::get<RNNParam>(attrs.parsed);
-  CHECK_EQ(param.mode, rnn_enum::kLstm)
-      << "Quantized RNN operator only supports LSTM mode.";
+bool QuantizedRnnType(const nnvm::NodeAttrs& attrs,
+                      std::vector<int>* in_type,
+                      std::vector<int>* out_type) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
+  CHECK_EQ(param.mode, rnn_enum::kLstm) << "Quantized RNN operator only supports LSTM mode.";
 
-  const uint32_t num_inputs = QuantizedRnnNumInputs(attrs);
+  const uint32_t num_inputs  = QuantizedRnnNumInputs(attrs);
   const uint32_t num_outputs = QuantizedRnnNumOutputs(attrs);
   CHECK_EQ(in_type->size(), num_inputs);
   CHECK_EQ(out_type->size(), num_outputs);
@@ -153,35 +146,34 @@ bool QuantizedRnnType(const nnvm::NodeAttrs &attrs, std::vector<int> *in_type,
   if (param.state_outputs) {
     TYPE_ASSIGN_CHECK(*out_type, quantized_rnn::kStateOut, mshadow::kFloat32);
     if (param.mode == rnn_enum::kLstm)
-      TYPE_ASSIGN_CHECK(*out_type, quantized_rnn::kStateCellOut,
-                        mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*out_type, quantized_rnn::kStateCellOut, mshadow::kFloat32);
   }
   return true;
 }
 
-bool QuantizedRnnStorageType(const nnvm::NodeAttrs &attrs, const int dev_mask,
-                             DispatchMode *dispatch_mode,
-                             std::vector<int> *in_attrs,
-                             std::vector<int> *out_attrs) {
-  const uint32_t num_inputs = QuantizedRnnNumInputs(attrs);
+bool QuantizedRnnStorageType(const nnvm::NodeAttrs& attrs,
+                             const int dev_mask,
+                             DispatchMode* dispatch_mode,
+                             std::vector<int>* in_attrs,
+                             std::vector<int>* out_attrs) {
+  const uint32_t num_inputs  = QuantizedRnnNumInputs(attrs);
   const uint32_t num_outputs = QuantizedRnnNumOutputs(attrs);
   CHECK_EQ(in_attrs->size(), num_inputs);
   CHECK_EQ(out_attrs->size(), num_outputs);
 
 #if MXNET_USE_MKLDNN == 1
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
-                           out_attrs);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 #else
   *dispatch_mode = DispatchMode::kFCompute;
 
-  for (auto &v : *out_attrs) {
+  for (auto& v : *out_attrs) {
     v = kDefaultStorage;
     if (common::stype_string(v).compare("unknown") == 0) {
       return false;
     }
   }
 
-  for (auto &v : *in_attrs) {
+  for (auto& v : *in_attrs) {
     v = kDefaultStorage;
     if (common::stype_string(v).compare("unknown") == 0) {
       return false;
@@ -191,17 +183,17 @@ bool QuantizedRnnStorageType(const nnvm::NodeAttrs &attrs, const int dev_mask,
 #endif
 }
 
-void QuantizedRnnParamParser(nnvm::NodeAttrs *attrs) {
+void QuantizedRnnParamParser(nnvm::NodeAttrs* attrs) {
   RNNParam param;
   attrs->dict["quantized"] = "true";
   try {
     param.Init(attrs->dict, dmlc::parameter::kAllowUnknown);
-  } catch (const dmlc::ParamError &e) {
+  } catch (const dmlc::ParamError& e) {
     std::ostringstream os;
     os << e.what();
     os << ", in operator " << attrs->op->name << "("
        << "name=\"" << attrs->name << "\"";
-    for (const auto &k : attrs->dict) {
+    for (const auto& k : attrs->dict) {
       os << ", " << k.first << "=\"" << k.second << "\"";
     }
     os << ")";
@@ -210,86 +202,82 @@ void QuantizedRnnParamParser(nnvm::NodeAttrs *attrs) {
   attrs->parsed = std::move(param);
 }
 
-OpStatePtr CreateQuantizedRnnState(const nnvm::NodeAttrs &attrs,
+OpStatePtr CreateQuantizedRnnState(const nnvm::NodeAttrs& attrs,
                                    const Context ctx,
-                                   const mxnet::ShapeVector &in_shapes,
-                                   const std::vector<int> &in_types) {
-  const RNNParam &param = nnvm::get<RNNParam>(attrs.parsed);
-  CHECK_EQ(param.mode, rnn_enum::kLstm)
-      << "Quantized RNN operator only supports LSTM mode.";
+                                   const mxnet::ShapeVector& in_shapes,
+                                   const std::vector<int>& in_types) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
+  CHECK_EQ(param.mode, rnn_enum::kLstm) << "Quantized RNN operator only supports LSTM mode.";
   OpStatePtr state = OpStatePtr();
 #if MXNET_USE_MKLDNN == 1
-  const int data_type = in_types[quantized_rnn::kData];
+  const int data_type   = in_types[quantized_rnn::kData];
   const int weight_type = in_types[quantized_rnn::kParams];
   if (data_type == mshadow::kUint8 && weight_type == mshadow::kFloat32) {
-    const mxnet::TShape &data_shape = in_shapes[quantized_rnn::kData];
-    state = OpStatePtr::Create<MKLDNNQuantizedRnnOp>(
+    const mxnet::TShape& data_shape = in_shapes[quantized_rnn::kData];
+    state                           = OpStatePtr::Create<MKLDNNQuantizedRnnOp>(
         attrs, data_shape[0], data_shape[1], data_shape[2]);
   }
 #else
-  LOG(FATAL)
-      << "Quantized RNN operator relies on MKL-DNN library."
-      << " Please build MXNet with USE_MKLDNN=ON to leverage this operator.";
+  LOG(FATAL) << "Quantized RNN operator relies on MKL-DNN library."
+             << " Please build MXNet with USE_MKLDNN=ON to leverage this operator.";
 #endif
   return state;
 }
 
-void QuantizedRnnForwardCPU(const OpStatePtr &state_ptr, const OpContext &ctx,
-                            const std::vector<TBlob> &in_data,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<TBlob> &out_data) {
-  LOG(FATAL)
-      << "Quantized RNN operator relies on MKL-DNN library."
-      << " Please build MXNet with USE_MKLDNN=ON to leverage this operator.";
+void QuantizedRnnForwardCPU(const OpStatePtr& state_ptr,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& in_data,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& out_data) {
+  LOG(FATAL) << "Quantized RNN operator relies on MKL-DNN library."
+             << " Please build MXNet with USE_MKLDNN=ON to leverage this operator.";
 }
 
 #if MXNET_USE_MKLDNN == 1
-void QuantizedRnnForwardCPUEx(const OpStatePtr &state_ptr, const OpContext &ctx,
-                              const std::vector<NDArray> &in_data,
-                              const std::vector<OpReqType> &req,
-                              const std::vector<NDArray> &out_data) {
-  MKLDNNQuantizedRnnOp &op = state_ptr.get_state<MKLDNNQuantizedRnnOp>();
+void QuantizedRnnForwardCPUEx(const OpStatePtr& state_ptr,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& in_data,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& out_data) {
+  MKLDNNQuantizedRnnOp& op = state_ptr.get_state<MKLDNNQuantizedRnnOp>();
   op.Forward(ctx, in_data, req, out_data);
 }
 #endif  // MXNET_USE_MKLDNN == 1
 
-bool NeedAsymQuantizeRnnInput(const NodeAttrs &attrs,
-                              const size_t index_to_check) {
+bool NeedAsymQuantizeRnnInput(const NodeAttrs& attrs, const size_t index_to_check) {
   bool need_asym_quantize = false;
   switch (index_to_check) {
-  case rnn_enum::kData: {
-    need_asym_quantize = true;
-    break;
-  }
-  default: {
-    need_asym_quantize = false;
-  }
+    case rnn_enum::kData: {
+      need_asym_quantize = true;
+      break;
+    }
+    default: {
+      need_asym_quantize = false;
+    }
   }
   return need_asym_quantize;
 }
 
-bool AvoidRnnQuantizeInput(const NodeAttrs &attrs, const size_t index_to_check,
+bool AvoidRnnQuantizeInput(const NodeAttrs& attrs,
+                           const size_t index_to_check,
                            const std::string quantize_granularity) {
   std::unordered_set<size_t> avoid_indexes;
-  avoid_indexes.insert({quantized_rnn::kParams, quantized_rnn::kState,
-                        quantized_rnn::kStateCell});
+  avoid_indexes.insert({quantized_rnn::kParams, quantized_rnn::kState, quantized_rnn::kStateCell});
 
   return avoid_indexes.count(index_to_check);
 }
 
-bool AvoidRnnDequantizeOutput(const NodeAttrs &attrs,
-                              const size_t index_to_check) {
+bool AvoidRnnDequantizeOutput(const NodeAttrs& attrs, const size_t index_to_check) {
   return true;
 }
 
-static std::vector<ResourceRequest>
-QuantizedRnnResourceEx(const NodeAttrs &attrs, const int dev_mask,
-                       const DispatchMode dispatch_mode) {
+static std::vector<ResourceRequest> QuantizedRnnResourceEx(const NodeAttrs& attrs,
+                                                           const int dev_mask,
+                                                           const DispatchMode dispatch_mode) {
   std::vector<ResourceRequest> request;
   if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN == 1
-    LOG(FATAL)
-        << "Currently, quantized RNN is not supported on the GPU platform.";
+    LOG(FATAL) << "Currently, quantized RNN is not supported on the GPU platform.";
 #endif
   } else {
 #if MXNET_USE_MKLDNN == 1
@@ -312,8 +300,7 @@ recurrent result in float32. It only supports quantization for Vanilla LSTM netw
     .set_num_outputs(QuantizedRnnNumOutputs)
     .set_attr_parser(QuantizedRnnParamParser)
     .set_attr<nnvm::FListInputNames>("FListInputNames", QuantizedRnnInputNames)
-    .set_attr<nnvm::FListOutputNames>("FListOutputNames",
-                                      QuantizedRnnOutputNames)
+    .set_attr<nnvm::FListOutputNames>("FListOutputNames", QuantizedRnnOutputNames)
     .set_attr<mxnet::FInferShape>("FInferShape", QuantizedRnnShape)
     .set_attr<nnvm::FInferType>("FInferType", QuantizedRnnType)
     .set_attr<FInferStorageType>("FInferStorageType", QuantizedRnnStorageType)
@@ -321,34 +308,28 @@ recurrent result in float32. It only supports quantization for Vanilla LSTM netw
     .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", QuantizedRnnForwardCPU)
 #if MXNET_USE_MKLDNN == 1
     .set_attr<bool>("TIsMKLDNN", true)
-    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                  QuantizedRnnForwardCPUEx)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", QuantizedRnnForwardCPUEx)
 #endif
     .set_attr<FResourceRequestEx>("FResourceRequestEx", QuantizedRnnResourceEx)
     .add_argument("data", "NDArray-or-Symbol", "Input data.")
     .add_argument("parameters", "NDArray-or-Symbol", "weight.")
-    .add_argument("state", "NDArray-or-Symbol",
-                  "initial hidden state of the RNN")
-    .add_argument("state_cell", "NDArray-or-Symbol",
+    .add_argument("state", "NDArray-or-Symbol", "initial hidden state of the RNN")
+    .add_argument("state_cell",
+                  "NDArray-or-Symbol",
                   "initial cell state for LSTM networks (only for LSTM)")
-    .add_argument("data_scale", "NDArray-or-Symbol",
-                  "quantization scale of data.")
-    .add_argument("data_shift", "NDArray-or-Symbol",
-                  "quantization shift of data.")
+    .add_argument("data_scale", "NDArray-or-Symbol", "quantization scale of data.")
+    .add_argument("data_shift", "NDArray-or-Symbol", "quantization shift of data.")
     .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(RNN)
     .set_attr<FQuantizable>("FQuantizable",
-                            [](const NodeAttrs &attrs) {
+                            [](const NodeAttrs& attrs) {
 #if MXNET_USE_MKLDNN == 1
-                              const RNNParam &param =
-                                  nnvm::get<RNNParam>(attrs.parsed);
+                              const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
                               if (param.mode != rnn_enum::kLstm)
-                                LOG(INFO)
-                                    << "Quantized RNN only supports LSTM mode.";
-                              return param.mode == rnn_enum::kLstm
-                                         ? QuantizeType::kMust
-                                         : QuantizeType::kNone;
+                                LOG(INFO) << "Quantized RNN only supports LSTM mode.";
+                              return param.mode == rnn_enum::kLstm ? QuantizeType::kMust :
+                                                                     QuantizeType::kNone;
 #else
     LOG(INFO) << "Quantized RNN is not supported by this MXNet release. Please enable MKL-DNN to "
               << "use the feature.";
@@ -356,23 +337,20 @@ NNVM_REGISTER_OP(RNN)
 #endif  // MXNET_USE_MKLDNN == 1
                             })
     .set_attr<FQuantizedOp>("FQuantizedOp",
-                            [](const NodeAttrs &attrs) {
-                              nnvm::ObjectPtr node = nnvm::Node::Create();
-                              node->attrs.op =
-                                  Op::Get("_contrib_quantized_rnn");
-                              node->attrs.name = "quantized_" + attrs.name;
-                              node->attrs.dict = attrs.dict;
+                            [](const NodeAttrs& attrs) {
+                              nnvm::ObjectPtr node          = nnvm::Node::Create();
+                              node->attrs.op                = Op::Get("_contrib_quantized_rnn");
+                              node->attrs.name              = "quantized_" + attrs.name;
+                              node->attrs.dict              = attrs.dict;
                               node->attrs.dict["quantized"] = "true";
                               if (node->op()->attr_parser != nullptr) {
                                 node->op()->attr_parser(&(node->attrs));
                               }
                               return node;
                             })
-    .set_attr<FNeedAsymQuantizeInput>("FNeedAsymQuantizeInput",
-                                      NeedAsymQuantizeRnnInput)
+    .set_attr<FNeedAsymQuantizeInput>("FNeedAsymQuantizeInput", NeedAsymQuantizeRnnInput)
     .set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", AvoidRnnQuantizeInput)
-    .set_attr<FAvoidDequantizeOutput>("FAvoidDequantizeOutput",
-                                      AvoidRnnDequantizeOutput);
+    .set_attr<FAvoidDequantizeOutput>("FAvoidDequantizeOutput", AvoidRnnDequantizeOutput);
 
 }  // namespace op
 }  // namespace mxnet

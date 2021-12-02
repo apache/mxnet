@@ -38,16 +38,19 @@ namespace op {
 
 class MKLDNNQuantizedRnnOp {
  public:
-  explicit MKLDNNQuantizedRnnOp(const nnvm::NodeAttrs &attrs, const int seq_len,
-                                const int batch_size, const int input_size)
-      : initialized_(false), weights_ver_(0),
+  explicit MKLDNNQuantizedRnnOp(const nnvm::NodeAttrs& attrs,
+                                const int seq_len,
+                                const int batch_size,
+                                const int input_size)
+      : initialized_(false),
+        weights_ver_(0),
         rnn_attr_(new mkldnn::primitive_attr),
-        full_param_(
-            MKLDNNRnnFullParamParser(attrs, seq_len, batch_size, input_size)) {}
+        full_param_(MKLDNNRnnFullParamParser(attrs, seq_len, batch_size, input_size)) {}
 
-  void Forward(const OpContext &op_ctx, const std::vector<NDArray> &inputs,
-               const std::vector<OpReqType> &req,
-               const std::vector<NDArray> &outputs);
+  void Forward(const OpContext& op_ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
  private:
   bool initialized_;
@@ -58,7 +61,7 @@ class MKLDNNQuantizedRnnOp {
   std::vector<MKLDNNRnnForward> fwd_inf_vec_;  // forward inference layers
 
   // Used to store the intermediate results of multi-layer
-  std::vector<mkldnn::memory *> dst_;
+  std::vector<mkldnn::memory*> dst_;
   // According to
   // https://intel.github.io/mkl-dnn/dev_guide_int8_computations.html, the
   // non-symmetric quantization is assumed by LSTM primitive. Namely, the
@@ -66,9 +69,10 @@ class MKLDNNQuantizedRnnOp {
   //                    data_f32 = (data_u8 - shift) / scale
   float cached_data_shift_{0.0};
   float cached_data_scale_{0.0};
-  void Init(const OpContext &ctx, const std::vector<NDArray> &inputs,
-            const std::vector<OpReqType> &req,
-            const std::vector<NDArray> &outputs);
+  void Init(const OpContext& ctx,
+            const std::vector<NDArray>& inputs,
+            const std::vector<OpReqType>& req,
+            const std::vector<NDArray>& outputs);
 };
 
 }  // namespace op

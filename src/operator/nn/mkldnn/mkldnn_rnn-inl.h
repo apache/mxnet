@@ -42,19 +42,16 @@ struct MKLDNNRnnParam : public dmlc::Parameter<MKLDNNRnnParam> {
   bool quantized;
 
   DMLC_DECLARE_PARAMETER(MKLDNNRnnParam) {
-    DMLC_DECLARE_FIELD(quantized).set_default(false)
-    .describe("Whether it's a quantized RNN operator");
+    DMLC_DECLARE_FIELD(quantized).set_default(false).describe(
+        "Whether it's a quantized RNN operator");
   }
 };
 
-inline void MKLDNNMemoryReorder(const mkldnn::memory& src,
-                                const mkldnn::memory& dst) {
+inline void MKLDNNMemoryReorder(const mkldnn::memory& src, const mkldnn::memory& dst) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature,
-      mkldnn::reorder, OpHash> reorderPrimitives;
+  static thread_local std::unordered_map<OpSignature, mkldnn::reorder, OpHash> reorderPrimitives;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature,
-      mkldnn::reorder, OpHash> reorderPrimitives;
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, mkldnn::reorder, OpHash> reorderPrimitives;
 #endif
   OpSignature key{};
   key.AddSign(src);
@@ -63,7 +60,7 @@ inline void MKLDNNMemoryReorder(const mkldnn::memory& src,
   auto it = reorderPrimitives.find(key);
   if (it == reorderPrimitives.end()) {
     auto reorder = mkldnn::reorder(src, dst);
-    it = AddToCache(&reorderPrimitives, key, reorder);
+    it           = AddToCache(&reorderPrimitives, key, reorder);
   }
 
   mkldnn_args_map_t net_args;
@@ -180,13 +177,10 @@ class RnnPrimitive {
     auto fwd_desc = typename rnn_fwd::desc(std::forward<Args>(args)...);
     rnn_fwd_prim.fwd_pd_.reset(
         new typename rnn_fwd::primitive_desc(
-            fwd_desc, attr ? *attr : mkldnn::primitive_attr(),
-            CpuEngine::Get()->get_engine()),
-        [](void *pd) {
-          delete reinterpret_cast<typename rnn_fwd::primitive_desc*>(pd);
-        });
+            fwd_desc, attr ? *attr : mkldnn::primitive_attr(), CpuEngine::Get()->get_engine()),
+        [](void* pd) { delete reinterpret_cast<typename rnn_fwd::primitive_desc*>(pd); });
     auto fwd_pd = reinterpret_cast<typename rnn_fwd::primitive_desc*>(rnn_fwd_prim.fwd_pd_.get());
-    rnn_fwd_prim.attr_ = attr;
+    rnn_fwd_prim.attr_               = attr;
     rnn_fwd_prim.weights_layer_desc_ = fwd_pd->weights_layer_desc();
     rnn_fwd_prim.weights_iter_desc_  = fwd_pd->weights_iter_desc();
     rnn_fwd_prim.workspace_desc_     = fwd_pd->workspace_desc();
@@ -197,7 +191,7 @@ class RnnPrimitive {
   }
 
   RnnPrimitive() {
-    this->attr_ = nullptr;
+    this->attr_               = nullptr;
     this->fwd_pd_             = nullptr;
     this->primitive_          = nullptr;
     this->weights_layer_desc_ = mkldnn::memory::desc();
@@ -206,7 +200,7 @@ class RnnPrimitive {
   }
 
   RnnPrimitive(const RnnPrimitive& rnn_fwd_prim) {
-    this->attr_ = rnn_fwd_prim.attr_;
+    this->attr_               = rnn_fwd_prim.attr_;
     this->fwd_pd_             = rnn_fwd_prim.fwd_pd_;
     this->primitive_          = rnn_fwd_prim.primitive_;
     this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
@@ -216,7 +210,7 @@ class RnnPrimitive {
 
   RnnPrimitive& operator=(const RnnPrimitive& rnn_fwd_prim) {
     if (this != &rnn_fwd_prim) {
-      this->attr_ = rnn_fwd_prim.attr_;
+      this->attr_               = rnn_fwd_prim.attr_;
       this->fwd_pd_             = rnn_fwd_prim.fwd_pd_;
       this->primitive_          = rnn_fwd_prim.primitive_;
       this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
@@ -246,7 +240,9 @@ class RnnPrimitive {
     return workspace_desc_;
   }
 
-  const mkldnn::primitive_attr &GetPrimAttr() const { return *attr_; }
+  const mkldnn::primitive_attr& GetPrimAttr() const {
+    return *attr_;
+  }
 
  private:
   std::shared_ptr<void> fwd_pd_;
@@ -295,7 +291,7 @@ class MKLDNNRnnForward {
     return fwd_inf_.GetPrim();
   }
 
-  void ResetFwd(const NDArray &data, const NDArray &params, const shared_mkldnn_attr_t& attr) {
+  void ResetFwd(const NDArray& data, const NDArray& params, const shared_mkldnn_attr_t& attr) {
     fwd_inf_ = GetRnnFwdPrim(this->param_, false, data, params, attr);
   }
 

@@ -78,19 +78,16 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(dshape.ndim(), 3U) \
       << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
   // data: [sequence len, batch, input dimension]
-  int batch_size = dshape[1];
-  int input_size = dshape[2];
+  int batch_size    = dshape[1];
+  int input_size    = dshape[2];
   int numDirections = param.bidirectional ? 2 : 1;
-  int total_layers = numDirections * param.num_layers;  // double for bidirectional
-  int layer_size = (param.projection_size.has_value()) ?
-      param.projection_size.value() : param.state_size;
-  SHAPE_ASSIGN_CHECK(*in_shape,
-                     rnn_enum::kState,
-                     Shape3(total_layers, batch_size, layer_size));
+  int total_layers  = numDirections * param.num_layers;  // double for bidirectional
+  int layer_size =
+      (param.projection_size.has_value()) ? param.projection_size.value() : param.state_size;
+  SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kState, Shape3(total_layers, batch_size, layer_size));
   if (param.mode == rnn_enum::kLstm) {
-    SHAPE_ASSIGN_CHECK(*in_shape,
-                       rnn_enum::kStateCell,
-                       Shape3(total_layers, batch_size, param.state_size));
+    SHAPE_ASSIGN_CHECK(
+        *in_shape, rnn_enum::kStateCell, Shape3(total_layers, batch_size, param.state_size));
   }
 
   // calculate parameter vector length

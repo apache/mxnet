@@ -38,4 +38,4 @@ enum QuantizedRnnOutputs { kOut, kStateOut, kStateCellOut };
 }  // namespace op
 }  // namespace mxnet
 
-#endif   // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RNN_INL_H_

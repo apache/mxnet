@@ -32,9 +32,9 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(QuantizeAsymParam);
 
-inline bool QuantizeAsymShape(const nnvm::NodeAttrs &attrs,
-                              mxnet::ShapeVector *in_attrs,
-                              mxnet::ShapeVector *out_attrs) {
+inline bool QuantizeAsymShape(const nnvm::NodeAttrs& attrs,
+                              mxnet::ShapeVector* in_attrs,
+                              mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 3U);
 
@@ -51,9 +51,9 @@ inline bool QuantizeAsymShape(const nnvm::NodeAttrs &attrs,
   return !shape_is_none(out_attrs->at(0));
 }
 
-inline bool QuantizeAsymType(const nnvm::NodeAttrs &attrs,
-                             std::vector<int> *in_attrs,
-                             std::vector<int> *out_attrs) {
+inline bool QuantizeAsymType(const nnvm::NodeAttrs& attrs,
+                             std::vector<int>* in_attrs,
+                             std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 3U);
 
@@ -66,10 +66,11 @@ inline bool QuantizeAsymType(const nnvm::NodeAttrs &attrs,
   return !type_is_none(out_attrs->at(0));
 }
 
-bool QuantizeAsymStorageType(const nnvm::NodeAttrs &attrs, const int dev_mask,
-                             DispatchMode *dispatch_mode,
-                             std::vector<int> *in_attrs,
-                             std::vector<int> *out_attrs) {
+bool QuantizeAsymStorageType(const nnvm::NodeAttrs& attrs,
+                             const int dev_mask,
+                             DispatchMode* dispatch_mode,
+                             std::vector<int>* in_attrs,
+                             std::vector<int>* out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
@@ -82,10 +83,10 @@ bool QuantizeAsymStorageType(const nnvm::NodeAttrs &attrs, const int dev_mask,
   return true;
 }
 
-OpStatePtr CreateQuantizeAsymState(const nnvm::NodeAttrs &attrs,
-                                   const Context &ctx,
-                                   const std::vector<TShape> &in_shapes,
-                                   const std::vector<int> &in_types) {
+OpStatePtr CreateQuantizeAsymState(const nnvm::NodeAttrs& attrs,
+                                   const Context& ctx,
+                                   const std::vector<TShape>& in_shapes,
+                                   const std::vector<int>& in_types) {
   OpStatePtr state;
   if (ctx.dev_type == kGPU) {
     state = OpStatePtr::Create<QuantizeAsymOp<gpu>>(attrs);
@@ -116,14 +117,13 @@ where `scale = uint8_range / (max_range - min_range)` and
     .set_num_inputs(1)
     .set_num_outputs(3)
     .set_attr<nnvm::FListInputNames>("FListInputNames",
-                                     [](const NodeAttrs &attrs) {
+                                     [](const NodeAttrs& attrs) {
                                        return std::vector<std::string>{"data"};
                                      })
-    .set_attr<nnvm::FListOutputNames>(
-        "FListOutputNames",
-        [](const NodeAttrs &attrs) {
-          return std::vector<std::string>{"output", "scale", "shift"};
-        })
+    .set_attr<nnvm::FListOutputNames>("FListOutputNames",
+                                      [](const NodeAttrs& attrs) {
+                                        return std::vector<std::string>{"output", "scale", "shift"};
+                                      })
     .set_attr<mxnet::FInferShape>("FInferShape", QuantizeAsymShape)
     .set_attr<nnvm::FInferType>("FInferType", QuantizeAsymType)
     .set_attr<FInferStorageType>("FInferStorageType", QuantizeAsymStorageType)
@@ -131,20 +131,15 @@ where `scale = uint8_range / (max_range - min_range)` and
     .set_attr<FCreateOpState>("FCreateOpState", CreateQuantizeAsymState)
 #if MXNET_USE_MKLDNN == 1
     .set_attr<bool>("TIsMKLDNN", true)
-    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                  MKLDNNQuantizeAsymForward)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", MKLDNNQuantizeAsymForward)
 #endif
-    .set_attr<FStatefulCompute>("FStatefulCompute<cpu>",
-                                QuantizeAsymForward<cpu>)
+    .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", QuantizeAsymForward<cpu>)
     .set_attr<FNeedCalibrateInput>("FNeedCalibrateInput",
-                                   [](const NodeAttrs &attrs) {
-                                     return std::vector<int>{0};
-                                   })
+                                   [](const NodeAttrs& attrs) { return std::vector<int>{0}; })
     .set_attr<FResourceRequest>("FResourceRequest",
-                                [](const NodeAttrs &attrs) {
-                                  const QuantizeAsymParam &param =
-                                      nnvm::get<QuantizeAsymParam>(
-                                          attrs.parsed);
+                                [](const NodeAttrs& attrs) {
+                                  const QuantizeAsymParam& param =
+                                      nnvm::get<QuantizeAsymParam>(attrs.parsed);
                                   if (param.max_calib_range.has_value() &&
                                       param.max_calib_range.has_value()) {
                                     return std::vector<ResourceRequest>();
@@ -153,8 +148,7 @@ where `scale = uint8_range / (max_range - min_range)` and
                                         1, ResourceRequest::kTempSpace);
                                   }
                                 })
-    .add_argument("data", "NDArray-or-Symbol",
-                  "A ndarray/symbol of type `float32`")
+    .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
     .add_arguments(QuantizeAsymParam::__FIELDS__());
 
 }  // namespace op
