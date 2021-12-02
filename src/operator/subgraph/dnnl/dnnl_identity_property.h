@@ -40,7 +40,7 @@ namespace op {
 class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
  private:
   std::vector<const BiDirectedNode*> matched_list_;
-
+  bool pattern_found = false;
  public:
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
@@ -65,10 +65,11 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
   }
 
   bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
-    if (input_node.node->is_variable()) {
+    if (pattern_found || input_node.node->is_variable()) {
       return false;
     } else if (input_node.node->op()) {
       matched_list_.emplace_back(&input_node);
+      pattern_found = true;
       return true;
     }
     return false;
