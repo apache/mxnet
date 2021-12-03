@@ -22,6 +22,7 @@ dependencies:
 - conda>=4.6.13
 - pip
 - python
+- setuptools==49.6.0
 - jupyter
 - sphinx==2.4.0
 - matplotlib
