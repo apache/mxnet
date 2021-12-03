@@ -515,6 +515,15 @@ MXNET_DLL int MXSetNumOMPThreads(int thread_num);
  * \param bulk_size new bulk_size
  * \param prev_bulk_size previous bulk_size
  */
+
+ /*!
+ * \brief Get the compute capability of a given GPU.
+ * \param dev the GPU number to query
+ * \param out pointer to integer that will hold the compute capability of the queried GPU.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXGetGPUSMArch(int dev, int* out);
+
 MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
 
 /*!
@@ -533,6 +542,22 @@ MXNET_DLL int MXGetGPUCount(int* out);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXGetGPUMemoryInformation(int dev, int* free_mem, int* total_mem);
+
+/*!
+ * \brief Get the size of the NCCL unique id (in bytes).
+ * \param size pointer to integer that will hold the NCCL unique id size.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXNCCLGetUniqueIdSize(int* size);
+
+/*!
+ * \brief Get the NCCL unique id.
+ * \param out pointer to an array that will hold the NCCL unique id. It has to be at least of the
+ *            size returned by MXNCCLGetUniqueIdSize.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXNCCLGetUniqueId(void* out);
+
 
 /*!
  * \brief get the free and total available memory on a GPU
