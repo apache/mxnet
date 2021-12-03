@@ -62,6 +62,13 @@
 #include "miniz.h"
 #include "nnvm/pass_functions.h"
 
+#if MXNET_USE_CUDA
+#include "../common/cuda/utils.h"
+#endif
+#if MXNET_USE_NCCL
+#include <nccl.h>
+#endif
+
 // FTZ only applies to SSE and AVX instructions.
 #if defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || \
     (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
