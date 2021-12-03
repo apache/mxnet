@@ -4096,7 +4096,7 @@ def test_np_concat():
             shape_lst[axis] = random.randint(0, 3)
         return tuple(shape_lst)
 
-    shapes = [(0, 0), (2, 3), (2, 1, 3)]
+    shapes = [(), (0, 0), (2, 3), (2, 1, 3)]
     hybridizes = [True, False]
     axes = [0, 1, -1, None]
     grad_reqs = ['write', 'add', 'null']
@@ -4105,6 +4105,8 @@ def test_np_concat():
 
     for shape, hybridize, axis, grad_req, dtype in combinations:
         # test gluon
+        if shape == () and axis != None:
+            continue
         test_concat = TestConcat(axis=axis)
         if hybridize:
             test_concat.hybridize()
