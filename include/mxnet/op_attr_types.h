@@ -350,6 +350,21 @@ using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
 
 /*!
  * \brief Register a function to determine if the input of a quantized operator
+ * needs to be quantized asymmetrically.
+ */
+using FNeedAsymQuantizeInput = std::function<bool (const NodeAttrs& attrs,
+                                                   const size_t index)>;
+
+/*!
+ * \brief Register a function to determine if the output of a quantized operator
+ * needs to be dequantized. This is usually used for the quantized operators
+ * which can produce fp32 outputs directly.
+ */
+using FAvoidDequantizeOutput = std::function<bool (const NodeAttrs& attrs,
+                                                   const size_t index)>;
+
+/*!
+ * \brief Register a function to determine if the input of a quantized operator
  * needs to be calibrated. This is usually used for the quantized operators
  * which need calibration on its input.
  */
