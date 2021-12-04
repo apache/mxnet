@@ -246,6 +246,14 @@ struct ConvWgrad {
                    const TBlob& dw);
 };
 
+bool LegacyAddBias(const OpContext& ctx, const LayoutInfo& li, const TBlob& y, const TBlob& b);
+
+bool LegacyBiasGrad(const OpContext& ctx,
+                    const LayoutInfo& li,
+                    bool add_to,
+                    const TBlob& db,
+                    const TBlob& dy);
+
 }  // namespace cudnn
 }  // namespace op
 }  // namespace mxnet
