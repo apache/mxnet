@@ -9342,7 +9342,7 @@ def fliplr(m):
 
     Examples
     --------
-    >>> A = np.diag([1.,2.,3.])
+    >>> A = np.diag(np.array([1.,2.,3.]))
     >>> A
     array([[1.,  0.,  0.],
         [0.,  2.,  0.],
