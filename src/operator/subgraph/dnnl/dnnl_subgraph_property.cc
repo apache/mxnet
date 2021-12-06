@@ -23,6 +23,7 @@
 #include "dnnl_bn_relu_property.h"
 #include "dnnl_conv_property.h"
 #include "dnnl_fc_property.h"
+#include "dnnl_identity_property.h"
 #include "dnnl_post_quantize_align_scale_property.h"
 #include "dnnl_post_quantize_property.h"
 #include "dnnl_transformer_qk_property.h"
@@ -35,6 +36,7 @@ MXNET_REGISTER_SUBGRAPH_BACKEND(ONEDNN)
     .set_attr("enable", DNNLEnvSet())
     .set_attr("context", Context::CPU());
 
+MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLIdentityProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLConvProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLFCProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLBNReLUProperty);
@@ -44,6 +46,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLBatchDotProperty);
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(ONEDNN_QUANTIZE).set_attr("context", Context::CPU());
 
+MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLIdentityProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLConvProperty).set_attr("quantize", true);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLFCProperty).set_attr("quantize", true);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN_QUANTIZE, SgDNNLTransformerQKProperty);

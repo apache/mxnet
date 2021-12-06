@@ -31,6 +31,7 @@
 #include <string>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../../common/alm.h"
 #include "elemwise_unary_op.h"
 
 namespace mxnet {
@@ -447,6 +448,7 @@ class BinaryScalarOp : public UnaryOp {
       .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                               \
       .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                   \
       .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)                    \
+      .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", ElemwiseChangeLayout)         \
       .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                   \
                                       [](const NodeAttrs& attrs) {                        \
                                         return std::vector<std::pair<int, int> >{{0, 0}}; \

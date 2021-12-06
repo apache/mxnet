@@ -1190,7 +1190,7 @@ def test_np_linspace(config, dtype, endpoint, retstep):
         np_ret = onp.linspace(config, endpoint=endpoint, retstep=retstep, dtype=dtype)
     if retstep:
         assert_almost_equal(mx_ret[0].asnumpy(), np_ret[0], atol=1e-3, rtol=1e-5)
-        same(mx_ret[1], np_ret[1])
+        assert same(mx_ret[1], np_ret[1])
     else:
         assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
 
@@ -3734,13 +3734,13 @@ def test_np_atleast_nd():
         np_out = funcs["numpy"][n](*tensors_np)
         for i in range(len(tensors)):
             assert mx_out[i].shape == np_out[i].shape
-            same(mx_out[i].asnumpy(), np_out[i])
+            assert same(mx_out[i].asnumpy(), np_out[i])
 
         mx_out = funcs["mxnet"][n](*tensors)
         np_out = funcs["numpy"][n](*tensors_np)
         for i in range(len(tensors)):
             assert mx_out[i].shape == np_out[i].shape
-            same(mx_out[i].asnumpy(), np_out[i])
+            assert same(mx_out[i].asnumpy(), np_out[i])
 
 
 @use_np
@@ -5763,7 +5763,7 @@ def test_np_indices():
         for shape in shapes:
             np_out = onp.indices(dimensions=shape, dtype=dtype)
             mx_out = np.indices(shape, dtype=dtype)
-            same(mx_out.asnumpy(), np_out)
+            assert same(mx_out.asnumpy(), np_out)
             assert mx_out.shape == np_out.shape
 
     @use_np
@@ -5785,7 +5785,7 @@ def test_np_indices():
                 if hybridize:
                     net.hybridize()
                 mx_out = net(x)
-                same(mx_out.asnumpy(), np_out)
+                assert same(mx_out.asnumpy(), np_out)
                 assert mx_out.shape == np_out.shape
 
 
@@ -8482,14 +8482,18 @@ def test_np_take():
             return np.take(a, indices, axis=self._axis, mode=self._mode)
 
     def grad_helper(grad_in, axis, idx, mode):
-        k = grad_in.shape[axis]
+        k = 1 if axis == None else grad_in.shape[axis]
         if mode == 'clip':
             idx = 0 if idx < 0 else idx
             idx = k - 1 if idx >= k else idx
         else:
             idx = idx % k
+
         if axis == None:
-            grad_in[idx] += 1.0
+            if grad_in.shape == ():
+                grad_in += 1.0
+            else:
+                grad_in[idx] += 1.0
         elif axis == 0:
             if axis == len(grad_in.shape) - 1:
                 grad_in[idx] += 1.0
@@ -8518,7 +8522,8 @@ def test_np_take():
     def check_output_n_grad(data_shape, idx_shape, axis, mode):
         data_real = onp.random.normal(size=data_shape).astype('float32')
         idx_real = onp.random.randint(low=-100, high=100, size=idx_shape)
-        same(np.take(np.array(data_real), np.array(idx_real), axis=axis, mode=mode).asnumpy(),
+
+        assert same(np.take(np.array(data_real), np.array(idx_real), axis=axis, mode=mode).asnumpy(),
              onp.take(data_real, idx_real, axis=axis, mode=mode))
 
         grad_in = onp.zeros(data_shape, dtype='float32')
@@ -8530,15 +8535,15 @@ def test_np_take():
         x.attach_grad()
         with mx.autograd.record():
             mx_out = test_take(x, np.array(idx_real))
-        same(mx_out.asnumpy(), onp.take(data_real, idx_real, axis=axis, mode=mode))
+        assert same(mx_out.asnumpy(), onp.take(data_real, idx_real, axis=axis, mode=mode))
 
         if axis and axis < 0:
             axis += len(data_shape)
-        try:
+
+        if idx_real.size != 0:
             for i in onp.nditer(idx_real):
                 grad_helper(grad_in, axis, i, mode)
-        except:
-            pass
+
 
         mx_out.backward()
         same(x.grad.asnumpy(), grad_in)
@@ -10207,7 +10212,7 @@ def test_np_where():
     ]
     flags = [True, False]
     for ctype, dtype, shape_pair, hybridize in itertools.product(dtypes, dtypes, shape_configs, flags):
-        cond = np.random.uniform(low=0, high=100, size=shape_pair[0], dtype='float64').astype(ctype)
+        cond = np.round(np.random.uniform(low=0, high=2, size=shape_pair[0], dtype='float64')).astype(ctype)
         x = np.random.uniform(low=0, high=100, size=shape_pair[1], dtype='float64').astype(dtype)
         y = np.random.uniform(low=0, high=100, size=shape_pair[2], dtype='float64').astype(dtype)
         cond.attach_grad()
@@ -10218,37 +10223,50 @@ def test_np_where():
             test_mod.hybridize()
         with mx.autograd.record():
             ret = test_mod(cond, x, y)
-        same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
+
+        assert same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
         if dtype in [np.float16, np.float32, np.float64]:
             ret.backward()
-            same(cond.grad.asnumpy(), onp.zeros(shape_pair[0], dtype=ctype))
-            same(x.grad.asnumpy(), collapse_sum_like(onp.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+            assert same(cond.grad.asnumpy(), onp.zeros(shape_pair[0], dtype=ctype))
+
+            xgrad = x.grad.asnumpy()
+            npgrad = collapse_sum_like((onp.broadcast_to(cond.asnumpy(), ret.shape) != 0).astype(dtype), shape_pair[1])
+            npgrad = npgrad.astype(xgrad.dtype)
+            assert same(xgrad, npgrad)
 
         # check imperative again
         ret = np.where(cond, x, y)
-        same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
+        assert same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
 
         # check scalar case
         if dtype in [np.float16, np.float32, np.float64]:
             # lscalar
             with mx.autograd.record():
                 ret_lscalar = np.where(cond, 1, x)
-            same(ret.asnumpy(), onp.where(cond.asnumpy(), 1, x.asnumpy()))
+            assert same(ret_lscalar.asnumpy(), onp.where(cond.asnumpy(), 1, x.asnumpy()))
             ret_lscalar.backward()
-            same(x.grad.asnumpy(), 1-collapse_sum_like(onp.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+
+            xgrad = x.grad.asnumpy()
+            npgrad = collapse_sum_like((onp.broadcast_to(cond.asnumpy(), ret_lscalar.shape) == 0).astype(dtype), shape_pair[1])
+            npgrad = npgrad.astype(xgrad.dtype)
+            assert same(xgrad, npgrad)
             # rscalar
             with mx.autograd.record():
                 ret_rscalar = np.where(cond, x, 1)
-            same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), 1))
+            assert same(ret_rscalar.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), 1))
             ret_rscalar.backward()
-            same(x.grad.asnumpy(), collapse_sum_like(onp.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+
+            xgrad = x.grad.asnumpy()
+            npgrad = collapse_sum_like((onp.broadcast_to(cond.asnumpy(), ret_rscalar.shape) != 0).astype(dtype), shape_pair[1])
+            npgrad = npgrad.astype(xgrad.dtype)
+            assert same(xgrad, npgrad)
 
         # check both scalar case
         x = onp.random.randint(0, 100)
         y = onp.random.randint(0, 100)
         mx_out = np.where(cond, x, y)
         np_out = onp.where(cond, x, y)
-        same(mx_out, np_out)
+        assert same(mx_out, np_out)
 
 
 @use_np
