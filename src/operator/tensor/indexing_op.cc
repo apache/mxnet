@@ -67,7 +67,7 @@ struct TakeNonzeroAxisCPU {
    * \param i                 global thread id
    * \param out_data          ptr to output buffer
    * \param in_data           ptr to input buffer
-   * \param idx               ptr to indices buffer
+   * \param indices           ptr to indices buffer
    * \param outer_dim_stride  stride of dimension before axis
    * \param axis_dim_stride   stride of axis dimension
    * \param idx_size          size of the indices tensor
@@ -87,8 +87,8 @@ struct TakeNonzeroAxisCPU {
     for (index_t j = 0; j < static_cast<index_t>(idx_size); ++j) {
       int index = indices[j];
       if (clip) {
-        index = (index < 0) ? 0 : index;
-        index = (index > axis_dim - 1) ? (axis_dim - 1) : index;
+        index = std::max(index, 0);
+        index = std::min(axis_dim - 1, index);
       } else {
         index %= axis_dim;
         index += (index < 0) ? axis_dim : 0;
