@@ -197,6 +197,7 @@ bool SupportDNNLTranspose(const NDArray& data);
 bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs);
 bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
+bool SupportDNNLSplit(const NDArray& input);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 }  // namespace op
 

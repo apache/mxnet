@@ -60,9 +60,8 @@ class DNNLSplitFwd {
  private:
   std::vector<split_fwd_t> split_fwds;
   std::vector<split_fwd_pd_t> split_pds;
+  dnnl::memory::dims strides;
 };
-
-bool SupportDNNLSplit(const NDArray& input);
 
 }  // namespace op
 }  // namespace mxnet

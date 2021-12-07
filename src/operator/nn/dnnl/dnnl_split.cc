@@ -88,7 +88,7 @@ DNNLSplitFwd::DNNLSplitFwd(const Tensors& tensors, const TShape& split_pts, cons
   const auto& dtype     = get_dnnl_type(input.dtype());
   const auto format_tag = static_cast<dnnl::memory::format_tag>(GetDefaultFormat(ishape.ndim()));
 
-  dnnl::memory::dims strides(ishape.ndim(), 1);
+  strides = dnnl::memory::dims(ishape.ndim(), 1);
   // last dim stride = 1, start loop from the penultimate
   for (int i = ishape.ndim() - 2; i >= 0; --i) {
     strides[i] = strides[i + 1] * ishape[i + 1];
@@ -120,13 +120,6 @@ void DNNLSplitFwd::Execute(const Tensors& tensors,
   const auto& cpu_engine = CpuEngine::Get()->get_engine();
 
   const auto& input_tensor = tensors.input.Reorder2Default();
-  const auto& ishape       = input_tensor.shape();
-
-  std::vector<int> strides(ishape.ndim(), 1);
-  for (int i = ishape.ndim() - 2; i >= 0; --i) {
-    strides[i] = strides[i + 1] * ishape[i + 1];
-  }
-
   int out_idx = 0, primitive_idx = 0;
   int axis_offset      = strides[split_axis] * GetTypeSize(input_tensor.dtype());
   std::byte* input_ptr = reinterpret_cast<std::byte*>(input_tensor.data().dptr_);
