@@ -57,7 +57,8 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(inputs[deconv::kBias].shape_.ndim(), 1);
       auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
       auto li     = cudnn::GetLayoutInfo(layout);
-      if (!cudnn::LegacyAddBias(ctx, li, outputs[deconv::kOut], inputs[deconv::kBias])) {
+      if (dmlc::GetEnv("MXNET_NATIVE_ADD_BIAS", li.channel_last) ||
+          !cudnn::LegacyAddBias(ctx, li, outputs[deconv::kOut], inputs[deconv::kBias])) {
         int k  = inputs[deconv::kBias].shape_.Size();
         auto b = inputs[deconv::kBias].reshape(cudnn::ExpandChannelDims(layout, k));
         BinaryBroadcastRTCCompute{"add"}(  // NOLINT(whitespace/braces)
@@ -120,7 +121,8 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     if (ok && !param.no_bias && req[deconv::kBias] != kNullOp) {
       auto li     = cudnn::GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
       auto add_to = req[conv::kBias] == kAddTo;
-      if (!cudnn::LegacyBiasGrad(ctx, li, add_to, outputs[deconv::kBias], inputs[0])) {
+      if (dmlc::GetEnv("MXNET_NATIVE_BIAS_GRAD", li.channel_last) ||
+          !cudnn::LegacyBiasGrad(ctx, li, add_to, outputs[deconv::kBias], inputs[0])) {
         if (li.channel_last) {
           // This kernel should be faster.
           auto y_grad = FlattenAs2DHead<gpu, DType>(inputs[0], ctx);
