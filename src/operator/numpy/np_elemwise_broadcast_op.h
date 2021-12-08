@@ -876,7 +876,7 @@ void NumpyBinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<mxnet::NDArray>& outputs) {
   if (SupportDNNLBinary(inputs)) {
-    const dnnl::algorithm alg = GetDNNLAlgorithm<OP>::dnnl_alg;
+    const dnnl::algorithm alg = DNNLAlgorithm<OP>::value;
     DNNLRun(DNNLBinaryOpForward<alg>, attrs, ctx, inputs, req, outputs);
     return;
   }

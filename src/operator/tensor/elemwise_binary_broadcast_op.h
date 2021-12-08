@@ -810,22 +810,22 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
 
 // template struct converting op::mshadow_op to dnnl::algorithm
 template <typename OP>
-struct GetDNNLAlgorithm {};
+struct DNNLAlgorithm {};
 template <>
-struct GetDNNLAlgorithm<op::mshadow_op::plus> {
-  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_add;
+struct DNNLAlgorithm<op::mshadow_op::plus> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_add;
 };
 template <>
-struct GetDNNLAlgorithm<op::mshadow_op::minus> {
-  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_sub;
+struct DNNLAlgorithm<op::mshadow_op::minus> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_sub;
 };
 template <>
-struct GetDNNLAlgorithm<op::mshadow_op::mul> {
-  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_mul;
+struct DNNLAlgorithm<op::mshadow_op::mul> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_mul;
 };
 template <>
-struct GetDNNLAlgorithm<op::mshadow_op::div> {
-  static const dnnl::algorithm dnnl_alg = dnnl::algorithm::binary_div;
+struct DNNLAlgorithm<op::mshadow_op::div> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_div;
 };
 #endif  // MXNET_USE_ONEDNN == 1
 

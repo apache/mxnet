@@ -2016,7 +2016,7 @@ def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
             if shape == x.shape:
                 return x
             keepdims_shape = list(x.shape)
-            #calculate difference between output and input ndims
+            # calculate difference between output and input ndims
             # to include cases where inputs' ndims are not equal
             ndim_diff = len(x.shape) - len(shape)
             for i in range(ndim_diff):

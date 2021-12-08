@@ -39,19 +39,19 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
   mxnet::TShape new_lshape, new_rshape, new_oshape;
-  int ndim = BinaryBroadcastShapeCompact(inputs[0].shape(),
-                                         inputs[1].shape(),
-                                         outputs[0].shape(),
-                                         &new_lshape,
-                                         &new_rshape,
-                                         &new_oshape);
+  int ndim_diff = BinaryBroadcastShapeCompact(inputs[0].shape(),
+                                              inputs[1].shape(),
+                                              outputs[0].shape(),
+                                              &new_lshape,
+                                              &new_rshape,
+                                              &new_oshape);
   std::vector<NDArray> new_inputs;
   std::vector<NDArray> new_outputs;
-  if (ndim) {
+  if (ndim_diff) {
     new_inputs  = {inputs[0].Reshape(new_lshape), inputs[1].Reshape(new_rshape)};
     new_outputs = {outputs[0].Reshape(new_oshape)};
-  } else if (inputs[0].shape().Size() == 1 && inputs[0].shape().Size() == 1) {
-    // BinaryBroadcastShapeCompact function doesn't reshape shape().Size() == 1 tensors
+  } else if (inputs[0].shape().Size() == 1 && inputs[1].shape().Size() == 1) {
+    // BinaryBroadcastShapeCompact function doesn't reshape tensors of size (1,1,...,1)
     // into shape (1). It is mandatory for oneDNN primitive to have this reshape done.
     mxnet::TShape one_shape = mxnet::TShape(1, 1);
     new_inputs              = {inputs[0].Reshape(one_shape), inputs[1].Reshape(one_shape)};
@@ -75,7 +75,7 @@ static void BinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_ONEDNN == 1
   if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     if (SupportDNNLBinary(inputs)) {
-      const dnnl::algorithm alg = GetDNNLAlgorithm<OP>::dnnl_alg;
+      const dnnl::algorithm alg = DNNLAlgorithm<OP>::value;
       DNNLRun(DNNLBinaryOpForward<alg>, attrs, ctx, inputs, req, outputs);
     } else {
       std::vector<mxnet::TBlob> in_data  = {inputs[0].data(), inputs[1].data()};

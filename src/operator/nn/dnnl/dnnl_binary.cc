@@ -44,16 +44,14 @@ DNNLBinaryOpFwd::DNNLBinaryOpFwd(const dnnl::algorithm alg,
 void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
-  auto engine = mxnet::CpuEngine::Get()->get_engine();
-  auto src0 =
-      dnnl::memory(fwd_pd->src0_desc(), engine, reinterpret_cast<void*>(inputs[0].data().dptr_));
-  auto src1 =
-      dnnl::memory(fwd_pd->src1_desc(), engine, reinterpret_cast<void*>(inputs[1].data().dptr_));
+  auto engine           = mxnet::CpuEngine::Get()->get_engine();
+  auto src0             = inputs[0].GetDNNLData();
+  auto src1             = inputs[1].GetDNNLData();
   dnnl_output_t out_mem = CreateDNNLMem(outputs[0], fwd_pd->dst_desc(), req[0], &inputs[0]);
 
   dnnl_args_map_t args = {
-      {DNNL_ARG_SRC_0, src0},
-      {DNNL_ARG_SRC_1, src1},
+      {DNNL_ARG_SRC_0, *src0},
+      {DNNL_ARG_SRC_1, *src1},
       {DNNL_ARG_DST, *out_mem.second},
   };
 
