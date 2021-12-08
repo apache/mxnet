@@ -679,7 +679,7 @@ def weibull(a, size=None, device=None, out=None):
     >>> np.random.weibull(a=5, size=[2,3])
     array([[1.0466299 , 1.1320982 , 0.98415005],
           [1.1430776 , 0.9532727 , 1.1344457 ]])
-    >>> np.random.weibull(a=np.array([2,3])
+    >>> np.random.weibull(a=np.array([2,3]))
     array([0.98843634, 1.0125613 ])
     The Weibull distribution is one of a class of Generalized Extreme
     Value (GEV) distributions. This class includes the Gumbel and Frechet
@@ -721,7 +721,7 @@ def pareto(a, size=None, device=None, out=None):
     >>> mx.numpy.random.pareto(a=5, size=[2,3])
     array([[0.06933999, 0.0344373 , 0.10654891],
             [0.0311172 , 0.12911797, 0.03370714]])
-    >>> np.random.pareto(a=np.array([2,3])
+    >>> np.random.pareto(a=np.array([2,3]))
     array([0.26636696, 0.15685666])
     The probability density for the Pareto distribution is f(x) = \frac{am^a}{x^{a+1}}
     where a is the shape and m the scale. Here m is assumed 1. The Pareto distribution

@@ -4097,7 +4097,7 @@ def cos(x, out=None, **kwargs):
     array([ 1.000000e+00, -4.371139e-08, -1.000000e+00])
     >>> # Example of providing the optional output parameter
     >>> out1 = np.array([0], dtype='f')
-    >>> out2 = np.cos(np.array([0.1]), out1)
+    >>> out2 = np.cos(np.array([0.1]), out=out1)
     >>> out2 is out1
     True
     """
@@ -4210,14 +4210,14 @@ def tanh(x, out=None, **kwargs):
 
     Examples
     --------
-    >>> np.tanh(np.array[0, np.pi]))
+    >>> np.tanh(np.array([0, np.pi]))
     array([0.       , 0.9962721])
     >>> np.tanh(np.pi)
     0.99627207622075
     >>> # Example of providing the optional output parameter illustrating
     >>> # that what is returned is a reference to said parameter
     >>> out1 = np.array(1)
-    >>> out2 = np.tanh(np.array(0.1), out1)
+    >>> out2 = np.tanh(np.array(0.1), out=out1)
     >>> out2 is out1
     True
     """
@@ -4381,7 +4381,7 @@ def fabs(x, out=None, **kwargs):
     --------
     >>> np.fabs(-1)
     1.0
-    >>> np.fabs(np.array([-1.2, 1.2]))s
+    >>> np.fabs(np.array([-1.2, 1.2]))
     array([ 1.2,  1.2])
     """
     return _mx_nd_np.fabs(x, out=out, **kwargs)
@@ -5400,7 +5400,7 @@ def ceil(x, out=None, **kwargs):
     array([-1., -1., -0.,  1.,  2.,  2.,  2.])
     >>> # if you use parameter out, x and out must be ndarray.
     >>> a = np.array(1)
-    >>> np.ceil(np.array(3.5), a)
+    >>> np.ceil(np.array(3.5), out=a)
     array(4.)
     >>> a
     array(4.)
@@ -5439,7 +5439,7 @@ def floor(x, out=None, **kwargs):
     array([-2., -2., -1.,  0.,  1.,  1.,  2.])
     >>> # if you use parameter out, x and out must be ndarray.
     >>> a = np.array(1)
-    >>> np.floor(np.array(3.5), a)
+    >>> np.floor(np.array(3.5), out=a)
     array(3.)
     >>> a
     array(3.)
@@ -6697,7 +6697,7 @@ def repeat(a, repeats, axis=None):
 
     Examples
     --------
-    >>> np.repeat(3, 4)
+    >>> np.repeat(np.array([3]), 4)
     array([3, 3, 3, 3])
     >>> x = np.array([[1,2],[3,4]])
     >>> np.repeat(x, 2)
@@ -12390,7 +12390,7 @@ def bincount(x, weights=None, minlength=0):
     >>> np.bincount(x).size == np.amax(x)+1
     True
 
-    >>> np.bincount(np.arange(5, dtype=float))
+    >>> np.bincount(np.arange(5, dtype=int))
     Traceback (most recent call last):
     File "<stdin>", line 1, in <module>
     TypeError: array cannot be safely cast to required type
