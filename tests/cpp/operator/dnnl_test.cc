@@ -101,7 +101,7 @@ static void VerifyDefMem(const dnnl::memory& mem) {
 
 TEST(DNNL_UTIL_FUNC, MemFormat) {
   // Check whether the number of format is correct.
-  CHECK_EQ(dnnl_format_tag_last, 385);
+  CHECK_EQ(dnnl_format_tag_last, 503);
   CHECK_EQ(dnnl_nchw, 5);
   CHECK_EQ(dnnl_oihw, 5);
 }
