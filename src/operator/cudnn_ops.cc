@@ -433,7 +433,7 @@ cudnnBackendHeurMode_t HeurMode() {
 
 std::string ConvParamStr(const ConvParam& param) {
   std::ostringstream ss;
-  ss << " layout: " << param.layout.value();
+  ss << mshadow::toString(static_cast<mshadow::LayoutFlag>(param.layout.value()));
   ss << " kernel: " << param.kernel;
   ss << " stride: " << param.stride;
   ss << " dilate: " << param.dilate;

@@ -122,14 +122,15 @@ DNNLTransposeFwd& GetTransposeForward(const NumpyTransposeParam& param, const ND
 }
 
 template <>
-NumpyTransposeParam ConvertParamsToNumpy<NumpyTransposeParam>(const NumpyTransposeParam& param) {
+NumpyTransposeParam ConvertTransposeParamsToNumpy<NumpyTransposeParam>(
+    const NumpyTransposeParam& param) {
   NumpyTransposeParam numpy_param;
   numpy_param.axes = common::CanonicalizeAxes(param.axes);
   return numpy_param;
 }
 
 template <>
-NumpyTransposeParam ConvertParamsToNumpy<TransposeParam>(const TransposeParam& param) {
+NumpyTransposeParam ConvertTransposeParamsToNumpy<TransposeParam>(const TransposeParam& param) {
   NumpyTransposeParam numpy_param;
   if (param.axes.ndim() == 0) {
     numpy_param.axes = mxnet::TShape(-1, 0);

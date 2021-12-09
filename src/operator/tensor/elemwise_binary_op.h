@@ -813,6 +813,7 @@ class ElemwiseBinaryOp : public OpBase {
                                        })                                                         \
       .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)                           \
       .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)                               \
+      .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", ElemwiseChangeLayout)                 \
       .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                           \
                                       [](const NodeAttrs& attrs) {                                \
                                         return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}}; \
