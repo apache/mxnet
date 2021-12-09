@@ -252,7 +252,7 @@ bool SupportDNNLConcat(const std::vector<NDArray>& arrs) {
       return false;
     if (!(arr.dtype() == mshadow::kFloat32 || arr.dtype() == mshadow::kBfloat16))
       return false;
-    // DO not support zero-size tensors.
+    // Do not support zero-size tensors.
     if (arr.shape().Size() == 0 || arr.shape().ndim() == 0)
       return false;
     int ndim             = arr.shape().ndim();
