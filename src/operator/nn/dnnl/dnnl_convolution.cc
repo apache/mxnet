@@ -30,6 +30,8 @@
 #include "dnnl_convolution-inl.h"
 #include "dnnl_ops-inl.h"
 
+#include <string>
+
 namespace mxnet {
 namespace op {
 
