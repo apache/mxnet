@@ -29,7 +29,9 @@
 
 #include <mxnet/op_attr_types.h>
 
+#include <algorithm>
 #include <mutex>
+#include <numeric>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -89,7 +91,23 @@ struct LayoutInfo {
 
   std::vector<size_t> Order() const;
   size_t ChannelIdx() const;
-  std::vector<int64_t> Strides(const std::vector<int64_t>& dims) const;
+
+  template <typename T>
+  std::vector<T> Strides(const std::vector<T>& dims) const {
+    return cudnn_cxx::PackedStrides(Order(), dims);
+  }
+
+  template <typename T>
+  void ExpandIf1d(std::vector<T>* dims, std::vector<T>* strides) const {
+    if (n_space_dims != 1)
+      return;
+    dims->insert(dims->begin() + 2, 1);
+    std::vector<size_t> order(dims->size());
+    std::iota(order.begin(), order.end(), 0);
+    if (channel_last)
+      std::rotate(order.begin() + 1, order.begin() + 2, order.end());
+    *strides = cudnn_cxx::PackedStrides(order, *dims);
+  }
 };
 
 LayoutInfo GetLayoutInfo(mshadow::LayoutFlag layout);

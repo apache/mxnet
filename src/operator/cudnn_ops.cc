@@ -29,12 +29,10 @@
 
 #include <dmlc/parameter.h>
 
-#include <algorithm>
 #include <cstdlib>
 #include <iomanip>
 #include <iterator>
 #include <limits>
-#include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -77,10 +75,6 @@ std::vector<size_t> LayoutInfo::Order() const {
 
 size_t LayoutInfo::ChannelIdx() const {
   return channel_last ? 1 + n_space_dims : 1;
-}
-
-std::vector<int64_t> LayoutInfo::Strides(const std::vector<int64_t>& dims) const {
-  return PackedStrides(Order(), dims);
 }
 
 LayoutInfo GetLayoutInfo(mshadow::LayoutFlag layout) {
@@ -165,14 +159,8 @@ Descriptor MakeTensorDesc(int64_t uid,
   for (size_t i = 0; i < dims.size(); ++i)
     dims[i] = blob.shape_[rev_order[i]];
   auto strides = li.Strides(dims);
-  if (li.n_space_dims == 1 && expand_1d) {
-    dims.insert(dims.begin() + 2, 1);
-    std::vector<size_t> order(dims.size());
-    std::iota(order.begin(), order.end(), 0);
-    if (li.channel_last)
-      std::rotate(order.begin() + 1, order.begin() + 2, order.end());
-    strides = PackedStrides(order, dims);
-  }
+  if (expand_1d)
+    li.ExpandIf1d(&dims, &strides);
   return MakeTensorDesc(
       uid, CudnnType(static_cast<mshadow::TypeFlag>(blob.type_flag_)), dims, strides, is_virtual);
 }
@@ -803,9 +791,8 @@ void SetLegacyTensor(cudnnTensorDescriptor_t desc, const TBlob& blob, const Layo
   auto rev_order = ReverseOrder(li.Order());
   for (size_t i = 0; i < dims.size(); ++i)
     dims[i] = blob.shape_[rev_order[i]];
-  auto strides64 = li.Strides(std::vector<int64_t>(dims.begin(), dims.end()));
-  std::vector<int> strides(strides64.begin(), strides64.end());
-
+  auto strides = li.Strides(dims);
+  li.ExpandIf1d(&dims, &strides);
   auto type = static_cast<mshadow::TypeFlag>(blob.type_flag_);
   CUDNN_CALL(cudnnSetTensorNdDescriptor(desc, CudnnType(type), dims.size(), &dims[0], &strides[0]));
 }
@@ -817,7 +804,7 @@ void SetLegacyCTensorExpandDims(cudnnTensorDescriptor_t desc,
   dims[1] = blob.shape_[0];
   std::vector<int> strides(dims.size(), 1);
   strides[0] = blob.shape_[0];
-
+  li.ExpandIf1d(&dims, &strides);
   auto type = static_cast<mshadow::TypeFlag>(blob.type_flag_);
   CUDNN_CALL(cudnnSetTensorNdDescriptor(desc, CudnnType(type), dims.size(), &dims[0], &strides[0]));
 }
