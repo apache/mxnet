@@ -58,7 +58,7 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(inputs[conv::kBias].shape_.ndim(), 1);
       auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
       auto li     = cudnn::GetLayoutInfo(layout);
-      if (dmlc::GetEnv("MXNET_NATIVE_ADD_BIAS", li.channel_last) ||
+      if (li.channel_last ||
           !cudnn::LegacyAddBias(ctx, li, outputs[conv::kOut], inputs[conv::kBias])) {
         int k  = inputs[conv::kBias].shape_.Size();
         auto b = inputs[conv::kBias].reshape(cudnn::ExpandChannelDims(layout, k));
@@ -143,7 +143,7 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     if (ok && !param.no_bias && req[conv::kBias] != kNullOp) {
       auto li     = cudnn::GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
       auto add_to = req[conv::kBias] == kAddTo;
-      if (dmlc::GetEnv("MXNET_NATIVE_BIAS_GRAD", li.channel_last) ||
+      if (li.channel_last ||
           !cudnn::LegacyBiasGrad(ctx, li, add_to, outputs[conv::kBias], inputs[0])) {
         if (li.channel_last) {
           // This kernel should be faster.
