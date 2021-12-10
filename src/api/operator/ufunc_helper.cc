@@ -65,9 +65,9 @@ void UFuncHelper(NDArray* lhs,
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   op::NumpyBinaryParam param = {};
-  param.in_place = in_place;
-  attrs.op     = op;
-  attrs.parsed = param;
+  param.in_place             = in_place;
+  attrs.op                   = op;
+  attrs.parsed               = param;
   SetAttrDict<op::NumpyBinaryParam>(&attrs);
   NDArray* inputs[] = {lhs, rhs};
   int num_inputs    = 2;
@@ -194,9 +194,11 @@ void UFuncHelper(runtime::MXNetArgs args,
       if (args_size == 4) {
         bool in_place = args[3].operator bool();
         if (in_place) {
-          UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array, true);
+          UFuncHelper(
+              args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array, true);
         } else {
-          UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array, false);
+          UFuncHelper(
+              args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array, false);
         }
       } else {
         UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array);

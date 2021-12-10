@@ -54,7 +54,7 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
   const int lhs_dtype = in_attrs->at(0);
 
   const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
-  bool is_inplace = param.in_place;
+  bool is_inplace               = param.in_place;
   if (is_inplace) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, lhs_dtype);
     return true;

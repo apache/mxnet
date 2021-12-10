@@ -92,7 +92,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& out = outputs[0];
 
   const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
-  bool is_inplace = param.in_place;
+  bool is_inplace               = param.in_place;
   if (is_inplace) {
     TBlob temp_tblob;
     MSHADOW_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
@@ -122,7 +122,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
         // If both are the same integers, output is float32 or float64
         CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
             << "true_divide only supports float32 and float64"
-              " output when input's dtype is "
+               " output when input's dtype is "
             << type_string(lhs.type_flag_);
         MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
           MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
@@ -210,7 +210,7 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
   int ndim = BinaryBroadcastShapeCompact(
       inputs[0].shape_, inputs[1].shape_, outputs[0].shape_, &new_lshape, &new_rshape, &new_oshape);
   const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
-  bool is_inplace = param.in_place;
+  bool is_inplace               = param.in_place;
   if (!ndim) {
     TrueDivideElemwiseCompute<xpu>(attrs, ctx, inputs, req, outputs);
   } else {
@@ -233,16 +233,16 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
         });
         CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
         MSHADOW_TYPE_SWITCH_EXT(out.type_flag_, DType, {
-          Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
-                xpu>::template LaunchEx(s,
-                                        new_oshape.Size(),
-                                        req[0],
-                                        lstride,
-                                        rstride,
-                                        oshape,
-                                        lhs.dptr<DType>(),
-                                        temp_tblob.dptr<DType>(),
-                                        out.dptr<DType>());
+          Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
+              s,
+              new_oshape.Size(),
+              req[0],
+              lstride,
+              rstride,
+              oshape,
+              lhs.dptr<DType>(),
+              temp_tblob.dptr<DType>(),
+              out.dptr<DType>());
         });
       } else {
         if (lhs.type_flag_ == rhs.type_flag_) {
@@ -250,16 +250,16 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
           if (common::is_float(lhs.type_flag_)) {
             // If both inputs are the same float types, output is the same float type
             MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, DType, {
-              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
-                  s,
-                  new_oshape.Size(),
-                  req[0],
-                  lstride,
-                  rstride,
-                  oshape,
-                  lhs.dptr<DType>(),
-                  rhs.dptr<DType>(),
-                  out.dptr<DType>());
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                     xpu>::template LaunchEx(s,
+                                             new_oshape.Size(),
+                                             req[0],
+                                             lstride,
+                                             rstride,
+                                             oshape,
+                                             lhs.dptr<DType>(),
+                                             rhs.dptr<DType>(),
+                                             out.dptr<DType>());
             });
           } else {
             CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
@@ -267,16 +267,16 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
                 << type_string(lhs.type_flag_);
             MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
               // If both inputs are the same integer types, output is float type
-              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
-                  s,
-                  new_oshape.Size(),
-                  req[0],
-                  lstride,
-                  rstride,
-                  oshape,
-                  lhs.dptr<DType>(),
-                  rhs.dptr<DType>(),
-                  out.dptr<float>());
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                     xpu>::template LaunchEx(s,
+                                             new_oshape.Size(),
+                                             req[0],
+                                             lstride,
+                                             rstride,
+                                             oshape,
+                                             lhs.dptr<DType>(),
+                                             rhs.dptr<DType>(),
+                                             out.dptr<float>());
             });
           }
         } else {
@@ -292,15 +292,15 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
               CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
               MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
                 Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
-                      xpu>::template LaunchEx(s,
-                                              new_oshape.Size(),
-                                              req[0],
-                                              lstride,
-                                              rstride,
-                                              oshape,
-                                              lhs.dptr<DType>(),
-                                              temp_tblob.dptr<DType>(),
-                                              out.dptr<DType>());
+                       xpu>::template LaunchEx(s,
+                                               new_oshape.Size(),
+                                               req[0],
+                                               lstride,
+                                               rstride,
+                                               oshape,
+                                               lhs.dptr<DType>(),
+                                               temp_tblob.dptr<DType>(),
+                                               out.dptr<DType>());
               });
             } else {
               MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
@@ -311,15 +311,15 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
               CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
               MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
                 Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
-                      xpu>::template LaunchEx(s,
-                                              new_oshape.Size(),
-                                              req[0],
-                                              lstride,
-                                              rstride,
-                                              oshape,
-                                              temp_tblob.dptr<DType>(),
-                                              rhs.dptr<DType>(),
-                                              out.dptr<DType>());
+                       xpu>::template LaunchEx(s,
+                                               new_oshape.Size(),
+                                               req[0],
+                                               lstride,
+                                               rstride,
+                                               oshape,
+                                               temp_tblob.dptr<DType>(),
+                                               rhs.dptr<DType>(),
+                                               out.dptr<DType>());
               });
             }
           } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
@@ -331,15 +331,15 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
               MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
                 MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
                   Kernel<binary_broadcast_kernel<NDim, mshadow_op::rtrue_divide>,
-                        xpu>::template LaunchEx(s,
-                                                new_oshape.Size(),
-                                                req[0],
-                                                rstride,
-                                                lstride,
-                                                oshape,
-                                                rhs.dptr<RType>(),
-                                                lhs.dptr<LType>(),
-                                                out.dptr<LType>());
+                         xpu>::template LaunchEx(s,
+                                                 new_oshape.Size(),
+                                                 req[0],
+                                                 rstride,
+                                                 lstride,
+                                                 oshape,
+                                                 rhs.dptr<RType>(),
+                                                 lhs.dptr<LType>(),
+                                                 out.dptr<LType>());
                 });
               });
             } else {
@@ -349,15 +349,15 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
               MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
                 MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
                   Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
-                        xpu>::template LaunchEx(s,
-                                                new_oshape.Size(),
-                                                req[0],
-                                                lstride,
-                                                rstride,
-                                                oshape,
-                                                lhs.dptr<LType>(),
-                                                rhs.dptr<RType>(),
-                                                out.dptr<RType>());
+                         xpu>::template LaunchEx(s,
+                                                 new_oshape.Size(),
+                                                 req[0],
+                                                 lstride,
+                                                 rstride,
+                                                 oshape,
+                                                 lhs.dptr<LType>(),
+                                                 rhs.dptr<RType>(),
+                                                 out.dptr<RType>());
                 });
               });
             }
