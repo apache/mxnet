@@ -1160,12 +1160,12 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @wrap_mxnp_np_ufunc
     def __ilshift__(self, other):
         """x.__ilshift__(y) <=> x <<= y"""
-        return bitwise_left_shift(self, other, out=self)
+        return _api_internal.bitwise_left_shift(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __irshift__(self, other):
         """x.__irshift__(y) <=> x >>= y"""
-        return bitwise_right_shift(self, other, out=self)
+        return _api_internal.bitwise_right_shift(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __rlshift__(self, other):
@@ -1229,7 +1229,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__ifloordiv__(y) <=> x //= y"""
         if not self.writable:
             raise ValueError('trying to divide from a readonly ndarray')
-        return floor_divide(self, other, out=self)
+        return _api_internal.floor_divide(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __rfloordiv__(self, other):
@@ -1314,7 +1314,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @wrap_mxnp_np_ufunc
     def __ipow__(self, other):
         """x.__ipow__(y) <=> x **= y"""
-        return power(self, other, out=self)
+        return _api_internal.power(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __eq__(self, other):

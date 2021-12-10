@@ -27,6 +27,8 @@
 namespace mxnet {
 namespace op {
 
+DMLC_REGISTER_PARAMETER(NumpyBinaryParam);
+
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_add)
     .set_attr<FCompute>("FCompute<cpu>",
                         NumpyBinaryBroadcastComputeWithBool<cpu,

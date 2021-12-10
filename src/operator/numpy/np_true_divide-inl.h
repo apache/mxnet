@@ -90,89 +90,108 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& lhs = inputs[0];
   const TBlob& rhs = inputs[1];
   const TBlob& out = outputs[0];
-  if (lhs.type_flag_ == rhs.type_flag_) {
-    // Case when types of the 2 input tensors are the same
-    if (common::is_float(lhs.type_flag_)) {
-      // If both are the same floats, normal launch
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, DType, {
-          Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
-              s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>());
-        });
+
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    TBlob temp_tblob;
+    MSHADOW_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MSHADOW_TYPE_SWITCH_EXT(out.type_flag_, DType, {
+        Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+            s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), temp_tblob.dptr<DType>());
       });
-    } else {
-      // If both are the same integers, output is float32 or float64
-      CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
-          << "true_divide only supports float32 and float64"
-             " output when input's dtype is "
-          << type_string(lhs.type_flag_);
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
-          Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
-              s, out.Size(), out.dptr<float>(), lhs.dptr<DType>(), rhs.dptr<DType>());
-        });
-      });
-    }
+    });
   } else {
-    // Case when types of the 2 input tensors are different
-    if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
-      // both lhs and rhs are float types, output type is the more precise one
-      TBlob temp_tblob;
-      if (lhs.type_flag_ == out.type_flag_) {
-        MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
-          Tensor<xpu, 1, LType> temp_tensor =
-              ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
-          temp_tblob = TBlob(temp_tensor);
-        });
-        CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
-        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-          MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-            Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
-                s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), temp_tblob.dptr<DType>());
-          });
-        });
-      } else {
-        MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
-          Tensor<xpu, 1, RType> temp_tensor =
-              ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
-          temp_tblob = TBlob(temp_tensor);
-        });
-        CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
-        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-          MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-            Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
-                s, out.Size(), out.dptr<DType>(), temp_tblob.dptr<DType>(), rhs.dptr<DType>());
-          });
-        });
-      }
-    } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
-      // one is float type, the other is integer type, the output type should be the same as float
-      CHECK_EQ(out.type_flag_, common::is_float(lhs.type_flag_) ? lhs.type_flag_ : rhs.type_flag_)
-          << "This case out type should be same as the float type";
+    if (lhs.type_flag_ == rhs.type_flag_) {
+      // Case when types of the 2 input tensors are the same
       if (common::is_float(lhs.type_flag_)) {
-        // lhs is the float one
+        // If both are the same floats, normal launch
         MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-          MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
-            MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
-              Kernel<op_with_req<mshadow_op::rtrue_divide, Req>, xpu>::Launch(
-                  s, out.Size(), out.dptr<LType>(), rhs.dptr<RType>(), lhs.dptr<LType>());
-            });
+          MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, DType, {
+            Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+                s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>());
           });
         });
       } else {
-        // rhs is the float one
+        // If both are the same integers, output is float32 or float64
+        CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
+            << "true_divide only supports float32 and float64"
+              " output when input's dtype is "
+            << type_string(lhs.type_flag_);
         MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-          MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
-            MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
-              Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
-                  s, out.Size(), out.dptr<RType>(), lhs.dptr<LType>(), rhs.dptr<RType>());
-            });
+          MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
+            Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+                s, out.Size(), out.dptr<float>(), lhs.dptr<DType>(), rhs.dptr<DType>());
           });
         });
       }
     } else {
-      // lhs is integer type, rhs is integer type, output type should be float
-      LOG(FATAL) << "not implemented yet...";
+      // Case when types of the 2 input tensors are different
+      if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+        // both lhs and rhs are float types, output type is the more precise one
+        TBlob temp_tblob;
+        if (lhs.type_flag_ == out.type_flag_) {
+          MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+            Tensor<xpu, 1, LType> temp_tensor =
+                ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+            temp_tblob = TBlob(temp_tensor);
+          });
+          CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+          MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+            MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+              Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+                  s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), temp_tblob.dptr<DType>());
+            });
+          });
+        } else {
+          MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
+            Tensor<xpu, 1, RType> temp_tensor =
+                ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+            temp_tblob = TBlob(temp_tensor);
+          });
+          CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+          MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+            MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+              Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+                  s, out.Size(), out.dptr<DType>(), temp_tblob.dptr<DType>(), rhs.dptr<DType>());
+            });
+          });
+        }
+      } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
+        // one is float type, the other is integer type, the output type should be the same as float
+        CHECK_EQ(out.type_flag_, common::is_float(lhs.type_flag_) ? lhs.type_flag_ : rhs.type_flag_)
+            << "This case out type should be same as the float type";
+        if (common::is_float(lhs.type_flag_)) {
+          // lhs is the float one
+          MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+            MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+              MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
+                Kernel<op_with_req<mshadow_op::rtrue_divide, Req>, xpu>::Launch(
+                    s, out.Size(), out.dptr<LType>(), rhs.dptr<RType>(), lhs.dptr<LType>());
+              });
+            });
+          });
+        } else {
+          // rhs is the float one
+          MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+            MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
+              MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
+                Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
+                    s, out.Size(), out.dptr<RType>(), lhs.dptr<LType>(), rhs.dptr<RType>());
+              });
+            });
+          });
+        }
+      } else {
+        // lhs is integer type, rhs is integer type, output type should be float
+        LOG(FATAL) << "not implemented yet...";
+      }
     }
   }
 }
@@ -190,6 +209,8 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(
       inputs[0].shape_, inputs[1].shape_, outputs[0].shape_, &new_lshape, &new_rshape, &new_oshape);
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
   if (!ndim) {
     TrueDivideElemwiseCompute<xpu>(attrs, ctx, inputs, req, outputs);
   } else {
@@ -203,125 +224,147 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
       mshadow::Shape<NDim> oshape  = new_oshape.get<NDim>();
       mshadow::Shape<NDim> lstride = calc_stride(new_lshape.get<NDim>());
       mshadow::Shape<NDim> rstride = calc_stride(new_rshape.get<NDim>());
-      if (lhs.type_flag_ == rhs.type_flag_) {
-        // When the both inputs have the same data types
-        if (common::is_float(lhs.type_flag_)) {
-          // If both inputs are the same float types, output is the same float type
-          MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, DType, {
-            Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
-                s,
-                new_oshape.Size(),
-                req[0],
-                lstride,
-                rstride,
-                oshape,
-                lhs.dptr<DType>(),
-                rhs.dptr<DType>(),
-                out.dptr<DType>());
-          });
-        } else {
-          CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
-              << "true_divide only supports float32 and float64 output when input's dtype is "
-              << type_string(lhs.type_flag_);
-          MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
-            // If both inputs are the same integer types, output is float type
-            Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
-                s,
-                new_oshape.Size(),
-                req[0],
-                lstride,
-                rstride,
-                oshape,
-                lhs.dptr<DType>(),
-                rhs.dptr<DType>(),
-                out.dptr<float>());
-          });
-        }
+      if (is_inplace) {
+        TBlob temp_tblob;
+        MSHADOW_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+          Tensor<xpu, 1, LType> temp_tensor =
+              ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+          temp_tblob = TBlob(temp_tensor);
+        });
+        CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+        MSHADOW_TYPE_SWITCH_EXT(out.type_flag_, DType, {
+          Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                xpu>::template LaunchEx(s,
+                                        new_oshape.Size(),
+                                        req[0],
+                                        lstride,
+                                        rstride,
+                                        oshape,
+                                        lhs.dptr<DType>(),
+                                        temp_tblob.dptr<DType>(),
+                                        out.dptr<DType>());
+        });
       } else {
-        if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
-          // lhs and rhs have different float types, the output is the more precise one
-          TBlob temp_tblob;
-          if (lhs.type_flag_ == out.type_flag_) {
-            MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
-              Tensor<xpu, 1, LType> temp_tensor =
-                  ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
-              temp_tblob = TBlob(temp_tensor);
-            });
-            CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
-            MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
-                     xpu>::template LaunchEx(s,
-                                             new_oshape.Size(),
-                                             req[0],
-                                             lstride,
-                                             rstride,
-                                             oshape,
-                                             lhs.dptr<DType>(),
-                                             temp_tblob.dptr<DType>(),
-                                             out.dptr<DType>());
-            });
-          } else {
-            MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
-              Tensor<xpu, 1, RType> temp_tensor =
-                  ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
-              temp_tblob = TBlob(temp_tensor);
-            });
-            CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
-            MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
-                     xpu>::template LaunchEx(s,
-                                             new_oshape.Size(),
-                                             req[0],
-                                             lstride,
-                                             rstride,
-                                             oshape,
-                                             temp_tblob.dptr<DType>(),
-                                             rhs.dptr<DType>(),
-                                             out.dptr<DType>());
-            });
-          }
-        } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
-          // one of lhs and rhs is float, the output is the same type as the float one
+        if (lhs.type_flag_ == rhs.type_flag_) {
+          // When the both inputs have the same data types
           if (common::is_float(lhs.type_flag_)) {
-            // lhs is float type, output will be the same float type
-            CHECK_EQ(lhs.type_flag_, out.type_flag_)
-                << "lhs should have the same type as out, infer type broken?";
-            MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
-              MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
-                Kernel<binary_broadcast_kernel<NDim, mshadow_op::rtrue_divide>,
-                       xpu>::template LaunchEx(s,
-                                               new_oshape.Size(),
-                                               req[0],
-                                               rstride,
-                                               lstride,
-                                               oshape,
-                                               rhs.dptr<RType>(),
-                                               lhs.dptr<LType>(),
-                                               out.dptr<LType>());
-              });
+            // If both inputs are the same float types, output is the same float type
+            MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, DType, {
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
+                  s,
+                  new_oshape.Size(),
+                  req[0],
+                  lstride,
+                  rstride,
+                  oshape,
+                  lhs.dptr<DType>(),
+                  rhs.dptr<DType>(),
+                  out.dptr<DType>());
             });
           } else {
-            // rhs is float type, output will be the same float type
-            CHECK_EQ(rhs.type_flag_, out.type_flag_)
-                << "rhs should have the same type as out, infer type broken?";
-            MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
-              MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
-                Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
-                       xpu>::template LaunchEx(s,
-                                               new_oshape.Size(),
-                                               req[0],
-                                               lstride,
-                                               rstride,
-                                               oshape,
-                                               lhs.dptr<LType>(),
-                                               rhs.dptr<RType>(),
-                                               out.dptr<RType>());
-              });
+            CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
+                << "true_divide only supports float32 and float64 output when input's dtype is "
+                << type_string(lhs.type_flag_);
+            MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
+              // If both inputs are the same integer types, output is float type
+              Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>, xpu>::template LaunchEx(
+                  s,
+                  new_oshape.Size(),
+                  req[0],
+                  lstride,
+                  rstride,
+                  oshape,
+                  lhs.dptr<DType>(),
+                  rhs.dptr<DType>(),
+                  out.dptr<float>());
             });
           }
         } else {
-          // lhs and rhs have different integer types, the output is float type
-          LOG(FATAL) << "not implemented yet...";
+          if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+            // lhs and rhs have different float types, the output is the more precise one
+            TBlob temp_tblob;
+            if (lhs.type_flag_ == out.type_flag_) {
+              MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+                Tensor<xpu, 1, LType> temp_tensor =
+                    ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+                temp_tblob = TBlob(temp_tensor);
+              });
+              CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+              MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+                Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                      xpu>::template LaunchEx(s,
+                                              new_oshape.Size(),
+                                              req[0],
+                                              lstride,
+                                              rstride,
+                                              oshape,
+                                              lhs.dptr<DType>(),
+                                              temp_tblob.dptr<DType>(),
+                                              out.dptr<DType>());
+              });
+            } else {
+              MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
+                Tensor<xpu, 1, RType> temp_tensor =
+                    ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+                temp_tblob = TBlob(temp_tensor);
+              });
+              CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+              MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+                Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                      xpu>::template LaunchEx(s,
+                                              new_oshape.Size(),
+                                              req[0],
+                                              lstride,
+                                              rstride,
+                                              oshape,
+                                              temp_tblob.dptr<DType>(),
+                                              rhs.dptr<DType>(),
+                                              out.dptr<DType>());
+              });
+            }
+          } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
+            // one of lhs and rhs is float, the output is the same type as the float one
+            if (common::is_float(lhs.type_flag_)) {
+              // lhs is float type, output will be the same float type
+              CHECK_EQ(lhs.type_flag_, out.type_flag_)
+                  << "lhs should have the same type as out, infer type broken?";
+              MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+                MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
+                  Kernel<binary_broadcast_kernel<NDim, mshadow_op::rtrue_divide>,
+                        xpu>::template LaunchEx(s,
+                                                new_oshape.Size(),
+                                                req[0],
+                                                rstride,
+                                                lstride,
+                                                oshape,
+                                                rhs.dptr<RType>(),
+                                                lhs.dptr<LType>(),
+                                                out.dptr<LType>());
+                });
+              });
+            } else {
+              // rhs is float type, output will be the same float type
+              CHECK_EQ(rhs.type_flag_, out.type_flag_)
+                  << "rhs should have the same type as out, infer type broken?";
+              MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
+                MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
+                  Kernel<binary_broadcast_kernel<NDim, mshadow_op::true_divide>,
+                        xpu>::template LaunchEx(s,
+                                                new_oshape.Size(),
+                                                req[0],
+                                                lstride,
+                                                rstride,
+                                                oshape,
+                                                lhs.dptr<LType>(),
+                                                rhs.dptr<RType>(),
+                                                out.dptr<RType>());
+                });
+              });
+            }
+          } else {
+            // lhs and rhs have different integer types, the output is float type
+            LOG(FATAL) << "not implemented yet...";
+          }
         }
       }
     });

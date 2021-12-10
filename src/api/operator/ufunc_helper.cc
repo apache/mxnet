@@ -57,6 +57,31 @@ void UFuncHelper(NDArray* lhs,
 }
 
 void UFuncHelper(NDArray* lhs,
+                 NDArray* rhs,
+                 NDArray* out,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op,
+                 bool in_place) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  op::NumpyBinaryParam param = {};
+  param.in_place = in_place;
+  attrs.op     = op;
+  attrs.parsed = param;
+  SetAttrDict<op::NumpyBinaryParam>(&attrs);
+  NDArray* inputs[] = {lhs, rhs};
+  int num_inputs    = 2;
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (outputs) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  }
+}
+
+void UFuncHelper(NDArray* lhs,
                  int64_t rhs,
                  NDArray* out,
                  runtime::MXNetRetValue* ret,

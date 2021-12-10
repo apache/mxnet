@@ -345,7 +345,20 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(
       lhs.shape_, rhs.shape_, out.shape_, &new_lshape, &new_rshape, &new_oshape);
-  if (!ndim) {
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    TBlob temp_tblob;
+    mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+        ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastComputeWithBool<xpu, OP>(
+      attrs, ctx, {temp_tblob.reshape(rhs.shape_), lhs}, req, outputs);
+  } else if (!ndim) {
     MixedBinaryElemwiseCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
@@ -490,7 +503,21 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastComputeWithBool<xpu, OP>(attrs, ctx, inputs, req, outputs);
     return;
   }
-  if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
+
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    Stream<xpu>* s = ctx.get_stream<xpu>();
+    TBlob temp_tblob;
+    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+        ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastComputeWithBool<xpu, OP>(
+      attrs, ctx, {temp_tblob.reshape(rhs.shape_), lhs}, req, outputs);
+  } else if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
     Stream<xpu>* s = ctx.get_stream<xpu>();
     TBlob temp_tblob;
     if (lhs.type_flag_ == out.type_flag_) {
@@ -560,7 +587,18 @@ void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
   }
   Stream<xpu>* s = ctx.get_stream<xpu>();
   TBlob temp_tblob;
-  if (lhs.type_flag_ == out.type_flag_) {
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+        ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(
+      attrs, ctx, {temp_tblob.reshape(rhs.shape_), lhs}, req, outputs);
+  } else if (lhs.type_flag_ == out.type_flag_) {
     MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
       Tensor<xpu, 1, LType> temp_tensor =
           ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
@@ -888,6 +926,12 @@ inline bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const int ltype = in_attrs->at(0);
   const int rtype = in_attrs->at(1);
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, ltype);
+    return true;
+  }
   if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
     // Only when both input types are known and not the same, we enter the mixed-precision mode
     TYPE_ASSIGN_CHECK(*out_attrs, 0, common::type_promotion(ltype, rtype));
@@ -901,6 +945,7 @@ inline bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
   NNVM_REGISTER_OP(name)                                                                          \
       .set_num_inputs(2)                                                                          \
       .set_num_outputs(1)                                                                         \
+      .set_attr_parser(ParamParser<NumpyBinaryParam>)                                             \
       .set_attr<nnvm::FListInputNames>("FListInputNames",                                         \
                                        [](const NodeAttrs& attrs) {                               \
                                          return std::vector<std::string>{"lhs", "rhs"};           \
@@ -930,6 +975,12 @@ inline bool NumpyBinaryMixedIntPrecisionTypeWithBool(const nnvm::NodeAttrs& attr
       << "1st input only supports integer types or bool types.";
   CHECK(common::is_int(rtype) || rtype == mshadow::kBool)
       << "2nd input only supports integer types or bool types.";
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, ltype);
+    return true;
+  }
   if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
     // Only when both input types are known and not the same, we enter the mixed-precision mode
     TYPE_ASSIGN_CHECK(*out_attrs, 0, common::type_promotion(ltype, rtype));
@@ -943,6 +994,7 @@ inline bool NumpyBinaryMixedIntPrecisionTypeWithBool(const nnvm::NodeAttrs& attr
   NNVM_REGISTER_OP(name)                                                                          \
       .set_num_inputs(2)                                                                          \
       .set_num_outputs(1)                                                                         \
+      .set_attr_parser(ParamParser<NumpyBinaryParam>)                                             \
       .set_attr<nnvm::FListInputNames>("FListInputNames",                                         \
                                        [](const NodeAttrs& attrs) {                               \
                                          return std::vector<std::string>{"lhs", "rhs"};           \
@@ -970,6 +1022,12 @@ inline bool NumpyBinaryMixedIntPrecisionType(const nnvm::NodeAttrs& attrs,
   const int rtype = in_attrs->at(1);
   CHECK(common::is_int(ltype)) << "1st input only supports integer types.";
   CHECK(common::is_int(rtype)) << "2nd input only supports integer types.";
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, ltype);
+    return true;
+  }
   if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
     // Only when both input types are known and not the same, we enter the mixed-precision mode
     TYPE_ASSIGN_CHECK(*out_attrs, 0, common::type_promotion(ltype, rtype));
@@ -983,6 +1041,7 @@ inline bool NumpyBinaryMixedIntPrecisionType(const nnvm::NodeAttrs& attrs,
   NNVM_REGISTER_OP(name)                                                                          \
       .set_num_inputs(2)                                                                          \
       .set_num_outputs(1)                                                                         \
+      .set_attr_parser(ParamParser<NumpyBinaryParam>)                                             \
       .set_attr<nnvm::FListInputNames>("FListInputNames",                                         \
                                        [](const NodeAttrs& attrs) {                               \
                                          return std::vector<std::string>{"lhs", "rhs"};           \
