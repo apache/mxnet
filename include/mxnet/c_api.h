@@ -1705,18 +1705,25 @@ MXNET_DLL int MXSymbolGrad(SymbolHandle sym, uint32_t num_wrt, const char** wrt,
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
  *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is
- * positional. This api is available when MXNet is built with flag USE_INT64_TENSOR_SIZE=0 (by
- * default) \param sym symbol handle \param num_args number of input arguments. \param keys the key
- * of keyword args (optional) \param arg_ind_ptr the head pointer of the rows in CSR \param
- * arg_shape_data the content of the CSR \param in_shape_size sizeof the returning array of
- * in_shapes \param in_shape_ndim returning array of shape dimensions of eachs input shape. \param
- * in_shape_data returning array of pointers to head of the input shape. \param out_shape_size
- * sizeof the returning array of out_shapes \param out_shape_ndim returning array of shape
- * dimensions of each output shape. \param out_shape_data returning array of pointers to head of the
- * output shape. \param aux_shape_size sizeof the returning array of aux_shapes \param
- * aux_shape_ndim returning array of shape dimensions of each auxiliary shape. \param aux_shape_data
- * returning array of pointers to head of the auxiliary shape. \param complete whether infer shape
- * completes or more information is needed. \return 0 when success, -1 when failure happens
+ *  positional. This api is available when MXNet is built with flag USE_INT64_TENSOR_SIZE=0 (by
+ *  default)
+ *
+ * \param sym symbol handle
+ * \param num_args number of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of each output shape.
+ * \param out_shape_data returning array of pointers to head of the output shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of each auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  uint32_t num_args,
@@ -1737,19 +1744,27 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
+ *
  *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is
  * positional. This api is available when MXNet is built with flag USE_INT64_TENSOR_SIZE=1 (not
- * default) i.e. Large Tensor Support \param sym symbol handle \param num_args number of input
- * arguments. \param keys the key of keyword args (optional) \param arg_ind_ptr the head pointer of
- * the rows in CSR \param arg_shape_data the content of the CSR \param in_shape_size sizeof the
- * returning array of in_shapes \param in_shape_ndim returning array of shape dimensions of each
- * input shape. \param in_shape_data returning array of pointers to head of the input shape. \param
- * out_shape_size sizeof the returning array of out_shapes \param out_shape_ndim returning array of
- * shape dimensions of each output shape. \param out_shape_data returning array of pointers to head
- * of the output shape. \param aux_shape_size sizeof the returning array of aux_shapes \param
- * aux_shape_ndim returning array of shape dimensions of each auxiliary shape. \param aux_shape_data
- * returning array of pointers to head of the auxiliary shape. \param complete whether infer shape
- * completes or more information is needed. \return 0 when success, -1 when failure happens
+ * default) i.e. Large Tensor Support
+ *
+ * \param sym symbol handle
+ * \param num_args number of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of each input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of each output shape.
+ * \param out_shape_data returning array of pointers to head of the output shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of each auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolInferShape64(SymbolHandle sym,
                                    uint32_t num_args,
@@ -1923,14 +1938,16 @@ MXNET_DLL int MXSymbolInferTypePartial(SymbolHandle sym,
  * \param num_excluded_sym_names number of layers excluded from being quantized in the input symbol
  * \param excluded_sym_names node names to be excluded from being quantized
  * \param num_excluded_op_names number of operators excluded from being quantized in the input
- * symbol \param excluded_op_names operator names to be excluded from being quantized \param
- * num_offline number of parameters that are quantized offline \param offline_params array of c
- * strings representing the names of params quantized offline \param quantized_dtype the quantized
- * destination type for input data \param calib_quantize **Deprecated**. quantize op will always be
- * calibrated if could \param quantize_mode quantize mode to be used in quantize pass \param
- * quantize_granularity quantize granularity, tensor-wise or channel-wise \param out_num_calib_names
- * return the number of nodes to be calibrated \param out_calib_names return the node names to be
- * calibrated
+ * symbol
+ * \param excluded_op_names operator names to be excluded from being quantized
+ * \param num_offline number of parameters that are quantized offline
+ * \param offline_params array of c strings representing the names of params quantized offline
+ * \param quantized_dtype the quantized destination type for input data
+ * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could
+ * \param quantize_mode quantize mode to be used in quantize pass
+ * \param quantize_granularity quantize granularity, tensor-wise or channel-wise
+ * \param out_num_calib_names return the number of nodes to be calibrated
+ * \param out_calib_names return the node names to be calibrated
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
                                SymbolHandle* ret_sym_handle,
@@ -1950,16 +1967,21 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
 
 /*!
  * \brief Convert a symbol into a mixed precision symbol with cast operators for target dtype
- * casting \param sym_handle symbol to be converted \param ret_sym_handle mixed precision symbol
- * result \param num_args number of arguments for known dtypes \param arg_type_data arg types of the
- * arguments \param target_dtype target_dtype for mixed precision symbol \param cast_optional_params
- * whether to cast optional params to target_dtype \param num_target_dtype_op_names number of ops to
- * be casted to target_dtype \param num_fp32_op_names number of ops to be casted to FP32 \param
- * num_widest_dtype_op_names number of ops to be casted to widest dtype \param
- * num_conditional_fp32_op_names number of ops to be casted to FP32 based on a condition \param
- * num_excluded_symbols number of symbols to be excluded from casting \param num_model_params number
- * of model parameters \param num_widest_dtype_op_names number of ops to be casted to the widest
- * dtype \param num_conditional_fp32_op_names number of ops to be cast to fp32 based on precision
+ * casting
+ * \param sym_handle symbol to be converted
+ * \param ret_sym_handle mixed precision symbol result
+ * \param num_args number of arguments for known dtypes
+ * \param arg_type_data arg types of the arguments
+ * \param target_dtype target_dtype for mixed precision symbol
+ * \param cast_optional_params whether to cast optional params to target_dtype
+ * \param num_target_dtype_op_names number of ops to be casted to target_dtype
+ * \param num_fp32_op_names number of ops to be casted to FP32
+ * \param num_widest_dtype_op_names number of ops to be casted to widest dtype
+ * \param num_conditional_fp32_op_names number of ops to be casted to FP32 based on a condition
+ * \param num_excluded_symbols number of symbols to be excluded from casting
+ * \param num_model_params number of model parameters
+ * \param num_widest_dtype_op_names number of ops to be casted to the widest dtype
+ * \param num_conditional_fp32_op_names number of ops to be cast to fp32 based on precision
  * \param target_dtype_op_names op names to be casted to target_dtype
  * \param fp32_op_names op names to be casted to fp32
  * \param widest_dtype_op_names names to be casted to widest dtype
@@ -3103,6 +3125,20 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func,
 MXNET_DLL int MXCheckDynamicShapeOp(SymbolHandle sym_handle, bool* has_dynamic_shape);
 
 /*!
+ * \brief Synchronize the consumer stream with the producer stream where the NDArray lives.
+ * \param handle NDArray handle of producer.
+ * \param stream A pointer to a stream from consumer.
+ */
+MXNET_DLL int MXPushStreamDep(NDArrayHandle handle, int stream);
+
+/*!
+ * \brief Get current stream pointer based on current device type and id
+ * \param device_id Current device id.
+ * \param stream A pointer pointing to current stream.
+ */
+MXNET_DLL int MXGetCurrentStream(int device_id, int* stream);
+
+/*!
  * \brief Push a new NVTX range. Requires building with CUDA and NVTX.
  * \param name Name of the range.
  * \param color Color used to display the range in the visual profiling tools.
@@ -3124,6 +3160,16 @@ MXNET_DLL int MXCUDAProfilerStart();
  * \brief End CUDA profiling session. Requires building with CUDA and NVTX.
  */
 MXNET_DLL int MXCUDAProfilerStop();
+
+/*!
+ * \brief Turns on or off Layout Optimization
+ */
+MXNET_DLL int MXSetOptimizeLayout(bool val);
+
+/*!
+ * \brief Get current Layout Optimization status
+ */
+MXNET_DLL int MXGetOptimizeLayout(bool* val);
 
 #ifdef __cplusplus
 }

@@ -35,6 +35,10 @@
 #include "./elemwise_binary_broadcast_op.h"
 #include "../mxnet_op.h"
 
+#if MXNET_USE_ONEDNN
+#include "../nn/dnnl/dnnl_reduce-inl.h"
+#endif  // MXNET_USE_ONEDNN
+
 namespace mxnet {
 namespace op {
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
@@ -598,10 +602,14 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
       invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   bool dispatched = false;
   if (!dispatched && in_stype == kDefaultStorage) {
+#if MXNET_USE_ONEDNN == 1
+    dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+#else
     // When input is dense output storage is set as dense and dispatched to
     // dense operator
     dispatched =
         storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+#endif
   }
   mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
   if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 &&
@@ -1040,6 +1048,19 @@ void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs,
   if (istype == kCSRStorage) {
     NDArray output = outputs[0];
     ReduceCsr<xpu, mshadow::red::sum, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
+#if MXNET_USE_ONEDNN == 1
+  } else if (istype == kDefaultStorage) {
+    if (SupportDNNLReduce<ReduceAxesParam>(attrs, inputs[0], outputs[0])) {
+      constexpr dnnl::algorithm alg =
+          normalize ? dnnl::algorithm::reduction_mean : dnnl::algorithm::reduction_sum;
+
+      DNNLRun(DNNLReduceForward<ReduceAxesParam, alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
+      return;
+    } else {
+      FallBackCompute(ReduceAxesCompute<cpu, reducer, normalize>, attrs, ctx, inputs, req, outputs);
+      return;
+    }
+#endif
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }

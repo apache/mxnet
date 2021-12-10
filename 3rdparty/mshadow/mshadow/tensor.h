@@ -391,6 +391,97 @@ inline Shape<5> ConvertLayout(const Shape<5>& src, int src_layout, int dst_layou
 }
 
 /*!
+ * \brief returns axes of transpose operation
+ *        that needs to be performed between src layout and dst
+ * \param src_layout input layout
+ * \param dst_layout output layout
+ * \return vector of required type describing axes of a transpose operation
+ */
+template <typename dim_t>
+inline std::vector<dim_t> getTranspAxes(const LayoutFlag src_layout, const LayoutFlag dst_layout) {
+  auto apply = [](const std::vector<dim_t>& v, const std::vector<dim_t>& op) {
+    CHECK_EQ(v.size(), op.size()) << "Layout ndims does not match";
+    std::vector<dim_t> ret(v.size());
+    for (size_t i = 0; i < v.size(); i++) {
+      ret[i] = v[op[i]];
+    }
+    return ret;
+  };
+  std::vector<dim_t> axes;
+  // transpose from `case` to ND?H?WC
+  switch (src_layout) {
+    case kUNKNOWN:
+      LOG(FATAL) << "Unknown source layout";
+      break;
+    case kNHWC:
+      axes = std::vector<dim_t>({0, 1, 2, 3});
+      break;
+    case kNCHW:
+      axes = std::vector<dim_t>({0, 2, 3, 1});
+      break;
+    case kCHWN:
+      axes = std::vector<dim_t>({3, 1, 2, 0});
+      break;
+    case kNWC:
+      axes = std::vector<dim_t>({0, 1, 2});
+      break;
+    case kNCW:
+      axes = std::vector<dim_t>({0, 2, 1});
+      break;
+    case kCWN:
+      axes = std::vector<dim_t>({2, 1, 0});
+      break;
+    case kNDHWC:
+      axes = std::vector<dim_t>({0, 1, 2, 3, 4});
+      break;
+    case kNCDHW:
+      axes = std::vector<dim_t>({0, 2, 3, 4, 1});
+      break;
+    case kCDHWN:
+      axes = std::vector<dim_t>({4, 1, 2, 3, 0});
+      break;
+    default:
+      LOG(FATAL) << "Invalid source layout " << src_layout;
+  }
+  // transpose from ND?H?WC to `case`
+  switch (dst_layout) {
+    case kUNKNOWN:
+      LOG(FATAL) << "Unknown destination layout";
+      break;
+    case kNHWC:
+      axes = apply(axes, {0, 1, 2, 3});
+      break;
+    case kNCHW:
+      axes = apply(axes, {0, 3, 1, 2});
+      break;
+    case kCHWN:
+      axes = apply(axes, {3, 1, 2, 0});
+      break;
+    case kNWC:
+      axes = apply(axes, {0, 1, 2});
+      break;
+    case kNCW:
+      axes = apply(axes, {0, 2, 1});
+      break;
+    case kCWN:
+      axes = apply(axes, {2, 1, 0});
+      break;
+    case kNDHWC:
+      axes = apply(axes, {0, 1, 2, 3, 4});
+      break;
+    case kNCDHW:
+      axes = apply(axes, {0, 4, 1, 2, 3});
+      break;
+    case kCDHWN:
+      axes = apply(axes, {4, 1, 2, 3, 0});
+      break;
+    default:
+      LOG(FATAL) << "Invalid destination layout " << src_layout;
+  }
+  return axes;
+}
+
+/*!
  * \brief computaion stream structure, used for asynchronous computations
  */
 template<typename Device>

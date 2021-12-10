@@ -103,7 +103,7 @@ void DNNLPoolingFwd::Execute(const NDArray& in_data,
   }
 }
 
-dnnl::algorithm GetDNNLPoolAlgo(const PoolingParam& param) {
+dnnl::algorithm GetDNNLPoolingAlgorithm(const PoolingParam& param) {
   switch (param.pool_type) {
     case pool_enum::kMaxPooling:
       return dnnl::algorithm::pooling_max;
@@ -245,7 +245,7 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
 
   InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
-  const dnnl::algorithm alg = GetDNNLPoolAlgo(param);
+  const dnnl::algorithm alg = GetDNNLPoolingAlgorithm(param);
   dnnl::prop_kind kind      = dnnl::prop_kind::forward_scoring;
   if (is_train && alg != dnnl::algorithm::pooling_avg) {
     kind = dnnl::prop_kind::forward_training;
@@ -259,7 +259,8 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
 DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                               const bool is_train,
                               const NDArray& data,
-                              const NDArray& output) {
+                              const NDArray& output,
+                              const bool use_adaptive_pooling) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLPoolingSignature, DNNLPoolingFwd, OpHash> pooling_fwds;
 #else
@@ -267,27 +268,42 @@ DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
       pooling_fwds;
 #endif
 
-  bool with_workspace = is_train && DNNLRequireWorkspace(param);
+  const bool with_workspace = is_train && DNNLRequireWorkspace(param);
   DNNLPoolingSignature key(param);
   key.AddSign(is_train);
   key.AddSign(with_workspace);
   key.AddSign(data);
   key.AddSign(output);
 
+  if (use_adaptive_pooling) {
+    key.AddSign(use_adaptive_pooling);
+  }
+
   auto it = pooling_fwds.find(key);
   if (it == pooling_fwds.end()) {
-    CHECK(param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3)
+    CHECK(use_adaptive_pooling || (param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3))
         << "Not Implemented";
     auto data_md = data.GetDNNLData()->get_desc();
 
-    const auto kernel_ndims = param.kernel.ndim();
+    const auto kernel_ndims = use_adaptive_pooling ? data.shape().ndim() : param.kernel.ndim();
     dnnl::memory::dims kernel(kernel_ndims);
     dnnl::memory::dims strides(kernel_ndims);
     dnnl::memory::dims pad_l(kernel_ndims);
     dnnl::memory::dims pad_r(kernel_ndims);
-    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
-    const dnnl::algorithm alg = GetDNNLPoolAlgo(param);
+    if (use_adaptive_pooling) {
+      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data, output);
+      dnnl::memory::validate_dims(kernel);
+      dnnl::memory::validate_dims(strides);
+      dnnl::memory::validate_dims(pad_l);
+      dnnl::memory::validate_dims(pad_r);
+    } else {
+      InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+    }
+
+    const dnnl::algorithm alg =
+        use_adaptive_pooling ? dnnl::algorithm::pooling_avg : GetDNNLPoolingAlgorithm(param);
+
     DNNLPoolingFwd fwd(data, output, kernel, strides, pad_l, pad_r, alg, with_workspace, is_train);
     it = AddToCache(&pooling_fwds, key, fwd);
   }
@@ -299,8 +315,9 @@ void DNNLPoolingCompute(const OpContext& ctx,
                         const NDArray& in_data,
                         const OpReqType req,
                         const NDArray& out_data,
-                        const NDArray* workspace) {
-  auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
+                        const NDArray* workspace,
+                        const bool use_adaptive_pooling) {
+  auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data, use_adaptive_pooling);
   fwd.Execute(in_data, req, out_data, workspace);
 }
 
@@ -346,7 +363,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto diff_src_dims = dnnl::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
     auto diff_src_md   = dnnl::memory::desc(diff_src_dims, get_data_type(data_md), any);
     auto cpu_engine    = CpuEngine::Get()->get_engine();
-    auto alg           = GetDNNLPoolAlgo(param);
+    auto alg           = GetDNNLPoolingAlgorithm(param);
 
     const int kernel_ndims = param.kernel.ndim();
     dnnl::memory::dims kernel(kernel_ndims);

@@ -24,6 +24,7 @@
  */
 #include "../elemwise_op_common.h"
 #include "./pooling-inl.h"
+#include "../../common/alm.h"
 #if MXNET_USE_ONEDNN == 1
 #include "./dnnl/dnnl_base-inl.h"
 #include "./dnnl/dnnl_pooling-inl.h"
@@ -270,6 +271,22 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+static bool PoolChangeLayout(nnvm::NodeAttrs* attrs,
+                             mshadow::LayoutFlag targetLayout,
+                             std::vector<alm::Transpose>* inpTransposes,
+                             std::vector<alm::Transpose>* outTransposes) {
+  CHECK_EQ(targetLayout, mshadow::kUNKNOWN);
+  const auto& param = nnvm::get<PoolingParam>(attrs->parsed);
+  CHECK(param.layout) << "Current layout of pooling should be known: " << attrs->name;
+  auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
+  auto t      = alm::FactorCommonTranspose(inpTransposes);
+  if (alm::IsIdentity(t))
+    return false;
+  outTransposes->assign(1, t);
+  attrs->dict["layout"] = mshadow::toString(alm::ApplyTranspose(layout, alm::Reverse(t)));
+  return true;
+}
+
 #if MXNET_USE_ONEDNN == 1
 void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
@@ -291,7 +308,7 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
       workspace = &outputs[1];
     }
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
-    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
+    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, false);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -443,6 +460,7 @@ For each window ``X``, the mathematical expression for Lp pooling is:
 #endif
     .set_attr<nnvm::FInferType>("FInferType", PoolingType)
     .set_attr<mxnet::FInferShape>("FInferShape", PoolingShape)
+    .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", PoolChangeLayout)
     .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsDNNL", true)

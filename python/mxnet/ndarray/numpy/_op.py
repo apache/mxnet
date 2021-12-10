@@ -2033,7 +2033,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     if dtype is None:
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if retstep:
-        step = (stop - start) / (num - 1)
+        step = (stop - start) / (num - int(endpoint))
         return _api_internal.linspace(start, stop, num, endpoint, device, dtype), step
     else:
         return _api_internal.linspace(start, stop, num, endpoint, device, dtype)
