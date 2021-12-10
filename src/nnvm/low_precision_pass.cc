@@ -502,11 +502,12 @@ Graph ReducePrecision(Graph&& src) {
   const auto& input_nodes       = idx.input_nodes();
   nnvm::DTypeVector arg_types(input_nodes.size(), -1);
   for (const auto& new_variable_node : target_dtype_variable_nodes) {
-    const auto id     = idx.node_id(new_variable_node);
-    const auto found  = std::find(input_nodes.begin(), input_nodes.end(), id);
-    const auto arg_id = found - input_nodes.begin();
-    CHECK(arg_id >= 0);
-    arg_types[arg_id] = target_dtype;
+    const auto id    = idx.node_id(new_variable_node);
+    const auto found = std::find(input_nodes.begin(), input_nodes.end(), id);
+    CHECK(found != input_nodes.end());
+
+    const auto arg_idx = found - input_nodes.begin();
+    arg_types[arg_idx] = target_dtype;
   }
   ret.attrs["arg_types"] = std::make_shared<dmlc::any>(std::move(arg_types));
 

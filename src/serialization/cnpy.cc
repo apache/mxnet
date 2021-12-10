@@ -109,7 +109,7 @@ std::string dtype_descr(const TBlob& blob) {
     case mshadow::kUint64:
       return "'" MXNET_BYTEORDER "u8'";
     case mshadow::kBfloat16:
-      return "[('bfloat16', '" MXNET_BYTEORDER "u2')]";
+      return "'" MXNET_BYTEORDER "bfloat16'";
     default: {
       LOG(FATAL) << "Unknown dtype type " << blob.type_flag_ << "encountered.";
       return "";

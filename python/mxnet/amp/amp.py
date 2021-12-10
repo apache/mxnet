@@ -720,7 +720,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
 
     # Prepare inputs to pass to the convert_symbol API
     inputs, _ = block._cached_graph
-    sym, _ = block.export(None)
+    sym, _ = block.export(None, remove_amp_cast=False)
     input_names = []
     for inp in inputs:
         input_names.append(inp.name)
