@@ -519,6 +519,7 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
     BinaryBroadcastComputeWithBool<xpu, OP>(
         attrs, ctx, {temp_tblob.reshape(rhs.shape_), lhs}, req, outputs);
+    return;
   } else if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
     Stream<xpu>* s = ctx.get_stream<xpu>();
     TBlob temp_tblob;

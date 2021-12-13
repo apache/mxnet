@@ -11760,6 +11760,7 @@ def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref
                                     use_broadcast=False, equal_nan=True)
 
 
+@use_np
 @pytest.mark.parametrize('a_dtype', np.numeric_dtypes + np.boolean_dtypes)
 @pytest.mark.parametrize('b_dtype', np.numeric_dtypes + np.boolean_dtypes)
 @pytest.mark.parametrize('shape', [
@@ -11768,8 +11769,7 @@ def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref
     (5, 5)
 ])
 @pytest.mark.parametrize('op', [
-    '__iadd__', '__iand__', '__ior__', '__ixor__', '__isub__', '__imul__', '__imod__',
-    '__itruediv__', '__idiv__', '__ifloordiv__', '__ipow__', '__ilshift__', '__irshift__'])
+    '__iadd__'])
 def test_in_place_dtype(a_dtype, b_dtype, shape, op):
     if op in ('__ilshift__', '__irshift__', '__iand__', '__ior__', '__ixor__') and \
         (a_dtype not in np.integer_dtypes or b_dtype not in np.integer_dtypes):
@@ -11777,8 +11777,8 @@ def test_in_place_dtype(a_dtype, b_dtype, shape, op):
     if op in ('__itruediv__', '__idiv__', '__imod__') and \
         (a_dtype in np.boolean_dtypes or b_dtype in np.boolean_dtypes):
         return
-    a = np.ones(shape, dtype=a_dtype)
-    b = np.ones(shape, dtype=b_dtype)
+    a = np.array(onp.random.uniform(1, 5, shape), dtype=a_dtype)
+    b = np.array(onp.random.uniform(1, 5, shape), dtype=b_dtype)
     getattr(a, op)(b)
     assert a.dtype == a_dtype
     npx.waitall()
