@@ -172,27 +172,34 @@ inline bool DNNLRequireWorkspace(const PoolingParam& param) {
 }
 
 typedef ParamOpSign<PoolingParam> DNNLPoolingSignature;
-void DNNLPoolingCompute(const OpContext& ctx,
-                        const PoolingParam& param,
-                        const NDArray& in_data,
-                        const OpReqType req,
-                        const NDArray& out_data,
-                        const NDArray* workspace,
-                        const bool use_adaptive_pooling);
 
-void DNNLPoolingGradCompute(const OpContext& ctx,
-                            const PoolingParam& param,
-                            const NDArray& out_grad,
-                            const NDArray& in_data,
-                            const NDArray* workspace,
-                            const OpReqType req,
-                            const NDArray& in_grad);
+void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs);
 
 DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                               const bool is_train,
                               const NDArray& data,
                               const NDArray& output,
                               const bool use_adaptive_pooling);
+
+template <bool use_adaptive_pooling>
+void DNNLPoolingCompute(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& in_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& out_data) {
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  const NDArray* workspace  = nullptr;
+  if (DNNLRequireWorkspace(param)) {
+    CHECK_GT(out_data.size(), 1U);
+    workspace = &out_data[1];
+  }
+  auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0], use_adaptive_pooling);
+  fwd.Execute(in_data[0], req[0], out_data[0], workspace);
+}
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1

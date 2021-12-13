@@ -310,17 +310,6 @@ DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
   return it->second;
 }
 
-void DNNLPoolingCompute(const OpContext& ctx,
-                        const PoolingParam& param,
-                        const NDArray& in_data,
-                        const OpReqType req,
-                        const NDArray& out_data,
-                        const NDArray* workspace,
-                        const bool use_adaptive_pooling) {
-  auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data, use_adaptive_pooling);
-  fwd.Execute(in_data, req, out_data, workspace);
-}
-
 DNNLPoolingBwd::DNNLPoolingBwd(const dnnl::pooling_backward::primitive_desc& pdesc, bool with_ws)
     : with_workspace(with_ws), pd(pdesc) {
   bwd = std::make_shared<dnnl::pooling_backward>(pd);
@@ -384,22 +373,38 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
   return it->second;
 }
 
-void DNNLPoolingGradCompute(const OpContext& ctx,
-                            const PoolingParam& param,
-                            const NDArray& out_grad,
-                            const NDArray& in_data,
-                            const NDArray* workspace,
-                            const OpReqType req,
-                            const NDArray& in_grad) {
-  if (req == kNullOp) {
+void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs) {
+  if (req[0] == kNullOp) {
     return;
   }
 
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+
+  const NDArray& out_grad  = inputs[0];
+  const NDArray* workspace = nullptr;
+  const NDArray* in_data   = nullptr;
+  if (DNNLRequireWorkspace(param)) {
+    // The first two elements are the gradient of the outputs in forward.
+    // The third is the input of forward.
+    // The fourth and the fifth are the outputs of forward.
+    CHECK_EQ(inputs.size(), 5U);
+    in_data   = &inputs[2];
+    workspace = &inputs[4];
+  } else {
+    CHECK_EQ(inputs.size(), 3U);
+    in_data = &inputs[1];
+  }
+  const NDArray& in_grad = outputs[0];
+
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
-  auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad);
+  auto& bwd            = GetPoolingBwd(param, *in_data, in_grad, out_grad);
   auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
-  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req);
+  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
   dnnl_args_map_t args = {
       {DNNL_ARG_DIFF_DST, *diff_dst_mem},
       {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
