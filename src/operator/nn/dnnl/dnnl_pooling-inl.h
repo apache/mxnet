@@ -28,6 +28,7 @@
 
 #include <dnnl.hpp>
 #include <utility>
+#include <vector>
 
 #include "../pooling-inl.h"
 #include "./dnnl_base-inl.h"
