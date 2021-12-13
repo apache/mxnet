@@ -45,9 +45,6 @@ const std::set<std::string> support_req_fusion_op = {"_contrib_quantized_elemwis
                                                      "_sg_onednn_selfatt_qk",
                                                      "_sg_onednn_selfatt_valatt",
                                                      "_sg_onednn_batch_dot"};
-
-const std::set<const Op*> no_enable_float_output = {
-      Op::Get("_contrib_quantized_elemwise_add")};
 }  // namespace
 
 class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
@@ -192,6 +189,8 @@ class SgDNNLPostQuantizeProperty : public SubgraphProperty {
     nnvm::ObjectPtr fuse_node       = nullptr;
     nnvm::ObjectPtr requantize_node = nullptr;
     nnvm::ObjectPtr dequantize_node = nullptr;
+    const static std::set<const Op*> no_enable_float_output = {
+      Op::Get("_contrib_quantized_elemwise_add")};
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())

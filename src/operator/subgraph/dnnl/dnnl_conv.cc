@@ -130,9 +130,10 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   auto& dnnl_param      = full_conv_param.dnnl_param;
   auto& conv_param      = full_conv_param.conv_param;
   auto bn_param         = param_.bn_param.get();
-  size_t input_size     = 2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
-                      (dnnl_param.with_sum ? 1 : 0) +
-                      (dnnl_param.quantized ? 2 + (dnnl_param.with_sum ? 2 : 0) : 0);
+  size_t input_size =
+      2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
+      (dnnl_param.with_sum ? 1 : 0) +
+      (dnnl_param.quantized ? 2 + (dnnl_param.with_sum ? 2 : 0) : 0);
   // When dedup is on, in_data is used to calculate sum instead of in_sum
   if (dnnl_param.dedup_sum) {
     input_size -= 1;
@@ -168,7 +169,6 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   bool has_bias  = dnnl_param.with_bn || !conv_param.no_bias;
   NDArray data   = inputs[in_data];
   NDArray output = dnnl_param.with_sum ? inputs[in_sum] : outputs[kOut];
-
   // Copy inputs[in_sum] into outputs[kOut] in case inplace optimization failed.
   if (dnnl_param.with_sum) {
     if (!initialized_) {
@@ -195,7 +195,19 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
             dnnl::reorder(*in_dnnl_mem, *tmp_mem),
             {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
         output = NDArray(tmp_mem);
-      } else {
+      } else if (outputs[kOut].dtype() == mshadow::kFloat32) {
+        const auto& mem_desc  = in_dnnl_mem->get_desc();
+        const auto this_dtype = get_dnnl_type(mshadow::kFloat32);
+        auto omd              = mem_desc;
+        omd.data.data_type    = static_cast<dnnl_data_type_t>(this_dtype);
+        dnnl_mem_ptr tmp_mem(
+            new dnnl::memory(omd, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
+        DNNLStream::Get()->RegisterMem(tmp_mem);
+        DNNLStream::Get()->RegisterPrimArgs(
+            dnnl::reorder(*in_dnnl_mem, *tmp_mem),
+            {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
+        output = NDArray(tmp_mem);
+       } else {
         dnnl_mem_ptr tmp_mem(new dnnl::memory(in_dnnl_mem->get_desc(),
                                               CpuEngine::Get()->get_engine(),
                                               out_dnnl_mem->get_data_handle()));
@@ -292,7 +304,14 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
         }
         full_conv_param.requantize_scales.resize(weight_channelwise_scale ? channel : 1);
         for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
-          full_conv_param.requantize_scales[c] = output_scale / data_scale_ / weight_scales_[c];
+          full_conv_param.requantize_scales[c] = 1.0 / data_scale_ / weight_scales_[c];
+        }
+        if(dnnl_param.with_act) {
+          full_conv_param.act_param.scale = output_scale;
+        } else {
+          for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
+            full_conv_param.requantize_scales[c] *= output_scale;
+          }
         }
       } else {
         Stream<cpu>* s = ctx.get_stream<cpu>();
@@ -329,13 +348,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
         if (dnnl_param.with_sum) {
           LOG(ERROR) << "oneDNN doesn't support conv + relu + sum fusion yet.";
           full_conv_param.act_param.alpha *= output_scale;
-        } else {
-          // For conv+relu6 without sum, we don't need post_ops as output_scale can do the cut off.
-          dnnl_param.with_act = false;
         }
-      }
-      if (dnnl_param.with_postsum_act) {
-        CHECK(full_conv_param.postsum_act_param.alg == dnnl::algorithm::eltwise_relu);
       }
     }
     fwd_.reset(new DNNLConvForward(full_conv_param,
