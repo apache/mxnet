@@ -11761,8 +11761,8 @@ def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref
 
 
 @use_np
-@pytest.mark.parametrize('a_dtype', np.numeric_dtypes + np.boolean_dtypes)
-@pytest.mark.parametrize('b_dtype', np.numeric_dtypes + np.boolean_dtypes)
+@pytest.mark.parametrize('a_dtype', np.numeric_dtypes)
+@pytest.mark.parametrize('b_dtype', np.numeric_dtypes)
 @pytest.mark.parametrize('shape', [
     (),
     (2, 0, 2, 2),
@@ -11773,9 +11773,6 @@ def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref
 def test_in_place_dtype(a_dtype, b_dtype, shape, op):
     if op in ('__ilshift__', '__irshift__', '__iand__', '__ior__', '__ixor__') and \
         (a_dtype not in np.integer_dtypes or b_dtype not in np.integer_dtypes):
-        return
-    if op in ('__itruediv__', '__idiv__', '__imod__') and \
-        (a_dtype in np.boolean_dtypes or b_dtype in np.boolean_dtypes):
         return
     a = np.array(onp.random.uniform(1, 5, shape), dtype=a_dtype)
     b = np.array(onp.random.uniform(1, 5, shape), dtype=b_dtype)
