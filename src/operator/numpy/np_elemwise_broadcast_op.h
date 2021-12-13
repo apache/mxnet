@@ -344,20 +344,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(
       lhs.shape_, rhs.shape_, out.shape_, &new_lshape, &new_rshape, &new_oshape);
-  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
-  bool is_inplace               = param.in_place;
-  if (is_inplace) {
-    TBlob temp_tblob;
-    mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
-      Tensor<xpu, 1, LType> temp_tensor =
-          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
-      temp_tblob = TBlob(temp_tensor);
-    });
-    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
-    BinaryBroadcastComputeWithBool<xpu, OP>(
-        attrs, ctx, {temp_tblob.reshape(rhs.shape_), lhs}, req, outputs);
-  } else if (!ndim) {
+  if (!ndim) {
     MixedBinaryElemwiseCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
@@ -474,6 +461,22 @@ void NumpyBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
 
   if (lhs.type_flag_ == rhs.type_flag_) {
     BinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    return;
+  }
+
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace               = param.in_place;
+  if (is_inplace) {
+    TBlob temp_tblob;
+    mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastCompute<xpu, OP>(
+        attrs, ctx, {temp_tblob.reshape(rhs.shape_), lhs}, req, outputs);
     return;
   }
 
