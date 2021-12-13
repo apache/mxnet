@@ -235,19 +235,28 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
                                                          const dnnl::memory::desc& data_md,
                                                          const dnnl::memory::desc& out_md,
                                                          const bool use_adaptive_pooling) {
-  CHECK(param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3) << "Not Implemented";
+  std::cout << "fwdPdesc kernel_ndim_pooling=" << mxnet::TShape(data_md.dims()).ndim() << '\n';
+  std::cout << "fwdPdesc kernel_ndim_pooling_shape=" << mxnet::TShape(data_md.dims()) << '\n';
 
-  const int kernel_ndims = param.kernel.ndim();
+  CHECK((param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3) || use_adaptive_pooling)
+      << "Not Implemented";  // to be changed
+
+  const int kernel_ndims = use_adaptive_pooling ? param.kernel.ndim() : mxnet::TShape(data_md.dims()).ndim();
   dnnl::memory::dims kernel(kernel_ndims);
   dnnl::memory::dims strides(kernel_ndims);
   dnnl::memory::dims pad_l(kernel_ndims);
   dnnl::memory::dims pad_r(kernel_ndims);
-  if (use_adaptive_pooling) {
-    key.AddSign(use_adaptive_pooling);
-  }
 
+  const mxnet::TShape input_shape  = mxnet::TShape(data_md.dims());
+  const mxnet::TShape output_shape = mxnet::TShape(out_md.dims());
+
+  std::cout << "input shape = " << input_shape << '\n';
+  std::cout << "output shape = " << output_shape << '\n';
+
+  std::cout << "Getting PoolingAlg\n";
+  std::cout << "use_adaptive=" << use_adaptive_pooling << '\n';
   if (use_adaptive_pooling) {
-    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data, output);
+    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, input_shape, output_shape);
     dnnl::memory::validate_dims(kernel);
     dnnl::memory::validate_dims(strides);
     dnnl::memory::validate_dims(pad_l);
@@ -255,6 +264,7 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
   } else {
     InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
   }
+
 
   const dnnl::algorithm alg = GetDNNLPoolingAlgorithm(param);
   dnnl::prop_kind kind      = dnnl::prop_kind::forward_scoring;
@@ -303,7 +313,7 @@ DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
     dnnl::memory::dims pad_r(kernel_ndims);
 
     if (use_adaptive_pooling) {
-      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data, output);
+      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data.shape(), output.shape());
       dnnl::memory::validate_dims(kernel);
       dnnl::memory::validate_dims(strides);
       dnnl::memory::validate_dims(pad_l);
@@ -333,7 +343,7 @@ const dnnl::pooling_backward& DNNLPoolingBwd::GetBwd() {
 DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
                               const NDArray& in_data,
                               const NDArray& in_grad,
-                              const NDArray& out_grad
+                              const NDArray& out_grad,
                               const bool use_adaptive_pooling) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLPoolingSignature, DNNLPoolingBwd, OpHash> pooling_bwds;
@@ -344,7 +354,13 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
 
   bool with_workspace = DNNLRequireWorkspace(param);
   DNNLPoolingSignature key(param);
-  key.AddSign(in_data);
+  if (&in_data != nullptr) {
+    std::cout << "in_data is not null\n";
+    // std::cout << in_data.shape() << '\n'; // na odczytywaniu in_data tez leci segmentation fault
+    key.AddSign(in_data);
+  }
+  std::cout << "After in_data\n";
+  // key.AddSign(in_data); // Tutaj leci pierwszy segmentation fault
   key.AddSign(in_grad);
   key.AddSign(out_grad);
   if (use_adaptive_pooling) {
@@ -353,7 +369,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    auto input_mem = in_data.GetDNNLData();
+    auto input_mem = in_grad.GetDNNLData(); // changed in_data to in_grad
     auto data_md   = input_mem->get_desc();
 
     auto dst_dims = dnnl::memory::dims(out_grad.shape().begin(), out_grad.shape().end());
@@ -361,7 +377,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto dst_md   = dnnl::memory::desc(dst_dims, get_data_type(data_md), any);
 
     // fwd hint
-    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md);
+    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md, use_adaptive_pooling);
 
     // creat bwd desc
     auto diff_src_dims = dnnl::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
@@ -369,14 +385,18 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto cpu_engine    = CpuEngine::Get()->get_engine();
     auto alg           = GetDNNLPoolingAlgorithm(param);
 
-    const int kernel_ndims = param.kernel.ndim();
+    std::cout << "Inside GetPoolingBwd\n";
+    const int kernel_ndims = use_adaptive_pooling
+                                 ? in_grad.shape().ndim()
+                                 : param.kernel.ndim();  // in_grad czy in_data ? Czy moze output?
     dnnl::memory::dims kernel(kernel_ndims);
     dnnl::memory::dims strides(kernel_ndims);
     dnnl::memory::dims pad_l(kernel_ndims);
     dnnl::memory::dims pad_r(kernel_ndims);
 
     if (use_adaptive_pooling) {
-      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, in_data, out_grad);
+      UseAdaptivePaddingKernel(
+          &kernel, &strides, &pad_l, &pad_r, in_data.shape(), out_grad.shape());
       dnnl::memory::validate_dims(kernel);
       dnnl::memory::validate_dims(strides);
       dnnl::memory::validate_dims(pad_l);
@@ -391,7 +411,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto pdesc = dnnl::pooling_backward::primitive_desc(bwd_desc, cpu_engine, fwd_pd);
 
     DNNLPoolingBwd bwd(pdesc, with_workspace);
-    it = AddToCache(&pooling_bwds, key, bwd);
+    it = AddToCache(&pooling_bwds, key, bwd);  // Dodawanie do cache'a
   }
   return it->second;
 }
@@ -423,6 +443,7 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
   }
   const NDArray& in_grad = outputs[0];
 
+  std::cout << "Inside DNNLPoolingGradCompute\n";
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
   auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad, use_adaptive_pooling);

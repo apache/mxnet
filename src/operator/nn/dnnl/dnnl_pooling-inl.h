@@ -32,6 +32,7 @@
 
 #include "../pooling-inl.h"
 #include "./dnnl_base-inl.h"
+#include "../../contrib/adaptive_avg_pooling-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -93,12 +94,12 @@ void UseAdaptivePaddingKernel(T* kernel,
                               T* strides,
                               T* pad_l,
                               T* pad_r,
-                              const NDArray& in_data,
-                              const NDArray& out_data) {
-  const int IH = in_data.shape()[2];
-  const int IW = in_data.shape()[3];
-  const int OH = out_data.shape()[2];
-  const int OW = out_data.shape()[3];
+                              const mxnet::TShape& input_shape,
+                              const mxnet::TShape& output_shape) {
+  const int IH = input_shape[2];
+  const int IW = input_shape[3];
+  const int OH = output_shape[2];
+  const int OW = output_shape[3];
 
   strides->at(0) = floor((IH << 1) / OH) - floor(IH / OH);
   strides->at(1) = floor((IW << 1) / OW) - floor(IW / OW);
@@ -117,6 +118,12 @@ inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
 }
 
 inline bool SupportDNNLPooling(const PoolingParam& param) {
+  // Jak moge wypsiac param, zeby zobaczyc co ma w srodeczku?
+  std::cout << "kernel_ndim=" << param.kernel.ndim() << "\n";
+  std::cout << "pool_type=" << param.pool_type << "\n";
+  if (param.layout.has_value()) {
+    std::cout << "layout=" << param.GetLayout(param.kernel.ndim()) << "\n";
+  }
   return (param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3) &&
          (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) &&
          (!param.layout.has_value() ||
