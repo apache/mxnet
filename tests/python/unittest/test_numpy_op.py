@@ -11777,8 +11777,8 @@ def test_in_place_dtype(a_dtype, b_dtype, shape, op):
     if op in ('__itruediv__', '__idiv__', '__imod__') and \
         (a_dtype in np.boolean_dtypes or b_dtype in np.boolean_dtypes):
         return
-    a = np.random.uniform(size=shape).astype(a_dtype)
-    b = np.random.uniform(size=shape).astype(b_dtype)
+    a = np.ones(shape, dtype=a_dtype)
+    b = np.ones(shape, dtype=b_dtype)
     getattr(a, op)(b)
     assert a.dtype == a_dtype
     npx.waitall()
