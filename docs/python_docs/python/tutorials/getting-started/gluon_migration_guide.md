@@ -432,6 +432,68 @@ A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. 
 
 3. [Transformation](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/transformation): implement invertible transformation with computable log det jacobians.
 
+##  oneDNN Integration
+### Operator fusion
+In versions v1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support and could be enabled/disabled by `MXNET_SUBGRAPH_BACKEND` environment flag. MXNet 2.0 introduces changes in forward
+inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
+
+ - the model must be defined as a subclass of HybridBlock or Symbol
+
+ - the model must have specific operator patterns which can be fused
+
+Both HybridBlock and Symbol classes provide API to easily run fusion of operators. All we have to do is add single line of code enabling fusion passes on our model:
+```{.python}
+# on HybridBlock
+net.optimize_for(data, backend='MKLDNN')
+# on Symbol
+optimized_symbol = sym.optimize_for(backend='MKLDNN')
+```
+
+Controling which patterns should be fused still can be done by setting proper environment variables. See [**oneDNN Environment Variables**](#oneDNN-Environment-Variables)
+
+### INT8 Quantization / Precision reduction
+Quantization API was also refactored to be consistent with other new features and mechanisms. In comparision to MXNet v1.x versions it was decided to remove `quantize_net_v2` function and focus mainly on `quantize_net` to give end user flexibility and ease of use.
+Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with `quantize_model` ( it is deprecated method and should be avoided, is was left to remain most of backward compability).
+
+```{.python}
+import mxnet as mx
+from mxnet.contrib.quantization import quantize_net
+from mxnet.gluon.model_zoo.vision import resnet50_v1
+
+# load model
+net = resnet50_v1(pretrained=True)
+
+# prepare calibration data
+dummy_data = mx.nd.random.uniform(-1.0, 1.0, (batch_size, 3, 224, 224))
+calib_data_loader = mx.gluon.data.DataLoader(dummy_data, batch_size=batch_size)
+
+# quantization
+qnet = quantize_net(net, calib_mode='naive', calib_data=calib_data_loader)
+```
+`quantize_net` can be much more complex - all function attributes can be found in the [API](../../api/contrib/quantization/index.rst).
+
+### oneDNN Environment Variables
+In version MXNet 2.0 all references to MKLDNN (former name of oneDNN) was replaced by ONEDNN. Below table lists all environment variables:
+
+|              MXNet v1.x              |              MXNet 2.0                 |
+| ------------------------------------ | ---------------------------------------|
+|         MXNET_MKLDNN_ENABLED         |          MXNET_ONEDNN_ENABLED          |
+|         MXNET_MKLDNN_CACHE_NUM       |         MXNET_ONEDNN_CACHE_NUM         |
+|    MXNET_MKLDNN_FORCE_FC_AB_FORMAT   |     MXNET_ONEDNN_FORCE_FC_AB_FORMAT    |
+|         MXNET_MKLDNN_ENABLED         |          MXNET_ONEDNN_ENABLED          |
+|         MXNET_MKLDNN_DEBUG           |           MXNET_ONEDNN_DEBUG           |
+|         MXNET_USE_MKLDNN_RNN         |          MXNET_USE_ONEDNN_RNN          |
+|     MXNET_DISABLE_MKLDNN_CONV_OPT    |      MXNET_DISABLE_ONEDNN_CONV_OPT     |
+|    MXNET_DISABLE_MKLDNN_FUSE_CONV_BN |    MXNET_DISABLE_ONEDNN_FUSE_CONV_BN   |
+|  MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |   MXNET_DISABLE_ONEDNN_FUSE_CONV_RELU  |
+|  MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |   MXNET_DISABLE_ONEDNN_FUSE_CONV_SUM   |
+|      MXNET_DISABLE_MKLDNN_FC_OPT     |       MXNET_DISABLE_ONEDNN_FC_OPT      |
+| MXNET_DISABLE_MKLDNN_FUSE_FC_ELTWISE |  MXNET_DISABLE_ONEDNN_FUSE_FC_ELTWISE  |
+| MXNET_DISABLE_MKLDNN_TRANSFORMER_OPT |  MXNET_DISABLE_ONEDNN_TRANSFORMER_OPT  |
+|          n/a                         |   MXNET_DISABLE_ONEDNN_BATCH_DOT_FUSE  |
+|          n/a                         |      MXNET_ONEDNN_FUSE_REQUANTIZE      |
+|          n/a                         |      MXNET_ONEDNN_FUSE_DEQUANTIZE      |
+
 ## Appendix
 ### NumPy Array Deprecated Attributes
 |                   Deprecated Attributes               |    NumPy ndarray Equivalent    |
