@@ -27,6 +27,8 @@ import os, ctypes
 import mxnet as mx
 from mxnet.gluon import nn
 from mxnet import nd
+from mxnet import np, npx
+from gluonnlp.layers import get_activation
 from mxnet.base import _LIB, check_call, mx_uint, c_str, c_str_array, SymbolHandle
 
 # load library
@@ -47,7 +49,42 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
+
+class Easynet(nn.HybridBlock):
+    def __init__(self):
+        super().__init__()
+        self.l1 = nn.Dense(in_units=2, units=2, flatten=False)
+        #self.l2 = nn.Dense(in_units=2, units=2, flatten=False)
+        self.act1 = get_activation('relu')
+
+        #self.seq.add(nn.Dense(in_units=2, units=2, flatten=False))
+        #self.seq.add(get_activation('relu'))
+        #self.seq.add(nn.Dense(in_units=2, units=2, flatten=False))
+        #self.seq.register_op_hook(mon_callback,  monitor_all=True)
+        #self.l1.register_op_hook(mon_callback,  monitor_all=True)
+
+
+    def forward(self, input):
+        input = self.l1(input)
+        input = self.act1(input)
+        return input
+
+
 def test_model(pass_name):
+    model = Easynet()
+    model.initialize()
+    model.hybridize()
+
+
+    print('try on model')
+    x = np.array([[1,2]])
+
+    model.optimize_for(x, backend = pass_name)
+
+    out = model(x)
+    model.export("my_model")
+    print(out.shape)
+    return
     args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))}
     # execute in MXNet
     print('-------------------------------')
