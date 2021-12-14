@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file transsparse_lib.cc
  * \brief Sample 2D transpose custom operator.
  */
@@ -30,35 +29,35 @@
 using namespace mxnet::ext;
 
 void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
-  MXSparse* A = src.data<MXSparse>();
-  MXSparse* B = dst.data<MXSparse>(); 
+  MXSparse* A                = src.data<MXSparse>();
+  MXSparse* B                = dst.data<MXSparse>();
   std::vector<int64_t> shape = src.shape;
-  int64_t h = shape[0];
-  int64_t w = shape[1];
-  if(src.stype == kCSRStorage) {
-    float *Aval = (float*) (A->data);
+  int64_t h                  = shape[0];
+  int64_t w                  = shape[1];
+  if (src.stype == kCSRStorage) {
+    float* Aval = (float*)(A->data);
     // Here we need one more element to help calculate index(line 57).
     std::vector<int64_t> rowPtr(w + 2, 0);
     // count column
-    for(int i = 0; i < A->data_len; i++) {
+    for (int i = 0; i < A->data_len; i++) {
       rowPtr[A->indices[i] + 2]++;
     }
-    // Accumulated sum. After this for loop, rowPtr[1:w+2) stores the correct 
+    // Accumulated sum. After this for loop, rowPtr[1:w+2) stores the correct
     // result of transposed rowPtr.
-    for(int i = 2; i < rowPtr.size(); i++) {
+    for (int i = 2; i < rowPtr.size(); i++) {
       rowPtr[i] += rowPtr[i - 1];
     }
-    
+
     // Alloc memory for sparse data, where 0 is the index
     // of B in output vector.
     res.alloc_sparse(B, 0, A->data_len, w + 1);
-    float *Bval = (float*) (B->data);
-    for(int i = 0; i < h; i++) {
-      for(int j = A->indptr[i]; j < A->indptr[i + 1]; j++) {
-        // Helps calculate index and after that rowPtr[0:w+1) stores the 
+    float* Bval = (float*)(B->data);
+    for (int i = 0; i < h; i++) {
+      for (int j = A->indptr[i]; j < A->indptr[i + 1]; j++) {
+        // Helps calculate index and after that rowPtr[0:w+1) stores the
         // correct result of transposed rowPtr.
-        int index = rowPtr[A->indices[j] + 1]++;
-        Bval[index] = Aval[j];
+        int index         = rowPtr[A->indices[j] + 1]++;
+        Bval[index]       = Aval[j];
         B->indices[index] = i;
       }
     }
@@ -70,10 +69,9 @@ MXReturnValue forward(const std::unordered_map<std::string, std::string>& attrs,
                       std::vector<MXTensor>* inputs,
                       std::vector<MXTensor>* outputs,
                       const OpResource& res) {
-  // The data types and storage types of inputs and outputs should be the same.  
-  if(inputs->at(0).dtype != outputs->at(0).dtype ||
-     inputs->at(0).stype != outputs->at(0).stype) {
-    MX_ERROR_MSG << "Error! Expected all inputs and outputs to be the same type." 
+  // The data types and storage types of inputs and outputs should be the same.
+  if (inputs->at(0).dtype != outputs->at(0).dtype || inputs->at(0).stype != outputs->at(0).stype) {
+    MX_ERROR_MSG << "Error! Expected all inputs and outputs to be the same type."
                  << "Found input storage type:" << inputs->at(0).stype
                  << " Found output storage type:" << outputs->at(0).stype
                  << " Found input data type:" << inputs->at(0).dtype
@@ -93,8 +91,9 @@ MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs
 }
 
 MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& attrs,
-                         int* num_in, int* num_out) {
-  *num_in = 1;
+                         int* num_in,
+                         int* num_out) {
+  *num_in  = 1;
   *num_out = 1;
   return MX_SUCCESS;
 }
@@ -142,42 +141,41 @@ MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& att
 }
 
 REGISTER_OP(my_transposecsr)
-.setForward(forward, "cpu")
-.setBackward(backward, "cpu")
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferSType(inferSType)
-.setInferShape(inferShape);
+    .setForward(forward, "cpu")
+    .setBackward(backward, "cpu")
+    .setParseAttrs(parseAttrs)
+    .setInferType(inferType)
+    .setInferSType(inferSType)
+    .setInferShape(inferShape);
 
 /* ------------------------------------------------------------------------- */
 
 class MyStatefulTransposeCSR : public CustomStatefulOp {
-  public:
-    explicit MyStatefulTransposeCSR(int count,
-                                    std::unordered_map<std::string, std::string>  attrs)
+ public:
+  explicit MyStatefulTransposeCSR(int count, std::unordered_map<std::string, std::string> attrs)
       : count(count), attrs_(std::move(attrs)) {}
 
-    MXReturnValue Forward(std::vector<MXTensor>* inputs,
-                          std::vector<MXTensor>* outputs,
-                          const OpResource& op_res) override {
-      std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
-      return forward(attrs_, inputs, outputs, op_res);
-    }
+  MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                        std::vector<MXTensor>* outputs,
+                        const OpResource& op_res) override {
+    std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
+    return forward(attrs_, inputs, outputs, op_res);
+  }
 
-    MXReturnValue Backward(std::vector<MXTensor>* inputs,
-                           std::vector<MXTensor>* outputs,
-                           const OpResource& op_res) override {
-      return backward(attrs_, inputs, outputs, op_res);
-    }
+  MXReturnValue Backward(std::vector<MXTensor>* inputs,
+                         std::vector<MXTensor>* outputs,
+                         const OpResource& op_res) override {
+    return backward(attrs_, inputs, outputs, op_res);
+  }
 
-  private:
-    int count;
-    const std::unordered_map<std::string, std::string> attrs_;
+ private:
+  int count;
+  const std::unordered_map<std::string, std::string> attrs_;
 };
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
                             const MXContext& ctx,
-                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<std::vector<unsigned int>>& in_shapes,
                             const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
@@ -189,11 +187,11 @@ MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& 
 }
 
 REGISTER_OP(my_state_transposecsr)
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferSType(inferSType)
-.setInferShape(inferShape)
-.setCreateOpState(createOpState, "cpu");
+    .setParseAttrs(parseAttrs)
+    .setInferType(inferType)
+    .setInferSType(inferSType)
+    .setInferShape(inferShape)
+    .setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
   if (version >= 10700) {

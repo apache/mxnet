@@ -255,8 +255,8 @@ bool SupportDNNLConcat(const std::vector<NDArray>& arrs) {
     // DO not support zero-size tensors.
     if (arr.shape().Size() == 0)
       return false;
-    int ndim               = arr.shape().ndim();
-    const int dnnl_ndims   = arr.GetDNNLData()->get_desc().data.ndims;
+    int ndim             = arr.shape().ndim();
+    const int dnnl_ndims = arr.GetDNNLData()->get_desc().data.ndims;
     if ((ndim != 2 && ndim != 4) || ndim != dnnl_ndims) {
       return false;
     }

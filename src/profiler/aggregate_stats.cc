@@ -131,9 +131,9 @@ void AggregateStats::DumpTable(std::ostream& os, int sort_by, int ascending) {
            << " " << std::fixed << std::setw(16) << std::setprecision(4) << std::right
            << (is_memory ? ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_))
            << " " << std::fixed << std::setw(16) << std::setprecision(4) << std::right
-           << (data.type_ == AggregateStats::StatData::kCounter
-                   ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2)
-                   : MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_));
+           << (data.type_ == AggregateStats::StatData::kCounter ?
+                   ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
+                   MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_));
         os << std::endl;
       }
       heap.pop();
@@ -181,9 +181,9 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
             << (is_memory ? ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_))
             << "," << std::endl
             << "                \"Avg\": " << std::setprecision(4)
-            << (data.type_ == AggregateStats::StatData::kCounter
-                    ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2)
-                    : MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_))
+            << (data.type_ == AggregateStats::StatData::kCounter ?
+                    ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
+                    MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_))
             << std::endl
             << "            }" << std::endl;
       }

@@ -29,7 +29,6 @@
 #include <dmlc/logging.h>
 #include <type_traits>
 
-
 namespace mxnet {
 namespace runtime {
 /*!
@@ -42,9 +41,9 @@ class MXNetDataType {
  public:
   /*! \brief Type code for the MXNetDataType. */
   enum TypeCode {
-    kInt = kDLInt,
-    kUInt = kDLUInt,
-    kFloat = kDLFloat,
+    kInt    = kDLInt,
+    kUInt   = kDLUInt,
+    kFloat  = kDLFloat,
     kHandle = MXNetTypeCode::kHandle,
   };
   /*! \brief default constructor */
@@ -53,8 +52,7 @@ class MXNetDataType {
    * \brief Constructor
    * \param dtype The DLDataType
    */
-  explicit MXNetDataType(DLDataType dtype)
-      : data_(dtype) {}
+  explicit MXNetDataType(DLDataType dtype) : data_(dtype) {}
   /*!
    * \brief Constructor
    * \param code The type code.
@@ -62,8 +60,8 @@ class MXNetDataType {
    * \param lanes The number of lanes.
    */
   MXNetDataType(int code, int bits, int lanes) {
-    data_.code = static_cast<uint8_t>(code);
-    data_.bits = static_cast<uint8_t>(bits);
+    data_.code  = static_cast<uint8_t>(code);
+    data_.bits  = static_cast<uint8_t>(bits);
     data_.lanes = static_cast<uint16_t>(lanes);
   }
   /*! \return The type code. */
@@ -139,10 +137,8 @@ class MXNetDataType {
    * \return The comparison resilt.
    */
   bool operator==(const MXNetDataType& other) const {
-    return
-        data_.code == other.data_.code &&
-        data_.bits == other.data_.bits &&
-        data_.lanes == other.data_.lanes;
+    return data_.code == other.data_.code && data_.bits == other.data_.bits &&
+           data_.lanes == other.data_.lanes;
   }
   /*!
    * \brief NotEqual comparator.
@@ -156,7 +152,7 @@ class MXNetDataType {
    * \brief Converter to DLDataType
    * \return the result.
    */
-  operator DLDataType () const {
+  operator DLDataType() const {
     return data_;
   }
 

@@ -114,9 +114,9 @@ NNVM_REGISTER_OP(_npi_bincount)
                                      [](const NodeAttrs& attrs) {
                                        const NumpyBincountParam& params =
                                            nnvm::get<NumpyBincountParam>(attrs.parsed);
-                                       return params.has_weights
-                                                  ? std::vector<std::string>{"data", "weights"}
-                                                  : std::vector<std::string>{"data"};
+                                       return params.has_weights ?
+                                                  std::vector<std::string>{"data", "weights"} :
+                                                  std::vector<std::string>{"data"};
                                      })
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {

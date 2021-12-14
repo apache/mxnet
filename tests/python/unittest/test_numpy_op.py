@@ -29,6 +29,7 @@ import scipy.stats as ss
 import scipy.special as scipy_special
 import pytest
 import mxnet.ndarray.numpy._internal as _npi
+from functools import reduce
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -1189,7 +1190,7 @@ def test_np_linspace(config, dtype, endpoint, retstep):
         np_ret = onp.linspace(config, endpoint=endpoint, retstep=retstep, dtype=dtype)
     if retstep:
         assert_almost_equal(mx_ret[0].asnumpy(), np_ret[0], atol=1e-3, rtol=1e-5)
-        same(mx_ret[1], np_ret[1])
+        assert same(mx_ret[1], np_ret[1])
     else:
         assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
 
@@ -3734,13 +3735,13 @@ def test_np_atleast_nd():
         np_out = funcs["numpy"][n](*tensors_np)
         for i in range(len(tensors)):
             assert mx_out[i].shape == np_out[i].shape
-            same(mx_out[i].asnumpy(), np_out[i])
+            assert same(mx_out[i].asnumpy(), np_out[i])
 
         mx_out = funcs["mxnet"][n](*tensors)
         np_out = funcs["numpy"][n](*tensors_np)
         for i in range(len(tensors)):
             assert mx_out[i].shape == np_out[i].shape
-            same(mx_out[i].asnumpy(), np_out[i])
+            assert same(mx_out[i].asnumpy(), np_out[i])
 
 
 @use_np
@@ -5759,7 +5760,7 @@ def test_np_indices():
         for shape in shapes:
             np_out = onp.indices(dimensions=shape, dtype=dtype)
             mx_out = np.indices(dimensions=shape, dtype=dtype)
-            same(mx_out.asnumpy(), np_out)
+            assert same(mx_out.asnumpy(), np_out)
             assert mx_out.shape == np_out.shape
 
     @use_np
@@ -5781,7 +5782,7 @@ def test_np_indices():
                 if hybridize:
                     net.hybridize()
                 mx_out = net(x)
-                same(mx_out.asnumpy(), np_out)
+                assert same(mx_out.asnumpy(), np_out)
                 assert mx_out.shape == np_out.shape
 
 
@@ -5938,6 +5939,245 @@ def test_np_linalg_norm():
             np_ret = onp.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
         mx_ret = np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
         assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+
+@use_np
+@pytest.mark.parametrize('shape,ord,axis', [
+    ((2, 3, 4), 2, (1, 2)),
+    ((2, 3, 4), None, None),
+    ((3,), None, None),
+    ((2, 3), 2, 1),
+    ((2, 3, 4), 1, 1),
+    ((2, 3, 4), -1, 2),
+    ((2, 3, 4), 2, 1),
+    ((2, 3, 4), 4, 1),
+    ((2, 3, 0, 4), -2, 1),
+    ((2, 3, 4, 5), 2, (2, 3)),
+    ((2, 3, 4), 'inf', 1),
+    ((2, 3, 4), '-inf', (1, 0)),
+    ((2, 3), None, (0, 1)),
+    ((3, 2, 3), None, (1, 2)),
+    ((2, 3), None, None),
+    ((2, 3, 4), None, (0, 2)),
+    ((2, 3, 4), -3.2, 2),
+    ((2, 3, 4), 'inf', (0, 2)),
+    ((2, 3, 4), '-inf', (0, 2)),
+    ((2, 3, 4, 5, 7), 2, (2, 3, 1)),
+])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('itype', [np.float32, np.float64])
+@pytest.mark.parametrize('keepdims', [True, False])
+def test_np_linalg_vector_norm(shape, ord, axis, hybridize, itype, keepdims):
+    class TestLinalgVectNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgVectNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def forward(self, x):
+            return np.linalg.vector_norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    def spectral_norm_grad(data):
+        with mx.autograd.record():
+            UT, S, V = np.linalg.svd(data)
+            norm = np.max(np.abs(S), axis=-1)
+        norm.backward()
+        return data.grad.asnumpy()
+    
+    def onp_vector_norm(a, axis=None, keepdims=False, ord=2):
+        if axis is None:
+            a = a.flatten()
+            axis = 0
+        elif isinstance(axis, tuple):
+            # Note: The axis argument supports any number of axes, whereas norm()
+            # only supports a single axis for vector norm.
+            rest = tuple(i for i in range(a.ndim) if i not in axis)
+            newshape = axis + rest
+            a = onp.transpose(a, newshape).reshape((reduce(lambda x, y: x * y, [a.shape[x] for x in axis]), *[a.shape[i] for i in rest]))
+            axis = 0
+        return onp.linalg.norm(a, axis=axis, keepdims=keepdims, ord=ord)
+
+    # numpy is flaky under float16, also gesvd does not support fp16
+    net = TestLinalgVectNorm(ord, axis, keepdims)
+    rtol = 1e-2
+    atol = 1e-2
+    if hybridize:
+        net.hybridize()
+    a = mx.np.random.uniform(-10.0, 10.0, size=shape, dtype=itype)
+    a.attach_grad()
+    with mx.autograd.record():
+        mx_ret = net(a)
+    if ord == 'inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp_vector_norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+
+    assert np_ret.shape == mx_ret.shape
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+    mx_ret.backward()
+
+    grad_axis = axis
+    if axis is None and len(shape) >= 2 and ord is not None:
+        grad_axis = (len(shape) - 2, len(shape) - 1)
+    elif axis is None and ord is None:
+        grad_axis = tuple([i for i in range(len(shape))])
+    elif axis is None:
+        grad_axis = len(shape) - 1
+
+    if not keepdims and isinstance(grad_axis, tuple):
+        if len(grad_axis) == 2 and grad_axis[0] > grad_axis[1] and grad_axis[0] > len(np_ret.shape):
+            grad_axis = (grad_axis[1], grad_axis[0])
+        for i in grad_axis:
+            np_ret = onp.expand_dims(np_ret, axis=i)
+    elif not keepdims:
+        np_ret = onp.expand_dims(np_ret, axis=grad_axis)
+
+    if ord == 4:
+        backward_expected = onp.sign(a.asnumpy()) * onp.power(onp.abs(a.asnumpy()) / np_ret, ord - 1)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    if ord == 2 and not isinstance(grad_axis, tuple):
+        backward_expected = onp.divide(a.asnumpy(), np_ret)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+    elif ord == 2 and isinstance(grad_axis, tuple):
+        backward_expected = spectral_norm_grad(a)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    assert a.grad.shape == a.shape
+
+    # Test imperative once again
+    if ord == 'inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp_vector_norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp_vector_norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+    mx_ret = np.linalg.vector_norm(a, ord=ord, axis=axis, keepdims=keepdims)
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+
+@use_np
+@pytest.mark.parametrize('shape,ord,axis', [
+    ((2, 3, 4), 1, (2, 1)),
+    ((2, 3, 4), 2, (1, 2)),
+    ((2, 3, 4), None, None),
+    ((3,), None, None),
+    ((2, 3), 2, 1),
+    ((2, 3, 4), 1, 1),
+    ((2, 3, 4), -1, 2),
+    ((2, 3, 4), 2, 1),
+    ((2, 3, 4), 4, 1),
+    ((2, 3, 0, 4), -2, 1),
+    ((2, 3, 4, 5), 2, (2, 3)),
+    ((2, 3), -1, None),
+    ((2, 3, 4), 'inf', 1),
+    ((2, 3, 4), '-inf', (1, 0)),
+    ((2, 3), None, (0, 1)),
+    ((3, 2, 3), None, (1, 2)),
+    ((2, 3), None, None),
+    ((2, 3, 4), 'fro', (0, 2)),
+    ((2, 0, 4), 'fro', (0, 2)),
+    ((2, 3, 4), None, (0, 2)),
+    ((2, 3, 4), -3.2, 2),
+    ((2, 3, 4), -1, (0, 1)),
+    ((2, 3, 4), 'inf', (0, 2)),
+    ((2, 3, 4), '-inf', (0, 2)),
+    ((4, 4, 4, 4), -2, (0, 2)),
+    ((2, 3, 4), 'nuc', (0, 2)),
+    ((2, 2), 'nuc', None),
+])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('itype', [np.float32, np.float64])
+@pytest.mark.parametrize('keepdims', [True, False])
+def test_np_linalg_matrix_norm(shape, ord, axis, hybridize, itype, keepdims):
+    class TestLinalgMatNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgMatNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def forward(self, x):
+            return np.linalg.matrix_norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    def spectral_norm_grad(data):
+        with mx.autograd.record():
+            UT, S, V = np.linalg.svd(data)
+            norm = np.max(np.abs(S), axis=-1)
+        norm.backward()
+        return data.grad.asnumpy()
+
+    # numpy is flaky under float16, also gesvd does not support fp16
+    net = TestLinalgMatNorm(ord, axis, keepdims)
+    rtol = 1e-2
+    atol = 1e-2
+    if hybridize:
+        net.hybridize()
+    a = mx.np.random.uniform(-10.0, 10.0, size=shape, dtype=itype)
+    if not isinstance(axis, tuple) or not len(axis) == 2:
+        assertRaises(ValueError, np.linalg.matrix_norm, a, ord, axis, keepdims)
+        return
+    a.attach_grad()
+    with mx.autograd.record():
+        mx_ret = net(a)
+    if ord == 'inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+
+    assert np_ret.shape == mx_ret.shape
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
+    mx_ret.backward()
+
+    grad_axis = axis
+    if axis is None and len(shape) >= 2 and ord is not None:
+        grad_axis = (len(shape) - 2, len(shape) - 1)
+    elif axis is None and ord is None:
+        grad_axis = tuple([i for i in range(len(shape))])
+    elif axis is None:
+        grad_axis = len(shape) - 1
+
+    if not keepdims and isinstance(grad_axis, tuple):
+        if len(grad_axis) == 2 and grad_axis[0] > grad_axis[1] and grad_axis[0] > len(np_ret.shape):
+            grad_axis = (grad_axis[1], grad_axis[0])
+        for i in grad_axis:
+            np_ret = onp.expand_dims(np_ret, axis=i)
+    elif not keepdims:
+        np_ret = onp.expand_dims(np_ret, axis=grad_axis)
+
+    if ord == 4:
+        backward_expected = onp.sign(a.asnumpy()) * onp.power(onp.abs(a.asnumpy()) / np_ret, ord - 1)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    if ord == 2 and not isinstance(grad_axis, tuple):
+        backward_expected = onp.divide(a.asnumpy(), np_ret)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+    elif ord == 2 and isinstance(grad_axis, tuple):
+        backward_expected = spectral_norm_grad(a)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    if ord == 'fro':
+        backward_expected = onp.divide(a.asnumpy(), np_ret)
+        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+    assert a.grad.shape == a.shape
+
+    # Test imperative once again
+    if ord == 'inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=onp.inf, axis=axis, keepdims=keepdims)
+    elif ord == '-inf':
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=-onp.inf, axis=axis, keepdims=keepdims)
+    else:
+        np_ret = onp.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+    mx_ret = np.linalg.matrix_norm(a, ord=ord, axis=axis, keepdims=keepdims)
+    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
 
 
 @use_np
@@ -8230,14 +8470,18 @@ def test_np_take():
             return np.take(a, indices, axis=self._axis, mode=self._mode)
 
     def grad_helper(grad_in, axis, idx, mode):
-        k = grad_in.shape[axis]
+        k = 1 if axis == None else grad_in.shape[axis]
         if mode == 'clip':
             idx = 0 if idx < 0 else idx
             idx = k - 1 if idx >= k else idx
         else:
             idx = idx % k
+
         if axis == None:
-            grad_in[idx] += 1.0
+            if grad_in.shape == ():
+                grad_in += 1.0
+            else:
+                grad_in[idx] += 1.0
         elif axis == 0:
             if axis == len(grad_in.shape) - 1:
                 grad_in[idx] += 1.0
@@ -8266,7 +8510,8 @@ def test_np_take():
     def check_output_n_grad(data_shape, idx_shape, axis, mode):
         data_real = onp.random.normal(size=data_shape).astype('float32')
         idx_real = onp.random.randint(low=-100, high=100, size=idx_shape)
-        same(np.take(np.array(data_real), np.array(idx_real), axis=axis, mode=mode).asnumpy(),
+
+        assert same(np.take(np.array(data_real), np.array(idx_real), axis=axis, mode=mode).asnumpy(),
              onp.take(data_real, idx_real, axis=axis, mode=mode))
 
         grad_in = onp.zeros(data_shape, dtype='float32')
@@ -8278,15 +8523,15 @@ def test_np_take():
         x.attach_grad()
         with mx.autograd.record():
             mx_out = test_take(x, np.array(idx_real))
-        same(mx_out.asnumpy(), onp.take(data_real, idx_real, axis=axis, mode=mode))
+        assert same(mx_out.asnumpy(), onp.take(data_real, idx_real, axis=axis, mode=mode))
 
         if axis and axis < 0:
             axis += len(data_shape)
-        try:
+
+        if idx_real.size != 0:
             for i in onp.nditer(idx_real):
                 grad_helper(grad_in, axis, i, mode)
-        except:
-            pass
+
 
         mx_out.backward()
         same(x.grad.asnumpy(), grad_in)
@@ -9955,7 +10200,7 @@ def test_np_where():
     ]
     flags = [True, False]
     for ctype, dtype, shape_pair, hybridize in itertools.product(dtypes, dtypes, shape_configs, flags):
-        cond = np.random.uniform(low=0, high=100, size=shape_pair[0], dtype='float64').astype(ctype)
+        cond = np.round(np.random.uniform(low=0, high=2, size=shape_pair[0], dtype='float64')).astype(ctype)
         x = np.random.uniform(low=0, high=100, size=shape_pair[1], dtype='float64').astype(dtype)
         y = np.random.uniform(low=0, high=100, size=shape_pair[2], dtype='float64').astype(dtype)
         cond.attach_grad()
@@ -9966,37 +10211,50 @@ def test_np_where():
             test_mod.hybridize()
         with mx.autograd.record():
             ret = test_mod(cond, x, y)
-        same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
+
+        assert same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
         if dtype in [np.float16, np.float32, np.float64]:
             ret.backward()
-            same(cond.grad.asnumpy(), onp.zeros(shape_pair[0], dtype=ctype))
-            same(x.grad.asnumpy(), collapse_sum_like(onp.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+            assert same(cond.grad.asnumpy(), onp.zeros(shape_pair[0], dtype=ctype))
+
+            xgrad = x.grad.asnumpy()
+            npgrad = collapse_sum_like((onp.broadcast_to(cond.asnumpy(), ret.shape) != 0).astype(dtype), shape_pair[1])
+            npgrad = npgrad.astype(xgrad.dtype)
+            assert same(xgrad, npgrad)
 
         # check imperative again
         ret = np.where(cond, x, y)
-        same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
+        assert same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
 
         # check scalar case
         if dtype in [np.float16, np.float32, np.float64]:
             # lscalar
             with mx.autograd.record():
                 ret_lscalar = np.where(cond, 1, x)
-            same(ret.asnumpy(), onp.where(cond.asnumpy(), 1, x.asnumpy()))
+            assert same(ret_lscalar.asnumpy(), onp.where(cond.asnumpy(), 1, x.asnumpy()))
             ret_lscalar.backward()
-            same(x.grad.asnumpy(), 1-collapse_sum_like(onp.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+
+            xgrad = x.grad.asnumpy()
+            npgrad = collapse_sum_like((onp.broadcast_to(cond.asnumpy(), ret_lscalar.shape) == 0).astype(dtype), shape_pair[1])
+            npgrad = npgrad.astype(xgrad.dtype)
+            assert same(xgrad, npgrad)
             # rscalar
             with mx.autograd.record():
                 ret_rscalar = np.where(cond, x, 1)
-            same(ret.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), 1))
+            assert same(ret_rscalar.asnumpy(), onp.where(cond.asnumpy(), x.asnumpy(), 1))
             ret_rscalar.backward()
-            same(x.grad.asnumpy(), collapse_sum_like(onp.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+
+            xgrad = x.grad.asnumpy()
+            npgrad = collapse_sum_like((onp.broadcast_to(cond.asnumpy(), ret_rscalar.shape) != 0).astype(dtype), shape_pair[1])
+            npgrad = npgrad.astype(xgrad.dtype)
+            assert same(xgrad, npgrad)
 
         # check both scalar case
         x = onp.random.randint(0, 100)
         y = onp.random.randint(0, 100)
         mx_out = np.where(cond, x, y)
         np_out = onp.where(cond, x, y)
-        same(mx_out, np_out)
+        assert same(mx_out, np_out)
 
 
 @use_np
@@ -10053,8 +10311,20 @@ def test_np_expand_dims():
 
 
 @use_np
-@pytest.mark.skip(reason='Test hangs. Tracked in #18144')
-def test_np_unravel_index():
+@pytest.mark.parametrize('ishape', [
+    2, 5,
+    (), (1,), (4,),
+    (2, 2), (2, 4), (3, 5),
+    (2, 2, 2), (2, 3, 2), (2, 3, 4),
+])
+@pytest.mark.parametrize('rshape', [
+    10, (15,),
+    (3, 4), (4, 5),
+    (2,3,4)
+])
+@pytest.mark.parametrize('dtype', [np.uint8, np.int8, np.int32, np.int64])
+@pytest.mark.parametrize('hybridize', [True, False])
+def test_np_unravel_index(ishape, rshape, dtype, hybridize):
     class TestUnravel_index(HybridBlock):
         def __init__(self, shape, order='C') :
             super(TestUnravel_index, self).__init__()
@@ -10064,44 +10334,33 @@ def test_np_unravel_index():
         def forward(self, a):
             return np.unravel_index(a, self._shape, self._order)
 
-    in_shapes = [
-        2, 5,
-        (), (1,), (4,),
-        (2, 2), (2, 4), (3, 5),
-        (2, 2, 2), (2, 3, 2), (2, 3, 4),
-    ]
-    unravel_shapes = [
-        10, (15,),
-        (3, 4), (4, 5),
-        (2,3,4)
-    ]
-    dtypes = [np.uint8, np.int8, np.int32, np.int64]
-    for hybridize, ishape, dtype, rshape in itertools.product([False, True], in_shapes, dtypes, unravel_shapes):
-        rtol = 1e-2 if dtype == np.float16 else 1e-3
-        atol = 1e-4 if dtype == np.float16 else 1e-5
-        test_unravel_index = TestUnravel_index(rshape)
-        if hybridize:
-            test_unravel_index.hybridize()
-        if type(ishape) == int and hybridize:
-            x = np.array([ishape], dtype=dtype)
-            np_out = onp.unravel_index(x.asnumpy(), rshape)
-        else:
-            x = np.random.uniform(0, 8, size=ishape).astype(dtype)
-            np_out = onp.unravel_index(x.asnumpy(), rshape)
-        mx_out = test_unravel_index(x)
-        assert len(mx_out) == len(np_out)
-        for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elem_np.shape
-            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
-        # no backward function for unravel_index operator
 
-        # Test imperative once again
-        mx_out = np.unravel_index(x, rshape)
+    rtol = 1e-2 if dtype == np.float16 else 1e-3
+    atol = 1e-4 if dtype == np.float16 else 1e-5
+    test_unravel_index = TestUnravel_index(rshape)
+    if hybridize:
+        test_unravel_index.hybridize()
+    if type(ishape) == int and hybridize:
+        x = np.array([ishape], dtype=dtype)
         np_out = onp.unravel_index(x.asnumpy(), rshape)
-        assert len(mx_out) == len(np_out)
-        for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elem_np.shape
-            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+    else:
+        x = np.random.uniform(0, 8, size=ishape).astype(dtype)
+        np_out = onp.unravel_index(x.asnumpy(), rshape)
+    mx_out = test_unravel_index(x)
+    assert len(mx_out) == len(np_out)
+    for elem_mx, elem_np in zip(mx_out, np_out):
+        assert elem_mx.asnumpy().shape == elem_np.shape
+        assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+    # no backward function for unravel_index operator
+
+    # Test imperative once again
+    mx_out = np.unravel_index(x, rshape)
+    np_out = onp.unravel_index(x.asnumpy(), rshape)
+    print(np_out)
+    assert len(mx_out) == len(np_out)
+    for elem_mx, elem_np in zip(mx_out, np_out):
+        assert elem_mx.asnumpy().shape == elem_np.shape
+        assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
 @use_np
@@ -11239,3 +11498,264 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
 
     assert_almost_equal(deconvOut, deconvRefOut)
     assert_almost_equal(deconvData.grad, deconvRefGrad)
+
+
+@use_np
+@pytest.mark.parametrize('dtype', np.floating_dtypes)
+def test_np_finfo(dtype):
+    mx_finfo_obj = np.finfo(dtype)
+    np_finfo = onp.finfo(dtype)
+    assert (mx_finfo_obj.bits, mx_finfo_obj.eps, mx_finfo_obj.max, mx_finfo_obj.min, mx_finfo_obj.smallest_normal) == \
+        (np_finfo.bits, np_finfo.eps, np_finfo.max, np_finfo.min, np_finfo.tiny)
+
+
+@use_np
+@pytest.mark.parametrize('dtype', np.integer_dtypes)
+def test_np_iinfo(dtype):
+    mx_iinfo_obj = np.iinfo(dtype)
+    np_iinfo = onp.iinfo(dtype)
+    assert (mx_iinfo_obj.bits, mx_iinfo_obj.max, mx_iinfo_obj.min) == \
+        (np_iinfo.bits, np_iinfo.max, np_iinfo.min)
+
+
+@use_np
+@pytest.mark.parametrize('input1', [d for d in np.numeric_dtypes + np.boolean_dtypes] + [np.ones((1,), dtype=d) for d in np.numeric_dtypes + np.boolean_dtypes])
+@pytest.mark.parametrize('input2', [d for d in np.numeric_dtypes + np.boolean_dtypes])
+def test_np_can_cast(input1, input2):
+    np_input1 = input1
+    np_input2 = input2
+    if isinstance(input1, np.ndarray):
+        np_input1 = input1.asnumpy()
+    assert np.can_cast(input1, input2) == onp.can_cast(np_input1, np_input2)
+
+
+@use_np
+@pytest.mark.parametrize('nums', [1, 2, 3, 4, 10, 100])
+def test_np_result_type(nums):
+    PICK_LIST = np.numeric_dtypes + np.boolean_dtypes + [np.ones((1,), dtype=d) for d in np.numeric_dtypes + np.boolean_dtypes]
+    import random
+    inputs = [random.choice(PICK_LIST) for _ in range(nums)]
+
+    try:
+        promoted = np.result_type(*inputs)
+    except Exception as e:
+        with pytest.raises(TypeError):
+            promoted = np.result_type(*inputs)
+
+
+@use_np
+@pytest.mark.parametrize('func,func2,dtypes,ref_grad,low,high', [
+    ('abs', 'abs', 'numeric', lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
+    ('acos', 'arccos', 'floating-point', lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), -1.0, 1.0),
+    ('acosh', 'arccosh', 'floating-point', lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
+    ('asin', 'arcsin', 'floating-point', lambda x: 1. / (1. - x ** 2) ** (1. / 2.), -1.0, 1.0),
+    ('asinh', 'arcsinh', 'floating-point', lambda x: 1./(x**2 + 1.)**(1./2.), -1.0, 1.0),
+    ('atan', 'arctan', 'floating-point', lambda x: 1. / (x ** 2. + 1.), -1.0, 1.0),
+    ('atanh', 'arctanh', 'floating-point', lambda x: -1./(x**2 - 1.), -0.99, 0.99),
+    ('bitwise_invert', 'invert', 'integer or boolean', None, -5, 5),
+    ('ceil', 'ceil', 'numeric', None, -10.0, 10.0),
+    ('cos', 'cos', 'floating-point', lambda x: -onp.sin(x), -1.0, 1.0),
+    ('cosh', 'cosh', 'floating-point', lambda x: onp.sinh(x), -1.0, 1.0),
+    ('exp', 'exp', 'floating-point', lambda x: onp.exp(x), -1.0, 1.0),
+    ('expm1', 'expm1', 'floating-point', lambda x: onp.exp(x), -1.0, 1.0),
+    ('floor', 'floor', 'numeric', None, -10.0, 10.0),
+    ('log', 'log', 'floating-point', lambda x: 1.0 / x, 0.1, 5.0),
+    ('log10', 'log10', 'floating-point', lambda x: 1.0 / (x * onp.log(10)), 0.1, 10.0),
+    ('log1p', 'log1p', 'floating-point', lambda x: 1.0 / (1.0 + x), -0.9, 5.0),
+    ('log2', 'log2', 'floating-point', lambda x: 1.0 / (x * onp.log(2)), 0.1, 2.0),
+    ('logical_not', 'logical_not', 'boolean', None,  -1.0, 1.0),
+    ('negative', 'negative', 'numeric', lambda x: -1. * onp.ones(x.shape), -1.0, 1.0),
+    ('positive', 'positive', 'numeric', lambda x: onp.ones(x.shape), -1.0, 1.0),
+    ('sign', 'sign', 'numeric', None, -1.0, 1.0),
+    ('sin', 'sin', 'floating-point', lambda x: onp.cos(x), -1.0, 1.0),
+    ('sinh', 'sinh', 'floating-point', lambda x: onp.cosh(x), -1.0, 1.0),
+    ('sqrt', 'sqrt', 'floating-point', lambda x: 0.5 / onp.sqrt(x), 0.001, 10.0),
+    ('square', 'square', 'numeric', lambda x: 2.0 * x, -1.0, 1.0),
+    ('tan', 'tan', 'floating-point', lambda x: onp.tan(x) ** 2 + 1.0, -1.0, 1.0),
+    ('tanh', 'tanh', 'floating-point', lambda x: 1. - onp.tanh(x) ** 2, -1.0, 1.0),
+    ('trunc', 'trunc', 'numeric', None, -5.0, 5.0),
+])
+@pytest.mark.parametrize('ndim', [2, 3, 4])
+def test_np_standard_unary_funcs(func, func2, dtypes, ref_grad, low, high, ndim):
+    class TestStandardUnary(HybridBlock):
+        def __init__(self, func):
+            super(TestStandardUnary, self).__init__()
+            self._func = func
+
+        def forward(self, a):
+            return getattr(np, self._func)(a)
+
+    type_mapping = {
+        'floating-point': np.floating_dtypes,
+        'numeric': np.numeric_dtypes,
+        'integer or boolean': np.integer_dtypes + np.boolean_dtypes,
+        'boolean': np.boolean_dtypes,
+    }
+
+    def array_values(low, high, shape):
+        for d in np.integer_dtypes + np.boolean_dtypes + np.floating_dtypes:
+            yield onp.random.uniform(low, high, shape).astype(d), d
+
+
+    shapes = [i for i in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]]
+    for shape in shapes:
+        for (np_test_data, dtype) in array_values(low, high, shape):
+            if dtype in type_mapping[dtypes]:
+                rtol = 1e-2 if dtype == np.float16 else 1e-3
+                atol = 1e-4 if dtype == np.float16 else 1e-5
+                # get rid of warning: divide by zero
+                if((func=='log' or func=='log10' or func=='log2') and
+                    (dtype=='int8' or dtype=='uint8' or dtype=='int32' or
+                    dtype=='int64')):
+                    low = 1
+                if (func=='arctanh' and dtype=='bool'):
+                    continue
+                np_func = getattr(onp, func2)
+                mx_func = TestStandardUnary(func)
+                mx_test_data = np.array(np_test_data, dtype=dtype)
+                for hybridize in [True, False]:
+                    if hybridize:
+                        mx_func.hybridize()
+                    if ref_grad:
+                        mx_test_data.attach_grad()
+                    np_out = np_func(np_test_data)
+                    with mx.autograd.record():
+                        y = mx_func(mx_test_data)
+                    assert y.shape == np_out.shape
+                    assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=atol)
+                    if np_out.dtype == np.bool_:
+                        assert y.dtype == np.bool_
+
+                    if ref_grad and (dtype == 'float16' or dtype == 'float32' or dtype == 'float64'):
+                        y.backward()
+                        assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
+
+                np_func = getattr(onp, func2)
+                mx_out = getattr(mx.np, func)(mx_test_data)
+                assert mx_out.shape == np_out.shape
+                assert np.result_type(mx_out) == dtype
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=1e-5)
+
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, where=False)
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, subok=False)
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, dtype=onp.int8)
+                assertRaises(TypeError, getattr(np, func), mx_test_data, dtype="abcdefg")
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, casting='safe')
+                assertRaises(TypeError, getattr(np, func), mx_test_data, casting='mxnet')
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, order='C')
+                assertRaises(NotImplementedError, getattr(np, func), mx_test_data, order='mxnet')
+
+
+@use_np
+@pytest.mark.flaky
+@pytest.mark.parametrize('func,func2,promoted,dtypes,ref_grad_a,ref_grad_b,low,high', [
+    ('add', 'add', True, 'numeric', lambda y, x1, x2: onp.ones(y.shape), None, -1.0, 1.0),
+    ('atan2', 'arctan2', True, 'floating-point', lambda y, x1, x2: x2 / (onp.square(x1) + onp.square(x2)),
+                                                 lambda y, x1, x2: -x1 / (onp.square(x1) + onp.square(x2)), -1, 1),
+    ('bitwise_and', 'bitwise_and', True, 'integer or boolean', None, None, -100, 100),
+    ('bitwise_or', 'bitwise_or', True, 'integer or boolean', None, None, -100, 100),
+    ('bitwise_xor', 'bitwise_xor', True, 'integer or boolean', None, None, -100, 100),
+    ('divide', 'divide', True, 'floating-point', lambda y, x1, x2: onp.ones(y.shape) / x2,
+                                                 lambda y, x1, x2: -x1 / (x2 * x2), 0.1, 1.0),
+    ('equal', 'equal', False, 'all', None, None, 0.0, 2.0),
+    ('floor_divide', 'floor_divide', True, 'numeric', lambda y, x1, x2: onp.zeros(y.shape),
+                                                      lambda y, x1, x2: onp.zeros(y.shape), 2.0, 10.0),
+    ('greater', 'greater', False, 'numeric', None, None, 0.0, 2.0),
+    ('greater_equal', 'greater_equal', False, 'numeric', None, None, 0.0, 2.0),
+    ('less', 'less', False, 'numeric', None, None, 0.0, 2.0),
+    ('less_equal', 'less_equal', False, 'numeric', None, None, 0.0, 2.0),
+    ('logaddexp', 'logaddexp', True, 'floating-point', lambda y, x1, x2: onp.exp(x1) / (onp.exp(x1) + onp.exp(x2)),
+                                                       lambda y, x1, x2: onp.exp(x2) / (onp.exp(x1) + onp.exp(x2)), -10, 10),
+    ('logical_and', 'logical_and', False, 'boolean', None, None, -100, 100),
+    ('logical_or', 'logical_or', False, 'boolean', None, None, -100, 100),
+    ('logical_xor', 'logical_xor', False, 'boolean', None, None, -100, 100),
+    ('multiply', 'multiply', True, 'numeric', lambda y, x1, x2: onp.broadcast_to(x2, y.shape),
+                                              lambda y, x1, x2: onp.broadcast_to(x1, y.shape), -1.0, 1.0),
+    ('not_equal', 'not_equal', False, 'all', None, None, 0.0, 2.0),
+    ('pow', 'power', True, 'floating-point', lambda y, x1, x2: onp.power(x1, x2 - 1.0) * x2,
+                                             lambda y, x1, x2: onp.power(x1, x2) * onp.log(x1), 1.0, 3.0),
+    ('subtract', 'subtract', True, 'numeric', lambda y, x1, x2: onp.ones(y.shape),
+                                              lambda y, x1, x2: -onp.ones(y.shape), -1.0, 1.0),
+])
+@pytest.mark.parametrize('lshape,rshape', [
+    ((3, 2), (3, 2)),
+    ((3, 2), (3, 1)),
+    ((3, 1), (3, 0)),
+    ((0, 2), (1, 2)),
+    ((2, 3, 4), (3, 1)),
+    ((2, 3), ()),
+    ((), (2, 3))
+])
+def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref_grad_b, low, high, lshape, rshape):
+    class TestStandardBinary(HybridBlock):
+        def __init__(self, func):
+            super(TestStandardBinary, self).__init__()
+            self._func = func
+
+        def forward(self, a, b,):
+            return getattr(np, self._func)(a, b)
+
+    type_mapping = {
+        'floating-point': np.floating_dtypes,
+        'numeric': np.numeric_dtypes,
+        'integer or boolean': np.integer_dtypes + np.boolean_dtypes,
+        'boolean': np.boolean_dtypes,
+        'all': np.numeric_dtypes + np.boolean_dtypes,
+    }
+
+    def array_values(low, high, shape):
+        for d in np.integer_dtypes + np.boolean_dtypes + np.floating_dtypes:
+            yield onp.random.uniform(low, high, shape).astype(d), d
+
+
+    for (left_value, ltype) in array_values(low, high, lshape):
+        for (right_value, rtype) in array_values(low, high, rshape):
+            if ltype in type_mapping[dtypes] and rtype in type_mapping[dtypes]:
+                try:
+                    promote_type = np.result_type(ltype, rtype)
+                except Exception as e:
+                    # Unkown type promotion between two types
+                    continue
+                rtol = 1e-2 if ltype == np.float16 or rtype == np.float16 else 1e-3
+                atol = 1e-4 if ltype == np.float16 or rtype == np.float16 else 1e-5
+                mx_left_value = np.array(left_value, dtype=ltype)
+                mx_right_value = np.array(right_value, dtype=rtype)
+                mx_func = TestStandardBinary(func)
+                np_func = getattr(onp, func2)
+                for hybridize in [True, False]:
+                    if hybridize:
+                        mx_func.hybridize()
+                    if ref_grad_a:
+                        mx_left_value.attach_grad()
+                        mx_right_value.attach_grad()
+                    np_out = np_func(left_value, right_value)
+                    with mx.autograd.record():
+                        y = mx_func(mx_left_value, mx_right_value)
+                    assert y.shape == np_out.shape
+                    assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
+                                        use_broadcast=False, equal_nan=True)
+
+                    if ref_grad_a and ltype in np.floating_dtypes and rtype in np.floating_dtypes:
+                        y.backward()
+                        assert_almost_equal(mx_left_value.grad.asnumpy(),
+                                            collapse_sum_like(ref_grad_a(y.asnumpy(), left_value, right_value), mx_left_value.shape),
+                                            rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                        if ref_grad_b is None:
+                            assert_almost_equal(mx_right_value.grad.asnumpy(),
+                                                collapse_sum_like(ref_grad_a(y.asnumpy(), right_value, left_value), mx_right_value.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                        else:
+                            assert_almost_equal(mx_right_value.grad.asnumpy(),
+                                                collapse_sum_like(ref_grad_b(y.asnumpy(), left_value, right_value), mx_right_value.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+
+                np_out = getattr(onp, func2)(left_value, right_value)
+                mx_out = getattr(np, func)(mx_left_value, mx_right_value)
+                assert mx_out.shape == np_out.shape
+                if promoted:
+                    assert np.result_type(ltype, rtype) == mx_out.dtype
+                else:
+                    assert mx_out.dtype == np.bool_
+                assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
+                                    use_broadcast=False, equal_nan=True)
+

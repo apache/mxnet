@@ -1272,9 +1272,9 @@ struct FTMLKernel {
                                   const DType clip_grad,
                                   const OpReqType req) {
     using namespace mshadow_op;
-    const DType grad_i = clip_grad >= 0.0f
-                             ? clip::Map(rescale_grad * grad[i], clip_grad) + wd * weight[i]
-                             : (rescale_grad * grad[i] + wd * weight[i]);
+    const DType grad_i = clip_grad >= 0.0f ?
+                             clip::Map(rescale_grad * grad[i], clip_grad) + wd * weight[i] :
+                             (rescale_grad * grad[i] + wd * weight[i]);
     v[i]               = beta2 * v[i] + (1 - beta2) * square::Map(grad_i);
     const DType d_t    = (1 - power::Map(beta1, t)) / lr *
                       (square_root::Map(v[i] / (1 - power::Map(beta2, t))) + epsilon);

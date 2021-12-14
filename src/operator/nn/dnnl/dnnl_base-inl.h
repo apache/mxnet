@@ -197,6 +197,7 @@ bool SupportDNNLTranspose(const NDArray& data);
 bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs);
 bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
+bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
@@ -225,7 +226,7 @@ static inline dnnl::memory::data_type get_dnnl_type(int dtype) {
     case mshadow::kUint8:
       return dnnl::memory::data_type::u8;
     default:
-      LOG(FATAL) << "unknown type for DNNL :" << static_cast<int>(dtype);
+      LOG(FATAL) << "unknown type for oneDNN :" << static_cast<int>(dtype);
       return dnnl::memory::data_type::undef;
   }
 }
@@ -258,7 +259,7 @@ static inline int get_mxnet_type(dnnl_data_type_t dtype) {
     case dnnl::memory::data_type::u8:
       return mshadow::kUint8;
     default:
-      LOG(FATAL) << "unknown DNNL type";
+      LOG(FATAL) << "unknown oneDNN data type";
       return mshadow::kFloat32;
   }
 }
@@ -321,7 +322,7 @@ inline static dnnl::memory::desc GetWeightDesc(const NDArray& arr,
   } else {
     const auto ndim = arr.shape().ndim();
     CHECK((ndim == 3) || (ndim == 4) || (ndim == 5))
-        << "DNNL weight currently supports 3d or 4d or 5d layout";
+        << "oneDNN weight currently supports 3d or 4d or 5d layout";
     auto tz = dnnl::memory::dims{0};
     int N = 0, C = 1, H = 2, W = 3;
     int D = -1;
@@ -607,9 +608,9 @@ class DNNLMemory {
       dnnl::memory::data_type data_type = dnnl::memory::data_type::undef) const {
     dnnl::memory::dims dims(desc.data.dims, desc.data.dims + desc.data.ndims);
     dnnl::memory::data_type cpp_type =
-        (data_type == dnnl::memory::data_type::undef)
-            ? static_cast<dnnl::memory::data_type>(desc.data.data_type)
-            : data_type;
+        (data_type == dnnl::memory::data_type::undef) ?
+            static_cast<dnnl::memory::data_type>(desc.data.data_type) :
+            data_type;
     dnnl::memory::desc data_md(dims, cpp_type, static_cast<dnnl::memory::format_tag>(format));
     return data_md;
   }

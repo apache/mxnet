@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npx.embedding")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_embedding");
-      op::EmbeddingParam param;
+      op::EmbeddingParam param = {};
       // inputs
       int num_inputs = 2;
       std::vector<NDArray*> inputs;

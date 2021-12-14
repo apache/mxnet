@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npx.arange_like")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_arange_like");
-      op::RangeLikeParam param;
+      op::RangeLikeParam param = {};
       // inputs
       int num_inputs    = 1;
       NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};

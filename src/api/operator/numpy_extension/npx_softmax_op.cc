@@ -33,8 +33,8 @@ MXNET_REGISTER_API("_npx.softmax")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       static const nnvm::Op* op = Op::Get("_npx_softmax");
-      op::SoftmaxParam param;
-      int args_size = args.size();
+      op::SoftmaxParam param    = {};
+      int args_size             = args.size();
       // inputs
       int num_inputs = args_size - 4;
       std::vector<NDArray*> inputs;
@@ -87,7 +87,7 @@ MXNET_REGISTER_API("_npx.log_softmax")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       static const nnvm::Op* op = Op::Get("_npx_log_softmax");
-      op::SoftmaxParam param;
+      op::SoftmaxParam param    = {};
 
       int args_size = args.size();
       // inputs
@@ -141,8 +141,8 @@ MXNET_REGISTER_API("_npx.masked_softmax")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       nnvm::NodeAttrs attrs;
-      static const nnvm::Op* op = Op::Get("_npx_masked_softmax");
-      op::MaskedSoftmaxParam param;
+      static const nnvm::Op* op    = Op::Get("_npx_masked_softmax");
+      op::MaskedSoftmaxParam param = {};
 
       // inputs
       int num_inputs = 2;
@@ -185,8 +185,8 @@ MXNET_REGISTER_API("_npx.masked_log_softmax")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       nnvm::NodeAttrs attrs;
-      static const nnvm::Op* op = Op::Get("_npx_masked_log_softmax");
-      op::MaskedSoftmaxParam param;
+      static const nnvm::Op* op    = Op::Get("_npx_masked_log_softmax");
+      op::MaskedSoftmaxParam param = {};
 
       // inputs
       int num_inputs = 2;

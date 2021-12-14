@@ -700,10 +700,13 @@ inline int ilog2(unsigned int a) {
 }  // namespace
 
 /*
- * \brief finds the lower and upper-bound positions of each unique element within a sorted input
- * array \param sorted_data input elements previously sorted \param bounds output containing all
- * lower-bound followed by all upper-bound positions \param data_dim total number of elements in the
- * input array \param vocab_dim maximum number of unique elements
+ * \brief finds the lower and upper-bound positions of each unique element within
+ * a sorted input array
+ *
+ * \param sorted_data input elements previously sorted
+ * \param bounds output containing all lower-bound followed by all upper-bound positions
+ * \param data_dim total number of elements in the input array
+ * \param vocab_dim maximum number of unique elements
  */
 template <typename IType>
 __global__ void EmbeddingFindBounds(const IType* sorted_data,

@@ -48,7 +48,7 @@ struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  bool enable_float_output;               // min float value calculated from calibration dataset
+  bool enable_float_output;
   DMLC_DECLARE_PARAMETER(DNNLDotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
         .describe("If true then transpose the first input before dot.")

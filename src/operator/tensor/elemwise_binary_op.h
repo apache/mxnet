@@ -462,6 +462,31 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template <typename xpu, typename OP>
+  static void ComputeIntWithBool(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
+    using namespace mxnet_op;
+    if (req[0] == kNullOp)
+      return;
+    Stream<xpu>* s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
+        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size()) +
+                             DataType<DType>::kLanes - 1) /
+                            DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+              s, size, outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+        }
+      });
+    });
+  }
+
+  template <typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
@@ -477,7 +502,7 @@ class ElemwiseBinaryOp : public OpBase {
       LOG(FATAL) << "Operator " << attrs.op->name << " does not support boolean type";
     }
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
         const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size()) +
                              DataType<DType>::kLanes - 1) /
                             DataType<DType>::kLanes;
@@ -788,6 +813,7 @@ class ElemwiseBinaryOp : public OpBase {
                                        })                                                         \
       .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)                           \
       .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)                               \
+      .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", ElemwiseChangeLayout)                 \
       .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                           \
                                       [](const NodeAttrs& attrs) {                                \
                                         return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}}; \

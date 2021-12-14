@@ -24,6 +24,7 @@
  */
 #include "../elemwise_op_common.h"
 #include "./pooling-inl.h"
+#include "../../common/alm.h"
 #if MXNET_USE_ONEDNN == 1
 #include "./dnnl/dnnl_base-inl.h"
 #include "./dnnl/dnnl_pooling-inl.h"
@@ -157,8 +158,8 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
     CHECK(layout == mshadow::kNCW || layout == mshadow::kNWC) << "Need 1D layout";
     // Perform shape calculations in a standard (NCW) layout space
     mshadow::Shape<3> dshape_ncw =
-        (layout == mshadow::kNWC) ? ConvertLayout(dshape.get<3>(), mshadow::kNWC, mshadow::kNCW)
-                                  : dshape.get<3>();
+        (layout == mshadow::kNWC) ? ConvertLayout(dshape.get<3>(), mshadow::kNWC, mshadow::kNCW) :
+                                    dshape.get<3>();
     mshadow::Shape<3> oshape_ncw = dshape_ncw;
     CHECK(param.kernel[0] <= dshape_ncw[2] + 2 * param.pad[0])
         << "kernel size (" << param.kernel[0] << ") exceeds input (" << dshape[2] << " padded to "
@@ -175,9 +176,9 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
           std::ceil(static_cast<float>(dshape_ncw[2] + 2 * param.pad[0]) / param.stride[0]));
     }
     // Convert back from standard (NCW) layout space to the actual layout type
-    mxnet::TShape oshape = (layout == mshadow::kNWC)
-                               ? ConvertLayout(oshape_ncw, mshadow::kNCW, mshadow::kNWC)
-                               : oshape_ncw;
+    mxnet::TShape oshape = (layout == mshadow::kNWC) ?
+                               ConvertLayout(oshape_ncw, mshadow::kNCW, mshadow::kNWC) :
+                               oshape_ncw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_ONEDNN == 1
@@ -189,8 +190,9 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
     CHECK(layout == mshadow::kNCHW || layout == mshadow::kNHWC) << "Need 2D layout";
     // Perform shape calculations in a standard (NCHW) layout space
     mshadow::Shape<4> dshape_nchw =
-        (layout == mshadow::kNHWC) ? ConvertLayout(dshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW)
-                                   : dshape.get<4>();
+        (layout == mshadow::kNHWC) ?
+            ConvertLayout(dshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW) :
+            dshape.get<4>();
     mshadow::Shape<4> oshape_nchw = dshape_nchw;
     CHECK(param.kernel[0] <= dshape_nchw[2] + 2 * param.pad[0])
         << "kernel size (" << param.kernel[0] << ") exceeds input (" << dshape_nchw[2]
@@ -212,9 +214,9 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
                        param.stride[1]));
     }
     // Convert back from standard (NCHW) layout space to the actual layout type
-    mxnet::TShape oshape = (layout == mshadow::kNHWC)
-                               ? ConvertLayout(oshape_nchw, mshadow::kNCHW, mshadow::kNHWC)
-                               : oshape_nchw;
+    mxnet::TShape oshape = (layout == mshadow::kNHWC) ?
+                               ConvertLayout(oshape_nchw, mshadow::kNCHW, mshadow::kNHWC) :
+                               oshape_nchw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_ONEDNN == 1
@@ -226,9 +228,9 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
     CHECK(layout == mshadow::kNCDHW || layout == mshadow::kNDHWC) << "Need 3D layout";
     // Perform shape calculations in a standard (NCDHW) layout space
     mshadow::Shape<5> dshape_ncdhw =
-        (layout == mshadow::kNDHWC)
-            ? ConvertLayout(dshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW)
-            : dshape.get<5>();
+        (layout == mshadow::kNDHWC) ?
+            ConvertLayout(dshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW) :
+            dshape.get<5>();
     mshadow::Shape<5> oshape_ncdhw = dshape_ncdhw;
     CHECK_LE(param.kernel[0], dshape_ncdhw[2] + 2 * param.pad[0]) << "kernel size exceeds input";
     CHECK_LE(param.kernel[1], dshape_ncdhw[3] + 2 * param.pad[1]) << "kernel size exceeds input";
@@ -255,9 +257,9 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
                        param.stride[2]));
     }
     // Convert back from standard (NCDHW) layout space to the actual layout type
-    mxnet::TShape oshape = (layout == mshadow::kNDHWC)
-                               ? ConvertLayout(oshape_ncdhw, mshadow::kNCDHW, mshadow::kNDHWC)
-                               : oshape_ncdhw;
+    mxnet::TShape oshape = (layout == mshadow::kNDHWC) ?
+                               ConvertLayout(oshape_ncdhw, mshadow::kNCDHW, mshadow::kNDHWC) :
+                               oshape_ncdhw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_ONEDNN == 1
@@ -266,6 +268,22 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
 #endif
   }
 
+  return true;
+}
+
+static bool PoolChangeLayout(nnvm::NodeAttrs* attrs,
+                             mshadow::LayoutFlag targetLayout,
+                             std::vector<alm::Transpose>* inpTransposes,
+                             std::vector<alm::Transpose>* outTransposes) {
+  CHECK_EQ(targetLayout, mshadow::kUNKNOWN);
+  const auto& param = nnvm::get<PoolingParam>(attrs->parsed);
+  CHECK(param.layout) << "Current layout of pooling should be known: " << attrs->name;
+  auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
+  auto t      = alm::FactorCommonTranspose(inpTransposes);
+  if (alm::IsIdentity(t))
+    return false;
+  outTransposes->assign(1, t);
+  attrs->dict["layout"] = mshadow::toString(alm::ApplyTranspose(layout, alm::Reverse(t)));
   return true;
 }
 
@@ -290,7 +308,7 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
       workspace = &outputs[1];
     }
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
-    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
+    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, false);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -442,6 +460,7 @@ For each window ``X``, the mathematical expression for Lp pooling is:
 #endif
     .set_attr<nnvm::FInferType>("FInferType", PoolingType)
     .set_attr<mxnet::FInferShape>("FInferShape", PoolingShape)
+    .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", PoolChangeLayout)
     .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsDNNL", true)

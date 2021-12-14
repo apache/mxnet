@@ -133,7 +133,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
 
   const_cast<NDArray&>(out).Init(s);
   // do the copy
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(data.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(data.dtype(), DType, {
     size_t input_size            = data.shape().Size();
     size_t col_size              = input_size / idx_size;
     mshadow::Stream<cpu>* stream = ctx.get_stream<cpu>();

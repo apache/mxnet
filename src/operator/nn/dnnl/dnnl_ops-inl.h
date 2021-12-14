@@ -180,6 +180,12 @@ void DNNLLayerNormBackward(const nnvm::NodeAttrs& attrs,
 
 void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
 
+void DNNLStackForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& in_data,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& out_data);
+
 template <class ParamType>
 void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,

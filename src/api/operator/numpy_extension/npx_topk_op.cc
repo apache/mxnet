@@ -49,7 +49,7 @@ MXNET_REGISTER_API("_npx.topk").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npx_topk");
-  op::TopKParam param;
+  op::TopKParam param = {};
   // inputs
   int num_inputs    = 1;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};

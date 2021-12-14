@@ -445,8 +445,8 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
     // dns -> dns
     DispatchMode mode = DispatchMode::kFCompute;
 #if MXNET_USE_ONEDNN == 1
-    // If we use DNNL and the arrays are in CPU memory, the array may store
-    // DNNL layout, we should convert its layout explicitly.
+    // If we use oneDNN and the arrays are in CPU memory, the array may store
+    // oneDNN layout, we should convert its layout explicitly.
     if (dev_mask == kCPU)
       mode = DispatchMode::kFComputeEx;
 #endif

@@ -379,9 +379,9 @@ Graph MXPlanMemory(Graph ret) {
   size_t min_allocated_bytes = -1;
   size_t max_match_range     = dmlc::GetEnv("NNVM_EXEC_MATCH_RANGE", 16);
   size_t min_match_range =
-      dmlc::GetEnv("MXNET_MEMORY_OPT", 0) || dmlc::GetEnv("NNVM_AUTO_SEARCH_MATCH_RANGE", false)
-          ? 1
-          : max_match_range;
+      dmlc::GetEnv("MXNET_MEMORY_OPT", 0) || dmlc::GetEnv("NNVM_AUTO_SEARCH_MATCH_RANGE", false) ?
+          1 :
+          max_match_range;
   for (size_t match_range = min_match_range; match_range <= max_match_range; match_range *= 2) {
     // Make a copy of related fields
     StorageVector storage_vec(storage);

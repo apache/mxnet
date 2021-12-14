@@ -281,8 +281,8 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
   char* is_delete_ptr = nullptr;
   MSHADOW_TYPE_SWITCH(
       ((inputs.size() == 2U) ?  // obj is tensor
-           inputs[delete_::kObj].dtype()
-                             : mshadow::DataType<int64_t>::kFlag),
+           inputs[delete_::kObj].dtype() :
+           mshadow::DataType<int64_t>::kFlag),
       IType,
       {
         size_t temp_mem_size = sizeof(int64_t) * arr.shape()[axis] + sizeof(IType) * numtodel +
@@ -342,8 +342,8 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
   }
 
   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
-                           inputs[delete_::kObj].dtype()
-                                             : mshadow::DataType<int64_t>::kFlag),
+                           inputs[delete_::kObj].dtype() :
+                           mshadow::DataType<int64_t>::kFlag),
                       IType,
                       {
                         MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {

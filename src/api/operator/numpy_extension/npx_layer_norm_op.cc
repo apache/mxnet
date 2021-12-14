@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npx.layer_norm")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_layer_norm");
-      op::LayerNormParam param;
+      op::LayerNormParam param = {};
       // inputs
       int num_inputs = 3;
       std::vector<NDArray*> inputs;

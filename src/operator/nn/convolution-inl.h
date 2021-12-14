@@ -100,6 +100,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
         .add_enum("NCW", mshadow::kNCW)
         .add_enum("NCHW", mshadow::kNCHW)
         .add_enum("NCDHW", mshadow::kNCDHW)
+        .add_enum("NWC", mshadow::kNWC)
         .add_enum("NHWC", mshadow::kNHWC)
         .add_enum("NDHWC", mshadow::kNDHWC)
         .set_default(dmlc::optional<int>())

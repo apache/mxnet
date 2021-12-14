@@ -85,7 +85,7 @@ Performance
 
    .. card::
       :title: oneDNN
-      :link: performance/backend/mkldnn/index.html
+      :link: performance/backend/dnnl/index.html
 
       How to get the most from your CPU by using oneDNN.
 

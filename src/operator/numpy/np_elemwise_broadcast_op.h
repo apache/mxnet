@@ -116,7 +116,7 @@ void MixedIntRealBinaryElemwiseCompute(const OpContext& ctx,
     if (size == 0)
       return;
 
-    MXNET_INT_TYPE_SWITCH(rhs.type_flag_, IType, {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
         Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
             s, size, out.dptr<FType>(), rhs.dptr<IType>(), lhs.dptr<FType>());
@@ -125,7 +125,88 @@ void MixedIntRealBinaryElemwiseCompute(const OpContext& ctx,
   });
 }
 
-template <typename xpu, typename LOP, typename ROP>
+template <typename xpu, typename OP>
+void MixedIntBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
+                                   const OpContext& ctx,
+                                   const TBlob& lhs,
+                                   const TBlob& rhs,
+                                   const TBlob& out,
+                                   const OpReqType req) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  TBlob temp_tblob;
+  if (lhs.type_flag_ == out.type_flag_) {
+    MXNET_INT_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+      MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, DType, {
+        const size_t size = (ElemwiseBinaryOp::minthree(out.Size(), lhs.Size(), temp_tblob.Size()) +
+                             DataType<DType>::kLanes - 1) /
+                            DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+              s, size, out.dptr<DType>(), lhs.dptr<DType>(), temp_tblob.dptr<DType>());
+        }
+      });
+    });
+  } else if (rhs.type_flag_ == out.type_flag_) {
+    MXNET_INT_TYPE_SWITCH_EXT(rhs.type_flag_, RType, {
+      Tensor<xpu, 1, RType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+      MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, DType, {
+        const size_t size = (ElemwiseBinaryOp::minthree(out.Size(), temp_tblob.Size(), rhs.Size()) +
+                             DataType<DType>::kLanes - 1) /
+                            DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+              s, size, out.dptr<DType>(), temp_tblob.dptr<DType>(), rhs.dptr<DType>());
+        }
+      });
+    });
+  } else {
+    TBlob temp_tblob_l;
+    TBlob temp_tblob_r;
+    MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, OType, {
+      Tensor<xpu, 1, OType> workspace =
+          ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
+      TBlob temp_tblob = TBlob(workspace);
+      temp_tblob_l     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_),
+                           lhs.shape_,
+                           temp_tblob.dev_mask(),
+                           temp_tblob.dev_id());
+      temp_tblob_r     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_) + lhs.Size() + 1,
+                           rhs.shape_,
+                           temp_tblob.dev_mask(),
+                           temp_tblob.dev_id());
+    });
+    CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob_l});
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob_r});
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+      MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, DType, {
+        const size_t size =
+            (ElemwiseBinaryOp::minthree(out.Size(), temp_tblob_l.Size(), temp_tblob_r.Size()) +
+             DataType<DType>::kLanes - 1) /
+            DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+              s, size, out.dptr<DType>(), temp_tblob_l.dptr<DType>(), temp_tblob_r.dptr<DType>());
+        }
+      });
+    });
+  }
+}
+
+template <typename xpu, typename OP, typename LOP, typename ROP>
 void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<TBlob>& inputs,
@@ -152,7 +233,7 @@ void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
       MixedIntRealBinaryElemwiseCompute<xpu, LOP>(ctx, rhs, lhs, out, req[0]);
     }
   } else {
-    PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
+    MixedIntBinaryElemwiseCompute<xpu, OP>(attrs, ctx, lhs, rhs, out, req[0]);
   }
 }
 
@@ -250,7 +331,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   int ndim = BinaryBroadcastShapeCompact(
       lhs.shape_, rhs.shape_, out.shape_, &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {
-    MixedBinaryElemwiseCompute<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+    MixedBinaryElemwiseCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
     if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
@@ -270,7 +351,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
         if (lhs.type_flag_ == out.type_flag_) {
           MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, LType, {
-            MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
+            MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
               mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, ROP>,
                                xpu>::template LaunchEx(s,
                                                        new_oshape.Size(),
@@ -285,7 +366,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
           });
         } else {
           MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, RType, {
-            MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
+            MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
               mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, LOP>,
                                xpu>::template LaunchEx(s,
                                                        new_oshape.Size(),
@@ -303,7 +384,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     } else if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
       TBlob temp_tblob;
       if (lhs.type_flag_ == out.type_flag_) {
-        MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
+        MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
           Tensor<xpu, 1, LType> temp_tensor =
               ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
           temp_tblob = TBlob(temp_tensor);
@@ -311,8 +392,8 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
         BinaryBroadcastCompute<xpu, OP>(
             attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
-      } else {
-        MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
+      } else if (rhs.type_flag_ == out.type_flag_) {
+        MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
           Tensor<xpu, 1, RType> temp_tensor =
               ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
           temp_tblob = TBlob(temp_tensor);
@@ -320,6 +401,25 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
         BinaryBroadcastCompute<xpu, OP>(
             attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
+      } else {
+        TBlob temp_tblob_l;
+        TBlob temp_tblob_r;
+        MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(out.type_flag_, OType, {
+          Tensor<xpu, 1, OType> workspace =
+              ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
+          TBlob temp_tblob = TBlob(workspace);
+          temp_tblob_l     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_),
+                               lhs.shape_,
+                               temp_tblob.dev_mask(),
+                               temp_tblob.dev_id());
+          temp_tblob_r     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_) + lhs.Size() + 1,
+                               rhs.shape_,
+                               temp_tblob.dev_mask(),
+                               temp_tblob.dev_id());
+        });
+        CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob_l});
+        CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob_r});
+        BinaryBroadcastCompute<xpu, OP>(attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
       }
     } else {
       PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
@@ -379,7 +479,7 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     Stream<xpu>* s = ctx.get_stream<xpu>();
     TBlob temp_tblob;
     if (lhs.type_flag_ == out.type_flag_) {
-      MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
         Tensor<xpu, 1, LType> temp_tensor =
             ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
         temp_tblob = TBlob(temp_tensor);
@@ -387,8 +487,8 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
       CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
       BinaryBroadcastCompute<xpu, OP>(
           attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
-    } else {
-      MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
+    } else if (rhs.type_flag_ == out.type_flag_) {
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
         Tensor<xpu, 1, RType> temp_tensor =
             ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
         temp_tblob = TBlob(temp_tensor);
@@ -396,10 +496,228 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
       CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
       BinaryBroadcastCompute<xpu, OP>(
           attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
+    } else {
+      TBlob temp_tblob_l;
+      TBlob temp_tblob_r;
+      MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(out.type_flag_, OType, {
+        Tensor<xpu, 1, OType> workspace =
+            ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
+        TBlob temp_tblob = TBlob(workspace);
+        temp_tblob_l     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_),
+                             lhs.shape_,
+                             temp_tblob.dev_mask(),
+                             temp_tblob.dev_id());
+        temp_tblob_r     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_) + lhs.Size() + 1,
+                             rhs.shape_,
+                             temp_tblob.dev_mask(),
+                             temp_tblob.dev_id());
+      });
+      CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob_l});
+      CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob_r});
+      BinaryBroadcastCompute<xpu, OP>(attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
     }
     return;
   }
   MixedBinaryBroadcastCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+}
+
+template <typename xpu, typename OP>
+void NumpyBinaryBroadcastIntComputeWithBool(const nnvm::NodeAttrs& attrs,
+                                            const OpContext& ctx,
+                                            const std::vector<TBlob>& inputs,
+                                            const std::vector<OpReqType>& req,
+                                            const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  const TBlob& lhs = inputs[0];
+  const TBlob& rhs = inputs[1];
+  const TBlob& out = outputs[0];
+
+  if ((out.shape_.Size() == 0U) || (req[0] == kNullOp))
+    return;
+
+  if (lhs.type_flag_ == rhs.type_flag_) {
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  TBlob temp_tblob;
+  if (lhs.type_flag_ == out.type_flag_) {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(
+        attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
+  } else if (rhs.type_flag_ == out.type_flag_) {
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(rhs.type_flag_, RType, {
+      Tensor<xpu, 1, RType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(
+        attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
+  } else {
+    TBlob temp_tblob_l;
+    TBlob temp_tblob_r;
+    MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(out.type_flag_, OType, {
+      Tensor<xpu, 1, OType> workspace =
+          ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
+      TBlob temp_tblob = TBlob(workspace);
+      temp_tblob_l     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_),
+                           lhs.shape_,
+                           temp_tblob.dev_mask(),
+                           temp_tblob.dev_id());
+      temp_tblob_r     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_) + lhs.Size() + 1,
+                           rhs.shape_,
+                           temp_tblob.dev_mask(),
+                           temp_tblob.dev_id());
+    });
+    CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob_l});
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob_r});
+    BinaryBroadcastIntComputeWithBool<xpu, OP>(
+        attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
+  }
+  return;
+}
+
+template <typename xpu, typename OP>
+void NumpyBinaryBroadcastIntCompute(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  const TBlob& lhs = inputs[0];
+  const TBlob& rhs = inputs[1];
+  const TBlob& out = outputs[0];
+
+  if ((out.shape_.Size() == 0U) || (req[0] == kNullOp))
+    return;
+
+  if (lhs.type_flag_ == rhs.type_flag_) {
+    BinaryBroadcastIntCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  TBlob temp_tblob;
+  if (lhs.type_flag_ == out.type_flag_) {
+    MXNET_INT_TYPE_SWITCH_EXT(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastIntCompute<xpu, OP>(
+        attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
+  } else if (rhs.type_flag_ == out.type_flag_) {
+    MXNET_INT_TYPE_SWITCH_EXT(rhs.type_flag_, RType, {
+      Tensor<xpu, 1, RType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastIntCompute<xpu, OP>(
+        attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
+  } else {
+    TBlob temp_tblob_l;
+    TBlob temp_tblob_r;
+    MXNET_INT_TYPE_SWITCH_EXT(out.type_flag_, OType, {
+      Tensor<xpu, 1, OType> workspace =
+          ctx.requested[0].get_space_typed<xpu, 1, OType>(Shape1(lhs.Size() + rhs.Size()), s);
+      TBlob temp_tblob = TBlob(workspace);
+      temp_tblob_l     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_),
+                           lhs.shape_,
+                           temp_tblob.dev_mask(),
+                           temp_tblob.dev_id());
+      temp_tblob_r     = TBlob(reinterpret_cast<OType*>(temp_tblob.dptr_) + lhs.Size() + 1,
+                           rhs.shape_,
+                           temp_tblob.dev_mask(),
+                           temp_tblob.dev_id());
+    });
+    CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob_l});
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob_r});
+    BinaryBroadcastIntCompute<xpu, OP>(attrs, ctx, {temp_tblob_l, temp_tblob_r}, req, outputs);
+  }
+  return;
+}
+
+inline bool NumpyBinaryMixedFloatingType(const nnvm::NodeAttrs& attrs,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int ltype = in_attrs->at(0);
+  const int rtype = in_attrs->at(1);
+
+  if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
+    // Only when both input types are known and not the same, we enter the mixed-precision mode
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, common::type_promotion(ltype, rtype));
+  } else {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
+  }
+  // check if it is float16, float32 or float64. If not, raise error.
+  CHECK(common::is_float(in_attrs->at(0))) << "Do not support `int` as input.\n";
+  return out_attrs->at(0) != -1;
+}
+
+template <typename xpu, typename OP>
+void NumpyBinaryMixedFloatingCompute(const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<TBlob>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  const TBlob& lhs = inputs[0];
+  const TBlob& rhs = inputs[1];
+  const TBlob& out = outputs[0];
+
+  if ((out.shape_.Size() == 0U) || (req[0] == kNullOp))
+    return;
+
+  if (lhs.type_flag_ == rhs.type_flag_) {
+    BinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  TBlob temp_tblob;
+  if (lhs.type_flag_ == out.type_flag_) {
+    MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastCompute<xpu, OP>(
+        attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
+  } else {
+    MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
+      Tensor<xpu, 1, RType> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastCompute<xpu, OP>(
+        attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
+  }
+  return;
 }
 
 template <typename xpu, typename LOP, typename ROP>
@@ -549,15 +867,15 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
       .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 inline bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
-                                   std::vector<int>* in_attrs,
-                                   std::vector<int>* out_attrs) {
+                                          std::vector<int>* in_attrs,
+                                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const int ltype = in_attrs->at(0);
   const int rtype = in_attrs->at(1);
   if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
     // Only when both input types are known and not the same, we enter the mixed-precision mode
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, common::np_binary_out_infer_type(ltype, rtype));
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, common::type_promotion(ltype, rtype));
   } else {
     return ElemwiseType<2, 1>(attrs, in_attrs, out_attrs);
   }
@@ -574,6 +892,88 @@ inline bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
                                        })                                                         \
       .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)                          \
       .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedPrecisionType)                    \
+      .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                           \
+                                      [](const NodeAttrs& attrs) {                                \
+                                        return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}}; \
+                                      })                                                          \
+      .set_attr<FResourceRequest>(                                                                \
+          "FResourceRequest",                                                                     \
+          [](const NodeAttrs& attrs) {                                                            \
+            return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};                     \
+          })                                                                                      \
+      .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")                    \
+      .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
+
+inline bool NumpyBinaryMixedIntPrecisionTypeWithBool(const nnvm::NodeAttrs& attrs,
+                                                     std::vector<int>* in_attrs,
+                                                     std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int ltype = in_attrs->at(0);
+  const int rtype = in_attrs->at(1);
+  CHECK(common::is_int(ltype) || ltype == mshadow::kBool)
+      << "1st input only supports integer types or bool types.";
+  CHECK(common::is_int(rtype) || rtype == mshadow::kBool)
+      << "2nd input only supports integer types or bool types.";
+  if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
+    // Only when both input types are known and not the same, we enter the mixed-precision mode
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, common::type_promotion(ltype, rtype));
+  } else {
+    return ElemwiseType<2, 1>(attrs, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION_WITH_BOOL(name)                     \
+  NNVM_REGISTER_OP(name)                                                                          \
+      .set_num_inputs(2)                                                                          \
+      .set_num_outputs(1)                                                                         \
+      .set_attr<nnvm::FListInputNames>("FListInputNames",                                         \
+                                       [](const NodeAttrs& attrs) {                               \
+                                         return std::vector<std::string>{"lhs", "rhs"};           \
+                                       })                                                         \
+      .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)                          \
+      .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedIntPrecisionTypeWithBool)         \
+      .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                           \
+                                      [](const NodeAttrs& attrs) {                                \
+                                        return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}}; \
+                                      })                                                          \
+      .set_attr<FResourceRequest>(                                                                \
+          "FResourceRequest",                                                                     \
+          [](const NodeAttrs& attrs) {                                                            \
+            return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};                     \
+          })                                                                                      \
+      .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")                    \
+      .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
+
+inline bool NumpyBinaryMixedIntPrecisionType(const nnvm::NodeAttrs& attrs,
+                                             std::vector<int>* in_attrs,
+                                             std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int ltype = in_attrs->at(0);
+  const int rtype = in_attrs->at(1);
+  CHECK(common::is_int(ltype)) << "1st input only supports integer types.";
+  CHECK(common::is_int(rtype)) << "2nd input only supports integer types.";
+  if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
+    // Only when both input types are known and not the same, we enter the mixed-precision mode
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, common::type_promotion(ltype, rtype));
+  } else {
+    return ElemwiseType<2, 1>(attrs, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION(name)                               \
+  NNVM_REGISTER_OP(name)                                                                          \
+      .set_num_inputs(2)                                                                          \
+      .set_num_outputs(1)                                                                         \
+      .set_attr<nnvm::FListInputNames>("FListInputNames",                                         \
+                                       [](const NodeAttrs& attrs) {                               \
+                                         return std::vector<std::string>{"lhs", "rhs"};           \
+                                       })                                                         \
+      .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)                          \
+      .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedIntPrecisionType)                 \
       .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                           \
                                       [](const NodeAttrs& attrs) {                                \
                                         return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}}; \

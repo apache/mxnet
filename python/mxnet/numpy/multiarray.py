@@ -54,7 +54,8 @@ from ..device import current_device
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
-from ..dlpack import ndarray_from_numpy, ndarray_from_dlpack
+from ..dlpack import ndarray_from_numpy, ndarray_to_dlpack_for_write, DLDeviceType,\
+                     ndarray_from_dlpack
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -446,6 +447,45 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         return sys.modules[self.__module__]
 
 
+    def __dlpack__(self, stream=None):
+        """Exports the array for consumption by from_dlpack() as a DLPack capsule.
+
+        Parameters
+        ----------
+        stream : int, optional
+            A Python integer representing a pointer to a stream (CUDA or ROCm).
+            Stream is provided by the consumer to the producer to instruct the producer
+            to ensure that operations can safely be performed on the array. The pointer must
+            be positive integer or -1. If stream is -1, the value must be used by the consumer
+            to signal "producer must not perform any synchronization". 
+
+        Returns
+        -------
+        capsule : PyCapsule
+            A DLPack capsule for the array, containing a DLPackManagedTensor.
+        """
+        if stream is not None:
+            if type(stream) is not int:
+                raise TypeError('The input stream must be int or None')
+            if self.device.device_type != "gpu":
+                raise ValueError('Stream {} is not supported in current device {}'\
+                    .format(stream, self.device.device_type))
+            if stream != -1:
+                check_call(_LIB.MXPushStreamDep(self.handle, ctypes.c_int64(stream)))
+        to_dlpack_write = ndarray_to_dlpack_for_write()
+        return to_dlpack_write(self)
+
+
+    def __dlpack_device__(self):
+        """Returns device type and device ID in DLPack format"""
+        devtype_map = {'cpu': DLDeviceType.DLCPU,
+                       'gpu': DLDeviceType.DLGPU,
+                       'cpu_pinned': DLDeviceType.DLCPUPINNED}
+        if self.device.device_type not in devtype_map:
+            raise ValueError('Unkown device type {} for DLPack'.format(self.device.device_type))
+        return (devtype_map[self.device.device_type], self.device.device_id)
+
+
     def _get_np_basic_indexing(self, key):
         """
         This function indexes ``self`` with a tuple of `slice` objects only.
@@ -584,6 +624,8 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         remaining_dims = shape[key_ndim:]
         data = _reshape_view(self, -1, *remaining_dims)
         key = _reshape_view(key, -1)
+        if data.size == 0 and key.size == 0:
+            return data
         return _reshape_view(_npi.boolean_mask(data, key), -1, *remaining_dims)
 
     def _set_np_boolean_indexing(self, key, value):
@@ -1678,7 +1720,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                       ' ndarray.to_device', DeprecationWarning)
         return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
 
-    def default_device(self, ctx):
+    def as_in_ctx(self, ctx):
         """This function has been deprecated. Please refer to ``ndarray.to_device``."""
         warnings.warn('ndarray.to_device has been renamed to'
                       ' ndarray.to_device', DeprecationWarning)
@@ -13181,7 +13223,6 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     array(-128, dtype=int8)
     """
     return _mx_nd_np.sum(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims, initial=initial, where=where)
-# pylint: enable=redefined-outer-name, too-many-arguments
 
 
 @set_module('mxnet.numpy')
@@ -13285,34 +13326,50 @@ def asarray(obj, dtype=None, device=None, copy=None):
 
     Examples
     --------
-    >>> a = np.arange(4).reshape(2,2)
-    >>> a
-    array([[0, 1],
-        [2, 3]])
-    >>> np.diagonal(a)
-    array([0, 3])
-    >>> np.diagonal(a, 1)
-    array([1])
+    >>> np.asarray([1, 2, 3])
+    array([1., 2., 3.])
 
-    >>> a = np.arange(8).reshape(2,2,2)
-    >>>a
-    array([[[0, 1],
-            [2, 3]],
-            [[4, 5],
-            [6, 7]]])
-    >>> np.diagonal(a, 0, 0, 1)
-    array([[0, 6],
-            [1, 7]])
+    >>> np.asarray([[1, 2], [3, 4]], dtype=np.int32)
+    array([[1, 2],
+           [3, 4]], dtype=int32)
+
+    >>> np.asarray([1.2], device=mx.gpu())
+    array([1.2], device=gpu(0))
     """
     if isinstance(obj, numeric_types):
         dtype = dtype_from_number(obj) if dtype is None else dtype
         obj = _np.asarray(obj, dtype=dtype)
     elif isinstance(obj, _np.ndarray):
-        dtype = obj.dtype if dtype is None else dtype
+        if is_np_default_dtype():
+            dtype = obj.dtype if dtype is None else dtype
+        else:
+            dtype = _np.float32 if dtype is None or obj.dtype is _np.float64 else dtype
     elif isinstance(obj, ndarray):
-        dtype = obj.dtype if dtype is None else dtype
-    array = _as_mx_np_array(obj, device=device, zero_copy=copy)
-    return array.astype(dtype)
+        if dtype is not None:
+            obj = obj.astype(dtype, copy=copy)
+        if device is not None:
+            obj = obj.to_device(device)
+        return obj
+    elif hasattr(obj, '__dlpack__'):
+        return from_dlpack(obj)
+    else:
+        if dtype is None:
+            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
+            dtype = obj.dtype if hasattr(obj, "dtype") else default_dtype
+        try:
+            obj = _np.array(obj, dtype=dtype)
+        except Exception as e:
+            # printing out the error raised by official NumPy's array function
+            # for transparency on users' side
+            raise TypeError('{}'.format(str(e)))
+    if device is None:
+        device = current_device()
+    ret = empty(obj.shape, dtype=dtype, device=device)
+    if len(obj.shape) == 0:
+        ret[()] = obj
+    else:
+        ret[:] = obj
+    return ret
 
 
 # pylint: disable=redefined-outer-name

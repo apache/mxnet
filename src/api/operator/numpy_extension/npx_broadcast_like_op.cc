@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npx.broadcast_like")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_broadcast_like");
-      op::BroadcastLikeParam param;
+      op::BroadcastLikeParam param = {};
       // inputs
       int num_inputs = 2;
       std::vector<NDArray*> inputs;

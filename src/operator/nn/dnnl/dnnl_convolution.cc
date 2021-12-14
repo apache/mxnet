@@ -53,8 +53,8 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
   auto weight_md = GetWeightDesc(weights, param.conv_param.num_group, param.dnnl_param.quantized);
   auto out_md    = GetMemDesc(output);
   auto bias_md =
-      bias ? (param.dnnl_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias))
-           : dnnl::memory::desc{{}, dnnl::memory::data_type::undef, dnnl::memory::format_tag::any};
+      bias ? (param.dnnl_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias)) :
+             dnnl::memory::desc{{}, dnnl::memory::data_type::undef, dnnl::memory::format_tag::any};
   auto bias_md_ptr = bias ? &bias_md : nullptr;
 
   dnnl::memory::dims strides(param.conv_param.kernel.ndim());
@@ -84,7 +84,7 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
     padding[1] = param.conv_param.pad[1];
     padding[2] = param.conv_param.pad[2];
   } else {
-    LOG(FATAL) << "Unexpected DNNL Conv kernel size " << param.conv_param.kernel.ndim()
+    LOG(FATAL) << "Unexpected oneDNN Conv kernel size " << param.conv_param.kernel.ndim()
                << ", supporting only 1 or 2 or 3.";
   }
   dnnl::primitive_attr attr;
@@ -168,7 +168,7 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
       dilates[1] = param.conv_param.dilate[1] - 1;
       dilates[2] = param.conv_param.dilate[2] - 1;
     } else {
-      LOG(FATAL) << "Unexpected DNNL Conv dilate size " << param.conv_param.dilate.ndim()
+      LOG(FATAL) << "Unexpected oneDNN Conv dilate size " << param.conv_param.dilate.ndim()
                  << ", supporting only 1 or 2 or 3.";
     }
     if (bias_md_ptr == nullptr) {
@@ -235,7 +235,7 @@ static std::shared_ptr<dnnl::convolution_backward_data::primitive_desc> GetConvB
     padding[1] = param.pad[1];
     padding[2] = param.pad[2];
   } else {
-    LOG(FATAL) << "Unexpected DNNL Conv kernel size " << param.kernel.ndim()
+    LOG(FATAL) << "Unexpected oneDNN Conv kernel size " << param.kernel.ndim()
                << ", supporting only 1 or 2 or 3.";
   }
 
@@ -278,7 +278,7 @@ static std::shared_ptr<dnnl::convolution_backward_data::primitive_desc> GetConvB
       dilates[1] = param.dilate[1] - 1;
       dilates[2] = param.dilate[2] - 1;
     } else {
-      LOG(FATAL) << "Unexpected DNNL Conv dilate size " << param.dilate.ndim()
+      LOG(FATAL) << "Unexpected oneDNN Conv dilate size " << param.dilate.ndim()
                  << ", supporting only 1 or 2 or 3.";
     }
     dnnl::convolution_backward_data::desc desc(dnnl::algorithm::convolution_direct,
@@ -331,7 +331,7 @@ static std::shared_ptr<dnnl::convolution_backward_weights::primitive_desc> GetCo
     padding[1] = param.pad[1];
     padding[2] = param.pad[2];
   } else {
-    LOG(FATAL) << "Unexpected DNNL Conv kernel size " << param.kernel.ndim()
+    LOG(FATAL) << "Unexpected oneDNN Conv kernel size " << param.kernel.ndim()
                << ", supporting only 1 or 2 or 3.";
   }
 
@@ -385,7 +385,7 @@ static std::shared_ptr<dnnl::convolution_backward_weights::primitive_desc> GetCo
       dilates[1] = param.dilate[1] - 1;
       dilates[2] = param.dilate[2] - 1;
     } else {
-      LOG(FATAL) << "Unexpected DNNL Conv dilate size " << param.dilate.ndim()
+      LOG(FATAL) << "Unexpected oneDNN Conv dilate size " << param.dilate.ndim()
                  << ", supporting only 1 or 2 or 3.";
     }
     if (bias == nullptr) {

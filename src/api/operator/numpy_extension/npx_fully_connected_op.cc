@@ -35,7 +35,7 @@ MXNET_REGISTER_API("_npx.fully_connected")
       int args_size = args.size();
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_fully_connected");
-      op::FullyConnectedParam param;
+      op::FullyConnectedParam param = {};
       // no_bias
       param.no_bias = args[args_size - 2].operator bool();
       // inputs

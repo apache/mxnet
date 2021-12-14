@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.unique")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_unique");
       nnvm::NodeAttrs attrs;
-      op::NumpyUniqueParam param;
+      op::NumpyUniqueParam param = {};
       // param
       param.return_index   = args[1].operator bool();
       param.return_inverse = args[2].operator bool();

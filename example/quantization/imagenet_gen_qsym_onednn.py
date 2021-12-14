@@ -100,7 +100,7 @@ def get_exclude_symbols(model_name, exclude_first_conv):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel oneDNN support')
+    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with oneDNN support')
     parser.add_argument('--model', type=str, default='resnet50_v1',
                         help='model to be quantized. If no-pretrained is set then'
                              'model must be provided to `model` directory in the same path'

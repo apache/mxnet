@@ -55,6 +55,7 @@
 #include "../operator/tvmop/op_module.h"
 #include "../operator/subgraph/partitioner/custom_subgraph_property.h"
 #include "../operator/subgraph/subgraph_property.h"
+#include "../common/alm.h"
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
 #include "../serialization/cnpy.h"
@@ -170,7 +171,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<size_t> in_verIDs, out_verIDs;
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
-  std::vector<NDArray> conv_mkl;  // converted NDArrays from DNNL format
+  std::vector<NDArray> conv_dnnl;  // converted NDArrays from DNNL format
 
   // Extra data for sparse inputs and outputs.
   std::vector<int> in_stypes(inputs.size(), 0), out_stypes(outputs.size(), 0);
@@ -186,8 +187,8 @@ void CustomFComputeDispatcher(const std::string op_name,
     // reorder data if in DNNL format
     if (in_nd->IsDNNLData()) {
       // convert from DNNL
-      conv_mkl.push_back(in_nd->Reorder2Default());
-      in_nd = &(conv_mkl.back());
+      conv_dnnl.push_back(in_nd->Reorder2Default());
+      in_nd = &(conv_dnnl.back());
     }
 #endif
     // pull out parts to pass over to library
@@ -2829,8 +2830,8 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle* out) {
   // TODO(tianjun) make label 1D when label_width=0
   mxnet::TShape shape = no_label ? TShape({
                                        1,
-                                   })
-                                 : db.data[1].shape();
+                                   }) :
+                                   db.data[1].shape();
   if (no_label || shape.Size() < 1) {
     // it's possible that label is not available and not required
     // but we need to bypass the invalid copy
@@ -3954,7 +3955,25 @@ int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
   API_END_HANDLE_ERROR(delete ret);
 }
 
-int MXNVTXRangePush(const char * name, mx_uint color) {
+int MXPushStreamDep(NDArrayHandle handle, int stream) {
+  API_BEGIN();
+  static_cast<NDArray*>(handle)->StreamSync(stream);
+  API_END();
+}
+
+int MXGetCurrentStream(int device_id, int* stream) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  RunContext rctx{Context::GPU(device_id), new mshadow::Stream<gpu>(), nullptr};
+  mshadow::Stream<gpu>* cur_stream = rctx.get_stream<gpu>();
+  *stream = reinterpret_cast<int64_t>(mshadow::Stream<gpu>::GetStream(cur_stream));
+#else
+  LOG(FATAL) << "GPU is not enabled.";
+#endif
+  API_END();
+}
+
+int MXNVTXRangePush(const char* name, mx_uint color) {
   API_BEGIN();
 #if MXNET_USE_CUDA && MXNET_USE_NVTX
   mxnet::common::cuda::nvtx::gpuRangeStart(color, name);
@@ -3991,5 +4010,17 @@ int MXCUDAProfilerStop() {
 #else
   LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have CUDA Profiler support.";
 #endif
+  API_END();
+}
+
+int MXSetOptimizeLayout(bool val) {
+  API_BEGIN();
+  mxnet::alm::ALMParams::get().optimize = val;
+  API_END();
+}
+
+int MXGetOptimizeLayout(bool* val) {
+  API_BEGIN();
+  *val = mxnet::alm::ALMParams::get().optimize;
   API_END();
 }

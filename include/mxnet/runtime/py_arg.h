@@ -28,10 +28,11 @@ namespace runtime {
 
 class PythonArg {
  public:
-  explicit PythonArg(int offset): offset_(offset) {}
+  explicit PythonArg(int offset) : offset_(offset) {}
   int offset() const {
     return offset_;
   }
+
  private:
   int offset_;
 };

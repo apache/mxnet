@@ -51,9 +51,9 @@ NNVM_REGISTER_OP(_npi_rayleigh)
                                        if (param.scale.has_value()) {
                                          num_inputs -= 1;
                                        }
-                                       return (num_inputs == 0)
-                                                  ? std::vector<std::string>()
-                                                  : std::vector<std::string>{"input1"};
+                                       return (num_inputs == 0) ?
+                                                  std::vector<std::string>() :
+                                                  std::vector<std::string>{"input1"};
                                      })
     .set_attr_parser(ParamParser<NumpyRayleighParam>)
     .set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyRayleighParam>)

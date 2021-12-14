@@ -21,7 +21,7 @@
  * \file test_op_runner.h
  * \brief Run a generic operator
  * \author Chris Olivier
-*/
+ */
 #ifndef TEST_OP_RUNNER_H_
 #define TEST_OP_RUNNER_H_
 
@@ -39,10 +39,10 @@ namespace test {
  * \tparam OperatorExecutor Data container for forward and backward passes for some given
  *         data types
  */
-template<typename OperatorProp, typename OperatorExecutor>
+template <typename OperatorProp, typename OperatorExecutor>
 class OperatorRunner {
  public:
-  typedef typename OperatorExecutor::DataType    DType;
+  typedef typename OperatorExecutor::DataType DType;
 
   OperatorRunner() {
 #ifdef NDEBUG
@@ -61,21 +61,20 @@ class OperatorRunner {
    * \param count Number of times to run in each direction
    * \return OpInfo object for further opereator analysis
    */
-  test::op::OpInfo<OperatorProp, OperatorExecutor>
-  RunGenericOperatorForward(
-    bool isGPU,
-    const mxnet::ShapeVector& inputShapes,
-    const std::vector<std::pair<std::string, std::string> > &kwargs,
-    const size_t count = 1) {
+  test::op::OpInfo<OperatorProp, OperatorExecutor> RunGenericOperatorForward(
+      bool isGPU,
+      const mxnet::ShapeVector& inputShapes,
+      const std::vector<std::pair<std::string, std::string> >& kwargs,
+      const size_t count = 1) {
 #if MXNET_USE_CUDA
     if (isGPU && !test::unitTestsWithCuda) {
       LOG(INFO) << "GPU not found, running test as non-GPU";
     }
 #else
-    isGPU = false;
+    isGPU             = false;
 #endif
     test::op::OpInfo<OperatorProp, OperatorExecutor> info =
-      test::op::createOpAndInfoF<OperatorProp, OperatorExecutor>(kwargs, isGPU, inputShapes);
+        test::op::createOpAndInfoF<OperatorProp, OperatorExecutor>(kwargs, isGPU, inputShapes);
     info.executor_->initForward(*info.prop_, &info.in_type_);
     info.executor_->forward(count);
     return info;
@@ -88,8 +87,8 @@ class OperatorRunner {
    * \return OpInfo object for further opereator analysis
    */
   test::op::OpInfo<OperatorProp, OperatorExecutor> RunGenericOperatorBackward(
-    test::op::OpInfo<OperatorProp, OperatorExecutor> *info,
-    const size_t count = 1) {
+      test::op::OpInfo<OperatorProp, OperatorExecutor>* info,
+      const size_t count = 1) {
     CHECK(info->executor_->HasBackward());
     info->executor_->initBackward(*info->prop_, &info->in_type_);
     info->executor_->backward(count);
@@ -106,12 +105,12 @@ class OperatorRunner {
    * \return
    */
   test::op::OpInfo<OperatorProp, OperatorExecutor> RunBidirectional(
-    bool isGPU,
-    const mxnet::ShapeVector& inputShapes,
-    const std::vector<std::pair<std::string, std::string> > &kwargs,
-    const size_t count = 1) {
+      bool isGPU,
+      const mxnet::ShapeVector& inputShapes,
+      const std::vector<std::pair<std::string, std::string> >& kwargs,
+      const size_t count = 1) {
     test::op::OpInfo<OperatorProp, OperatorExecutor> info =
-      RunGenericOperatorForward(isGPU, inputShapes, kwargs, count);
+        RunGenericOperatorForward(isGPU, inputShapes, kwargs, count);
     if (info.executor_->HasBackward()) {
       return RunGenericOperatorBackward(&info, count);
     }
@@ -130,18 +129,18 @@ class OperatorRunner {
    * \param dim Data dimensions
    * \param count Number of times to run in each direction
    */
-  std::unordered_map<int, perf::TimingInstrument::Info>
-  TimingTest(const std::string& label,
-             const bool isGPU,
-             const bool stochastic,
-             const test::op::kwargs_t& kwargs,
-             int dim = 0,
-             size_t count = 1,
-             const mxnet::ShapeVector& timing_shapes = {},
-             bool backward = true) {
+  std::unordered_map<int, perf::TimingInstrument::Info> TimingTest(
+      const std::string& label,
+      const bool isGPU,
+      const bool stochastic,
+      const test::op::kwargs_t& kwargs,
+      int dim                                 = 0,
+      size_t count                            = 1,
+      const mxnet::ShapeVector& timing_shapes = {},
+      bool backward                           = true) {
     if (mxnet::test::quick_test) {
       total_iterations_ = 2;
-      count = 1;
+      count             = 1;
     }
 
     test::perf::TimingInstrument timing;
@@ -168,18 +167,18 @@ class OperatorRunner {
 
     for (size_t i = 0; i < total_iterations_; ++i) {
       index_t batchSize = 1;
-      index_t channels = 1;
-      index_t depth = 1;
-      index_t height = 1;
-      index_t width = 1;
+      index_t channels  = 1;
+      index_t depth     = 1;
+      index_t height    = 1;
+      index_t width     = 1;
 
       if (timing_shapes.empty()) {
         do {
           batchSize = stochastic ? test::rangedRand(1U, TEST_BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
-          channels = stochastic ? test::rangedRand(1U, TEST_CHANNELS * 2U) : TIMING_CHANNELS;
-          depth = stochastic ? test::rangedRand(1U, TEST_DEPTH * 2U) : TIMING_DEPTH;
-          height = stochastic ? test::rangedRand(1U, TEST_DH * 2U) : TIMING_DH;
-          width = stochastic ? test::rangedRand(1U, TEST_DW * 2U) : TIMING_DW;
+          channels  = stochastic ? test::rangedRand(1U, TEST_CHANNELS * 2U) : TIMING_CHANNELS;
+          depth     = stochastic ? test::rangedRand(1U, TEST_DEPTH * 2U) : TIMING_DEPTH;
+          height    = stochastic ? test::rangedRand(1U, TEST_DH * 2U) : TIMING_DH;
+          width     = stochastic ? test::rangedRand(1U, TEST_DW * 2U) : TIMING_DW;
         } while (stochastic && (height * width) == 1U);
       } else {
         dim = timing_shapes[0].ndim() - 1;
@@ -190,37 +189,31 @@ class OperatorRunner {
       test::op::OpInfo<OperatorProp, OperatorExecutor> info;
       switch (D) {
         case 0:
-          info = RunGenericOperatorForward(isGPU,
-                                           !timing_shapes.empty()
-                                           ? timing_shapes
-                                           : mxnet::ShapeVector({mxnet::TShape({batchSize,
-                                                                          channels,
-                                                                          width})}),
-                                           kwargs,
-                                           count);
+          info = RunGenericOperatorForward(
+              isGPU,
+              !timing_shapes.empty() ?
+                  timing_shapes :
+                  mxnet::ShapeVector({mxnet::TShape({batchSize, channels, width})}),
+              kwargs,
+              count);
           break;
         case 1:
-          info = RunGenericOperatorForward(isGPU,
-                                           !timing_shapes.empty()
-                                           ? timing_shapes
-                                           : mxnet::ShapeVector({ mxnet::TShape({batchSize,
-                                                                           channels,
-                                                                           height,
-                                                                           width})}),
-                                           kwargs,
-                                           count);
+          info = RunGenericOperatorForward(
+              isGPU,
+              !timing_shapes.empty() ?
+                  timing_shapes :
+                  mxnet::ShapeVector({mxnet::TShape({batchSize, channels, height, width})}),
+              kwargs,
+              count);
           break;
         case 2:
-          info = RunGenericOperatorForward(isGPU,
-                                           !timing_shapes.empty()
-                                           ? timing_shapes
-                                           : mxnet::ShapeVector({ mxnet::TShape({batchSize,
-                                                                           channels,
-                                                                           depth,
-                                                                           height,
-                                                                           width})}),
-                                           kwargs,
-                                           count);
+          info = RunGenericOperatorForward(
+              isGPU,
+              !timing_shapes.empty() ?
+                  timing_shapes :
+                  mxnet::ShapeVector({mxnet::TShape({batchSize, channels, depth, height, width})}),
+              kwargs,
+              count);
           break;
         default:
           CHECK(false) << "Unsupported dimension count: " << (D + 1);
@@ -240,22 +233,26 @@ class OperatorRunner {
     return timing.data();
   }
 
-  void set_verbose(bool verbose) { verbose_ = verbose; }
+  void set_verbose(bool verbose) {
+    verbose_ = verbose;
+  }
 
-  void set_total_iterations(size_t iterations) { total_iterations_ = iterations; }
+  void set_total_iterations(size_t iterations) {
+    total_iterations_ = iterations;
+  }
 
  protected:
   static constexpr int TEST_BATCH_SIZE = 5;
-  static constexpr int TEST_CHANNELS = 3;
-  static constexpr int TEST_DEPTH = 2;
-  static constexpr int TEST_DH = 2;
-  static constexpr int TEST_DW = 3;
+  static constexpr int TEST_CHANNELS   = 3;
+  static constexpr int TEST_DEPTH      = 2;
+  static constexpr int TEST_DH         = 2;
+  static constexpr int TEST_DW         = 3;
 
   static constexpr int TIMING_BATCH_SIZE = 128;
-  static constexpr int TIMING_CHANNELS = 3;
-  static constexpr int TIMING_DEPTH = 2;
-  static constexpr int TIMING_DH = 64;
-  static constexpr int TIMING_DW = 64;
+  static constexpr int TIMING_CHANNELS   = 3;
+  static constexpr int TIMING_DEPTH      = 2;
+  static constexpr int TIMING_DH         = 64;
+  static constexpr int TIMING_DW         = 64;
   /*! \brief verbose output */
   bool verbose_ = true;
   /*! \brief Tital iterations */

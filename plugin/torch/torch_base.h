@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file torch_base.h
  * \brief Torch interface.
  * \author Junyuan Xie
@@ -65,26 +64,26 @@ class TorchState {
   }
 #endif  // MXNET_USE_CUDA
 
-  template<typename xpu>
+  template <typename xpu>
   void SetStream(mshadow::Stream<xpu>* s);
 
   void PrintState() {
     int i;
     int top = lua_gettop(L);
     LOG(INFO) << "Stack height: " << top;
-    for (i = 1; i <= top; i++) {  /* repeat for each level */
+    for (i = 1; i <= top; i++) { /* repeat for each level */
       int t = lua_type(L, i);
       switch (t) {
-        case LUA_TSTRING:  /* strings */
+        case LUA_TSTRING: /* strings */
           LOG(INFO) << i << ": '" << lua_tostring(L, i) << "'";
           break;
-        case LUA_TBOOLEAN:  /* booleans */
+        case LUA_TBOOLEAN: /* booleans */
           LOG(INFO) << i << ": " << (lua_toboolean(L, i) ? "true" : "false");
           break;
-        case LUA_TNUMBER:  /* numbers */
+        case LUA_TNUMBER: /* numbers */
           LOG(INFO) << i << ": " << lua_tonumber(L, i);
           break;
-        default:  /* other values */
+        default: /* other values */
           LOG(INFO) << i << ": " << lua_typename(L, t);
           break;
       }
@@ -152,7 +151,7 @@ class TorchTensor {
   }
 
   static THGeneralTensor TBlobToTHTensor(TorchState* torchState, TBlob data) {
-    size_t size = data.Size();
+    size_t size            = data.Size();
     THGeneralTensor tensor = NULL;
     THLongStorage* thshape = THLongStorage_newWithSize(data.ndim());
     for (int i = 0; i < data.ndim(); ++i) {
@@ -161,8 +160,8 @@ class TorchTensor {
     CHECK_EQ(data.type_flag_, mshadow::kFloat32) << "Torch Interface only support float32";
     switch (data.dev_mask()) {
       case cpu::kDevMask: {
-        THFloatStorage* storage = THFloatStorage_newWithData(static_cast<real_t*>(data.dptr_),
-                                                             size);
+        THFloatStorage* storage =
+            THFloatStorage_newWithData(static_cast<real_t*>(data.dptr_), size);
         THFloatStorage_clearFlag(storage, TH_STORAGE_FREEMEM);
         tensor = (THGeneralTensor)THFloatTensor_newWithStorage(storage, 0, thshape, NULL);
         THFloatStorage_free(storage);
@@ -171,8 +170,8 @@ class TorchTensor {
 #if MXNET_USE_CUDA
       case gpu::kDevMask: {
         THCState* state = torchState->CudaState();
-        THCudaStorage* storage = THCudaStorage_newWithData(state, static_cast<real_t*>(data.dptr_),
-                                                           size);
+        THCudaStorage* storage =
+            THCudaStorage_newWithData(state, static_cast<real_t*>(data.dptr_), size);
         // a bug in cutorch
         THFloatStorage_clearFlag(reinterpret_cast<THFloatStorage*>(storage), TH_STORAGE_FREEMEM);
         tensor = (THGeneralTensor)THCudaTensor_newWithStorage(state, storage, 0, thshape, NULL);
@@ -197,7 +196,7 @@ class TorchTensor {
       }
 #if MXNET_USE_CUDA
       case gpu::kDevMask: {
-        THCState* state = torchState->CudaState();
+        THCState* state         = torchState->CudaState();
         THCudaStorage* original = static_cast<THCudaTensor*>(tensor)->storage;
         THCudaStorage_free(state, original);
         break;
@@ -212,10 +211,10 @@ class TorchTensor {
     size_t size = blob.Size();
     switch (blob.dev_mask()) {
       case cpu::kDevMask: {
-        THFloatStorage* storage = THFloatStorage_newWithData(static_cast<real_t*>(blob.dptr_),
-                                                             size);
+        THFloatStorage* storage =
+            THFloatStorage_newWithData(static_cast<real_t*>(blob.dptr_), size);
         THFloatStorage_clearFlag(storage, TH_STORAGE_FREEMEM);
-        THFloatStorage* original = static_cast<THFloatTensor*>(tensor)->storage;
+        THFloatStorage* original                     = static_cast<THFloatTensor*>(tensor)->storage;
         static_cast<THFloatTensor*>(tensor)->storage = storage;
         THFloatStorage_free(original);
         break;
@@ -223,12 +222,11 @@ class TorchTensor {
 #if MXNET_USE_CUDA
       case gpu::kDevMask: {
         THCState* state = torchState->CudaState();
-        THCudaStorage* storage = THCudaStorage_newWithData(state,
-                                                           static_cast<real_t*>(blob.dptr_),
-                                                           size);
+        THCudaStorage* storage =
+            THCudaStorage_newWithData(state, static_cast<real_t*>(blob.dptr_), size);
         // TODO(min): torch bug Cuda version not implemented
         THFloatStorage_clearFlag(reinterpret_cast<THFloatStorage*>(storage), TH_STORAGE_FREEMEM);
-        THCudaStorage* original = static_cast<THCudaTensor*>(tensor)->storage;
+        THCudaStorage* original                     = static_cast<THCudaTensor*>(tensor)->storage;
         static_cast<THCudaTensor*>(tensor)->storage = storage;
         THCudaStorage_free(state, original);
         break;
@@ -240,9 +238,9 @@ class TorchTensor {
   }
 
   static std::vector<THGeneralTensor> TBlobVectorAsTable(
-    TorchState* torchState,
-    const std::vector<TBlob>::const_iterator begin,
-    const std::vector<TBlob>::const_iterator end) {
+      TorchState* torchState,
+      const std::vector<TBlob>::const_iterator begin,
+      const std::vector<TBlob>::const_iterator end) {
     lua_State* L = torchState->L;
     std::vector<THGeneralTensor> res;
     int num = end - begin;
@@ -269,16 +267,16 @@ class TorchTensor {
     lua_State* L = torchState->L;
     if (luaT_isudata(L, -1, TorchTensor::TensorType(cpu::kDevMask))) {
       CHECK_EQ(dst.dev_mask(), cpu::kDevMask) << "Device type mismatch.";
-      THFloatTensor* src = static_cast<THFloatTensor*>(
-        luaT_toudata(L, -1, TorchTensor::TensorType(cpu::kDevMask)));
+      THFloatTensor* src =
+          static_cast<THFloatTensor*>(luaT_toudata(L, -1, TorchTensor::TensorType(cpu::kDevMask)));
       if (src->storage != static_cast<THFloatTensor*>(th_dst)->storage) {
         THFloatTensor_copy(static_cast<THFloatTensor*>(th_dst), src);
       }
 #if MXNET_USE_CUDA
     } else if (luaT_isudata(L, -1, TorchTensor::TensorType(gpu::kDevMask))) {
       CHECK_EQ(dst.dev_mask(), gpu::kDevMask) << "Device type mismatch.";
-      THCudaTensor* src = static_cast<THCudaTensor*>(
-        luaT_toudata(L, -1, TorchTensor::TensorType(gpu::kDevMask)));
+      THCudaTensor* src =
+          static_cast<THCudaTensor*>(luaT_toudata(L, -1, TorchTensor::TensorType(gpu::kDevMask)));
       if (src->storage != static_cast<THCudaTensor*>(th_dst)->storage) {
         THCudaTensor_copy(torchState->CudaState(), static_cast<THCudaTensor*>(th_dst), src);
       }
@@ -294,7 +292,7 @@ class TorchTensor {
                           std::vector<THGeneralTensor>::const_iterator th_begin,
                           std::vector<THGeneralTensor>::const_iterator th_end) {
     lua_State* L = torchState->L;
-    int num = end - begin;
+    int num      = end - begin;
     CHECK_EQ(th_end - th_begin, num);
     if (num == 0) {
     } else if (num == 1) {

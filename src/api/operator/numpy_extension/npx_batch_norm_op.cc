@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npx.batch_norm")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_batch_norm");
-      op::BatchNormParam param;
+      op::BatchNormParam param = {};
       // eps
       param.eps = args[5].operator double();
       // momentum

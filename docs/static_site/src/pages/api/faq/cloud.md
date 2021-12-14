@@ -54,8 +54,8 @@ on how to connect to a Jupyter notebook running on an EC2 instance.
 ### Set Up an EC2 GPU Instance from Scratch
 
 [Deep Learning Base AMIs](https://aws.amazon.com/marketplace/search/results?x=0&y=0&searchTerms=Deep+Learning+Base+AMI)
-provide a foundational image with NVIDIA CUDA, cuDNN, GPU drivers, Intel
-ONEDNN, Docker and Nvidia-Docker, etc. for deploying your own custom deep
+provide a foundational image with NVIDIA CUDA, cuDNN, GPU drivers, oneDNN,
+Docker and Nvidia-Docker, etc. for deploying your own custom deep
 learning environment. You may follow the [MXNet Build From Source
 instructions](https://mxnet.apache.org/get_started/build_from_source) easily on
 the Deep Learning Base AMIs.
