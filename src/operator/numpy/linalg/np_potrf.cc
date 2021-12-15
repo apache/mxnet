@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_potrf.cc
  * \brief CPU implementation placeholder of Cholesky Operator
  */
@@ -37,27 +36,30 @@ inline bool NumpyLaCholeskyShape(const nnvm::NodeAttrs& attrs,
                                  mxnet::ShapeVector* in_attrs,
                                  mxnet::ShapeVector* out_attrs) {
   const mxnet::TShape& in_shape = (*in_attrs)[0];
-  CHECK_GE(in_shape.ndim(), 2)
-    << "Array must be at least two-dimensional";
+  CHECK_GE(in_shape.ndim(), 2) << "Array must be at least two-dimensional";
   return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
 }
 
 // calls forward and backward implemented in la_op
 NNVM_REGISTER_OP(_npi_cholesky)
-.describe(R"code()code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LaCholeskyParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyLaCholeskyShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int>>{{0, 0}}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, potrf>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_potrf"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be decomposed")
-.add_arguments(LaCholeskyParam::__FIELDS__());
+    .describe(R"code()code" ADD_FILELINE)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LaCholeskyParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"A"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyLaCholeskyShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, potrf>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_potrf"})
+    .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be decomposed")
+    .add_arguments(LaCholeskyParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

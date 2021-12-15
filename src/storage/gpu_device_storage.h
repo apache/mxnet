@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file gpu_device_storage.h
  * \brief GPU storage implementation.
  */
@@ -39,8 +38,9 @@ class GPUDeviceStorage {
   /*!
    * \brief Allocation.
    * \param handle Handle struct.
+   * \param failsafe Return a handle with a null dptr if out of memory, rather than exit.
    */
-  inline static void Alloc(Storage::Handle* handle);
+  inline static void Alloc(Storage::Handle* handle, bool failsafe = false);
   /*!
    * \brief Deallocation.
    * \param handle Handle struct.
@@ -48,13 +48,20 @@ class GPUDeviceStorage {
   inline static void Free(Storage::Handle handle);
 };  // class GPUDeviceStorage
 
-inline void GPUDeviceStorage::Alloc(Storage::Handle* handle) {
+inline void GPUDeviceStorage::Alloc(Storage::Handle* handle, bool failsafe) {
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
-  CUDA_CALL(cudaMalloc(&handle->dptr, handle->size));
-  profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, handle->size, false);
+  cudaError_t err = cudaMalloc(&handle->dptr, handle->size);
+  if (failsafe && err == cudaErrorMemoryAllocation) {
+    // Clear sticky cuda mem alloc error
+    cudaGetLastError();
+    handle->dptr = nullptr;
+  } else {
+    CUDA_CALL(err);
+    profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, handle->size, false);
+  }
 }
 
 inline void GPUDeviceStorage::Free(Storage::Handle handle) {
@@ -62,6 +69,14 @@ inline void GPUDeviceStorage::Free(Storage::Handle handle) {
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
+#if MXNET_USE_CUDA
+  for (auto ev : handle.sync_obj.events) {
+    auto valid_ev = ev.lock();
+    if (valid_ev) {
+      MSHADOW_CUDA_CALL(cudaEventSynchronize(*valid_ev));
+    }
+  }
+#endif
   CUDA_CALL(cudaFree(handle.dptr))
   profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
 }

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file base.h
  * \brief configuration of MXNet as well as basic data structure.
  */
@@ -36,7 +35,6 @@
 #include "nnvm/symbolic.h"
 #include "libinfo.h"
 #include "tuple.h"
-
 
 /*!
  * \brief define dllexport for Visual Studio
@@ -65,7 +63,7 @@
 /*! \brief patch version */
 #define MXNET_PATCH 0
 /*! \brief mxnet version */
-#define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
+#define MXNET_VERSION (MXNET_MAJOR * 10000 + MXNET_MINOR * 100 + MXNET_PATCH)
 /*! \brief helper for making version number */
 #define MXNET_MAKE_VERSION(major, minor, patch) ((major)*10000 + (minor)*100 + patch)
 /*!
@@ -92,8 +90,8 @@ using Op = nnvm::Op;
 struct Context {
   /*! \brief Type of device */
   enum DeviceType {
-    kCPU = cpu::kDevMask,
-    kGPU = gpu::kDevMask,
+    kCPU       = cpu::kDevMask,
+    kGPU       = gpu::kDevMask,
     kCPUPinned = 3,
     kCPUShared = 5,
   };
@@ -108,14 +106,16 @@ struct Context {
    * \return cpu::kDevMask or gpu::kDevMask
    */
   inline DeviceType dev_mask() const {
-    if (dev_type == kCPUPinned || dev_type == kCPUShared) return kCPU;
+    if (dev_type == kCPUPinned || dev_type == kCPUShared)
+      return kCPU;
     return dev_type;
   }
   /*!
    * \brief Returns dev_id for kGPU and kCPUPinned, 0 otherwise
    */
   inline int real_dev_id() const {
-    if (dev_type == kCPUPinned || dev_type == kGPU) return dev_id;
+    if (dev_type == kCPUPinned || dev_type == kGPU)
+      return dev_id;
     return 0;
   }
   /*!
@@ -123,13 +123,13 @@ struct Context {
    * \param b another context to compare
    * \return compared result
    */
-  inline bool operator<(const Context &b) const;
+  inline bool operator<(const Context& b) const;
   /*!
    * \brief check if current context equals another one
    * \param b another context to compare
    * \return whether dev mask and id are same
    */
-  inline bool operator==(const Context &b) const {
+  inline bool operator==(const Context& b) const {
     return dev_type == b.dev_type && dev_id == b.dev_id;
   }
   /*!
@@ -137,14 +137,14 @@ struct Context {
    * \param b another context to compare
    * \return whether they are not the same
    */
-  inline bool operator!=(const Context &b) const {
+  inline bool operator!=(const Context& b) const {
     return !(*this == b);
   }
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream
    */
-  inline void Save(dmlc::Stream *strm) const {
+  inline void Save(dmlc::Stream* strm) const {
     strm->Write(&dev_type, sizeof(dev_type));
     strm->Write(&dev_id, sizeof(dev_id));
   }
@@ -153,9 +153,11 @@ struct Context {
    * \param strm the output stream
    * \return whether the load is successful
    */
-  inline bool Load(dmlc::Stream *strm) {
-    if (strm->Read(&dev_type, sizeof(dev_type)) != sizeof(dev_type)) return false;
-    if (strm->Read(&dev_id, sizeof(int32_t)) != sizeof(int32_t)) return false;
+  inline bool Load(dmlc::Stream* strm) {
+    if (strm->Read(&dev_type, sizeof(dev_type)) != sizeof(dev_type))
+      return false;
+    if (strm->Read(&dev_id, sizeof(int32_t)) != sizeof(int32_t))
+      return false;
     return true;
   }
   /*! \brief the maximal device type */
@@ -198,7 +200,7 @@ struct Context {
    * \param total_mem pointer to the uint64_t holding total GPU memory
    * \return No return value
    */
-  inline static void GetGPUMemoryInformation(int dev, uint64_t *free, uint64_t *total);
+  inline static void GetGPUMemoryInformation(int dev, uint64_t* free, uint64_t* total);
   /*!
    * Create a pinned CPU context.
    * \param dev_id the device id for corresponding GPU.
@@ -220,10 +222,10 @@ struct Context {
 
  private:
 #if MXNET_USE_CUDA
-    static void CudaLibChecks();
+  static void CudaLibChecks();
 #endif
 #if MXNET_USE_CUDNN
-    static void CuDNNLibChecks();
+  static void CuDNNLibChecks();
 #endif
 };
 
@@ -235,19 +237,18 @@ class GPUAuxStream {
    * \brief constructor.
    * \param primary_stream gpu stream that is synced with the created auxiliary stream.
    */
-  explicit GPUAuxStream(mshadow::Stream<gpu> *primary_stream) :
-      primary_stream_(primary_stream),
-      aux_stream_(primary_stream),
-      gpu_stream_sync_event_(nullptr) {
+  explicit GPUAuxStream(mshadow::Stream<gpu>* primary_stream)
+      : primary_stream_(primary_stream),
+        aux_stream_(primary_stream),
+        gpu_stream_sync_event_(nullptr) {
     if (Context::GetGPUStreamsPerWorker() >= 2) {
       // Create auxiliary stream on the same device with the same properties as the primary stream
       bool primary_has_blas_handle =
           primary_stream->blas_handle_ownership_ == mshadow::Stream<gpu>::OwnHandle;
       bool primary_has_dnn_handle =
           primary_stream->dnn_handle_ownership_ == mshadow::Stream<gpu>::OwnHandle;
-      aux_stream_ = mshadow::NewStream<gpu>(primary_has_blas_handle,
-                                            primary_has_dnn_handle,
-                                            primary_stream->dev_id);
+      aux_stream_ = mshadow::NewStream<gpu>(
+          primary_has_blas_handle, primary_has_dnn_handle, primary_stream->dev_id);
       MSHADOW_CUDA_CALL(cudaEventCreateWithFlags(&gpu_stream_sync_event_, cudaEventDisableTiming));
     }
   }
@@ -276,21 +277,23 @@ class GPUAuxStream {
       StreamSync(aux_stream_, primary_stream_, gpu_stream_sync_event_);
   }
   /*! \brief Getter for created auxiliary stream. */
-  mshadow::Stream<gpu> *GetStream() { return aux_stream_; }
+  mshadow::Stream<gpu>* GetStream() {
+    return aux_stream_;
+  }
   /*!
    * \brief Make future work enqueued to `s2` wait on completion of current work enqueued to `s1`.
    * \param s1 stream with work that must be completed before future s2 work can begin.
    * \param s2 stream whose future work is made to wait on the completion of existing s1 work.
    * \param event used to pass s1 state to s2.
    */
-  static void StreamSync(mshadow::Stream<gpu> *s1, mshadow::Stream<gpu> *s2, cudaEvent_t event) {
+  static void StreamSync(mshadow::Stream<gpu>* s1, mshadow::Stream<gpu>* s2, cudaEvent_t event) {
     MSHADOW_CUDA_CALL(cudaEventRecord(event, s1->stream_));
     MSHADOW_CUDA_CALL(cudaStreamWaitEvent(s2->stream_, event, 0));
   }
 
  private:
-  mshadow::Stream<gpu> *primary_stream_;
-  mshadow::Stream<gpu> *aux_stream_;
+  mshadow::Stream<gpu>* primary_stream_;
+  mshadow::Stream<gpu>* aux_stream_;
   cudaEvent_t gpu_stream_sync_event_;
 };
 
@@ -308,7 +311,7 @@ class SyncedGPUAuxStream {
    * \brief constructor.
    * \param gpu_aux_stream auxilary gpu stream that is managed by this RAII object.
    */
-  explicit SyncedGPUAuxStream(GPUAuxStream *gpu_aux_stream) : gpu_aux_stream_(gpu_aux_stream) {
+  explicit SyncedGPUAuxStream(GPUAuxStream* gpu_aux_stream) : gpu_aux_stream_(gpu_aux_stream) {
     gpu_aux_stream_->PreAuxStreamUseSync();
   }
   /*! \brief destructor */
@@ -329,7 +332,7 @@ class SyncedGPUAuxStream {
   }
 
  private:
-  GPUAuxStream *gpu_aux_stream_;
+  GPUAuxStream* gpu_aux_stream_;
 };
 #endif  // MXNET_USE_CUDA
 
@@ -343,21 +346,21 @@ struct RunContext {
   /*!
    * \brief the stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
-  void *stream;
+  void* stream;
   /*!
    * \brief the auxiliary stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
-  void *aux_stream;
+  void* aux_stream;
   /*!
-   * \brief indicator of whether this execution is run in bulk mode
+   * \brief pointer to the cuda event pool used by the dependency engine
    */
-  bool is_bulk;
+  void* event_pool = nullptr;
   /*!
    * \brief get mshadow stream from Context
    * \return the mshadow stream
    * \tparam xpu the device type of the stream
    */
-  template<typename xpu>
+  template <typename xpu>
   inline mshadow::Stream<xpu>* get_stream() const {
     return static_cast<mshadow::Stream<xpu>*>(stream);
   }
@@ -380,7 +383,7 @@ struct RunContext {
 //! \cond Doxygen_Suppress
 namespace mxnet {
 // implementing Context
-inline bool Context::operator<(const Context &b) const {
+inline bool Context::operator<(const Context& b) const {
   if (dev_type == b.dev_type) {
     return dev_id < b.dev_id;
   } else {
@@ -390,7 +393,7 @@ inline bool Context::operator<(const Context &b) const {
 inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   Context ctx;
   ctx.dev_type = dev_type;
-  ctx.dev_id = dev_id < 0 ? 0 : dev_id;
+  ctx.dev_id   = dev_id < 0 ? 0 : dev_id;
   if (dev_type & kGPU) {
 #if MXNET_USE_CUDA
     CudaLibChecks();
@@ -462,8 +465,7 @@ inline int32_t Context::GetGPUStreamsPerWorker() {
   return num_streams;
 }
 
-inline void Context::GetGPUMemoryInformation(int dev, uint64_t *free_mem,
-                                             uint64_t *total_mem) {
+inline void Context::GetGPUMemoryInformation(int dev, uint64_t* free_mem, uint64_t* total_mem) {
 #if MXNET_USE_CUDA
 
   size_t memF, memT;
@@ -482,12 +484,11 @@ inline void Context::GetGPUMemoryInformation(int dev, uint64_t *free_mem,
   e = cudaSetDevice(curDevice);
   CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
 
-  *free_mem = static_cast<uint64_t>(memF);
+  *free_mem  = static_cast<uint64_t>(memF);
   *total_mem = static_cast<uint64_t>(memT);
 
 #else
-  LOG(FATAL)
-      << "This call is only supported for MXNet built with CUDA support.";
+  LOG(FATAL) << "This call is only supported for MXNet built with CUDA support.";
 #endif
 }
 
@@ -497,10 +498,10 @@ inline Context Context::FromString(const std::string& str) {
     const std::string::size_type l = str.find('(');
     CHECK_NE(l, std::string::npos);
     const std::string::size_type r = str.find(')');
-    CHECK_EQ(r, str.length()-1);
+    CHECK_EQ(r, str.length() - 1);
 
     const std::string type = str.substr(0, l);
-    int id = std::stoi(str.substr(l+1, r-l-1));
+    int id                 = std::stoi(str.substr(l + 1, r - l - 1));
     if (type == "cpu") {
       ret = CPU(id);
     } else if (type == "gpu") {
@@ -518,7 +519,7 @@ inline Context Context::FromString(const std::string& str) {
   return ret;
 }
 
-inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
+inline std::ostream& operator<<(std::ostream& out, const Context& ctx) {
   if (ctx.dev_type == Context::kCPU) {
     out << "cpu(";
   } else if (ctx.dev_type == Context::kGPU) {
@@ -536,29 +537,29 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 
 // describe op registration point
 #define STRINGIZE_DETAIL(x) #x
-#define STRINGIZE(x) STRINGIZE_DETAIL(x)
+#define STRINGIZE(x)        STRINGIZE_DETAIL(x)
 #define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
-#define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
-
+#define ADD_FILELINE        "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
 #if MXNET_USE_ONEDNN == 1 || MXNET_USE_INTGEMM == 1
-constexpr size_t kMKLDNNAlign = 64;
+constexpr size_t kDNNLAlign = 64;
 #endif
 
 }  // namespace mxnet
 
 namespace std {
-template<> struct hash<mxnet::Context> {
+template <>
+struct hash<mxnet::Context> {
   size_t operator()(const mxnet::Context& ctx) const {
     size_t res = 0;
-    res = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_type));
-    res = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_id));
+    res        = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_type));
+    res        = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_id));
     return res;
   }
 };
 
 #if __cplusplus < 201402L && !defined(_MSC_VER)
-template<typename T, typename... Args>
+template <typename T, typename... Args>
 inline std::unique_ptr<T> make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }

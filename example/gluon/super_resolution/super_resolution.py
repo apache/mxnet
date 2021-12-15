@@ -30,7 +30,6 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon, autograd as ag
 from mxnet.gluon import nn
-from mxnet.gluon.contrib import nn as contrib_nn
 from mxnet.image import CenterCropAug, ResizeAug
 from mxnet.io import PrefetchingIter
 from mxnet.test_utils import download
@@ -133,21 +132,20 @@ def get_dataset(prefetch=False):
 
 train_data, val_data = get_dataset()
 
-mx.random.seed(opt.seed)
-ctx = [mx.gpu(0)] if opt.use_gpu else [mx.cpu()]
+mx.np.random.seed(opt.seed)
+device = [mx.gpu(0)] if opt.use_gpu else [mx.cpu()]
 
 
 class SuperResolutionNet(gluon.HybridBlock):
     def __init__(self, upscale_factor):
         super(SuperResolutionNet, self).__init__()
-        with self.name_scope():
-            self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), activation='relu')
-            self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
-            self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
-            self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1))
-            self.pxshuf = contrib_nn.PixelShuffle2D(upscale_factor)
+        self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), activation='relu')
+        self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
+        self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), activation='relu')
+        self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1))
+        self.pxshuf = nn.PixelShuffle2D(upscale_factor)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
@@ -158,14 +156,14 @@ class SuperResolutionNet(gluon.HybridBlock):
 net = SuperResolutionNet(upscale_factor)
 metric = mx.gluon.metric.MSE()
 
-def test(ctx):
+def test(device):
     val_data.reset()
     avg_psnr = 0
     batches = 0
     for batch in val_data:
         batches += 1
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch.data[0], device_list=device, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0], device_list=device, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -176,20 +174,20 @@ def test(ctx):
     print('validation avg psnr: %f' % avg_psnr)
 
 
-def train(epoch, ctx):
-    if isinstance(ctx, mx.Context):
-        ctx = [ctx]
-    net.initialize(mx.init.Orthogonal(), ctx=ctx)
+def train(epoch, device):
+    if isinstance(device, mx.Device):
+        device = [device]
+    net.initialize(mx.init.Orthogonal(), device=device)
     # re-initialize conv4's weight to be Orthogonal
-    net.conv4.initialize(mx.init.Orthogonal(scale=1), force_reinit=True, ctx=ctx)
+    net.conv4.initialize(mx.init.Orthogonal(scale=1), force_reinit=True, device=device)
     trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
     loss = gluon.loss.L2Loss()
 
     for i in range(epoch):
         train_data.reset()
         for batch in train_data:
-            data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = gluon.utils.split_and_load(batch.data[0], device_list=device, batch_axis=0)
+            label = gluon.utils.split_and_load(batch.label[0], device_list=device, batch_axis=0)
             outputs = []
             with ag.record():
                 for x, y in zip(data, label):
@@ -203,24 +201,24 @@ def train(epoch, ctx):
         name, acc = metric.get()
         metric.reset()
         print('training mse at epoch %d: %s=%f'%(i, name, acc))
-        test(ctx)
+        test(device)
 
     net.save_parameters(path.join(this_dir, 'superres.params'))
 
-def resolve(ctx):
+def resolve(device):
     from PIL import Image
 
-    if isinstance(ctx, list):
-        ctx = [ctx[0]]
+    if isinstance(device, list):
+        device = [device[0]]
 
     img_basename = path.splitext(path.basename(opt.resolve_img))[0]
     img_dirname = path.dirname(opt.resolve_img)
 
-    net.load_parameters(path.join(this_dir, 'superres.params'), ctx=ctx)
+    net.load_parameters(path.join(this_dir, 'superres.params'), device=device)
     img = Image.open(opt.resolve_img).convert('YCbCr')
     y, cb, cr = img.split()
-    data = mx.nd.expand_dims(mx.nd.expand_dims(mx.nd.array(y), axis=0), axis=0)
-    out_img_y = mx.nd.reshape(net(data), shape=(-3, -2)).asnumpy()
+    data = mx.np.expand_dims(mx.np.expand_dims(mx.np.array(y), axis=0), axis=0)
+    out_img_y = mx.np.reshape(net(data), shape=(-3, -2)).asnumpy()
     out_img_y = out_img_y.clip(0, 255)
     out_img_y = Image.fromarray(np.uint8(out_img_y[0]), mode='L')
 
@@ -231,6 +229,6 @@ def resolve(ctx):
     out_img.save(path.join(img_dirname, '{}-resolved.png'.format(img_basename)))
 
 if opt.resolve_img:
-    resolve(ctx)
+    resolve(device)
 else:
-    train(opt.epochs, ctx)
+    train(opt.epochs, device)

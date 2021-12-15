@@ -81,7 +81,7 @@ Thanks to inheriting from HybridBlock, one can easily do forward pass on a given
 
 ```{.python .input}
 layer = NormalizationHybridLayer()
-layer(np.array([1, 2, 3], ctx=mx.cpu()))
+layer(np.array([1, 2, 3], device=mx.cpu()))
 ```
 
 Output:

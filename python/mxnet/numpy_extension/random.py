@@ -19,12 +19,14 @@
 
 from .. import random as _mx_rand
 from ..ndarray import numpy_extension as _mx_nd_npx
+from ..util import wrap_ctx_to_device_func
 
 
 __all__ = ['seed', 'bernoulli', 'normal_n', 'uniform_n']
 
 
-def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
+@wrap_ctx_to_device_func
+def seed(seed, device='all'):  # pylint: disable=redefined-outer-name
     r"""Seeds the random number generators in MXNet.
 
     This affects the behavior of modules in MXNet that uses random number generators,
@@ -35,7 +37,7 @@ def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
     seed : int
         The random number seed.
 
-    ctx : Context
+    device : Device
         The device context of the generator. The default is "all" which means seeding random
         number generators of all devices.
 
@@ -47,7 +49,7 @@ def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
     even if they are seeded using the same seed.
 
     To produce identical random number sequences independent of the device id,
-    set optional `ctx` argument. This produces the same sequence of random numbers independent
+    set optional `device` argument. This produces the same sequence of random numbers independent
     of the device id, but the sequence can be different on different kind of devices as MXNet's
     random number generators for CPU and GPU use different algorithms.
 
@@ -65,16 +67,17 @@ def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
     >>> np.random.uniform()
     array(0.03812965)
     >>> npx.random.seed(128)
-    >>> np.random.uniform(ctx=npx.gpu(0))
-    array(0.9894903, ctx=gpu(0))
+    >>> np.random.uniform(device=npx.gpu(0))
+    array(0.9894903, device=gpu(0))
     >>> npx.random.seed(128)
-    >>> np.random.uniform(ctx=npx.gpu(0))
-    array(0.9894903, ctx=gpu(0))
+    >>> np.random.uniform(device=npx.gpu(0))
+    array(0.9894903, device=gpu(0))
     """
-    _mx_rand.seed(seed_state=seed, ctx=ctx)
+    _mx_rand.seed(seed_state=seed, device=device)
 
 
-def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
+@wrap_ctx_to_device_func
+def bernoulli(prob=None, logit=None, size=None, dtype=None, device=None, out=None):
     """Creates a Bernoulli distribution parameterized by :attr:`prob`
     or :attr:`logit` (but not both).
 
@@ -98,8 +101,8 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
         name, i.e., 'int64', 'int', etc, so byteorder is not available
         and a specific precision may have different C types depending
         on the platform. The default value is 'np.float32'.
-    ctx : Context, optional
-        Device context of output. Default is current context.
+    device : Device, optional
+        Device context of output. Default is current device.
     out : symbol, optional
         The output symbol (default is `None`).
 
@@ -124,10 +127,11 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
         [1., 1., 1., 0.],
         [1., 0., 1., 0.]])
     """
-    return _mx_nd_npx.random.bernoulli(prob, logit, size, dtype, ctx, out)
+    return _mx_nd_npx.random.bernoulli(prob, logit, size, dtype, device, out)
 
 
-def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
+@wrap_ctx_to_device_func
+def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, device=None):
     r"""Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
@@ -152,8 +156,8 @@ def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output. Default is current context.
+    device : Device, optional
+        Device context of output. Default is current device.
 
     Returns
     -------
@@ -181,10 +185,11 @@ def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
     function to behave when passed arguments satisfying that
     inequality condition.
     """
-    return _mx_nd_npx.random.uniform_n(low, high, batch_shape=batch_shape, ctx=ctx, dtype=dtype)
+    return _mx_nd_npx.random.uniform_n(low, high, batch_shape=batch_shape, device=device, dtype=dtype)
 
 
-def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
+@wrap_ctx_to_device_func
+def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, device=None):
     r"""Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -206,8 +211,8 @@ def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
         ``np.broadcast(loc, scale).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output, default is current context.
+    device : Device, optional
+        Device context of output, default is current device.
 
     Returns
     -------
@@ -249,4 +254,4 @@ def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
     >>> np.abs(mu - np.mean(s)) < 0.01
     array(True)
     """
-    return _mx_nd_npx.random.normal_n(loc, scale, batch_shape, dtype, ctx)
+    return _mx_nd_npx.random.normal_n(loc, scale, batch_shape, dtype, device)

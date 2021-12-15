@@ -28,11 +28,11 @@ namespace mxnet {
 namespace op {
 
 inline bool CumsumShape(const nnvm::NodeAttrs& attrs,
-                        mxnet::ShapeVector *in_attrs,
-                        mxnet::ShapeVector *out_attrs) {
+                        mxnet::ShapeVector* in_attrs,
+                        mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const CumsumParam &param = nnvm::get<CumsumParam>(attrs.parsed);
+  const CumsumParam& param = nnvm::get<CumsumParam>(attrs.parsed);
 
   if (param.axis.has_value()) {
     return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
@@ -44,11 +44,11 @@ inline bool CumsumShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool CumsumType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int> *in_attrs,
-                       std::vector<int> *out_attrs) {
+                       std::vector<int>* in_attrs,
+                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const CumsumParam &param = nnvm::get<CumsumParam>(attrs.parsed);
+  const CumsumParam& param = nnvm::get<CumsumParam>(attrs.parsed);
 
   if (param.dtype.has_value()) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype.value());
@@ -66,32 +66,33 @@ inline bool CumsumType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(CumsumParam);
 
 NNVM_REGISTER_OP(_npi_cumsum)
-.add_alias("cumsum")
-.describe(R"code(Return the cumulative sum of the elements along a given axis.)code" ADD_FILELINE)
-.set_attr_parser(ParamParser<CumsumParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", CumsumShape)
-.set_attr<nnvm::FInferType>("FInferType", CumsumType)
-.set_attr<FCompute>("FCompute<cpu>", CumsumForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_cumsum"})
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.add_argument("a", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(CumsumParam::__FIELDS__());
+    .add_alias("cumsum")
+    .describe(
+        R"code(Return the cumulative sum of the elements along a given axis.)code" ADD_FILELINE)
+    .set_attr_parser(ParamParser<CumsumParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", CumsumShape)
+    .set_attr<nnvm::FInferType>("FInferType", CumsumType)
+    .set_attr<FCompute>("FCompute<cpu>", CumsumForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_cumsum"})
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}};
+                                    })
+    .add_argument("a", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(CumsumParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npi_cumsum)
-.set_attr_parser(ParamParser<CumsumParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", CumsumBackward<cpu>);
+    .set_attr_parser(ParamParser<CumsumParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", CumsumBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -33,17 +33,18 @@
 
 namespace mxnet {
 
-template<typename ValueType>
+template <typename ValueType>
 inline PrimExpr MakeConstScalar(MXNetDataType t, ValueType value) {
-  if (t.is_int()) return IntImm(t, static_cast<int64_t>(value));
-  if (t.is_float()) return FloatImm(t, static_cast<double>(value));
+  if (t.is_int())
+    return IntImm(t, static_cast<int64_t>(value));
+  if (t.is_float())
+    return FloatImm(t, static_cast<double>(value));
   // customized type and uint is not supported for MXNet for now
   LOG(FATAL) << "cannot make const for type " << t;
   return PrimExpr();
 }
 
-
-template<typename ValueType>
+template <typename ValueType>
 inline PrimExpr make_const(MXNetDataType t, ValueType value) {
   if (t.lanes() == 1) {
     return MakeConstScalar(t, value);

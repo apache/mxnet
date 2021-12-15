@@ -599,8 +599,8 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
     """
     assert data is not None and weight is not None and kernel is not None, \
            "Missing input data, weight or kernel"
-    assert num_filter > 1, "Number of output filters should be greater than 1"
-    assert workspace > 0, "Maximum temporary workspace should be greater than 0"
+    assert num_filter >= 1, "Number of output filters should be greater equal to 1."
+    assert workspace >= 0, "Maximum temporary workspace should be greater equal to 0."
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.convolution(data, weight, kernel, stride, dilate, pad,
@@ -617,9 +617,9 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
 @set_module('mxnet.ndarray.numpy_extension')
 def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, dilate=None,
                   pad=None, adj=None, target_shape=None, num_filter=1, num_group=1,
-                  workspace=512, no_bias=False, cudnn_tune=None,
+                  workspace=1024, no_bias=False, cudnn_tune=None,
                   cudnn_off=False, layout=None):
-    r"""Computes 1D or 2D transposed convolution (aka fractionally strided convolution) of
+    r"""Computes 1D, 2D or 3D transposed convolution (aka fractionally strided convolution) of
     the input tensor. This operation can be seen as the gradient of Convolution operation
     with respect to its input. Convolution usually reduces the size of the input.
     Transposed convolution works the other way, going from a smaller input
@@ -682,8 +682,8 @@ def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, d
     """
     assert data is not None and weight is not None and kernel is not None, \
            "Missing input data, weight or kernel"
-    assert num_filter > 1, "Number of output filters should be greater than 1"
-    assert workspace > 0, "Maximum temporary workspace should be greater than 0"
+    assert num_filter >= 1, "Number of output filters should be greater equal to 1."
+    assert workspace >= 0, "Maximum temporary workspace should be greater equal to 0."
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.deconvolution(data, weight, kernel, stride, dilate, pad,
@@ -1128,6 +1128,7 @@ def embedding(data, weight, input_dim=None, output_dim=None, dtype="float32", sp
     """
     assert input_dim > 0, "Vocabulary size of the input indices should be greater than 0."
     assert output_dim > 0, "Dimension of the embedding vectors should greater than 0."
+    assert not sparse_grad, "Currently row sparse gradient is not supported in npx.embedding"
     return _api_internal.embedding(data, weight, input_dim, output_dim, dtype, sparse_grad)
 
 

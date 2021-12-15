@@ -39,21 +39,18 @@
 namespace mxnet {
 namespace op {
 
-struct NumpyTraceParam: public dmlc::Parameter<NumpyTraceParam> {
+struct NumpyTraceParam : public dmlc::Parameter<NumpyTraceParam> {
   int offset, axis1, axis2;
   DMLC_DECLARE_PARAMETER(NumpyTraceParam) {
-    DMLC_DECLARE_FIELD(offset)
-    .set_default(0)
-    .describe("Offset of the diagonal from the main diagonal. "
-              "Can be both positive and negative. Defaults to 0.");
-    DMLC_DECLARE_FIELD(axis1)
-    .set_default(0)
-    .describe("Axes to be used as the first axis of the 2-D sub-arrays "
-              "from which the diagonals should be taken. Defaults to 0.");
-    DMLC_DECLARE_FIELD(axis2)
-    .set_default(1)
-    .describe("Axes to be used as the second axis of the 2-D sub-arrays "
-              "from which the diagonals should be taken. Defaults to 1.");
+    DMLC_DECLARE_FIELD(offset).set_default(0).describe(
+        "Offset of the diagonal from the main diagonal. "
+        "Can be both positive and negative. Defaults to 0.");
+    DMLC_DECLARE_FIELD(axis1).set_default(0).describe(
+        "Axes to be used as the first axis of the 2-D sub-arrays "
+        "from which the diagonals should be taken. Defaults to 0.");
+    DMLC_DECLARE_FIELD(axis2).set_default(1).describe(
+        "Axes to be used as the second axis of the 2-D sub-arrays "
+        "from which the diagonals should be taken. Defaults to 1.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream offset_s, axis1_s, axis2_s;
@@ -61,18 +58,22 @@ struct NumpyTraceParam: public dmlc::Parameter<NumpyTraceParam> {
     axis1_s << axis1;
     axis2_s << axis2;
     (*dict)["offset"] = offset_s.str();
-    (*dict)["axis1"] = axis1_s.str();
-    (*dict)["axis2"] = axis2_s.str();
+    (*dict)["axis1"]  = axis1_s.str();
+    (*dict)["axis2"]  = axis2_s.str();
   }
 };
 
-template<int ndim, int req, bool back>
+template <int ndim, int req, bool back>
 struct numpy_trace {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out,
+                                  const DType* a,
                                   mshadow::Shape<ndim> oshape,
                                   mshadow::Shape<ndim> ishape,
-                                  index_t stride, index_t offset, int dlength) {
+                                  index_t stride,
+                                  index_t offset,
+                                  int dlength) {
     using namespace mxnet_op;
     using namespace mshadow;
     index_t j = ravel(unravel(i, oshape), ishape) + offset;
@@ -98,14 +99,14 @@ struct numpy_trace {
   }
 };
 
-template<typename xpu, bool back>
+template <typename xpu, bool back>
 void NumpyTraceOpProcess(const TBlob& in_data,
                          const TBlob& out_data,
                          const mxnet::TShape& ishape,
                          const mxnet::TShape& oshape,
                          index_t dsize,
                          const NumpyTraceParam& param,
-                         mxnet_op::Stream<xpu> *s,
+                         mxnet_op::Stream<xpu>* s,
                          const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow;
@@ -152,9 +153,7 @@ void NumpyTraceOpProcess(const TBlob& in_data,
   // three axes, hence improving the rave and
   // unravel efficiency)
 
-  index_t oleading = 1,
-          obody = 1,
-          otrailing = 1;
+  index_t oleading = 1, obody = 1, otrailing = 1;
 
   for (uint32_t i = 0; i < minx; ++i) {
     oleading *= ishape[i];
@@ -166,12 +165,9 @@ void NumpyTraceOpProcess(const TBlob& in_data,
     otrailing *= ishape[i];
   }
 
-  index_t ileading = oleading,
-          ibody = obody * ishape[minx],
-          itrailing = otrailing * ishape[maxx];
+  index_t ileading = oleading, ibody = obody * ishape[minx], itrailing = otrailing * ishape[maxx];
 
-  index_t stride1 = itrailing * obody,
-          stride2 = otrailing;
+  index_t stride1 = itrailing * obody, stride2 = otrailing;
   // stride1 + stride2 is the stride for
   // iterating over the diagonal in question
 
@@ -205,16 +201,20 @@ void NumpyTraceOpProcess(const TBlob& in_data,
       if (back) {
         out_data.FlatTo1D<xpu, DType>(s) = 0;
       }
-      Kernel<numpy_trace<3, req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
+      Kernel<numpy_trace<3, req_type, back>, xpu>::Launch(s,
+                                                          dsize,
+                                                          out_data.dptr<DType>(),
                                                           in_data.dptr<DType>(),
                                                           Shape3(oleading, obody, otrailing),
                                                           Shape3(ileading, ibody, itrailing),
-                                                          stride1 + stride2, offset, dlength);
+                                                          stride1 + stride2,
+                                                          offset,
+                                                          dlength);
     });
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 void NumpyTraceOpForward(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<TBlob>& inputs,
@@ -225,18 +225,18 @@ void NumpyTraceOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
-  const mxnet::TShape& ishape = inputs[0].shape_;
-  const mxnet::TShape& oshape = outputs[0].shape_;
+  mshadow::Stream<xpu>* s      = ctx.get_stream<xpu>();
+  const TBlob& in_data         = inputs[0];
+  const TBlob& out_data        = outputs[0];
+  const mxnet::TShape& ishape  = inputs[0].shape_;
+  const mxnet::TShape& oshape  = outputs[0].shape_;
   const NumpyTraceParam& param = nnvm::get<NumpyTraceParam>(attrs.parsed);
 
-  NumpyTraceOpProcess<xpu, false>(in_data, out_data, ishape, oshape,
-                                  out_data.Size(), param, s, req);
+  NumpyTraceOpProcess<xpu, false>(
+      in_data, out_data, ishape, oshape, out_data.Size(), param, s, req);
 }
 
-template<typename xpu>
+template <typename xpu>
 void NumpyTraceOpBackward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
@@ -247,16 +247,15 @@ void NumpyTraceOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
 
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
-  const mxnet::TShape& ishape = inputs[0].shape_;
-  const mxnet::TShape& oshape = outputs[0].shape_;
+  const TBlob& in_data         = inputs[0];
+  const TBlob& out_data        = outputs[0];
+  const mxnet::TShape& ishape  = inputs[0].shape_;
+  const mxnet::TShape& oshape  = outputs[0].shape_;
   const NumpyTraceParam& param = nnvm::get<NumpyTraceParam>(attrs.parsed);
 
-  NumpyTraceOpProcess<xpu, true>(in_data, out_data, oshape, ishape,
-                                 in_data.Size(), param, s, req);
+  NumpyTraceOpProcess<xpu, true>(in_data, out_data, oshape, ishape, in_data.Size(), param, s, req);
 }
 
 }  // namespace op

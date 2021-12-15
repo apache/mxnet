@@ -43,7 +43,7 @@ _NUMPY_DTYPE_DEFAULT_FUNC_LIST = [
     'ones',
     'zeros',
     'eye',
-    'full',
+    # 'full',  dtype of mx.np.full now infers from fill_value
     'identity',
     'linspace',
     'logspace',
@@ -181,7 +181,7 @@ def check_default_dtype(op_list):
             assert False
         assert workloads is not None, 'Workloads for operator `{}` has not been ' \
                                       'added for checking default dtype with the ' \
-                                      'official NumPy and the deep NumPy.'.format(name)
+                                      'official NumPy and the deep NumPy.'.format(op_name)
         for workload in workloads:
             check_np_default_dtype(op, *workload['args'], **workload['kwargs'])
             check_deepnp_default_dtype(op, *workload['args'], **workload['kwargs'])

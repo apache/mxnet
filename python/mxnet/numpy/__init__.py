@@ -27,6 +27,8 @@ from ._op import *  # pylint: disable=wildcard-import
 from .utils import *  # pylint: disable=wildcard-import
 from .function_base import *  # pylint: disable=wildcard-import
 from .stride_tricks import *  # pylint: disable=wildcard-import
+from .set_functions import *  # pylint: disable=wildcard-import
+from .type_functions import * # pylint: disable=wildcard-import
 from .io import *  # pylint: disable=wildcard-import
 from .arrayprint import *  # pylint: disable=wildcard-import
 

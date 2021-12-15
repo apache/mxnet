@@ -26,17 +26,16 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_tensordot)
-.set_attr<FCompute>("FCompute<gpu>", TensordotOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_tensordot).set_attr<FCompute>("FCompute<gpu>", TensordotOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_tensordot)
-.set_attr<FCompute>("FCompute<gpu>", TensordotOpBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", TensordotOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_npi_tensordot_int_axes)
-.set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpForward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_tensordot_int_axes)
-.set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

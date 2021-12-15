@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file calibraite-inl.h
  * \brief Implementation of calibrate operator
  */
@@ -37,9 +36,8 @@ struct CalibrateEntropyParam : public dmlc::Parameter<CalibrateEntropyParam> {
   int num_quantized_bins;
   DMLC_DECLARE_PARAMETER(CalibrateEntropyParam) {
     DMLC_DECLARE_FIELD(num_quantized_bins)
-      .set_default(255)
-      .describe(
-          "The number of quantized bins.");
+        .set_default(255)
+        .describe("The number of quantized bins.");
   }
 };
 

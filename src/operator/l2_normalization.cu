@@ -18,19 +18,16 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file l2_normalization.cu
  * \brief l2 normalization operator
-*/
+ */
 #include "./l2_normalization-inl.h"
 namespace mxnet {
 namespace op {
-template<>
+template <>
 Operator* CreateOp<gpu>(L2NormalizationParam param, int dtype) {
   Operator* op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new L2NormalizationOp<gpu, DType>(param);
-  });
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new L2NormalizationOp<gpu, DType>(param); });
   return op;
 }
 }  // namespace op

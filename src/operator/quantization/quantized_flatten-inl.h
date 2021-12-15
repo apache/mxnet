@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantized_flatten-inl.h
  * \brief implementation of quantized flatten operation
  */
@@ -38,17 +37,21 @@ namespace op {
 
 // keep zero-center
 struct quantized_flatten {
-  template<typename DstDType, typename SrcDType>
-  MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range,
-                                  float *omax_range, const SrcDType *in,
-                                  const float *imin_range, const float *imax_range) {
-    out[i] = in[i];
+  template <typename DstDType, typename SrcDType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  DstDType* out,
+                                  float* omin_range,
+                                  float* omax_range,
+                                  const SrcDType* in,
+                                  const float* imin_range,
+                                  const float* imax_range) {
+    out[i]        = in[i];
     omin_range[0] = imin_range[0];
     omax_range[0] = imax_range[0];
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void QuantizedFlattenCompute(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
                              const std::vector<TBlob>& inputs,
@@ -57,36 +60,48 @@ void QuantizedFlattenCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 3U);
   CHECK_EQ(req.size(), 3U);
-  if (req[0] == kWriteInplace && req[1] == kWriteInplace && req[2] == kWriteInplace) return;
+  if (req[0] == kWriteInplace && req[1] == kWriteInplace && req[2] == kWriteInplace)
+    return;
   using namespace mshadow;
   using namespace mxnet_op;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
 
   if (inputs[0].type_flag_ == mshadow::kUint8) {
     typedef uint8_t SrcDType;
     typedef uint8_t DstDType;
-    Kernel<quantized_flatten, xpu>::Launch(s, outputs[0].Size(),
-      outputs[0].dptr<DstDType>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
-      inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>());
+    Kernel<quantized_flatten, xpu>::Launch(s,
+                                           outputs[0].Size(),
+                                           outputs[0].dptr<DstDType>(),
+                                           outputs[1].dptr<float>(),
+                                           outputs[2].dptr<float>(),
+                                           inputs[0].dptr<SrcDType>(),
+                                           inputs[1].dptr<float>(),
+                                           inputs[2].dptr<float>());
   } else if (inputs[0].type_flag_ == mshadow::kInt8) {
     typedef int8_t SrcDType;
     typedef int8_t DstDType;
-    Kernel<quantized_flatten, xpu>::Launch(s, outputs[0].Size(),
-      outputs[0].dptr<DstDType>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
-      inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>());
+    Kernel<quantized_flatten, xpu>::Launch(s,
+                                           outputs[0].Size(),
+                                           outputs[0].dptr<DstDType>(),
+                                           outputs[1].dptr<float>(),
+                                           outputs[2].dptr<float>(),
+                                           inputs[0].dptr<SrcDType>(),
+                                           inputs[1].dptr<float>(),
+                                           inputs[2].dptr<float>());
   } else {
     LOG(FATAL) << "quantized_flatten op only supports int8 and uint8 as input and output type";
   }
 }
 
 inline bool QuantizedFlattenShape(const nnvm::NodeAttrs& attrs,
-                                  mxnet::ShapeVector *in_attrs,
-                                  mxnet::ShapeVector *out_attrs) {
+                                  mxnet::ShapeVector* in_attrs,
+                                  mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
 
-  const mxnet::TShape &dshape = (*in_attrs)[0];
-  if (!shape_is_known(dshape)) return false;
+  const mxnet::TShape& dshape = (*in_attrs)[0];
+  if (!shape_is_known(dshape))
+    return false;
 
   dim_t target_dim = 1;
   for (int i = 1; i < dshape.ndim(); ++i) {
@@ -102,8 +117,8 @@ inline bool QuantizedFlattenShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool QuantizedFlattenType(const nnvm::NodeAttrs& attrs,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
+                                 std::vector<int>* in_attrs,
+                                 std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
   TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kFloat32);

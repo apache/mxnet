@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file lazy_alloc_array.h
  * \brief An array that lazily allocate elements as
  *   First time the cell get visited.
@@ -36,7 +35,7 @@
 namespace mxnet {
 namespace common {
 
-template<typename TElem>
+template <typename TElem>
 class LazyAllocArray {
  public:
   LazyAllocArray();
@@ -46,23 +45,22 @@ class LazyAllocArray {
    * \param index the array index position
    * \param creator a lambda function to create new element when needed.
    */
-  template<typename FCreate>
+  template <typename FCreate>
   inline std::shared_ptr<TElem> Get(int index, FCreate creator);
   /*!
    * \brief for each not null element of the array, call fvisit
    * \param fvisit a function of (size_t, TElem*)
    */
-  template<typename FVisit>
+  template <typename FVisit>
   inline void ForEach(FVisit fvisit);
   /*! \brief clear all the allocated elements in array */
   inline void Clear();
 
  private:
-  template<typename SyncObject>
+  template <typename SyncObject>
   class unique_unlock {
    public:
-    explicit unique_unlock(std::unique_lock<SyncObject> *lock)
-      : lock_(lock) {
+    explicit unique_unlock(std::unique_lock<SyncObject>* lock) : lock_(lock) {
       if (lock_) {
         lock_->unlock();
       }
@@ -72,8 +70,9 @@ class LazyAllocArray {
         lock_->lock();
       }
     }
+
    private:
-    std::unique_lock<SyncObject> *lock_;
+    std::unique_lock<SyncObject>* lock_;
   };
 
   /*! \brief the initial size of the array */
@@ -88,14 +87,12 @@ class LazyAllocArray {
   std::atomic<bool> is_clearing_;
 };
 
-template<typename TElem>
-inline LazyAllocArray<TElem>::LazyAllocArray()
-  : is_clearing_(false) {
-}
+template <typename TElem>
+inline LazyAllocArray<TElem>::LazyAllocArray() : is_clearing_(false) {}
 
 // implementations
-template<typename TElem>
-template<typename FCreate>
+template <typename TElem>
+template <typename FCreate>
 inline std::shared_ptr<TElem> LazyAllocArray<TElem>::Get(int index, FCreate creator) {
   CHECK_GE(index, 0);
   size_t idx = static_cast<size_t>(index);
@@ -135,7 +132,7 @@ inline std::shared_ptr<TElem> LazyAllocArray<TElem>::Get(int index, FCreate crea
   return nullptr;
 }
 
-template<typename TElem>
+template <typename TElem>
 inline void LazyAllocArray<TElem>::Clear() {
   std::unique_lock<std::mutex> lock(create_mutex_);
   is_clearing_.store(true);
@@ -144,13 +141,13 @@ inline void LazyAllocArray<TElem>::Clear() {
   // any growth which might happen when create_mutex_ is unlocked
   for (size_t i = 0; i < head_.size(); ++i) {
     std::shared_ptr<TElem> p = head_[i];
-    head_[i] = std::shared_ptr<TElem>(nullptr);
+    head_[i]                 = std::shared_ptr<TElem>(nullptr);
     unique_unlock<std::mutex> unlocker(&lock);
     p = std::shared_ptr<TElem>(nullptr);
   }
   for (size_t i = 0; i < more_.size(); ++i) {
     std::shared_ptr<TElem> p = more_[i];
-    more_[i] = std::shared_ptr<TElem>(nullptr);
+    more_[i]                 = std::shared_ptr<TElem>(nullptr);
     unique_unlock<std::mutex> unlocker(&lock);
     p = std::shared_ptr<TElem>(nullptr);
   }
@@ -158,8 +155,8 @@ inline void LazyAllocArray<TElem>::Clear() {
   is_clearing_.store(false);
 }
 
-template<typename TElem>
-template<typename FVisit>
+template <typename TElem>
+template <typename FVisit>
 inline void LazyAllocArray<TElem>::ForEach(FVisit fvisit) {
   std::lock_guard<std::mutex> lock(create_mutex_);
   for (size_t i = 0; i < head_.size(); ++i) {

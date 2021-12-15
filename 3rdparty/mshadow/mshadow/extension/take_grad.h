@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file take_grad.h
  * \brief
  * \author Bing Xu

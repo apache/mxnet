@@ -22,7 +22,7 @@ import math
 import numpy as np
 import mxnet as mx
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_device, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
 from common import with_seed
 import pytest
@@ -228,7 +228,7 @@ def test_nn():
         shape = (LARGE_X, SMALL_Y)
         x = mx.sym.var('data')
         y = mx.sym.Dropout(x, p=1, cudnn_off=True)
-        exe = y._simple_bind(ctx=default_context(), data=shape)
+        exe = y._simple_bind(ctx=default_device(), data=shape)
         exe.arg_arrays[0][:] = 1
         out = exe.forward(is_train=True)
         nd.waitall()
@@ -280,7 +280,7 @@ def test_nn():
             # calculate the inverse of standard variance
             invstdvar = 1. / np.sqrt(var + eps)
             return mean, invstdvar
-        # Here use 4D input to cover mkldnn BN and non-mkldnn BN
+        # Here use 4D input to cover dnnl BN and non-dnnl BN
         shape = (1, 2, LARGE_X, SMALL_Y)
         axis = 1  # default
         eps = 1e-3

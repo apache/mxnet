@@ -50,14 +50,13 @@ class ArrayNode : public Object {
  * \tparam Converter a struct that contains converting function
  * \tparam TIter the content iterator type.
  */
-template<typename Converter,
-         typename TIter>
+template <typename Converter, typename TIter>
 class IterAdapter {
  public:
-  using difference_type = typename std::iterator_traits<TIter>::difference_type;
-  using value_type = typename Converter::ResultType;
-  using pointer = typename Converter::ResultType*;
-  using reference = typename Converter::ResultType&;   // NOLINT(*)
+  using difference_type   = typename std::iterator_traits<TIter>::difference_type;
+  using value_type        = typename Converter::ResultType;
+  using pointer           = typename Converter::ResultType*;
+  using reference         = typename Converter::ResultType&;  // NOLINT(*)
   using iterator_category = typename std::iterator_traits<TIter>::iterator_category;
 
   explicit IterAdapter(TIter iter) : iter_(iter) {}
@@ -69,10 +68,10 @@ class IterAdapter {
     return IterAdapter(iter_ + offset);
   }
 
-  template<typename T = IterAdapter>
+  template <typename T = IterAdapter>
   typename std::enable_if<std::is_same<iterator_category, std::random_access_iterator_tag>::value,
-                          typename T::difference_type>::type
-  inline operator-(const IterAdapter& rhs) const {
+                          typename T::difference_type>::type inline
+  operator-(const IterAdapter& rhs) const {
     return iter_ - rhs.iter_;
   }
 
@@ -98,8 +97,8 @@ class IterAdapter {
  * operator[] only provide const acces, use Set to mutate the content.
  * \tparam T The content NodeRef type.
  */
-template<typename T,
-         typename = typename std::enable_if<std::is_base_of<ObjectRef, T>::value>::type >
+template <typename T,
+          typename = typename std::enable_if<std::is_base_of<ObjectRef, T>::value>::type>
 class Array : public ObjectRef {
  public:
   /*!
@@ -112,14 +111,14 @@ class Array : public ObjectRef {
    * \brief move constructor
    * \param other source
    */
-  Array(Array<T> && other) {  // NOLINT(*)
+  Array(Array<T>&& other) {  // NOLINT(*)
     data_ = std::move(other.data_);
   }
   /*!
    * \brief copy constructor
    * \param other source
    */
-  Array(const Array<T> &other) { // NOLINT(*)
+  Array(const Array<T>& other) {  // NOLINT(*)
     data_ = std::move(other.data_);
   }
   /*!
@@ -133,7 +132,7 @@ class Array : public ObjectRef {
    * \param end end of iterator
    * \tparam IterType The type of iterator
    */
-  template<typename IterType>
+  template <typename IterType>
   Array(IterType begin, IterType end) {
     assign(begin, end);
   }
@@ -141,14 +140,14 @@ class Array : public ObjectRef {
    * \brief constructor from initializer list
    * \param init The initalizer list
    */
-  Array(std::initializer_list<T> init) { // NOLINT(*)
+  Array(std::initializer_list<T> init) {  // NOLINT(*)
     assign(init.begin(), init.end());
   }
   /*!
    * \brief constructor from vector
    * \param init The vector
    */
-  Array(const std::vector<T>& init) { // NOLINT(*)
+  Array(const std::vector<T>& init) {  // NOLINT(*)
     assign(init.begin(), init.end());
   }
   /*!
@@ -168,7 +167,7 @@ class Array : public ObjectRef {
    * \param other The source of assignment
    * \return reference to self.
    */
-  Array<T>& operator=(Array<T> && other) {
+  Array<T>& operator=(Array<T>&& other) {
     data_ = std::move(other.data_);
     return *this;
   }
@@ -177,7 +176,7 @@ class Array : public ObjectRef {
    * \param other The source of assignment
    * \return reference to self.
    */
-  Array<T>& operator=(const Array<T> & other) {
+  Array<T>& operator=(const Array<T>& other) {
     data_ = other.data_;
     return *this;
   }
@@ -187,7 +186,7 @@ class Array : public ObjectRef {
    * \param end end of iterator
    * \tparam IterType The type of iterator
    */
-  template<typename IterType>
+  template <typename IterType>
   void assign(IterType begin, IterType end) {
     auto n = make_object<ArrayNode>();
     for (IterType it = begin; it != end; ++it) {
@@ -201,12 +200,12 @@ class Array : public ObjectRef {
    * \return the i-th element.
    */
   inline const T operator[](size_t i) const {
-    return DowncastNoCheck<T>(
-        static_cast<const ArrayNode*>(data_.get())->data[i]);
+    return DowncastNoCheck<T>(static_cast<const ArrayNode*>(data_.get())->data[i]);
   }
   /*! \return The size of the array */
   inline size_t size() const {
-    if (data_.get() == nullptr) return 0;
+    if (data_.get() == nullptr)
+      return 0;
     return static_cast<const ArrayNode*>(data_.get())->data.size();
   }
   /*!
@@ -218,9 +217,9 @@ class Array : public ObjectRef {
    * \return Handle to the internal node container(which ganrantees to be unique)
    */
   inline ArrayNode* CopyOnWrite() {
-    if (data_.get() == nullptr || !data_.unique())  {
+    if (data_.get() == nullptr || !data_.unique()) {
       runtime::ObjectPtr<ArrayNode> n = make_object<ArrayNode>();
-      n->data = static_cast<ArrayNode*>(data_.get())->data;
+      n->data                         = static_cast<ArrayNode*>(data_.get())->data;
       runtime::ObjectPtr<Object>(std::move(n)).swap(data_);
     }
     return static_cast<ArrayNode*>(data_.get());
@@ -248,7 +247,7 @@ class Array : public ObjectRef {
    */
   inline void Set(size_t i, const T& value) {
     ArrayNode* n = this->CopyOnWrite();
-    n->data[i] = value;
+    n->data[i]   = value;
   }
   /*! \return whether array is empty */
   inline bool empty() const {
@@ -260,10 +259,11 @@ class Array : public ObjectRef {
    * \tparam F the type of the mutation function.
    * \note This function performs copy on write optimization.
    */
-  template<typename F>
+  template <typename F>
   inline void MutateByApply(F fmutate) {
     ArrayNode* ptr = static_cast<ArrayNode*>(data_.get());
-    if (ptr == nullptr) return;
+    if (ptr == nullptr)
+      return;
     if (data_.unique()) {
       // Copy on write optimization.
       // Perform inplace update because this is an unique copy.
@@ -271,8 +271,8 @@ class Array : public ObjectRef {
         // It is important to use move here
         // to make prevent the element's ref count from increasing
         // so fmutate itself can perform copy-on-write optimization
-        T old_elem = DowncastNoCheck<T>(std::move(ptr->data[i]));
-        T new_elem = fmutate(std::move(old_elem));
+        T old_elem   = DowncastNoCheck<T>(std::move(ptr->data[i]));
+        T new_elem   = fmutate(std::move(old_elem));
         ptr->data[i] = std::move(new_elem);
       }
     } else {
@@ -305,12 +305,10 @@ class Array : public ObjectRef {
       return DowncastNoCheck<T>(n);
     }
   };
-  using iterator = IterAdapter<ValueConverter,
-                               std::vector<ObjectRef>::const_iterator>;
+  using iterator = IterAdapter<ValueConverter, std::vector<ObjectRef>::const_iterator>;
 
-  using reverse_iterator = IterAdapter<
-    ValueConverter,
-    std::vector<ObjectRef>::const_reverse_iterator>;
+  using reverse_iterator =
+      IterAdapter<ValueConverter, std::vector<ObjectRef>::const_reverse_iterator>;
 
   /*! \return begin iterator */
   inline iterator begin() const {

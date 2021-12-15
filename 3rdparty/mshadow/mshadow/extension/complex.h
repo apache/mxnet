@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file complex.h
  * \brief support for complex operations
  * \author Xingjian Shi

@@ -18,11 +18,10 @@
  */
 
 /*!
-*  Copyright (c) 2017 by Contributors
-* \file op_util.h
-* \brief operator helper functions
-* \author Chris Olivier
-*/
+ * \file op_util.h
+ * \brief operator helper functions
+ * \author Chris Olivier
+ */
 
 #ifndef MXNET_CPP_OP_UTIL_H_
 #define MXNET_CPP_OP_UTIL_H_
@@ -46,12 +45,12 @@ inline ::caffe::LayerParameter textToCaffeLayerParameter(const std::string& text
   return ::caffe::LayerParameter(np.layer(0));
 }
 
-template<typename StreamType>
-inline StreamType& operator << (StreamType& os, const ::caffe::LayerParameter& op) {
+template <typename StreamType>
+inline StreamType& operator<<(StreamType& os, const ::caffe::LayerParameter& op) {
   std::string s;
   caffe::NetParameter np;
   // Avoid wasting time making a copy -- just push in out default object's pointer
-  np.mutable_layer()->AddAllocated(const_cast<::caffe::LayerParameter *>(&op));
+  np.mutable_layer()->AddAllocated(const_cast<::caffe::LayerParameter*>(&op));
   google::protobuf::TextFormat::PrintToString(np, &s);
   np.mutable_layer()->ReleaseLast();
   os << s;

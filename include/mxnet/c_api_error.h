@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file c_api_error.h
  * \brief Error handling for C API.
 
@@ -37,26 +36,26 @@
  * and finishes with API_END() or API_END_HANDLE_ERROR()
  * The finally clause contains procedure to cleanup states when an error happens.
  */
-#define MX_API_BEGIN()                                                         \
-  try {                                                                        \
+#define MX_API_BEGIN() \
+  try {                \
     on_enter_api(__FUNCTION__);
-#define MX_API_END()                                                           \
-  }                                                                            \
-  catch (const std::exception &_except_) {                                     \
-    on_exit_api();                                                             \
-    return MXAPIHandleException(_except_);                                     \
-  }                                                                            \
-  on_exit_api();                                                               \
-  return 0; // NOLINT(*)
-#define MX_API_END_HANDLE_ERROR(Finalize)                                      \
-  }                                                                            \
-  catch (const std::exception &_except_) {                                     \
-    Finalize;                                                                  \
-    on_exit_api();                                                             \
-    return MXAPIHandleException(_except_);                                     \
-  }                                                                            \
-  on_exit_api();                                                               \
-  return 0; // NOLINT(*)
+#define MX_API_END()                       \
+  }                                        \
+  catch (const std::exception& _except_) { \
+    on_exit_api();                         \
+    return MXAPIHandleException(_except_); \
+  }                                        \
+  on_exit_api();                           \
+  return 0;  // NOLINT(*)
+#define MX_API_END_HANDLE_ERROR(Finalize)  \
+  }                                        \
+  catch (const std::exception& _except_) { \
+    Finalize;                              \
+    on_exit_api();                         \
+    return MXAPIHandleException(_except_); \
+  }                                        \
+  on_exit_api();                           \
+  return 0;  // NOLINT(*)
 
 /*!
  * \brief Set the last error message needed by C API
@@ -68,10 +67,10 @@ void MXAPISetLastError(const char* msg);
  * \param e the exception
  * \return the return value of API after exception is handled
  */
-int MXAPIHandleException(const std::exception &e);
+int MXAPIHandleException(const std::exception& e);
 
 namespace mxnet {
-extern void on_enter_api(const char *function);
+extern void on_enter_api(const char* function);
 extern void on_exit_api();
 }
 #endif  // MXNET_C_API_ERROR_H_

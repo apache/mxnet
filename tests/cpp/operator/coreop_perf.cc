@@ -33,13 +33,13 @@ using namespace mxnet;
 
 using kwargs_t = test::op::kwargs_t;
 
-template<typename DType = float>
+template <typename DType = float>
 static void RunCoreOpBidirectional(const bool isGPU,
                                    const kwargs_t& op_kwargs,
-                                   const char *op_name,
-                                   const char *backward_op_name = "") {
+                                   const char* op_name,
+                                   const char* backward_op_name = "") {
   const mxnet::TShape shape({5, 5});
-  test::op::CoreOpExecutor<DType> op(isGPU, { shape });
+  test::op::CoreOpExecutor<DType> op(isGPU, {shape});
   op.set_verbose(false);
 
   op.Init(op.ArgsWithOpName(op_kwargs, op_name, backward_op_name));
@@ -56,38 +56,32 @@ static void RunCoreOpBidirectional(const bool isGPU,
   }
 }
 
-template<typename DType = float>
+template <typename DType = float>
 static void RunCoreOpTimingTest(const bool isGPU,
                                 const kwargs_t& op_kwargs,
-                                const char *op_name,
-                                const char *backward_op_name = "") {
-  const kwargs_t kwargs = test::op::CoreOpExecutor<DType>::ArgsWithOpName(
-    op_kwargs, op_name, backward_op_name);
+                                const char* op_name,
+                                const char* backward_op_name = "") {
+  const kwargs_t kwargs =
+      test::op::CoreOpExecutor<DType>::ArgsWithOpName(op_kwargs, op_name, backward_op_name);
 
   // prime code and cache before the performance runs
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, { {20, 3, 128, 128} }, kwargs, 1);
+  runner.RunBidirectional(false, {{20, 3, 128, 128}}, kwargs, 1);
 
   // Do the performance runs
-  std::vector <mxnet::TShape> shapes;
+  std::vector<mxnet::TShape> shapes;
   if (test::performance_run) {
-    shapes = {
-      {1,  1, 28,  28},
-      {1,  3, 28,  28},
-      {50, 1, 18,  32},
-      {50, 3, 18,  32},
-      {20, 3, 128, 128}
-    };
+    shapes = {{1, 1, 28, 28}, {1, 3, 28, 28}, {50, 1, 18, 32}, {50, 3, 18, 32}, {20, 3, 128, 128}};
   } else {
     shapes = {
-      {1,  1, 28,  28},
-      {50, 3, 18,  32},
+        {1, 1, 28, 28},
+        {50, 3, 18, 32},
     };
   }
-  const char *pu = isGPU ? "GPU" : "CPU";
-  for (const mxnet::TShape &shape : shapes) {
-    runner.TimingTest(std::string(op_name) + " Operator " + pu, isGPU, false, kwargs,
-                      2, 10, { shape });
+  const char* pu = isGPU ? "GPU" : "CPU";
+  for (const mxnet::TShape& shape : shapes) {
+    runner.TimingTest(
+        std::string(op_name) + " Operator " + pu, isGPU, false, kwargs, 2, 10, {shape});
   }
 }
 
@@ -96,11 +90,13 @@ static void RunCoreOpTimingTest(const bool isGPU,
  */
 TEST(COREOP_PERF, ExecuteBidirectional) {
   std::cout << "NEGATIVE CLIP GRADIENT" << std::endl;
-  RunCoreOpBidirectional(false, { {"lr", "0.01" }, { "clip_gradient", "-1" } },
+  RunCoreOpBidirectional(false,
+                         {{"lr", "0.01"}, {"clip_gradient", "-1"}},
                          "sgd_mom_update",
                          COREOP_BWD_OP_NAME_VALUE_NONE);
   std::cout << "POSITIVE CLIP GRADIENT" << std::endl;
-  RunCoreOpBidirectional(false, { {"lr", "0.01" }, { "clip_gradient", "1" } },
+  RunCoreOpBidirectional(false,
+                         {{"lr", "0.01"}, {"clip_gradient", "1"}},
                          "sgd_mom_update",
                          COREOP_BWD_OP_NAME_VALUE_NONE);
 }
@@ -110,11 +106,13 @@ TEST(COREOP_PERF, ExecuteBidirectional) {
  */
 TEST(COREOP_PERF, TimingCPU) {
   std::cout << "NEGATIVE CLIP GRADIENT" << std::endl;
-  RunCoreOpTimingTest(false, { {"lr", "0.01" }, { "clip_gradient", "-1" } },
+  RunCoreOpTimingTest(false,
+                      {{"lr", "0.01"}, {"clip_gradient", "-1"}},
                       "sgd_mom_update",
                       COREOP_BWD_OP_NAME_VALUE_NONE);
   std::cout << "POSITIVE CLIP GRADIENT" << std::endl;
-  RunCoreOpTimingTest(false, { {"lr", "0.01" }, { "clip_gradient", "1" } },
+  RunCoreOpTimingTest(false,
+                      {{"lr", "0.01"}, {"clip_gradient", "1"}},
                       "sgd_mom_update",
                       COREOP_BWD_OP_NAME_VALUE_NONE);
 }
@@ -125,13 +123,14 @@ TEST(COREOP_PERF, TimingCPU) {
  */
 TEST(COREOP_PERF, TimingGPU) {
   std::cout << "NEGATIVE CLIP GRADIENT" << std::endl;
-  RunCoreOpTimingTest(true, { {"lr", "0.01" }, { "clip_gradient", "-1" } },
+  RunCoreOpTimingTest(true,
+                      {{"lr", "0.01"}, {"clip_gradient", "-1"}},
                       "sgd_mom_update",
                       COREOP_BWD_OP_NAME_VALUE_NONE);
   std::cout << "POSITIVE CLIP GRADIENT" << std::endl;
-  RunCoreOpTimingTest(true, { {"lr", "0.01" }, { "clip_gradient", "1" } },
+  RunCoreOpTimingTest(true,
+                      {{"lr", "0.01"}, {"clip_gradient", "1"}},
                       "sgd_mom_update",
                       COREOP_BWD_OP_NAME_VALUE_NONE);
 }
 #endif  // MXNET_USE_CUDA == 1
-

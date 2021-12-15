@@ -30,22 +30,23 @@ namespace op {
  * This selects nodes for a subgraph that only contains operators
  * in a given set and it visits nodes via both input and output links.
  */
-class ContainOpSelector: public SubgraphSelector {
+class ContainOpSelector : public SubgraphSelector {
  public:
   explicit ContainOpSelector(const std::unordered_set<std::string>& op_names)
-    : op_names_(op_names) {}
+      : op_names_(op_names) {}
 
-  bool Select(const nnvm::Node &seed_node) override {
+  bool Select(const nnvm::Node& seed_node) override {
     return !seed_node.is_variable() && op_names_.count(seed_node.op()->name);
   }
 
-  bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) override {
+  bool SelectInput(const nnvm::Node& cur_node, const nnvm::Node& input_node) override {
     return !input_node.is_variable() && op_names_.count(input_node.op()->name);
   }
 
-  bool SelectOutput(const nnvm::Node &cur_node, const nnvm::Node &output_node) override {
+  bool SelectOutput(const nnvm::Node& cur_node, const nnvm::Node& output_node) override {
     return !output_node.is_variable() && op_names_.count(output_node.op()->name);
   }
+
  private:
   const std::unordered_set<std::string>& op_names_;
 };
@@ -54,17 +55,19 @@ class ContainOpSelector: public SubgraphSelector {
  * This subgraph property finds a subgraph whose nodes have only operators
  * within a set. The operators in the subgraph will be executed by _CachedOp.
  */
-class DefaultSubgraphProperty: public SubgraphProperty {
+class DefaultSubgraphProperty : public SubgraphProperty {
  public:
-  static SubgraphPropertyPtr Create() { return std::make_shared<DefaultSubgraphProperty>(); }
-  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                           const int subgraph_id = 0) const override {
+  static SubgraphPropertyPtr Create() {
+    return std::make_shared<DefaultSubgraphProperty>();
+  }
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
+                                     const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get("_CachedOp");
-    n->attrs.name = "_CachedOp" + std::to_string(subgraph_id);
+    n->attrs.op       = Op::Get("_CachedOp");
+    n->attrs.name     = "_CachedOp" + std::to_string(subgraph_id);
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
 
-    std::vector<std::pair<std::string, std::string> > flags{{"static_alloc", "true"}};
+    std::vector<std::pair<std::string, std::string>> flags{{"static_alloc", "true"}};
     n->attrs.parsed = std::make_shared<CachedOp>(sym, flags);
 
     return n;

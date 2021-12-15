@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file implicit_gemm.h
  * \brief support for implicit GEMM operation
  * \author Tianqi Chen

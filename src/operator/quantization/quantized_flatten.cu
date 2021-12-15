@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantized_flatten.cu
  * \brief
  */
@@ -28,7 +27,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_quantized_flatten)
-.set_attr<FCompute>("FCompute<gpu>", QuantizedFlattenCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", QuantizedFlattenCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

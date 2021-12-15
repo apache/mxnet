@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file reset_arrays.cu
  * \brief setting all array element values to zeros
  * \author Moises Hernandez-Fernandez, Andrei Ivanov
@@ -28,13 +27,12 @@
 namespace mxnet {
 namespace op {
 
-template<>
-void ResetMemory<gpu>(void *pntr, size_t len, mshadow::Stream<gpu> *s) {
+template <>
+void ResetMemory<gpu>(void* pntr, size_t len, mshadow::Stream<gpu>* s) {
   CUDA_CALL(cudaMemsetAsync(pntr, 0, len, mshadow::Stream<gpu>::GetStream(s)));
 }
 
-NNVM_REGISTER_OP(reset_arrays)
-.set_attr<FCompute>("FCompute<gpu>", ResetArrays<gpu>);
+NNVM_REGISTER_OP(reset_arrays).set_attr<FCompute>("FCompute<gpu>", ResetArrays<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

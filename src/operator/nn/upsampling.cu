@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file upsampling_nearest.cc
  * \brief
  * \author Bing Xu, Da Zheng
-*/
+ */
 
 #include "./deconvolution-inl.h"
 #include "./upsampling-inl.h"
@@ -30,11 +29,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(UpSampling)
-.set_attr<FCompute>("FCompute<gpu>", UpSamplingCompute<gpu>);
+NNVM_REGISTER_OP(UpSampling).set_attr<FCompute>("FCompute<gpu>", UpSamplingCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_UpSampling)
-.set_attr<FCompute>("FCompute<gpu>", UpSamplingGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", UpSamplingGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_tril_op-inl.h
  * \brief Function definition of the tril (lower triangle of an array) op
  */
@@ -41,28 +40,27 @@ struct NumpyFillDiagonalParam : public dmlc::Parameter<NumpyFillDiagonalParam> {
   Tuple<double> val;
   bool wrap;
   DMLC_DECLARE_PARAMETER(NumpyFillDiagonalParam) {
-    DMLC_DECLARE_FIELD(val)
-      .describe("Value to be written on the diagonal, "
-                "its type must be compatible with that of the array a.");
-    DMLC_DECLARE_FIELD(wrap)
-    .set_default(false)
-    .describe("The diagonal “wrapped” after N columns."
-              "You can have this behavior with this option. "
-              "This affects only tall matrices.");
+    DMLC_DECLARE_FIELD(val).describe(
+        "Value to be written on the diagonal, "
+        "its type must be compatible with that of the array a.");
+    DMLC_DECLARE_FIELD(wrap).set_default(false).describe(
+        "The diagonal “wrapped” after N columns."
+        "You can have this behavior with this option. "
+        "This affects only tall matrices.");
   }
 
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream val_s, wrap_s;
     val_s << val;
     wrap_s << wrap;
-    (*dict)["val"] = val_s.str();
+    (*dict)["val"]  = val_s.str();
     (*dict)["wrap"] = wrap_s.str();
   }
 };
 
 inline bool NumpyFillDiagonalOpShape(const nnvm::NodeAttrs& attrs,
-                                      mxnet::ShapeVector* in_attrs,
-                                      mxnet::ShapeVector* out_attrs) {
+                                     mxnet::ShapeVector* in_attrs,
+                                     mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -85,11 +83,16 @@ inline bool NumpyFillDiagonalOpShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
-template<int req>
+template <int req>
 struct FillDiagonalOpForwardImpl {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const double* val, int length, index_t step, index_t end){
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out_data,
+                                  const DType* in_data,
+                                  const double* val,
+                                  int length,
+                                  index_t step,
+                                  index_t end) {
     using namespace mxnet_op;
     if (i < end) {
       if (i % step == 0) {
@@ -99,7 +102,7 @@ struct FillDiagonalOpForwardImpl {
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void NumpyFillDiagonalForward(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<TBlob>& inputs,
@@ -109,37 +112,40 @@ void NumpyFillDiagonalForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
 
-  const TBlob& in_data = inputs[0];
+  const TBlob& in_data  = inputs[0];
   const TBlob& out_data = outputs[0];
   CHECK_GE(in_data.ndim(), 2) << "Input ndim must greater or equal 2.";
   const TShape inshape = in_data.shape_;
 
   const NumpyFillDiagonalParam& param = nnvm::get<NumpyFillDiagonalParam>(attrs.parsed);
-  Tuple<double> val_data = param.val;
-  bool wrap = param.wrap;
+  Tuple<double> val_data              = param.val;
+  bool wrap                           = param.wrap;
 
   size_t total_temp_size = val_data.ndim() * sizeof(double);
   Tensor<xpu, 1, char> temp_space =
-    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
   double* val = reinterpret_cast<double*>(temp_space.dptr_);
 
   // filling in
   if (ctx.run_ctx.ctx.dev_mask() == gpu::kDevMask) {
-  #if MXNET_USE_CUDA
-    cudaMemcpyAsync(val, val_data.begin(), val_data.ndim() * sizeof(double),
-                    cudaMemcpyHostToDevice, Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
-  #else
+#if MXNET_USE_CUDA
+    cudaMemcpyAsync(val,
+                    val_data.begin(),
+                    val_data.ndim() * sizeof(double),
+                    cudaMemcpyHostToDevice,
+                    Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
+#else
     LOG(FATAL) << "Illegal attempt to use GPU in a CPU-only build";
-  #endif
+#endif
   } else {
     std::memcpy(val, val_data.begin(), val_data.ndim() * sizeof(double));
   }
 
   // for kernel
   int64_t step = 0;
-  int64_t end = 0;
+  int64_t end  = 0;
   // wrap only works when ndim is 2
   if (in_data.ndim() == 2) {
     if (!wrap) {
@@ -162,9 +168,14 @@ void NumpyFillDiagonalForward(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<FillDiagonalOpForwardImpl<req_type>, xpu>::Launch(
-          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
-          val, val_data.ndim(), step, end);
+      Kernel<FillDiagonalOpForwardImpl<req_type>, xpu>::Launch(s,
+                                                               out_data.Size(),
+                                                               out_data.dptr<DType>(),
+                                                               in_data.dptr<DType>(),
+                                                               val,
+                                                               val_data.ndim(),
+                                                               step,
+                                                               end);
     });
   });
 }

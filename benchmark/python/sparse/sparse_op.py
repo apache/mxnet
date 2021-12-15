@@ -155,7 +155,7 @@ def test_dot_synthetic():
         return diff / repeat
 
     def bench_dot_forward(m, k, n, density, ctx, repeat):
-        set_default_context(ctx)
+        set_default_device(ctx)
         dns = mx.nd.random.uniform(shape=(k, n)).copyto(ctx)
         data_shape = (m, k)
         csr_data = rand_ndarray(data_shape, 'csr', density)
@@ -184,7 +184,7 @@ def test_dot_synthetic():
                      ratio_baseline, costs_baseline[0], costs_baseline[1]))
 
     def bench_dot_backward(m, k, n, density, ctx, repeat):
-        set_default_context(ctx)
+        set_default_device(ctx)
         dns = mx.nd.random.uniform(shape=(m, n)).copyto(ctx)
         data_shape = (m, k)
         csr_data = rand_ndarray(data_shape, 'csr', density)

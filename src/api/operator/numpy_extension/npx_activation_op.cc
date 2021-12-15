@@ -19,7 +19,8 @@
 
 /*!
  * \file npx_activation_op.cc
- * \brief Implementation of the API of functions in src/operator/numpy_extension/npx_activation_op.cc
+ * \brief Implementation of the API of functions in
+ * src/operator/numpy_extension/npx_activation_op.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
@@ -52,22 +53,22 @@ inline int String2MXNetActType(const std::string& s) {
 }
 
 MXNET_REGISTER_API("_npx.activation")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  const nnvm::Op* op = Op::Get("_npx_activation");
-  op::ActivationParam param;
-  // act_type
-  param.act_type = String2MXNetActType(args[1].operator std::string());
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::ActivationParam>(&attrs);
-  // inputs
-  NDArray* inputs[] = {args[0].operator NDArray*()};
-  int num_inputs = 1;
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      nnvm::NodeAttrs attrs;
+      const nnvm::Op* op = Op::Get("_npx_activation");
+      op::ActivationParam param = {};
+      // act_type
+      param.act_type = String2MXNetActType(args[1].operator std::string());
+      attrs.parsed   = param;
+      attrs.op       = op;
+      SetAttrDict<op::ActivationParam>(&attrs);
+      // inputs
+      NDArray* inputs[] = {args[0].operator NDArray*()};
+      int num_inputs    = 1;
+      int num_outputs   = 0;
+      auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+      *ret              = ndoutputs[0];
+    });
 
 }  // namespace mxnet

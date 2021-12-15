@@ -29,38 +29,38 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npx.one_hot")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  const nnvm::Op* op = Op::Get("_npx_one_hot");
-  op::OneHotParam param;
-  // inputs
-  int num_inputs = 1;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  // depth
-  param.depth = args[1].operator int64_t();
-  // on_value
-  if (args[2].type_code() == kNull) {
-    param.on_value = 1.0;
-  } else {
-    param.on_value = args[2].operator double();
-  }
-  // off_value
-  if (args[3].type_code() == kNull) {
-    param.off_value = 0.0;
-  } else {
-    param.off_value = args[3].operator double();
-  }
-  // dtype
-  if (args[4].type_code() != kNull) {
-    param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
-  }
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::OneHotParam>(&attrs);
-  int num_outputs = 1;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      nnvm::NodeAttrs attrs;
+      const nnvm::Op* op = Op::Get("_npx_one_hot");
+      op::OneHotParam param = {};
+      // inputs
+      int num_inputs    = 1;
+      NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+      // depth
+      param.depth = args[1].operator int64_t();
+      // on_value
+      if (args[2].type_code() == kNull) {
+        param.on_value = 1.0;
+      } else {
+        param.on_value = args[2].operator double();
+      }
+      // off_value
+      if (args[3].type_code() == kNull) {
+        param.off_value = 0.0;
+      } else {
+        param.off_value = args[3].operator double();
+      }
+      // dtype
+      if (args[4].type_code() != kNull) {
+        param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
+      }
+      attrs.parsed = param;
+      attrs.op     = op;
+      SetAttrDict<op::OneHotParam>(&attrs);
+      int num_outputs = 1;
+      auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+      *ret            = ndoutputs[0];
+    });
 
 }  // namespace mxnet

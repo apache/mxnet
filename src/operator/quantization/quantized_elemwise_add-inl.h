@@ -35,22 +35,24 @@ struct QuantizeElemwiseAddParam : public dmlc::Parameter<QuantizeElemwiseAddPara
   dmlc::optional<float> max_calib_range;
   DMLC_DECLARE_PARAMETER(QuantizeElemwiseAddParam) {
     DMLC_DECLARE_FIELD(min_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The minimum scalar value in the form of float32 obtained "
-              "through calibration. If present, it will be used to requantize the "
-              "int8 output data.");
+        .set_default(dmlc::optional<float>())
+        .describe(
+            "The minimum scalar value in the form of float32 obtained "
+            "through calibration. If present, it will be used to requantize the "
+            "int8 output data.");
     DMLC_DECLARE_FIELD(max_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The maximum scalar value in the form of float32 obtained "
-              "through calibration. If present, it will be used to requantize the "
-              "int8 output data.");
+        .set_default(dmlc::optional<float>())
+        .describe(
+            "The maximum scalar value in the form of float32 obtained "
+            "through calibration. If present, it will be used to requantize the "
+            "int8 output data.");
   }
 };
 
 namespace quantized_elemwise_add_enum {
 enum QuantizedElemwiseAddOutputs { kOut, kMin, kMax };
-enum QuantizedElemwiseAddInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax};
-}
+enum QuantizedElemwiseAddInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax };
+}  // namespace quantized_elemwise_add_enum
 
 }  // namespace op
 }  // namespace mxnet

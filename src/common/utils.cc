@@ -29,14 +29,16 @@
 namespace mxnet {
 namespace common {
 
-template<>
-void CheckFormatWrapper<cpu>(const RunContext &rctx, const NDArray &input,
-                             const TBlob &err_cpu, const bool full_check) {
+template <>
+void CheckFormatWrapper<cpu>(const RunContext& rctx,
+                             const NDArray& input,
+                             const TBlob& err_cpu,
+                             const bool full_check) {
   CheckFormatImpl<cpu>(rctx, input, err_cpu, full_check);
 }
 
-template<>
-void SparseRetainOpForwardRspWrapper<cpu>(mshadow::Stream<cpu> *s,
+template <>
+void SparseRetainOpForwardRspWrapper<cpu>(mshadow::Stream<cpu>* s,
                                           const NDArray& input_nd,
                                           const TBlob& idx_data,
                                           const OpReqType req,
@@ -44,22 +46,20 @@ void SparseRetainOpForwardRspWrapper<cpu>(mshadow::Stream<cpu> *s,
   mxnet::op::SparseRetainOpForwardRspImpl<cpu>(s, input_nd, idx_data, req, output_nd);
 }
 
-template<>
-void CastStorageDispatch<cpu>(const OpContext& ctx,
-                              const NDArray& input,
-                              const NDArray& output) {
+template <>
+void CastStorageDispatch<cpu>(const OpContext& ctx, const NDArray& input, const NDArray& output) {
   mxnet::op::CastStorageComputeImpl<cpu>(ctx, input, output);
 }
 
 void ExecuteMonInputCallback(
-    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
-    size_t nid, const std::function<void(const char *, const char *, void *)>
-                    &monitor_callback) {
-  static const auto &flist_inputs =
-      nnvm::Op::GetAttr<nnvm::FListInputNames>("FListInputNames");
+    const nnvm::IndexedGraph& idx,
+    const std::vector<NDArray*>& state_arrays,
+    size_t nid,
+    const std::function<void(const char*, const char*, void*)>& monitor_callback) {
+  static const auto& flist_inputs = nnvm::Op::GetAttr<nnvm::FListInputNames>("FListInputNames");
   std::vector<std::string> input_names;
-  const nnvm::IndexedGraph::Node &inode = idx[nid];
-  const nnvm::Node *node = inode.source;
+  const nnvm::IndexedGraph::Node& inode = idx[nid];
+  const nnvm::Node* node                = inode.source;
   if (flist_inputs.count(node->op())) {
     input_names = flist_inputs[node->op()](node->attrs);
   } else {
@@ -69,26 +69,25 @@ void ExecuteMonInputCallback(
   }
 
   for (size_t i = 0; i < node->num_inputs(); ++i) {
-    const nnvm::NodeEntry &input = node->inputs[i];
+    const nnvm::NodeEntry& input = node->inputs[i];
     if (state_arrays[idx.entry_id(input)]->is_none()) {
       continue;
     }
-    NDArray *cpy = new NDArray(*state_arrays[idx.entry_id(input)]);
+    NDArray* cpy     = new NDArray(*state_arrays[idx.entry_id(input)]);
     std::string name = inode.source->attrs.name + "_" + input_names[i];
-    monitor_callback(name.c_str(), inode.source->op()->name.c_str(),
-                     reinterpret_cast<void *>(cpy));
+    monitor_callback(name.c_str(), inode.source->op()->name.c_str(), reinterpret_cast<void*>(cpy));
   }
 }
 
 void ExecuteMonOutputCallback(
-    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
-    size_t nid, const std::function<void(const char *, const char *, void *)>
-                    &monitor_callback) {
-  static const auto &flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+    const nnvm::IndexedGraph& idx,
+    const std::vector<NDArray*>& state_arrays,
+    size_t nid,
+    const std::function<void(const char*, const char*, void*)>& monitor_callback) {
+  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   std::vector<std::string> output_names;
-  const nnvm::IndexedGraph::Node &inode = idx[nid];
-  const nnvm::Node *node = inode.source;
+  const nnvm::IndexedGraph::Node& inode = idx[nid];
+  const nnvm::Node* node                = inode.source;
   if (flist_outputs.count(node->op())) {
     output_names = flist_outputs[node->op()](node->attrs);
   } else {
@@ -101,10 +100,9 @@ void ExecuteMonOutputCallback(
     if (state_arrays[idx.entry_id(nid, i)]->is_none()) {
       continue;
     }
-    NDArray *cpy = new NDArray(*state_arrays[idx.entry_id(nid, i)]);
+    NDArray* cpy     = new NDArray(*state_arrays[idx.entry_id(nid, i)]);
     std::string name = inode.source->attrs.name + "_" + output_names[i];
-    monitor_callback(name.c_str(), inode.source->op()->name.c_str(),
-                     reinterpret_cast<void *>(cpy));
+    monitor_callback(name.c_str(), inode.source->op()->name.c_str(), reinterpret_cast<void*>(cpy));
   }
 }
 
@@ -119,6 +117,14 @@ MShadowTypeInfo mshadow_type_info(const int type_flag) {
       return MShadowTypeInfo("float16", 2, sizeof(float));
     case kUint8:
       return MShadowTypeInfo("uint8", sizeof(uint8_t), sizeof(index_t));
+    case kUint16:
+      return MShadowTypeInfo("uint16", sizeof(uint16_t));
+    case kUint32:
+      return MShadowTypeInfo("uint32", sizeof(uint32_t));
+    case kUint64:
+      return MShadowTypeInfo("uint64", sizeof(uint64_t));
+    case kInt16:
+      return MShadowTypeInfo("int16", sizeof(int16_t));
     case kInt32:
       return MShadowTypeInfo("int32", sizeof(int32_t));
     case kInt8:

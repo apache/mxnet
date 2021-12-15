@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_scalar-inl.h
  * \brief Function definition of insert operators (insert by int index)
  */
@@ -35,7 +34,7 @@ namespace op {
 /*
  * Only support scalar index (the type of param 'obj' is scalar).
  */
-template<typename xpu>
+template <typename xpu>
 void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<TBlob>& inputs,
@@ -45,28 +44,29 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
 
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
-  int input_count = param.val.has_value() ? 1 : 2;
+  int input_count               = param.val.has_value() ? 1 : 2;
   CHECK_EQ(inputs.size(), input_count);
   CHECK_EQ(outputs.size(), 1);
   CHECK_EQ(req.size(), 1);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const int arr_pos = 0;
-  const int val_pos = param.val.has_value() ? 0 : 1;
-  const int out_pos = 0;
-  int ndim = inputs[arr_pos].shape_.ndim();
-  int axis = param.axis.has_value() ? param.axis.value() : 0;
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  const int arr_pos       = 0;
+  const int val_pos       = param.val.has_value() ? 0 : 1;
+  const int out_pos       = 0;
+  int ndim                = inputs[arr_pos].shape_.ndim();
+  int axis                = param.axis.has_value() ? param.axis.value() : 0;
   TBlob arr;
-  TBlob values = param.val.has_value() ?
-                  TBlob(nullptr, mxnet::TShape(0, 1), xpu::kDevMask, outputs[out_pos].type_flag_) :
-                  inputs[val_pos];
+  TBlob values =
+      param.val.has_value() ?
+          TBlob(nullptr, mxnet::TShape(0, 1), xpu::kDevMask, outputs[out_pos].type_flag_) :
+          inputs[val_pos];
   if (!param.axis.has_value()) {
-    arr = inputs[arr_pos].reshape(Shape1(inputs[arr_pos].shape_.Size()));
+    arr  = inputs[arr_pos].reshape(Shape1(inputs[arr_pos].shape_.Size()));
     ndim = 1;
   } else if (ndim == 0) {
     if (param.val.has_value()) {
       CHECK_EQ(inputs[val_pos].shape_.ndim(), 0)
-        << "'arr' is a 0-d array, 'values' can not assign to it. "
-        << "alueError: assignment to 0-d array.";
+          << "'arr' is a 0-d array, 'values' can not assign to it. "
+          << "alueError: assignment to 0-d array.";
       mxnet_op::copy(s, outputs[out_pos], inputs[val_pos]);
     } else {
       MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
@@ -77,19 +77,18 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
   } else {
     arr = inputs[arr_pos];
     CHECK(axis >= -1 * arr.shape_.ndim() && axis < arr.shape_.ndim())
-      << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
+        << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
     axis += (axis < 0) ? arr.shape_.ndim() : 0;
   }
 
-  index_t N = arr.shape_[axis];
+  index_t N     = arr.shape_[axis];
   size_t numnew = 0;  // numnew = output.shape[axis] - arr.shape[axis]
   index_t index = 0;  // save modified index, because index may be negative integer
   mxnet::TShape val_newshape(arr.shape_.ndim(), -1);
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
-  for (index_t i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
-        i >= 0 || j >= 0;
-        --i, --j) {
+  for (index_t i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1; i >= 0 || j >= 0;
+       --i, --j) {
     if (i >= 0 && j >= 0) {
       val_newshape[j] = values.shape_[i];
     } else if (i >= 0) {
@@ -105,7 +104,7 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
   if (param.int_ind.has_value()) {
     index = param.int_ind.value();
     CHECK(index >= -1 * N && index <= N)
-      << "Index should be in the range of [-r, r-1] where r is the dim size in 'axis'";
+        << "Index should be in the range of [-r, r-1] where r is the dim size in 'axis'";
     if (index < 0) {
       index += N;
     }
@@ -129,10 +128,8 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
   values.shape_.assign(val_newshape2.begin(), val_newshape2.end());
 
   const mxnet::TShape& outshape = outputs[out_pos].shape_;
-  int dtype = outputs[out_pos].type_flag_;
-  int vtype = param.val.has_value() ?
-              mshadow::DataType<double>::kFlag :
-              inputs[val_pos].type_flag_;
+  int dtype                     = outputs[out_pos].type_flag_;
+  int vtype = param.val.has_value() ? mshadow::DataType<double>::kFlag : inputs[val_pos].type_flag_;
   if (param.val.has_value()) {
     MSHADOW_TYPE_SWITCH(vtype, VType, {
       // If insert use single index and 'value' is inputed as numerical parameter
@@ -143,14 +140,24 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
 
   // 'obj' is integer, need to moveaxis
   MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-    InsertScalerImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
+    InsertScalerImpl<xpu, ndim>(s,
+                                outputs[out_pos],
+                                arr,
+                                values,
                                 mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                 mxnet_op::calc_stride(values.shape_.get<ndim>()),
                                 mxnet_op::calc_stride(old_valshape.get<ndim>()),
                                 mxnet_op::calc_stride(outshape.get<ndim>()),
-                                outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                dtype, vtype, req[out_pos], axis, index, numnew,
-                                outshape.Size(), true);
+                                outshape.get<ndim>(),
+                                values.shape_.get<ndim>(),
+                                dtype,
+                                vtype,
+                                req[out_pos],
+                                axis,
+                                index,
+                                numnew,
+                                outshape.Size(),
+                                true);
   });
 }
 

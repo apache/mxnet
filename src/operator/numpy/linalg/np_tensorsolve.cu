@@ -31,10 +31,10 @@ namespace op {
 #if MXNET_USE_CUSOLVER == 1
 
 NNVM_REGISTER_OP(_npi_tensorsolve)
-.set_attr<FCompute>("FCompute<gpu>", TensorsolveOpForward<gpu, tensorsolve>);
+    .set_attr<FCompute>("FCompute<gpu>", TensorsolveOpForward<gpu, tensorsolve>);
 
 NNVM_REGISTER_OP(_backward_npi_tensorsolve)
-.set_attr<FCompute>("FCompute<gpu>", TensorsolveOpBackward<gpu, tensorsolve_backward>);
+    .set_attr<FCompute>("FCompute<gpu>", TensorsolveOpBackward<gpu, tensorsolve_backward>);
 
 #endif
 

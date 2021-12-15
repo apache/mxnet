@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file amp_graph_pass.cc
  * \brief graph pass regarding AMP
  * \author Clement Fuji Tsang
@@ -30,10 +29,9 @@
 namespace mxnet {
 namespace op {
 
+using nnvm::Graph;
 using nnvm::Node;
 using nnvm::ObjectPtr;
-using nnvm::Graph;
-
 
 /*
  * \brief Remove amp_cast and amp_multicast and replug the fp32 weights
@@ -52,10 +50,7 @@ Graph RemoveAmpCast(Graph&& g) {
   return std::move(g);
 }
 
-NNVM_REGISTER_PASS(RemoveAmpCast)
-.describe("")
-.set_body(RemoveAmpCast)
-.set_change_graph(true);
+NNVM_REGISTER_PASS(RemoveAmpCast).describe("").set_body(RemoveAmpCast).set_change_graph(true);
 
 }  // namespace op
 }  // namespace mxnet

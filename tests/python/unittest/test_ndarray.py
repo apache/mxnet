@@ -27,7 +27,7 @@ import pytest
 from common import assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
-from mxnet.test_utils import default_context
+from mxnet.test_utils import default_device
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
 from mxnet.test_utils import random_sample, rand_shape_nd, random_arrays
@@ -890,7 +890,7 @@ def test_linspace():
 
 @pytest.mark.serial
 def test_order():
-    ctx = default_context()
+    ctx = default_device()
     dat_size = 5
     is_large_tensor_enabled = runtime.Features().is_enabled('INT64_TENSOR_SIZE')
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
@@ -1295,7 +1295,7 @@ def test_ndarray_fluent():
                     'softmin', 'reciprocal'])
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
-            data = mx.nd.random_uniform(shape=shape, ctx=default_context())
+            data = mx.nd.random_uniform(shape=shape, ctx=default_device())
             regular = getattr(mx.ndarray, func)(data, **kwargs)
             fluent = getattr(data, func)(**kwargs)
             if isinstance(regular, list):
@@ -1746,7 +1746,7 @@ def test_ndarray_astype():
 
 
 @pytest.mark.serial
-def test_norm(ctx=default_context()):
+def test_norm(ctx=default_device()):
     try:
         import scipy
         assert LooseVersion(scipy.__version__) >= LooseVersion('0.1')

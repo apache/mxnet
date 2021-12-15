@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file crop.h
  * \brief support for crop
  * \author Tianqi Chen

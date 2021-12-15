@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file operator_util.h
  * \brief Utility functions and registries to help quickly build new operators.
  *  [Deprecated]
@@ -31,7 +30,7 @@
 #define MXNET_OPERATOR_UTIL_H_
 
 #ifdef _MSC_VER
-#pragma warning(disable:4503)  // disable warning: decorated name length exceeded.
+#pragma warning(disable : 4503)  // disable warning: decorated name length exceeded.
 #endif
 
 #include <dmlc/registry.h>
@@ -87,10 +86,7 @@ struct EnvArguments {
  * \param req The requirement to stroe the ret.
  * \param ctx Runtime context to execute the function.
  */
-typedef void (*SourceFunction)(const EnvArguments& env,
-                               TBlob* ret,
-                               OpReqType req,
-                               RunContext ctx);
+typedef void (*SourceFunction)(const EnvArguments& env, TBlob* ret, OpReqType req, RunContext ctx);
 
 /*!
  * \brief Shape inference function to get the correct shape.
@@ -119,8 +115,7 @@ typedef void (*UnaryFunction)(const TBlob& src,
  * \param env The Environment arguments.
  * \return The inferred result shape.
  */
-typedef mxnet::TShape (*UnaryShapeFunction)(const mxnet::TShape& src,
-                                     const EnvArguments& env);
+typedef mxnet::TShape (*UnaryShapeFunction)(const mxnet::TShape& src, const EnvArguments& env);
 
 /*!
  * \brief Gradient function that takes output value of function and computes gradient wrt to input.
@@ -190,8 +185,8 @@ typedef void (*BinaryFunction)(const TBlob& lhs,
  * \return The inferred result shape.
  */
 typedef mxnet::TShape (*BinaryShapeFunction)(const mxnet::TShape& lhs,
-                                      const mxnet::TShape& rhs,
-                                      const EnvArguments& env);
+                                             const mxnet::TShape& rhs,
+                                             const EnvArguments& env);
 /*!
  * \brief Gradient function that takes only output gradient and computes gradient wrt to input.
  *  We support total gradient as a whole to make it easy to combine a few ops.
@@ -247,16 +242,10 @@ enum SimpleOpInplaceOption {
 };
 
 /*! \brief options in the registry to set symbolic registration */
-enum SimpleOpScalarOption {
-  kScalarBeforeArray,
-  kArrayBeforeScalar
-};
+enum SimpleOpScalarOption { kScalarBeforeArray, kArrayBeforeScalar };
 
 /*! \brief options in the registry to set symbolic registration */
-enum SimpleOpRegOption {
-  kNotRegisterSymbolic,
-  kRegisterSymbolic
-};
+enum SimpleOpRegOption { kNotRegisterSymbolic, kRegisterSymbolic };
 
 /*! \brief registry entry to register simple operators via functions. */
 class SimpleOpRegEntry {
@@ -279,9 +268,8 @@ class SimpleOpRegEntry {
    * \param enable_scalar whether to enable scalar argument
    * \param type_mask the position of the scalar argument.
    */
-  virtual TSelf& set_enable_scalar(
-      bool enable_scalar,
-      SimpleOpScalarOption type_mask = kArrayBeforeScalar) = 0;
+  virtual TSelf& set_enable_scalar(bool enable_scalar,
+                                   SimpleOpScalarOption type_mask = kArrayBeforeScalar) = 0;
   /*!
    * \brief set whether to enable kwargs
    *  A function cannot have both kwargs and scalar arguments.
@@ -295,8 +283,7 @@ class SimpleOpRegEntry {
    *  The resource will be presented in both forward and backward.
    * \param reqs the request.
    */
-  virtual TSelf& set_resource_request(
-      const std::vector<ResourceRequest>& reqs) = 0;
+  virtual TSelf& set_resource_request(const std::vector<ResourceRequest>& reqs) = 0;
   /*!
    * \brief set resource request
    *  By default there is no resource request.
@@ -327,10 +314,9 @@ class SimpleOpRegEntry {
    * \param fsource The unary function that peforms the operation.
    * \param register_symbolic Whether register a symbolic operator as well.
    */
-  virtual TSelf& set_function(
-      int dev_mask,
-      SourceFunction fsource,
-      SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
+  virtual TSelf& set_function(int dev_mask,
+                              SourceFunction fsource,
+                              SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
   /*!
    * \brief set function of the function to be funary
    * \param dev_mask The device mask of the function can act on.
@@ -338,11 +324,10 @@ class SimpleOpRegEntry {
    * \param inplace_in_out Whether do inplace optimization on in and out.
    * \param register_symbolic Whether register a symbolic operator as well.
    */
-  virtual TSelf& set_function(
-      int dev_mask,
-      UnaryFunction funary,
-      SimpleOpInplaceOption inplace_in_out,
-      SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
+  virtual TSelf& set_function(int dev_mask,
+                              UnaryFunction funary,
+                              SimpleOpInplaceOption inplace_in_out,
+                              SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
   /*!
    * \brief set function of the function to be funary
    * \param dev_mask The device mask of the function can act on.
@@ -350,11 +335,10 @@ class SimpleOpRegEntry {
    * \param inplace_lhs_out Whether do inplace optimization on lhs and out.
    * \param register_symbolic Whether register a symbolic operator as well.
    */
-  virtual TSelf& set_function(
-      int dev_mask,
-      BinaryFunction fbinary,
-      SimpleOpInplaceOption inplace_lhs_out,
-      SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
+  virtual TSelf& set_function(int dev_mask,
+                              BinaryFunction fbinary,
+                              SimpleOpInplaceOption inplace_lhs_out,
+                              SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
   /*!
    * \brief set gradient of the function of this function.
    * \param dev_mask The device mask of the function can act on.
@@ -405,14 +389,14 @@ class SimpleOpRegEntry {
    * \param description The description of the function.
    * \return reference to self.
    */
-  virtual TSelf& describe(const std::string &description) = 0;
+  virtual TSelf& describe(const std::string& description) = 0;
   /*!
    * \brief Describe the function.
    * \param args argument information.
    *  Add additional arguments to the function.
    * \return reference to self.
    */
-  virtual TSelf& add_arguments(const std::vector<dmlc::ParamFieldInfo> &args) = 0;
+  virtual TSelf& add_arguments(const std::vector<dmlc::ParamFieldInfo>& args) = 0;
   /*! \brief virtual destructor */
   virtual ~SimpleOpRegEntry() {}
 };
@@ -425,13 +409,13 @@ class SimpleOpRegistry {
    * \param name name of the function
    * \return ref to the registered entry, used to set properties
    */
-  SimpleOpRegEntry &__REGISTER_OR_FIND__(char const* name);
+  SimpleOpRegEntry& __REGISTER_OR_FIND__(char const* name);
   /*!
    * \brief Find the entry with corresponding name.
    * \param name name of the function
    * \return the corresponding function, can be nullptr
    */
-  inline static const SimpleOpRegEntry *Find(const std::string &name) {
+  inline static const SimpleOpRegEntry* Find(const std::string& name) {
     return Get()->fmap_.at(name);
   }
   /*! \return global singleton of the registry */
@@ -452,28 +436,27 @@ class SimpleOpRegistry {
  * \tparam OType output type
  * \tparam Exp expression type
  */
-#define ASSIGN_DISPATCH(out, req, exp)  \
-  {                                     \
-    switch (req) {                      \
-      case kNullOp:                     \
-        break;                          \
-      case kWriteTo:                    \
-      case kWriteInplace:               \
-        (out) = (exp);                  \
-        break;                          \
-      case kAddTo:                      \
-        (out) += (exp);                 \
-        break;                          \
-      default:                          \
-        LOG(FATAL) << "not reached";    \
-    }                                   \
+#define ASSIGN_DISPATCH(out, req, exp) \
+  {                                    \
+    switch (req) {                     \
+      case kNullOp:                    \
+        break;                         \
+      case kWriteTo:                   \
+      case kWriteInplace:              \
+        (out) = (exp);                 \
+        break;                         \
+      case kAddTo:                     \
+        (out) += (exp);                \
+        break;                         \
+      default:                         \
+        LOG(FATAL) << "not reached";   \
+    }                                  \
   }
 
 /*!
-* \brief Maximum ndim supported for special operators like broadcasting with non contiguous lhs/rhs
-*/
+ * \brief Maximum ndim supported for special operators like broadcasting with non contiguous lhs/rhs
+ */
 #define MXNET_SPECIAL_MAX_NDIM 5
-
 
 //--------------------------------------------------------------
 // The following part are API Registration of Simple Operators
@@ -495,9 +478,8 @@ class SimpleOpRegistry {
  *
  * \endcode
  */
-#define MXNET_REGISTER_SIMPLE_OP(Name, DEV)                             \
-  static ::mxnet::op::SimpleOpRegEntry &                                \
-  __make_ ## SimpleOpRegEntry ## _ ## Name ## __ ## DEV ##__ =          \
+#define MXNET_REGISTER_SIMPLE_OP(Name, DEV)                                               \
+  static ::mxnet::op::SimpleOpRegEntry& __make_##SimpleOpRegEntry##_##Name##__##DEV##__ = \
       ::mxnet::op::SimpleOpRegistry::Get()->__REGISTER_OR_FIND__(#Name)
 
 }  // namespace op

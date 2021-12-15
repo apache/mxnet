@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file node_op_util.h
  * \brief abstraction for commonly used nnvm::Node operations.
  */
@@ -34,58 +33,54 @@ namespace util {
 
 class NodeOpGen {
  private:
-    const nnvm::ObjectPtr &dependent_node;
+  const nnvm::ObjectPtr& dependent_node;
 
  public:
-    explicit NodeOpGen(const nnvm::ObjectPtr &dependent_node) : dependent_node{dependent_node} {}
+  explicit NodeOpGen(const nnvm::ObjectPtr& dependent_node) : dependent_node{dependent_node} {}
 
-    nnvm::NodeEntry mul(const nnvm::NodeEntry &lhs, const nnvm::NodeEntry &rhs) {
-        return nnvm::NodeEntry{mxnet::op::MakeNode("elemwise_mul",
-                                                   dependent_node->attrs.name + "_mul",
-                                                   {lhs, rhs}, nullptr, &dependent_node)};
-    }
+  nnvm::NodeEntry mul(const nnvm::NodeEntry& lhs, const nnvm::NodeEntry& rhs) {
+    return nnvm::NodeEntry{mxnet::op::MakeNode(
+        "elemwise_mul", dependent_node->attrs.name + "_mul", {lhs, rhs}, nullptr, &dependent_node)};
+  }
 
-    nnvm::NodeEntry mul(const nnvm::NodeEntry &x, double scalar) {
-        const std::unordered_map<std::string, std::string> scalar_dict =
-            {{"scalar", std::to_string(scalar)}};
-        return nnvm::NodeEntry{mxnet::op::MakeNode("_mul_scalar",
-                                                   dependent_node->attrs.name + "_mul_scalar",
-                                                   {x}, &scalar_dict, &dependent_node)};
-    }
+  nnvm::NodeEntry mul(const nnvm::NodeEntry& x, double scalar) {
+    const std::unordered_map<std::string, std::string> scalar_dict = {
+        {"scalar", std::to_string(scalar)}};
+    return nnvm::NodeEntry{mxnet::op::MakeNode("_mul_scalar",
+                                               dependent_node->attrs.name + "_mul_scalar",
+                                               {x},
+                                               &scalar_dict,
+                                               &dependent_node)};
+  }
 
-    nnvm::NodeEntry mul(double scalar, const nnvm::NodeEntry &x) {
-        return NodeOpGen::mul(x, scalar);
-    }
+  nnvm::NodeEntry mul(double scalar, const nnvm::NodeEntry& x) {
+    return NodeOpGen::mul(x, scalar);
+  }
 
-    nnvm::NodeEntry div(const nnvm::NodeEntry &lhs, const nnvm::NodeEntry &rhs) {
-        return nnvm::NodeEntry{mxnet::op::MakeNode("elemwise_div",
-                                                   dependent_node->attrs.name + "_div",
-                                                   {lhs, rhs}, nullptr, &dependent_node)};
-    }
+  nnvm::NodeEntry div(const nnvm::NodeEntry& lhs, const nnvm::NodeEntry& rhs) {
+    return nnvm::NodeEntry{mxnet::op::MakeNode(
+        "elemwise_div", dependent_node->attrs.name + "_div", {lhs, rhs}, nullptr, &dependent_node)};
+  }
 
-    nnvm::NodeEntry square(const nnvm::NodeEntry &x) {
-        return nnvm::NodeEntry{mxnet::op::MakeNode("square",
-                                                   dependent_node->attrs.name + "_square",
-                                                   {x}, nullptr, &dependent_node)};
-    }
+  nnvm::NodeEntry square(const nnvm::NodeEntry& x) {
+    return nnvm::NodeEntry{mxnet::op::MakeNode(
+        "square", dependent_node->attrs.name + "_square", {x}, nullptr, &dependent_node)};
+  }
 
-    nnvm::NodeEntry reciprocal(const nnvm::NodeEntry &x) {
-        return nnvm::NodeEntry{mxnet::op::MakeNode("reciprocal",
-                                                   dependent_node->attrs.name + "_reciprocal",
-                                                   {x}, nullptr, &dependent_node)};
-    }
+  nnvm::NodeEntry reciprocal(const nnvm::NodeEntry& x) {
+    return nnvm::NodeEntry{mxnet::op::MakeNode(
+        "reciprocal", dependent_node->attrs.name + "_reciprocal", {x}, nullptr, &dependent_node)};
+  }
 
-    nnvm::NodeEntry negative(const nnvm::NodeEntry &x) {
-        return nnvm::NodeEntry{mxnet::op::MakeNode("negative",
-                                                   dependent_node->attrs.name + "_negative",
-                                                   {x}, nullptr, &dependent_node)};
-    }
+  nnvm::NodeEntry negative(const nnvm::NodeEntry& x) {
+    return nnvm::NodeEntry{mxnet::op::MakeNode(
+        "negative", dependent_node->attrs.name + "_negative", {x}, nullptr, &dependent_node)};
+  }
 
-    nnvm::NodeEntry ones_like(const nnvm::NodeEntry &x) {
-        return nnvm::NodeEntry{mxnet::op::MakeNode("ones_like",
-                                                   dependent_node->attrs.name + "_oneslike",
-                                                   {x}, nullptr, &dependent_node)};
-    }
+  nnvm::NodeEntry ones_like(const nnvm::NodeEntry& x) {
+    return nnvm::NodeEntry{mxnet::op::MakeNode(
+        "ones_like", dependent_node->attrs.name + "_oneslike", {x}, nullptr, &dependent_node)};
+  }
 };
 
 }  // namespace util

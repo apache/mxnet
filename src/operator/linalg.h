@@ -55,29 +55,44 @@ using namespace mshadow;
 // for further information about the function and its parameters.
 // Note that this is C = gemm(A,B,C), so C is input and output parameter.
 // C = alpha * A * B + beta * C
-template<typename xpu, typename DType>
-void linalg_gemm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 const Tensor<xpu, 2, DType>& C, DType alpha, DType beta,
-                 bool tA, bool tB, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_gemm(const Tensor<xpu, 2, DType>& A,
+                 const Tensor<xpu, 2, DType>& B,
+                 const Tensor<xpu, 2, DType>& C,
+                 DType alpha,
+                 DType beta,
+                 bool tA,
+                 bool tB,
+                 Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
-void linalg_batch_gemm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
-                       const Tensor<xpu, 3, DType>& C, DType alpha, DType beta,
-                       bool tA, bool tB, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_batch_gemm(const Tensor<xpu, 3, DType>& A,
+                       const Tensor<xpu, 3, DType>& B,
+                       const Tensor<xpu, 3, DType>& C,
+                       DType alpha,
+                       DType beta,
+                       bool tA,
+                       bool tB,
+                       Stream<xpu>* s = 0);
 
 // Version of batch gemmm where rows are indexed at axis 1 and columns at axis 3.
-template<typename xpu, typename DType>
-void linalg_batch_gemm(const Tensor<xpu, 4, DType>& A, const Tensor<xpu, 4, DType>& B,
-                       const Tensor<xpu, 4, DType>& C, DType alpha, DType beta,
-                       bool tA, bool tB, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_batch_gemm(const Tensor<xpu, 4, DType>& A,
+                       const Tensor<xpu, 4, DType>& B,
+                       const Tensor<xpu, 4, DType>& C,
+                       DType alpha,
+                       DType beta,
+                       bool tA,
+                       bool tB,
+                       Stream<xpu>* s = 0);
 
-
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
                         const Tensor<xpu, 2, DType>& B,
                         const Tensor<xpu, 2, DType>& C,
-                        bool tA, bool tB,
-                        Stream<xpu> *s = 0,
+                        bool tA,
+                        bool tB,
+                        Stream<xpu>* s       = 0,
                         mxnet::OpReqType req = mxnet::kWriteTo);
 
 //////////////////////////////// TRSM ////////////////////////////////////////////
@@ -85,13 +100,23 @@ inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
 // CPU/GPU-versions of BLAS3 function "trsm". Please refer to the BLAS3-documentation
 // for further information about the function and its parameters.
 // Note that this is B = trsm(A,B), so B is input and output parameter.
-template<typename xpu, typename DType>
-void linalg_trsm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 DType alpha, bool rightside, bool lower, bool transpose, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_trsm(const Tensor<xpu, 2, DType>& A,
+                 const Tensor<xpu, 2, DType>& B,
+                 DType alpha,
+                 bool rightside,
+                 bool lower,
+                 bool transpose,
+                 Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
-inline void linalg_batch_trsm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
-                   DType alpha, bool rightside, bool lower, bool transpose, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+inline void linalg_batch_trsm(const Tensor<xpu, 3, DType>& A,
+                              const Tensor<xpu, 3, DType>& B,
+                              DType alpha,
+                              bool rightside,
+                              bool lower,
+                              bool transpose,
+                              Stream<xpu>* s = 0);
 
 //////////////////////////////// TRMM ////////////////////////////////////////////
 
@@ -99,13 +124,23 @@ inline void linalg_batch_trsm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 
 // for further information about the function and its parameters.
 // Note that this is B = trmm(A,B), so B is input and output parameter.
 
-template<typename xpu, typename DType>
-void linalg_trmm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 DType alpha, bool rightside, bool lower, bool transpose, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_trmm(const Tensor<xpu, 2, DType>& A,
+                 const Tensor<xpu, 2, DType>& B,
+                 DType alpha,
+                 bool rightside,
+                 bool lower,
+                 bool transpose,
+                 Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
-void linalg_batch_trmm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
-                    DType alpha, bool rightside, bool lower, bool transpose, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_batch_trmm(const Tensor<xpu, 3, DType>& A,
+                       const Tensor<xpu, 3, DType>& B,
+                       DType alpha,
+                       bool rightside,
+                       bool lower,
+                       bool transpose,
+                       Stream<xpu>* s = 0);
 
 //////////////////////////////// POTRF ////////////////////////////////////////////
 
@@ -113,11 +148,11 @@ void linalg_batch_trmm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DTyp
 // for further information about the function and its parameters.
 // Note that this is A = potrf(A), so A is input and output parameter.
 
-template<typename xpu, typename DType>
-void linalg_potrf(const Tensor<xpu, 2, DType>& A, bool lower, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_potrf(const Tensor<xpu, 2, DType>& A, bool lower, Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
-void linalg_batch_potrf(const Tensor<xpu, 3, DType>& A, bool lower, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_batch_potrf(const Tensor<xpu, 3, DType>& A, bool lower, Stream<xpu>* s = 0);
 
 //////////////////////////////// POTRI ////////////////////////////////////////////
 
@@ -125,11 +160,11 @@ void linalg_batch_potrf(const Tensor<xpu, 3, DType>& A, bool lower, Stream<xpu> 
 // for further information about the function and its parameters.
 // Note that this is A = potri(A), so A is input and output parameter.
 
-template<typename xpu, typename DType>
-void linalg_potri(const Tensor<xpu, 2, DType>& A, bool lower, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_potri(const Tensor<xpu, 2, DType>& A, bool lower, Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
-void linalg_batch_potri(const Tensor<xpu, 3, DType>& A, bool lower, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_batch_potri(const Tensor<xpu, 3, DType>& A, bool lower, Stream<xpu>* s = 0);
 
 //////////////////////////////// SYRK ////////////////////////////////////////////
 
@@ -137,14 +172,21 @@ void linalg_batch_potri(const Tensor<xpu, 3, DType>& A, bool lower, Stream<xpu> 
 // for further information about the function and its parameters.
 // Note that this is B = syrk(A, B), so that B is input and output parameter.
 
-template<typename xpu, typename DType>
-void linalg_syrk(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 DType alpha, DType beta, bool tA, Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+void linalg_syrk(const Tensor<xpu, 2, DType>& A,
+                 const Tensor<xpu, 2, DType>& B,
+                 DType alpha,
+                 DType beta,
+                 bool tA,
+                 Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 void linalg_batch_syrk(const Tensor<xpu, 3, DType>& A,
-                       const Tensor<xpu, 3, DType>& B, DType alpha, DType beta,
-                       bool tA, Stream<xpu> *s = 0);
+                       const Tensor<xpu, 3, DType>& B,
+                       DType alpha,
+                       DType beta,
+                       bool tA,
+                       Stream<xpu>* s = 0);
 
 //////////////////////////////// GELQF ////////////////////////////////////////////
 
@@ -156,20 +198,21 @@ void linalg_batch_syrk(const Tensor<xpu, 3, DType>& A,
 // - We call orglq after gelqf. Apart from A, they also communicate via the
 //   first part of the workspace.
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 void linalg_gelqf(const Tensor<xpu, 2, DType>& A,
-                  const Tensor<xpu, 1, DType>& work, Stream<xpu> *s = 0);
+                  const Tensor<xpu, 1, DType>& work,
+                  Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 void linalg_orglq(const Tensor<xpu, 2, DType>& A,
-                  const Tensor<xpu, 1, DType>& work, Stream<xpu> *s = 0);
+                  const Tensor<xpu, 1, DType>& work,
+                  Stream<xpu>* s = 0);
 
 // This function determines the amount of workspace needed for linalg_gelqf,
 // linalg_orglq. The workspace can be used for both. The first m entries are
 // used to communicate information from gelqf to orglq.
-template<typename xpu, typename DType>
-int linalg_gelqf_workspace_query(const Tensor<xpu, 2, DType>& A,
-                                 Stream<xpu> *s = 0);
+template <typename xpu, typename DType>
+int linalg_gelqf_workspace_query(const Tensor<xpu, 2, DType>& A, Stream<xpu>* s = 0);
 
 //////////////////////////////// SYEVD ////////////////////////////////////////////
 
@@ -179,18 +222,18 @@ int linalg_gelqf_workspace_query(const Tensor<xpu, 2, DType>& A,
 // - A is input and output parameter (overwritten by U)
 // - Input A is symmetric, we access the lower triangle only
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 void linalg_syevd(const Tensor<xpu, 2, DType>& A,
                   const Tensor<xpu, 1, DType>& L,
                   const Tensor<xpu, 1, DType>& work,
-                  Stream<xpu> *s = 0);
+                  Stream<xpu>* s = 0);
 
 // This function determines the amount of workspace needed for linalg_syevd
 // which is returned as number of elements of type DType.
-template<typename xpu, typename DType, typename IndexT = typename LapackIndex<xpu>::IndexT>
+template <typename xpu, typename DType, typename IndexT = typename LapackIndex<xpu>::IndexT>
 IndexT linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
-                                 const Tensor<xpu, 1, DType>& L,
-                                 Stream<xpu> *s = 0);
+                                    const Tensor<xpu, 1, DType>& L,
+                                    Stream<xpu>* s = 0);
 
 //////////////////////////////// GESVD ////////////////////////////////////////////
 
@@ -198,7 +241,7 @@ IndexT linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
 // LAPACK documentation for further details.
 // Note: V is input and output parameter (it overwrites A)
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 void linalg_gesvd(const Tensor<xpu, 2, DType>& UT,
                   const Tensor<xpu, 1, DType>& L,
                   const Tensor<xpu, 2, DType>& V,
@@ -207,11 +250,11 @@ void linalg_gesvd(const Tensor<xpu, 2, DType>& UT,
 
 // This function determines the amount of workspace needed for linalg_gesvd
 // which is returned as number of elements of type DType.
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 size_t linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
-                                 const Tensor<xpu, 1, DType>& L,
-                                 const Tensor<xpu, 2, DType>& V,
-                                 Stream<xpu>* s = 0);
+                                    const Tensor<xpu, 1, DType>& L,
+                                    const Tensor<xpu, 2, DType>& V,
+                                    Stream<xpu>* s = 0);
 
 //////////////////////////////// GETRF ////////////////////////////////////////////
 
@@ -222,17 +265,17 @@ size_t linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
 // - A is input and output parameter (overwritten by LU)
 // - Param check_singular is only useful in cpu version. If check_singular is false,
 //   don't throw error when A is non-invertible matrix.
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 void linalg_getrf(const Tensor<xpu, 2, DType>& A,
                   const Tensor<xpu, 1, lapack_index_t>& pivot,
                   bool check_singular,
-                  Stream<xpu> *s = 0);
+                  Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType, typename IndexT>
+template <typename xpu, typename DType, typename IndexT>
 void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 2, IndexT>& pivot,
                         bool check_singular,
-                        Stream<xpu> *s = 0);
+                        Stream<xpu>* s = 0);
 
 //////////////////////////////// GETRI ////////////////////////////////////////////
 
@@ -242,26 +285,26 @@ void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
 // Note:
 // - pivot and LU is the output of getrf(A)
 // - LU is also the output parameter (overwritten by inverse(A))
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 void linalg_getri(const Tensor<xpu, 2, DType>& LU,
-                  const Tensor<xpu, 1, lapack_index_t>& pivot, \
+                  const Tensor<xpu, 1, lapack_index_t>& pivot,
                   const Tensor<xpu, 1, DType>& work,
-                  Stream<xpu> *s = 0);
+                  Stream<xpu>* s = 0);
 
 // Note that this function only implements GPU version with "getriBatched" in cuBLAS.
 // Unlike lapack routines in cpu, it is computed out-of-place, so the final matrix
 // inverse is stored in A.
-template<typename xpu, typename DType, typename IndexT>
+template <typename xpu, typename DType, typename IndexT>
 void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 3, DType>& LU,
                         const Tensor<xpu, 2, IndexT>& pivot,
-                        Stream<xpu> *s = 0);
+                        Stream<xpu>* s = 0);
 
 //////////////////////////////// INVERSE ////////////////////////////////////////////
 
 // CPU/GPU-versions of matrix inverse combining LAPACK function "getrf" and "getri"
 // Note that A = inverse(B)
-template<typename xpu, typename DType, typename IndexT = typename LapackIndex<xpu>::IndexT>
+template <typename xpu, typename DType, typename IndexT = typename LapackIndex<xpu>::IndexT>
 void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
                           const Tensor<xpu, 3, DType>& B,
                           const mxnet::OpContext& ctx);
@@ -272,7 +315,7 @@ void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
 
 // Helper function in determinant backward computation: compute matrix inverse
 // from LU and pivot using temp workspace, the result is stored back to LU
-template<typename xpu, typename DType, typename IndexT>
+template <typename xpu, typename DType, typename IndexT>
 void linalg_batch_det_backward_helper(const Tensor<xpu, 3, DType>& LU,
                                       const Tensor<xpu, 2, IndexT>& pivot,
                                       const Tensor<xpu, 1, DType>& det,

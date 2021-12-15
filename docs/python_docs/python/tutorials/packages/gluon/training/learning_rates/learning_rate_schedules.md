@@ -140,7 +140,7 @@ As discussed above, the schedule should return a learning rate given an (1-based
 
 ```{.python .input}
 # Use GPU if one exists, else use CPU
-ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
+device = mx.gpu() if mx.device.num_gpus() else mx.cpu()
 
 # MNIST images are 28x28. Total pixels in input layer is 28x28 = 784
 num_inputs = 784
@@ -178,7 +178,7 @@ We then initialize our network (technically deferred until we pass the first bat
 
 ```{.python .input}
 # Initialize the parameters with Xavier initializer
-net.initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), device=device)
 # Use cross entropy loss
 softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 ```
@@ -227,8 +227,8 @@ for epoch in range(1, num_epochs+1):
     # Iterate through the images and labels in the training data
     for batch_num, (data, label) in enumerate(train_dataloader, start=1):
         # get the images and labels
-        data = data.as_in_context(ctx)
-        label = label.as_in_context(ctx)
+        data = data.to_device(device)
+        label = label.to_device(device)
         # Ask autograd to record the forward pass
         with mx.autograd.record():
             # Run the forward pass
@@ -279,7 +279,7 @@ We replicate the example above, but now keep track of the `iteration_idx`, call 
 
 ```{.python .input}
 net = build_cnn()
-net.initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), device=device)
 
 schedule = mx.lr_scheduler.MultiFactorScheduler(step=steps_iterations, factor=0.1)
 schedule.base_lr = 0.03
@@ -293,8 +293,8 @@ for epoch in range(1, num_epochs + 1):
     # Iterate through the images and labels in the training data
     for batch_num, (data, label) in enumerate(train_dataloader, start=1):
         # get the images and labels
-        data = data.as_in_context(ctx)
-        label = label.as_in_context(ctx)
+        data = data.to_device(device)
+        label = label.to_device(device)
         # Ask autograd to record the forward pass
         with mx.autograd.record():
             # Run the forward pass

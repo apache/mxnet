@@ -29,14 +29,16 @@
 namespace mxnet {
 namespace common {
 
-template<>
-void CheckFormatWrapper<gpu>(const RunContext &rctx, const NDArray &input,
-                             const TBlob &err_cpu,  const bool full_check) {
+template <>
+void CheckFormatWrapper<gpu>(const RunContext& rctx,
+                             const NDArray& input,
+                             const TBlob& err_cpu,
+                             const bool full_check) {
   CheckFormatImpl<gpu>(rctx, input, err_cpu, full_check);
 }
 
-template<>
-void SparseRetainOpForwardRspWrapper<gpu>(mshadow::Stream<gpu> *s,
+template <>
+void SparseRetainOpForwardRspWrapper<gpu>(mshadow::Stream<gpu>* s,
                                           const NDArray& input_nd,
                                           const TBlob& idx_data,
                                           const OpReqType req,
@@ -44,10 +46,8 @@ void SparseRetainOpForwardRspWrapper<gpu>(mshadow::Stream<gpu> *s,
   mxnet::op::SparseRetainOpForwardRspImpl<gpu>(s, input_nd, idx_data, req, output_nd);
 }
 
-template<>
-void CastStorageDispatch<gpu>(const OpContext& ctx,
-                              const NDArray& input,
-                              const NDArray& output) {
+template <>
+void CastStorageDispatch<gpu>(const OpContext& ctx, const NDArray& input, const NDArray& output) {
   mxnet::op::CastStorageComputeImpl<gpu>(ctx, input, output);
 }
 

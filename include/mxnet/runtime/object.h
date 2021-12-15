@@ -48,18 +48,18 @@ namespace mxnet {
 namespace runtime {
 
 /*! \brief list of the type index. */
-enum TypeIndex  {
+enum TypeIndex {
   /*! \brief Root object type. */
-  kRoot = 0,
-  kMXNetTensor = 1,
+  kRoot         = 0,
+  kMXNetTensor  = 1,
   kMXNetClosure = 2,
-  kMXNetADT = 3,
-  kMXNetMap = 4,
-  kMXNetString = 5,
-  kEllipsis = 6,
-  kSlice = 7,
-  kInteger = 8,
-  kFloat = 9,
+  kMXNetADT     = 3,
+  kMXNetMap     = 4,
+  kMXNetString  = 5,
+  kEllipsis     = 6,
+  kSlice        = 7,
+  kInteger      = 8,
+  kFloat        = 9,
   kStaticIndexEnd,
   /*! \brief Type index is allocated during runtime. */
   kDynamic = kStaticIndexEnd
@@ -93,8 +93,8 @@ enum TypeIndex  {
  *       Recommendation: set to estimate number of children needed.
  * - _type_child_slots_can_overflow:
  *       Whether we can add additional child classes even if the number of child classes
- *       exceeds the _type_child_slots. A fallback mechanism to check global type table will be used.
- *       Recommendation: set to false for optimal runtime speed if we know exact number of children.
+ *       exceeds the _type_child_slots. A fallback mechanism to check global type table will be
+ * used. Recommendation: set to false for optimal runtime speed if we know exact number of children.
  *
  * Two macros are used to declare helper functions in the object:
  * - Use MXNET_DECLARE_BASE_OBJECT_INFO for object classes that can be sub-classed.
@@ -177,7 +177,7 @@ class Object {
    * \tparam TargetType The target type to be checked.
    * \return Whether the target type is true.
    */
-  template<typename TargetType>
+  template <typename TargetType>
   inline bool IsInstance() const;
 
   /*!
@@ -215,8 +215,8 @@ class Object {
   }
 
   // Default object type properties for sub-classes
-  static constexpr bool _type_final = false;
-  static constexpr uint32_t _type_child_slots = 0;
+  static constexpr bool _type_final                    = false;
+  static constexpr uint32_t _type_child_slots          = 0;
   static constexpr bool _type_child_slots_can_overflow = true;
   // NOTE: the following field is not type index of Object
   // but was intended to be used by sub-classes as default value.
@@ -234,10 +234,10 @@ class Object {
   }
   Object(Object&& other) {  // NOLINT(*)
   }
-  Object& operator=(const Object& other) {  //NOLINT(*)
+  Object& operator=(const Object& other) {  // NOLINT(*)
     return *this;
   }
-  Object& operator=(Object&& other) {  //NOLINT(*)
+  Object& operator=(Object&& other) {  // NOLINT(*)
     return *this;
   }
 
@@ -255,7 +255,7 @@ class Object {
   FDeleter deleter_ = nullptr;
   // Invariant checks.
   static_assert(sizeof(int32_t) == sizeof(RefCounterType) &&
-                alignof(int32_t) == sizeof(RefCounterType),
+                    alignof(int32_t) == sizeof(RefCounterType),
                 "RefCounter ABI check.");
 
   /*!
@@ -275,12 +275,11 @@ class Object {
    * \param type_child_slots_can_overflow Whether to allow child to overflow the slots.
    * \return The allocated type index.
    */
-  MXNET_DLL static uint32_t GetOrAllocRuntimeTypeIndex(
-      const std::string& key,
-      uint32_t static_tindex,
-      uint32_t parent_tindex,
-      uint32_t type_child_slots,
-      bool type_child_slots_can_overflow);
+  MXNET_DLL static uint32_t GetOrAllocRuntimeTypeIndex(const std::string& key,
+                                                       uint32_t static_tindex,
+                                                       uint32_t parent_tindex,
+                                                       uint32_t type_child_slots,
+                                                       bool type_child_slots_can_overflow);
 
   // reference counter related operations
   /*! \brief developer function, increases reference counter. */
@@ -304,9 +303,9 @@ class Object {
    */
   MXNET_DLL bool DerivedFrom(uint32_t parent_tindex) const;
   // friend classes
-  template<typename>
+  template <typename>
   friend class ObjAllocatorBase;
-  template<typename>
+  template <typename>
   friend class ObjectPtr;
   friend class MXNetRetValue;
   friend class ObjectInternal;
@@ -483,9 +482,9 @@ class ObjectPtr {
   friend class Object;
   friend class ObjectRef;
   friend struct ObjectHash;
-  template<typename>
+  template <typename>
   friend class ObjectPtr;
-  template<typename>
+  template <typename>
   friend class ObjAllocatorBase;
   friend class MXNetPODValue_;
   friend class MXNetArgsSetter;
@@ -584,7 +583,7 @@ class ObjectRef {
    * \tparam T The target reference type.
    * \return The casted result.
    */
-  template<typename T>
+  template <typename T>
   static T DowncastNoCheck(ObjectRef ref) {
     return T(std::move(ref.data_));
   }
@@ -594,7 +593,7 @@ class ObjectRef {
    * \tparam ObjectType The corresponding object type.
    * \return the corresponding type.
    */
-  template<typename ObjectType>
+  template <typename ObjectType>
   static ObjectPtr<ObjectType> GetDataPtr(const ObjectRef& ref) {
     return ObjectPtr<ObjectType>(ref.data_.data_);
   }
@@ -623,12 +622,11 @@ struct ObjectHash {
     return operator()(a.data_);
   }
 
-  template<typename T>
+  template <typename T>
   size_t operator()(const ObjectPtr<T>& a) const {
     return std::hash<Object*>()(a.get());
   }
 };
-
 
 /*! \brief ObjectRef equal functor */
 struct ObjectEqual {
@@ -636,43 +634,41 @@ struct ObjectEqual {
     return a.same_as(b);
   }
 
-  template<typename T>
+  template <typename T>
   size_t operator()(const ObjectPtr<T>& a, const ObjectPtr<T>& b) const {
     return a == b;
   }
 };
-
 
 /*!
  * \brief helper macro to declare a base object type that can be inheritated.
  * \param TypeName The name of the current type.
  * \param ParentType The name of the ParentType
  */
-#define MXNET_DECLARE_BASE_OBJECT_INFO(TypeName, ParentType)                \
-  static uint32_t RuntimeTypeIndex()  {                                     \
-    return TypeName::_type_index != ::mxnet::runtime::TypeIndex::kDynamic ? \
-           TypeName::_type_index : _GetOrAllocRuntimeTypeIndex();           \
-  }                                                                         \
-  static uint32_t _GetOrAllocRuntimeTypeIndex()  {                          \
-    static uint32_t tidx = GetOrAllocRuntimeTypeIndex(                      \
-        TypeName::_type_key,                                                \
-        TypeName::_type_index,                                              \
-        ParentType::_GetOrAllocRuntimeTypeIndex(),                          \
-        TypeName::_type_child_slots,                                        \
-        TypeName::_type_child_slots_can_overflow);                          \
-    return tidx;                                                            \
+#define MXNET_DECLARE_BASE_OBJECT_INFO(TypeName, ParentType)                                     \
+  static uint32_t RuntimeTypeIndex() {                                                           \
+    return TypeName::_type_index != ::mxnet::runtime::TypeIndex::kDynamic ?                      \
+               TypeName::_type_index :                                                           \
+               _GetOrAllocRuntimeTypeIndex();                                                    \
+  }                                                                                              \
+  static uint32_t _GetOrAllocRuntimeTypeIndex() {                                                \
+    static uint32_t tidx = GetOrAllocRuntimeTypeIndex(TypeName::_type_key,                       \
+                                                      TypeName::_type_index,                     \
+                                                      ParentType::_GetOrAllocRuntimeTypeIndex(), \
+                                                      TypeName::_type_child_slots,               \
+                                                      TypeName::_type_child_slots_can_overflow); \
+    return tidx;                                                                                 \
   }
 
 /*!
  * \brief helper macro to declare type information in a final class.
-  * \param TypeName The name of the current type.
-  * \param ParentType The name of the ParentType
-  */
-#define MXNET_DECLARE_FINAL_OBJECT_INFO(TypeName, ParentType)             \
-  static const constexpr bool _type_final = true;                         \
-  static const constexpr int _type_child_slots = 0;                       \
-  MXNET_DECLARE_BASE_OBJECT_INFO(TypeName, ParentType)                    \
-
+ * \param TypeName The name of the current type.
+ * \param ParentType The name of the ParentType
+ */
+#define MXNET_DECLARE_FINAL_OBJECT_INFO(TypeName, ParentType) \
+  static const constexpr bool _type_final      = true;        \
+  static const constexpr int _type_child_slots = 0;           \
+  MXNET_DECLARE_BASE_OBJECT_INFO(TypeName, ParentType)
 
 /*!
  * \brief Helper macro to register the object type to runtime.
@@ -680,45 +676,49 @@ struct ObjectEqual {
  *
  *  Use this macro in the cc file for each terminal class.
  */
-#define MXNET_REGISTER_OBJECT_TYPE(TypeName)                              \
-  static DMLC_ATTRIBUTE_UNUSED uint32_t __make_Object_tidx ## _ ## TypeName ## __ = \
+#define MXNET_REGISTER_OBJECT_TYPE(TypeName)                                  \
+  static DMLC_ATTRIBUTE_UNUSED uint32_t __make_Object_tidx##_##TypeName##__ = \
       TypeName::_GetOrAllocRuntimeTypeIndex()
 
 #define MXNET_DEFINE_DEFAULT_COPY_MOVE_AND_ASSIGN(TypeName) \
   TypeName(const TypeName& other) = default;                \
-  TypeName(TypeName&& other) = default;                     \
+  TypeName(TypeName&& other)      = default;                \
   TypeName& operator=(const TypeName& other) = default;     \
   TypeName& operator=(TypeName&& other) = default;
 
-#define MXNET_DEFINE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName) \
-  TypeName() {}                                                           \
-  explicit TypeName(                                                      \
-      ::mxnet::runtime::ObjectPtr<::mxnet::runtime::Object> n)            \
-      : ParentType(n) {}                                                  \
-  const ObjectName* operator->() const {                                  \
-    return static_cast<const ObjectName*>(data_.get());                   \
-  }                                                                       \
-  operator bool() const { return data_ != nullptr; }                      \
+#define MXNET_DEFINE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName)                       \
+  TypeName() {}                                                                                 \
+  explicit TypeName(::mxnet::runtime::ObjectPtr<::mxnet::runtime::Object> n) : ParentType(n) {} \
+  const ObjectName* operator->() const {                                                        \
+    return static_cast<const ObjectName*>(data_.get());                                         \
+  }                                                                                             \
+  operator bool() const {                                                                       \
+    return data_ != nullptr;                                                                    \
+  }                                                                                             \
   using ContainerType = ObjectName;
 
-#define MXNET_DEFINE_OBJECT_REF_METHODS_MUT(TypeName, ParentType, ObjectName) \
-  TypeName() {}                                                               \
-  explicit TypeName(                                                          \
-      ::mxnet::runtime::ObjectPtr<::mxnet::runtime::Object> n)                \
-      : ParentType(n) {}                                                      \
-  ObjectName* operator->() {                                                  \
-    return static_cast<ObjectName*>(data_.get());                             \
-  }                                                                           \
-  operator bool() const { return data_ != nullptr; }                          \
+#define MXNET_DEFINE_OBJECT_REF_METHODS_MUT(TypeName, ParentType, ObjectName)                   \
+  TypeName() {}                                                                                 \
+  explicit TypeName(::mxnet::runtime::ObjectPtr<::mxnet::runtime::Object> n) : ParentType(n) {} \
+  ObjectName* operator->() {                                                                    \
+    return static_cast<ObjectName*>(data_.get());                                               \
+  }                                                                                             \
+  operator bool() const {                                                                       \
+    return data_ != nullptr;                                                                    \
+  }                                                                                             \
   using ContainerType = ObjectName;
 
-#define MXNET_DEFINE_NOTNULLABLE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName)              \
-  explicit TypeName(::mxnet::runtime::ObjectPtr<::mxnet::runtime::Object> n) : ParentType(n) {}    \
-  MXNET_DEFINE_DEFAULT_COPY_MOVE_AND_ASSIGN(TypeName);                                             \
-  const ObjectName* operator->() const { return static_cast<const ObjectName*>(data_.get()); }     \
-  const ObjectName* get() const { return operator->(); }                                           \
-  static constexpr bool _type_is_nullable = false;                                                 \
-  using ContainerType = ObjectName;
+#define MXNET_DEFINE_NOTNULLABLE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName)           \
+  explicit TypeName(::mxnet::runtime::ObjectPtr<::mxnet::runtime::Object> n) : ParentType(n) {} \
+  MXNET_DEFINE_DEFAULT_COPY_MOVE_AND_ASSIGN(TypeName);                                          \
+  const ObjectName* operator->() const {                                                        \
+    return static_cast<const ObjectName*>(data_.get());                                         \
+  }                                                                                             \
+  const ObjectName* get() const {                                                               \
+    return operator->();                                                                        \
+  }                                                                                             \
+  static constexpr bool _type_is_nullable = false;                                              \
+  using ContainerType                     = ObjectName;
 
 // Implementations details below
 // Object reference counting.
@@ -761,14 +761,15 @@ inline int Object::use_count() const {
 
 #endif  // MXNET_OBJECT_ATOMIC_REF_COUNTER
 
-template<typename TargetType>
+template <typename TargetType>
 inline bool Object::IsInstance() const {
   const Object* self = this;
   // NOTE: the following code can be optimized by
   // compiler dead-code elimination for already known constants.
   if (self != nullptr) {
     // Everything is a subclass of object.
-    if (std::is_same<TargetType, Object>::value) return true;
+    if (std::is_same<TargetType, Object>::value)
+      return true;
     if (TargetType::_type_final) {
       // if the target type is a final type
       // then we only need to check the equivalence.
@@ -780,13 +781,17 @@ inline bool Object::IsInstance() const {
       // The condition will be optimized by constant-folding.
       if (TargetType::_type_child_slots != 0) {
         uint32_t end = begin + TargetType::_type_child_slots;
-        if (self->type_index_ >= begin && self->type_index_ < end) return true;
+        if (self->type_index_ >= begin && self->type_index_ < end)
+          return true;
       } else {
-        if (self->type_index_ == begin) return true;
+        if (self->type_index_ == begin)
+          return true;
       }
-      if (!TargetType::_type_child_slots_can_overflow) return false;
+      if (!TargetType::_type_child_slots_can_overflow)
+        return false;
       // Invariance: parent index is always smaller than the child.
-      if (self->type_index_ < TargetType::RuntimeTypeIndex()) return false;
+      if (self->type_index_ < TargetType::RuntimeTypeIndex())
+        return false;
       // The rare slower-path, check type hierachy.
       return self->DerivedFrom(TargetType::RuntimeTypeIndex());
     }
@@ -795,11 +800,9 @@ inline bool Object::IsInstance() const {
   }
 }
 
-
 template <typename ObjectType>
 inline const ObjectType* ObjectRef::as() const {
-  if (data_ != nullptr &&
-      data_->IsInstance<ObjectType>()) {
+  if (data_ != nullptr && data_->IsInstance<ObjectType>()) {
     return static_cast<ObjectType*>(data_.get());
   } else {
     return nullptr;
@@ -827,8 +830,8 @@ template <typename SubRef, typename BaseRef>
 inline SubRef Downcast(BaseRef ref) {
   if (ref.defined()) {
     CHECK(ref->template IsInstance<typename SubRef::ContainerType>())
-        << "Downcast from " << ref->GetTypeKey() << " to "
-        << SubRef::ContainerType::_type_key << " failed.";
+        << "Downcast from " << ref->GetTypeKey() << " to " << SubRef::ContainerType::_type_key
+        << " failed.";
   } else {
     CHECK(SubRef::_type_is_nullable) << "Downcast from nullptr to not nullable reference of "
                                      << SubRef::ContainerType::_type_key;
@@ -838,7 +841,7 @@ inline SubRef Downcast(BaseRef ref) {
 
 }  // namespace runtime
 
-template<typename T>
+template <typename T>
 using NodePtr = runtime::ObjectPtr<T>;
 
 }  // namespace mxnet

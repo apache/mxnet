@@ -82,99 +82,100 @@ inline int String2Convention(const std::string& s) {
 }
 
 MXNET_REGISTER_API("_npx.pooling")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  const nnvm::Op* op = Op::Get("_npx_pooling");
-  op::PoolingParam param;
-  // inputs
-  int num_inputs = 1;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      nnvm::NodeAttrs attrs;
+      const nnvm::Op* op = Op::Get("_npx_pooling");
+      op::PoolingParam param = {};
+      // inputs
+      int num_inputs    = 1;
+      NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
 
-  // kernel
-  if (args[1].type_code() == kDLInt) {
-    param.kernel = TShape(1, args[1].operator int64_t());
-  } else {
-    param.kernel = TShape(args[1].operator ObjectRef());
-  }
-  // global pool
-  param.global_pool = args[6].operator bool();
-  // stride
-  if (args[2].type_code() == kNull) {
-    if (param.kernel.ndim() == 1) {
-      param.stride = mshadow::Shape1(1);
-    } else if (param.kernel.ndim() == 2) {
-      param.stride = mshadow::Shape2(1, 1);
-    } else {
-      if (param.global_pool == false) {
-        CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
-            << "D pooling not supported. Only 1D, 2D, and 3D pooling are supported.";
+      // kernel
+      if (args[1].type_code() == kDLInt) {
+        param.kernel = TShape(1, args[1].operator int64_t());
+      } else {
+        param.kernel = TShape(args[1].operator ObjectRef());
       }
-      param.stride = mshadow::Shape3(1, 1, 1);
-    }
-  } else if (args[2].type_code() == kDLInt) {
-    param.stride = TShape(1, args[2].operator int64_t());
-  } else {
-    param.stride = TShape(args[2].operator ObjectRef());
-  }
-  // pad
-  if (args[3].type_code() == kNull) {
-    if (param.kernel.ndim() == 1) {
-      param.pad = mshadow::Shape1(0);
-    } else if (param.kernel.ndim() == 2) {
-      param.pad = mshadow::Shape2(0, 0);
-    } else {
-      param.pad = mshadow::Shape3(0, 0, 0);
-    }
-  } else if (args[3].type_code() == kDLInt) {
-    param.pad = TShape(1, args[3].operator int64_t());
-  } else {
-    param.pad = TShape(args[3].operator ObjectRef());
-  }
-  // pool type
-  param.pool_type = String2PoolType(args[4].operator std::string());
-  // pooling convention
-  param.pooling_convention = String2Convention(args[5].operator std::string());
-  // cudnn_off
-  if (args[7].type_code() == kNull) {
-    param.cudnn_off = false;
-  } else {
-    param.cudnn_off = args[7].operator bool();
-  }
-  // p_value
-  if (args[8].type_code() == kNull) {
-    param.p_value = dmlc::nullopt;
-  } else {
-    param.p_value = args[8].operator int();
-  }
-  // count_include_pad
-  if (args[9].type_code() == kNull) {
-    param.count_include_pad = dmlc::nullopt;
-  } else {
-    param.count_include_pad = args[9].operator bool();
-  }
-  // layout
-  if (args[10].type_code() == kNull) {
-    param.layout = dmlc::nullopt;
-  } else {
-    param.layout = String2PoolingLayout(args[10]);
-  }
+      // global pool
+      param.global_pool = args[6].operator bool();
+      // stride
+      if (args[2].type_code() == kNull) {
+        if (param.kernel.ndim() == 1) {
+          param.stride = mshadow::Shape1(1);
+        } else if (param.kernel.ndim() == 2) {
+          param.stride = mshadow::Shape2(1, 1);
+        } else {
+          if (param.global_pool == false) {
+            CHECK_EQ(param.kernel.ndim(), 3U)
+                << param.kernel.ndim()
+                << "D pooling not supported. Only 1D, 2D, and 3D pooling are supported.";
+          }
+          param.stride = mshadow::Shape3(1, 1, 1);
+        }
+      } else if (args[2].type_code() == kDLInt) {
+        param.stride = TShape(1, args[2].operator int64_t());
+      } else {
+        param.stride = TShape(args[2].operator ObjectRef());
+      }
+      // pad
+      if (args[3].type_code() == kNull) {
+        if (param.kernel.ndim() == 1) {
+          param.pad = mshadow::Shape1(0);
+        } else if (param.kernel.ndim() == 2) {
+          param.pad = mshadow::Shape2(0, 0);
+        } else {
+          param.pad = mshadow::Shape3(0, 0, 0);
+        }
+      } else if (args[3].type_code() == kDLInt) {
+        param.pad = TShape(1, args[3].operator int64_t());
+      } else {
+        param.pad = TShape(args[3].operator ObjectRef());
+      }
+      // pool type
+      param.pool_type = String2PoolType(args[4].operator std::string());
+      // pooling convention
+      param.pooling_convention = String2Convention(args[5].operator std::string());
+      // cudnn_off
+      if (args[7].type_code() == kNull) {
+        param.cudnn_off = false;
+      } else {
+        param.cudnn_off = args[7].operator bool();
+      }
+      // p_value
+      if (args[8].type_code() == kNull) {
+        param.p_value = dmlc::nullopt;
+      } else {
+        param.p_value = args[8].operator int();
+      }
+      // count_include_pad
+      if (args[9].type_code() == kNull) {
+        param.count_include_pad = dmlc::nullopt;
+      } else {
+        param.count_include_pad = args[9].operator bool();
+      }
+      // layout
+      if (args[10].type_code() == kNull) {
+        param.layout = dmlc::nullopt;
+      } else {
+        param.layout = String2PoolingLayout(args[10]);
+      }
 
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::PoolingParam>(&attrs);
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  if (num_outputs == 1) {
-    *ret = ndoutputs[0];
-  } else {
-    std::vector<NDArrayHandle> ndarray_handles;
-    ndarray_handles.reserve(num_outputs);
-    for (int i = 0; i < num_outputs; ++i) {
-      ndarray_handles.emplace_back(ndoutputs[i]);
-    }
-    *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
-  }
-});
+      attrs.parsed = param;
+      attrs.op     = op;
+      SetAttrDict<op::PoolingParam>(&attrs);
+      int num_outputs = 0;
+      auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+      if (num_outputs == 1) {
+        *ret = ndoutputs[0];
+      } else {
+        std::vector<NDArrayHandle> ndarray_handles;
+        ndarray_handles.reserve(num_outputs);
+        for (int i = 0; i < num_outputs; ++i) {
+          ndarray_handles.emplace_back(ndoutputs[i]);
+        }
+        *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+      }
+    });
 
 }  // namespace mxnet

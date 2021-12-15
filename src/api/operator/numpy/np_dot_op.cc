@@ -27,19 +27,17 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.dot")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.dot").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_dot");
   nnvm::NodeAttrs attrs;
-  attrs.op = op;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*(),
-                       args[1].operator mxnet::NDArray*()};
-  NDArray* out = args[2].operator NDArray*();
+  attrs.op          = op;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
+  NDArray* out      = args[2].operator NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_inputs = 2;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_inputs    = 2;
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(2);
   } else {

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -28,20 +28,19 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.take")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.take").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
-  op::TakeParam param;
+  op::TakeParam param = {};
   NDArray* inputs[2];
 
   if (args[0].type_code() != kNull) {
-    inputs[0] = args[0].operator mxnet::NDArray *();
+    inputs[0] = args[0].operator mxnet::NDArray*();
   }
 
   if (args[1].type_code() != kNull) {
-    inputs[1] = args[1].operator mxnet::NDArray *();
+    inputs[1] = args[1].operator mxnet::NDArray*();
   }
 
   if (args[2].type_code() == kDLInt) {
@@ -60,14 +59,14 @@ MXNET_REGISTER_API("_npi.take")
   }
 
   attrs.parsed = param;
-  attrs.op = op;
+  attrs.op     = op;
   SetAttrDict<op::TakeParam>(&attrs);
 
-  NDArray* out = args[4].operator mxnet::NDArray*();
+  NDArray* out      = args[4].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   // set the number of outputs provided by the `out` arugment
   int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, outputs);
+  auto ndoutputs  = Invoke(op, &attrs, 2, inputs, &num_outputs, outputs);
   if (out) {
     *ret = PythonArg(4);
   } else {

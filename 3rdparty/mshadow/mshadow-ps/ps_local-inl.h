@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file ps_local-inl.h
  * \brief local multi-threading implementation of PS abstraction
  *

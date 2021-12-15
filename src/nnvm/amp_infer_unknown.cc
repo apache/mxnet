@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file low_precision_pass.cc
  * \brief Use the Mixed Precision Model to infer the dtypes of
  * unknown input nodes
@@ -36,24 +35,25 @@
 #include "../operator/tensor/amp_cast.h"
 
 namespace mxnet {
-using nnvm::Graph;
-using nnvm::ObjectPtr;
-using nnvm::NodeEntry;
 using dmlc::any;
 using mxnet::op::AMPCastParam;
+using nnvm::Graph;
+using nnvm::NodeEntry;
+using nnvm::ObjectPtr;
 
 // If a var node is not visited, visit it and set inferred_dtype_result as result_dtype,
 // If already visited compare the result_dtype with existing inferred_dtype_result
 static void CheckAndUpdateInferredDtypes(
-    const nnvm::DTypeVector &inferred_dtypes, const nnvm::IndexedGraph &idx,
-    const NodeEntry &node_entry,
+    const nnvm::DTypeVector& inferred_dtypes,
+    const nnvm::IndexedGraph& idx,
+    const NodeEntry& node_entry,
     mshadow::TypeFlag result_dtype,
-    std::unordered_map<std::string, mshadow::TypeFlag> *visited_vars,
-    nnvm::DTypeVector *inferred_dtype_result) {
-  const ObjectPtr &input_node = node_entry.node;
+    std::unordered_map<std::string, mshadow::TypeFlag>* visited_vars,
+    nnvm::DTypeVector* inferred_dtype_result) {
+  const ObjectPtr& input_node = node_entry.node;
   if (!visited_vars->count(input_node->attrs.name)) {
     if ((*inferred_dtype_result)[idx.entry_id(node_entry)] == -1) {
-      (*visited_vars)[input_node->attrs.name] = result_dtype;
+      (*visited_vars)[input_node->attrs.name]            = result_dtype;
       (*inferred_dtype_result)[idx.entry_id(node_entry)] = result_dtype;
     }
   } else {
@@ -68,15 +68,14 @@ static void CheckAndUpdateInferredDtypes(
 
 // Graph pass to infer unknown nodes which are input nodes
 // as LP16 if possible
-Graph AMPInferUnknown(Graph &&src) {
-  const nnvm::DTypeVector &inferred_dtypes =
-      src.GetAttr<nnvm::DTypeVector>("inferred_dtypes");
-  const int target_dtype = src.GetAttr<int>("target_dtype");
+Graph AMPInferUnknown(Graph&& src) {
+  const nnvm::DTypeVector& inferred_dtypes = src.GetAttr<nnvm::DTypeVector>("inferred_dtypes");
+  const int target_dtype                   = src.GetAttr<int>("target_dtype");
   CHECK(target_dtype == mshadow::kFloat16 || target_dtype == mshadow::kBfloat16)
       << "Only float16 and bfloat16 target_dtypes are supported yet";
 
   nnvm::DTypeVector inferred_dtype_result(inferred_dtypes);
-  const nnvm::IndexedGraph &idx = src.indexed_graph();
+  const nnvm::IndexedGraph& idx = src.indexed_graph();
 
   std::unordered_map<std::string, mshadow::TypeFlag> visited_vars;
 
@@ -84,7 +83,7 @@ Graph AMPInferUnknown(Graph &&src) {
   // and check if inputs to these nodes are variables.
   // If input nodes are variables, set dtype for these inputs
   // and check for conflicts if an input node goes to two cast nodes
-  DFSVisit(src.outputs, [&](const ObjectPtr &node) {
+  DFSVisit(src.outputs, [&](const ObjectPtr& node) {
     if (!node->is_variable()) {
       std::string op_name = node->op()->name;
 
@@ -93,17 +92,18 @@ Graph AMPInferUnknown(Graph &&src) {
         // to visited_vars, if a var is being visited second time
         // and already has dtype set, make sure the dtype inferred again
         // is same, otherwise reset dtype to original dtype
-        for (const NodeEntry &node_entry : node->inputs) {
-          const ObjectPtr &input_node = node_entry.node;
+        for (const NodeEntry& node_entry : node->inputs) {
+          const ObjectPtr& input_node = node_entry.node;
           if (input_node->is_variable() &&
               (node->attrs.dict.find("dtype") != node->attrs.dict.end())) {
-            const AMPCastParam &param =
-                nnvm::get<AMPCastParam>(node->attrs.parsed);
-            CHECK(param.dtype != -1)
-                << "amp_cast node shouldn't have unknown dtype";
-            CheckAndUpdateInferredDtypes(inferred_dtypes, idx, node_entry,
+            const AMPCastParam& param = nnvm::get<AMPCastParam>(node->attrs.parsed);
+            CHECK(param.dtype != -1) << "amp_cast node shouldn't have unknown dtype";
+            CheckAndUpdateInferredDtypes(inferred_dtypes,
+                                         idx,
+                                         node_entry,
                                          static_cast<mshadow::TypeFlag>(param.dtype),
-                                         &visited_vars, &inferred_dtype_result);
+                                         &visited_vars,
+                                         &inferred_dtype_result);
           }
         }
       } else if (op_name == "amp_multicast") {
@@ -120,11 +120,14 @@ Graph AMPInferUnknown(Graph &&src) {
           }
         }
         if (max_dtype == target_dtype) {
-          for (const NodeEntry &node_entry : node->inputs) {
-            const ObjectPtr &input_node = node_entry.node;
+          for (const NodeEntry& node_entry : node->inputs) {
+            const ObjectPtr& input_node = node_entry.node;
             if (input_node->is_variable()) {
-              CheckAndUpdateInferredDtypes(inferred_dtypes, idx, node_entry,
-                                           max_dtype, &visited_vars,
+              CheckAndUpdateInferredDtypes(inferred_dtypes,
+                                           idx,
+                                           node_entry,
+                                           max_dtype,
+                                           &visited_vars,
                                            &inferred_dtype_result);
             }
           }

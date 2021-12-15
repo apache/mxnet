@@ -151,13 +151,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty2); // Execution order 2.
 MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty3); // Execution order 3.
 ```
 
-After compiling this subgraph mechanism into MXNet, we can use the environment variable `MXNET_SUBGRAPH_BACKEND` to activate it during symbol bind.
-
-```bash
-export MXNET_SUBGRAPH_BACKEND=SgTest
-```
-
-Or you can use python symbol API `get_backend_symbol` to run all properties registered for this backend and get returned symbol.
+After compiling this subgraph mechanism into MXNet you can use python symbol API `get_backend_symbol` to run all properties registered for this backend and get returned symbol.
 
 ```python
 sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
