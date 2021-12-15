@@ -433,7 +433,7 @@ A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. 
 3. [Transformation](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/transformation): implement invertible transformation with computable log det jacobians.
 
 ##  oneDNN Integration
-### Operator fusion
+### Operator Fusion
 In versions v1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support and could be enabled/disabled by `MXNET_SUBGRAPH_BACKEND` environment flag. MXNet 2.0 introduces changes in forward
 inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
 
@@ -444,16 +444,16 @@ inference flow which led to refactor of fusion mechanism. To fuse model in MXNet
 Both HybridBlock and Symbol classes provide API to easily run fusion of operators. All we have to do is add single line of code enabling fusion passes on our model:
 ```{.python}
 # on HybridBlock
-net.optimize_for(data, backend='MKLDNN')
+net.optimize_for(data, backend='ONEDNN')
 # on Symbol
-optimized_symbol = sym.optimize_for(backend='MKLDNN')
+optimized_symbol = sym.optimize_for(backend='ONEDNN')
 ```
 
 Controling which patterns should be fused still can be done by setting proper environment variables. See [**oneDNN Environment Variables**](#oneDNN-Environment-Variables)
 
 ### INT8 Quantization / Precision reduction
-Quantization API was also refactored to be consistent with other new features and mechanisms. In comparision to MXNet v1.x versions it was decided to remove `quantize_net_v2` function and focus mainly on `quantize_net` to give end user flexibility and ease of use.
-Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with `quantize_model` ( it is deprecated method and should be avoided, is was left to remain most of backward compability).
+Quantization API was also refactored to be consistent with other new features and mechanisms. In comparison to MXNet v1.x releases, in v2.0 `quantize_net_v2` function has been removed and development focused mainly on `quantize_net` function to make it easier to use for end user and ultimately give him more flexibility.
+Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with `quantize_model` (it is deprecated method, left only to provide backward compatibility and its usage should be avoided).
 
 ```{.python}
 import mxnet as mx
@@ -473,7 +473,7 @@ qnet = quantize_net(net, calib_mode='naive', calib_data=calib_data_loader)
 `quantize_net` can be much more complex - all function attributes can be found in the [API](../../api/contrib/quantization/index.rst).
 
 ### oneDNN Environment Variables
-In version MXNet 2.0 all references to MKLDNN (former name of oneDNN) was replaced by ONEDNN. Below table lists all environment variables:
+In version 2.0 of MXNet all references to MKLDNN (former name of oneDNN) were replaced by ONEDNN. Below table lists all environment variables:
 
 |              MXNet v1.x              |              MXNet 2.0                 |
 | ------------------------------------ | ---------------------------------------|
