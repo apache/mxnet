@@ -44,17 +44,17 @@ class Optimizer;
  */
 class Executor {
  public:
-  Executor(const Symbol &symbol, 
+  Executor(const Symbol& symbol,
            Context context,
-           const std::vector<NDArray> &arg_arrays,
-           const std::vector<NDArray> &grad_arrays,
-           const std::vector<OpReqType> &grad_reqs,
-           const std::vector<NDArray> &aux_arrays,
-           const std::map<std::string, Context> &group_to_ctx = std::map<std::string, Context>(),
-           Executor *shared_exec                              = nullptr,
-           const std::map<std::string, std::string> &flags    = std::map<std::string, std::string>());
-  explicit Executor(const CachedOpHandle &h) { 
-    handle_ = h; 
+           const std::vector<NDArray>& arg_arrays,
+           const std::vector<NDArray>& grad_arrays,
+           const std::vector<OpReqType>& grad_reqs,
+           const std::vector<NDArray>& aux_arrays,
+           const std::map<std::string, Context>& group_to_ctx = std::map<std::string, Context>(),
+           Executor* shared_exec                              = nullptr,
+           const std::map<std::string, std::string>& flags = std::map<std::string, std::string>());
+  explicit Executor(const CachedOpHandle& h) {
+    handle_ = h;
   }
   /*!
    * \brief Perform a Forward operation of Operator

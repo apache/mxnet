@@ -35,14 +35,15 @@
 
 namespace mxnet {
 namespace cpp {
-inline Executor::Executor(const Symbol &symbol, Context context,
-                          const std::vector<NDArray> &arg_arrays,
-                          const std::vector<NDArray> &grad_arrays,
-                          const std::vector<OpReqType> &grad_reqs,
-                          const std::vector<NDArray> &aux_arrays,
-                          const std::map<std::string, Context> &group_to_ctx,
-                          Executor *shared_exec,
-                          const std::map<std::string, std::string> &flags) {
+inline Executor::Executor(const Symbol& symbol,
+                          Context context,
+                          const std::vector<NDArray>& arg_arrays,
+                          const std::vector<NDArray>& grad_arrays,
+                          const std::vector<OpReqType>& grad_reqs,
+                          const std::vector<NDArray>& aux_arrays,
+                          const std::map<std::string, Context>& group_to_ctx,
+                          Executor* shared_exec,
+                          const std::map<std::string, std::string>& flags) {
   this->arg_arrays = arg_arrays;
   this->grad_arrays = grad_arrays;
   this->aux_arrays = aux_arrays;
@@ -92,14 +93,15 @@ inline Executor::Executor(const Symbol &symbol, Context context,
   this->combined_arrays = combined_arrays;
   std::vector<const char*> keys_cstr;
   std::vector<const char*> vals_cstr;
-  for (auto &kv : flags) {
+  for (auto& kv : flags) {
     keys_cstr.push_back(kv.first.c_str());
     vals_cstr.push_back(kv.second.c_str());
   }
-  CHECK_EQ(MXCreateCachedOp(symbol.GetHandle(), flags.size(), keys_cstr.data(), vals_cstr.data(),
-                            &handle_, false), 0);
+  CHECK_EQ(
+      MXCreateCachedOp(
+          symbol.GetHandle(), flags.size(), keys_cstr.data(), vals_cstr.data(), &handle_, false),
+      0);
 }
-
 
 }  // namespace cpp
 }  // namespace mxnet

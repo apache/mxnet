@@ -220,101 +220,101 @@ inline mxnet::cpp::Symbol Symbol::GetBackendSymbol(const std::string &backendNam
 }
 
 inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(
-    const std::string &backendName,
-    const Context &ctx,
-    std::map<std::string, NDArray> *arg_map,
-    std::map<std::string, NDArray> *aux_map,
-    const std::map<std::string, std::string> &options,
-    const std::map<std::string, std::vector<mx_uint> > &input_shapes,
+    const std::string& backendName,
+    const Context& ctx,
+    std::map<std::string, NDArray>* arg_map,
+    std::map<std::string, NDArray>* aux_map,
+    const std::map<std::string, std::string>& options,
+    const std::map<std::string, std::vector<mx_uint> >& input_shapes,
     const std::map<std::string, int> input_dtypes,
     const std::map<std::string, int> input_stypes,
     bool skip_infer) const {
-
   /* See: optimize_for in python/mxnet/symbol/symbol.py  */
 
   SymbolHandle symbolHandle;
   // Collect the symbol arguments as needed by the c_api
   std::vector<NDArrayHandle> arg_handles;
   std::vector<NDArrayHandle> aux_handles;
-  for (auto &arg : ListArguments()) {
+  for (auto& arg : ListArguments()) {
     arg_handles.push_back(arg_map->at(arg).GetHandle());
   }
-  for (auto &aux : ListAuxiliaryStates()) {
+  for (auto& aux : ListAuxiliaryStates()) {
     aux_handles.push_back(aux_map->at(aux).GetHandle());
   }
 
   // MXOptimizeForBackend can leave these untouched, so we initialize to values
   // that result to no actions after the call if untouched.
-  int new_args_cnt = -1;
-  NDArrayHandle *new_args_handle = nullptr;
-  char **new_arg_names_handle = nullptr;
-  int new_aux_cnt = -1;
-  NDArrayHandle *new_aux_handle = nullptr;
-  char **new_aux_names_handle = nullptr;
+  int new_args_cnt               = -1;
+  NDArrayHandle* new_args_handle = nullptr;
+  char** new_arg_names_handle    = nullptr;
+  int new_aux_cnt                = -1;
+  NDArrayHandle* new_aux_handle  = nullptr;
+  char** new_aux_names_handle    = nullptr;
 
   // Convert map arguments to key/value lists
   mx_uint num_options = options.size();
-  std::vector<const char *> opt_keys;
-  std::vector<const char *> opt_vals;
-  for (auto &kv : options) {
+  std::vector<const char*> opt_keys;
+  std::vector<const char*> opt_vals;
+  for (auto& kv : options) {
     opt_keys.push_back(kv.first.c_str());
     opt_vals.push_back(kv.second.c_str());
   }
 
-  std::vector<const char *> input_shape_names;
+  std::vector<const char*> input_shape_names;
   std::vector<uint64_t> input_shape_data;
   std::vector<uint32_t> input_shape_idx(1, 0);
 
-  for (auto &kv : input_shapes) {
+  for (auto& kv : input_shapes) {
     input_shape_names.push_back(kv.first.c_str());
     input_shape_idx.push_back(input_shape_idx.back() + kv.second.size());
     input_shape_data.insert(input_shape_data.end(), kv.second.begin(), kv.second.end());
   }
 
-  std::vector<const char *> input_type_names;
+  std::vector<const char*> input_type_names;
   std::vector<int> input_dtypes_data;
 
-  for (auto &kv : input_dtypes) {
+  for (auto& kv : input_dtypes) {
     input_type_names.push_back(kv.first.c_str());
     input_dtypes_data.push_back(kv.second);
   }
 
-  std::vector<const char *> input_stype_names;
+  std::vector<const char*> input_stype_names;
   std::vector<int> input_stype_data;
 
-  for (auto &kv : input_stypes) {
+  for (auto& kv : input_stypes) {
     input_stype_names.push_back(kv.first.c_str());
     input_stype_data.push_back(kv.second);
   }
 
   CHECK_EQ(MXOptimizeForBackend(GetHandle(),
-                       backendName.c_str(),
-                       ctx.GetDeviceType(),
-                       &symbolHandle,
-                       arg_handles.size(),
-                       arg_handles.data(),
-                       aux_handles.size(),
-                       aux_handles.data(),
-                       num_options,
-                       opt_keys.data(),
-                       opt_vals.data(),
-                       input_shapes.size(),
-                       input_shape_names.data(),
-                       reinterpret_cast<const int64_t *>(input_shape_data.data()),
-                       input_shape_idx.data(),
-                       input_dtypes.size(),
-                       input_type_names.data(),
-                       input_dtypes_data.data(),
-                       input_stypes.size(),
-                       input_stype_names.data(),
-                       input_stype_data.data(),
-                       skip_infer,
-                       &new_args_cnt,
-                       &new_args_handle,
-                       &new_arg_names_handle,
-                       &new_aux_cnt,
-                       &new_aux_handle,
-                       &new_aux_names_handle), 0);
+                                backendName.c_str(),
+                                ctx.GetDeviceType(),
+                                &symbolHandle,
+                                arg_handles.size(),
+                                arg_handles.data(),
+                                aux_handles.size(),
+                                aux_handles.data(),
+                                num_options,
+                                opt_keys.data(),
+                                opt_vals.data(),
+                                input_shapes.size(),
+                                input_shape_names.data(),
+                                reinterpret_cast<const int64_t*>(input_shape_data.data()),
+                                input_shape_idx.data(),
+                                input_dtypes.size(),
+                                input_type_names.data(),
+                                input_dtypes_data.data(),
+                                input_stypes.size(),
+                                input_stype_names.data(),
+                                input_stype_data.data(),
+                                skip_infer,
+                                &new_args_cnt,
+                                &new_args_handle,
+                                &new_arg_names_handle,
+                                &new_aux_cnt,
+                                &new_aux_handle,
+                                &new_aux_names_handle),
+           0);
 
   // Update arg_map and aux_map
   for (int i = 0; i < new_args_cnt; ++i) {

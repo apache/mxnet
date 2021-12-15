@@ -213,12 +213,8 @@ Predictor::Predictor(const std::string& model_json_file,
   std::map<std::string, std::string> flags;
 
   if (enable_tensorrt) {
-    flags = {{"static_alloc", "true"},
-             {"static_shape", "true"}};
-    net_ = net_.OptimizeForBackend("TensorRT", global_ctx_,
-                                   &args_map_,
-                                   &aux_map_,
-                                   flags);
+    flags = {{"static_alloc", "true"}, {"static_shape", "true"}};
+    net_  = net_.OptimizeForBackend("TensorRT", global_ctx_, &args_map_, &aux_map_, flags);
   }
 
   std::vector<NDArray> arg_arrays;
@@ -234,9 +230,15 @@ Predictor::Predictor(const std::string& model_json_file,
   for (auto& i : grad_reqs) i = OpReqType::kNullOp;
 
   // Create an executor after binding the model to input parameters.
-  executor_ = new Executor(net_, global_ctx_, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
+  executor_ = new Executor(net_,
+                           global_ctx_,
+                           arg_arrays,
+                           grad_arrays,
+                           grad_reqs,
+                           aux_arrays,
                            std::map<std::string, Context>(),
-                           nullptr, flags);
+                           nullptr,
+                           flags);
 }
 
 /*
