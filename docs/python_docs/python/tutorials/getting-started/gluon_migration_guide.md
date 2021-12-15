@@ -434,8 +434,7 @@ A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. 
 
 ##  oneDNN Integration
 ### Operator Fusion
-In versions v1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support and could be enabled/disabled by `MXNET_SUBGRAPH_BACKEND` environment flag. MXNet 2.0 introduces changes in forward
-inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
+In versions 1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support could have been disabled by setting 'MXNET_SUBGRAPH_BACKEND' environment flag to `None`. MXNet 2.0 introduced changes in forward inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
 
  - the model must be defined as a subclass of HybridBlock or Symbol
 
@@ -452,7 +451,7 @@ optimized_symbol = sym.optimize_for(backend='ONEDNN')
 Controling which patterns should be fused still can be done by setting proper environment variables. See [**oneDNN Environment Variables**](#oneDNN-Environment-Variables)
 
 ### INT8 Quantization / Precision reduction
-Quantization API was also refactored to be consistent with other new features and mechanisms. In comparison to MXNet v1.x releases, in v2.0 `quantize_net_v2` function has been removed and development focused mainly on `quantize_net` function to make it easier to use for end user and ultimately give him more flexibility.
+Quantization API was also refactored to be consistent with other new features and mechanisms. In comparison to MXNet 1.x releases, in MXNet 2.0 `quantize_net_v2` function has been removed and development focused mainly on `quantize_net` function to make it easier to use for end user and ultimately give him more flexibility.
 Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with `quantize_model` (it is deprecated method, left only to provide backward compatibility and its usage should be avoided).
 
 ```{.python}
@@ -475,7 +474,7 @@ qnet = quantize_net(net, calib_mode='naive', calib_data=calib_data_loader)
 ### oneDNN Environment Variables
 In version 2.0 of MXNet all references to MKLDNN (former name of oneDNN) were replaced by ONEDNN. Below table lists all environment variables:
 
-|              MXNet v1.x              |              MXNet 2.0                 |
+|               MXNet 1.x              |                MXNet 2.0               |
 | ------------------------------------ | ---------------------------------------|
 |         MXNET_MKLDNN_ENABLED         |          MXNET_ONEDNN_ENABLED          |
 |         MXNET_MKLDNN_CACHE_NUM       |         MXNET_ONEDNN_CACHE_NUM         |
@@ -490,9 +489,9 @@ In version 2.0 of MXNet all references to MKLDNN (former name of oneDNN) were re
 |      MXNET_DISABLE_MKLDNN_FC_OPT     |       MXNET_DISABLE_ONEDNN_FC_OPT      |
 | MXNET_DISABLE_MKLDNN_FUSE_FC_ELTWISE |  MXNET_DISABLE_ONEDNN_FUSE_FC_ELTWISE  |
 | MXNET_DISABLE_MKLDNN_TRANSFORMER_OPT |  MXNET_DISABLE_ONEDNN_TRANSFORMER_OPT  |
-|          n/a                         |   MXNET_DISABLE_ONEDNN_BATCH_DOT_FUSE  |
-|          n/a                         |      MXNET_ONEDNN_FUSE_REQUANTIZE      |
-|          n/a                         |      MXNET_ONEDNN_FUSE_DEQUANTIZE      |
+|                  n/a                 |   MXNET_DISABLE_ONEDNN_BATCH_DOT_FUSE  |
+|                  n/a                 |      MXNET_ONEDNN_FUSE_REQUANTIZE      |
+|                  n/a                 |      MXNET_ONEDNN_FUSE_DEQUANTIZE      |
 
 ## Appendix
 ### NumPy Array Deprecated Attributes
