@@ -17,10 +17,9 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_percentile_op.cu
  * \brief GPU Implementation of Numpy-compatible percentile
-*/
+ */
 
 #include "np_percentile_op-inl.h"
 
@@ -28,27 +27,32 @@ namespace mxnet {
 namespace op {
 
 struct is_valid_check {
-  template<typename QType>
+  template <typename QType>
   MSHADOW_XINLINE static void Map(int i, char* invalid_ptr, const QType* data) {
-    if (data[i] < 0.0 || data[i] > 100) *invalid_ptr = 1;
+    if (data[i] < 0.0 || data[i] > 100)
+      *invalid_ptr = 1;
   }
 };
 
-template<typename QType, typename gpu>
-bool CheckInvalidInput(mshadow::Stream<gpu> *s, const QType *data,
-                       const size_t& data_size, char* is_valid_ptr) {
+template <typename QType, typename gpu>
+bool CheckInvalidInput(mshadow::Stream<gpu>* s,
+                       const QType* data,
+                       const size_t& data_size,
+                       char* is_valid_ptr) {
   using namespace mxnet_op;
   int32_t is_valid = 0;
   Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
   Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data);
-  CUDA_CALL(cudaMemcpyAsync(&is_valid, is_valid_ptr, sizeof(char),
-                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaMemcpyAsync(&is_valid,
+                            is_valid_ptr,
+                            sizeof(char),
+                            cudaMemcpyDeviceToHost,
+                            mshadow::Stream<gpu>::GetStream(s)));
   CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
   return is_valid == 0;
 }
 
-NNVM_REGISTER_OP(_npi_percentile)
-.set_attr<FCompute>("FCompute<gpu>", NumpyPercentileForward<gpu>);
+NNVM_REGISTER_OP(_npi_percentile).set_attr<FCompute>("FCompute<gpu>", NumpyPercentileForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

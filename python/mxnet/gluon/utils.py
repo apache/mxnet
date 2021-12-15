@@ -136,17 +136,17 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
     def group_by_ctx(arr_list):
         groups = collections.defaultdict(list)
         for arr in arr_list:
-            ctx = arr.ctx
+            ctx = arr.device
             groups[ctx].append(arr)
         return groups
     def multi_sum_sq(*args, ctx=None):
-        sum = _mx_np.array([0], ctx=ctx)
+        sum = _mx_np.array([0], device=ctx)
         for arg in args:
             sum += _mx_np.square(arg).sum().item()
         return sum
     arrays_groups = group_by_ctx(arrays)
     all_ctx_sum = _mx_np.array([0])
-    ctx = arrays[0].ctx
+    ctx = arrays[0].device
     for group in arrays_groups:
         sum_sq = multi_sum_sq(*arrays_groups[group], ctx=ctx)
         all_ctx_sum += sum_sq
@@ -158,7 +158,7 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
                 UserWarning('nan or inf is detected. '
                             'Clipping results will be undefined.'), stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
-    scale = _mx_np.min(_mx_np.concatenate([scale, _mx_np.ones(1, ctx=ctx)], axis=0))
+    scale = _mx_np.min(_mx_np.concatenate([scale, _mx_np.ones(1, device=ctx)], axis=0))
     for arr in arrays:
         arr *= scale.item()
     if check_isfinite:
@@ -504,3 +504,79 @@ def _check_block_input_np_ndarrays(inputs):
         for i in inputs:
             _check_block_input_np_ndarrays(i)
     # pylint: enable=no-else-raise
+
+
+# pylint: disable=too-many-nested-blocks
+def split_rnn_params(param, mode, num_layers, input_size, hidden_size, bidirectional=False, projection_size=None):
+    """Split rnn layer parameter into weight and bias in different layer.
+
+    Parameters
+    ----------
+    param : ndarray
+        The parameter of rnn layer.
+    mode : str
+        Mode of rnn. Supported modes: rnn_relu, rnn_tanh, lstm, gru
+    num_layers : int, default 1
+        Number of recurrent layers.
+    input_size: int, default 0
+        The number of expected features in the input x.
+        If not specified, it will be inferred from input.
+    hidden_size: int
+        The number of features in the hidden state h.
+    bidirectional: bool, default False
+        If `True`, becomes a bidirectional RNN.
+    projection_size: int, default None
+        The number of features after projection.
+    """
+    gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
+    dir = 2 if bidirectional else 1
+    param_dict = {}
+    begin = 0
+    if not projection_size:
+        for p in ['weight', 'bias']:
+            for l in range(num_layers):
+                for d in ['l', 'r'][:dir]:
+                    for g in ['i2h', 'h2h']:
+                        ni = input_size
+                        if l != 0:
+                            ni = hidden_size * dir
+                        if g == 'h2h':
+                            ni = hidden_size
+                        shape0 = gates * hidden_size
+                        if p == 'weight':
+                            cur_len = shape0 * ni
+                            param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
+                                param[begin:begin+cur_len].reshape(shape0, ni)
+                        else:
+                            cur_len = shape0
+                            param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
+                                param[begin:begin+cur_len].reshape(shape0,)
+                        begin += cur_len
+    else:
+        for p in ['weight', 'bias']:
+            for l in range(num_layers):
+                for d in ['l', 'r'][:dir]:
+                    for g in ['i2h', 'h2h', 'h2r']:
+                        if g != 'h2r' or p != 'bias':
+                            if g == 'h2r':
+                                cur_len = projection_size * hidden_size
+                                param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
+                                    param[begin:begin+cur_len]. \
+                                        reshape(projection_size, hidden_size)
+                            else:
+                                ni = input_size
+                                if l != 0:
+                                    ni = projection_size * dir
+                                if g == 'h2h':
+                                    ni = projection_size
+                                shape0 = gates * hidden_size
+                                if p == 'weight':
+                                    cur_len = shape0 * ni
+                                    param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
+                                        param[begin:begin+cur_len].reshape(shape0, ni)
+                                else:
+                                    cur_len = shape0
+                                    param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
+                                        param[begin:begin+cur_len].reshape(shape0,)
+                            begin += cur_len
+    return param_dict

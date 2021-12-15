@@ -23,8 +23,8 @@ import numpy as _np
 from ...base import numeric_types, integer_types
 from ...util import _sanity_check_params, set_module
 from ...util import wrap_np_unary_func, wrap_np_binary_func
-from ...util import is_np_default_dtype
-from ...context import current_context
+from ...util import is_np_default_dtype, dtype_from_number
+from ...device import current_device
 from . import _internal as _npi
 from . import _api_internal
 from ..ndarray import NDArray
@@ -50,7 +50,8 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
+           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal',
+           'positive', 'logaddexp', 'floor_divide', 'bitwise_left_shift', 'bitwise_right_shift']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -88,7 +89,7 @@ def shape(a):
 
 
 @set_module('mxnet.ndarray.numpy')
-def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def zeros(shape, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -107,29 +108,30 @@ def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-
     order : {'C'}, optional, default: 'C'
         How to store multi-dimensional data in memory, currently only row-major
         (C-style) is supported.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
 
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+        Array of zeros with the given shape, dtype, and device.
     """
     if order != 'C':
         raise NotImplementedError
-    # If the following code (4 lines) regarding ctx is removed
+    # If the following code (4 lines) regarding device is removed
     # np.zeros((3, 4)) can be as fast as 4.96 us
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.zeros(shape, dtype, ctx)
+    return _api_internal.zeros(shape, dtype, device)
 
 
 @set_module('mxnet.ndarray.numpy')
-def ones(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def ones(shape, dtype=None, order='C', device=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -147,28 +149,29 @@ def ones(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-o
     order : {'C'}, optional, default: 'C'
         How to store multi-dimensional data in memory, currently only row-major
         (C-style) is supported.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
 
     Returns
     -------
     out : ndarray
-        Array of ones with the given shape, dtype, and ctx.
+        Array of ones with the given shape, dtype, and device.
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.ones(shape, dtype, ctx)
+    return _api_internal.ones(shape, dtype, device)
 
 
 # pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
-def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
+def zeros_like(a, dtype=None, order='C', device=None, out=None):
     """
     Return an array of zeros with the same shape and type as a given array.
 
@@ -183,7 +186,9 @@ def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
     order : {'C'}, optional
         Whether to store multidimensional data in C- or Fortran-contiguous
         (row- or column-wise) order in memory. Currently only supports C order.
-    ctx: to specify the device, e.g. the i-th GPU.
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
     out : ndarray or None, optional
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
@@ -222,11 +227,11 @@ def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
     """
     if order != 'C':
         raise NotImplementedError
-    return full_like(a, 0, dtype=dtype, order=order, ctx=ctx, out=out)
+    return full_like(a, 0, dtype=dtype, order=order, device=device, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
-def ones_like(a, dtype=None, order='C', ctx=None, out=None):
+def ones_like(a, dtype=None, order='C', device=None, out=None):
     """
     Return an array of ones with the same shape and type as a given array.
 
@@ -241,7 +246,9 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
     order : {'C'}, optional
         Whether to store multidimensional data in C- or Fortran-contiguous
         (row- or column-wise) order in memory. Currently only supports C order.
-    ctx: to specify the device, e.g. the i-th GPU.
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
     out : ndarray or None, optional
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
@@ -278,7 +285,7 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
     >>> np.ones_like(y)
     array([1., 1., 1.], dtype=float64)
     """
-    return full_like(a, 1, dtype=dtype, order=order, ctx=ctx, out=out)
+    return full_like(a, 1, dtype=dtype, order=order, device=device, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -312,7 +319,7 @@ def broadcast_to(array, shape):
 
 
 @set_module('mxnet.ndarray.numpy')
-def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+def full(shape, fill_value, dtype=None, order='C', device=None, out=None):  # pylint: disable=too-many-arguments
     """
     Return a new array of given shape and type, filled with `fill_value`.
 
@@ -323,14 +330,16 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     fill_value : scalar or ndarray
         Fill value.
     dtype : data-type, optional
-        The desired data-type for the array. The default, `None`, means
-        `np.array(fill_value).dtype`.
-        - When npx.is_np_default_dtype() returns False, default dtype is float32;
-        - When npx.is_np_default_dtype() returns True, default dtype is float64.
+        If dtype is None, the output array data type must be inferred from fill_value.
+        If it’s an int, the output array dtype must be the default integer dtype;
+        If it’s a float, then the output array dtype must be the default floating-point data type;
+        If it’s a bool then the output array must have boolean dtype. Default: None.
     order : {'C'}, optional
         Whether to store multidimensional data in C- or Fortran-contiguous
         (row- or column-wise) order in memory. Currently only supports C order.
-    ctx: to specify the device, e.g. the i-th GPU.
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
     out : ndarray or None, optional
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
@@ -340,15 +349,15 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     -------
     out : ndarray
         Array of `fill_value` with the given shape, dtype, and order.
-        If `fill_value` is an ndarray, out will have the same context as `fill_value`
-        regardless of the provided `ctx`.
+        If `fill_value` is an ndarray, out will have the same device as `fill_value`
+        regardless of the provided `device`.
 
     Notes
     -----
     This function differs from the original `numpy.full
     https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
     the following way(s):
-    - Have an additional `ctx` argument to specify the device
+    - Have an additional `device` argument to specify the device
     - Have an additional `out` argument
     - Currently does not support `order` selection
 
@@ -363,7 +372,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     >>> np.full((2, 2), 10)
     array([[10., 10.],
            [10., 10.]])
-    >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
+    >>> np.full((2, 2), 2, dtype=np.int32, device=mx.cpu(0))
     array([[2, 2],
            [2, 2]], dtype=int32)
 
@@ -376,21 +385,24 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         else:
             ret = broadcast_to(fill_value, shape).astype(dtype)
         return ret
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
         dtype = _np.bool if dtype is None else dtype
+    elif isinstance(fill_value, numeric_types):
+        if dtype is None or dtype is float:
+            dtype = dtype_from_number(fill_value)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.full(shape, dtype, fill_value, ctx, out)
+    return _api_internal.full(shape, dtype, fill_value, device, out)
 # pylint: enable=too-many-arguments, redefined-outer-name
 
 
 @set_module('mxnet.ndarray.numpy')
-def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylint: disable=too-many-arguments
+def full_like(a, fill_value, dtype=None, order='C', device=None, out=None): # pylint: disable=too-many-arguments
     """
     Return a full array with the same shape and type as a given array.
 
@@ -407,7 +419,9 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylin
     order : {'C'}, optional
         Whether to store multidimensional data in C- or Fortran-contiguous
         (row- or column-wise) order in memory. Currently only supports C order.
-    ctx: to specify the device, e.g. the i-th GPU.
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
     out : ndarray or None, optional
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
@@ -444,13 +458,13 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylin
         raise NotImplementedError
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.full_like(a, fill_value, dtype, ctx, out)
+    return _api_internal.full_like(a, fill_value, dtype, device, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -509,9 +523,11 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
     array([[4.9e-324, 9.9e-324, 1.5e-323], # uninitialized
            [2.0e-323, 2.5e-323, 3.0e-323]])
     """
-    dtype_list = {None:'None', _np.int8:'int8', _np.uint8:'uint8', _np.int32:'int32',
-                  _np.int64:'int64', _np.float16:'float16', _np.float32:'float32',
-                  _np.float64:'float64', _np.bool_:'bool_', bool:'bool', int:'int64', float:'float64'}
+    dtype_list = {_np.float16: 'float16', _np.float32: 'float32', _np.float64: 'float64',
+                  float: 'float64', _np.int8: 'int8', _np.int16: 'int16', _np.int32: 'int32',
+                  _np.int64: 'int64', int:'int64', _np.uint8: 'uint8', _np.uint16: 'uint16',
+                  _np.uint32: 'uint32', _np.uint64: 'uint64', _np.bool: 'bool',
+                  _np.bool_: 'bool_', bool: 'bool', None: 'None'}
     if order != 'C':
         raise NotImplementedError("Only support C-order at this moment")
     if subok:
@@ -526,7 +542,7 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
 
 
 @set_module('mxnet.ndarray.numpy')
-def arange(start, stop=None, step=1, dtype=None, ctx=None):
+def arange(start, stop=None, step=1, dtype=None, device=None):
     """Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
@@ -565,10 +581,10 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     """
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if stop is None:
         stop = start
         start = 0
@@ -578,11 +594,11 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         raise ValueError('start and stop cannot be both None')
     if step == 0:
         raise ZeroDivisionError('step cannot be 0')
-    return _api_internal.arange(start, stop, step, dtype, ctx)
+    return _api_internal.arange(start, stop, step, dtype, device)
 
 
 @set_module('mxnet.ndarray.numpy')
-def identity(n, dtype=None, ctx=None):
+def identity(n, dtype=None, device=None):
     """
     Return the identity array.
 
@@ -597,8 +613,9 @@ def identity(n, dtype=None, ctx=None):
         Data-type of the output.
         - When npx.is_np_default_dtype() returns False, default dtype is float32;
         - When npx.is_np_default_dtype() returns True, default dtype is float64.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
 
     Returns
     -------
@@ -617,14 +634,14 @@ def identity(n, dtype=None, ctx=None):
         raise TypeError("Input 'n' should be an integer")
     if n < 0:
         raise ValueError("Input 'n' cannot be negative")
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     shape = (n, n)  # pylint: disable=redefined-outer-name
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.identity(shape, dtype, ctx)
+    return _api_internal.identity(shape, dtype, device)
 
 
 # pylint: disable=redefined-outer-name
@@ -1167,6 +1184,45 @@ def true_divide(x1, x2, out=None):
 
 @set_module('mxnet.ndarray.numpy')
 @wrap_np_binary_func
+def floor_divide(x1, x2, out=None):
+    """Return the largest integer smaller or equal to the division of the inputs.
+    It is equivalent to the Python // operator and pairs with the Python % (remainder),
+    function so that a = a % b + b * (a // b) up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+    x2 : ndarray or scalar
+        Divisor array.
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+
+    .. note::
+
+       This operator now supports automatic type promotion. The resulting type will be determined
+       according to the following rules:
+
+       * If both inputs are of floating number types, the output is the more precise type.
+       * If only one of the inputs is floating number type, the result is that type.
+       * If both inputs are of integer types (including boolean), the output is the more
+       precise type
+
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.floor_divide(x1, x2, out=out)
+    return _api_internal.floor_divide(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
 def mod(x1, x2, out=None, **kwargs):
     """
     Return element-wise remainder of division.
@@ -1548,12 +1604,15 @@ def any(a, axis=None, out=None, keepdims=False):
 
 
 @set_module('mxnet.ndarray.numpy')
-def argsort(a, axis=-1, kind=None, order=None):
+def argsort(a, axis=-1, descending=False, stable=True):
     """
-    Returns the indices that would sort an array.
-    Perform an indirect sort along the given axis using the algorithm specified
-    by the `kind` keyword. It returns an array of indices of the same shape as
-    `a` that index data along the given axis in sorted order.
+    Returns the indices that sort an array `x` along a specified axis.
+
+    Notes
+    -----
+    `argsort` is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.sorting_functions.argsort.html
+    instead of an official NumPy operator.
 
     Parameters
     ----------
@@ -1562,11 +1621,13 @@ def argsort(a, axis=-1, kind=None, order=None):
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : string, optional
-        This argument can take any string, but it does not have any effect on the
-        final result.
-    order : str or list of str, optional
-        Not supported yet, will raise NotImplementedError if not None.
+    descending : bool, optional
+        sort order. If `True`, the returned indices sort x in descending order (by value).
+        If `False`, the returned indices sort x in ascending order (by value).Default: False.
+    stable : bool, optional
+        sort stability. If `True`, the returned indices must maintain the relative order
+        of x values which compare as equal. If `False`, the returned indices may or may not
+        maintain the relative order of x values which compare as equal. Default: True.
 
     Returns
     -------
@@ -1617,29 +1678,34 @@ def argsort(a, axis=-1, kind=None, order=None):
     >>> x[ind]  # same as np.sort(x, axis=None)
     array([0, 2, 2, 3])
     """
-    if order is not None:
-        raise NotImplementedError("order not supported here")
-
-    return _api_internal.argsort(a, axis, True, 'int64')
+    return _api_internal.argsort(a, axis, not descending, 'int64')
 
 
 @set_module('mxnet.ndarray.numpy')
-def sort(a, axis=-1, kind=None, order=None):
+def sort(a, axis=-1, descending=False, stable=True):
     """
     Return a sorted copy of an array.
+
+    Notes
+    -----
+    `sort` is a standard API in
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.sorting_functions.sort.html
+    instead of an official NumPy operator.
 
     Parameters
     ----------
     a : ndarray
-        Array to be sorted.
+        Array to sort.
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : string, optional
-        This argument can take any string, but it does not have any effect on the
-        final result.
-    order : str or list of str, optional
-        Not supported yet, will raise NotImplementedError if not None.
+    descending : bool, optional
+        sort order. If `True`, the returned indices sort x in descending order (by value).
+        If `False`, the returned indices sort x in ascending order (by value).Default: False.
+    stable : bool, optional
+        sort stability. If `True`, the returned indices must maintain the relative order
+        of x values which compare as equal. If `False`, the returned indices may or may not
+        maintain the relative order of x values which compare as equal. Default: True.
 
     Returns
     -------
@@ -1662,9 +1728,7 @@ def sort(a, axis=-1, kind=None, order=None):
     array([[1, 1],
            [3, 4]])
     """
-    if order is not None:
-        raise NotImplementedError("order not supported here")
-    return _api_internal.sort(a, axis, True)
+    return _api_internal.sort(a, axis, not descending)
 
 @set_module('mxnet.ndarray.numpy')
 def dot(a, b, out=None):
@@ -1859,20 +1923,21 @@ def eye(N, M=None, k=0, dtype=float, **kwargs):
         except for the k-th diagonal, whose values are equal to one.
     """
     _sanity_check_params('eye', ['order'], kwargs)
-    ctx = kwargs.pop('ctx', current_context())
-    if ctx is None:
-        ctx = str(current_context())
+    device = kwargs.pop('device', current_device())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is None or dtype is float:
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.eye(N, M, k, ctx, dtype)
+    k = minimum(k, N) if M is None else minimum(k, M)
+    return _api_internal.eye(N, M, int(k), device, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, device=None):  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
     Returns num evenly spaced samples, calculated over the interval [start, stop].
@@ -1880,9 +1945,9 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
 
     Parameters
     ----------
-    start : real number
+    start : int or float
         The starting value of the sequence.
-    stop : real number
+    stop : int or float
         The end value of the sequence, unless endpoint is set to False. In
         that case, the sequence consists of all but the last of num + 1
         evenly spaced samples, so that stop is excluded. Note that the step
@@ -1951,7 +2016,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
 
     - `start` and `stop` do not support list, numpy ndarray and mxnet ndarray
     - axis could only be 0
-    - There could be an additional `ctx` argument to specify the device, e.g. the i-th
+    - There could be an additional `device` argument to specify the device, e.g. the i-th
       GPU.
     """
     if isinstance(start, (list, _np.ndarray, NDArray)) or \
@@ -1959,21 +2024,23 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         raise NotImplementedError('start and stop only support int')
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
+    if dtype is None:
+        dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if retstep:
-        step = (stop - start) / (num - 1)
-        return _api_internal.linspace(start, stop, num, endpoint, ctx, dtype), step
+        step = (stop - start) / (num - int(endpoint))
+        return _api_internal.linspace(start, stop, num, endpoint, device, dtype), step
     else:
-        return _api_internal.linspace(start, stop, num, endpoint, ctx, dtype)
+        return _api_internal.linspace(start, stop, num, endpoint, device, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
-def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
+def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, device=None):  # pylint: disable=too-many-arguments
     r"""Return numbers spaced evenly on a log scale.
 
     In linear space, the sequence starts at ``base ** start``
@@ -2007,8 +2074,9 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
         The axis in the result to store the samples.  Relevant only if start
         or stop are array-like.  By default (0), the samples will be along a
         new axis inserted at the beginning. Now, axis only support axis = 0.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
 
     Returns
     -------
@@ -2042,21 +2110,21 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     array([4.       , 5.0396843, 6.349604 , 8.       ])
     >>> np.logspace(2.0, 3.0, num=4, base=2.0, dtype=np.int32)
     array([4, 5, 6, 8], dtype=int32)
-    >>> np.logspace(2.0, 3.0, num=4, ctx=npx.gpu(0))
-    array([ 100.     ,  215.44347,  464.15887, 1000.     ], ctx=gpu(0))
+    >>> np.logspace(2.0, 3.0, num=4, device=npx.gpu(0))
+    array([ 100.     ,  215.44347,  464.15887, 1000.     ], device=gpu(0))
     """
     if isinstance(start, (list, tuple, _np.ndarray, NDArray)) or \
        isinstance(stop, (list, tuple, _np.ndarray, NDArray)):
         raise NotImplementedError('start and stop only support int and float')
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.logspace(start, stop, num, endpoint, base, ctx, dtype)
+    return _api_internal.logspace(start, stop, num, endpoint, base, device, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2270,7 +2338,7 @@ def trace(a, offset=0, axis1=0, axis2=1, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def tri(N, M=None, k=0, dtype=None, ctx=None):
+def tri(N, M=None, k=0, dtype=None, device=None):
     r"""
     An array with ones at and below the given diagonal and zeros elsewhere.
 
@@ -2306,13 +2374,13 @@ def tri(N, M=None, k=0, dtype=None, ctx=None):
            [1.,  0.,  0.,  0.,  0.],
            [1.,  1.,  0.,  0.,  0.]])
     """
-    if ctx is None:
-        ctx = str(current_context())
-    return _api_internal.tri(N, M, k, dtype, ctx)
+    if device is None:
+        device = str(current_device())
+    return _api_internal.tri(N, M, k, dtype, device)
 
 
 @set_module('mxnet.ndarray.numpy')
-def triu_indices(n, k=0, m=None, ctx=None):
+def triu_indices(n, k=0, m=None, device=None):
     r"""
     Return the indices for the upper-triangle of an (n, m) array.
 
@@ -2386,7 +2454,7 @@ def triu_indices(n, k=0, m=None, ctx=None):
            [  8,   9,  -1,  -1],
            [ 12,  13,  14,  -1]])
         """
-    return nonzero(~tri(N=n, M=m, k=k-1, dtype=bool, ctx=ctx))
+    return nonzero(~tri(N=n, M=m, k=k-1, dtype=bool, device=device))
 
 
 
@@ -3007,7 +3075,7 @@ def arcsin(x, out=None, **kwargs):
     For each value that cannot be expressed as a real number or infinity,
     it yields ``nan`` and sets the `invalid` floating point error flag.
     The inverse sine is also known as `asin` or sin^{-1}.
-    The output `ndarray` has the same `ctx` as the input `ndarray`.
+    The output `ndarray` has the same `device` as the input `ndarray`.
     This function differs from the original `numpy.arcsin
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
     the following aspects:
@@ -3482,7 +3550,7 @@ def reciprocal(x, out=None, **kwargs):
     For integer arguments with absolute value larger than 1 the result is
     always zero because of the way Python handles integer division.  For
     integer zero the result is an overflow.
-    The output `ndarray` has the same `ctx` as the input `ndarray`.
+    The output `ndarray` has the same `device` as the input `ndarray`.
     This function differs from the original `numpy.reciprocal
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.reciprocal.html>`_ in
     the following aspects:
@@ -3522,7 +3590,7 @@ def square(x, out=None, **kwargs):
 
     Notes
     -----
-    The output `ndarray` has the same `ctx` as the input `ndarray`.
+    The output `ndarray` has the same `device` as the input `ndarray`.
     This function differs from the original `numpy.square
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.square.html>`_ in
     the following aspects:
@@ -3557,6 +3625,40 @@ def negative(x, out=None, **kwargs):
     -1
     """
     return _pure_unary_func_helper(x, _api_internal.negative, _np.negative, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_unary_func
+def positive(x, out=None, **kwargs):
+    r"""
+    Computes the numerical positive of each element `x_i` (i.e.,`y_i = +x_i`)
+    of the input array x .
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Returned array or scalar: y = +x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    Equivalent to `x.copy()`, but only defined for types that support arithmetic.
+
+    Examples
+    --------
+    >>> x1 = np.array(([1., -1.]))
+    >>> np.positive(x1)
+    array([ 1., -1.])
+    >>> +x1
+    array([ 1., -1.])
+    """
+    if out is x:
+        return x
+    return _pure_unary_func_helper(x, _api_internal.copy, _np.positive, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3655,6 +3757,8 @@ def ceil(x, out=None, **kwargs):
     >>> a
     array(4.)
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.ceil, _np.ceil, out=out, **kwargs)
 
 
@@ -3694,6 +3798,8 @@ def floor(x, out=None, **kwargs):
     >>> a
     array(3.)
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.floor, _np.floor, out=out, **kwargs)
 
 
@@ -3839,6 +3945,8 @@ def trunc(x, out=None, **kwargs):
     >>> np.trunc(a)
     array([-1., -1., -0.,  0.,  1.,  1.,  2.])
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.trunc, _np.trunc, out=out, **kwargs)
 
 
@@ -5336,7 +5444,7 @@ def tril_indices(n, k=0, m=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def argmax(a, axis=None, out=None):
+def argmax(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -5351,6 +5459,11 @@ def argmax(a, axis=None, out=None):
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -5360,6 +5473,10 @@ def argmax(a, axis=None, out=None):
 
     Notes
     -----
+    ``keepdims`` param is part of request in data-api-standard
+    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+    which is not the parameter in official NumPy
+
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
@@ -5401,11 +5518,11 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _api_internal.argmax(a, axis, False, out)
+    return _api_internal.argmax(a, axis, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
-def argmin(a, axis=None, out=None):
+def argmin(a, axis=None, out=None, keepdims=False):
     r"""
     Returns the indices of the maximum values along an axis.
 
@@ -5419,6 +5536,11 @@ def argmin(a, axis=None, out=None):
     out : ndarray or None, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
+    keepdims : bool
+        If True, the reduced axes (dimensions) must be included in the result as
+        singleton dimensions, and, accordingly, the result must be compatible with
+        the input array. Otherwise, if False, the reduced axes (dimensions) must
+        not be included in the result. Default: False .
 
     Returns
     -------
@@ -5428,6 +5550,10 @@ def argmin(a, axis=None, out=None):
 
     Notes
     -----
+    ``keepdims`` param is part of request in data-api-standard
+    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+    which is not the parameter in official NumPy
+
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
@@ -5469,7 +5595,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _api_internal.argmin(a, axis, False, out)
+    return _api_internal.argmin(a, axis, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5771,7 +5897,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
-def indices(dimensions, dtype=None, ctx=None):
+def indices(dimensions, dtype=None, device=None):
     """Return an array representing the indices of a grid.
 
     Compute an array where the subarrays contain index values 0,1,...
@@ -5783,9 +5909,9 @@ def indices(dimensions, dtype=None, ctx=None):
         The shape of the grid.
     dtype : data-type, optional
         The desired data-type for the array. Default is `int64`.
-    ctx : device context, optional
+    device : Device, optional
         Device context on which the memory is allocated. Default is
-        `mxnet.context.current_context()`.
+        `mxnet.device.current_device()`.
 
     Returns
     -------
@@ -5829,13 +5955,13 @@ def indices(dimensions, dtype=None, ctx=None):
     extract the required elements directly with ``x[:2, :3]``.
     """
     if isinstance(dimensions, (tuple, list)):
-        if ctx is None:
-            ctx = str(current_context())
+        if device is None:
+            device = str(current_device())
         else:
-            ctx = str(ctx)
+            device = str(device)
         if dtype is not None and not isinstance(dtype, str):
             dtype = _np.dtype(dtype).name
-        return _api_internal.indices(dimensions, dtype, ctx)
+        return _api_internal.indices(dimensions, dtype, device)
     else:
         raise ValueError("The dimensions must be sequence of ints")
 # pylint: enable=redefined-outer-name
@@ -5977,9 +6103,10 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     if order == 'C':
         if isinstance(indices, numeric_types):
             return _np.unravel_index(indices, shape)
-        return tuple(_npi.unravel_index_fallback(indices, shape=shape))
-    else:
-        raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
+        if isinstance(indices, NDArray):
+            return tuple(_api_internal.unravel_index(indices, shape))
+        raise TypeError('Do not support type {} as indices.'.format(str(type(indices))))
+    raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
 
 
 def flatnonzero(a):
@@ -6062,7 +6189,7 @@ def diag_indices_from(arr):
 
 
 @set_module('mxnet.ndarray.numpy')
-def hanning(M, dtype=None, ctx=None):
+def hanning(M, dtype=None, device=None):
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -6072,8 +6199,9 @@ def hanning(M, dtype=None, ctx=None):
     M : int
         Number of points in the output window. If zero or less, an
         empty array is returned.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
 
     Returns
     -------
@@ -6138,17 +6266,17 @@ def hanning(M, dtype=None, ctx=None):
     Text(0.5, 0, 'Sample')
     >>> plt.show()
     """
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.hanning(M, dtype, ctx)
+    return _api_internal.hanning(M, dtype, device)
 
 
 @set_module('mxnet.ndarray.numpy')
-def hamming(M, dtype=None, ctx=None):
+def hamming(M, dtype=None, device=None):
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -6158,8 +6286,9 @@ def hamming(M, dtype=None, ctx=None):
     M : int
         Number of points in the output window. If zero or less, an
         empty array is returned.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
 
     Returns
     -------
@@ -6222,17 +6351,17 @@ def hamming(M, dtype=None, ctx=None):
     Text(0.5, 0, 'Sample')
     >>> plt.show()
     """
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.hamming(M, dtype, ctx)
+    return _api_internal.hamming(M, dtype, device)
 
 
 @set_module('mxnet.ndarray.numpy')
-def blackman(M, dtype=None, ctx=None):
+def blackman(M, dtype=None, device=None):
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three
@@ -6245,8 +6374,9 @@ def blackman(M, dtype=None, ctx=None):
     M : int
         Number of points in the output window. If zero or less, an
         empty array is returned.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
+    device : Device, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.device.current_device()`.
 
     Returns
     -------
@@ -6304,13 +6434,13 @@ def blackman(M, dtype=None, ctx=None):
     Text(0.5, 0, 'Sample')
     >>> plt.show()
     """
-    if ctx is None:
-        ctx = str(current_context())
+    if device is None:
+        device = str(current_device())
     else:
-        ctx = str(ctx)
+        device = str(device)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.blackman(M, dtype, ctx)
+    return _api_internal.blackman(M, dtype, device)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6875,6 +7005,48 @@ def ldexp(x1, x2, out=None, **kwargs):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.ldexp(x1, x2, out=out)
     return _api_internal.ldexp(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def logaddexp(x1, x2, out=None, **kwargs):
+    """
+    Logarithm of the sum of exponentiations of the inputs.
+
+    Calculates log(exp(x1) + exp(x2)). This function is useful in statistics where
+    the calculated probabilities of events may be so small as to exceed the range of
+    normal floating point numbers. In such cases the logarithm of the calculate
+    probability is stored. This function allows adding probabilities stored
+    in such a fashion.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Array of multipliers.
+    x2 : ndarray or scalar, int
+        Array of twos exponents.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Logarithm of exp(x1) + exp(x2). This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    --------
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> prob12 = np.logaddexp(prob1, prob2)
+    >>> prob12
+    -113.87649168120691
+    >>> np.exp(prob12)
+    3.5000000000000057e-50
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.logaddexp(x1, x2, out=out)
+    return _api_internal.logaddexp(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -9879,3 +10051,81 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
         raise ValueError("only where=None or where=True cases are supported for now")
     return _api_internal.sum(a, axis, dtype, keepdims, initial, out)
 # pylint:enable=redefined-outer-name, too-many-arguments
+
+
+@set_module('mxnet.ndarray.numpy')
+def bitwise_left_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the left. Bits are shifted to the left by
+    appending x2 0s at the right of x1. Since the internal representation of numbers
+    is in binary format, this operation is equivalent to ``x1 * 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x2 : ndarray or scalar
+        Number of zeros to append to x1. Has to be non-negative. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.left_shift(5, 2)
+    20
+    >>> np.binary_repr(20)
+    '10100'
+    >>> np.left_shift(5, np.array([1,2,3]))
+    array([10, 20, 40])
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.left_shift(x1, x2, out=out)
+    return _api_internal.bitwise_left_shift(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def bitwise_right_shift(x1, x2, out=None):
+    r"""
+    Shift the bits of and integer to the right. Bits are shifted to the right by
+    x2. Because the internal representation of numbers is in binary format,
+    this operation is equivalent to ``x1 / 2**x2``
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+    x1 : ndarray or scalar
+        Number of bits to remove at the right of x1. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.binary_repr(10)
+    '1010'
+    >>> np.right_shift(10, 1)
+    5
+    >>> np.binary_repr(5)
+    '101'
+    >>> np.right_shift(10, np.array([1,2,3]))
+    array([5, 2, 1])
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.right_shift(x1, x2, out=out)
+    return _api_internal.bitwise_right_shift(x1, x2, out)

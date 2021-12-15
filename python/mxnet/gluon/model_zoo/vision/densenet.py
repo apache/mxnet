@@ -22,11 +22,11 @@ __all__ = ['DenseNet', 'densenet121', 'densenet161', 'densenet169', 'densenet201
 
 import os
 
-from ....context import cpu
+from ....device import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
-from ....util import use_np
+from ....util import use_np, wrap_ctx_to_device_func
 
 # Helpers
 def _make_dense_block(num_layers, bn_size, growth_rate, dropout):
@@ -121,7 +121,8 @@ densenet_spec = {121: (64, 32, [6, 12, 24, 16]),
 
 
 # Constructor
-def get_densenet(num_layers, pretrained=False, ctx=cpu(),
+@wrap_ctx_to_device_func
+def get_densenet(num_layers, pretrained=False, device=cpu(),
                  root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""Densenet-BC model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
@@ -132,8 +133,8 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(),
         Number of layers for the variant of densenet. Options are 121, 161, 169, 201.
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
@@ -141,7 +142,7 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(),
     net = DenseNet(num_init_features, growth_rate, block_config, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_parameters(get_model_file('densenet%d'%(num_layers), root=root), ctx=ctx)
+        net.load_parameters(get_model_file('densenet%d'%(num_layers), root=root), device=device)
     return net
 
 def densenet121(**kwargs):
@@ -152,8 +153,8 @@ def densenet121(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
@@ -167,8 +168,8 @@ def densenet161(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
@@ -182,8 +183,8 @@ def densenet169(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
@@ -197,8 +198,8 @@ def densenet201(**kwargs):
     ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ctx : Context, default CPU
-        The context in which to load the pretrained weights.
+    device : Device, default CPU
+        The device in which to load the pretrained weights.
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """

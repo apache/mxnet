@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_op_logic.cc
  * \brief CPU Implementation of unary function.
  */
@@ -28,49 +27,49 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY(_equal)
-.add_alias("_Equal")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::eq>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Equal")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::eq>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_not_equal)
-.add_alias("_Not_Equal")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::ne>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Not_Equal")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::ne>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_greater)
-.add_alias("_Greater")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::gt>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Greater")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::gt>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_greater_equal)
-.add_alias("_Greater_Equal")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::ge>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Greater_Equal")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::ge>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_lesser)
-.add_alias("_Lesser")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::lt>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Lesser")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::lt>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_lesser_equal)
-.add_alias("_Lesser_Equal")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::le>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Lesser_Equal")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::le>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_logical_and)
-.add_alias("_Logical_And")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_and>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Logical_And")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_and>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_logical_or)
-.add_alias("_Logical_Or")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_or>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Logical_Or")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_or>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_BINARY(_logical_xor)
-.add_alias("_Logical_Xor")
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_xor>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+    .add_alias("_Logical_Xor")
+    .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_xor>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet

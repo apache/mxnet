@@ -1,5 +1,3 @@
-#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
-#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,11 +18,13 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file tensorrt-inl.h
  * \brief TensorRT operation registration
  * \author Marek Kolodziej, Clement Fuji Tsang
-*/
+ */
+
+#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_TENSORRT_INL_H_
 
 #if MXNET_USE_TENSORRT
 
@@ -64,11 +64,11 @@ struct TRTEngineParam {
                  std::unique_ptr<onnx_to_tensorrt::TRT_Logger> _trt_logger,
                  const std::unordered_map<std::string, uint32_t>& input_map,
                  const std::unordered_map<std::string, uint32_t>& output_map) {
-    trt_engine = std::move(_trt_engine);
-    trt_logger = std::move(_trt_logger);
-    trt_parser = std::move(_trt_parser);
-    binding_order = std::make_shared<std::vector<std::pair<uint32_t, bool> > >();
-    bindings = std::make_shared<std::vector<void*> >();
+    trt_engine    = std::move(_trt_engine);
+    trt_logger    = std::move(_trt_logger);
+    trt_parser    = std::move(_trt_parser);
+    binding_order = std::make_shared<std::vector<std::pair<uint32_t, bool>>>();
+    bindings      = std::make_shared<std::vector<void*>>();
     binding_order->reserve(trt_engine->getNbBindings());
     bindings->resize(trt_engine->getNbBindings());
     for (int b = 0; b < trt_engine->getNbBindings(); ++b) {
@@ -86,32 +86,30 @@ struct TRTEngineParam {
   onnx_to_tensorrt::unique_ptr<nvinfer1::IExecutionContext> trt_executor;
   onnx_to_tensorrt::unique_ptr<nvonnxparser::IParser> trt_parser;
   std::unique_ptr<onnx_to_tensorrt::TRT_Logger> trt_logger;
-  std::shared_ptr<std::vector<std::pair<uint32_t, bool> > > binding_order;
-  std::shared_ptr<std::vector<void*> > bindings;
+  std::shared_ptr<std::vector<std::pair<uint32_t, bool>>> binding_order;
+  std::shared_ptr<std::vector<void*>> bindings;
 };
 
 class TensorrtSelector : public SubgraphSelector {
  public:
   const std::unordered_set<std::string> unconditionalTRTops = {
-    "_copy",
-    "clip",
-    "elemwise_add",
-    "elemwise_sub",
-    "elemwise_mul",
-    "Flatten",
-    "Pad",
-    "relu",
-    "rsqrt",
+      "_copy",
+      "clip",
+      "elemwise_add",
+      "elemwise_sub",
+      "elemwise_mul",
+      "Flatten",
+      "Pad",
+      "relu",
+      "rsqrt",
   };
 
-  const std::unordered_set<std::string> withWeightsOps = {
-    "BatchNorm",
-    "Convolution",
-    "Deconvolution",
-    "FullyConnected"
-  };
+  const std::unordered_set<std::string> withWeightsOps = {"BatchNorm",
+                                                          "Convolution",
+                                                          "Deconvolution",
+                                                          "FullyConnected"};
 
-  bool isTRTCompatible(const nnvm::Node &n) {
+  bool isTRTCompatible(const nnvm::Node& n) {
     const std::string op_name = n.op()->name;
     if (op_name == "FullyConnected") {
       const auto& param = nnvm::get<FullyConnectedParam>(n.attrs.parsed);
@@ -194,8 +192,9 @@ class TensorrtSelector : public SubgraphSelector {
     }
 
     if (op_name == "Concat") {
-      const auto& param = nnvm::get<ConcatParam>(n.attrs.parsed);
-      return (param.dim != 0);
+      const auto& param   = nnvm::get<ConcatParam>(n.attrs.parsed);
+      const int param_dim = param.dim.has_value() ? param.dim.value() : 0;
+      return (param_dim != 0);
     }
 
     if (op_name == "Dropout") {
@@ -204,9 +203,8 @@ class TensorrtSelector : public SubgraphSelector {
     }
 
     if (op_name == "Activation") {
-      return n.attrs.dict.at("act_type") == "relu" ||
-        n.attrs.dict.at("act_type") == "tanh" ||
-        n.attrs.dict.at("act_type") == "sigmoid";
+      return n.attrs.dict.at("act_type") == "relu" || n.attrs.dict.at("act_type") == "tanh" ||
+             n.attrs.dict.at("act_type") == "sigmoid";
     }
 
     if (op_name == "BatchNorm") {
@@ -226,11 +224,11 @@ class TensorrtSelector : public SubgraphSelector {
     return false;
   }
 
-  bool Select(const nnvm::Node &n) override {
+  bool Select(const nnvm::Node& n) override {
     return !n.is_variable() && isTRTCompatible(n);
   }
 
-  bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     if (new_node.is_variable()) {
       if (withWeightsOps.count(n.op()->name)) {
         return n.inputs[0].node->attrs.name != new_node.attrs.name;
@@ -241,7 +239,7 @@ class TensorrtSelector : public SubgraphSelector {
     return isTRTCompatible(new_node);
   }
 
-  bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     return isTRTCompatible(new_node);
   }
 
@@ -268,11 +266,11 @@ class TensorrtProperty : public SubgraphProperty {
   }
 
   void PrePartition(const nnvm::Graph& g,
-    const std::unordered_map<std::string, std::string>& options_map) override {
-    auto& in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
-    auto& in_aux_names = g.GetAttr<std::vector<std::string>>("in_aux_names");
-    NDArray **in_args_ptr = g.GetAttr<NDArray**>("in_args");
-    NDArray **in_aux_ptr = g.GetAttr<NDArray**>("in_aux");
+                    const std::unordered_map<std::string, std::string>& options_map) override {
+    auto& in_arg_names    = g.GetAttr<std::vector<std::string>>("in_arg_names");
+    auto& in_aux_names    = g.GetAttr<std::vector<std::string>>("in_aux_names");
+    NDArray** in_args_ptr = g.GetAttr<NDArray**>("in_args");
+    NDArray** in_aux_ptr  = g.GetAttr<NDArray**>("in_aux");
     in_args_dict.clear();
     in_aux_dict.clear();
     // we trust the Python API, len(in_arg_names) == len(in_args_ptr)
@@ -284,26 +282,27 @@ class TensorrtProperty : public SubgraphProperty {
     }
   }
 
-  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                   const int subgraph_id) const override {
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
+                                     const int subgraph_id) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
     nnvm::Symbol new_sym;
-    std::unique_copy(sym.outputs.begin(), sym.outputs.end(),
-        std::back_inserter(new_sym.outputs), [](
-        nnvm::NodeEntry lhs, nnvm::NodeEntry rhs) {
-          return lhs.index == rhs.index && lhs.node.get() == rhs.node.get();
-        });
+    std::unique_copy(sym.outputs.begin(),
+                     sym.outputs.end(),
+                     std::back_inserter(new_sym.outputs),
+                     [](nnvm::NodeEntry lhs, nnvm::NodeEntry rhs) {
+                       return lhs.index == rhs.index && lhs.node.get() == rhs.node.get();
+                     });
     n->attrs.name = "TensorRT" + std::to_string(subgraph_id);
-    n->attrs.op = Op::Get("_TensorRT");
+    n->attrs.op   = Op::Get("_TensorRT");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
 
     // Mapping subgraph params with NDArrays
     TRTParam param;
     std::ostringstream params_oss;
-    for (auto &param_name : new_sym.ListInputNames(nnvm::Symbol::kAll)) {
-      NDArray *cache = nullptr;
-      auto it_args = in_args_dict.find(param_name);
+    for (auto& param_name : new_sym.ListInputNames(nnvm::Symbol::kAll)) {
+      NDArray* cache = nullptr;
+      auto it_args   = in_args_dict.find(param_name);
       if (it_args != in_args_dict.end()) {
         cache = it_args->second;
       } else {
@@ -322,7 +321,7 @@ class TensorrtProperty : public SubgraphProperty {
     if (!tensorrt_params_names.empty()) {
       tensorrt_params_names.pop_back();
     }
-    n->attrs.parsed = param;
+    n->attrs.parsed                        = param;
     n->attrs.dict["subgraph_params_names"] = tensorrt_params_names;
     return n;
   }
@@ -331,16 +330,16 @@ class TensorrtProperty : public SubgraphProperty {
     return std::make_shared<TensorrtSelector>();
   }
 
-  void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node, \
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
                               std::vector<nnvm::NodeEntry*>* output_entries) const override {
     std::vector<nnvm::NodeEntry>& outputs = subgraph_node->attrs.subgraphs[0]->outputs;
-    TRTParam& _params = nnvm::get<TRTParam>(subgraph_node->attrs.parsed);
+    TRTParam& _params                     = nnvm::get<TRTParam>(subgraph_node->attrs.parsed);
     for (size_t i = 0; i < outputs.size(); i++) {
       auto& o = outputs[i];
       for (auto& e : *output_entries) {
         if (o.index == e->index && o.node.get() == e->node.get()) {
           e->index = i;
-          e->node = subgraph_node;
+          e->node  = subgraph_node;
           // TODO(cfujitsang): For future support this would fail
           //                   if the node have multiple outputs
           _params.outputs_to_idx[o.node->attrs.name] = i;
@@ -357,7 +356,7 @@ class TensorrtProperty : public SubgraphProperty {
     subgraph_node->inputs.clear();
     subgraph_node->inputs.resize(orig_input_entries->size());
     for (size_t i = 0; i < orig_input_entries->size(); ++i) {
-      subgraph_node->inputs[i] = orig_input_entries->at(i);
+      subgraph_node->inputs[i]                                      = orig_input_entries->at(i);
       _params.inputs_to_idx[input_entries->at(i)->node->attrs.name] = i;
     }
     subgraph_node->attrs.parsed = std::move(_params);
@@ -365,7 +364,6 @@ class TensorrtProperty : public SubgraphProperty {
 
   std::unordered_map<std::string, NDArray*> in_args_dict, in_aux_dict;
 };
-
 
 }  // namespace op
 }  // namespace mxnet

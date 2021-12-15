@@ -141,9 +141,9 @@ Backward pass is partially supported and not completely tested, so it is conside
 
 Not supported:
 
-* GPU and ONEDNN. 
+* GPU and oneDNN. 
 * Windows, ARM or any operating system other than Ubuntu
-* Any permutation of MXNet wheel that contains ONEDNN. 
+* Any permutation of MXNet wheel that contains oneDNN. 
 * Other language bindings like Scala, Java, R,  and Julia.
 
 

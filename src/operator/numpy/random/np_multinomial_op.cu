@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_multinomial_op.cu
  * \brief Operator for numpy sampling from multinomial distributions
  */
@@ -27,23 +26,22 @@
 namespace mxnet {
 namespace op {
 
-template<typename DType>
+template <typename DType>
 void CheckPvalGPU(const OpContext& ctx, DType* input, int prob_length) {
   std::vector<DType> pvals_(prob_length);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(ctx.get_stream<gpu>());
-  CUDA_CALL(cudaMemcpyAsync(&pvals_[0], input, sizeof(DType) * prob_length,
-                            cudaMemcpyDeviceToHost, stream));
+  CUDA_CALL(cudaMemcpyAsync(
+      &pvals_[0], input, sizeof(DType) * prob_length, cudaMemcpyDeviceToHost, stream));
   CUDA_CALL(cudaStreamSynchronize(stream));
   DType sum = DType(0.0);
   for (int i = 0; i < prob_length; ++i) {
     sum += pvals_[i];
-    CHECK(sum <= DType(1.0 + 1e-12))
-      << "sum(pvals[:-1]) > 1.0";
+    CHECK(sum <= DType(1.0 + 1e-12)) << "sum(pvals[:-1]) > 1.0";
   }
 }
 
 NNVM_REGISTER_OP(_npi_multinomial)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -31,8 +31,8 @@
 
 using namespace mxnet;
 
-typedef std::vector<std::pair<std::string, std::string> > kwargs_t;
-const kwargs_t basic_activation_args = { };
+typedef std::vector<std::pair<std::string, std::string>> kwargs_t;
+const kwargs_t basic_activation_args = {};
 
 /*!
  * \brief Generic bidirectional sanity test
@@ -42,7 +42,7 @@ TEST(SLICE_CHANNEL_PERF, ExecuteBidirectional) {
   kwargs_t kwargs = basic_activation_args;
   kwargs.push_back({"num_outputs", "160"});
   test::op::LegacyOpRunner<mxnet::op::SliceChannelProp, float, float> runner;
-  runner.RunBidirectional(false, { shape }, kwargs, 1);
+  runner.RunBidirectional(false, {shape}, kwargs, 1);
 }
 
 /*!
@@ -53,26 +53,16 @@ TEST(SLICE_CHANNEL_PERF, TimingCPU) {
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"num_outputs", "160"});
   test::op::LegacyOpRunner<mxnet::op::SliceChannelProp, float, float> runner;
-  runner.RunBidirectional(false,
-                          { mxnet::TShape({1, 160, 200}) },
-                          kwargs, 1);  // prime code and cache
-  std::vector <mxnet::TShape> shapes;
+  runner.RunBidirectional(
+      false, {mxnet::TShape({1, 160, 200})}, kwargs, 1);  // prime code and cache
+  std::vector<mxnet::TShape> shapes;
   if (test::performance_run) {
-    shapes = {
-      {1, 160, 200},
-      {10, 160, 200},
-      {100, 160, 200},
-      {10, 160, 500},
-      {100, 160, 500}
-    };
+    shapes = {{1, 160, 200}, {10, 160, 200}, {100, 160, 200}, {10, 160, 500}, {100, 160, 500}};
   } else {
-    shapes = {
-      {1, 160, 200},
-      {1, 160, 200}
-    };
+    shapes = {{1, 160, 200}, {1, 160, 200}};
   }
-  for (const mxnet::TShape &shape : shapes) {
-    runner.TimingTest("SliceChannel Operator CPU", false, false, kwargs, 2, 10, { shape });
+  for (const mxnet::TShape& shape : shapes) {
+    runner.TimingTest("SliceChannel Operator CPU", false, false, kwargs, 2, 10, {shape});
   }
 }
 
@@ -84,21 +74,13 @@ TEST(SLICE_CHANNEL_PERF, TimingGPU) {
   kwargs_t kwargs = basic_activation_args;
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"num_outputs", "160"});
-  test::OperatorRunner<mxnet::op::SliceChannelProp,
-    test::op::LegacyOperatorExecutor<float, float>> runner;
-  runner.RunBidirectional(true,
-                          { mxnet::TShape({1, 160, 200}) },
-                          kwargs, 1);  // prime code and cache
-  std::vector <mxnet::TShape> shapes = {
-      {1, 160, 200},
-      {1, 160, 200},
-      {1, 160, 200},
-      {1, 160, 200},
-      {1, 160, 200}
-    };
-  for (const mxnet::TShape &shape : shapes) {
-    runner.TimingTest("SliceChannel Operator GPU", true, false, kwargs, 2, 10, { shape });
+  test::OperatorRunner<mxnet::op::SliceChannelProp, test::op::LegacyOperatorExecutor<float, float>>
+      runner;
+  runner.RunBidirectional(true, {mxnet::TShape({1, 160, 200})}, kwargs, 1);  // prime code and cache
+  std::vector<mxnet::TShape> shapes = {
+      {1, 160, 200}, {1, 160, 200}, {1, 160, 200}, {1, 160, 200}, {1, 160, 200}};
+  for (const mxnet::TShape& shape : shapes) {
+    runner.TimingTest("SliceChannel Operator GPU", true, false, kwargs, 2, 10, {shape});
   }
 }
 #endif  // MXNET_USE_CUDA == 1
-

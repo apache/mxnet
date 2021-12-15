@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file batch_norm-inl.h
  * \brief
  * \author Bing Xu, Chris Olivier, Da Zheng
@@ -370,8 +369,8 @@ class BNTensor3 {
   inline BNTensor3(const TBlob& blob, const int indexOfChannel)
       : dptr_(blob.dptr<DType>()),
         indexOfChannel_(static_cast<size_t>(
-            indexOfChannel < 0 ? (static_cast<int>(blob.shape_.ndim()) + indexOfChannel)
-                               : indexOfChannel)) {
+            indexOfChannel < 0 ? (static_cast<int>(blob.shape_.ndim()) + indexOfChannel) :
+                                 indexOfChannel)) {
     CHECK_EQ(blob.type_flag_, mshadow::DataType<DType>::kFlag);
     shape_[OUTER] = 1;
     for (size_t i = 0; i < indexOfChannel_; ++i) {
@@ -386,9 +385,9 @@ class BNTensor3 {
 
   inline BNTensor3(DType* p, const mxnet::TShape& shape, const int indexOfChannel)
       : dptr_(p),
-        indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
-                                                ? (static_cast<int>(shape.ndim()) + indexOfChannel)
-                                                : indexOfChannel)) {
+        indexOfChannel_(static_cast<size_t>(indexOfChannel < 0 ?
+                                                (static_cast<int>(shape.ndim()) + indexOfChannel) :
+                                                indexOfChannel)) {
     shape_[OUTER] = 1;
     for (size_t i = 0; i < indexOfChannel_; ++i) {
       shape_[OUTER] *= shape[i];

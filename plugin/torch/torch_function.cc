@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file torch_base.cc
  * \brief torch_state
  * \author Junyuan Xie
-*/
+ */
 #include "./torch_function.h"
 
 namespace mxnet {
@@ -51,8 +50,10 @@ MXNET_REGISTER_TORCH_UNARY_FUN(_th_floor, floor);
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_log, log);
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_log1p, log1p);
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_pow, pow)
-.add_argument("n", "float", "pow(x, n) returns x^n, element-wise. "
-  "pow(n, x) returns n^x, element-wise.");
+    .add_argument("n",
+                  "float",
+                  "pow(x, n) returns x^n, element-wise. "
+                  "pow(n, x) returns n^x, element-wise.");
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_round, round);
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_sin, sin);
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_sinh, sinh);
@@ -62,7 +63,7 @@ MXNET_REGISTER_TORCH_UNARY_FUN(_th_tanh, tanh);
 
 // Basic operations
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_add_scalar, add)
-.add_argument("value", "float", "Add value to all elements in x");
+    .add_argument("value", "float", "Add value to all elements in x");
 MXNET_REGISTER_TORCH_BINARY_FUN_WITH_ARG(_th_add, add);
 MXNET_REGISTER_TORCH_BINARY_FUN(_th_add_axpy, add);
 
@@ -70,7 +71,7 @@ MXNET_REGISTER_TORCH_BINARY_FUN(_th_add_axpy, add);
 // MXNET_REGISTER_TORCH_BINARY_FUN_WITH_ARG(_th_csub, csub);
 
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_mul_scalar, mul)
-.add_argument("value", "float", "Multiply value to all elements in x");
+    .add_argument("value", "float", "Multiply value to all elements in x");
 MXNET_REGISTER_TORCH_BINARY_FUN_WITH_ARG(_th_cmul, cmul);
 
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_clamp, clamp);
@@ -78,7 +79,7 @@ MXNET_REGISTER_TORCH_BINARY_FUN_WITH_ARG(_th_cpow, cpow);
 MXNET_REGISTER_TORCH_TENARY_FUN(_th_addcmul, addcmul);
 
 MXNET_REGISTER_TORCH_UNARY_FUN(_th_div_scalar, div)
-.add_argument("value", "float", "Divide all elements in x by value");
+    .add_argument("value", "float", "Divide all elements in x by value");
 MXNET_REGISTER_TORCH_BINARY_FUN_WITH_ARG(_th_cdiv, cdiv);
 MXNET_REGISTER_TORCH_TENARY_FUN(_th_addcdiv, addcdiv);
 
@@ -89,67 +90,66 @@ MXNET_REGISTER_TORCH_TENARY_FUN(_th_addbmm, addbmm);
 MXNET_REGISTER_TORCH_TENARY_FUN(_th_baddbmm, baddbmm);
 
 struct TorchMMShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
-    const std::map<std::string, std::string>& param) {
+  static std::vector<mshadow::TShape> GetShape(NDArray** u,
+                                               const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 2);
     CHECK_EQ(u[1]->shape().ndim(), 2);
     CHECK_EQ(u[0]->shape()[1], u[1]->shape()[0]);
     index_t shape[] = {u[0]->shape()[0], u[1]->shape()[1]};
-    mshadow::TShape tshape(shape, shape+2);
+    mshadow::TShape tshape(shape, shape + 2);
     return {tshape};
   }
   static constexpr const char* fname = "mm";
-  static const int num_inputs = 2;
-  static const int num_outputs = 1;
+  static const int num_inputs        = 2;
+  static const int num_outputs       = 1;
 };
 MXNET_REGISTER_TORCH_FUN(_th_mm, TorchMMShape);
 
 struct TorchMVShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
-    const std::map<std::string, std::string>& param) {
+  static std::vector<mshadow::TShape> GetShape(NDArray** u,
+                                               const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 2);
     CHECK_EQ(u[1]->shape().ndim(), 1);
     CHECK_EQ(u[0]->shape()[1], u[1]->shape()[0]);
     index_t shape[] = {u[0]->shape()[0]};
-    mshadow::TShape tshape(shape, shape+1);
+    mshadow::TShape tshape(shape, shape + 1);
     return {tshape};
   }
   static constexpr const char* fname = "mv";
-  static const int num_inputs = 2;
-  static const int num_outputs = 1;
+  static const int num_inputs        = 2;
+  static const int num_outputs       = 1;
 };
 MXNET_REGISTER_TORCH_FUN(_th_mv, TorchMVShape);
 
-
 struct TorchBMMShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
-    const std::map<std::string, std::string>& param) {
+  static std::vector<mshadow::TShape> GetShape(NDArray** u,
+                                               const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 3);
     CHECK_EQ(u[1]->shape().ndim(), 3);
     CHECK_EQ(u[0]->shape()[0], u[1]->shape()[0]);
     CHECK_EQ(u[0]->shape()[2], u[1]->shape()[1]);
     index_t shape[] = {u[0]->shape()[1], u[1]->shape()[2]};
-    mshadow::TShape tshape(shape, shape+2);
+    mshadow::TShape tshape(shape, shape + 2);
     return {tshape};
   }
   static constexpr const char* fname = "bmm";
-  static const int num_inputs = 2;
-  static const int num_outputs = 1;
+  static const int num_inputs        = 2;
+  static const int num_outputs       = 1;
 };
 MXNET_REGISTER_TORCH_FUN(_th_bmm, TorchBMMShape);
 
 struct TorchGERShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
-    const std::map<std::string, std::string>& param) {
+  static std::vector<mshadow::TShape> GetShape(NDArray** u,
+                                               const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 1);
     CHECK_EQ(u[1]->shape().ndim(), 1);
     index_t shape[] = {u[0]->shape()[0], u[1]->shape()[0]};
-    mshadow::TShape tshape(shape, shape+2);
+    mshadow::TShape tshape(shape, shape + 2);
     return {tshape};
   }
   static constexpr const char* fname = "ger";
-  static const int num_inputs = 2;
-  static const int num_outputs = 1;
+  static const int num_inputs        = 2;
+  static const int num_outputs       = 1;
 };
 MXNET_REGISTER_TORCH_FUN(_th_ger, TorchGERShape);
 

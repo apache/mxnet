@@ -18,10 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file layer_norm.cu
  * \brief Implements Ba et. al, Layer Normalization (https://arxiv.org/abs/1607.06450).
-*/
+ */
 #include "./layer_norm-inl.h"
 
 using namespace mshadow::cuda;
@@ -50,28 +49,49 @@ void LayerNormGradComputeGeneralImpl<gpu>(const nnvm::NodeAttrs& attrs,
                                           const int channel_size) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  Stream<gpu> *s = ctx.get_stream<gpu>();
+  Stream<gpu>* s = ctx.get_stream<gpu>();
   // Compute normalized_data = (data - mean) / std
-  BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
-                                    {data, mean},
-                                    {kWriteTo}, {normalized_data});
-  BinaryBroadcastRTCCompute {"div"}(attrs, ctx,
-                                    {normalized_data, std},
-                                    {kWriteTo}, {normalized_data});
+  BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+      attrs,
+      ctx,
+      {data, mean},
+      {kWriteTo},
+      {normalized_data});
+  BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+      attrs,
+      ctx,
+      {normalized_data, std},
+      {kWriteTo},
+      {normalized_data});
   // Calculate grad_beta
   if (req[2] != kNullOp) {
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-      broadcast::RTCReduce(ctx, outputs[2].reshape(red_exclude_dst_shape), req[2], workspace,
-                           ograd.reshape(red_exclude_src_shape), "red::sum{}", NDim, "identity");
+      broadcast::RTCReduce(ctx,
+                           outputs[2].reshape(red_exclude_dst_shape),
+                           req[2],
+                           workspace,
+                           ograd.reshape(red_exclude_src_shape),
+                           "red::sum{}",
+                           NDim,
+                           "identity");
     });
   }
   // Calculate grad_gamma, it will be sum(ograd * normalized_data, exclude_axis)
-  ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {normalized_data, ograd},
-                                   {kWriteTo}, {ograd_mult});
+  ElemwiseBinaryRTCCompute{"mul"}(  // NOLINT
+      attrs,
+      ctx,
+      {normalized_data, ograd},
+      {kWriteTo},
+      {ograd_mult});
   if (req[1] != kNullOp) {
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-      broadcast::RTCReduce(ctx, outputs[1].reshape(red_exclude_dst_shape), req[1], workspace,
-                           ograd_mult.reshape(red_exclude_src_shape), "red::sum{}", NDim,
+      broadcast::RTCReduce(ctx,
+                           outputs[1].reshape(red_exclude_dst_shape),
+                           req[1],
+                           workspace,
+                           ograd_mult.reshape(red_exclude_src_shape),
+                           "red::sum{}",
+                           NDim,
                            "identity");
     });
   }
@@ -80,41 +100,69 @@ void LayerNormGradComputeGeneralImpl<gpu>(const nnvm::NodeAttrs& attrs,
   //   grad_data = ograd_mult - mean(ograd_mult, axis)
   //               + normalized_data * (-mean(normalized_data * ograd_mult, axis))
   if (req[0] != kNullOp) {
-    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
-                                      {ograd, gamma},
-                                      {kWriteTo}, {ograd_mult});
-    BinaryBroadcastRTCCompute {"div"}(attrs, ctx,
-                                      {ograd_mult, std},
-                                      {kWriteTo}, {ograd_mult});
+    BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd, gamma},
+        {kWriteTo},
+        {ograd_mult});
+    BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, std},
+        {kWriteTo},
+        {ograd_mult});
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-        broadcast::RTCReduce(ctx, red_out.reshape(red_dst_shape), kWriteTo, workspace,
-                             ograd_mult.reshape(red_src_shape), "red::sum{}", NDim, "identity");
+      broadcast::RTCReduce(ctx,
+                           red_out.reshape(red_dst_shape),
+                           kWriteTo,
+                           workspace,
+                           ograd_mult.reshape(red_src_shape),
+                           "red::sum{}",
+                           NDim,
+                           "identity");
     });
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Tensor<gpu, 1, DType> red_out_tensor = red_out.FlatTo1D<gpu, DType>(s);
       red_out_tensor /= scalar<DType>(channel_size);
     });
-    BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
-                                      {ograd_mult, red_out},
-                                      {req[0]}, {outputs[0]});
-    ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {ograd_mult, normalized_data},
-                                     {kWriteTo}, {ograd_mult});
+    BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, red_out},
+        {req[0]},
+        {outputs[0]});
+    ElemwiseBinaryRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, normalized_data},
+        {kWriteTo},
+        {ograd_mult});
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      broadcast::RTCReduce(ctx, red_out.reshape(red_dst_shape), kWriteTo, workspace,
-                           ograd_mult.reshape(red_src_shape), "red::sum{}", NDim, "identity");
+      broadcast::RTCReduce(ctx,
+                           red_out.reshape(red_dst_shape),
+                           kWriteTo,
+                           workspace,
+                           ograd_mult.reshape(red_src_shape),
+                           "red::sum{}",
+                           NDim,
+                           "identity");
     });
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Tensor<gpu, 1, DType> red_out_tensor = red_out.FlatTo1D<gpu, DType>(s);
-      red_out_tensor /=  scalar<DType>(- channel_size);
+      red_out_tensor /= scalar<DType>(-channel_size);
     });
-    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
-                                      {normalized_data, red_out},
-                                      {kAddTo}, {outputs[0]});
+    BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {normalized_data, red_out},
+        {kAddTo},
+        {outputs[0]});
   }
 }
 template <typename DType>
-__device__ __forceinline__ DType warp_shfl(DType value, int src_lane,
-                                           int width = 32, unsigned int mask = 0xffffffff) {
+__device__ __forceinline__ DType
+warp_shfl(DType value, int src_lane, int width = 32, unsigned int mask = 0xffffffff) {
 #if CUDA_VERSION >= 9000
   return __shfl_sync(mask, value, src_lane, width);
 #else
@@ -123,8 +171,8 @@ __device__ __forceinline__ DType warp_shfl(DType value, int src_lane,
 }
 
 template <typename DType>
-__device__ __forceinline__ DType warp_shfl_xor(DType value, int laneMask,
-                                               int width = 32, unsigned int mask = 0xffffffff) {
+__device__ __forceinline__ DType
+warp_shfl_xor(DType value, int laneMask, int width = 32, unsigned int mask = 0xffffffff) {
 #if CUDA_VERSION >= 9000
   return __shfl_xor_sync(mask, value, laneMask, width);
 #else
@@ -132,16 +180,15 @@ __device__ __forceinline__ DType warp_shfl_xor(DType value, int laneMask,
 #endif
 }
 
-
 /* A single updating step of the Welford's online algorithm to calculate the mean and variance.
  * The value 'curr' will be accumulated to the (mean, sigma2, count) triplet.
  *
  */
-template<typename DType, typename IType>
+template <typename DType, typename IType>
 __device__ __forceinline__ void StepWelfordOnlineSum(const DType curr,
-                                                     DType& mean,         //NOLINT
-                                                     DType& sigma2,       //NOLINT
-                                                     IType& count) {      //NOLINT
+                                                     DType& mean,     // NOLINT
+                                                     DType& sigma2,   // NOLINT
+                                                     IType& count) {  // NOLINT
   count += IType(1);
   DType delta = curr - mean;
   mean += delta / count;
@@ -155,24 +202,24 @@ __device__ __forceinline__ void StepWelfordOnlineSum(const DType curr,
  *
  *  TODO(sxjscience) Explore the possibility of int lhs_count and rhs_count
  */
-template<typename DType, typename IType>
+template <typename DType, typename IType>
 __device__ __inline__ void ChanMergePartition(const DType lhs_mean,
                                               const DType lhs_sigma2,
                                               const IType lhs_count,
-                                              DType& rhs_mean,         //NOLINT
-                                              DType& rhs_sigma2,       //NOLINT
-                                              IType& rhs_count) {      //NOLINT
+                                              DType& rhs_mean,     // NOLINT
+                                              DType& rhs_sigma2,   // NOLINT
+                                              IType& rhs_count) {  // NOLINT
   DType delta = rhs_mean - lhs_mean;
-  DType nA = static_cast<DType>(lhs_count);
-  DType nB = static_cast<DType>(rhs_count);
-  rhs_count = nA + nB;
+  DType nA    = static_cast<DType>(lhs_count);
+  DType nB    = static_cast<DType>(rhs_count);
+  rhs_count   = nA + nB;
   if (rhs_count > DType(0)) {
-    nA = nA / rhs_count;
-    nB = nB / rhs_count;
-    rhs_mean = nA * lhs_mean + nB * rhs_mean;
+    nA         = nA / rhs_count;
+    nB         = nB / rhs_count;
+    rhs_mean   = nA * lhs_mean + nB * rhs_mean;
     rhs_sigma2 = rhs_sigma2 + lhs_sigma2 + delta * delta * nA * nB * rhs_count;
   } else {
-    rhs_mean = DType(0);
+    rhs_mean   = DType(0);
     rhs_sigma2 = DType(0);
   }
 }
@@ -181,13 +228,13 @@ __device__ __inline__ void ChanMergePartition(const DType lhs_mean,
  * Each thread will keep a mean/sigma2. The mean/sigma2 can be further merged to get the mean and
  * sigma2 of the column.
  */
-template<typename AType, typename DType, typename IType>
+template <typename AType, typename DType, typename IType>
 __device__ __forceinline__ void BlockWelfordOnlineSum(const DType* __restrict__ col_vals,
                                                       const int nchannel,
-                                                      AType& mean,         //NOLINT
-                                                      AType& sigma2,       //NOLINT
-                                                      IType& count) {      //NOLINT
-  int tid = threadIdx.x + threadIdx.y * blockDim.x;
+                                                      AType& mean,     // NOLINT
+                                                      AType& sigma2,   // NOLINT
+                                                      IType& count) {  // NOLINT
+  int tid           = threadIdx.x + threadIdx.y * blockDim.x;
   const int nthread = blockDim.x * blockDim.y;
   // Each thread takes charge of 4 consecutive numbers. This should optimize the loading speed using
   // vectorized types like float4.
@@ -204,23 +251,22 @@ __device__ __forceinline__ void BlockWelfordOnlineSum(const DType* __restrict__ 
   }
 }
 
-template<>
-__device__ __forceinline__
-void BlockWelfordOnlineSum<float, mshadow::half::half_t, int>
-                                          (const mshadow::half::half_t* __restrict__ col_vals,
-                                           const int nchannel,
-                                           float& mean,                    //NOLINT
-                                           float& sigma2,                  //NOLINT
-                                           int& count) {                 //NOLINT
-  int tid = threadIdx.x + threadIdx.y * blockDim.x;
+template <>
+__device__ __forceinline__ void BlockWelfordOnlineSum<float, mshadow::half::half_t, int>(
+    const mshadow::half::half_t* __restrict__ col_vals,
+    const int nchannel,
+    float& mean,    // NOLINT
+    float& sigma2,  // NOLINT
+    int& count) {   // NOLINT
+  int tid           = threadIdx.x + threadIdx.y * blockDim.x;
   const int nthread = blockDim.x * blockDim.y;
   // We cast the input half pointer to half2 to optimize the loading speed.
   // Here, we need to notice that CUDA forces memory alignment, i.e.,
   // ASSERT static_cast<size_t>(ptr) % sizeof(dtype) == 0.
   // Thus, we need to shift the address of the half pointer to be aligned by half2.
-  int align_shift = (reinterpret_cast<size_t>(col_vals) % 4) != 0;
-  int padding = (nchannel - align_shift) % 2;
-  int half2_size = (nchannel - align_shift) / 2;
+  int align_shift               = (reinterpret_cast<size_t>(col_vals) % 4) != 0;
+  int padding                   = (nchannel - align_shift) % 2;
+  int half2_size                = (nchannel - align_shift) / 2;
   const __half2* half2_col_vals = reinterpret_cast<const __half2*>(col_vals + align_shift);
   if (threadIdx.x == 0 && threadIdx.y == 0) {
     if (align_shift) {
@@ -232,7 +278,7 @@ void BlockWelfordOnlineSum<float, mshadow::half::half_t, int>
   }
 
   for (int l = tid; l < half2_size; l += nthread) {
-    float2 ele_val =  __half22float2(half2_col_vals[l]);
+    float2 ele_val = __half22float2(half2_col_vals[l]);
     StepWelfordOnlineSum(ele_val.x, mean, sigma2, count);
     StepWelfordOnlineSum(ele_val.y, mean, sigma2, count);
   }
@@ -251,7 +297,7 @@ void BlockWelfordOnlineSum<float, mshadow::half::half_t, int>
  *  Also, when blockDim.y > 1, it requires shared memory that has size:
  *      sizeof(AType) * blockDim.y + sizeof(int) * blockDim.y / 2
  */
-template<typename AType, typename DType, typename IType>
+template <typename AType, typename DType, typename IType>
 __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
                                                   const int nchannel,
                                                   const AType eps,
@@ -261,12 +307,12 @@ __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
                                                   DType* __restrict__ out_data,
                                                   DType* __restrict__ mean_data,
                                                   DType* __restrict__ std_data) {
-  int bid = blockIdx.x + blockIdx.y * gridDim.x;
-  const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+  int bid           = blockIdx.x + blockIdx.y * gridDim.x;
+  const int tid     = threadIdx.y * blockDim.x + threadIdx.x;
   const int nthread = blockDim.x * blockDim.y;
-  IType count = 0;
-  AType mean = 0;
-  AType sigma2 = 0;
+  IType count       = 0;
+  AType mean        = 0;
+  AType sigma2      = 0;
 
   if (bid < nbatch) {
     extern __shared__ char buf[];  // Shared memory
@@ -279,9 +325,9 @@ __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
     // After calling the function, threadIdx.x == 0 will store the result of
     // the aggregated (mean, sigma2, counts).
     for (int mask = blockDim.x / 2; mask > 0; mask >>= 1) {
-      AType meanB = warp_shfl_xor(mean, mask);
+      AType meanB   = warp_shfl_xor(mean, mask);
       AType sigma2B = warp_shfl_xor(sigma2, mask);
-      IType countB = warp_shfl_xor(count, mask);
+      IType countB  = warp_shfl_xor(count, mask);
       ChanMergePartition(meanB, sigma2B, countB, mean, sigma2, count);
     }
     if (blockDim.y > 1) {
@@ -289,14 +335,14 @@ __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
       // and merge with the lower-half warp
       AType* mean_buf = reinterpret_cast<AType*>(buf);
       AType* sigma2_buf =
-        reinterpret_cast<AType*>(buf + sizeof(AType) * blockDim.y / 2 * blockDim.x);
+          reinterpret_cast<AType*>(buf + sizeof(AType) * blockDim.y / 2 * blockDim.x);
       IType* count_buf = reinterpret_cast<IType*>(buf + sizeof(AType) * blockDim.y * blockDim.x);
       for (int offset = blockDim.y / 2; offset > 0; offset >>= 1) {
         if (threadIdx.y >= offset && threadIdx.y < 2 * offset) {
-          const int idx = (threadIdx.y - offset) * blockDim.x + threadIdx.x;
-          mean_buf[idx] = mean;
+          const int idx   = (threadIdx.y - offset) * blockDim.x + threadIdx.x;
+          mean_buf[idx]   = mean;
           sigma2_buf[idx] = sigma2;
-          count_buf[idx] = count;
+          count_buf[idx]  = count;
         }
         __syncthreads();
         if (threadIdx.y < offset) {
@@ -307,35 +353,35 @@ __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
       }
       // Broadcast the result to all threads
       if (threadIdx.y == 0) {
-        mean_buf[threadIdx.x] = mean;
+        mean_buf[threadIdx.x]   = mean;
         sigma2_buf[threadIdx.x] = sigma2;
       }
       __syncthreads();
-      mean = mean_buf[threadIdx.x];
+      mean   = mean_buf[threadIdx.x];
       sigma2 = sigma2_buf[threadIdx.x] / nchannel;
     } else {
       sigma2 /= nchannel;
     }
     // Calculate the out_data: gamma * (x - mean) / sqrt(var + eps) + beta
-    AType std_eps = sqrt(sigma2 + eps);
-    AType invstd_eps = DType(1.0) / std_eps;
+    AType std_eps      = sqrt(sigma2 + eps);
+    AType invstd_eps   = DType(1.0) / std_eps;
     DType* out_col_val = out_data + bid * nchannel;
 
     if (gamma != nullptr && beta != nullptr) {
       for (int i = tid; i < nchannel; i += nthread) {
-        out_col_val[i] = gamma[i] * static_cast<DType>(invstd_eps *
-                                                       (static_cast<AType>(col_vals[i]) - mean))
-                                                         + beta[i];
+        out_col_val[i] =
+            gamma[i] * static_cast<DType>(invstd_eps * (static_cast<AType>(col_vals[i]) - mean)) +
+            beta[i];
       }
     } else if (gamma == nullptr && beta != nullptr) {
       for (int i = tid; i < nchannel; i += nthread) {
-        out_col_val[i] = static_cast<DType>(invstd_eps * (static_cast<AType>(col_vals[i]) - mean))
-                                                       + beta[i];
+        out_col_val[i] =
+            static_cast<DType>(invstd_eps * (static_cast<AType>(col_vals[i]) - mean)) + beta[i];
       }
     } else if (gamma != nullptr && beta == nullptr) {
       for (int i = tid; i < nchannel; i += nthread) {
-        out_col_val[i] = gamma[i] * static_cast<DType>(invstd_eps *
-                                                       (static_cast<AType>(col_vals[i]) - mean));
+        out_col_val[i] =
+            gamma[i] * static_cast<DType>(invstd_eps * (static_cast<AType>(col_vals[i]) - mean));
       }
     } else {
       for (int i = tid; i < nchannel; i += nthread) {
@@ -345,14 +391,15 @@ __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
     // Write the out_data and var_data
     if (threadIdx.x == 0 && threadIdx.y == 0) {
       mean_data[bid] = static_cast<DType>(mean);
-      std_data[bid] = static_cast<DType>(std_eps);
+      std_data[bid]  = static_cast<DType>(std_eps);
     }
   }
 }
 
-template<bool safe_acc = false>
+template <bool safe_acc = false>
 void LayerNormGPUContig(const LayerNormParam param,
-                        const OpContext& ctx, const std::vector<TBlob>& inputs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
   using namespace mshadow;
@@ -361,13 +408,13 @@ void LayerNormGPUContig(const LayerNormParam param,
   mxnet::TShape mean_shape(1, 0);
   size_t in_ndim = inputs[layernorm::kData].ndim();
   data_shape[0] = mean_shape[0] = inputs[layernorm::kData].shape_.ProdShape(0, in_ndim - 1);
-  data_shape[1] = inputs[layernorm::kData].shape_[in_ndim - 1];
-  const TBlob in_data = inputs[layernorm::kData].reshape(data_shape);
-  const TBlob gamma = inputs[layernorm::kGamma];
-  const TBlob beta = inputs[layernorm::kBeta];
-  const TBlob out_data = outputs[layernorm::kOut].reshape(data_shape);
-  const TBlob mean_data = outputs[layernorm::kMean].reshape(mean_shape);
-  const TBlob std_data = outputs[layernorm::kStd].reshape(mean_shape);
+  data_shape[1]                 = inputs[layernorm::kData].shape_[in_ndim - 1];
+  const TBlob in_data           = inputs[layernorm::kData].reshape(data_shape);
+  const TBlob gamma             = inputs[layernorm::kGamma];
+  const TBlob beta              = inputs[layernorm::kBeta];
+  const TBlob out_data          = outputs[layernorm::kOut].reshape(data_shape);
+  const TBlob mean_data         = outputs[layernorm::kMean].reshape(mean_shape);
+  const TBlob std_data          = outputs[layernorm::kStd].reshape(mean_shape);
   // Make sure the inputs are contiguous
   CHECK_EQ(in_data.CheckContiguous(), true);
   CHECK_EQ(gamma.CheckContiguous(), true);
@@ -378,11 +425,11 @@ void LayerNormGPUContig(const LayerNormParam param,
 
   // Lauch the kernel. The dynamic shared memory size is
   // sizeof(DType) * blockDim.y * blockDim.x + sizeof(DType) * blockDim.y / 2 * blockDim.x
-  int nbatch = data_shape[0];
+  int nbatch   = data_shape[0];
   int nchannel = data_shape[1];
-  float eps = param.eps;
-  int ngrid_x = (nbatch > kMaxGridDim) ? (nbatch + kBaseGridNum - 1) / kBaseGridNum : nbatch;
-  int ngrid_y = (nbatch > kMaxGridDim) ? kBaseGridNum : 1;
+  float eps    = param.eps;
+  int ngrid_x  = (nbatch > kMaxGridDim) ? (nbatch + kBaseGridNum - 1) / kBaseGridNum : nbatch;
+  int ngrid_y  = (nbatch > kMaxGridDim) ? kBaseGridNum : 1;
   int nthread_y;
   const dim3 dimGrid(ngrid_x, ngrid_y);
   if (nchannel <= 128) {
@@ -396,24 +443,32 @@ void LayerNormGPUContig(const LayerNormParam param,
   const dim3 dimBlock(32, nthread_y);
   MXNET_REAL_ACC_TYPE_SWITCH(in_data.type_flag_, DType, AccType, {
     typedef typename std::conditional<safe_acc, AccType, DType>::type AType;
-    int nshared = nthread_y > 1 ? nthread_y * 32 * sizeof(AType)
-                                  + (nthread_y / 2) * 32 * sizeof(int) : 0;
+    int nshared =
+        nthread_y > 1 ? nthread_y * 32 * sizeof(AType) + (nthread_y / 2) * 32 * sizeof(int) : 0;
     CheckLaunchParam(dimGrid, dimBlock);
-    LayerNormFusedForwardKernelContig<AType, DType, int> <<<dimGrid, dimBlock, nshared, stream>>>
-     (nbatch, nchannel, static_cast<AType>(eps),
-      in_data.dptr<DType>(), gamma.dptr<DType>(), beta.dptr<DType>(),
-      out_data.dptr<DType>(), mean_data.dptr<DType>(), std_data.dptr<DType>());
+    LayerNormFusedForwardKernelContig<AType, DType, int>
+        <<<dimGrid, dimBlock, nshared, stream>>>(nbatch,
+                                                 nchannel,
+                                                 static_cast<AType>(eps),
+                                                 in_data.dptr<DType>(),
+                                                 gamma.dptr<DType>(),
+                                                 beta.dptr<DType>(),
+                                                 out_data.dptr<DType>(),
+                                                 mean_data.dptr<DType>(),
+                                                 std_data.dptr<DType>());
   });
   MSHADOW_CUDA_POST_KERNEL_CHECK(LayerNormFusedForwardKernelContig);
 }
 
-template<>
+template <>
 void LayerNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   CHECK_NE(req[0], kAddTo);
   int axis = param.axis;
   if (axis < 0) {
@@ -424,9 +479,10 @@ void LayerNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
     // Try to use the accelerated CUDA kernels
     bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
     if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
-      common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LayerNorm with float16 inputs. "
-                      "See https://mxnet.apache.org/api/faq/env_var "
-                      "for more details.");
+      common::LogOnce(
+          "MXNET_SAFE_ACCUMULATION=1 is recommended for LayerNorm with float16 inputs. "
+          "See https://mxnet.apache.org/api/faq/env_var "
+          "for more details.");
     }
     if (safe_acc) {
       return LayerNormGPUContig<true>(param, ctx, inputs, req, outputs);
@@ -436,7 +492,6 @@ void LayerNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
   }
   return LayerNormComputeGeneral<gpu>(attrs, ctx, inputs, req, outputs);
 }
-
 
 /* Fused CUDA kernel for calculating the gradient w.r.t gamma/beta in LayerNorm when axis=-1
  * (Contiguous case).
@@ -464,7 +519,7 @@ void LayerNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
  * This `LayerNormFusedBackwardKernel_PartGammaBeta` function implements the first step and
  * `LayerNormFusedBackwardKernel_GammaBeta` implements the second step.
  */
-template<typename AType, typename DType>
+template <typename AType, typename DType>
 __global__ void LayerNormFusedBackwardKernel_PartGammaBeta(const int nbatch,
                                                            const int nchannel,
                                                            const DType* __restrict__ in_data,
@@ -474,28 +529,28 @@ __global__ void LayerNormFusedBackwardKernel_PartGammaBeta(const int nbatch,
                                                            AType* __restrict__ part_gamma_grad,
                                                            AType* __restrict__ part_beta_grad) {
   extern __shared__ char buf[];
-  AType* d_buf = reinterpret_cast<AType*>(buf);
-  const int npart = gridDim.y;
+  AType* d_buf            = reinterpret_cast<AType*>(buf);
+  const int npart         = gridDim.y;
   const int block_row_num = (nbatch + npart - 1) / npart;
   // The rows are divided into `npart` parts. Each threadblock calculates the reduction result
   // within the corresponding row ranges.
-  int row_stride = blockDim.x + 1;
-  const int c = blockIdx.x * blockDim.x + threadIdx.x;
-  int r_begin = blockIdx.y * block_row_num;
-  int r_end = min((blockIdx.y + 1) * block_row_num, nbatch);
-  AType* buf_gamma_grad = d_buf;
-  AType* buf_beta_grad = d_buf + blockDim.y * row_stride;
+  int row_stride         = blockDim.x + 1;
+  const int c            = blockIdx.x * blockDim.x + threadIdx.x;
+  int r_begin            = blockIdx.y * block_row_num;
+  int r_end              = min((blockIdx.y + 1) * block_row_num, nbatch);
+  AType* buf_gamma_grad  = d_buf;
+  AType* buf_beta_grad   = d_buf + blockDim.y * row_stride;
   AType local_gamma_grad = 0;
-  AType local_beta_grad = 0;
+  AType local_beta_grad  = 0;
 
   if (c < nchannel) {
     for (int r_b = r_begin; r_b < r_end; r_b += blockDim.y) {
       int r = r_b + threadIdx.y;
       if (r < r_end) {
-        AType local_mean = static_cast<AType>(mean_data[r]);
-        AType local_std = static_cast<AType>(std_data[r]);
-        int read_idx = r * nchannel + c;
-        AType local_in_data = static_cast<AType>(in_data[read_idx]);
+        AType local_mean     = static_cast<AType>(mean_data[r]);
+        AType local_std      = static_cast<AType>(std_data[r]);
+        int read_idx         = r * nchannel + c;
+        AType local_in_data  = static_cast<AType>(in_data[read_idx]);
         AType local_out_grad = static_cast<AType>(out_grad[read_idx]);
         local_gamma_grad += (local_in_data - local_mean) / local_std * local_out_grad;
         local_beta_grad += local_out_grad;
@@ -503,9 +558,9 @@ __global__ void LayerNormFusedBackwardKernel_PartGammaBeta(const int nbatch,
     }
   }
   buf_gamma_grad[threadIdx.y * row_stride + threadIdx.x] = local_gamma_grad;
-  buf_beta_grad[threadIdx.y * row_stride + threadIdx.x] = local_beta_grad;
+  buf_beta_grad[threadIdx.y * row_stride + threadIdx.x]  = local_beta_grad;
   __syncthreads();
-  for (int offset = blockDim.y/2;  offset > 1;  offset >>= 1) {
+  for (int offset = blockDim.y / 2; offset > 1; offset >>= 1) {
     if (threadIdx.y < offset) {
       int idx1 = threadIdx.y * row_stride + threadIdx.x;
       int idx2 = (threadIdx.y + offset) * row_stride + threadIdx.x;
@@ -515,14 +570,14 @@ __global__ void LayerNormFusedBackwardKernel_PartGammaBeta(const int nbatch,
     __syncthreads();
   }
   if (threadIdx.y == 0 && c < nchannel) {
-    part_gamma_grad[blockIdx.y * nchannel + c] = buf_gamma_grad[threadIdx.x]
-                                                   + buf_gamma_grad[threadIdx.x + row_stride];
-    part_beta_grad[blockIdx.y * nchannel + c] = buf_beta_grad[threadIdx.x]
-                                                   + buf_beta_grad[threadIdx.x + row_stride];
+    part_gamma_grad[blockIdx.y * nchannel + c] =
+        buf_gamma_grad[threadIdx.x] + buf_gamma_grad[threadIdx.x + row_stride];
+    part_beta_grad[blockIdx.y * nchannel + c] =
+        buf_beta_grad[threadIdx.x] + buf_beta_grad[threadIdx.x + row_stride];
   }
 }
 
-template<bool gamma_addto, bool beta_addto, typename AType, typename DType>
+template <bool gamma_addto, bool beta_addto, typename AType, typename DType>
 __global__ void LayerNormFusedBackwardKernel_GammaBeta(const int nbatch,
                                                        const int nchannel,
                                                        const int npart,
@@ -530,14 +585,14 @@ __global__ void LayerNormFusedBackwardKernel_GammaBeta(const int nbatch,
                                                        const AType* __restrict__ part_beta_grad,
                                                        DType* gamma_grad,
                                                        DType* beta_grad) {
-  const int c = blockIdx.x * blockDim.x + threadIdx.x;
+  const int c   = blockIdx.x * blockDim.x + threadIdx.x;
   const int tid = threadIdx.y * blockDim.x + threadIdx.x;
   if (c < nchannel) {
     extern __shared__ char buf[];
     AType* buf_gamma_grad = reinterpret_cast<AType*>(buf);
-    AType* buf_beta_grad = reinterpret_cast<AType*>(buf) + blockDim.x * blockDim.y;
-    buf_gamma_grad[tid] = 0;
-    buf_beta_grad[tid] = 0;
+    AType* buf_beta_grad  = reinterpret_cast<AType*>(buf) + blockDim.x * blockDim.y;
+    buf_gamma_grad[tid]   = 0;
+    buf_beta_grad[tid]    = 0;
     for (int r = threadIdx.y; r < npart; r += blockDim.y) {
       buf_gamma_grad[tid] += part_gamma_grad[r * nchannel + c];
       buf_beta_grad[tid] += part_beta_grad[r * nchannel + c];
@@ -545,7 +600,7 @@ __global__ void LayerNormFusedBackwardKernel_GammaBeta(const int nbatch,
     __syncthreads();
     // Begin for inter-warp reduce
     if (npart > 1) {
-      for (int offset = blockDim.y/2; offset > 0; offset >>= 1) {
+      for (int offset = blockDim.y / 2; offset > 0; offset >>= 1) {
         if (threadIdx.y < offset) {
           int idx1 = tid;
           int idx2 = tid + offset * blockDim.x;
@@ -578,7 +633,7 @@ __global__ void LayerNormFusedBackwardKernel_GammaBeta(const int nbatch,
  *
  *
  */
-template<int LOAD_UNROLL, bool data_addto, typename AType, typename DType>
+template <int LOAD_UNROLL, bool data_addto, typename AType, typename DType>
 __global__ void LayerNormFusedBackwardKernel_Data(const int nbatch,
                                                   const int nchannel,
                                                   const DType* __restrict__ in_data,
@@ -587,7 +642,7 @@ __global__ void LayerNormFusedBackwardKernel_Data(const int nbatch,
                                                   const DType* __restrict__ std_data,
                                                   const DType* __restrict__ gamma,
                                                   DType* data_grad) {
-  int bid = blockIdx.x + blockIdx.y * gridDim.x;
+  int bid           = blockIdx.x + blockIdx.y * gridDim.x;
   const int nthread = blockDim.x * blockDim.y;
   if (bid < nbatch) {
     // Shared memory with size blockDim.y * blockDim.x * sizeof(DType)
@@ -595,24 +650,24 @@ __global__ void LayerNormFusedBackwardKernel_Data(const int nbatch,
     int tid = threadIdx.x + threadIdx.y * blockDim.x;
     // 1. Calculate: mean(out_grad * gamma / std, axis=-1)
     //               mean(out_grad * gamma / std * (x - mean) / std, axis=-1)
-    AType sum_val0 = 0;  // Stores mean(out_grad * gamma / std, axis=-1)
-    AType sum_val1 = 0;  // Stores mean(out_grad * gamma / std * (x - mean) / std, axis=-1)
-    AType mean = static_cast<AType>(mean_data[bid]);
+    AType sum_val0   = 0;  // Stores mean(out_grad * gamma / std, axis=-1)
+    AType sum_val1   = 0;  // Stores mean(out_grad * gamma / std * (x - mean) / std, axis=-1)
+    AType mean       = static_cast<AType>(mean_data[bid]);
     AType invstd_eps = AType(1) / static_cast<AType>(std_data[bid]);
-    int l = LOAD_UNROLL * tid;
+    int l            = LOAD_UNROLL * tid;
     for (; l + LOAD_UNROLL - 1 < nchannel; l += nthread * LOAD_UNROLL) {
 #pragma unroll
       for (int i = 0; i < LOAD_UNROLL; ++i) {
-        AType ele_og = static_cast<AType>(out_grad[bid * nchannel + l + i]);
-        AType ele_x = static_cast<AType>(in_data[bid * nchannel + l + i]);
+        AType ele_og    = static_cast<AType>(out_grad[bid * nchannel + l + i]);
+        AType ele_x     = static_cast<AType>(in_data[bid * nchannel + l + i]);
         AType ele_gamma = static_cast<AType>(gamma[l + i]);
         sum_val0 += ele_og * ele_gamma * invstd_eps;
         sum_val1 += ele_og * ele_gamma * (ele_x - mean) * invstd_eps * invstd_eps;
       }
     }
     for (; l < nchannel; ++l) {
-      AType ele_og = static_cast<AType>(out_grad[bid * nchannel + l]);
-      AType ele_x = static_cast<AType>(in_data[bid * nchannel + l]);
+      AType ele_og    = static_cast<AType>(out_grad[bid * nchannel + l]);
+      AType ele_x     = static_cast<AType>(in_data[bid * nchannel + l]);
       AType ele_gamma = static_cast<AType>(gamma[l]);
       sum_val0 += ele_og * ele_gamma * invstd_eps;
       sum_val1 += ele_og * ele_gamma * (ele_x - mean) * invstd_eps * invstd_eps;
@@ -626,10 +681,10 @@ __global__ void LayerNormFusedBackwardKernel_Data(const int nbatch,
     if (blockDim.y > 1) {
       AType* sum_val0_buf = reinterpret_cast<AType*>(buf);
       AType* sum_val1_buf =
-        reinterpret_cast<AType*>(buf + blockDim.y / 2 * blockDim.x * sizeof(AType));
+          reinterpret_cast<AType*>(buf + blockDim.y / 2 * blockDim.x * sizeof(AType));
       for (int offset = blockDim.y / 2; offset > 0; offset >>= 1) {
         if (threadIdx.y >= offset && threadIdx.y < 2 * offset) {
-          const int idx = (threadIdx.y - offset) * blockDim.x + threadIdx.x;
+          const int idx     = (threadIdx.y - offset) * blockDim.x + threadIdx.x;
           sum_val0_buf[idx] = sum_val0;
           sum_val1_buf[idx] = sum_val1;
         }
@@ -655,37 +710,41 @@ __global__ void LayerNormFusedBackwardKernel_Data(const int nbatch,
     //      out_grad * gamma / std - sum_val0 - (x - mean) / std * sum_val1
     for (int l = tid; l < nchannel; l += nthread) {
       AType ele_out_grad = static_cast<AType>(out_grad[bid * nchannel + l]);
-      AType ele_x = static_cast<AType>(in_data[bid * nchannel + l]);
-      AType ele_gamma = static_cast<AType>(gamma[l]);
+      AType ele_x        = static_cast<AType>(in_data[bid * nchannel + l]);
+      AType ele_gamma    = static_cast<AType>(gamma[l]);
       if (data_addto) {
         data_grad[bid * nchannel + l] +=
-          static_cast<DType>(ele_out_grad * ele_gamma * invstd_eps
-                               - sum_val0 - (ele_x - mean) * invstd_eps * sum_val1);
+            static_cast<DType>(ele_out_grad * ele_gamma * invstd_eps - sum_val0 -
+                               (ele_x - mean) * invstd_eps * sum_val1);
       } else {
         data_grad[bid * nchannel + l] =
-          static_cast<DType>(ele_out_grad * ele_gamma * invstd_eps - sum_val0
-                                               - (ele_x - mean) * invstd_eps * sum_val1);
+            static_cast<DType>(ele_out_grad * ele_gamma * invstd_eps - sum_val0 -
+                               (ele_x - mean) * invstd_eps * sum_val1);
       }
     }
   }
 }
 
-void GetGammaBetaGradKernelParams(const int nbatch, const int nchannel,
-                                  dim3* part_grad_block_dim, dim3* part_grad_grid_dim,
-                                  dim3* gb_block_dim, dim3* gb_grid_dim,
+void GetGammaBetaGradKernelParams(const int nbatch,
+                                  const int nchannel,
+                                  dim3* part_grad_block_dim,
+                                  dim3* part_grad_grid_dim,
+                                  dim3* gb_block_dim,
+                                  dim3* gb_grid_dim,
                                   int* npart) {
-  *npart = 16;
+  *npart               = 16;
   *part_grad_block_dim = dim3(32, 16);
-  *part_grad_grid_dim = dim3((nchannel + 32 - 1) / 32, *npart);
-  *gb_block_dim = dim3(32, *npart);
-  *gb_grid_dim = dim3((nchannel + 32 - 1) / 32);
+  *part_grad_grid_dim  = dim3((nchannel + 32 - 1) / 32, *npart);
+  *gb_block_dim        = dim3(32, *npart);
+  *gb_grid_dim         = dim3((nchannel + 32 - 1) / 32);
   CheckLaunchParam(*part_grad_grid_dim, *part_grad_block_dim);
   CheckLaunchParam(*gb_grid_dim, *gb_block_dim);
 }
 
-template<bool safe_acc = false>
+template <bool safe_acc = false>
 void LayerNormGradGPUContig(const LayerNormParam param,
-                            const OpContext& ctx, const std::vector<TBlob>& inputs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
@@ -694,14 +753,14 @@ void LayerNormGradGPUContig(const LayerNormParam param,
 #else
   CHECK_EQ(inputs.size(), 5U);
 #endif
-  const TBlob out_grad = inputs[0];
-  const TBlob in_data = inputs[1];
-  const TBlob gamma = inputs[2];
-  const TBlob mean_data = inputs[3];
-  const TBlob std_data = inputs[4];
-  const TBlob data_grad = outputs[0];
+  const TBlob out_grad   = inputs[0];
+  const TBlob in_data    = inputs[1];
+  const TBlob gamma      = inputs[2];
+  const TBlob mean_data  = inputs[3];
+  const TBlob std_data   = inputs[4];
+  const TBlob data_grad  = outputs[0];
   const TBlob gamma_grad = outputs[1];
-  const TBlob beta_grad = outputs[2];
+  const TBlob beta_grad  = outputs[2];
 
   // Make sure the inputs are contiguous
   CHECK_EQ(out_grad.CheckContiguous(), true);
@@ -709,15 +768,15 @@ void LayerNormGradGPUContig(const LayerNormParam param,
   CHECK_EQ(gamma.CheckContiguous(), true);
   CHECK_EQ(mean_data.CheckContiguous(), true);
   CHECK_EQ(std_data.CheckContiguous(), true);
-  int nbatch = in_data.shape_.ProdShape(0, in_data.ndim() - 1);
-  int nchannel = in_data.shape_[in_data.ndim() - 1];
-  int data_grad_req = req[0];
+  int nbatch         = in_data.shape_.ProdShape(0, in_data.ndim() - 1);
+  int nchannel       = in_data.shape_[in_data.ndim() - 1];
+  int data_grad_req  = req[0];
   int gamma_grad_req = req[1];
-  int beta_grad_req = req[2];
+  int beta_grad_req  = req[2];
   CHECK_NE(data_grad_req, kWriteInplace);
   CHECK_NE(gamma_grad_req, kWriteInplace);
   CHECK_NE(beta_grad_req, kWriteInplace);
-  Stream<gpu> *s = ctx.get_stream<gpu>();
+  Stream<gpu>* s      = ctx.get_stream<gpu>();
   cudaStream_t stream = Stream<gpu>::GetStream(s);
 
   // Calculate the gradient for gamma/beta
@@ -725,45 +784,73 @@ void LayerNormGradGPUContig(const LayerNormParam param,
   CHECK_EQ(beta_grad.CheckContiguous(), true);
   dim3 part_grad_block_dim, part_grad_grid_dim, gb_block_dim, gb_grid_dim;
   int npart;
-  GetGammaBetaGradKernelParams(nbatch, nchannel, &part_grad_block_dim, &part_grad_grid_dim,
-                               &gb_block_dim, &gb_grid_dim, &npart);
+  GetGammaBetaGradKernelParams(nbatch,
+                               nchannel,
+                               &part_grad_block_dim,
+                               &part_grad_grid_dim,
+                               &gb_block_dim,
+                               &gb_grid_dim,
+                               &npart);
   if (gamma_grad_req != kNullOp || beta_grad_req != kNullOp) {
     MXNET_REAL_ACC_TYPE_SWITCH(in_data.type_flag_, DType, AccType, {
       typedef typename std::conditional<safe_acc, AccType, DType>::type AType;
       Tensor<gpu, 1, AType> workspace =
-        ctx.requested[0].get_space_typed<gpu, 1, AType>(Shape1(2 * npart * nchannel), s);
+          ctx.requested[0].get_space_typed<gpu, 1, AType>(Shape1(2 * npart * nchannel), s);
       AType* part_gamma_grad_ptr = workspace.dptr_;
-      AType* part_beta_grad_ptr = workspace.dptr_ + npart * nchannel;
-      const int nshared_K1 = 2 * (part_grad_block_dim.x + 1)
-                               * part_grad_block_dim.y * sizeof(AType);
-      const int nshared_K2 = 2 * gb_block_dim.x * gb_block_dim.y * sizeof(AType);
+      AType* part_beta_grad_ptr  = workspace.dptr_ + npart * nchannel;
+      const int nshared_K1 =
+          2 * (part_grad_block_dim.x + 1) * part_grad_block_dim.y * sizeof(AType);
+      const int nshared_K2  = 2 * gb_block_dim.x * gb_block_dim.y * sizeof(AType);
       DType* gamma_grad_ptr = (gamma_grad_req != kNullOp) ? gamma_grad.dptr<DType>() : nullptr;
-      DType* beta_grad_ptr = (beta_grad_req != kNullOp) ? beta_grad.dptr<DType>() : nullptr;
-      LayerNormFusedBackwardKernel_PartGammaBeta
-        <<<part_grad_grid_dim, part_grad_block_dim, nshared_K1, stream>>>
-        (nbatch, nchannel, in_data.dptr<DType>(), out_grad.dptr<DType>(),
-         mean_data.dptr<DType>(), std_data.dptr<DType>(), part_gamma_grad_ptr, part_beta_grad_ptr);
+      DType* beta_grad_ptr  = (beta_grad_req != kNullOp) ? beta_grad.dptr<DType>() : nullptr;
+      LayerNormFusedBackwardKernel_PartGammaBeta<<<part_grad_grid_dim,
+                                                   part_grad_block_dim,
+                                                   nshared_K1,
+                                                   stream>>>(nbatch,
+                                                             nchannel,
+                                                             in_data.dptr<DType>(),
+                                                             out_grad.dptr<DType>(),
+                                                             mean_data.dptr<DType>(),
+                                                             std_data.dptr<DType>(),
+                                                             part_gamma_grad_ptr,
+                                                             part_beta_grad_ptr);
       MSHADOW_CUDA_POST_KERNEL_CHECK(LayerNormFusedBackwardKernel_PartGammaBeta);
       if (gamma_grad_req == kAddTo && beta_grad_req != kAddTo) {
         LayerNormFusedBackwardKernel_GammaBeta<true, false>
-          <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>
-          (nbatch, nchannel, npart, part_gamma_grad_ptr, part_beta_grad_ptr,
-           gamma_grad_ptr, beta_grad_ptr);
+            <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>(nbatch,
+                                                                nchannel,
+                                                                npart,
+                                                                part_gamma_grad_ptr,
+                                                                part_beta_grad_ptr,
+                                                                gamma_grad_ptr,
+                                                                beta_grad_ptr);
       } else if (gamma_grad_req != kAddTo && beta_grad_req == kAddTo) {
         LayerNormFusedBackwardKernel_GammaBeta<false, true>
-          <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>
-          (nbatch, nchannel, npart, part_gamma_grad_ptr, part_beta_grad_ptr,
-            gamma_grad_ptr, beta_grad_ptr);
+            <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>(nbatch,
+                                                                nchannel,
+                                                                npart,
+                                                                part_gamma_grad_ptr,
+                                                                part_beta_grad_ptr,
+                                                                gamma_grad_ptr,
+                                                                beta_grad_ptr);
       } else if (gamma_grad_req == kAddTo && beta_grad_req == kAddTo) {
         LayerNormFusedBackwardKernel_GammaBeta<true, true>
-          <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>
-          (nbatch, nchannel, npart, part_gamma_grad_ptr, part_beta_grad_ptr,
-            gamma_grad_ptr, beta_grad_ptr);
+            <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>(nbatch,
+                                                                nchannel,
+                                                                npart,
+                                                                part_gamma_grad_ptr,
+                                                                part_beta_grad_ptr,
+                                                                gamma_grad_ptr,
+                                                                beta_grad_ptr);
       } else {
         LayerNormFusedBackwardKernel_GammaBeta<false, false>
-          <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>
-          (nbatch, nchannel, npart, part_gamma_grad_ptr, part_beta_grad_ptr,
-            gamma_grad_ptr, beta_grad_ptr);
+            <<<gb_grid_dim, gb_block_dim, nshared_K2, stream>>>(nbatch,
+                                                                nchannel,
+                                                                npart,
+                                                                part_gamma_grad_ptr,
+                                                                part_beta_grad_ptr,
+                                                                gamma_grad_ptr,
+                                                                beta_grad_ptr);
       }
     });
     MSHADOW_CUDA_POST_KERNEL_CHECK(LayerNormFusedBackwardKernel_GammaBeta);
@@ -793,27 +880,38 @@ void LayerNormGradGPUContig(const LayerNormParam param,
       CheckLaunchParam(data_grid_dim, data_block_dim);
       if (data_grad_req == kAddTo) {
         LayerNormFusedBackwardKernel_Data<LOAD_UNROLL, true, AType>
-          <<<data_grid_dim, data_block_dim, nshared, stream>>>
-          (nbatch, nchannel, in_data.dptr<DType>(), out_grad.dptr<DType>(), mean_data.dptr<DType>(),
-           std_data.dptr<DType>(), gamma.dptr<DType>(), data_grad.dptr<DType>());
+            <<<data_grid_dim, data_block_dim, nshared, stream>>>(nbatch,
+                                                                 nchannel,
+                                                                 in_data.dptr<DType>(),
+                                                                 out_grad.dptr<DType>(),
+                                                                 mean_data.dptr<DType>(),
+                                                                 std_data.dptr<DType>(),
+                                                                 gamma.dptr<DType>(),
+                                                                 data_grad.dptr<DType>());
       } else {
         LayerNormFusedBackwardKernel_Data<LOAD_UNROLL, false, AType>
-          <<<data_grid_dim, data_block_dim, nshared, stream>>>
-          (nbatch, nchannel, in_data.dptr<DType>(), out_grad.dptr<DType>(), mean_data.dptr<DType>(),
-           std_data.dptr<DType>(), gamma.dptr<DType>(), data_grad.dptr<DType>());
+            <<<data_grid_dim, data_block_dim, nshared, stream>>>(nbatch,
+                                                                 nchannel,
+                                                                 in_data.dptr<DType>(),
+                                                                 out_grad.dptr<DType>(),
+                                                                 mean_data.dptr<DType>(),
+                                                                 std_data.dptr<DType>(),
+                                                                 gamma.dptr<DType>(),
+                                                                 data_grad.dptr<DType>());
       }
     });
     MSHADOW_CUDA_POST_KERNEL_CHECK(LayerNormFusedBackwardKernel_Data);
   }
 }
 
-template<>
+template <>
 void LayerNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
-                               const OpContext& ctx, const std::vector<TBlob>& inputs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs) {
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
-  int axis = param.axis;
+  int axis                    = param.axis;
   if (axis < 0) {
     axis += static_cast<int>(inputs[0].ndim());
   }
@@ -830,12 +928,10 @@ void LayerNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   return LayerNormGradComputeGeneral<gpu>(attrs, ctx, inputs, req, outputs);
 }
 
-
-NNVM_REGISTER_OP(LayerNorm)
-.set_attr<FCompute>("FCompute<gpu>", LayerNormCompute<gpu>);
+NNVM_REGISTER_OP(LayerNorm).set_attr<FCompute>("FCompute<gpu>", LayerNormCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_LayerNorm)
-.set_attr<FCompute>("FCompute<gpu>", LayerNormGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", LayerNormGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

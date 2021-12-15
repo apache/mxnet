@@ -261,6 +261,26 @@ rsub(const DType a, const DType2 b) {
 
 template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
+floor_divide(const DType a, const DType2 b) {
+  if (type_util::has_double_or_integral<DType, DType2>::value) {
+    return ::floor((double)a / (double)b);
+  } else {
+    return ::floorf((float)a / (float)b);
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+rfloor_divide(const DType a, const DType2 b) {
+  if (type_util::has_double_or_integral<DType, DType2>::value) {
+    return ::floor((double)b / (double)a);
+  } else {
+    return ::floorf((float)b / (float)a);
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
 mul(const DType a, const DType2 b) {
   return a * b;
 }
@@ -597,6 +617,38 @@ __device__ inline mixed_type<DType, DType2> bitwise_and(const DType a,
   return real_a & real_b;
 }
 
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2> bitwise_left_shift(const DType a,
+                                                                              const DType2 b) {
+  const mixed_type<DType, DType2> real_a = a;
+  const mixed_type<DType, DType2> real_b = b;
+  return real_a << real_b;
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2> rbitwise_left_shift(const DType a,
+                                                                               const DType2 b) {
+  const mixed_type<DType, DType2> real_a = a;
+  const mixed_type<DType, DType2> real_b = b;
+  return real_b << real_a;
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2> bitwise_right_shift(const DType a,
+                                                                               const DType2 b) {
+  const mixed_type<DType, DType2> real_a = a;
+  const mixed_type<DType, DType2> real_b = b;
+  return real_a >> real_b;
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2> rbitwise_right_shift(const DType a,
+                                                                                const DType2 b) {
+  const mixed_type<DType, DType2> real_a = a;
+  const mixed_type<DType, DType2> real_b = b;
+  return real_b >> real_a;
+}
+
 DEFINE_BINARY_MATH_FUNC(arctan2, ::atan2, ::atan2f)
 
 template <typename DType, typename DType2>
@@ -619,6 +671,16 @@ template <typename DType, typename DType2>
 __device__ inline mixed_type<DType, DType2>
 rldexp(const DType a, const DType2 b) {
   return ldexp(b, a);
+}
+
+template <typename DType, typename DType2>
+__device__ inline mixed_type<DType, DType2>
+logaddexp(const DType a, const DType2 b) {
+  if (type_util::has_double_or_integral<DType, DType2>::value) {
+    return ::log(::exp(static_cast<double>(a)) + ::exp(static_cast<double>(b)));
+  } else {
+    return ::log(::expf(static_cast<float>(a)) + ::expf(static_cast<float>(b)));
+  }
 }
 
 #undef DEFINE_BINARY_MATH_FUNC

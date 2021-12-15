@@ -365,7 +365,7 @@ def test_dataloader_context():
     for _, x in enumerate(loader2):
         assert x.context == context.cpu_pinned(default_dev_id)
 
-    if mx.context.num_gpus() <= 1:
+    if mx.device.num_gpus() <= 1:
         print('Bypassing custom_dev_id pinned mem test on system with < 2 gpus.')
     else:
         # use pinned memory with custom device id

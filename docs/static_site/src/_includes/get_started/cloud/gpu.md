@@ -18,7 +18,7 @@ VM](https://docs.nvidia.com/ngc/ngc-alibaba-setup-guide/launching-nv-cloud-vm-co
 MXNet models
 - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled
 Conda environments
-for Python 2 or 3 with MXNet, CUDA, cuDNN, ONEDNN, and AWS Elastic Inference
+for Python 2 or 3 with MXNet, CUDA, cuDNN, oneDNN, and AWS Elastic Inference
 - [Dynamic Training on
 AWS](https://github.com/awslabs/dynamic-training-with-apache-mxnet-on-aws) -
 experimental manual EC2 setup or semi-automated CloudFormation setup

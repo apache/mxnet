@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file storage_manager.h
  * \brief Storage manager.
  */
@@ -40,8 +39,9 @@ class StorageManager {
   /*!
    * \brief Allocation.
    * \param handle Handle struct.
+   * \param failsafe Return a handle with a null dptr if out of memory, rather than exit.
    */
-  virtual void Alloc(Storage::Handle* handle) = 0;
+  virtual void Alloc(Storage::Handle* handle, bool failsafe = false) = 0;
   /*!
    * \brief Deallocation.
    * \param handle Handle struct.
@@ -53,12 +53,12 @@ class StorageManager {
    */
   virtual void DirectFree(Storage::Handle handle) = 0;
   /*!
-  * \brief Release all memory if using a pool storage manager
-  *
-  * This release all memory from pool storage managers such as
-  * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
-  * For non-pool memory managers this has no effect.
-  */
+   * \brief Release all memory if using a pool storage manager
+   *
+   * This release all memory from pool storage managers such as
+   * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
+   * For non-pool memory managers this has no effect.
+   */
   virtual void ReleaseAll() {}
   /*!
    * \brief Destructor.

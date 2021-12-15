@@ -101,13 +101,13 @@ Let's define a function that will run a single training iteration given `data` a
 
 ```{.python .input}
 # Use GPU if available
-if mx.context.num_gpus():
-    ctx=mx.gpu()
+if mx.device.num_gpus():
+    device=mx.gpu()
 else:
-    ctx=mx.cpu()
+    device=mx.cpu()
 
 # Initialize the parameters with random weights
-net.initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), device=device)
 
 # Use SGD optimizer
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
@@ -117,9 +117,9 @@ softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 
 # A helper function to run one training iteration
 def run_training_iteration(data, label):
-    # Load data and label is the right context
-    data = data.as_in_context(ctx)
-    label = label.as_in_context(ctx)
+    # Load data and label is the right device
+    data = data.to_device(device)
+    label = label.to_device(device)
     # Run the forward pass
     with autograd.record():
         output = net(data)
@@ -178,7 +178,7 @@ When working with networks created using the Gluon API, you will get a more gran
 
 ### Viewing profiler output
 
-There are a few ways to view the information collected by the profiler. You can view it in the console, you can view a more graphical version in a browser, or you can use a vendor tool such as Intel VTune or Nvidia NVProf to view output. For most scenarios the information you need can be obtained with MXNet's built in profiler support, but if you want to investigate the performance of operators alongside extra context about your hardware (e.g. cache hit rates, or CUDA kernel timings) then profiling jointly with vendor tools is recommended.
+There are a few ways to view the information collected by the profiler. You can view it in the console, you can view a more graphical version in a browser, or you can use a vendor tool such as Intel VTune or Nvidia NVProf to view output. For most scenarios the information you need can be obtained with MXNet's built in profiler support, but if you want to investigate the performance of operators alongside extra device about your hardware (e.g. cache hit rates, or CUDA kernel timings) then profiling jointly with vendor tools is recommended.
 
 #### 1. View in console
 
@@ -210,12 +210,12 @@ Let's zoom in to check the time taken by operators
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
-### Profiling ONEDNN Operators
-Reagrding ONEDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `MKLDNN_VERBOSE=1` to enable internal profiler.
+### Profiling oneDNN Operators
+Reagrding oneDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `DNNL_VERBOSE=1` to enable internal profiler.
 
-`$ MKLDNN_VERBOSE=1 python my_script.py > mkldnn_verbose.log`
+`$ DNNL_VERBOSE=1 python my_script.py > dnnl_verbose.log`
 
-Now, the detailed profiling insights of each ONEDNN prmitive are saved into `mkldnn_verbose.log` (like below).
+Now, the detailed profiling insights of each oneDNN prmitive are saved into `dnnl_verbose.log` (like below).
 
 ```
 dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
@@ -225,13 +225,13 @@ dnnl_verbose,exec,cpu,convolution,jit:avx512_common,forward_inference,src_f32::b
 
 For example, if you want to calculate the total executing time of `convolution` primitive, you can just run:
 
-`$ cat mkldnn_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+`$ cat dnnl_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
 
-Moreover, you can set `MKLDNN_VERBOSE=2` to collect both creating and executing time of each primitive.
+Moreover, you can set `DNNL_VERBOSE=2` to collect both creating and executing time of each primitive.
 
-`$ cat mkldnn_verbose.log | grep "create,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+`$ cat dnnl_verbose.log | grep "create,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
 
-`$ cat mkldnn_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+`$ cat dnnl_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
 
 
 ### Profiling Custom Operators
@@ -261,7 +261,7 @@ class CustomAddOneProp(mx.operator.CustomOpProp):
     def infer_shape(self, in_shape):
         return [in_shape[0]], [in_shape[0]], []
 
-    def create_operator(self, ctx, shapes, dtypes):
+    def create_operator(self, device, shapes, dtypes):
         return MyAddOne()
 
 

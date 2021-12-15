@@ -43,9 +43,9 @@ def test_make_subgraph():
 
         s = (10, 10)
         a_arr = mx.nd.array(np.random.normal(-0.1, 0.1, size=s),
-                ctx=default_context()).tostype(stype)
+                ctx=default_device()).tostype(stype)
         b_arr = mx.nd.array(np.random.normal(-0.1, 0.1, size=s),
-                ctx=default_context()).tostype(stype)
+                ctx=default_device()).tostype(stype)
         return (d, y, {'a': a_arr, 'b': b_arr}, {})
 
     def create_weights(shapes, names):
@@ -54,7 +54,7 @@ def test_make_subgraph():
         assert len(shapes) == len(names)
         for i in range(len(shapes)):
             sym_dict[names[i]] = mx.symbol.Variable(names[i])
-            nd_dict[names[i]] = mx.nd.array(np.ones(shapes[i]), ctx=default_context())
+            nd_dict[names[i]] = mx.nd.array(np.ones(shapes[i]), ctx=default_device())
         return (nd_dict, sym_dict)
 
     def make_subgraph_weight(orig, shape, stype):
@@ -73,7 +73,7 @@ def test_make_subgraph():
             input_list.append(input_dict[name])
         subg = make_subgraph(orig, *input_list)
 
-        arr = mx.nd.random.uniform(-1, 1, shape=shape, ctx=default_context()).tostype(stype)
+        arr = mx.nd.random.uniform(-1, 1, shape=shape, ctx=default_device()).tostype(stype)
         arg_dict = weight_dict
         arg_dict['data'] = arr
         return (orig, subg, arg_dict, aux_dict)
@@ -117,10 +117,10 @@ def test_make_subgraph():
             all_inputs = copy.deepcopy(inputs)
             all_inputs.update(aux_states)
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
-            e1 = orig._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
+            e1 = orig._bind(ctx=default_device(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
-            e2 = subg._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
+            e2 = subg._bind(ctx=default_device(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
             e1.forward(is_train=True)
             e2.forward(is_train=True)
@@ -128,7 +128,7 @@ def test_make_subgraph():
                 assert_almost_equal(e1.outputs[i].asnumpy(), e2.outputs[i].asnumpy(),
                         rtol=0.001, atol=0.0001)
 
-            out_grads = [mx.nd.random.uniform(-1, 1, shape=out.shape, ctx=default_context())
+            out_grads = [mx.nd.random.uniform(-1, 1, shape=out.shape, ctx=default_device())
                     for out in e1.outputs]
             e1.backward(out_grads)
             e2.backward(out_grads)

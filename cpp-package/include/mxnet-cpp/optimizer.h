@@ -18,11 +18,10 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
-* \file optimizer.h
-* \brief definition of optimizer
-* \author Chuntao Hong, Zhang Chen
-*/
+ * \file optimizer.h
+ * \brief definition of optimizer
+ * \author Chuntao Hong, Zhang Chen
+ */
 
 #ifndef MXNET_CPP_OPTIMIZER_H_
 #define MXNET_CPP_OPTIMIZER_H_
@@ -43,32 +42,32 @@ namespace mxnet {
 namespace cpp {
 
 /*!
-* \brief Optimizer interface
-*/
+ * \brief Optimizer interface
+ */
 class Optimizer {
  public:
   /*!
-  * \brief constructor
-  * \param beign_num_update The initial number of updates
-  */
+   * \brief constructor
+   * \param beign_num_update The initial number of updates
+   */
   explicit Optimizer(unsigned begin_num_update);
   /*!
-  * \brief get optimizer type
-  * \return string of optimizer type
-  */
+   * \brief get optimizer type
+   * \return string of optimizer type
+   */
   virtual std::string GetType() const = 0;
   /*!
-  * \brief destructor
-  */
+   * \brief destructor
+   */
   virtual ~Optimizer();
   /*!
-  * \brief set config parameters
-  * \param name name of the config parameter
-  * \param value value of the config parameter
-  * \return reference of self
-  */
+   * \brief set config parameters
+   * \param name name of the config parameter
+   * \param value value of the config parameter
+   * \return reference of self
+   */
   template <typename T>
-  Optimizer *SetParam(const std::string &name, const T &value) {
+  Optimizer* SetParam(const std::string& name, const T& value) {
     std::string value_str;
     std::stringstream ss;
     ss << value;
@@ -78,22 +77,22 @@ class Optimizer {
     return this;
   }
   /*!
-  * \bried set the lr scheduler
-  * \param lrScheduler lr scheduler used for this optimizer
-  * \return reference if self
-  */
-  Optimizer *SetLRScheduler(std::unique_ptr<LRScheduler> lrScheduler) {
+   * \bried set the lr scheduler
+   * \param lrScheduler lr scheduler used for this optimizer
+   * \return reference if self
+   */
+  Optimizer* SetLRScheduler(std::unique_ptr<LRScheduler> lrScheduler) {
     CHECK(lrScheduler);
     lrScheduler_ = std::move(lrScheduler);
     lrScheduler_->SetLR(dmlc::stof(params_["lr"]));
     return this;
   }
   /*!
-  *  \brief Update a weight with gradient.
-  *  \param index the unique index for the weight.
-  *  \param weight the weight to update.
-  *  \param grad gradient for the weight.
-  */
+   *  \brief Update a weight with gradient.
+   *  \param index the unique index for the weight.
+   *  \param weight the weight to update.
+   *  \param grad gradient for the weight.
+   */
   virtual void Update(int index, NDArray weight, NDArray grad) = 0;
   // TODO(zhangcheng-qinyinghua)
   // implement Update a list of arrays, maybe in the form of map
@@ -101,9 +100,9 @@ class Optimizer {
   // grad, mx_float lr);
 
   /*!
-  *  \brief Serialize the optimizer parameters to a string.
-  *  \return serialization
-  */
+   *  \brief Serialize the optimizer parameters to a string.
+   *  \return serialization
+   */
   std::string Serialize() const;
 
  protected:
@@ -126,19 +125,21 @@ class OptimizerRegistry {
  public:
   static Optimizer* Find(const std::string& name);
   static int __REGISTER__(const std::string& name, OptimizerCreator creator);
+
  private:
   static std::map<std::string, OptimizerCreator>& cmap();
-  OptimizerRegistry() = delete;
+  OptimizerRegistry()  = delete;
   ~OptimizerRegistry() = delete;
 };
-#define MXNETCPP_REGISTER_OPTIMIZER(Name, OptimizerType)\
-  OptimizerRegistry::__REGISTER__(#Name, [](){return new OptimizerType();})
+#define MXNETCPP_REGISTER_OPTIMIZER(Name, OptimizerType) \
+  OptimizerRegistry::__REGISTER__(#Name, []() { return new OptimizerType(); })
 
 class SGDOptimizer : public Optimizer {
  public:
   explicit SGDOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
+
  private:
   virtual ~SGDOptimizer();
   void CreateState_(int index, NDArray weight) override;
@@ -152,6 +153,7 @@ class SignumOptimizer : public Optimizer {
   explicit SignumOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
+
  private:
   virtual ~SignumOptimizer();
   void CreateState_(int index, NDArray weight) override;
@@ -160,12 +162,12 @@ class SignumOptimizer : public Optimizer {
   AtomicSymbolCreator mom_update_handle_;
 };
 
-
 class RMSPropOptimizer : public Optimizer {
  public:
   explicit RMSPropOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
+
  private:
   virtual ~RMSPropOptimizer();
   void CreateState_(int index, NDArray weight) override;
@@ -179,6 +181,7 @@ class AdamOptimizer : public Optimizer {
   explicit AdamOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
+
  private:
   virtual ~AdamOptimizer();
   void CreateState_(int index, NDArray weight) override;
@@ -192,6 +195,7 @@ class AdaGradOptimizer : public Optimizer {
   explicit AdaGradOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
+
  private:
   virtual ~AdaGradOptimizer();
   void CreateState_(int index, NDArray weight) override;
@@ -203,6 +207,7 @@ class AdaDeltaOptimizer : public Optimizer {
   explicit AdaDeltaOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
+
  private:
   virtual ~AdaDeltaOptimizer();
   void CreateState_(int index, NDArray weight) override;

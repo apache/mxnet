@@ -21,7 +21,7 @@ import mxnet as mx
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../quantization'))
-from mxnet.test_utils import set_default_context
+from mxnet.test_utils import set_default_device
 from test_quantization import *
 
-set_default_context(mx.gpu(0))
+set_default_device(mx.gpu(0))

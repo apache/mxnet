@@ -18,30 +18,30 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file fft-inl.h
  * \brief
  * \author Chen Zhu
-*/
+ */
 #include "./fft-inl.h"
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<cpu>(FFTParam param, int dtype) {
+template <>
+Operator* CreateOp<cpu>(FFTParam param, int dtype) {
   LOG(FATAL) << "fft is only available for GPU.";
   return nullptr;
 }
 
-Operator *FFTProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                                                    std::vector<int> *in_type) const {
+Operator* FFTProp::CreateOperatorEx(Context ctx,
+                                    mxnet::ShapeVector* in_shape,
+                                    std::vector<int>* in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(FFTParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_fft, FFTProp)
-.describe(R"code(Apply 1D FFT to input"
+    .describe(R"code(Apply 1D FFT to input"
 
 .. note:: `fft` is only available on GPU.
 
@@ -54,7 +54,7 @@ Example::
    out = mx.contrib.ndarray.fft(data = mx.nd.array(data,ctx = mx.gpu(0)))
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data to the FFTOp.")
-.add_arguments(FFTParam::__FIELDS__());
+    .add_argument("data", "NDArray-or-Symbol", "Input data to the FFTOp.")
+    .add_arguments(FFTParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

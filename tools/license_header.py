@@ -77,6 +77,9 @@ _WHITE_LIST = [
                '3rdparty/ps-lite',
                '3rdparty/tvm',
 
+               # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+               'tools/lint/git-clang-format-13',
+               
                # 3rdparty headerfiles under different licenses
                'include/onednn',
 
@@ -106,6 +109,32 @@ _WHITE_LIST = [
                'cmake/upstream/FindCUDAToolkit.cmake',
                'cmake/upstream/FindBLAS.cmake',
                'cmake/upstream/select_compute_arch.cmake',
+
+               # Licensed under the Boost Software License, Version 1.0
+               'cmake/Modules/FindJeMalloc.cmake',
+
+               # Licensed under MIT license and contributed by Microsoft
+               'src/operator/contrib/nn/modulated_deformable_im2col.cuh',
+               'src/operator/contrib/nn/modulated_deformable_im2col.h',
+               'src/operator/modulated_deformable_convolution-inl.h',
+               'src/operator/modulated_deformable_convolution.cc',
+               'src/operator/modulated_deformable_convolution.cu',
+
+               # Licensed under Apache 2.0 license and contributed by Microsoft
+               'src/operator/contrib/deformable_psroi_pooling.cu',
+               'src/operator/deformable_convolution.cu',
+               'src/operator/deformable_convolution-inl.h',
+               'src/operator/contrib/psroi_pooling.cc',
+               'src/operator/contrib/multi_proposal.cu',
+               'src/operator/contrib/deformable_psroi_pooling-inl.h',
+               'src/operator/contrib/deformable_psroi_pooling.cc',
+               'src/operator/deformable_convolution.cc',
+               'src/operator/contrib/psroi_pooling.cu',
+               'src/operator/contrib/multi_proposal.cc',
+               'src/operator/contrib/multi_proposal-inl.h',
+
+               # Licensed under Apache 2.0 license
+               'src/operator/nn/dnnl/dnnl_base-inl.h',
 
                # This file
                'tools/license_header.py',
@@ -177,11 +206,8 @@ def file_have_valid_license(fname):
     if (_lines_have_apache_license(lines) and (not _lines_have_multiple_license(lines))):
         return True
     elif _lines_have_multiple_license(lines):
-        if _file_listed_in_top_level_license(fname):
-            return True
-        else:
-            logging.error("File %s has multiple license", fname)
-            return False
+        logging.error("File %s has multiple licenses", fname)
+        return False
     else:
         if _file_listed_in_top_level_license(fname):
             return True

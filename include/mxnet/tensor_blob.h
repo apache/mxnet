@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor_blob.h
  * \brief TBlob class that holds common representation of
  *  arbirary dimension tensor, can be used to transformed
@@ -65,18 +64,17 @@ class NDArray;
  */
 class TBlob {
   friend class NDArray;
+
  public:
   /*! \brief pointer to the data */
-  void *dptr_;
+  void* dptr_;
   /*! \brief shape of the tensor */
   mxnet::TShape shape_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
 
   /*! \brief default constructor, default copy assign will work */
-  TBlob(void)
-      : dptr_(nullptr),
-        type_flag_(mshadow::DataType<real_t>::kFlag) {
+  TBlob(void) : dptr_(nullptr), type_flag_(mshadow::DataType<real_t>::kFlag) {
     SetDLTensor(cpu::kDevMask, 0);
   }
   /*!
@@ -86,10 +84,9 @@ class TBlob {
    * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
    * \param dev_id the device id
    */
-  template<typename DType>
-  TBlob(DType *dptr, const mxnet::TShape &shape, int dev_mask, int dev_id = -1)
-      : dptr_(dptr), shape_(shape),
-        type_flag_(mshadow::DataType<DType>::kFlag) {
+  template <typename DType>
+  TBlob(DType* dptr, const mxnet::TShape& shape, int dev_mask, int dev_id = -1)
+      : dptr_(dptr), shape_(shape), type_flag_(mshadow::DataType<DType>::kFlag) {
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
@@ -100,7 +97,7 @@ class TBlob {
    * \param type_flag the type flag. Can be one of enum mshadow::dtype
    * \param dev_id the device id
    */
-  TBlob(void *dptr, const mxnet::TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
+  TBlob(void* dptr, const mxnet::TShape& shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
     SetDLTensor(dev_mask, dev_id);
   }
@@ -108,7 +105,7 @@ class TBlob {
    * \brief constructor that construct TBlob from DLTensor
    * \param DLTensor Object
    */
-  explicit TBlob(const DLTensor &dltensor)
+  explicit TBlob(const DLTensor& dltensor)
       : dptr_(dltensor.data),
         shape_(mxnet::TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
         type_flag_(DLDataTypeTransform(dltensor.dtype)),
@@ -116,9 +113,9 @@ class TBlob {
     // compactness check for DLTensor
     if (dltensor.strides != nullptr) {
       // check strides
-      const int &ndim = dltensor.ndim;
-      const int64_t *shape = dltensor.shape;
-      const int64_t *strides = dltensor.strides;
+      const int& ndim        = dltensor.ndim;
+      const int64_t* shape   = dltensor.shape;
+      const int64_t* strides = dltensor.strides;
       if (ndim >= 1) {
         bool err = false;
         if (strides[ndim - 1] != 1) {
@@ -144,15 +141,15 @@ class TBlob {
    * \tparam dim tensor dimension
    * \tparam DType the type of elements in the tensor
    */
-  template<typename Device, int dim, typename DType>
-  TBlob(const mshadow::Tensor<Device, dim, DType> &src) {  // NOLINT(*)
+  template <typename Device, int dim, typename DType>
+  TBlob(const mshadow::Tensor<Device, dim, DType>& src) {  // NOLINT(*)
     *this = src;
   }
   /*!
    * \brief constructor from TBlob (copy constructor)
    * \param src source TBlob
    */
-  TBlob(const TBlob &src): dptr_(src.dptr_), shape_(src.shape_), type_flag_(src.type_flag_) {
+  TBlob(const TBlob& src) : dptr_(src.dptr_), shape_(src.shape_), type_flag_(src.type_flag_) {
     this->SetDLTensor(src.dev_mask(), src.dev_id());
   }
   /*!
@@ -163,10 +160,10 @@ class TBlob {
    * \tparam DType the type of elements in the tensor
    * \return reference of self
    */
-  template<typename Device, int dim, typename DType>
-  inline TBlob &operator=(const mshadow::Tensor<Device, dim, DType> &src) {
-    dptr_ = src.dptr_;
-    shape_ = src.shape_;
+  template <typename Device, int dim, typename DType>
+  inline TBlob& operator=(const mshadow::Tensor<Device, dim, DType>& src) {
+    dptr_      = src.dptr_;
+    shape_     = src.shape_;
     type_flag_ = mshadow::DataType<DType>::kFlag;
     SetDLTensor(Device::kDevMask, -1);
     return *this;
@@ -176,9 +173,9 @@ class TBlob {
    * \param src source TBlob
    * \return reference of self
    */
-  inline TBlob &operator=(const TBlob &src) {
-    dptr_ = src.dptr_;
-    shape_ = src.shape_;
+  inline TBlob& operator=(const TBlob& src) {
+    dptr_      = src.dptr_;
+    shape_     = src.shape_;
     type_flag_ = src.type_flag_;
     SetDLTensor(src.dev_mask(), src.dev_id());
     return *this;
@@ -195,8 +192,8 @@ class TBlob {
    * \return reshaped blob
    */
   inline TBlob reshape(const mxnet::TShape& shape) const {
-    CHECK_EQ(this->shape_.Size(), shape.Size()) << "Shape size mismatch "
-    << this->shape_.Size() << " v.s. "  << shape.Size();
+    CHECK_EQ(this->shape_.Size(), shape.Size())
+        << "Shape size mismatch " << this->shape_.Size() << " v.s. " << shape.Size();
     TBlob ret(this->dptr_, shape, this->dev_mask(), this->type_flag_, this->dev_id());
     return ret;
   }
@@ -207,18 +204,16 @@ class TBlob {
    * \tparam DType the type of elements in the tensor
    * \return tensor after flatten
    */
-  template<typename Device, typename DType>
+  template <typename Device, typename DType>
   inline mshadow::Tensor<Device, 2, DType> FlatTo2D(
-    mshadow::Stream<Device> *stream = nullptr) const {
+      mshadow::Stream<Device>* stream = nullptr) const {
     CHECK(Device::kDevMask == this->dev_mask())
-      << "TBlob.get: device type do not match specified type";
+        << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
-      << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << mshadow::dtype_string(type_flag_)
-      << " v.s. given " << mshadow::dtype_string(mshadow::DataType<DType>::kFlag);
-    return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
-                                             shape_.FlatTo2D(),
-                                             stream);
+        << "TBlob.get_with_shape: data type do not match specified type."
+        << "Expected: " << mshadow::dtype_string(type_flag_) << " v.s. given "
+        << mshadow::dtype_string(mshadow::DataType<DType>::kFlag);
+    return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_), shape_.FlatTo2D(), stream);
   }
   /*!
    * \brief flatten the tensor to 1 dimension, collapse all the dimensions together.
@@ -227,11 +222,10 @@ class TBlob {
    * \tparam DType the type of elements in the tensor
    * \return tensor after flatten
    */
-  template<typename Device, typename DType>
+  template <typename Device, typename DType>
   inline mshadow::Tensor<Device, 1, DType> FlatTo1D(
-      mshadow::Stream<Device> *stream = nullptr) const {
-    return this->get_with_shape<Device, 1, DType>(
-        mshadow::Shape1(shape_.Size()), stream);
+      mshadow::Stream<Device>* stream = nullptr) const {
+    return this->get_with_shape<Device, 1, DType>(mshadow::Shape1(shape_.Size()), stream);
   }
   /*! \brief return number of dimension of the tensor inside */
   inline int ndim(void) const {
@@ -251,12 +245,12 @@ class TBlob {
     return shape_.Size();
   }
   /*! \brief get pointer in dtype */
-  template<typename DType>
+  template <typename DType>
   inline DType* dptr() const {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
-      << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << mshadow::dtype_string(type_flag_)
-      << " v.s. given " << mshadow::dtype_string(mshadow::DataType<DType>::kFlag);
+        << "TBlob.get_with_shape: data type do not match specified type."
+        << "Expected: " << mshadow::dtype_string(type_flag_) << " v.s. given "
+        << mshadow::dtype_string(mshadow::DataType<DType>::kFlag);
     return static_cast<DType*>(dptr_);
   }
   /*! \brief device mask of the corresponding device */
@@ -284,12 +278,12 @@ class TBlob {
    * \tparam dim dimension of the tensor
    * \tparam DType the type of elements in the tensor
    */
-  template<typename Device, int dim, typename DType>
-  inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = nullptr) const {
+  template <typename Device, int dim, typename DType>
+  inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device>* stream = nullptr) const {
     CHECK(Device::kDevMask == this->dev_mask())
-      << "TBlob.get: device type do not match specified type";
-    return mshadow::Tensor<Device, dim, DType>(dptr<DType>(),
-        shape_.get<dim>(), shape_[shape_.ndim() - 1], stream);
+        << "TBlob.get: device type do not match specified type";
+    return mshadow::Tensor<Device, dim, DType>(
+        dptr<DType>(), shape_.get<dim>(), shape_[shape_.ndim() - 1], stream);
   }
   /*!
    * \brief fetch a tensor in given shape
@@ -301,17 +295,16 @@ class TBlob {
    * \tparam dim dimension of the tensor
    * \tparam DType the type of elements in the tensor
    */
-  template<typename Device, int dim, typename DType>
+  template <typename Device, int dim, typename DType>
   inline mshadow::Tensor<Device, dim, DType> get_with_shape(
-      const mshadow::Shape<dim> &shape,
-      mshadow::Stream<Device> *stream = nullptr) const {
+      const mshadow::Shape<dim>& shape,
+      mshadow::Stream<Device>* stream = nullptr) const {
     CHECK(Device::kDevMask == this->dev_mask())
-      << "TBlob.get: device type do not match specified type";
+        << "TBlob.get: device type do not match specified type";
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
     CHECK_EQ(this->shape_.Size(), static_cast<size_t>(shape.Size()))
-      << "TBlob.get_with_shape: new and old shape do not match total elements";
-    return mshadow::Tensor<Device, dim, DType>(dptr<DType>(), shape,
-                                               shape[dim - 1], stream);
+        << "TBlob.get_with_shape: new and old shape do not match total elements";
+    return mshadow::Tensor<Device, dim, DType>(dptr<DType>(), shape, shape[dim - 1], stream);
   }
   /*!
    * \brief flatten the tensor to 3 dimension,
@@ -322,11 +315,11 @@ class TBlob {
    * \tparam DType the type of elements in the tensor
    * \return tensor after flatten
    */
-  template<typename Device, typename DType>
+  template <typename Device, typename DType>
   inline mshadow::Tensor<Device, 3, DType> FlatTo3D(
-      int axis, mshadow::Stream<Device> *stream = nullptr) const {
-    return this->get_with_shape<Device, 3, DType>(
-        this->shape_.FlatTo3D(axis), stream);
+      int axis,
+      mshadow::Stream<Device>* stream = nullptr) const {
+    return this->get_with_shape<Device, 3, DType>(this->shape_.FlatTo3D(axis), stream);
   }
   /*!
    * \brief flatten the tensor to 3 dimension,
@@ -338,12 +331,11 @@ class TBlob {
    * \tparam DType the type of elements in the tensor
    * \return tensor after flatten
    */
-  template<typename Device, typename DType>
-  inline mshadow::Tensor<Device, 3, DType> FlatTo3D(
-      int axis_begin, int axis_end,
-      mshadow::Stream<Device> *stream = nullptr) const {
-    return this->get_with_shape<Device, 3, DType>(
-        this->shape_.FlatTo3D(axis_begin, axis_end), stream);
+  template <typename Device, typename DType>
+  inline mshadow::Tensor<Device, 3, DType>
+  FlatTo3D(int axis_begin, int axis_end, mshadow::Stream<Device>* stream = nullptr) const {
+    return this->get_with_shape<Device, 3, DType>(this->shape_.FlatTo3D(axis_begin, axis_end),
+                                                  stream);
   }
   /*!
    * \brief flatten the tensor to specified number of dimensions,
@@ -354,9 +346,9 @@ class TBlob {
    * \tparam DType the type of elements in the tensor
    * \return tensor after flatten
    */
-  template<typename Device, int dim, typename DType>
+  template <typename Device, int dim, typename DType>
   inline mshadow::Tensor<Device, dim, DType> FlatToKD(
-     mshadow::Stream<Device> *stream = nullptr) const {
+      mshadow::Stream<Device>* stream = nullptr) const {
     mshadow::Shape<dim> shape;
     shape[0] = 1;
     // Pad higher dimensions in case dim > ndim()
@@ -377,15 +369,32 @@ class TBlob {
  private:
   static DLDataType DTypeTransform(int type_flag) {
     switch (type_flag) {
-      case mshadow::kFloat32: return DLDataType{kDLFloat, 32, 1};
-      case mshadow::kFloat64: return DLDataType{kDLFloat, 64, 1};
-      case mshadow::kFloat16: return DLDataType{kDLFloat, 16, 1};
-      case mshadow::kBfloat16: return DLDataType{kDLBfloat, 16, 1};
-      case mshadow::kUint8: return DLDataType{kDLUInt, 8, 1};
-      case mshadow::kInt32: return DLDataType{kDLInt, 32, 1};
-      case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
-      case mshadow::kInt64: return DLDataType{kDLInt, 64, 1};
-      case mshadow::kBool: return DLDataType{kDLUInt, 1, 1};
+      case mshadow::kFloat32:
+        return DLDataType{kDLFloat, 32, 1};
+      case mshadow::kFloat64:
+        return DLDataType{kDLFloat, 64, 1};
+      case mshadow::kFloat16:
+        return DLDataType{kDLFloat, 16, 1};
+      case mshadow::kBfloat16:
+        return DLDataType{kDLBfloat, 16, 1};
+      case mshadow::kUint8:
+        return DLDataType{kDLUInt, 8, 1};
+      case mshadow::kInt32:
+        return DLDataType{kDLInt, 32, 1};
+      case mshadow::kInt8:
+        return DLDataType{kDLInt, 8, 1};
+      case mshadow::kInt64:
+        return DLDataType{kDLInt, 64, 1};
+      case mshadow::kBool:
+        return DLDataType{kDLUInt, 1, 1};
+      case mshadow::kInt16:
+        return DLDataType{kDLInt, 16, 1};
+      case mshadow::kUint16:
+        return DLDataType{kDLUInt, 16, 1};
+      case mshadow::kUint32:
+        return DLDataType{kDLUInt, 32, 1};
+      case mshadow::kUint64:
+        return DLDataType{kDLUInt, 64, 1};
       default: {
         LOG(FATAL) << "Unknown type_flag=" << type_flag;
         return DLDataType();
@@ -399,43 +408,59 @@ class TBlob {
     switch (dldata_type.code) {
       case kDLFloat:
         switch (dldata_type.bits) {
-          case 16: return mshadow::kFloat16;
-          case 32: return mshadow::kFloat32;
-          case 64: return mshadow::kFloat64;
+          case 16:
+            return mshadow::kFloat16;
+          case 32:
+            return mshadow::kFloat32;
+          case 64:
+            return mshadow::kFloat64;
         }
         break;
       case kDLBfloat:
         switch (dldata_type.bits) {
-          case 16: return mshadow::kBfloat16;
+          case 16:
+            return mshadow::kBfloat16;
         }
         break;
       case kDLUInt:
         switch (dldata_type.bits) {
-          case 1: return mshadow::kBool;
-          case 8: return mshadow::kUint8;
+          case 1:
+            return mshadow::kBool;
+          case 8:
+            return mshadow::kUint8;
+          case 16:
+            return mshadow::kUint16;
+          case 32:
+            return mshadow::kUint32;
+          case 64:
+            return mshadow::kUint64;
         }
         break;
       case kDLInt:
         switch (dldata_type.bits) {
-          case 8: return mshadow::kInt8;
-          case 32: return mshadow::kInt32;
-          case 64: return mshadow::kInt64;
+          case 8:
+            return mshadow::kInt8;
+          case 16:
+            return mshadow::kInt16;
+          case 32:
+            return mshadow::kInt32;
+          case 64:
+            return mshadow::kInt64;
         }
         break;
     }
-    LOG(FATAL) << "Unknown DLDataType{" << dldata_type.code
-               << ", " << dldata_type.bits
-               << ", " << dldata_type.lanes << "}";
+    LOG(FATAL) << "Unknown DLDataType{" << dldata_type.code << ", " << dldata_type.bits << ", "
+               << dldata_type.lanes << "}";
     return mshadow::kFloat32;
   }
 
   inline void SetDLTensor(int dev_mask, int dev_id) {
-    dltensor_.data = dptr_;
-    dltensor_.ctx = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
-    dltensor_.ndim = shape_.ndim();
-    dltensor_.dtype = DTypeTransform(type_flag_);
-    dltensor_.shape = shape_.data();
-    dltensor_.strides = nullptr;
+    dltensor_.data        = dptr_;
+    dltensor_.ctx         = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
+    dltensor_.ndim        = shape_.ndim();
+    dltensor_.dtype       = DTypeTransform(type_flag_);
+    dltensor_.shape       = shape_.data();
+    dltensor_.strides     = nullptr;
     dltensor_.byte_offset = 0;
   }
 
@@ -455,22 +480,21 @@ DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<dmlc::optional<int>>, "Shape(tuple)");
 
 namespace parameter {
 
-template<>
-class FieldEntry<mxnet::TShape>
-    : public FieldEntryBase<FieldEntry<mxnet::TShape>, mxnet::TShape> {
+template <>
+class FieldEntry<mxnet::TShape> : public FieldEntryBase<FieldEntry<mxnet::TShape>, mxnet::TShape> {
  public:
   FieldEntry() : enforce_nonzero_(false), expect_ndim_(0) {}
   // parent class
   typedef FieldEntryBase<FieldEntry<mxnet::TShape>, mxnet::TShape> Parent;
 
-  virtual void Check(void *head) const {
+  virtual void Check(void* head) const {
     Parent::Check(head);
-    mxnet::TShape &v = this->Get(head);
+    mxnet::TShape& v = this->Get(head);
     if (expect_ndim_ != 0 && v.ndim() != expect_ndim_) {
       std::ostringstream os;
-        os << "value " << v << "for Parameter " << this->key_
-           << " has wrong dimensions, expected dimension=" << expect_ndim_;
-        throw dmlc::ParamError(os.str());
+      os << "value " << v << "for Parameter " << this->key_
+         << " has wrong dimensions, expected dimension=" << expect_ndim_;
+      throw dmlc::ParamError(os.str());
     }
     if (enforce_nonzero_) {
       for (int i = 0; i < v.ndim(); ++i) {
@@ -483,11 +507,11 @@ class FieldEntry<mxnet::TShape>
       }
     }
   }
-  inline FieldEntry<mxnet::TShape> &enforce_nonzero() {
+  inline FieldEntry<mxnet::TShape>& enforce_nonzero() {
     this->enforce_nonzero_ = true;
     return this->self();
   }
-  inline FieldEntry<mxnet::TShape> &set_expect_ndim(int ndim) {
+  inline FieldEntry<mxnet::TShape>& set_expect_ndim(int ndim) {
     expect_ndim_ = ndim;
     return this->self();
   }

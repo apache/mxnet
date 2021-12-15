@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file pinned_memory_storage.h
  * \brief CPU storage with pinned memory
  */
@@ -37,7 +36,7 @@ class PinnedMemoryStorage {
    * \brief Allocation.
    * \param handle Handle struct.
    */
-  inline static void Alloc(Storage::Handle* handle);
+  inline static void Alloc(Storage::Handle* handle, bool failsafe);
 
   /*!
    * \brief Deallocation.
@@ -46,7 +45,7 @@ class PinnedMemoryStorage {
   inline static void Free(Storage::Handle handle);
 };
 
-inline void PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
+inline void PinnedMemoryStorage::Alloc(Storage::Handle* handle, bool /* failsafe */) {
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif

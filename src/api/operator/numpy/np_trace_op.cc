@@ -28,24 +28,23 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.trace")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npi.trace").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_trace");
   nnvm::NodeAttrs attrs;
-  op::NumpyTraceParam param;
+  op::NumpyTraceParam param = {};
   param.offset = args[1].operator int64_t();
-  param.axis1 = args[2].operator int64_t();
-  param.axis2 = args[3].operator int64_t();
+  param.axis1  = args[2].operator int64_t();
+  param.axis2  = args[3].operator int64_t();
   attrs.parsed = param;
-  attrs.op = op;
+  attrs.op     = op;
   SetAttrDict<op::NumpyTraceParam>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  int num_inputs = 1;
-  NDArray* out = args[4].operator mxnet::NDArray*();
+  int num_inputs    = 1;
+  NDArray* out      = args[4].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
     *ret = PythonArg(4);
   } else {

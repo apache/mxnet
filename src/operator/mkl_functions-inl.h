@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkl_functions-inl.h
  * \brief Wrapper for MKL VML functions
  * \author Tao Lv, Shufan Wu
-*/
+ */
 #ifndef MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
 #define MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
 
@@ -44,31 +43,31 @@ static bool check_type(const int t) {
   return (t == mshadow::kFloat32 || t == mshadow::kFloat64);
 }
 
-#define MXNET_MKL_UNARY_MATH_FUNC(name, func)                                               \
-struct name {                                                                               \
-  MSHADOW_XINLINE static void Vectorize(const index_t n, const float *src, float *dst) {    \
-    vs##func(static_cast<MKL_INT>(n), src, dst);                                            \
-  }                                                                                         \
-  MSHADOW_XINLINE static void Vectorize(const index_t n, const double *src, double *dst) {  \
-    vd##func(static_cast<MKL_INT>(n), src, dst);                                            \
-  }                                                                                         \
-};
+#define MXNET_MKL_UNARY_MATH_FUNC(name, func)                                                \
+  struct name {                                                                              \
+    MSHADOW_XINLINE static void Vectorize(const index_t n, const float* src, float* dst) {   \
+      vs##func(static_cast<MKL_INT>(n), src, dst);                                           \
+    }                                                                                        \
+    MSHADOW_XINLINE static void Vectorize(const index_t n, const double* src, double* dst) { \
+      vd##func(static_cast<MKL_INT>(n), src, dst);                                           \
+    }                                                                                        \
+  };
 
-#define MXNET_MKL_BINARY_MATH_FUNC(name, func)                                        \
-struct name {                                                                         \
-  MSHADOW_XINLINE static void Vectorize(const index_t n,                              \
-                                        const float *a,                               \
-                                        const float *b,                               \
-                                        float *c) {                                   \
-    vs##func(static_cast<MKL_INT>(n), a, b, c);                                       \
-  }                                                                                   \
-  MSHADOW_XINLINE static void Vectorize(const index_t n,                              \
-                                        const double *a,                              \
-                                        const double *b,                              \
-                                        double *c) {                                  \
-    vd##func(static_cast<MKL_INT>(n), a, b, c);                                       \
-  }                                                                                   \
-};
+#define MXNET_MKL_BINARY_MATH_FUNC(name, func)             \
+  struct name {                                            \
+    MSHADOW_XINLINE static void Vectorize(const index_t n, \
+                                          const float* a,  \
+                                          const float* b,  \
+                                          float* c) {      \
+      vs##func(static_cast<MKL_INT>(n), a, b, c);          \
+    }                                                      \
+    MSHADOW_XINLINE static void Vectorize(const index_t n, \
+                                          const double* a, \
+                                          const double* b, \
+                                          double* c) {     \
+      vd##func(static_cast<MKL_INT>(n), a, b, c);          \
+    }                                                      \
+  };
 
 MXNET_MKL_UNARY_MATH_FUNC(erf, Erf);
 MXNET_MKL_UNARY_MATH_FUNC(exp, Exp);
@@ -113,7 +112,7 @@ MXNET_MKL_BINARY_MATH_FUNC(pow, Pow);
 MXNET_MKL_BINARY_MATH_FUNC(hypot, Hypot);
 
 template <typename DType>
-MSHADOW_XINLINE static void sum_(index_t n, DType *in, DType *dst) {
+MSHADOW_XINLINE static void sum_(index_t n, DType* in, DType* dst) {
   DType sum = 0.0f;
   for (index_t i = 0; i < n; i++)
     sum += in[i];
@@ -125,19 +124,19 @@ MSHADOW_XINLINE static void sum_(index_t n, DType *in, DType *dst) {
 template <typename DType>
 MSHADOW_XINLINE static void LayerNormLastDim(index_t m,
                                              index_t n,
-                                             DType *a,
-                                             DType *b,
-                                             DType *gamma,
-                                             DType *beta,
-                                             DType *mean,
-                                             DType *var,
+                                             DType* a,
+                                             DType* b,
+                                             DType* gamma,
+                                             DType* beta,
+                                             DType* mean,
+                                             DType* var,
                                              DType eps) {
   auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 #pragma omp parallel for num_threads(nthreads)
   for (index_t i = 0; i < m; i++) {
-    DType* in_offset = a + i * n;
-    DType* out_offset = b + i * n;
-    DType x_sum = 0.0f;
+    DType* in_offset   = a + i * n;
+    DType* out_offset  = b + i * n;
+    DType x_sum        = 0.0f;
     DType x_square_sum = 0.0f;
 
 #if !defined(_MSC_VER)
@@ -148,7 +147,7 @@ MSHADOW_XINLINE static void LayerNormLastDim(index_t m,
       x_square_sum += in_offset[j] * in_offset[j];
     }
     mean[i] = x_sum / n;
-    var[i] = math::sqrt(x_square_sum / n - mean[i] * mean[i] + eps);
+    var[i]  = math::sqrt(x_square_sum / n - mean[i] * mean[i] + eps);
 
 #if !defined(_MSC_VER)
 #pragma omp simd

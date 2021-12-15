@@ -20,7 +20,7 @@
 /*!
  * \file sequence_mask-inl.h
  * \brief
-*/
+ */
 #ifndef MXNET_OPERATOR_NN_SEQUENCE_MASK_INL_H_
 #define MXNET_OPERATOR_NN_SEQUENCE_MASK_INL_H_
 
@@ -29,8 +29,9 @@ namespace op {
 namespace mxnet_op {
 
 template <typename DType, typename LType>
-inline void SequenceMask(const mshadow::Tensor<cpu, 3, DType> &dst,
-                         const mshadow::Tensor<cpu, 1, LType> label, DType value) {
+inline void SequenceMask(const mshadow::Tensor<cpu, 3, DType>& dst,
+                         const mshadow::Tensor<cpu, 1, LType> label,
+                         DType value) {
   for (index_t b = 0; b < dst.size(1); ++b)
     for (index_t s = label[b]; s < dst.size(0); ++s)
       for (index_t r = 0; r < dst.size(2); ++r)
@@ -38,9 +39,10 @@ inline void SequenceMask(const mshadow::Tensor<cpu, 3, DType> &dst,
 }
 
 #ifdef __CUDACC__
-template<int n_bits, typename DType, typename LType>
+template <int n_bits, typename DType, typename LType>
 __global__ void SequenceMaskKernel(mshadow::Tensor<gpu, 3, DType> dst,
-                                   const mshadow::Tensor<gpu, 1, LType> lengths, DType value) {
+                                   const mshadow::Tensor<gpu, 1, LType> lengths,
+                                   DType value) {
   const index_t smax = dst.size(0);
   const index_t bmax = lengths.size(1);
   const index_t nmax = dst.size(2);
@@ -51,14 +53,15 @@ __global__ void SequenceMaskKernel(mshadow::Tensor<gpu, 3, DType> dst,
     return;
 
   // loop over batches
-    for (index_t s = lengths[batch]; s < smax; ++s)
-      for (index_t r = 0; r < nmax; ++r)
+  for (index_t s = lengths[batch]; s < smax; ++s)
+    for (index_t r = 0; r < nmax; ++r)
       dst[s][batch][r] = value;
 }
 
-template<typename DType, typename LType>
-inline void SequenceMask(const mshadow::Tensor<gpu, 3, DType> &dst,
-                         const mshadow::Tensor<gpu, 1, LType> &lengths, DType value) {
+template <typename DType, typename LType>
+inline void SequenceMask(const mshadow::Tensor<gpu, 3, DType>& dst,
+                         const mshadow::Tensor<gpu, 1, LType>& lengths,
+                         DType value) {
   using namespace mshadow;
   using namespace mshadow::cuda;
   dim3 dimBlock(kBaseThreadNum);

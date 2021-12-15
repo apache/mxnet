@@ -16,14 +16,16 @@
 # under the License.
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
-from ...context import current_context
+from ...device import current_device
 from ..numpy import _internal as _npi
+from ...util import wrap_ctx_to_device_func
 
 
 __all__ = ['bernoulli', 'normal_n', 'uniform_n']
 
 
-def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
+@wrap_ctx_to_device_func
+def bernoulli(prob=None, logit=None, size=None, dtype=None, device=None, out=None):
     """Creates a Bernoulli distribution parameterized by :attr:`prob`
     or :attr:`logit` (but not both).
 
@@ -47,8 +49,8 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
         name, i.e., 'int64', 'int', etc, so byteorder is not available
         and a specific precision may have different C types depending
         on the platform. The default value is 'np.float32'.
-    ctx : Context, optional
-        Device context of output. Default is current context.
+    device : Device, optional
+        Device context of output. Default is current device.
     out : symbol, optional
         The output symbol (default is `None`).
 
@@ -81,29 +83,30 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
             "Received prob={}, logit={}".format(prob, logit))
     if dtype is None:
         dtype = 'float32'
-    if ctx is None:
-        ctx = current_context()
+    if device is None:
+        device = current_device()
     if size == ():
         size = None
     if prob is not None:
         is_tensor = isinstance(prob, tensor_type_name)
         if is_tensor:
             return _npi.bernoulli(prob, prob=None, logit=None, is_logit=False,
-                                  size=size, ctx=ctx, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
         else:
             return _npi.bernoulli(prob=prob, logit=None, is_logit=False,
-                                  size=size, ctx=ctx, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
     else:
         is_tensor = isinstance(logit, tensor_type_name)
         if is_tensor:
             return _npi.bernoulli(logit, prob=None, logit=None, is_logit=True,
-                                  size=size, ctx=ctx, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
         else:
             return _npi.bernoulli(prob=None, logit=logit, is_logit=True,
-                                  size=size, ctx=ctx, dtype=dtype, out=out)
+                                  size=size, ctx=device, dtype=dtype, out=out)
 
 
-def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
+@wrap_ctx_to_device_func
+def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, device=None):
     r"""Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
@@ -128,8 +131,8 @@ def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output. Default is current context.
+    device : Device, optional
+        Device context of output. Default is current device.
 
     Returns
     -------
@@ -161,8 +164,8 @@ def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
     input_type = (isinstance(low, np_ndarray), isinstance(high, np_ndarray))
     if dtype is None:
         dtype = 'float32'
-    if ctx is None:
-        ctx = current_context()
+    if device is None:
+        device = current_device()
     if batch_shape == ():
         batch_shape = None
     else:
@@ -171,19 +174,20 @@ def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
         batch_shape = (-2,) + batch_shape
     if input_type == (True, True):
         return _npi.uniform(low, high, low=None, high=None, size=batch_shape,
-                            ctx=ctx, dtype=dtype)
+                            ctx=device, dtype=dtype)
     elif input_type == (False, True):
         return _npi.uniform(high, low=low, high=None, size=batch_shape,
-                            ctx=ctx, dtype=dtype)
+                            ctx=device, dtype=dtype)
     elif input_type == (True, False):
         return _npi.uniform(low, low=None, high=high, size=batch_shape,
-                            ctx=ctx, dtype=dtype)
+                            ctx=device, dtype=dtype)
     else:
         return _npi.uniform(low=low, high=high, size=batch_shape,
-                            ctx=ctx, dtype=dtype)
+                            ctx=device, dtype=dtype)
 
 
-def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
+@wrap_ctx_to_device_func
+def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, device=None):
     r"""Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -205,8 +209,8 @@ def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
         ``np.broadcast(loc, scale).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output, default is current context.
+    device : Device, optional
+        Device context of output, default is current device.
 
     Returns
     -------
@@ -252,8 +256,8 @@ def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
     input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
     if dtype is None:
         dtype = 'float32'
-    if ctx is None:
-        ctx = current_context()
+    if device is None:
+        device = current_device()
     if batch_shape == ():
         batch_shape = None
     else:
@@ -262,13 +266,13 @@ def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
         batch_shape = (-2,) + batch_shape
     if input_type == (True, True):
         return _npi.normal(loc, scale, loc=None, scale=None, size=batch_shape,
-                           ctx=ctx, dtype=dtype)
+                           ctx=device, dtype=dtype)
     elif input_type == (False, True):
         return _npi.normal(scale, loc=loc, scale=None, size=batch_shape,
-                           ctx=ctx, dtype=dtype)
+                           ctx=device, dtype=dtype)
     elif input_type == (True, False):
         return _npi.normal(loc, loc=None, scale=scale, size=batch_shape,
-                           ctx=ctx, dtype=dtype)
+                           ctx=device, dtype=dtype)
     else:
         return _npi.normal(loc=loc, scale=scale, size=batch_shape,
-                           ctx=ctx, dtype=dtype)
+                           ctx=device, dtype=dtype)

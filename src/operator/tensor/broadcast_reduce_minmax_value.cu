@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_minmax_value.cu
  * \brief GPU Implementation of broadcast and reduce min and max functions based on value.
  */
@@ -27,19 +26,21 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(max)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>
-                                     {"identity", "red::maximum{}", false});
+NNVM_REGISTER_OP(max).set_attr<FCompute>("FCompute<gpu>",
+                                         ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
+                                                                                  "red::maximum{}",
+                                                                                  false});
 
 NNVM_REGISTER_OP(_backward_max)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::eq>);
+    .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::eq>);
 
-NNVM_REGISTER_OP(min)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesRTCCompute<ReduceAxesParam, 0>
-                                     {"identity", "red::minimum{}", false});
+NNVM_REGISTER_OP(min).set_attr<FCompute>("FCompute<gpu>",
+                                         ReduceAxesRTCCompute<ReduceAxesParam, 0>{"identity",
+                                                                                  "red::minimum{}",
+                                                                                  false});
 
 NNVM_REGISTER_OP(_backward_min)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::eq>);
+    .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::eq>);
 
 }  // namespace op
 }  // namespace mxnet

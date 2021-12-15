@@ -50,7 +50,7 @@ struct DiffParam : public dmlc::Parameter<DiffParam> {
     std::ostringstream n_s, axis_s;
     n_s << n;
     axis_s << axis;
-    (*dict)["n"] = n_s.str();
+    (*dict)["n"]    = n_s.str();
     (*dict)["axis"] = axis_s.str();
   }
 };
@@ -68,17 +68,20 @@ inline void YanghuiTri(std::vector<int>* buffer, int n) {
 
 struct diff_forward {
   template <typename IType, typename OType, int ndim>
-  MSHADOW_XINLINE static void Map(index_t i, int* diffFactor, OType* out,
-                                  const IType* in, const int n,
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  int* diffFactor,
+                                  OType* out,
+                                  const IType* in,
+                                  const int n,
                                   const index_t stride,
                                   const mshadow::Shape<ndim> oshape,
                                   const mshadow::Shape<ndim> ishape) {
     using namespace mxnet_op;
 
     // j represent the memory index of the corresponding input entry
-    index_t j = ravel(unravel(i, oshape), ishape);
+    index_t j     = ravel(unravel(i, oshape), ishape);
     int indicator = 1;
-    out[i] = 0;
+    out[i]        = 0;
     for (int k = n; k >= 0; --k) {
       out[i] += in[j + stride * k] * indicator * diffFactor[k];
       indicator *= -1;
@@ -87,8 +90,11 @@ struct diff_forward {
 };
 
 template <typename xpu>
-void DiffForwardImpl(const OpContext& ctx, const TBlob& in, const TBlob& out,
-                     const int n, const int axis) {
+void DiffForwardImpl(const OpContext& ctx,
+                     const TBlob& in,
+                     const TBlob& out,
+                     const int n,
+                     const int axis) {
   using namespace mshadow;
   using namespace mxnet_op;
 
@@ -96,7 +102,8 @@ void DiffForwardImpl(const OpContext& ctx, const TBlob& in, const TBlob& out,
   CHECK_GE(n, 0);
   int axis_checked = CheckAxis(axis, in.ndim());
   // nothing in the output
-  if (n >= in.shape_[axis_checked]) return;
+  if (n >= in.shape_[axis_checked])
+    return;
   // stride for elements on the given axis, same in input and output
   index_t stride = 1;
   for (int i = in.ndim() - 1; i > axis_checked; --i) {
@@ -104,27 +111,31 @@ void DiffForwardImpl(const OpContext& ctx, const TBlob& in, const TBlob& out,
   }
 
   Stream<xpu>* s = ctx.get_stream<xpu>();
-  std::vector<int> buffer(n+1, 0);
+  std::vector<int> buffer(n + 1, 0);
   YanghuiTri(&buffer, n);
-  Tensor<xpu, 1, int> diffFactor =
-      ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(n + 1), s);
+  Tensor<xpu, 1, int> diffFactor = ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(n + 1), s);
   Copy(diffFactor, Tensor<cpu, 1, int>(&buffer[0], Shape1(n + 1), 0), s);
 
   MSHADOW_TYPE_SWITCH(in.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(out.type_flag_, OType, {
       MXNET_NDIM_SWITCH(in.ndim(), ndim, {
-        Kernel<diff_forward, xpu>::Launch(
-          s, out.Size(), diffFactor.dptr_,
-          out.dptr<OType>(), in.dptr<IType>(),
-          n, stride, out.shape_.get<ndim>(),
-          in.shape_.get<ndim>());
+        Kernel<diff_forward, xpu>::Launch(s,
+                                          out.Size(),
+                                          diffFactor.dptr_,
+                                          out.dptr<OType>(),
+                                          in.dptr<IType>(),
+                                          n,
+                                          stride,
+                                          out.shape_.get<ndim>(),
+                                          in.shape_.get<ndim>());
       });
     });
   });
 }
 
 template <typename xpu>
-void DiffForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void DiffForward(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
                  const std::vector<TBlob>& inputs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
@@ -140,9 +151,13 @@ void DiffForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
 
 struct diff_backward {
   template <typename IType, typename OType, int ndim>
-  MSHADOW_XINLINE static void Map(index_t i, int* diffFactor, OType* igrad,
-                                  const IType* ograd, const int n,
-                                  const index_t stride, const int axis,
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  int* diffFactor,
+                                  OType* igrad,
+                                  const IType* ograd,
+                                  const int n,
+                                  const index_t stride,
+                                  const int axis,
                                   const mshadow::Shape<ndim> oshape,
                                   const mshadow::Shape<ndim> ishape) {
     using namespace mxnet_op;
@@ -153,15 +168,16 @@ struct diff_backward {
 
     Shape<ndim> coor = unravel(i, oshape);
     // one head thread for a whole sequence along the axis
-    if (coor[axis] != 0) return;
+    if (coor[axis] != 0)
+      return;
     index_t j = ravel(coor, ishape);
     // initialize the elements of output array
-    for (index_t k = 0; k < oshape[axis]; ++k) igrad[i + k * stride] = 0;
+    for (index_t k = 0; k < oshape[axis]; ++k)
+      igrad[i + k * stride] = 0;
     for (index_t k = 0; k < ishape[axis]; ++k) {
       int indicator = 1;
       for (int m = n; m >= 0; --m) {
-        igrad[i + (m + k) * stride] +=
-            ograd[j + k * stride] * indicator * diffFactor[m];
+        igrad[i + (m + k) * stride] += ograd[j + k * stride] * indicator * diffFactor[m];
         indicator *= -1;
       }
     }
@@ -169,8 +185,11 @@ struct diff_backward {
 };
 
 template <typename xpu>
-void DiffBackwardImpl(const OpContext& ctx, const TBlob& ograd,
-                      const TBlob& igrad, const int n, const int axis) {
+void DiffBackwardImpl(const OpContext& ctx,
+                      const TBlob& ograd,
+                      const TBlob& igrad,
+                      const int n,
+                      const int axis) {
   using namespace mshadow;
   using namespace mxnet_op;
 
@@ -178,7 +197,8 @@ void DiffBackwardImpl(const OpContext& ctx, const TBlob& ograd,
   CHECK_GE(n, 0);
   int axis_checked = CheckAxis(axis, igrad.ndim());
   // nothing in the ograd and igrad
-  if (n >= igrad.shape_[axis_checked]) return;
+  if (n >= igrad.shape_[axis_checked])
+    return;
   // stride for elements on the given axis, same in input and output
   index_t stride = 1;
   for (int i = igrad.ndim() - 1; i > axis_checked; --i) {
@@ -186,27 +206,32 @@ void DiffBackwardImpl(const OpContext& ctx, const TBlob& ograd,
   }
 
   Stream<xpu>* s = ctx.get_stream<xpu>();
-  std::vector<int> buffer(n+1, 0);
+  std::vector<int> buffer(n + 1, 0);
   YanghuiTri(&buffer, n);
-  Tensor<xpu, 1, int> diffFactor =
-      ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(n + 1), s);
+  Tensor<xpu, 1, int> diffFactor = ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(n + 1), s);
   Copy(diffFactor, Tensor<cpu, 1, int>(&buffer[0], Shape1(n + 1), 0), s);
 
   MSHADOW_TYPE_SWITCH(ograd.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(igrad.type_flag_, OType, {
       MXNET_NDIM_SWITCH(igrad.ndim(), ndim, {
-        Kernel<diff_backward, xpu>::Launch(
-          s, igrad.Size(), diffFactor.dptr_,
-          igrad.dptr<OType>(), ograd.dptr<IType>(),
-          n, stride, axis_checked,
-          igrad.shape_.get<ndim>(), ograd.shape_.get<ndim>());
+        Kernel<diff_backward, xpu>::Launch(s,
+                                           igrad.Size(),
+                                           diffFactor.dptr_,
+                                           igrad.dptr<OType>(),
+                                           ograd.dptr<IType>(),
+                                           n,
+                                           stride,
+                                           axis_checked,
+                                           igrad.shape_.get<ndim>(),
+                                           ograd.shape_.get<ndim>());
       });
     });
   });
 }
 
 template <typename xpu>
-void DiffBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void DiffBackward(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
                   const std::vector<TBlob>& inputs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {

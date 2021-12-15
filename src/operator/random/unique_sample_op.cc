@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file sample_op.cc
  * \brief CPU Implementation of unique sample op
  */
@@ -31,17 +30,16 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(SampleUniqueZifpianParam);
 
-#define MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(name, ParamType)             \
-  NNVM_REGISTER_OP(name)                                                   \
-  .set_num_inputs(0)                                                       \
-  .set_num_outputs(2)                                                      \
-  .set_attr_parser(ParamParser<ParamType>)                                 \
-  .set_attr<FResourceRequest>("FResourceRequest", UniqueSampleResource)    \
-  .add_arguments(ParamType::__FIELDS__())
+#define MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(name, ParamType)              \
+  NNVM_REGISTER_OP(name)                                                    \
+      .set_num_inputs(0)                                                    \
+      .set_num_outputs(2)                                                   \
+      .set_attr_parser(ParamParser<ParamType>)                              \
+      .set_attr<FResourceRequest>("FResourceRequest", UniqueSampleResource) \
+      .add_arguments(ParamType::__FIELDS__())
 
-MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(_sample_unique_zipfian,
-                                      SampleUniqueZifpianParam)
-.describe(R"code(Draw random samples from an an approximately log-uniform
+MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(_sample_unique_zipfian, SampleUniqueZifpianParam)
+    .describe(R"code(Draw random samples from an an approximately log-uniform
 or Zipfian distribution without replacement.
 
 This operation takes a 2-D shape `(batch_size, num_sampled)`,
@@ -64,9 +62,9 @@ Example::
    trials[0] = 16435
 
 )code" ADD_FILELINE)
-.set_attr<mxnet::FInferShape>("FInferShape", SampleUniqueShape<SampleUniqueZifpianParam>)
-.set_attr<nnvm::FInferType>("FInferType", SampleUniqueType<SampleUniqueZifpianParam>)
-.set_attr<FCompute>("FCompute<cpu>", SampleUniqueZifpian);
+    .set_attr<mxnet::FInferShape>("FInferShape", SampleUniqueShape<SampleUniqueZifpianParam>)
+    .set_attr<nnvm::FInferType>("FInferType", SampleUniqueType<SampleUniqueZifpianParam>)
+    .set_attr<FCompute>("FCompute<cpu>", SampleUniqueZifpian);
 
 }  // namespace op
 }  // namespace mxnet

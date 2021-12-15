@@ -163,7 +163,7 @@ The above code outputs results for different threads and cleans up the thread sa
 
 1. Only operators tested with the existing model coverage are supported. Other operators and operator types (stateful operators, custom operators are not supported. Existing model coverage is as follows (this list will keep growing as we test more models with different model types):
 
-|Models Tested|ONEDNN|CUDNN|NO-CUDNN|
+|Models Tested|oneDNN|CUDNN|NO-CUDNN|
 | --- | --- | --- | --- |
 | imagenet1k-resnet-18 | Yes | Yes | Yes |
 | imagenet1k-resnet-152 | Yes | Yes | Yes |

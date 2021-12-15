@@ -23,20 +23,20 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_SUBGRAPH_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
-C:\Python37\Scripts\pip install -r ci\docker\install\requirements
-C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_unittest.xml tests\python\unittest
+C:\Python38\Scripts\pip install -r ci\docker\install\requirements
+C:\Python38\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_unittest.xml tests\python\unittest
 if ($LastExitCode -ne 0) { Throw ("Error running parallel unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest
+C:\Python38\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest
 if ($LastExitCode -ne 0) { Throw ("Error running serial unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_train.xml tests\python\train
+C:\Python38\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_train.xml tests\python\train
 if ($LastExitCode -ne 0) { Throw ("Error running parallel train tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_train.xml --cov-append tests\python\train
+C:\Python38\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_train.xml --cov-append tests\python\train
 if ($LastExitCode -ne 0) { Throw ("Error running serial train tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 # Adding this extra test since it's not possible to set env var on the fly in Windows.
-C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest\test_operator.py::test_norm
+C:\Python38\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest\test_operator.py::test_norm
 if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 
 # Need to explicitly set the environment variable for MXNET_MEMORY_OPT.
 $env:MXNET_MEMORY_OPT=1
-C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest\test_memory_opt.py
+C:\Python38\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest\test_memory_opt.py
 if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
