@@ -104,21 +104,23 @@ onnxToTrtCtx(const std::string& onnx_model,
     throw dmlc::Error("Cannot parse ONNX into TensorRT Engine");
   }
 
-  nvinfer1::IBuilderConfig builder_config;
+  nvinfer1::IBuilderConfig* builder_config = trt_builder->createBuilderConfig();
 
   if (dmlc::GetEnv("MXNET_TENSORRT_USE_FP16", true)) {
     if (trt_builder->platformHasFastFp16()) {
-      builder_config.setFlag(nvinfer1::BuilderFlag::kFP16);
+      builder_config->setFlag(nvinfer1::BuilderFlag::kFP16);
     } else {
       LOG(WARNING) << "TensorRT can't use fp16 on this platform";
     }
   }
   trt_builder->setMaxBatchSize(max_batch_size);
-  builder_config.setMaxWorkspaceSize(max_workspace_size);
+  builder_config->setMaxWorkspaceSize(max_workspace_size);
   if(debug_builder) {
-    builder_config.setFlag(nvinfer1::BuilderFlag::kDEBUG);
+    builder_config->setFlag(nvinfer1::BuilderFlag::kDEBUG);
   }
-  auto trt_engine = InferObject(trt_builder->buildEngineWithConfig(*trt_network, builder_config));
+  auto trt_engine = InferObject(trt_builder->buildEngineWithConfig(*trt_network, *builder_config));
+  // Is this safe?
+  delete builder_config;
   return std::make_tuple(std::move(trt_engine), std::move(trt_parser), std::move(trt_logger));
 }
 
