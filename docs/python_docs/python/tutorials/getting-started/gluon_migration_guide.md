@@ -434,7 +434,7 @@ A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. 
 
 ##  oneDNN Integration
 ### Operator Fusion
-In versions 1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support could have been disabled by setting 'MXNET_SUBGRAPH_BACKEND' environment flag to `None`. MXNet 2.0 introduced changes in forward inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
+In versions 1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support and could have been disabled by setting 'MXNET_SUBGRAPH_BACKEND' environment flag to `None`. MXNet 2.0 introduced changes in forward inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
 
  - the model must be defined as a subclass of HybridBlock or Symbol
 
@@ -452,7 +452,7 @@ Controling which patterns should be fused still can be done by setting proper en
 
 ### INT8 Quantization / Precision reduction
 Quantization API was also refactored to be consistent with other new features and mechanisms. In comparison to MXNet 1.x releases, in MXNet 2.0 `quantize_net_v2` function has been removed and development focused mainly on `quantize_net` function to make it easier to use for end user and ultimately give him more flexibility.
-Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with `quantize_model` (it is deprecated method, left only to provide backward compatibility and its usage should be avoided).
+Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with `quantize_model` (it is deprecated method, left only to provide backward compatibility and its usage is strongly discouraged).
 
 ```{.python}
 import mxnet as mx
