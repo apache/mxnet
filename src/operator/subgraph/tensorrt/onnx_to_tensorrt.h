@@ -68,7 +68,7 @@ class TRT_Logger : public nvinfer1::ILogger {
  public:
   TRT_Logger(Severity verbosity = Severity::kWARNING, std::ostream& ostream = std::cout)  // NOLINT
       : _verbosity(verbosity), _ostream(&ostream) {}
-  void log(Severity severity, const char* msg) override {
+  void log(Severity severity, const char* msg) noexcept override {
     if (severity <= _verbosity) {
       time_t rawtime = std::time(0);
       char buf[256];
