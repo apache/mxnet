@@ -539,11 +539,8 @@ build_ubuntu_cpu_onednn_mkl() {
 }
 
 build_ubuntu_gpu_tensorrt() {
-
     set -ex
 
-    export CC=gcc-7
-    export CXX=g++-7
     export ONNX_NAMESPACE=onnx
 
     # Build ONNX
@@ -563,9 +560,10 @@ build_ubuntu_gpu_tensorrt() {
 
     # Build ONNX-TensorRT
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.2/targets/x86_64-linux/include/
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-11.4/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
+    rm -rf build
     mkdir -p build
     cd build
     cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
@@ -575,13 +573,21 @@ build_ubuntu_gpu_tensorrt() {
 
     mkdir -p /work/mxnet/lib/
     cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so* /work/mxnet/lib/
 
-    cd /work/build
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${LIBRARY_PATH}:/usr/local/cuda/lib64/stubs/
+
+
+    cd /work/mxnet/
+    rm -rf build
+    mkdir build
+    cd build
     cmake -DUSE_CUDA=1                            \
           -DUSE_CUDNN=1                           \
           -DUSE_OPENCV=1                          \
           -DUSE_TENSORRT=1                        \
+          -DUSE_CPP_PACKAGE=1                     \
+          -DBUILD_CPP_EXAMPLES=1                  \
           -DUSE_OPENMP=0                          \
           -DUSE_BLAS=Open                         \
           -DUSE_ONEDNN=0                          \
@@ -592,6 +598,11 @@ build_ubuntu_gpu_tensorrt() {
 
     ninja
 }
+
+build_ubuntu_tensorrt_cu114() {
+  build_ubuntu_gpu_tensorrt
+}
+
 
 build_ubuntu_gpu_onednn() {
     set -ex
@@ -961,7 +972,14 @@ unittest_ubuntu_python3_gpu_nocudnn() {
 unittest_cpp() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=100
+    export LD_LIBRARY_PATH=/work/mxnet/lib:/usr/local/cuda/lib64/stubs/
     build/tests/mxnet_unit_tests
+}
+
+citest_cpp_package() {
+    set -ex
+    export LD_LIBRARY_PATH=/work/mxnet/lib
+    cpp-package/tests/ci_test.sh
 }
 
 unittest_centos7_cpu() {

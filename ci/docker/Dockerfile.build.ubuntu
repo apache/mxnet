@@ -53,8 +53,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         build-essential \
         ninja-build \
         git \
-        protobuf-compiler \
-        libprotobuf-dev \
         default-jdk \
         clang-6.0 \
         clang-format \
@@ -126,6 +124,18 @@ RUN cd /usr/local/src && \
     cd /usr/local/src && \
     rm -rf ccache
 
+# Build static protobuf to avoid namespace collisions 
+RUN cd /usr/local/src && \
+    git clone --recursive -b v3.9.2 https://github.com/google/protobuf.git  && \
+    cd protobuf && \
+    ./autogen.sh && \
+    ./configure --disable-shared CXXFLAGS=-fPIC && \
+    make -j $(nproc) && \
+    make install && \
+    rm -rf /usr/local/lib/libprotobuf-lite.so* && \
+    rm -rf /usr/local/lib/libprotobuf.so* && \
+    rm -rf /usr/local/lib/libprotoc.so* 
+
 # RAT License Checker tool
 RUN cd /usr/local/src && \
     wget https://archive.apache.org/dist/creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz && \
@@ -158,17 +168,23 @@ SHELL ["/bin/bash", "-c"]
 # We need to redeclare ARG due to
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG BASE_IMAGE
+
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+
+# This is needed for some cuda things to build correctly outside of nvidia-docker
+RUN ln -s  /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1
+
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
     apt-get update && \
     apt-get install -y --allow-change-held-packages libcudnn8 libcudnn8-dev && \
-    if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
-        if [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
-            TRT_VERSION="7.2.0-1+cuda11.0"; \
-            TRT_MAJOR_VERSION=7; \
-        elif [ ${SHORT_CUDA_VERSION} = 11.1 ]; then \
-            TRT_VERSION="7.2.1-1+cuda11.1"; \
-            TRT_MAJOR_VERSION=7; \
+    if [[ ${OS_RELEASE} == *"Focal"* ]]; then \
+        if [ ${SHORT_CUDA_VERSION} = 11.4 ]; then \
+            TRT_VERSION="8.2.1-1+cuda11.4"; \
+            TRT_MAJOR_VERSION=8; \
+        elif [ ${SHORT_CUDA_VERSION} = 11.3 ]; then \
+            TRT_VERSION="8.0.3-1+cuda11.3"; \
+            TRT_MAJOR_VERSION=8; \
         else \
             echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
             exit 1; \
@@ -179,4 +195,3 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
                            libnvinfer-plugin-dev=${TRT_VERSION}; \
     fi && \
     rm -rf /var/lib/apt/lists/*
-
