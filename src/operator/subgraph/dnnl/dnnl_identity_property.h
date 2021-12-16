@@ -82,7 +82,8 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
 
   std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
     // candidates should contain only two nodes - custom node and identity node
-    if (candidates.size() == 2 && candidates.size() == matched_list_.size()) {
+    if (pattern_found && candidates.size() == matched_list_.size()) {
+      CHECK_EQ(candidates.size(), 2);
       return candidates;
     } else {
       return std::vector<BiDirectedNode*>(0);
