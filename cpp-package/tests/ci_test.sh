@@ -68,8 +68,13 @@ sh unittests/unit_test_mlp_csv.sh
 
 cd inference
 
+cp /work/build/cpp-package/example/inference/imagenet_inference .
+./unit_test_imagenet_inference.sh
+
 cp /work/build/cpp-package/example/sentiment_analysis_rnn .
 ./unit_test_sentiment_analysis_rnn.sh
+
+
 
 cd multi_threaded_inference
 
