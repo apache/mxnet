@@ -62,7 +62,7 @@ NNVM_REGISTER_OP(_contrib_NCCLReduce)
   })
 .set_attr<mxnet::FInferShape>("FInferShape", NCCLReduceShape)
 .set_attr<nnvm::FInferType>("FInferType", NCCLReduceType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_NCCLReduce"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_NCCLReduce"})
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
