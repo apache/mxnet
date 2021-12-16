@@ -36,10 +36,9 @@ void NCCLReduceCompute(const nnvm::NodeAttrs& attrs,
   const index_t size = inputs[0].shape_.Size() *
                        common::mshadow_type_info(inputs[0].type_flag_).size;
   if (req[0] != OpReqType::kAddTo) {
-
     ncclResult_t result = ncclReduce(inputs[0].dptr_,
                                         outputs[0].dptr_,
-                                        size, ncclInt8, ncclSum,  param.root_rank,
+                                        size, ncclFloat32, ncclAvg,  param.root_rank,
                                         comm,
                                         mshadow::Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
 

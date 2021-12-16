@@ -21,3 +21,5 @@
 from . import data
 
 from . import estimator
+
+from . import nn
