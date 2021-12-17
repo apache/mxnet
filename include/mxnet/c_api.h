@@ -3161,6 +3161,16 @@ MXNET_DLL int MXCUDAProfilerStart();
  */
 MXNET_DLL int MXCUDAProfilerStop();
 
+/*!
+ * \brief Turns on or off Layout Optimization
+ */
+MXNET_DLL int MXSetOptimizeLayout(bool val);
+
+/*!
+ * \brief Get current Layout Optimization status
+ */
+MXNET_DLL int MXGetOptimizeLayout(bool* val);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

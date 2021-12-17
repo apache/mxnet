@@ -23,9 +23,12 @@
  * \author Bing Xu, Jun Wu, Da Zheng
  */
 
+#include <mshadow/base.h>
+#include <mshadow/tensor.h>
 #include "./convolution-inl.h"
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
+#include "../../common/alm.h"
 #if MXNET_USE_ONEDNN == 1
 #include "./dnnl/dnnl_base-inl.h"
 #include "./dnnl/dnnl_ops-inl.h"
@@ -78,6 +81,29 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   FallBackCompute(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 #endif
+
+static bool ConvChangeLayout(nnvm::NodeAttrs* attrs,
+                             mshadow::LayoutFlag target_layout,
+                             std::vector<alm::Transpose>* in_axes,
+                             std::vector<alm::Transpose>* out_axes) {
+  const auto& param = nnvm::get<ConvolutionParam>(attrs->parsed);
+  CHECK(param.layout) << "Current layout of convolution should be known: " << attrs->name;
+  auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
+  auto t      = target_layout != mshadow::kUNKNOWN ?
+               mshadow::getTranspAxes<size_t>(layout, target_layout) :
+               alm::FactorCommonTranspose(in_axes);
+  out_axes->assign(1, alm::Reverse(t));
+  if (alm::IsIdentity(t))
+    return false;
+  if (target_layout != mshadow::kUNKNOWN) {
+    for (auto i : {0, 1})
+      in_axes->at(i) = alm::Compose(t, in_axes->at(i));
+  } else {
+    target_layout = alm::ApplyTranspose(layout, t);
+  }
+  attrs->dict["layout"] = mshadow::toString(target_layout);
+  return true;
+}
 
 static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector* in_shape,
@@ -502,6 +528,7 @@ There are other options to tune the performance.
                                       })
     .set_attr<mxnet::FInferShape>("FInferShape", ConvolutionShape)
     .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
+    .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", ConvChangeLayout)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", ConvStorageType)
 #endif
