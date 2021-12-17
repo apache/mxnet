@@ -558,10 +558,12 @@ class CSRNDArray(BaseSparseNDArray):
         >>> x = mx.nd.sparse.zeros('csr', (2,3))
         >>> y = x.asscipy()
         >>> type(y)
-        <type 'scipy.sparse.csr.csr_matrix'>
+        <class 'scipy.sparse.csr.csr_matrix'>
+x'>
         >>> y
-        <2x3 sparse matrix of type '<type 'numpy.float32'>'
-        with 0 stored elements in Compressed Sparse Row format>
+        <2x3 sparse matrix of type '<class 'numpy.float32'>'
+        	with 0 stored elements in Compressed Sparse Row format>
+format>
         """
         data = self.data.asnumpy()
         indices = self.indices.asnumpy()
@@ -1239,25 +1241,25 @@ def add(lhs, rhs):
     >>> a = mx.nd.ones((2,3)).tostype('csr')
     >>> b = mx.nd.ones((2,3)).tostype('csr')
     >>> a.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> b.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> (a+b).asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 2.,  2.,  2.]], dtype=float32)
+    array([[2., 2., 2.],
+           [2., 2., 2.]], dtype=float32)
     >>> c = mx.nd.ones((2,3)).tostype('row_sparse')
     >>> d = mx.nd.ones((2,3)).tostype('row_sparse')
     >>> c.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> d.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> (c+d).asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 2.,  2.,  2.]], dtype=float32)
+    array([[2., 2., 2.],
+           [2., 2., 2.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
     if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
@@ -1311,25 +1313,25 @@ def subtract(lhs, rhs):
     >>> a = mx.nd.ones((2,3)).tostype('csr')
     >>> b = mx.nd.ones((2,3)).tostype('csr')
     >>> a.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> b.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> (a-b).asnumpy()
-    array([[ 0.,  0.,  0.],
-           [ 0.,  0.,  0.]], dtype=float32)
+    array([[0., 0., 0.],
+           [0., 0., 0.]], dtype=float32)
     >>> c = mx.nd.ones((2,3)).tostype('row_sparse')
     >>> d = mx.nd.ones((2,3)).tostype('row_sparse')
     >>> c.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> d.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> (c-d).asnumpy()
-    array([[ 0.,  0.,  0.],
-           [ 0.,  0.,  0.]], dtype=float32)
+    array([[0., 0., 0.],
+           [0., 0., 0.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
     if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
@@ -1383,37 +1385,37 @@ def multiply(lhs, rhs):
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(3)
     >>> x.asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[1., 1., 1.],
+           [1., 1., 1.]], dtype=float32)
     >>> y.asnumpy()
-    array([[ 0.],
-           [ 1.]], dtype=float32)
+    array([[0.],
+           [1.]], dtype=float32)
     >>> z.asnumpy()
-    array([ 0.,  1.,  2.], dtype=float32)
+    array([0., 1., 2.], dtype=float32)
     >>> (x*2).asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 2.,  2.,  2.]], dtype=float32)
+    array([[2., 2., 2.],
+           [2., 2., 2.]], dtype=float32)
     >>> (x*y).asnumpy()
-    array([[ 0.,  0.,  0.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[0., 0., 0.],
+           [1., 1., 1.]], dtype=float32)
     >>> mx.nd.sparse.multiply(x, y).asnumpy()
-    array([[ 0.,  0.,  0.],
-           [ 1.,  1.,  1.]], dtype=float32)
+    array([[0., 0., 0.],
+           [1., 1., 1.]], dtype=float32)
     >>> (x*z).asnumpy()
-    array([[ 0.,  1.,  2.],
-           [ 0.,  1.,  2.]], dtype=float32)
+    array([[0., 1., 2.],
+           [0., 1., 2.]], dtype=float32)
     >>> mx.nd.sparse.multiply(x, z).asnumpy()
-    array([[ 0.,  1.,  2.],
-           [ 0.,  1.,  2.]], dtype=float32)
+    array([[0., 1., 2.],
+           [0., 1., 2.]], dtype=float32)
     >>> z = z.reshape((1, 3))
     >>> z.asnumpy()
-    array([[ 0.,  1.,  2.]], dtype=float32)
+    array([[0., 1., 2.]], dtype=float32)
     >>> (x*z).asnumpy()
-    array([[ 0.,  1.,  2.],
-           [ 0.,  1.,  2.]], dtype=float32)
+    array([[0., 1., 2.],
+           [0., 1., 2.]], dtype=float32)
     >>> mx.nd.sparse.multiply(x, z).asnumpy()
-    array([[ 0.,  1.,  2.],
-           [ 0.,  1.,  2.]], dtype=float32)
+    array([[0., 1., 2.],
+           [0., 1., 2.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
     if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
@@ -1467,39 +1469,40 @@ def divide(lhs, rhs):
     >>> y = mx.nd.arange(2).reshape((2,1)) + 1
     >>> z = mx.nd.arange(3) + 1
     >>> x.asnumpy()
-    array([[ 6.,  6.,  6.],
-           [ 6.,  6.,  6.]], dtype=float32)
+    array([[6., 6., 6.],
+           [6., 6., 6.]], dtype=float32)
     >>> y.asnumpy()
-    array([[ 1.],
-           [ 2.]], dtype=float32)
+    array([[1.],
+           [2.]], dtype=float32)
     >>> z.asnumpy()
-    array([ 1.,  2.,  3.], dtype=float32)
+    array([1., 2., 3.], dtype=float32)
     >>> x/2
-    <NDArray 2x3 @cpu(0)>
+    <BLANKLINE>
+    <CSRNDArray 2x3 @cpu(0)>
     >>> (x/3).asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 2.,  2.,  2.]], dtype=float32)
+    array([[2., 2., 2.],
+           [2., 2., 2.]], dtype=float32)
     >>> (x/y).asnumpy()
-    array([[ 6.,  6.,  6.],
-           [ 3.,  3.,  3.]], dtype=float32)
+    array([[6., 6., 6.],
+           [3., 3., 3.]], dtype=float32)
     >>> mx.nd.sparse.divide(x,y).asnumpy()
-    array([[ 6.,  6.,  6.],
-           [ 3.,  3.,  3.]], dtype=float32)
+    array([[6., 6., 6.],
+           [3., 3., 3.]], dtype=float32)
     >>> (x/z).asnumpy()
-    array([[ 6.,  3.,  2.],
-           [ 6.,  3.,  2.]], dtype=float32)
+    array([[6., 3., 2.],
+           [6., 3., 2.]], dtype=float32)
     >>> mx.nd.sprase.divide(x,z).asnumpy()
     array([[ 6.,  3.,  2.],
            [ 6.,  3.,  2.]], dtype=float32)
     >>> z = z.reshape((1,3))
     >>> z.asnumpy()
-    array([[ 1.,  2.,  3.]], dtype=float32)
+    array([[1., 2., 3.]], dtype=float32)
     >>> (x/z).asnumpy()
-    array([[ 6.,  3.,  2.],
-           [ 6.,  3.,  2.]], dtype=float32)
+    array([[6., 3., 2.],
+           [6., 3., 2.]], dtype=float32)
     >>> mx.nd.sparse.divide(x,z).asnumpy()
-    array([[ 6.,  3.,  2.],
-           [ 6.,  3.,  2.]], dtype=float32)
+    array([[6., 3., 2.],
+           [6., 3., 2.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
     if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:

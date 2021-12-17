@@ -583,8 +583,9 @@ class KVStore(KVStoreBase):
         >>> kv.pull(3, out = weight)
         >>> # weight is updated via gradient descent
         >>> weight.asnumpy()
-        array([[-0.01, -0.01],
-               [-0.01, -0.01]], dtype=float32)
+        array([[-0.1, -0.1],
+               [-0.1, -0.1]], dtype=float32)
+loat32)
         """
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
