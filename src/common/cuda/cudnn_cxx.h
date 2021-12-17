@@ -244,8 +244,14 @@ std::vector<Descriptor> GetSomeAttrs(size_t max_n,
                                      cudnnBackendDescriptorType_t type);
 
 // Order sets layout, as a permutation of dims, with N,C,<spacial dims> being identity.
-std::vector<int64_t> PackedStrides(const std::vector<size_t>& order,
-                                   const std::vector<int64_t>& dims);
+template <typename T>
+std::vector<T> PackedStrides(const std::vector<size_t>& order, const std::vector<T>& dims) {
+  CHECK_EQ(order.size(), dims.size());
+  std::vector<T> ret(dims.size(), 1);
+  for (size_t i = dims.size() - 1; i--;)
+    ret[order[i]] = dims[order[i + 1]] * ret[order[i + 1]];
+  return ret;
+}
 
 // Given an engine config's `notes`, return whether that config is compatible, i.e. does
 // the config have all of the required notes and none of the notes that are being excluded.
