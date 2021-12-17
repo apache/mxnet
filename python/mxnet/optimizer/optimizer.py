@@ -151,8 +151,7 @@ class Optimizer(object):
         ...     pass
         >>> optim = mx.optimizer.Optimizer.create_optimizer('MyOptimizer')
         >>> print(type(optim))
-        <class 'MyOptimizer'>
-r'>
+        <class '__main__.MyOptimizer'>
         """
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
@@ -189,12 +188,10 @@ r'>
         --------
         >>> sgd = mx.optimizer.Optimizer.create_optimizer('sgd')
         >>> type(sgd)
-        <class 'mxnet.optimizer.sgd.SGD'>
-D'>
+        <class 'mxnet.optimizer.SGD'>
         >>> adam = mx.optimizer.create('adam', learning_rate=.1)
         >>> type(adam)
-        <class 'mxnet.optimizer.adam.Adam'>
-m'>
+        <class 'mxnet.optimizer.Adam'>
         """
         if name.lower() in Optimizer.opt_registry:
             return Optimizer.opt_registry[name.lower()](**kwargs)

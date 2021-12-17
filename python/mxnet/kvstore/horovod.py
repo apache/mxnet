@@ -108,9 +108,8 @@ class Horovod(KVStoreBase):
         >>> a = mx.nd.ones(shape)
         >>> kv.pushpull('1', a)
         >>> print(a.asnumpy())
-        [[1. 1. 1.]
-         [1. 1. 1.]]
-.  8.]]
+        [[ 8.  8.  8.]
+        [ 8.  8.  8.]]
 
         >>> # perform allreduce on tensor a and output to b
         >>> a = mx.nd.ones(shape)

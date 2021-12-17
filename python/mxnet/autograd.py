@@ -311,7 +311,7 @@ def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=Fals
     >>> dx = mx.autograd.grad(z, [x], create_graph=True)
     >>> print(dx)
     [
-    [3.7183]
+    [ 3.71828175]
     <NDArray 1 @cpu(0)>]
     """
     head_handles, hgrad_handles = _parse_head(heads, head_grads)

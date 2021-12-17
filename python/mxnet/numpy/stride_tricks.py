@@ -52,9 +52,9 @@ def broadcast_arrays(*args):
     >>> x = np.array([[1,2,3]])
     >>> y = np.array([[4],[5]])
     >>> np.broadcast_arrays(x, y)
-    [array([[1, 2, 3],
-           [1, 2, 3]]), array([[4, 4, 4],
-           [5, 5, 5]])]
+    [array([[1., 2., 3.],
+           [1., 2., 3.]]), array([[4., 4., 4.],
+           [5., 5., 5.]])]
     """
     shape = _broadcast_shape(*args)
 

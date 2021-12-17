@@ -113,8 +113,7 @@ class Initializer(object):
         '["normal", {"sigma": 0.5}]'
         >>> init = mx.init.Xavier(factor_type="in", magnitude=2.34)
         >>> init.dumps()
-        '["xavier", {"rnd_type": "uniform", "factor_type": "in", "magnitude": 2.34}]'
-}]'
+        '["xavier", {"rnd_type": "uniform", "magnitude": 2.34, "factor_type": "in"}]'
         """
         return json.dumps([self.__class__.__name__.lower(), self._kwargs])
 

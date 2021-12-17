@@ -263,7 +263,7 @@ class CompositeEvalMetric(EvalMetric):
     ...     eval_metrics.add(child_metric)
     >>> eval_metrics.update(labels = labels, preds = predicts)
     >>> eval_metrics.get()
-    ([], [])
+    (['accuracy', 'f1'], [0.6666666666666666, 0.8])
     """
 
     def __init__(self, metrics=None, name='composite',
@@ -472,7 +472,7 @@ class TopKAccuracy(EvalMetric):
     >>> acc = mx.gluon.metric.TopKAccuracy(top_k=top_k)
     >>> acc.update(labels, predicts)
     >>> acc.get()
-    ('top_k_accuracy_3', 0.3)
+    ('top_k_accuracy', 0.3)
     """
 
     def __init__(self, top_k=1, name='top_k_accuracy',
@@ -770,7 +770,7 @@ class F1(EvalMetric):
     >>> f1 = mx.gluon.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
     >>> f1.get()
-    ('f1', 0.8000000000000002)
+    ('f1', 0.8)
     """
 
     def __init__(self, name='f1',
@@ -991,9 +991,9 @@ class MCC(EvalMetric):
     >>> mcc = mx.gluon.metric.MCC()
     >>> mcc.update(preds = predicts, labels = labels)
     >>> f1.get()
-    ('f1', nan)
+    ('f1', 0.95233560306652054)
     >>> mcc.get()
-    ('mcc', nan)
+    ('mcc', 0.01917751877733392)
     """
 
     def __init__(self, name='mcc',
@@ -1183,7 +1183,7 @@ class RMSE(MSE):
     >>> root_mean_squared_error = mx.gluon.metric.RMSE()
     >>> root_mean_squared_error.update(labels = labels, preds = predicts)
     >>> root_mean_squared_error.get()
-    ('rmse', 0.6123724356957945)
+    ('rmse', 0.612372457981)
     """
     def __init__(self, name='rmse',
                  output_names=None, label_names=None):
@@ -1228,7 +1228,7 @@ class MeanPairwiseDistance(EvalMetric):
     >>> mpd = mx.gluon.metric.MeanPairwiseDistance()
     >>> mpd.update(labels = labels, preds = predicts)
     >>> mpd.get()
-    ('mpd', 2.118033988749895)
+    ('mpd', 2.1180338859558105)
     """
     def __init__(self, name='mpd',
                  output_names=None, label_names=None, p=2):
@@ -1297,7 +1297,7 @@ class MeanCosineSimilarity(EvalMetric):
     >>> mcs = mx.gluon.metric.MeanCosineSimilarity()
     >>> mcs.update(labels = labels, preds = predicts)
     >>> mcs.get()
-    ('cos_sim', 0.7999999999999998)
+    ('cos_sim', 0.8)
     """
     def __init__(self, name='cos_sim',
                  output_names=None, label_names=None, eps=1e-8):
@@ -1383,7 +1383,7 @@ class CrossEntropy(EvalMetric):
     >>> ce = mx.gluon.metric.CrossEntropy()
     >>> ce.update(labels, predicts)
     >>> ce.get()
-    ('cross-entropy', 0.5715994760306423)
+    ('cross-entropy', 0.57159948348999023)
     """
     def __init__(self, eps=1e-12, ignore_label=None, axis=-1, from_logits=False,
                  name='cross-entropy', output_names=None, label_names=None):
@@ -1481,7 +1481,7 @@ class Perplexity(CrossEntropy):
     >>> perp = mx.gluon.metric.Perplexity(ignore_label=None)
     >>> perp.update(labels, predicts)
     >>> perp.get()
-    ('perplexity', 1.7710976153043518)
+    ('Perplexity', 1.7710976285155853)
     """
     def __init__(self, eps=1e-12, ignore_label=None, axis=-1, from_logits=False,
                  name='perplexity', output_names=None, label_names=None):
@@ -1526,7 +1526,7 @@ class PearsonCorrelation(EvalMetric):
     >>> pr = mx.gluon.metric.PearsonCorrelation()
     >>> pr.update(labels, predicts)
     >>> pr.get()
-    ('pearsonr', 0.421637021355784)
+    ('pearsonr', 0.42163704544016178)
     """
     def __init__(self, name='pearsonr',
                  output_names=None, label_names=None):
@@ -1641,9 +1641,9 @@ class PCC(EvalMetric):
     >>> pcc = mx.gluon.metric.PCC()
     >>> pcc.update(preds = predicts, labels = labels)
     >>> f1.get()
-    ('f1', nan)
+    ('f1', 0.95233560306652054)
     >>> pcc.get()
-    ('pcc', 0.08333333333333333)
+    ('pcc', 0.01917751877733392)
     """
     def __init__(self, name='pcc',
                  output_names=None, label_names=None):

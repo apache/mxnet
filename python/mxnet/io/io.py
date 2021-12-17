@@ -368,7 +368,8 @@ class PrefetchingIter(DataIter):
     >>> piter = mx.io.PrefetchingIter([iter1, iter2],
     ...                               rename_data=[{'data': 'data_1'}, {'data': 'data_2'}])
     >>> print(piter.provide_data)
-    [DataDesc[data_1,(25, 10),<class 'numpy.float32'>,NCHW], DataDesc[data_2,(25, 10),<class 'numpy.float32'>,NCHW]]
+    [DataDesc[data_1,(25, 10L),<type 'numpy.float32'>,NCHW],
+     DataDesc[data_2,(25, 10L),<type 'numpy.float32'>,NCHW]]
     """
     def __init__(self, iters, rename_data=None, rename_label=None):
         super(PrefetchingIter, self).__init__()
@@ -521,9 +522,9 @@ class NDArrayIter(DataIter):
       [ 30.  31.]]]
     (3L, 2L, 2L)
     >>> dataiter.provide_data # Returns a list of `DataDesc`
-    [DataDesc[data,(3, 2, 2),<class 'numpy.float32'>,NCHW]]
+    [DataDesc[data,(3, 2L, 2L),<type 'numpy.float32'>,NCHW]]
     >>> dataiter.provide_label # Returns a list of `DataDesc`
-    [DataDesc[softmax_label,(3, 1),<class 'numpy.float32'>,NCHW]]
+    [DataDesc[softmax_label,(3, 1L),<type 'numpy.float32'>,NCHW]]
 
     In the above example, data is shuffled as `shuffle` parameter is set to `True`
     and remaining examples are discarded as `last_batch_handle` parameter is set to `discard`.
@@ -575,33 +576,9 @@ class NDArrayIter(DataIter):
     >>> dataiter = mx.io.NDArrayIter(csr_data, labels, 3, last_batch_handle='discard')
     >>> [batch.data[0] for batch in dataiter]
     [
-    [[[0. 0.]
-      [0. 0.]]
-    <BLANKLINE>
-     [[0. 0.]
-      [0. 0.]]
-    <BLANKLINE>
-     [[0. 0.]
-      [0. 0.]]]
-    <NDArray 3x2x2 @cpu(0)>, 
-    [[[0. 0.]
-      [0. 0.]]
-    <BLANKLINE>
-     [[0. 0.]
-      [0. 0.]]
-    <BLANKLINE>
-     [[0. 0.]
-      [0. 0.]]]
-    <NDArray 3x2x2 @cpu(0)>, 
-    [[[0. 0.]
-      [0. 0.]]
-    <BLANKLINE>
-     [[0. 0.]
-      [0. 0.]]
-    <BLANKLINE>
-     [[0. 0.]
-      [0. 0.]]]
-    <NDArray 3x2x2 @cpu(0)>]
+    <CSRNDArray 3x4 @cpu(0)>,
+    <CSRNDArray 3x4 @cpu(0)>,
+    <CSRNDArray 3x4 @cpu(0)>]
 
     Parameters
     ----------

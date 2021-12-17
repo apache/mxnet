@@ -615,8 +615,7 @@ class Symbol(SymbolBase):
         -------
         >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
         >>> data.list_attr()
-        {'mood': 'angry', '__profiler_scope__': '<unk>:', 'profiler_scope': '<unk>:'}
-y'}
+        {'mood': 'angry'}
 
         Returns
         -------
@@ -641,8 +640,7 @@ y'}
         >>> b = mx.sym.Variable('b', attr={'b1':'b2'})
         >>> c = a+b
         >>> c.attr_dict()
-        {'a': {'__profiler_scope__': '<unk>:', 'profiler_scope': '<unk>:', 'a1': 'a2'}, 'b': {'__profiler_scope__': '<unk>:', 'profiler_scope': '<unk>:', 'b1': 'b2'}, '_plus0': {'__profiler_scope__': '<unk>:', 'profiler_scope': '<unk>:'}}
-'}}
+        {'a': {'a1': 'a2'}, 'b': {'b1': 'b2'}}
 
         Returns
         -------
@@ -693,8 +691,7 @@ y'}
         >>> c = a + b
         >>> d = c.get_inputs()
         >>> d
-        <Symbol group [a, b]>
-ed>
+        <Symbol Grouped>
         >>> d.list_outputs()
         ['a', 'b']
 
@@ -722,11 +719,9 @@ ed>
         >>> c = a + b
         >>> d = c.get_internals()
         >>> d
-        <Symbol group [a, b, _plus6]>
-ed>
+        <Symbol Grouped>
         >>> d.list_outputs()
-        ['a', 'b', '_plus6_output']
-t']
+        ['a', 'b', '_plus4_output']
 
         Returns
         -------
@@ -751,11 +746,9 @@ t']
         >>> a = y+z
         >>> b = x+a
         >>> b.get_children()
-        <Symbol group [x, _plus3]>
-ed>
+        <Symbol Grouped>
         >>> b.get_children().list_outputs()
-        ['x', '_plus3_output']
-t']
+        ['x', '_plus10_output']
         >>> b.get_children().get_children().list_outputs()
         ['y', 'z']
 
@@ -782,8 +775,7 @@ t']
         >>> b = mx.sym.var('b')
         >>> c = a + b
         >>> c.list_arguments
-        <bound method Symbol.list_arguments of <Symbol _plus9>>
-b']
+        ['a', 'b']
 
         Returns
         -------
@@ -805,8 +797,7 @@ b']
         >>> b = mx.sym.var('b')
         >>> c = a + b
         >>> c.list_outputs()
-        ['_plus11_output']
-t']
+        ['_plus12_output']
 
         Returns
         -------
@@ -921,11 +912,9 @@ t']
         >>> c = a + b
         >>> arg_types, out_types, aux_types = c.infer_type(a='float32')
         >>> arg_types
-        [<class 'numpy.float32'>, <class 'numpy.float32'>]
-'>]
+        [<type 'numpy.float32'>, <type 'numpy.float32'>]
         >>> out_types
-        [<class 'numpy.float32'>]
-'>]
+        [<type 'numpy.float32'>]
         >>> aux_types
         []
 
@@ -995,12 +984,10 @@ t']
         >>> out.infer_type(data='float32')
         (None, None, None)
         >>> out.infer_type_partial(data='float32')
-        ([<class 'numpy.float32'>, None], [<class 'numpy.float32'>], [])
-[])
+        ([numpy.float32, None], [numpy.float32], [])
         >>> # infers type if you give information about prev
         >>> out.infer_type(data='float32', prev='float16')
-        ([<class 'numpy.float32'>, <class 'numpy.float16'>], [<class 'numpy.float32'>], [])
-[])
+        ([numpy.float32, numpy.float16], [numpy.float32], [])
 
         Parameters
         ----------
@@ -1099,16 +1086,13 @@ t']
         >>> c = a + b
         >>> arg_shapes, out_shapes, aux_shapes = c.infer_shape(a=(3,3))
         >>> arg_shapes
-        [(3, 3), (3, 3)]
-L)]
+        [(3L, 3L), (3L, 3L)]
         >>> out_shapes
-        [(3, 3)]
-L)]
+        [(3L, 3L)]
         >>> aux_shapes
         []
         >>> c.infer_shape(a=(0,3)) # 0s in shape means unknown dimensions. So, returns None.
-        ([(0, 3), (0, 3)], [(0, 3)], [])
-ne)
+        (None, None, None)
 
         Inconsistencies in the known shapes will cause an error to be raised.
         See the following example:
@@ -1195,12 +1179,10 @@ ne)
         >>> out.infer_shape(data=(10,64))
         (None, None, None)
         >>> out.infer_shape_partial(data=(10,64))
-        ([(10, 64), (128, 64), (128,), None, None, None], [(10, 128)], [])
-[])
+        ([(10L, 64L), (128L, 64L), (128L,), (), (), ()], [(10L, 128L)], [])
         >>> # infers shape if you give information about fc2
         >>> out.infer_shape(data=(10,64), prev=(10,128))
-        ([(10, 64), (128, 64), (128,), (10, 128), (128, 128), (128,)], [(10, 128)], [])
-[])
+        ([(10L, 64L), (128L, 64L), (128L,), (10L, 128L), (128L, 128L), (128L,)], [(10L, 128L)], [])
 
         Parameters
         ----------
@@ -1345,7 +1327,6 @@ ne)
         >>> c = 2 * a + b
         >>> d = mx.sym.FullyConnected(data=c, num_hidden=10)
         >>> d.debug_str()
-        'Symbol Outputs:\n\toutput[0]=fullyconnected0(0)\nVariable:a\n--------------------\nOp:_mul_scalar, Name=_mulscalar0\nInputs:\n\targ[0]=a(0) version=0\nAttrs:\n\t__profiler_scope__=<unk>:\n\tscalar=2\n--------------------\nOp:sin, Name=sin0\nInputs:\n\targ[0]=a(0) version=0\nAttrs:\n\t__profiler_scope__=<unk>:\n--------------------\nOp:elemwise_add, Name=_plus1\nInputs:\n\targ[0]=_mulscalar0(0)\n\targ[1]=sin0(0)\nAttrs:\n\t__profiler_scope__=<unk>:\nVariable:fullyconnected0_weight\nVariable:fullyconnected0_bias\n--------------------\nOp:FullyConnected, Name=fullyconnected0\nInputs:\n\targ[0]=_plus1(0)\n\targ[1]=fullyconnected0_weight(0) version=0\n\targ[2]=fullyconnected0_bias(0) version=0\nAttrs:\n\t__profiler_scope__=<unk>:\n\tnum_hidden=10\n'
         >>> print(d.debug_str())
         Symbol Outputs:
 	        output[0]=fullyconnected0(0)
@@ -1942,15 +1923,10 @@ ne)
         >>> c = a + b
         >>> ex = c.eval(ctx = mx.cpu(), a = mx.nd.ones([2,3]), b = mx.nd.ones([2,3]))
         >>> ex
-        [
-        [[2. 2. 2.]
-         [2. 2. 2.]]
-        <NDArray 2x3 @cpu(0)>]
-)>]
+        [<NDArray 2x3 @cpu(0)>]
         >>> ex[0].asnumpy()
-        array([[2., 2., 2.],
-               [2., 2., 2.]], dtype=float32)
-loat32)
+        array([[ 2.,  2.,  2.],
+               [ 2.,  2.,  2.]], dtype=float32)
 
         Parameters
         ----------
@@ -2807,7 +2783,7 @@ def Group(symbols, create_fn=Symbol):
     >>> a = mx.sym.Variable('a')
     >>> b = mx.sym.Variable('b')
     >>> mx.sym.Group([a,b])
-    <Symbol group [a, b]>
+    <Symbol Grouped>
 
     Parameters
     ----------
@@ -2918,13 +2894,13 @@ def pow(base, exp):
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.pow(x, 2)
     >>> z.eval(x=mx.nd.array([1,2]))[0].asnumpy()
-    array([1., 4.], dtype=float32)
+    array([ 1.,  4.], dtype=float32)
     >>> z = mx.sym.pow(3, y)
     >>> z.eval(y=mx.nd.array([2,3]))[0].asnumpy()
-    array([ 9., 27.], dtype=float32)
+    array([  9.,  27.], dtype=float32)
     >>> z = mx.sym.pow(x, y)
     >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([2,3]))[0].asnumpy()
-    array([ 9., 64.], dtype=float32)
+    array([  9.,  64.], dtype=float32)
     """
     if isinstance(base, Symbol) and isinstance(exp, Symbol):
         return _internal._Power(base, exp)
@@ -2964,13 +2940,13 @@ def power(base, exp):
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.power(x, 2)
     >>> z.eval(x=mx.nd.array([1,2]))[0].asnumpy()
-    array([1., 4.], dtype=float32)
+    array([ 1.,  4.], dtype=float32)
     >>> z = mx.sym.power(3, y)
     >>> z.eval(y=mx.nd.array([2,3]))[0].asnumpy()
-    array([ 9., 27.], dtype=float32)
+    array([  9.,  27.], dtype=float32)
     >>> z = mx.sym.power(x, y)
     >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([2,3]))[0].asnumpy()
-    array([ 9., 64.], dtype=float32)
+    array([  9.,  64.], dtype=float32)
     """
     return pow(base, exp)
 
@@ -3002,10 +2978,10 @@ def maximum(left, right):
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.maximum(x, 4)
     >>> z.eval(x=mx.nd.array([3,5,2,10]))[0].asnumpy()
-    array([ 4.,  5.,  4., 10.], dtype=float32)
+    array([  4.,   5.,   4.,  10.], dtype=float32)
     >>> z = mx.sym.maximum(x, y)
     >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
-    array([10.,  4.], dtype=float32)
+    array([ 10.,   4.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Maximum(left, right)
@@ -3046,10 +3022,10 @@ def minimum(left, right):
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.minimum(x, 4)
     >>> z.eval(x=mx.nd.array([3,5,2,10]))[0].asnumpy()
-    array([3., 4., 2., 4.], dtype=float32)
+    array([ 3.,  4.,  2.,  4.], dtype=float32)
     >>> z = mx.sym.minimum(x, y)
     >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
-    array([3., 2.], dtype=float32)
+    array([ 3.,  2.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Minimum(left, right)
@@ -3091,10 +3067,10 @@ def hypot(left, right):
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.hypot(x, 4)
     >>> z.eval(x=mx.nd.array([3,5,2]))[0].asnumpy()
-    array([5.       , 6.4031243, 4.472136 ], dtype=float32)
+    array([ 5.,  6.40312433,  4.47213602], dtype=float32)
     >>> z = mx.sym.hypot(x, y)
     >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
-    array([10.440307,  4.472136], dtype=float32)
+    array([ 10.44030666,   4.47213602], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Hypot(left, right)

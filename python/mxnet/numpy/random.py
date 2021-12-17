@@ -419,15 +419,15 @@ def multinomial(n, pvals, size=None, **kwargs):
     Throw a dice 1000 times, and 1000 times again:
 
     >>> np.random.multinomial(1000, [1/6.]*6, size=2)
-    array([[193, 174, 154, 168, 161, 150],
-           [188, 153, 166, 152, 173, 168]])
+    array([[164, 161, 179, 158, 150, 188],
+           [178, 162, 177, 143, 163, 177]])
 
     A loaded die is more likely to land on number 6:
 
     >>> np.random.multinomial(100, [1/7.]*5 + [2/7.])
-    array([18, 16, 14, 14, 10, 28])
+    array([19, 14, 12, 11, 21, 23])
     >>> np.random.multinomial(100, [1.0 / 3, 2.0 / 3])
-    array([31, 69])
+    array([32, 68])
     """
     return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
 
@@ -542,7 +542,7 @@ def choice(a, size=None, replace=True, p=None, device=None, out=None):
     Generate a uniform random sample from np.arange(5) of size 3:
 
     >>> np.random.choice(5, 3)
-    array([1, 4, 1])
+    array([0, 3, 4])
     >>> #This is equivalent to np.random.randint(0,5,3)
 
     Generate a non-uniform random sample from np.arange(5) of size 3:
@@ -554,7 +554,7 @@ def choice(a, size=None, replace=True, p=None, device=None, out=None):
     replacement:
 
     >>> np.random.choice(5, 3, replace=False)
-    array([0, 1, 3])
+    array([3,1,0])
     >>> #This is equivalent to np.random.permutation(np.arange(5))[:3]
 
     Generate a non-uniform random sample from np.arange(5) of size
@@ -615,9 +615,9 @@ def rand(*size, **kwargs):
     Examples
     --------
     >>> np.random.rand(3,2)
-    array([[0.54881352, 0.59284461],
-           [0.71518934, 0.84426576],
-           [0.60276335, 0.85794562]])
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
     """
     output_shape = ()
     for s in size:
@@ -675,10 +675,10 @@ def weibull(a, size=None, device=None, out=None):
     Examples
     --------
     >>> np.random.weibull(a=5)
-    array(1.2754, dtype=float32)
+    array(0.9553641)
     >>> np.random.weibull(a=5, size=[2,3])
-    array([[0.9959, 1.086 , 0.7226],
-           [1.0836, 0.6166, 0.5422]], dtype=float32)
+    array([[1.0466299 , 1.1320982 , 0.98415005],
+          [1.1430776 , 0.9532727 , 1.1344457 ]])
     >>> np.random.weibull(a=np.array([2,3]))
     array([0.98843634, 1.0125613 ])
     The Weibull distribution is one of a class of Generalized Extreme
@@ -717,10 +717,10 @@ def pareto(a, size=None, device=None, out=None):
     Examples
     --------
     >>> np.random.pareto(a=5)
-    array(0.1118, dtype=float32)
+    array(0.12749612)
     >>> mx.numpy.random.pareto(a=5, size=[2,3])
-    array([[0.0062, 0.0652, 0.4402],
-           [0.078 , 0.0649, 0.1063]], dtype=float32)
+    array([[0.06933999, 0.0344373 , 0.10654891],
+            [0.0311172 , 0.12911797, 0.03370714]])
     >>> np.random.pareto(a=np.array([2,3]))
     array([0.26636696, 0.15685666])
     The probability density for the Pareto distribution is f(x) = \frac{am^a}{x^{a+1}}
@@ -752,10 +752,10 @@ def power(a, size=None, device=None, out=None):
     Examples
     --------
     >>> np.random.power(a=5)
-    array(0.71015394, dtype=float32)
+    array(0.8602478)
     >>> np.random.power(a=5, size=[2,3])
-    array([[0.9559659 , 0.9931128 , 0.98872477],
-           [0.8400331 , 0.89746976, 0.9865279 ]], dtype=float32)
+    array([[0.988391  , 0.5153122 , 0.9383134 ],
+           [0.9078098 , 0.87819266, 0.730635]])
     >>> np.random.power(a=np.array([2,3])
     array([0.7499419 , 0.88894516])
     The probability density function is f(x; a) = ax^{a-1}, 0 \le x \le 1, a>0.
@@ -783,16 +783,16 @@ def shuffle(x):
     >>> arr = np.arange(10)
     >>> np.random.shuffle(arr)
     >>> arr
-    array([4, 2, 8, 5, 7, 3, 0, 9, 1, 6])
+    array([5., 1., 0., 6., 7., 3., 9., 8., 4., 2.])  # random
 
     Multi-dimensional arrays are only shuffled along the first axis:
 
     >>> arr = np.arange(9).reshape((3, 3))
     >>> np.random.shuffle(arr)
     >>> arr
-    array([[6, 7, 8],
-           [0, 1, 2],
-           [3, 4, 5]])
+    array([[6., 7., 8.], # random
+           [3., 4., 5.],
+           [0., 1., 2.]])
     """
     _mx_nd_np.random.shuffle(x)
 
@@ -937,7 +937,7 @@ def f(dfnum, dfden, size=None, device=None):
     The lower bound for the top 1% of the samples is :
 
     >>> np.sort(s)[-10]
-    array(8.2784)
+    7.61988120985 # random
 
     So there is about a 1% chance that the F statistic will exceed 7.62,
     the measured value is 36, so the null hypothesis is rejected at the 1%
@@ -1008,7 +1008,7 @@ def chisquare(df, size=None, dtype=None, device=None):
     Examples
     --------
     >>> np.random.chisquare(2,4)
-    array([0.7063, 4.5302, 0.6584, 0.4134])
+    array([ 1.89920014,  9.00867716,  3.13710533,  5.62318272]) # random
     """
     return _mx_nd_np.random.chisquare(df, size=size, dtype=dtype, device=device)
 

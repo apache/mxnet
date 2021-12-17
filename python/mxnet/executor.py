@@ -154,9 +154,6 @@ class Executor:
         >>> # doing forward by not specifying things, but copy to the executor before hand
         >>> mydata.copyto(texec.arg_dict['data'])
         >>> texec.forward(is_train=True)
-        [
-        [4. 7.]
-        <NDArray 2 @cpu(0)>]
         >>> # doing forward by specifying data and get outputs
         >>> outputs = texec.forward(is_train=True, data=mydata)
         >>> print(outputs[0].asnumpy())

@@ -58,10 +58,9 @@ def zeros(shape, ctx=None, dtype=None, stype=None, **kwargs):
     Examples
     --------
     >>> mx.nd.zeros((1,2), mx.cpu(), stype='csr')
-    <BLANKLINE>
     <CSRNDArray 1x2 @cpu(0)>
     >>> mx.nd.zeros((1,2), mx.cpu(), 'float16', stype='row_sparse').asnumpy()
-    array([[0., 0.]], dtype=float16)
+    array([[ 0.,  0.]], dtype=float16)
     """
 
     if stype is None or stype == 'default':
@@ -92,15 +91,12 @@ def empty(shape, ctx=None, dtype=None, stype=None):
     Examples
     --------
     >>> mx.nd.empty(1)
-    <BLANKLINE>
-    [0.]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.empty((1,2), mx.gpu(0))
     <NDArray 1x2 @gpu(0)>
     >>> mx.nd.empty((1,2), mx.gpu(0), 'float16')
     <NDArray 1x2 @gpu(0)>
     >>> mx.nd.empty((1,2), stype='csr')
-    <BLANKLINE>
     <CSRNDArray 1x2 @cpu(0)>
     """
     if stype is None or stype == 'default':
@@ -132,24 +128,14 @@ def array(source_array, ctx=None, dtype=None):
     --------
     >>> import numpy as np
     >>> mx.nd.array([1, 2, 3])
-    <BLANKLINE>
-    [1. 2. 3.]
     <NDArray 3 @cpu(0)>
     >>> mx.nd.array([[1, 2], [3, 4]])
-    <BLANKLINE>
-    [[1. 2.]
-     [3. 4.]]
     <NDArray 2x2 @cpu(0)>
     >>> mx.nd.array(np.zeros((3, 2)))
-    <BLANKLINE>
-    [[0. 0.]
-     [0. 0.]
-     [0. 0.]]
     <NDArray 3x2 @cpu(0)>
     >>> mx.nd.array(np.zeros((3, 2)), mx.gpu(0))
     <NDArray 3x2 @gpu(0)>
     >>> mx.nd.array(mx.nd.zeros((3, 2), stype='row_sparse'))
-    <BLANKLINE>
     <RowSparseNDArray 3x2 @cpu(0)>
     """
     if spsp is not None and isinstance(source_array, spsp.csr.csr_matrix):
@@ -252,19 +238,9 @@ def save(fname, data):
     >>> mx.nd.save('my_list', [x,y])
     >>> mx.nd.save('my_dict', {'x':x, 'y':y})
     >>> mx.nd.load('my_list')
-    [
-    [[0. 0. 0.]
-     [0. 0. 0.]]
-    <NDArray 2x3 @cpu(0)>, 
-    [[1. 1. 1. 1.]]
-    <NDArray 1x4 @cpu(0)>]
+    [<NDArray 2x3 @cpu(0)>, <NDArray 1x4 @cpu(0)>]
     >>> mx.nd.load('my_dict')
-    {'x': 
-    [[0. 0. 0.]
-     [0. 0. 0.]]
-    <NDArray 2x3 @cpu(0)>, 'y': 
-    [[1. 1. 1. 1.]]
-    <NDArray 1x4 @cpu(0)>}
+    {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
     """
     from ..numpy import ndarray as np_ndarray
     if isinstance(data, NDArray):
