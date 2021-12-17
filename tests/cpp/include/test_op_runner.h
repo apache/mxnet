@@ -69,7 +69,7 @@ class OperatorRunner {
 #if MXNET_USE_CUDA
     if (isGPU && !test::unitTestsWithCuda) {
       LOG(INFO) << "GPU not found, running test as non-GPU";
-      isGPU           = false;
+      isGPU = false;
     }
 #else
     isGPU             = false;

@@ -115,7 +115,7 @@ onnxToTrtCtx(const std::string& onnx_model,
   }
   trt_builder->setMaxBatchSize(max_batch_size);
   builder_config->setMaxWorkspaceSize(max_workspace_size);
-  if(debug_builder) {
+  if (debug_builder) {
     builder_config->setFlag(nvinfer1::BuilderFlag::kDEBUG);
   }
   auto trt_engine = InferObject(trt_builder->buildEngineWithConfig(*trt_network, *builder_config));
