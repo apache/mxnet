@@ -78,13 +78,16 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     >>> true_cls = mx.nd.array([3])
     >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.rand_zipfian(true_cls, 4, 5)
     >>> samples
-    [1 3 3 3]
+    <BLANKLINE>
+    [4 2 3 2]
     <NDArray 4 @cpu(0)>
     >>> exp_count_true
-    [ 0.12453879]
+    <BLANKLINE>
+    [0.4982]
     <NDArray 1 @cpu(0)>
     >>> exp_count_sample
-    [ 0.22629439  0.12453879  0.12453879  0.12453879]
+    <BLANKLINE>
+    [0.407  0.6422 0.4982 0.6422]
     <NDArray 4 @cpu(0)>
     """
     if ctx is None:
@@ -300,21 +303,18 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     >>> outputs, states = mx.nd.contrib.while_loop(cond, func, loop_vars, max_iterations=10)
     >>> outputs
     [
-    [[ 1]
-    [ 2]
-    [ 4]
-    [ 7]
-    [11]
-    [16]
-    [...]  # undefined value
-    [...]
-    [...]
-    [...]]
-    <NDArray 6x1 @cpu(0)>]
+    [[              1]
+     [              2]
+     [              4]
+     ...
+     [           8098]
+     [              0]
+     [140592775149730]]
+    <NDArray 10x1 @cpu(0)>]
     >>> states
     [
     [6]
-    <NDArray 1 @cpu(0)>,
+    <NDArray 1 @cpu(0)>, 
     [16]
     <NDArray 1 @cpu(0)>]
     """
@@ -443,8 +443,9 @@ def cond(pred, then_func, else_func):
     >>> else_func = lambda: (a - 5) * (b - 5)
     >>> outputs = mx.nd.contrib.cond(pred, then_func, else_func)
     >>> outputs[0]
-    [42.]
-    <NDArray 1 @cpu(0)>
+    <BLANKLINE>
+    42.0
+    <NDArray  @cpu(0)>
     """
     def _to_python_scalar(inputs, type_, name):
         """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
@@ -485,6 +486,7 @@ def isinf(data):
     >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
     >>> output = mx.nd.contrib.isinf(data)
     >>> output
+    <BLANKLINE>
     [1. 1. 1. 0.]
     <NDArray 4 @cpu(0)>
     """
@@ -512,6 +514,7 @@ def isfinite(data):
     >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
     >>> output = mx.nd.contrib.isfinite(data)
     >>> output
+    <BLANKLINE>
     [0. 0. 0. 1.]
     <NDArray 4 @cpu(0)>
     """
@@ -540,6 +543,7 @@ def isnan(data):
     >>> data = mx.nd.array([np.nan, -1])
     >>> output = mx.nd.contrib.isnan(data)
     >>> output
+    <BLANKLINE>
     [1. 0.]
     <NDArray 2 @cpu(0)>
     """

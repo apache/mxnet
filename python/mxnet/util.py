@@ -79,7 +79,7 @@ def set_np_shape(active):
     >>> import mxnet as mx
     >>> prev_state = mx.set_np_shape(True)
     >>> print(prev_state)
-    False
+    True
     >>> print(mx.is_np_shape())
     True
     """
@@ -127,7 +127,7 @@ def is_np_shape():
     >>> import mxnet as mx
     >>> prev_state = mx.set_np_shape(True)
     >>> print(prev_state)
-    False
+    True
     >>> print(mx.is_np_shape())
     True
     """
@@ -934,13 +934,13 @@ def set_np(shape=True, array=True, dtype=False):
     >>> dense = nn.Dense(2)
     >>> dense.initialize()
     >>> dense(np.ones(shape=(3, 2)))
-    array([[0.01983214, 0.07832371],
-           [0.01983214, 0.07832371],
-           [0.01983214, 0.07832371]])
+    array([[0.05489889, 0.00661059],
+           [0.05489889, 0.00661059],
+           [0.05489889, 0.00661059]])
 
     >>> [p.data() for p in dense.collect_params().values()]
-    [array([[0.0068339 , 0.01299825],
-           [0.0301265 , 0.04819721]]), array([0., 0.])]
+    [array([[ 0.00628365,  0.04861524],
+           [-0.01068833,  0.01729892]]), array([0., 0.])]
 
     >>> npx.set_np(dtype=True)
     >>> np.ones(shape=()).dtype
@@ -1238,7 +1238,7 @@ def set_np_default_dtype(is_np_default_dtype=True):  # pylint: disable=redefined
     >>> from mxnet import npx
     >>> prev_state = npx.set_np_default_dtype(True)
     >>> print(prev_state)
-    False
+    True
     >>> print(npx.is_np_default_dtype())
     True
     """

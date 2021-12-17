@@ -149,7 +149,7 @@ class MXRecordIO(object):
         record_1
         >>> record.reset()  # Pointer is reset.
         >>> print(record.read()) # Started reading from start again.
-        record_0
+        None
         >>> record.close()
         """
         self.close()
@@ -415,7 +415,7 @@ def unpack(s):
     >>> item = record.read()
     >>> header, s = mx.recordio.unpack(item)
     >>> header
-    HEADER(flag=0, label=14.0, id=20129312, id2=0)
+    HEADER(flag=0, label=4, id=2574, id2=0)
     """
     header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
     s = s[_IR_SIZE:]
@@ -447,7 +447,7 @@ def unpack_img(s, iscolor=-1):
     >>> item = record.read()
     >>> header, img = mx.recordio.unpack_img(item)
     >>> header
-    HEADER(flag=0, label=14.0, id=20129312, id2=0)
+    HEADER(flag=0, label=4, id=2574, id2=0)
     >>> img
     array([[[ 23,  27,  45],
             [ 28,  32,  50],

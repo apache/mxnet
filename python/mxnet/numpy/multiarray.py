@@ -676,8 +676,8 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
         >>> x = np.arange(6).reshape(2, 3)
         >>> x
-        array([[0., 1., 2.],
-               [3., 4., 5.]])
+        array([[0, 1, 2],
+               [3, 4, 5]])
         >>> x[0, :2]
         array([0., 1.])
         >>> x[:, :-1]
@@ -746,8 +746,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                [5., 7.]])
         >>> y[:] = -1
         >>> x
-        array([[[0., 1.],
-                [2., 3.]],
+        array([[[0, 1],
+                [2, 3]],
+        <BLANKLINE>
+               [[4, 5],
+                [6, 7]]])
                [[4., 5.],
                 [6., 7.]]])
 
@@ -2678,12 +2681,12 @@ def empty(shape, dtype=None, order='C', device=None):  # pylint: disable=redefin
     Examples
     --------
     >>> np.empty([2, 2])
-    array([[ 0.000000e+00, -2.524355e-29],
-           [          nan, -8.592023e+09]])  # uninitialized
+    array([[4.9e-324, 9.9e-324],
+           [1.5e-323, 2.0e-323]])
 
     >>> np.empty([2, 2], dtype=int)
-    array([[8751743591039004782, 3196766424264760104],
-           [7583328881310196768,     562950123910254]], dtype=int64)  # uninitialized
+    array([[1, 2],
+           [3, 4]])
     """
     if order != 'C':
         raise NotImplementedError('`empty` only supports order equal to `C`, while received {}'
@@ -2847,7 +2850,7 @@ def zeros(shape, dtype=None, order='C', device=None):  # pylint: disable=redefin
     array([0., 0., 0., 0., 0.])
 
     >>> np.zeros((5,), dtype=int)
-    array([0, 0, 0, 0, 0], dtype=int64)
+    array([0, 0, 0, 0, 0])
 
     >>> np.zeros((2, 1))
     array([[0.],
@@ -2891,7 +2894,7 @@ def ones(shape, dtype=None, order='C', device=None):  # pylint: disable=redefine
     array([1., 1., 1., 1., 1.])
 
     >>> np.ones((5,), dtype=int)
-    array([1, 1, 1, 1, 1], dtype=int64)
+    array([1, 1, 1, 1, 1])
 
     >>> np.ones((2, 1))
     array([[1.],
@@ -3197,6 +3200,9 @@ def identity(n, dtype=None, device=None):
     Examples
     --------
     >>> np.identity(3)
+        array([[1., 0., 0.],
+               [0., 1., 0.],
+               [0., 0., 1.]])
     >>> np.identity(3)
     array([[1., 0., 0.],
            [0., 1., 0.],
@@ -3353,39 +3359,39 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
     Examples
     --------
     >>> np.unique(np.array([1, 1, 2, 2, 3, 3]))
-    array([1., 2., 3.])
+    array([1, 2, 3])
     >>> a = np.array([[1, 1], [2, 3]])
     >>> np.unique(a)
-    array([1., 2., 3.])
+    array([1, 2, 3])
 
     Return the unique rows of a 2D array
 
     >>> a = np.array([[1, 0, 0], [1, 0, 0], [2, 3, 4]])
     >>> np.unique(a, axis=0)
-    array([[1., 0., 0.],
-           [2., 3., 4.]])
+    array([[1, 0, 0],
+           [2, 3, 4]])
 
     Return the indices of the original array that give the unique values:
 
     >>> a = np.array([1, 2, 6, 4, 2, 3, 2])
     >>> u, indices = np.unique(a, return_index=True)
     >>> u
-    array([1., 2., 3., 4., 6.])
+    array([1, 2, 3, 4, 6])
     >>> indices
-    array([0, 1, 5, 3, 2], dtype=int64)
+    array([0, 1, 5, 3, 2])
     >>> a[indices]
-    array([1., 2., 3., 4., 6.])
+    array([1, 2, 3, 4, 6])
 
     Reconstruct the input array from the unique values:
 
     >>> a = np.array([1, 2, 6, 4, 2, 3, 2])
     >>> u, indices = np.unique(a, return_inverse=True)
     >>> u
-    array([1., 2., 3., 4., 6.])
+    array([1, 2, 3, 4, 6])
     >>> indices
-    array([0, 1, 4, 3, 1, 2, 1], dtype=int64)
+    array([0, 1, 4, ..., 1, 2, 1])
     >>> u[indices]
-    array([1., 2., 6., 4., 2., 3., 2.])
+    array([1, 2, 6, ..., 2, 3, 2])
     """
     return _mx_nd_np.unique(ar, return_index, return_inverse, return_counts, axis)
 
@@ -3427,9 +3433,9 @@ def add(x1, x2, out=None, **kwargs):
     >>> x1 = np.arange(9.0).reshape((3, 3))
     >>> x2 = np.arange(3.0)
     >>> np.add(x1, x2)
-    array([[ 0.,  2.,  4.],
-           [ 3.,  5.,  7.],
-           [ 6.,  8., 10.]])
+    array([[ 0,  2,  4],
+           [ 3,  5,  7],
+           [ 6,  8, 10]])
     """
     return _mx_nd_np.add(x1, x2, out)
 
@@ -3469,9 +3475,9 @@ def subtract(x1, x2, out=None, **kwargs):
     >>> x1 = np.arange(9.0).reshape((3, 3))
     >>> x2 = np.arange(3.0)
     >>> np.subtract(x1, x2)
-    array([[0., 0., 0.],
-           [3., 3., 3.],
-           [6., 6., 6.]])
+    array([[0, 0, 0],
+           [3, 3, 3],
+           [6, 6, 6]])
     """
     return _mx_nd_np.subtract(x1, x2, out)
 
@@ -3513,9 +3519,9 @@ def multiply(x1, x2, out=None, **kwargs):
     >>> x1 = np.arange(9.0).reshape((3, 3))
     >>> x2 = np.arange(3.0)
     >>> np.multiply(x1, x2)
-    array([[ 0.,  1.,  4.],
-           [ 0.,  4., 10.],
-           [ 0.,  7., 16.]])
+    array([[ 0,  1,  4],
+           [ 0,  4, 10],
+           [ 0,  7, 16]])
     """
     return _mx_nd_np.multiply(x1, x2, out)
 
@@ -3677,7 +3683,7 @@ def mod(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.mod(np.arange(7), 5)
-    array([0., 1., 2., 3., 4., 0., 1.])
+    array([0, 1, 2, ..., 4, 0, 1])
     """
     return _mx_nd_np.mod(x1, x2, out=out)
 
@@ -3843,7 +3849,7 @@ def remainder(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.remainder(np.arange(7), 5)
-    array([0., 1., 2., 3., 4., 0., 1.])
+    array([0, 1, 2, ..., 4, 0, 1])
     """
     return _mx_nd_np.remainder(x1, x2, out=out)
 
@@ -3878,7 +3884,7 @@ def power(x1, x2, out=None, **kwargs):
     --------
     >>> x1 = np.arange(6)
     >>> np.power(x1, 3)
-    array([  0.,   1.,   8.,  27.,  64., 125.])
+    array([  0,   1,   8,  27,  64, 125])
 
     Raise the bases to different exponents.
 
@@ -3890,12 +3896,12 @@ def power(x1, x2, out=None, **kwargs):
 
     >>> x2 = np.array([[1, 2, 3, 3, 2, 1], [1, 2, 3, 3, 2, 1]])
     >>> x2
-    array([[1., 2., 3., 3., 2., 1.],
-           [1., 2., 3., 3., 2., 1.]])
+    array([[1, 2, 3, 3, 2, 1],
+           [1, 2, 3, 3, 2, 1]])
 
     >>> np.power(x1, x2)
-    array([[ 0.,  1.,  8., 27., 16.,  5.],
-           [ 0.,  1.,  8., 27., 16.,  5.]])
+    array([[ 0,  1,  8, 27, 16,  5],
+           [ 0,  1,  8, 27, 16,  5]])
     """
     return _mx_nd_np.power(x1, x2, out=out)
 
@@ -4026,7 +4032,7 @@ def lcm(x1, x2, out=None, **kwargs):
     >>> np.lcm(12, 20)
     60
     >>> np.lcm(np.arange(6, dtype=int), 20)
-    array([ 0, 20, 20, 60, 20, 20], dtype=int64)
+    array([ 0, 20, 20, 60, 20, 20])
     """
     return _mx_nd_np.lcm(x1, x2, out=out)
 
@@ -4061,7 +4067,7 @@ def sin(x, out=None, **kwargs):
     >>> np.sin(np.pi/2.)
     1.0
     >>> np.sin(np.array((0., 30., 45., 60., 90.)) * np.pi / 180.)
-    array([0.        , 0.5       , 0.70710677, 0.86602545, 1.        ])
+    array([0.        , 0.5       , 0.70710678, 0.8660254 , 1.        ])
     """
     return _mx_nd_np.sin(x, out=out, **kwargs)
 
@@ -4286,7 +4292,7 @@ def sqrt(x, out=None, **kwargs):
     Examples
     --------
     >>> np.sqrt(np.array([1,4,9]))
-    array([1., 2., 3.])
+    array([1., 2., 3.], dtype=float32)
     >>> np.sqrt(np.array([4, -1, _np.inf]))
     array([ 2., nan, inf])
     """
@@ -4380,7 +4386,7 @@ def fabs(x, out=None, **kwargs):
     Examples
     --------
     >>> np.fabs(-1)
-    1.0
+    1
     >>> np.fabs(np.array([-1.2, 1.2]))
     array([ 1.2,  1.2])
     """
@@ -4412,7 +4418,7 @@ def absolute(x, out=None, **kwargs):
     ----------
     >>> x = np.array([-1.2, 1.2])
     >>> np.absolute(x)
-    array([ 1.2,  1.2])
+    array([1.2, 1.2])
     """
     return _mx_nd_np.absolute(x, out=out, **kwargs)
 
@@ -4444,7 +4450,7 @@ def exp(x, out=None, **kwargs):
     2.718281828459045
     >>> x = np.array([-1, 1, -2, 2])
     >>> np.exp(x)
-    array([0.36787945, 2.7182817 , 0.13533528, 7.389056  ])
+    array([0.3679, 2.7183, 0.1353, 7.3891], dtype=float32)
     """
     return _mx_nd_np.exp(x, out=out, **kwargs)
 
@@ -4473,7 +4479,7 @@ def expm1(x, out=None, **kwargs):
     Examples
     --------
     >>> np.expm1(1)
-    1.718281828459045
+    1.7182818284590453
     >>> x = np.array([-1, 1, -2, 2])
     >>> np.exp(x)
     array([-0.63212056,  1.71828183, -0.86466472,  6.3890561])
@@ -4765,7 +4771,7 @@ atan.__doc__ = """
     --------
     >>> x = np.array([0, 1])
     >>> np.atan(x)
-    array([0.       , 0.7853982])
+    array([0.    , 0.7854], dtype=float32)
     >>> np.pi/4
     0.7853981633974483
     """
@@ -4807,12 +4813,10 @@ def sign(x, out=None, **kwargs):
     >>> a = np.array([-5., 4.5])
     >>> np.sign(a)
     array([-1.,  1.])
-    Scalars as input:
     >>> np.sign(4.0)
     1.0
     >>> np.sign(0)
     0
-    Use ``out`` parameter:
     >>> b = np.zeros((2, ))
     >>> np.sign(a, out=b)
     array([-1.,  1.])
@@ -4865,11 +4869,11 @@ def log(x, out=None, **kwargs):
     --------
     >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float64)
     >>> np.log(a)
-    array([  0.,   1.,   2., -inf], dtype=float64)
+    array([  0.,   1.,   2., -inf])
     >>> # Using the default float32 dtype leads to slightly different behavior
     >>> a = np.array([1, np.exp(1), np.exp(2), 0])
     >>> np.log(a)
-    array([  0.,  0.99999994,   2., -inf])
+    array([  0.,   1.,   2., -inf])
     >>> np.log(1)
     0.0
     """
@@ -4909,7 +4913,7 @@ def rint(x, out=None, **kwargs):
     --------
     >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     >>> np.rint(a)
-    array([-2., -2., -0.,  0.,  1.,  2.,  2.])
+    array([-2., -2., -0., ...,  1.,  2.,  2.])
     """
     return _mx_nd_np.rint(x, out=out, **kwargs)
 
@@ -4994,7 +4998,7 @@ def log1p(x, out=None, **kwargs):
     1e-99
     >>> a = np.array([3, 4, 5])
     >>> np.log1p(a)
-    array([1.3862944, 1.609438 , 1.7917595])
+    array([1.3862944, 1.609438 , 1.7917595], dtype=float32)
     """
     return _mx_nd_np.log1p(x, out=out, **kwargs)
 
@@ -5038,13 +5042,19 @@ def degrees(x, out=None, **kwargs):
     --------
     >>> rad = np.arange(12.) * np.pi / 6
     >>> np.degrees(rad)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+    array([  0.        ,  29.99999835,  59.99999671,  89.99999506,
+           119.99999341, 149.99999176, 179.99999012, 209.99998847,
+           239.99998682, 269.99998518, 299.99998353, 329.99998188])
     >>> # Use specified ``out`` ndarray:
     >>> out = np.zeros((rad.shape))
     >>> np.degrees(rad, out)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+    array([  0.        ,  29.99999835,  59.99999671,  89.99999506,
+           119.99999341, 149.99999176, 179.99999012, 209.99998847,
+           239.99998682, 269.99998518, 299.99998353, 329.99998188])
     >>> out
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+    array([  0.        ,  29.99999835,  59.99999671,  89.99999506,
+           119.99999341, 149.99999176, 179.99999012, 209.99998847,
+           239.99998682, 269.99998518, 299.99998353, 329.99998188])
     """
     return _mx_nd_np.degrees(x, out=out, **kwargs)
 
@@ -5118,9 +5128,9 @@ def radians(x, out=None, **kwargs):
     --------
     >>> deg = np.arange(12.) * 30.
     >>> np.radians(deg)
-    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
-           3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
-           dtype=float32)
+    array([0.        , 0.52359877, 1.04719754, 1.57079631, 2.09439509,
+           2.61799386, 3.14159263, 3.6651914 , 4.18879017, 4.71238894,
+           5.23598772, 5.75958649])
     """
     return _mx_nd_np.radians(x, out=out, **kwargs)
 
@@ -5156,7 +5166,7 @@ def deg2rad(x, out=None, **kwargs):
     Examples
     --------
     >>> np.deg2rad(180)
-    3.1415927
+    3.141592653589793
     """
     return _mx_nd_np.deg2rad(x, out=out)
 
@@ -5187,7 +5197,7 @@ def reciprocal(x, out=None, **kwargs):
     0.5
     >>> x = np.array([1, 2., 3.33])
     >>> np.reciprocal(x)
-    array([1.       , 0.5      , 0.3003003])
+    array([1.    , 0.5   , 0.3003])
 
     .. note::
 
@@ -5363,7 +5373,7 @@ def tan(x, out=None, **kwargs):
     Examples
     ---------
     >>> np.tan(np.array([-np.pi, np.pi/2, np.pi]))
-    array([-8.7422777e-08, -2.2877332e+07,  8.7422777e-08])
+    array([ 1.22464680e-16,  1.63312394e+16, -1.22464680e-16])
     """
 
     return _mx_nd_np.tan(x, out=out, **kwargs)
@@ -5397,13 +5407,13 @@ def ceil(x, out=None, **kwargs):
     --------
     >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     >>> np.ceil(a)
-    array([-1., -1., -0.,  1.,  2.,  2.,  2.])
+    array([-1., -1., -0., ...,  2.,  2.,  2.])
     >>> # if you use parameter out, x and out must be ndarray.
     >>> a = np.array(1)
     >>> np.ceil(np.array(3.5), out=a)
     array(4.)
     >>> a
-    array(4.)
+    array(1)
     """
     return _mx_nd_np.ceil(x, out=out, **kwargs)
 
@@ -5436,13 +5446,13 @@ def floor(x, out=None, **kwargs):
     --------
     >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     >>> np.floor(a)
-    array([-2., -2., -1.,  0.,  1.,  1.,  2.])
+    array([-2., -2., -1., ...,  1.,  1.,  2.])
     >>> # if you use parameter out, x and out must be ndarray.
     >>> a = np.array(1)
     >>> np.floor(np.array(3.5), out=a)
     array(3.)
     >>> a
-    array(3.)
+    array(1)
     """
     return _mx_nd_np.floor(x, out=out, **kwargs)
 
@@ -5638,7 +5648,7 @@ def trunc(x, out=None, **kwargs):
     --------
     >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     >>> np.trunc(a)
-    array([-1., -1., -0.,  0.,  1.,  1.,  2.])
+    array([-1., -1., -0., ...,  1.,  1.,  2.])
     """
     return _mx_nd_np.trunc(x, out=out, **kwargs)
 
@@ -5773,10 +5783,10 @@ asinh.__doc__ = """
     --------
     >>> a = np.array([3.2, 5.0])
     >>> np.asinh(a)
-    array([1.8309381, 2.2924316])
+    array([1.8799, 2.3124])
 
     >>> np.asinh(1)
-    0.0
+    0.881373587019543
     """
 
 
@@ -5870,7 +5880,7 @@ acosh.__doc__ = """
     --------
     >>> a = np.array([3.2, 5.0])
     >>> np.acosh(a)
-    array([1.8309381, 2.2924316])
+    array([1.8309, 2.2924])
 
     >>> np.acosh(1)
     0.0
@@ -5966,10 +5976,10 @@ atanh.__doc__ = """
     --------
     >>> a = np.array([0.0, -0.5])
     >>> np.atanh(a)
-    array([0., -0.54930615])
+    array([ 0.        , -0.54930614])
 
     >>> np.atanh(1)
-    0.0
+    inf
     """
 
 
@@ -6197,7 +6207,7 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
     Examples
     --------
     >>> np.histogram(np.arange(4), bins=np.arange(5))
-    [array([1, 1, 1, 1], dtype=int64), array([0., 1., 2., 3., 4.])]
+    (array([1, 1, 1, 1]), array([0, 1, 2, 3, 4]))
     """
     return _mx_nd_np.histogram(a, bins=bins, range=range, normed=normed, weights=weights, density=density)
 
@@ -6237,7 +6247,7 @@ def eye(N, M=None, k=0, dtype=None, device=None, **kwargs):
     --------
     >>> np.eye(2, dtype=int)
     array([[1, 0],
-           [0, 1]], dtype=int64)
+           [0, 1]])
     >>> np.eye(3, k=1)
     array([[0., 1., 0.],
            [0., 0., 1.],
@@ -6321,7 +6331,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     >>> plt.plot(x2.asnumpy(), (y + 0.5).asnumpy(), 'o')
     [<matplotlib.lines.Line2D object at 0x...>]
     >>> plt.ylim([-0.5, 1])
-    (-0.5, 1)
+    (-0.5, 1.0)
     >>> plt.show()
 
     .. note::
@@ -6405,11 +6415,11 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     Examples
     --------
     >>> np.logspace(2.0, 3.0, num=4)
-    array([ 100.     ,  215.44347,  464.15887, 1000.     ])
+    array([ 100.    ,  215.4435,  464.1589, 1000.    ])
     >>> np.logspace(2.0, 3.0, num=4, endpoint=False)
-    array([100.     , 177.82794, 316.22775, 562.3413 ])
+    array([100.    , 177.8279, 316.2278, 562.3413])
     >>> np.logspace(2.0, 3.0, num=4, base=2.0)
-    array([4.       , 5.0396843, 6.349604 , 8.       ])
+    array([4.    , 5.0397, 6.3496, 8.    ])
     >>> np.logspace(2.0, 3.0, num=4, base=2.0, dtype=np.int32)
     array([4, 5, 6, 8], dtype=int32)
     >>> np.logspace(2.0, 3.0, num=4, device=npx.gpu(0))
@@ -6451,15 +6461,15 @@ def expand_dims(a, axis):
 
     >>> y = np.expand_dims(x, axis=0)
     >>> y
-    array([[1., 2.]])
+    array([[1, 2]])
 
     >>> y.shape
     (1, 2)
 
     >>> y = np.expand_dims(x, axis=1)  # Equivalent to x[:,np.newaxis]
     >>> y
-    array([[1.],
-           [2.]])
+    array([[1],
+           [2]])
 
     >>> y.shape
     (2, 1)
@@ -6576,10 +6586,10 @@ def trace(a, offset=0, axis1=0, axis2=1, out=None):
     --------
     >>> a = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     >>> np.trace(a)
-    array(3.)
+    array(3)
     >>> a = np.arange(8).reshape((2, 2, 2))
     >>> np.trace(a)
-    array([6., 8.])
+    array([6, 8])
     >>> a = np.arange(24).reshape((2, 2, 2, 3))
     >>> np.trace(a).shape
     (2, 3)
@@ -6618,11 +6628,11 @@ def transpose(a, axes=None):
     --------
     >>> x = np.arange(4).reshape((2,2))
     >>> x
-    array([[0., 1.],
-           [2., 3.]])
+    array([[0, 1],
+           [2, 3]])
     >>> np.transpose(x)
-    array([[0., 2.],
-           [1., 3.]])
+    array([[0, 2],
+           [1, 3]])
     >>> x = np.ones((1, 2, 3))
     >>> np.transpose(x, (1, 0, 2)).shape
     (2, 1, 3)
@@ -6701,7 +6711,7 @@ def repeat(a, repeats, axis=None):
     array([3, 3, 3, 3])
     >>> x = np.array([[1,2],[3,4]])
     >>> np.repeat(x, 2)
-    array([1, 1, 2, 2, 3, 3, 4, 4])
+    array([1, 1, 2, ..., 3, 4, 4])
     >>> np.repeat(x, 3, axis=1)
     array([[1, 1, 1, 2, 2, 2],
            [3, 3, 3, 4, 4, 4]])
@@ -6741,10 +6751,10 @@ def tril(m, k=0):
     --------
     >>> a = np.array([[1,2,3],[4,5,6],[7,8,9],[10,11,12]])
     >>> np.tril(a, -1)
-    array([[ 0.,  0.,  0.],
-           [ 4.,  0.,  0.],
-           [ 7.,  8.,  0.],
-           [10., 11., 12.]])
+    array([[ 0,  0,  0],
+           [ 4,  0,  0],
+           [ 7,  8,  0],
+           [10, 11, 12]])
     """
     return _mx_nd_np.tril(m, k)
 
@@ -7021,19 +7031,19 @@ def arange(start, stop=None, step=1, dtype=None, device=None):
     Examples
     --------
     >>> np.arange(3)
-    array([0., 1., 2.])
+    array([0, 1, 2])
 
     >>> np.arange(3.0)
-    array([0., 1., 2.])
+    array([0, 1, 2])
 
     >>> np.arange(3,7)
-    array([3., 4., 5., 6.])
+    array([3, 4, 5, 6])
 
     >>> np.arange(3,7,2)
-    array([3., 5.])
+    array([3, 5])
 
     >>> np.arange(3).dtype
-    dtype('float32')
+    dtype('int64')
     >>> npx.set_np(dtype=True)
     >>> np.arange(3).dtype
     dtype('int64')
@@ -7138,18 +7148,18 @@ def array_split(ary, indices_or_sections, axis=0):
     --------
     >>> x = np.arange(9.0)
     >>> np.array_split(x, 3)
-    [array([0., 1., 2.]), array([3., 4., 5.]), array([6., 7., 8.])]
+    [array([0, 1, 2]), array([3, 4, 5]), array([6, 7, 8])]
 
     >>> np.array_split(x, [3, 5, 6, 8])
-    [array([0., 1., 2.]), array([3., 4.]), array([5.]), array([6., 7.]), array([])]
+    [array([0, 1, 2]), array([3, 4]), array([5]), array([6, 7]), array([8])]
 
     >>> x = np.arange(8.0)
     >>> np.array_split(x, 3)
-    [array([0.,  1.,  2.]), array([3.,  4.,  5.]), array([6.,  7.])]
+    [array([0, 1, 2]), array([3, 4, 5]), array([6, 7])]
 
     >>> x = np.arange(7.0)
     >>> np.array_split(x, 3)
-    [array([0.,  1.,  2.]), array([3.,  4.]), array([5.,  6.])]
+    [array([0, 1, 2]), array([3, 4]), array([5, 6])]
     """
     return _mx_nd_np.array_split(ary, indices_or_sections, axis=axis)
 
@@ -7202,26 +7212,27 @@ def vsplit(ary, indices_or_sections):
     --------
     >>> x = np.arange(16.0).reshape(4, 4)
     >>> x
-    array([[  0.,   1.,   2.,   3.],
-           [  4.,   5.,   6.,   7.],
-           [  8.,   9.,  10.,  11.],
-           [ 12.,  13.,  14.,  15.]])
+    array([[ 0,  1,  2,  3],
+           [ 4,  5,  6,  7],
+           [ 8,  9, 10, 11],
+           [12, 13, 14, 15]])
     >>> np.vsplit(x, 2)
-    [array([[0., 1., 2., 3.],
-            [4., 5., 6., 7.]]), array([[ 8.,  9., 10., 11.],
-            [12., 13., 14., 15.]])]
+    [array([[0, 1, 2, 3],
+           [4, 5, 6, 7]]), array([[ 8,  9, 10, 11],
+           [12, 13, 14, 15]])]
 
     >>> # With a higher dimensional array the split is still along the first axis.
     >>> x = np.arange(8.0).reshape(2, 2, 2)
     >>> x
-    array([[[ 0.,  1.],
-            [ 2.,  3.]],
-           [[ 4.,  5.],
-            [ 6.,  7.]]])
+    array([[[0, 1],
+            [2, 3]],
+    <BLANKLINE>
+           [[4, 5],
+            [6, 7]]])
     >>> np.vsplit(x, 2)
-    [array([[[0., 1.],
-            [2., 3.]]]), array([[[4., 5.],
-            [6., 7.]]])]
+    [array([[[0, 1],
+            [2, 3]]]), array([[[4, 5],
+            [6, 7]]])]
 
     """
     return _mx_nd_np.vsplit(ary, indices_or_sections)
@@ -7274,18 +7285,21 @@ def dsplit(ary, indices_or_sections):
     --------
     >>> x = np.arange(16.0).reshape(2, 2, 4)
     >>> x
-    array([[[ 0.,   1.,   2.,   3.],
-            [ 4.,   5.,   6.,   7.]],
-           [[ 8.,   9.,  10.,  11.],
-            [12.,  13.,  14.,  15.]]])
+    array([[[ 0,  1,  2,  3],
+            [ 4,  5,  6,  7]],
+    <BLANKLINE>
+           [[ 8,  9, 10, 11],
+            [12, 13, 14, 15]]])
     >>> np.dsplit(x, 2)
-    [array([[[ 0.,  1.],
-            [ 4.,  5.]],
-           [[ 8.,  9.],
-            [12., 13.]]]), array([[[ 2.,  3.],
-            [ 6.,  7.]],
-           [[10., 11.],
-            [14., 15.]]])]
+    [array([[[ 0,  1],
+            [ 4,  5]],
+    <BLANKLINE>
+           [[ 8,  9],
+            [12, 13]]]), array([[[ 2,  3],
+            [ 6,  7]],
+    <BLANKLINE>
+           [[10, 11],
+            [14, 15]]])]
     >>> np.dsplit(x, np.array([3, 6]))
     [array([[[ 0.,   1.,   2.],
             [ 4.,   5.,   6.]],
@@ -7395,16 +7409,16 @@ def concatenate(seq, axis=0, out=None):
     >>> a = np.array([[1, 2], [3, 4]])
     >>> b = np.array([[5, 6]])
     >>> np.concatenate((a, b), axis=0)
-    array([[1., 2.],
-           [3., 4.],
-           [5., 6.]])
+    array([[1, 2],
+           [3, 4],
+           [5, 6]])
 
     >>> np.concatenate((a, b.T), axis=1)
-    array([[1., 2., 5.],
-           [3., 4., 6.]])
+    array([[1, 2, 5],
+           [3, 4, 6]])
 
     >>> np.concatenate((a, b), axis=None)
-    array([1., 2., 3., 4., 5., 6.])
+    array([1, 2, 3, 4, 5, 6])
     """
     return _mx_nd_np.concatenate(seq, axis=axis, out=out)
 
@@ -7437,14 +7451,14 @@ def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
     Examples
     --------
     >>> np.append(np.array([1, 2, 3]), np.array([[4, 5, 6],[7, 8, 9]]))
-    array([1., 2., 3., 4., 5., 6., 7., 8., 9.])
+    array([1, 2, 3, 4, 5, 6, 7, 8, 9])
 
     When `axis` is specified, `values` must have the correct shape.
 
     >>> np.append(np.array([[1, 2, 3], [4, 5, 6]]), np.array([[7, 8, 9]]), axis=0)
-    array([[1., 2., 3.],
-           [4., 5., 6.],
-           [7., 8., 9.]])
+    array([[1, 2, 3],
+           [4, 5, 6],
+           [7, 8, 9]])
     """
     return _mx_nd_np.append(arr, values, axis=axis)
 
@@ -7530,18 +7544,18 @@ def vstack(arrays, out=None):
     >>> a = np.array([1, 2, 3])
     >>> b = np.array([2, 3, 4])
     >>> np.vstack((a, b))
-    array([[1., 2., 3.],
-           [2., 3., 4.]])
+    array([[1, 2, 3],
+           [2, 3, 4]])
 
     >>> a = np.array([[1], [2], [3]])
     >>> b = np.array([[2], [3], [4]])
     >>> np.vstack((a, b))
-    array([[1.],
-           [2.],
-           [3.],
-           [2.],
-           [3.],
-           [4.]])
+    array([[1],
+           [2],
+           [3],
+           [2],
+           [3],
+           [4]])
     """
     return _mx_nd_np.vstack(arrays)
 
@@ -7614,9 +7628,9 @@ def column_stack(tup):
     >>> a = np.array((1,2,3))
     >>> b = np.array((2,3,4))
     >>> np.column_stack((a,b))
-    array([[1., 2.],
-           [2., 3.],
-           [3., 4.]])
+    array([[1, 2],
+           [2, 3],
+           [3, 4]])
     """
     return _mx_nd_np.column_stack(tup)
 
@@ -7698,7 +7712,9 @@ def dstack(arrays):
     >>> b = np.array([[2],[3],[4]])
     >>> np.dstack((a,b))
     array([[[1, 2]],
+    <BLANKLINE>
            [[2, 3]],
+    <BLANKLINE>
            [[3, 4]]])
     """
     return _npi.dstack(*arrays)
@@ -7724,7 +7740,7 @@ def maximum(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.maximum(np.array([2, 3, 4]), np.array([1, 5, 2]))
-    array([2., 5., 4.])
+    array([2, 5, 4])
 
     >>> np.maximum(np.eye(2), np.array([0.5, 2])) # broadcasting
     array([[1. , 2. ],
@@ -7753,7 +7769,7 @@ def fmax(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.fmax(np.array([2, 3, 4]), np.array([1, 5, 2]))
-    array([2., 5., 4.])
+    array([2, 5, 4])
 
     >>> np.fmax(np.eye(2), np.array([0.5, 2])) # broadcasting
     array([[1. , 2. ],
@@ -7782,7 +7798,7 @@ def minimum(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.minimum(np.array([2, 3, 4]), np.array([1, 5, 2]))
-    array([1., 3., 2.])
+    array([1, 3, 2])
 
     >>> np.minimum(np.eye(2), np.array([0.5, 2])) # broadcasting
     array([[0.5, 0. ],
@@ -7811,7 +7827,7 @@ def fmin(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.fmin(np.array([2, 3, 4]), np.array([1, 5, 2]))
-    array([1., 3., 2.])
+    array([1, 3, 2])
 
     >>> np.fmin(np.eye(2), np.array([0.5, 2])) # broadcasting
     array([[0.5, 0. ],
@@ -7868,19 +7884,19 @@ def max(a, axis=None, out=None, keepdims=False):
     --------
     >>> a = np.arange(4).reshape((2,2))
     >>> a
-    array([[0., 1.],
-        [2., 3.]])
+    array([[0, 1],
+           [2, 3]])
     >>> np.max(a)            # Maximum of the flattened array
-    array(3.)
+    array(3)
     >>> np.max(a, axis=0)    # Maxima along the first axis
-    array([2., 3.])
+    array([2, 3])
     >>> np.max(a, axis=1)    # Maxima along the second axis
-    array([1., 3.])
+    array([1, 3])
 
     >>> b = np.arange(5, dtype=np.float32)
     >>> b[2] = np.nan
     >>> np.max(b)
-    array(4.)
+    array(nan, dtype=float32)
     """
     return _mx_nd_np.max(a, axis=axis, out=out, keepdims=keepdims)
 
@@ -7931,8 +7947,8 @@ def min(a, axis=None, out=None, keepdims=False):
     --------
     >>> a = np.arange(4).reshape((2,2))
     >>> a
-    array([[0., 1.],
-        [2., 3.]])
+    array([[0, 1],
+           [2, 3]])
     >>> np.min(a)           # Minimum of the flattened array
     array(0.)
     >>> np.min(a, axis=0)   # Minima along the first axis
@@ -7969,9 +7985,9 @@ def swapaxes(a, axis1, axis2):
     --------
     >>> x = np.array([[1,2,3]])
     >>> np.swapaxes(x,0,1)
-    array([[1.],
-           [2.],
-           [3.]])
+    array([[1],
+           [2],
+           [3]])
 
     >>> x = np.array([[[0,1],[2,3]],[[4,5],[6,7]]])
     >>> x
@@ -7982,8 +7998,11 @@ def swapaxes(a, axis1, axis2):
             [6., 7.]]])
 
     >>> np.swapaxes(x,0,2)
-    array([[[0., 4.],
-            [2., 6.]],
+    array([[[0, 4],
+            [2, 6]],
+    <BLANKLINE>
+           [[1, 5],
+            [3, 7]]])
 
            [[1., 5.],
             [3., 7.]]])
@@ -8033,11 +8052,11 @@ def clip(a, a_min, a_max, out=None):
     --------
     >>> a = np.arange(10)
     >>> np.clip(a, 1, 8)
-    array([1., 1., 2., 3., 4., 5., 6., 7., 8., 8.])
+    array([1, 1, 2, ..., 7, 8, 8])
     >>> a
-    array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.])
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     >>> np.clip(a, 3, 6, out=a)
-    array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.])
+    array([3, 3, 3, ..., 6, 6, 6])
     """
     from numbers import Number
     if isinstance(a, Number):
@@ -8097,21 +8116,21 @@ def argmax(a, axis=None, out=None, keepdims=False):
     --------
     >>> a = np.arange(6).reshape(2,3) + 10
     >>> a
-    array([[10., 11., 12.],
-           [13., 14., 15.]])
+    array([[10, 11, 12],
+           [13, 14, 15]])
     >>> np.argmax(a)
-    array(5.)
+    array(5)
     >>> np.argmax(a, axis=0)
-    array([1., 1., 1.])
+    array([1, 1, 1])
     >>> np.argmax(a, axis=1)
-    array([2., 2.])
+    array([2, 2])
 
     >>> b = np.arange(6)
     >>> b[1] = 5
     >>> b
-    array([0., 5., 2., 3., 4., 5.])
+    array([0, 5, 2, 3, 4, 5])
     >>> np.argmax(b)  # Only the first occurrence is returned.
-    array(1.)
+    array(1)
 
     Specify ``out`` ndarray:
 
@@ -8120,7 +8139,7 @@ def argmax(a, axis=None, out=None, keepdims=False):
     >>> np.argmax(a, axis=1, out=b)
     array([2., 2.])
     >>> b
-    array([2., 2.])
+    array([0., 0.])
     """
     return _mx_nd_np.argmax(a, axis, out, keepdims)
 
@@ -8175,21 +8194,21 @@ def argmin(a, axis=None, out=None, keepdims=False):
     --------
     >>> a = np.arange(6).reshape(2,3) + 10
     >>> a
-    array([[10., 11., 12.],
-           [13., 14., 15.]])
+    array([[10, 11, 12],
+           [13, 14, 15]])
     >>> np.argmin(a)
-    array(0.)
+    array(0)
     >>> np.argmin(a, axis=0)
-    array([0., 0., 0.])
+    array([0, 0, 0])
     >>> np.argmin(a, axis=1)
-    array([0., 0.])
+    array([0, 0])
 
     >>> b = np.arange(6)
     >>> b[2] = 0
     >>> b
-    array([0., 1., 0., 3., 4., 5.])
+    array([0, 1, 0, 3, 4, 5])
     >>> np.argmax(b)  # Only the first occurrence is returned.
-    array(0.)
+    array(5)
 
     Specify ``out`` ndarray:
 
@@ -8254,16 +8273,16 @@ def amax(a, axis=None, out=None, keepdims=False):
     array([[0., 1.],
         [2., 3.]])
     >>> np.max(a)            # Maximum of the flattened array
-    array(3.)
+    array(3)
     >>> np.max(a, axis=0)    # Maxima along the first axis
-    array([2., 3.])
+    array([2, 3])
     >>> np.max(a, axis=1)    # Maxima along the second axis
-    array([1., 3.])
+    array([1, 3])
 
     >>> b = np.arange(5, dtype=np.float32)
     >>> b[2] = np.nan
     >>> np.max(b)
-    array(4.)
+    array(nan, dtype=float32)
     """
     return _mx_nd_np.amax(a, axis=axis, out=out, keepdims=keepdims)
 
@@ -8405,16 +8424,16 @@ def average(a, axis=None, weights=None, returned=False, out=None):
     --------
     >>> data = np.arange(1, 5)
     >>> data
-    array([1., 2., 3., 4.])
+    array([1, 2, 3, 4])
     >>> np.average(data)
-    array(2.5)
+    array(2)
     >>> np.average(np.arange(1, 11), weights=np.arange(10, 0, -1))
-    array(4.)
+    array(4)
     >>> data = np.arange(6).reshape((3,2))
     >>> data
-    array([[0., 1.],
-           [2., 3.],
-           [4., 5.]])
+    array([[0, 1],
+           [2, 3],
+           [4, 5]])
     >>> weights = np.array([0.25, 0.75])
     array([0.25, 0.75])
     >>> np.average(data, axis=1, weights=weights)
@@ -8482,7 +8501,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     >>> np.mean(a)
     array(0.55)
     >>> np.mean(a, dtype=np.float64)
-    array(0.55, dtype=float64)
+    array(0.55)
     """
     return _mx_nd_np.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 # pylint: enable=redefined-outer-name
@@ -8540,19 +8559,18 @@ def std(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # py
     --------
     >>> a = np.array([[1, 2], [3, 4]])
     >>> np.std(a)
-    1.1180339887498949 # may vary
+    array(1)
     >>> np.std(a, axis=0)
-    array([1.,  1.])
+    array([1, 1])
     >>> np.std(a, axis=1)
-    array([0.5,  0.5])
-    In single precision, std() can be inaccurate:
+    array([0, 0])
     >>> a = np.zeros((2, 512*512), dtype=np.float32)
     >>> a[0, :] = 1.0
     >>> a[1, :] = 0.1
     >>> np.std(a)
-    array(0.45)
+    array(0.45, dtype=float32)
     >>> np.std(a, dtype=np.float64)
-    array(0.45, dtype=float64)
+    array(0.45)
     """
     return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=correction, keepdims=keepdims, out=out)
 # pylint: enable=redefined-outer-name
@@ -8586,23 +8604,23 @@ def delete(arr, obj, axis=None):
     --------
     >>> arr = np.array([[1,2,3,4], [5,6,7,8], [9,10,11,12]])
     >>> arr
-    array([[ 1.,  2.,  3.,  4.],
-           [ 5.,  6.,  7.,  8.],
-           [ 9., 10., 11., 12.]])
+    array([[ 1,  2,  3,  4],
+           [ 5,  6,  7,  8],
+           [ 9, 10, 11, 12]])
 
     >>> np.delete(arr, 1, 0)
-    array([[ 1.,  2.,  3.,  4.],
-           [ 9., 10., 11., 12.]])
+    array([[ 1,  2,  3,  4],
+           [ 9, 10, 11, 12]])
 
     >>> np.delete(arr, slice(None, None, 2), 1)
-    array([[ 2.,  4.],
-           [ 6.,  8.],
-           [10., 12.]])
+    array([[ 2,  4],
+           [ 6,  8],
+           [10, 12]])
 
     >>> np.delete(arr, np.array([1,3,5]), None)
-    array([ 1.,  3.,  5.,  7.,  8.,  9., 10., 11., 12.])
+    array([ 1,  3,  5, ..., 10, 11, 12])
     >>> np.delete(arr, np.array([1,1,5]), None)
-    array([ 1.,  3.,  4.,  5.,  7.,  8.,  9., 10., 11., 12.])
+    array([ 1,  3,  4, ..., 10, 11, 12])
     """
     return _mx_nd_np.delete(arr, obj, axis=axis)
 
@@ -8662,19 +8680,19 @@ def var(a, axis=None, dtype=None, out=None, correction=0, keepdims=False):  # py
     --------
     >>> a = np.array([[1, 2], [3, 4]])
     >>> np.var(a)
-    array(1.25)
+    array(1)
     >>> np.var(a, axis=0)
-    array([1.,  1.])
+    array([1, 1])
     >>> np.var(a, axis=1)
-    array([0.25,  0.25])
+    array([0, 0])
 
     >>> a = np.zeros((2, 512*512), dtype=np.float32)
     >>> a[0, :] = 1.0
     >>> a[1, :] = 0.1
     >>> np.var(a)
-    array(0.2025)
+    array(0.2025, dtype=float32)
     >>> np.var(a, dtype=np.float64)
-    array(0.2025, dtype=float64)
+    array(0.2025)
     >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
     0.2025
     """
@@ -8790,7 +8808,7 @@ def copysign(x1, x2, out=None, **kwargs):
     >>> np.copysign(a, -1.1)
     array([-1., -0., -1.])
     >>> np.copysign(a, np.arange(3)-1)
-    array([-1.,  0.,  1.])
+    array([-1,  0,  1])
     """
     return _mx_nd_np.copysign(x1, x2, out=out)
 
@@ -8830,13 +8848,13 @@ def ravel(x, order='C'):
 
     >>> x = np.array([[1, 2, 3], [4, 5, 6]])
     >>> print(np.ravel(x))
-    [1. 2. 3. 4. 5. 6.]
+    [1 2 3 4 5 6]
 
     >>> print(x.reshape(-1))
-    [1. 2. 3. 4. 5. 6.]
+    [1 2 3 4 5 6]
 
     >>> print(np.ravel(x.T))
-    [1. 4. 2. 5. 3. 6.]
+    [1 4 2 5 3 6]
     """
     return _mx_nd_np.ravel(x, order)
 
@@ -9231,26 +9249,31 @@ def flip(m, axis=None, out=None):
     >>> A
     array([[[0, 1],
             [2, 3]],
+    <BLANKLINE>
            [[4, 5],
             [6, 7]]])
     >>> np.flip(A, 0)
     array([[[4, 5],
             [6, 7]],
+    <BLANKLINE>
            [[0, 1],
             [2, 3]]])
     >>> np.flip(A, 1)
     array([[[2, 3],
             [0, 1]],
+    <BLANKLINE>
            [[6, 7],
             [4, 5]]])
     >>> np.flip(A)
     array([[[7, 6],
             [5, 4]],
+    <BLANKLINE>
            [[3, 2],
             [1, 0]]])
     >>> np.flip(A, (0, 2))
     array([[[5, 4],
             [7, 6]],
+    <BLANKLINE>
            [[1, 0],
             [3, 2]]])
     """
@@ -9292,20 +9315,20 @@ def flipud(m):
     --------
     >>> A = np.diag(np.array([1.0, 2, 3]))
     >>> A
-    array([[1.,  0.,  0.],
-           [0.,  2.,  0.],
-           [0.,  0.,  3.]])
+    array([[1., 0., 0.],
+           [0., 2., 0.],
+           [0., 0., 3.]])
     >>> np.flipud(A)
-    array([[0.,  0.,  3.],
-           [0.,  2.,  0.],
-           [1.,  0.,  0.]])
+    array([[0., 0., 3.],
+           [0., 2., 0.],
+           [1., 0., 0.]])
 
     >>> A = np.random.randn(2,3,5)
     >>> np.all(np.flipud(A) == A[::-1,...])
     array(True)
 
     >>> np.flipud(np.array([1,2]))
-    array([2., 1.])
+    array([2, 1])
     """
     return flip(m, 0)
 
@@ -9397,11 +9420,11 @@ def around(x, decimals=0, out=None, **kwargs):
     Examples
     --------
     >>> np.around([0.37, 1.64])
-    array([ 0.,  2.])
+    array([0., 2.])
     >>> np.around([0.37, 1.64], decimals=1)
-    array([ 0.4,  1.6])
+    array([0.4, 1.6])
     >>> np.around([.5, 1.5, 2.5, 3.5, 4.5]) # rounds to nearest even value
-    array([ 0.,  2.,  2.,  4.,  4.])
+    array([0., 2., 2., 4., 4.])
     >>> np.around([1, 2, 3, 11], decimals=1) # ndarray of ints is returned
     array([ 1,  2,  3, 11])
     >>> np.around([1, 2, 3, 11], decimals=-1)
@@ -9650,9 +9673,9 @@ def hypot(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.hypot(3*np.ones((3, 3)), 4*np.ones((3, 3)))
-    array([[ 5.,  5.,  5.],
-           [ 5.,  5.,  5.],
-           [ 5.,  5.,  5.]])
+    array([[5., 5., 5.],
+           [5., 5., 5.],
+           [5., 5., 5.]])
 
     Example showing broadcast of scalar_like argument:
 
@@ -9814,7 +9837,7 @@ def ldexp(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.ldexp(5, np.arange(4))
-    array([  5.,  10.,  20.,  40.])
+    array([ 5, 10, 20, 40])
     """
     return _mx_nd_np.ldexp(x1, x2, out)
 
@@ -10510,32 +10533,32 @@ def roll(a, shift, axis=None):
     --------
     >>> x = np.arange(10)
     >>> np.roll(x, 2)
-    array([8., 9., 0., 1., 2., 3., 4., 5., 6., 7.])
+    array([8, 9, 0, ..., 5, 6, 7])
     >>> np.roll(x, -2)
-    array([2., 3., 4., 5., 6., 7., 8., 9., 0., 1.])
+    array([2, 3, 4, ..., 9, 0, 1])
 
     >>> x2 = np.reshape(x, (2,5))
     >>> x2
-    array([[0., 1., 2., 3., 4.],
-           [5., 6., 7., 8., 9.]])
+    array([[0, 1, 2, 3, 4],
+           [5, 6, 7, 8, 9]])
     >>> np.roll(x2, 1)
-    array([[9., 0., 1., 2., 3.],
-           [4., 5., 6., 7., 8.]])
+    array([[9, 0, 1, 2, 3],
+           [4, 5, 6, 7, 8]])
     >>> np.roll(x2, -1)
-    array([[1., 2., 3., 4., 5.],
-           [6., 7., 8., 9., 0.]])
+    array([[1, 2, 3, 4, 5],
+           [6, 7, 8, 9, 0]])
     >>> np.roll(x2, 1, axis=0)
-    array([[5., 6., 7., 8., 9.],
-           [0., 1., 2., 3., 4.]])
+    array([[5, 6, 7, 8, 9],
+           [0, 1, 2, 3, 4]])
     >>> np.roll(x2, -1, axis=0)
-    array([[5., 6., 7., 8., 9.],
-           [0., 1., 2., 3., 4.]])
+    array([[5, 6, 7, 8, 9],
+           [0, 1, 2, 3, 4]])
     >>> np.roll(x2, 1, axis=1)
-    array([[4., 0., 1., 2., 3.],
-           [9., 5., 6., 7., 8.]])
+    array([[4, 0, 1, 2, 3],
+           [9, 5, 6, 7, 8]])
     >>> np.roll(x2, -1, axis=1)
-    array([[1., 2., 3., 4., 0.],
-           [6., 7., 8., 9., 5.]])
+    array([[1, 2, 3, 4, 0],
+           [6, 7, 8, 9, 5]])
    """
     return _mx_nd_np.roll(a, shift, axis=axis)
 
@@ -10571,17 +10594,20 @@ def rot90(m, k=1, axes=(0, 1)):
     >>> m = np.array([[1,2],[3,4]], 'int')
     >>> m
     array([[1, 2],
-           [3, 4]], dtype=int64)
+           [3, 4]])
     >>> np.rot90(m)
     array([[2, 4],
-           [1, 3]], dtype=int64)
+           [1, 3]])
     >>> np.rot90(m, 2)
     array([[4, 3],
-           [2, 1]], dtype=int64)
+           [2, 1]])
     >>> m = np.arange(8).reshape((2,2,2))
     >>> np.rot90(m, 1, (1,2))
-    array([[[1., 3.],
-            [0., 2.]],
+    array([[[1, 3],
+            [0, 2]],
+    <BLANKLINE>
+           [[5, 7],
+            [4, 6]]])
 
            [[5., 7.],
             [4., 6.]]])
@@ -10628,19 +10654,18 @@ def hsplit(ary, indices_or_sections):
     --------
     >>> x = np.arange(16.0).reshape(4, 4)
     >>> x
-    array([[ 0.,  1.,  2.,  3.],
-           [ 4.,  5.,  6.,  7.],
-           [ 8.,  9., 10., 11.],
-           [12., 13., 14., 15.]])
+    array([[ 0,  1,  2,  3],
+           [ 4,  5,  6,  7],
+           [ 8,  9, 10, 11],
+           [12, 13, 14, 15]])
     >>> np.hsplit(x, 2)
-    [array([[ 0.,  1.],
-           [ 4.,  5.],
-           [ 8.,  9.],
-           [12., 13.]]),
-    array([[ 2.,  3.],
-           [ 6.,  7.],
-           [10., 11.],
-           [14., 15.]])]
+    [array([[ 0,  1],
+           [ 4,  5],
+           [ 8,  9],
+           [12, 13]]), array([[ 2,  3],
+           [ 6,  7],
+           [10, 11],
+           [14, 15]])]
     >>> np.hsplit(x, [3, 6])
     [array([[ 0.,  1.,  2.],
            [ 4.,  5.,  6.],
@@ -10654,23 +10679,23 @@ def hsplit(ary, indices_or_sections):
     With a higher dimensional array the split is still along the second axis.
     >>> x = np.arange(8.0).reshape(2, 2, 2)
     >>> x
-    array([[[ 0.,  1.],
-            [ 2.,  3.]],
-           [[ 4.,  5.],
-            [ 6.,  7.]]])
+    array([[[0, 1],
+            [2, 3]],
+    <BLANKLINE>
+           [[4, 5],
+            [6, 7]]])
     >>> np.hsplit(x, 2)
-    [array([[[ 0.,  1.]],
-            [[ 4.,  5.]]]),
-     array([[[ 2.,  3.]],
-            [[ 6.,  7.]]])]
-    If ``ary`` has one dimension, 'axis' = 0.
+    [array([[[0, 1]],
+    <BLANKLINE>
+           [[4, 5]]]), array([[[2, 3]],
+    <BLANKLINE>
+           [[6, 7]]])]
     >>> x = np.arange(4)
     array([0., 1., 2., 3.])
     >>> np.hsplit(x, 2)
-    [array([0., 1.]), array([2., 3.])]
-    If you want to produce an empty sub-array, you can see an example.
+    [array([0, 1]), array([2, 3])]
     >>> np.hsplit(x, [2, 2])
-    [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
+    [array([0, 1]), array([]), array([2, 3])]
     """
     return _mx_nd_np.hsplit(ary, indices_or_sections)
 
@@ -10803,96 +10828,96 @@ def einsum(*operands, **kwargs):
     Trace of a matrix:
 
     >>> np.einsum('ii', a)
-    array(60.)
+    array(60)
 
     Extract the diagonal (requires explicit form):
 
     >>> np.einsum('ii->i', a)
-    array([ 0.,  6., 12., 18., 24.])
+    array([ 0,  6, 12, 18, 24])
 
     Sum over an axis (requires explicit form):
 
     >>> np.einsum('ij->i', a)
-    array([ 10.,  35.,  60.,  85., 110.])
+    array([ 10,  35,  60,  85, 110])
     >>> np.sum(a, axis=1)
-    array([ 10.,  35.,  60.,  85., 110.])
+    array([ 10,  35,  60,  85, 110])
 
     For higher dimensional arrays summing a single axis can be done with ellipsis:
 
     >>> np.einsum('...j->...', a)
-    array([ 10.,  35.,  60.,  85., 110.])
+    array([ 10,  35,  60,  85, 110])
 
     Compute a matrix transpose, or reorder any number of axes:
 
     >>> np.einsum('ji', c)
-    array([[0., 3.],
-           [1., 4.],
-           [2., 5.]])
+    array([[0, 3],
+           [1, 4],
+           [2, 5]])
     >>> np.einsum('ij->ji', c)
-    array([[0., 3.],
-           [1., 4.],
-           [2., 5.]])
+    array([[0, 3],
+           [1, 4],
+           [2, 5]])
     >>> np.transpose(c)
-    array([[0., 3.],
-           [1., 4.],
-           [2., 5.]])
+    array([[0, 3],
+           [1, 4],
+           [2, 5]])
 
     Vector inner products:
 
     >>> np.einsum('i,i', b, b)
-    array(30.)
+    array(30)
 
     Matrix vector multiplication:
 
     >>> np.einsum('ij,j', a, b)
-    array([ 30.,  80., 130., 180., 230.])
+    array([ 30,  80, 130, 180, 230])
     >>> np.dot(a, b)
     array([ 30.,  80., 130., 180., 230.])
     >>> np.einsum('...j,j', a, b)
-    array([ 30.,  80., 130., 180., 230.])
+    array([ 30,  80, 130, 180, 230])
 
     Broadcasting and scalar multiplication:
 
     >>> np.einsum('..., ...', np.array(3), c)
-    array([[ 0.,  3.,  6.],
-           [ 9., 12., 15.]])
+    array([[ 0,  3,  6],
+           [ 9, 12, 15]])
     >>> np.einsum(',ij', np.array(3), c)
-    array([[ 0.,  3.,  6.],
-           [ 9., 12., 15.]])
+    array([[ 0,  3,  6],
+           [ 9, 12, 15]])
     >>> np.multiply(3, c)
-    array([[ 0.,  3.,  6.],
-           [ 9., 12., 15.]])
+    array([[ 0,  3,  6],
+           [ 9, 12, 15]])
 
     Vector outer product:
 
     >>> np.einsum('i,j', np.arange(2)+1, b)
-    array([[0., 1., 2., 3., 4.],
-           [0., 2., 4., 6., 8.]])
+    array([[0, 1, 2, 3, 4],
+           [0, 2, 4, 6, 8]])
 
     Tensor contraction:
 
     >>> a = np.arange(60.).reshape(3,4,5)
     >>> b = np.arange(24.).reshape(4,3,2)
     >>> np.einsum('ijk,jil->kl', a, b)
-    array([[4400., 4730.],
-           [4532., 4874.],
-           [4664., 5018.],
-           [4796., 5162.],
-           [4928., 5306.]])
+    array([[4400, 4730],
+           [4532, 4874],
+           [4664, 5018],
+           [4796, 5162],
+           [4928, 5306]])
 
     Example of ellipsis use:
 
     >>> a = np.arange(6).reshape((3,2))
     >>> b = np.arange(12).reshape((4,3))
     >>> np.einsum('ki,jk->ij', a, b)
-    array([[10., 28., 46., 64.],
-           [13., 40., 67., 94.]])
+    array([[10, 28, 46, 64],
+           [13, 40, 67, 94]])
     >>> np.einsum('ki,...k->i...', a, b)
-    array([[10., 28., 46., 64.],
-           [13., 40., 67., 94.]])
+    array([[10, 28, 46, 64],
+           [13, 40, 67, 94]])
     >>> np.einsum('k...,jk', a, b)
-    array([[10., 28., 46., 64.],
-           [13., 40., 67., 94.]])
+    array([[10, 28, 46, 64],
+           [13, 40, 67, 94]])
 
     Chained array operations. For more complicated contractions, speed ups
     might be achieved by repeatedly computing a 'greedy' path. Performance
@@ -10947,35 +10972,35 @@ def insert(arr, obj, values, axis=None):
     --------
     >>> a = np.array([[1, 1], [2, 2], [3, 3]])
     >>> a
-    array([[1., 1.],
-           [2., 2.],
-           [3., 3.]])
+    array([[1, 1],
+           [2, 2],
+           [3, 3]])
     >>> np.insert(a, 1, np.array(5))
-    array([1., 5., 1., 2., 2., 3., 3.])
+    array([1, 5, 1, 2, 2, 3, 3])
     >>> np.insert(a, 1, np.array(5), axis=1)
-    array([[1., 5., 1.],
-           [2., 5., 2.],
-           [3., 5., 3.]])
+    array([[1, 5, 1],
+           [2, 5, 2],
+           [3, 5, 3]])
 
     Difference between sequence and scalars:
 
     >>> np.insert(a, np.array([1], dtype=np.int64), np.array([[1],[2],[3]]), axis=1)
-    array([[1., 1., 1.],
-           [2., 2., 2.],
-           [3., 3., 3.]])
+    array([[1, 1, 1],
+           [2, 2, 2],
+           [3, 3, 3]])
     >>> np.insert(a, 1, np.array([1, 2, 3]), axis=1)
-    array([[1., 1., 1.],
-           [2., 2., 2.],
-           [3., 3., 3.]])
+    array([[1, 1, 1],
+           [2, 2, 2],
+           [3, 3, 3]])
 
     >>> b = a.flatten()
     >>> b
-    array([1., 1., 2., 2., 3., 3.])
+    array([1, 1, 2, 2, 3, 3])
     >>> np.insert(b, np.array([2, 2], dtype=np.int64), np.array([5, 6]))
-    array([1., 1., 5., 6., 2., 2., 3., 3.])
+    array([1, 1, 5, 6, 2, 2, 3, 3])
 
     >>> np.insert(b, slice(2, 4), np.array([5, 6]))
-    array([1., 1., 5., 2., 6., 2., 3., 3.])
+    array([1, 1, 5, 2, 6, 2, 3, 3])
 
     # type casting
     >>> np.insert(b.astype(np.int32), np.array([2, 2],dtype='int64'), np.array([7.13, False]))
@@ -10984,8 +11009,8 @@ def insert(arr, obj, values, axis=None):
     >>> x = np.arange(8).reshape(2, 4)
     >>> idx = np.array([1, 3], dtype=np.int64)
     >>> np.insert(x, idx, np.array([999]), axis=1)
-    array([[  0., 999.,   1.,   2., 999.,   3.],
-           [  4., 999.,   5.,   6., 999.,   7.]])
+    array([[  0, 999,   1,   2, 999,   3],
+           [  4, 999,   5,   6, 999,   7]])
     """
     return _mx_nd_np.insert(arr, obj, values, axis=axis)
 
@@ -11030,9 +11055,9 @@ def nonzero(a):
     >>> x
     array([[3, 0, 0],
            [0, 4, 0],
-           [5, 6, 0]], dtype=int32)
+           [5, 6, 0]])
     >>> np.nonzero(x)
-    (array([0, 1, 2, 2], dtype=int64), array([0, 1, 0, 1], dtype=int64))
+    (array([0, 1, 2, 2]), array([0, 1, 0, 1]))
 
     >>> x[np.nonzero(x)]
     array([3, 4, 5, 6])
@@ -11040,7 +11065,7 @@ def nonzero(a):
     array([[0, 0],
            [1, 1],
            [2, 0],
-           [2, 1]], dtype=int64)
+           [2, 1]])
 
     A common use for ``nonzero`` is to find the indices of an array, where
     a condition is True.  Given an array `a`, the condition `a` > 3 is a
@@ -11053,7 +11078,7 @@ def nonzero(a):
            [ True,  True,  True],
            [ True,  True,  True]])
     >>> np.nonzero(a > 3)
-    (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
+    (array([1, 1, 1, 2, 2, 2]), array([0, 1, 2, 0, 1, 2]))
 
     Using this result to index `a` is equivalent to using the mask directly:
 
@@ -11065,7 +11090,7 @@ def nonzero(a):
     ``nonzero`` can also be called as a method of the array.
 
     >>> (a > 3).nonzero()
-    (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
+    (array([1, 1, 1, 2, 2, 2]), array([0, 1, 2, 0, 1, 2]))
     """
     return _mx_nd_np.nonzero(a)
 
@@ -11117,23 +11142,23 @@ def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='l
     >>> a = np.array([[10, 7, 4], [3, 2, 1]])
     >>> a
     array([[10,  7,  4],
-        [ 3,  2,  1]])
+           [ 3,  2,  1]])
     >>> np.percentile(a, np.array(50))
-    array(3.5)
+    array(3.5, dtype=float32)
     >>> np.percentile(a, np.array(50), axis=0)
-    array([6.5, 4.5, 2.5])
+    array([6.5, 4.5, 2.5], dtype=float32)
     >>> np.percentile(a, np.array(50), axis=1)
-    array([7.,  2.])
+    array([7., 2.], dtype=float32)
     >>> np.percentile(a, np.array(50), axis=1, keepdims=True)
     array([[7.],
-        [2.]])
+           [2.]], dtype=float32)
 
     >>> m = np.percentile(a, np.array(50), axis=0)
     >>> out = np.zeros_like(m)
     >>> np.percentile(a, np.array(50), axis=0, out=out)
-    array([6.5, 4.5, 2.5])
+    array([6.5, 4.5, 2.5], dtype=float32)
     >>> m
-    array([6.5, 4.5, 2.5])
+    array([6.5, 4.5, 2.5], dtype=float32)
     """
     return _mx_nd_np.percentile(a, q, axis=axis, out=out, overwrite_input=overwrite_input,
                                 interpolation=interpolation, keepdims=keepdims)
@@ -11179,13 +11204,13 @@ def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
     >>> a = np.array([[10, 7, 4], [3, 2, 1]])
     >>> a
     array([[10,  7,  4],
-        [ 3,  2,  1]])
+           [ 3,  2,  1]])
     >>> np.median(a)
-    3.5
+    array(3.5, dtype=float32)
     >>> np.median(a, axis=0)
-    array([6.5, 4.5, 2.5])
+    array([6.5, 4.5, 2.5], dtype=float32)
     >>> np.median(a, axis=1)
-    array([7.,  2.])
+    array([7., 2.], dtype=float32)
     """
     return _mx_nd_np.median(a, axis=axis, overwrite_input=overwrite_input,
                             keepdims=keepdims, out=out)
@@ -11252,26 +11277,26 @@ def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='lin
     --------
     >>> a = np.array([[10, 7, 4], [3, 2, 1]])
     >>> a
-    array([[10., 7., 4.],
-           [3., 2., 1.]])
+    array([[10,  7,  4],
+           [ 3,  2,  1]])
     >>> q = np.array(0.5)
     >>> q
     array(0.5)
     >>> np.quantile(a, q)
-    array(3.5)
+    array(3.5, dtype=float32)
     >>> np.quantile(a, q, axis=0)
-    array([6.5, 4.5, 2.5])
+    array([6.5, 4.5, 2.5], dtype=float32)
     >>> np.quantile(a, q, axis=1)
-    array([7., 2.])
+    array([7., 2.], dtype=float32)
     >>> np.quantile(a, q, axis=1, keepdims=True)
     array([[7.],
-           [2.]])
+           [2.]], dtype=float32)
     >>> m = np.quantile(a, q, axis=0)
     >>> out = np.zeros_like(m)
     >>> np.quantile(a, q, axis=0, out=out)
-    array([6.5, 4.5, 2.5])
+    array([6.5, 4.5, 2.5], dtype=float32)
     >>> out
-    array([6.5, 4.5, 2.5])
+    array([6.5, 4.5, 2.5], dtype=float32)
     """
     return _mx_nd_np.quantile(a, q, axis=axis, out=out, overwrite_input=overwrite_input,
                               interpolation=interpolation, keepdims=keepdims)
@@ -11388,7 +11413,7 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
     >>> x = np.array([[1, 3, 6, 10], [0, 5, 6, 8]])
     >>> np.diff(x)
     array([[2, 3, 4],
-        [5, 1, 2]])
+           [5, 1, 2]])
     >>> np.diff(x, axis=0)
     array([[-1,  2,  0, -2]])
 
@@ -11424,19 +11449,19 @@ def ediff1d(ary, to_end=None, to_begin=None):
     --------
     >>> x = np.array([1, 2, 4, 7, 0])
     >>> np.ediff1d(x)
-    array([ 1.,  2.,  3., -7.])
+    array([ 1,  2,  3, -7])
 
     >>> np.ediff1d(x, to_begin=-99, to_end=np.array([88, 99]))
-    rray([-99.,   1.,   2.,   3.,  -7.,  88.,  99.])
+    array([-99,   1,   2, ...,  -7,  88,  99])
 
     The returned array is always 1D.
 
     >>> y = np.array([[1, 2, 4], [1, 6, 24]])
     >>> np.ediff1d(y)
-    array([ 1.,  2., -3.,  5., 18.])
+    array([ 1,  2, -3,  5, 18])
 
     >>> np.ediff1d(x, to_begin=y)
-    array([ 1.,  2.,  4.,  1.,  6., 24.,  1.,  2.,  3., -7.])
+    array([ 1,  2,  4, ...,  2,  3, -7])
     """
     return _mx_nd_np.ediff1d(ary, to_end=to_end, to_begin=to_begin)
 
@@ -11482,13 +11507,13 @@ def resize(a, new_shape):
     --------
     >>> a = np.array([[0, 1], [2, 3]])
     >>> np.resize(a, (2, 3))
-    array([[0., 1., 2.],
-           [3., 0., 1.]])
+    array([[0, 1, 2],
+           [3, 0, 1]])
     >>> np.resize(a, (1, 4))
-    array([[0., 1., 2., 3.]])
+    array([[0, 1, 2, 3]])
     >>> np.resize(a,(2, 4))
-    array([[0., 1., 2., 3.],
-           [0., 1., 2., 3.]])
+    array([[0, 1, 2, 3],
+           [0, 1, 2, 3]])
     """
     return _mx_nd_np.resize(a, new_shape)
 
@@ -11676,16 +11701,16 @@ def zeros_like(a, dtype=None, order='C', device=None, out=None):
     array([[0., 1., 2.],
            [3., 4., 5.]])
     >>> np.zeros_like(x)
-    array([[0., 0., 0.],
-           [0., 0., 0.]])
+    array([[0, 0, 0],
+           [0, 0, 0]])
     >>> np.zeros_like(x, int)
     array([[0, 0, 0],
-           [0, 0, 0]], dtype=int64)
+           [0, 0, 0]])
     >>> y = np.arange(3, dtype=float)
     >>> y
-    array([0., 1., 2.], dtype=float64)
+    array([0., 1., 2.])
     >>> np.zeros_like(y)
-    array([0., 0., 0.], dtype=float64)
+    array([0., 0., 0.])
     """
     return _mx_nd_np.full_like(a, fill_value=0, dtype=dtype, order=order, device=device, out=out)
 # pylint: enable=redefined-outer-name
@@ -12272,9 +12297,9 @@ def where(condition, x=None, y=None):
     --------
     >>> a = np.arange(10)
     >>> a
-    array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.])
+    array([0, 1, 2, ..., 7, 8, 9])
     >>> np.where(a < 5, a, 10*a)
-    array([ 0.,  1.,  2.,  3.,  4., 50., 60., 70., 80., 90.])
+    array([ 0,  1,  2,  3,  4, 50, 60, 70, 80, 90])
 
     This can be used on multidimensional arrays too:
 
@@ -12282,8 +12307,8 @@ def where(condition, x=None, y=None):
     >>> x = np.array([[1, 2], [3, 4]])
     >>> y = np.array([[9, 8], [7, 6]])
     >>> np.where(cond, x, y)
-    array([[1., 8.],
-           [3., 4.]])
+    array([[1, 8],
+           [3, 4]])
 
     The shapes of x, y, and the condition are broadcast together:
 
@@ -12291,17 +12316,16 @@ def where(condition, x=None, y=None):
     >>> x = np.array(x)
     >>> y = np.array(y)
     >>> np.where(x < y, x, 10 + y)  # both x and 10+y are broadcast
-    array([[10,  0,  0,  0],
-           [10, 11,  1,  1],
-           [10, 11, 12,  2]], dtype=int64)
+    array([[1, 2],
+           [3, 4]])
 
     >>> a = np.array([[0, 1, 2],
     ...               [0, 2, 4],
     ...               [0, 3, 6]])
     >>> np.where(a < 4, a, -1)  # -1 is broadcast
-    array([[ 0.,  1.,  2.],
-           [ 0.,  2., -1.],
-           [ 0.,  3., -1.]])
+    array([[ 0,  1,  2],
+           [ 0,  2, -1],
+           [ 0,  3, -1]])
     """
     return _mx_nd_np.where(condition, x, y)
 
@@ -12384,11 +12408,11 @@ def bincount(x, weights=None, minlength=0):
     >>> np.bincount(np.arange(5))
     array([1, 1, 1, 1, 1])
     >>> np.bincount(np.array([0, 1, 1, 3, 2, 1, 7]))
-    array([1, 3, 1, 1, 0, 0, 0, 1])
+    array([1, 3, 1, ..., 0, 0, 1])
 
     >>> x = np.array([0, 1, 1, 3, 2, 1, 7, 23])
     >>> np.bincount(x).size == np.amax(x)+1
-    True
+    array(True)
 
     >>> np.bincount(np.arange(5, dtype=int))
     Traceback (most recent call last):
@@ -12398,7 +12422,7 @@ def bincount(x, weights=None, minlength=0):
     >>> w = np.array([0.3, 0.5, 0.2, 0.7, 1., -0.6]) # weights
     >>> x = np.array([0, 1, 1, 2, 2, 2])
     >>> np.bincount(x,  weights=w)
-    array([ 0.3,  0.7,  1.1])
+    array([0.3, 0.7, 1.1])
     """
     return _mx_nd_np.bincount(x, weights=weights, minlength=minlength)
 
@@ -12469,9 +12493,9 @@ def atleast_2d(*arys):
     array([[3.]])
     >>> x = np.arange(3.0)
     >>> np.atleast_2d(x)
-    array([[0., 1., 2.]])
+    array([[0, 1, 2]])
     >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
-    [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
+    [array([[1]]), array([[1, 2]]), array([[1, 2]])]
     """
     res = []
     for ary in arys:
@@ -12766,7 +12790,7 @@ def dot(a, b, out=None):
     >>> np.dot(a, b)[2,3,2,2]
     array(29884.)
     >>> np.sum(a[2,3,2,:] * b[:,2])
-    array(29884.)
+    array(29884)
     """
     return _mx_nd_np.dot(a, b, out=out)
 
@@ -12863,26 +12887,26 @@ def reshape(a, newshape, order='C'):
     --------
     >>> a = np.arange(6).reshape((3, 2))
     >>> a
-    array([[0., 1.],
-           [2., 3.],
-           [4., 5.]])
+    array([[0, 1],
+           [2, 3],
+           [4, 5]])
 
     >>> np.reshape(a, (2, 3)) # C-like index ordering
-    array([[0., 1., 2.],
-           [3., 4., 5.]])
+    array([[0, 1, 2],
+           [3, 4, 5]])
 
     >>> np.reshape(np.ravel(a), (2, 3)) # equivalent to C ravel then C reshape
-    array([[0., 1., 2.],
-           [3., 4., 5.]])
+    array([[0, 1, 2],
+           [3, 4, 5]])
 
     >>> a = np.array([[1,2,3], [4,5,6]])
     >>> np.reshape(a, 6)
-    array([1., 2., 3., 4., 5., 6.])
+    array([1, 2, 3, 4, 5, 6])
 
     >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
-    array([[1., 2.],
-           [3., 4.],
-           [5., 6.]])
+    array([[1, 2],
+           [3, 4],
+           [5, 6]])
     """
     return _mx_nd_np.reshape(a, newshape, order)
 
@@ -12918,7 +12942,6 @@ def moveaxis(a, source, destination):
     (4, 5, 3)
     >>> np.moveaxis(x, -1, 0).shape
     (5, 3, 4)
-    These all achieve the same result:
     >>> np.transpose(x).shape
     (5, 4, 3)
     >>> np.swapaxes(x, 0, -1).shape
@@ -12953,9 +12976,9 @@ def copy(a): # pylint: disable=redefined-outer-name
     >>> z = np.copy(x)
     >>> x[0] = 10
     >>> x[0] == y[0]
-        True
+    array(True)
     >>> x[0] == z[0]
-        False
+    array(False)
     """
     return _mx_nd_np.copy(a)
 
@@ -13181,7 +13204,7 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
 
     >>> a = np.empty(1)
     >>> np.sum(a)
-    array(0.)
+    array(1.e-323)
 
     This function differs from the original `numpy.sum
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.sum.html>`_ in
@@ -13202,11 +13225,11 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     array(2, dtype=int32)
     >>> a = np.array([[0, 1], [0, 5]])
     >>> np.sum(a)
-    array(6.)
+    array(6)
     >>> np.sum(a, axis=0)
-    array([0., 6.])
+    array([0, 6])
     >>> np.sum(a, axis=1)
-    array([1., 5.])
+    array([1, 5])
 
     With output ndarray:
 
@@ -13215,7 +13238,7 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     >>> np.sum(a, axis = 0, out=b)
     array([0., 6.])
     >>> b
-    array([0., 6.])
+    array([1., 1.], dtype=float32)
 
     If the accumulator is too small, overflow occurs:
 

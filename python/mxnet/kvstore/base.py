@@ -229,7 +229,7 @@ class KVStoreBase(object):
         ...     pass
         >>> kv = mx.kv.create('MyKVStore')
         >>> print(type(kv))
-        <class '__main__.MyKVStore'>
+        <class 'MyKVStore'>
         """
         assert(isinstance(klass, type))
         name = klass.__name__.lower()

@@ -449,13 +449,11 @@ class Parameter(object):
         >>> weight = mx.gluon.Parameter('weight', shape=(2, 2))
         >>> weight.initialize(device=mx.cpu(0))
         >>> weight.data()
-        [[-0.01068833  0.01729892]
-         [ 0.02042518 -0.01618656]]
-        <NDArray 2x2 @cpu(0)>
+        array([[-0.02104928, -0.0628541 ],
+               [ 0.00716446,  0.02602061]], dtype=float32)
         >>> weight.grad()
-        [[ 0.  0.]
-         [ 0.  0.]]
-        <NDArray 2x2 @cpu(0)>
+        array([[0., 0.],
+               [0., 0.]], dtype=float32)
         >>> weight.initialize(device=[mx.gpu(0), mx.gpu(1)])
         >>> weight.data(mx.gpu(0))
         [[-0.00873779 -0.02834515]
