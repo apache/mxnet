@@ -45,7 +45,7 @@ LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
 
 # set by the CD pipeline
-is_release = os.environ.get("RELEASE_BUILD", "").strip()
+is_release = (os.environ.get("RELEASE_BUILD", "false").strip().lower() != "false")
 
 # set by the travis build pipeline
 travis_tag = os.environ.get("TRAVIS_TAG", "").strip()
