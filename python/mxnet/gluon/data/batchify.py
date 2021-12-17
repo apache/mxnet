@@ -335,12 +335,12 @@ class Group(object):
     >>> f1, f2 = Group(Pad(val=0),
     ...                Stack())([a, b])
     >>> f1
-    <BLANKLINE>
+    
     [[1. 2. 3. 4.]
      [5. 7. 0. 0.]]
     <NDArray 2x4 @cpu_shared(0)>
     >>> f2
-    <BLANKLINE>
+    
     [0 1]
     <NDArray 2 @cpu_shared(0)>
     """

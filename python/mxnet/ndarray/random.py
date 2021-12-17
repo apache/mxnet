@@ -90,20 +90,17 @@ def uniform(low=0, high=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     Examples
     --------
     >>> mx.nd.random.uniform(0, 1)
-    <BLANKLINE>
     [0.24778911]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.uniform(0, 1, ctx=mx.gpu(0))
     [ 0.92514056]
     <NDArray 1 @gpu(0)>
     >>> mx.nd.random.uniform(-1, 1, shape=(2,))
-    <BLANKLINE>
     [-0.75692574  0.18071883]
     <NDArray 2 @cpu(0)>
     >>> low = mx.nd.array([1,2,3])
     >>> high = mx.nd.array([2,3,4])
     >>> mx.nd.random.uniform(low, high, shape=2)
-    <BLANKLINE>
     [[1.1977979 1.9740655]
      [2.7326345 2.1105483]
      [3.180827  3.4497788]]
@@ -150,20 +147,17 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     Examples
     --------
     >>> mx.nd.random.normal(0, 1)
-    <BLANKLINE>
     [0.42529759]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.normal(0, 1, ctx=mx.gpu(0))
     [ 0.29253659]
     <NDArray 1 @gpu(0)>
     >>> mx.nd.random.normal(-1, 1, shape=(2,))
-    <BLANKLINE>
     [-1.08733432 -1.70004066]
     <NDArray 2 @cpu(0)>
     >>> loc = mx.nd.array([1,2,3])
     >>> scale = mx.nd.array([2,3,4])
     >>> mx.nd.random.normal(loc, scale, shape=2)
-    <BLANKLINE>
     [[-1.8623548   0.31761962]
      [-2.312745    0.7450856 ]
      [ 1.5007256  -0.12971163]]
@@ -210,16 +204,13 @@ def randn(*shape, **kwargs):
     Examples
     --------
     >>> mx.nd.random.randn()
-    <BLANKLINE>
     0.3418785909292861
     <NDArray  @cpu(0)>
     >>> mx.nd.random.randn(2, 2)
-    <BLANKLINE>
     [[ 1.8074323  -1.036532  ]
      [ 1.84233381 -0.10020491]]
     <NDArray 2x2 @cpu(0)>
     >>> mx.nd.random.randn(2, 3, loc=5, scale=1)
-    <BLANKLINE>
     [[7.52394211 4.72576618 4.3281031 ]
      [4.67710147 4.80459384 5.25170966]]
     <NDArray 2x3 @cpu(0)>
@@ -269,16 +260,13 @@ def poisson(lam=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     Examples
     --------
     >>> mx.nd.random.poisson(1)
-    <BLANKLINE>
     [0.]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.poisson(1, shape=(2,))
-    <BLANKLINE>
     [1. 1.]
     <NDArray 2 @cpu(0)>
     >>> lam = mx.nd.array([1,2,3])
     >>> mx.nd.random.poisson(lam, shape=2)
-    <BLANKLINE>
     [[1. 0.]
      [4. 1.]
      [2. 2.]]
@@ -325,16 +313,13 @@ def exponential(scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs)
     Examples
     --------
     >>> mx.nd.random.exponential(1)
-    <BLANKLINE>
     [0.83918016]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.exponential(1, shape=(2,))
-    <BLANKLINE>
     [1.33539349 0.42451449]
     <NDArray 2 @cpu(0)>
     >>> scale = mx.nd.array([1,2,3])
     >>> mx.nd.random.exponential(scale, shape=2)
-    <BLANKLINE>
     [[0.2029359 2.7034698]
      [1.7604957 8.427116 ]
      [4.9984465 7.2594795]]
@@ -381,17 +366,14 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     Examples
     --------
     >>> mx.nd.random.gamma(1, 1)
-    <BLANKLINE>
     [1.16737707]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.gamma(1, 1, shape=(2,))
-    <BLANKLINE>
     [0.88785538 3.23600551]
     <NDArray 2 @cpu(0)>
     >>> alpha = mx.nd.array([1,2,3])
     >>> beta = mx.nd.array([2,3,4])
     >>> mx.nd.random.gamma(alpha, beta, shape=2)
-    <BLANKLINE>
     [[ 3.1492126  1.1003432]
      [ 3.7075706  8.255784 ]
      [14.657232  15.084181 ]]
@@ -439,17 +421,14 @@ def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, ctx=None,
     Examples
     --------
     >>> mx.nd.random.negative_binomial(10, 0.5)
-    <BLANKLINE>
     [17.]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.negative_binomial(10, 0.5, shape=(2,))
-    <BLANKLINE>
     [16.  6.]
     <NDArray 2 @cpu(0)>
     >>> k = mx.nd.array([1,2,3])
     >>> p = mx.nd.array([0.2,0.4,0.6])
     >>> mx.nd.random.negative_binomial(k, p, shape=2)
-    <BLANKLINE>
     [[ 0.  2.]
      [10.  7.]
      [ 1.  2.]]
@@ -500,17 +479,14 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
     Examples
     --------
     >>> mx.nd.random.generalized_negative_binomial(10, 0.5)
-    <BLANKLINE>
     [10.]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.generalized_negative_binomial(10, 0.5, shape=(2,))
-    <BLANKLINE>
     [13.  2.]
     <NDArray 2 @cpu(0)>
     >>> mu = mx.nd.array([1,2,3])
     >>> alpha = mx.nd.array([0.2,0.4,0.6])
     >>> mx.nd.random.generalized_negative_binomial(mu, alpha, shape=2)
-    <BLANKLINE>
     [[ 1.  0.]
      [ 1.  2.]
      [ 6. 11.]]
@@ -567,16 +543,13 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kw
     --------
     >>> probs = mx.nd.array([0, 0.1, 0.2, 0.3, 0.4])
     >>> mx.nd.random.multinomial(probs)
-    <BLANKLINE>
     [2]
     <NDArray 1 @cpu(0)>
     >>> probs = mx.nd.array([[0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0]])
     >>> mx.nd.random.multinomial(probs)
-    <BLANKLINE>
     [3 3]
     <NDArray 2 @cpu(0)>
     >>> mx.nd.random.multinomial(probs, shape=2)
-    <BLANKLINE>
     [[3 1]
      [0 2]]
     <NDArray 2x2 @cpu(0)>
@@ -616,13 +589,11 @@ def shuffle(data, **kwargs):
     --------
     >>> data = mx.nd.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
     >>> mx.nd.random.shuffle(data)
-    <BLANKLINE>
     [[0. 1. 2.]
      [6. 7. 8.]
      [3. 4. 5.]]
     <NDArray 3x3 @cpu(0)>
     >>> mx.nd.random.shuffle(data)
-    <BLANKLINE>
     [[0. 1. 2.]
      [3. 4. 5.]
      [6. 7. 8.]]
@@ -666,14 +637,12 @@ def randint(low, high, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     Examples
     --------
     >>> mx.nd.random.randint(5, 100)
-    <BLANKLINE>
     [15]
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.randint(-10, 2, ctx=mx.gpu(0))
     [ -8]
     <NDArray 1 @gpu(0)>
     >>> mx.nd.random.randint(-10, 10, shape=(2,))
-    <BLANKLINE>
     [1 8]
     <NDArray 2 @cpu(0)>
     """

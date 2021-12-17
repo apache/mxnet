@@ -78,15 +78,12 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     >>> true_cls = mx.nd.array([3])
     >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.rand_zipfian(true_cls, 4, 5)
     >>> samples
-    <BLANKLINE>
     [4 2 3 2]
     <NDArray 4 @cpu(0)>
     >>> exp_count_true
-    <BLANKLINE>
     [0.4982]
     <NDArray 1 @cpu(0)>
     >>> exp_count_sample
-    <BLANKLINE>
     [0.407  0.6422 0.4982 0.6422]
     <NDArray 4 @cpu(0)>
     """
@@ -443,7 +440,6 @@ def cond(pred, then_func, else_func):
     >>> else_func = lambda: (a - 5) * (b - 5)
     >>> outputs = mx.nd.contrib.cond(pred, then_func, else_func)
     >>> outputs[0]
-    <BLANKLINE>
     42.0
     <NDArray  @cpu(0)>
     """
@@ -486,7 +482,6 @@ def isinf(data):
     >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
     >>> output = mx.nd.contrib.isinf(data)
     >>> output
-    <BLANKLINE>
     [1. 1. 1. 0.]
     <NDArray 4 @cpu(0)>
     """
@@ -514,7 +509,6 @@ def isfinite(data):
     >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
     >>> output = mx.nd.contrib.isfinite(data)
     >>> output
-    <BLANKLINE>
     [0. 0. 0. 1.]
     <NDArray 4 @cpu(0)>
     """
@@ -543,7 +537,6 @@ def isnan(data):
     >>> data = mx.nd.array([np.nan, -1])
     >>> output = mx.nd.contrib.isnan(data)
     >>> output
-    <BLANKLINE>
     [1. 0.]
     <NDArray 2 @cpu(0)>
     """

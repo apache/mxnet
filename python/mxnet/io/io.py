@@ -577,28 +577,22 @@ class NDArrayIter(DataIter):
     [
     [[[0. 0.]
       [0. 0.]]
-    <BLANKLINE>
      [[0. 0.]
       [0. 0.]]
-    <BLANKLINE>
      [[0. 0.]
       [0. 0.]]]
     <NDArray 3x2x2 @cpu(0)>, 
     [[[0. 0.]
       [0. 0.]]
-    <BLANKLINE>
      [[0. 0.]
       [0. 0.]]
-    <BLANKLINE>
      [[0. 0.]
       [0. 0.]]]
     <NDArray 3x2x2 @cpu(0)>, 
     [[[0. 0.]
       [0. 0.]]
-    <BLANKLINE>
      [[0. 0.]
       [0. 0.]]
-    <BLANKLINE>
      [[0. 0.]
       [0. 0.]]]
     <NDArray 3x2x2 @cpu(0)>]

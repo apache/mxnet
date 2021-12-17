@@ -748,7 +748,6 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         >>> x
         array([[[0, 1],
                 [2, 3]],
-        <BLANKLINE>
                [[4, 5],
                 [6, 7]]])
                [[4., 5.],
@@ -7226,7 +7225,6 @@ def vsplit(ary, indices_or_sections):
     >>> x
     array([[[0, 1],
             [2, 3]],
-    <BLANKLINE>
            [[4, 5],
             [6, 7]]])
     >>> np.vsplit(x, 2)
@@ -7287,17 +7285,14 @@ def dsplit(ary, indices_or_sections):
     >>> x
     array([[[ 0,  1,  2,  3],
             [ 4,  5,  6,  7]],
-    <BLANKLINE>
            [[ 8,  9, 10, 11],
             [12, 13, 14, 15]]])
     >>> np.dsplit(x, 2)
     [array([[[ 0,  1],
             [ 4,  5]],
-    <BLANKLINE>
            [[ 8,  9],
             [12, 13]]]), array([[[ 2,  3],
             [ 6,  7]],
-    <BLANKLINE>
            [[10, 11],
             [14, 15]]])]
     >>> np.dsplit(x, np.array([3, 6]))
@@ -7712,9 +7707,7 @@ def dstack(arrays):
     >>> b = np.array([[2],[3],[4]])
     >>> np.dstack((a,b))
     array([[[1, 2]],
-    <BLANKLINE>
            [[2, 3]],
-    <BLANKLINE>
            [[3, 4]]])
     """
     return _npi.dstack(*arrays)
@@ -8000,7 +7993,6 @@ def swapaxes(a, axis1, axis2):
     >>> np.swapaxes(x,0,2)
     array([[[0, 4],
             [2, 6]],
-    <BLANKLINE>
            [[1, 5],
             [3, 7]]])
 
@@ -9249,31 +9241,26 @@ def flip(m, axis=None, out=None):
     >>> A
     array([[[0, 1],
             [2, 3]],
-    <BLANKLINE>
            [[4, 5],
             [6, 7]]])
     >>> np.flip(A, 0)
     array([[[4, 5],
             [6, 7]],
-    <BLANKLINE>
            [[0, 1],
             [2, 3]]])
     >>> np.flip(A, 1)
     array([[[2, 3],
             [0, 1]],
-    <BLANKLINE>
            [[6, 7],
             [4, 5]]])
     >>> np.flip(A)
     array([[[7, 6],
             [5, 4]],
-    <BLANKLINE>
            [[3, 2],
             [1, 0]]])
     >>> np.flip(A, (0, 2))
     array([[[5, 4],
             [7, 6]],
-    <BLANKLINE>
            [[1, 0],
             [3, 2]]])
     """
@@ -10605,7 +10592,6 @@ def rot90(m, k=1, axes=(0, 1)):
     >>> np.rot90(m, 1, (1,2))
     array([[[1, 3],
             [0, 2]],
-    <BLANKLINE>
            [[5, 7],
             [4, 6]]])
 
@@ -10681,14 +10667,11 @@ def hsplit(ary, indices_or_sections):
     >>> x
     array([[[0, 1],
             [2, 3]],
-    <BLANKLINE>
            [[4, 5],
             [6, 7]]])
     >>> np.hsplit(x, 2)
     [array([[[0, 1]],
-    <BLANKLINE>
            [[4, 5]]]), array([[[2, 3]],
-    <BLANKLINE>
            [[6, 7]]])]
     >>> x = np.arange(4)
     array([0., 1., 2., 3.])

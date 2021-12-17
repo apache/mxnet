@@ -1475,7 +1475,6 @@ def divide(lhs, rhs):
     >>> z.asnumpy()
     array([1., 2., 3.], dtype=float32)
     >>> x/2
-    <BLANKLINE>
     <CSRNDArray 2x3 @cpu(0)>
     >>> (x/3).asnumpy()
     array([[2., 2., 2.],

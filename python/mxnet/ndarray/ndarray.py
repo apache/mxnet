@@ -675,7 +675,6 @@ fixed-size items.
         >>> x.asnumpy()
         array([[[-1., -1.],
                 [-1., -1.]],
-        <BLANKLINE>
                [[ 4.,  5.],
                 [ 6.,  7.]]], dtype=float32)
         >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
@@ -686,7 +685,6 @@ fixed-size items.
         >>> x.asnumpy()
         array([[[ 0.,  1.],
                 [ 2.,  3.]],
-        <BLANKLINE>
                [[-1., -1.],
                 [ 6.,  7.]]], dtype=float32)
         >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
@@ -698,7 +696,6 @@ fixed-size items.
         >>> x.asnumpy()
         array([[[0., 1.],
                 [2., 3.]],
-        <BLANKLINE>
                [[4., 5.],
                 [6., 7.]]], dtype=float32)
 
@@ -710,13 +707,11 @@ fixed-size items.
         >>> x[[0, 1]].asnumpy()
         array([[[0., 1.],
                 [2., 3.]],
-        <BLANKLINE>
                [[4., 5.],
                 [6., 7.]]], dtype=float32)
         >>> x[[0, 1], :].asnumpy()  # equivalent
         array([[[0., 1.],
                 [2., 3.]],
-        <BLANKLINE>
                [[4., 5.],
                 [6., 7.]]], dtype=float32)
         >>> y = np.array([0, 1], dtype='int32')
@@ -2347,7 +2342,6 @@ fixed-size items.
         array([[[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]],
-        <BLANKLINE>
                [[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]]], dtype=float32)
@@ -2399,7 +2393,6 @@ fixed-size items.
         array([[[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]],
-        <BLANKLINE>
                [[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]]], dtype=float32)
