@@ -273,15 +273,10 @@ def container_run(platform: str,
         # mount mxnet/build for storing build
         '-v', "{}:/work/build".format(local_build_folder),
         '-v', "{}:/work/ccache".format(local_ccache_dir),
-        '-u', '{}:{}'.format(os.getuid(), os.getgid()),
-        '-e', 'CCACHE_MAXSIZE={}'.format(environment['CCACHE_MAXSIZE']),
-        # temp dir should be local and not shared
-        '-e', 'CCACHE_TEMPDIR={}'.format(environment['CCACHE_TEMPDIR']),
-        # this path is inside the container as /work/ccache is mounted
-        '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),
-        # a container-scoped log, useful for ccache verification.
-        '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
+        '-u', '{}:{}'.format(os.getuid(), os.getgid())
     ]
+    for e in environment.keys():
+        docker_arg_list += ['-e', '{}={}'.format(e, environment[e])]
     docker_arg_list += [tag]
     docker_arg_list.extend(command)
 
