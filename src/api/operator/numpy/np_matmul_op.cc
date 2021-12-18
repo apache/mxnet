@@ -37,7 +37,7 @@ MXNET_REGISTER_API("_npi.matmul")
         LOG(ERROR) << "matmul: Input operand does not have enough dimensions ...";
         return;
       }
-       int num_inputs     = 2;
+      int num_inputs     = 2;
       NDArray* inputs[2] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
       attrs.op           = op;
       NDArray* out       = args[2].operator mxnet::NDArray*();
