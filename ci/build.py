@@ -34,7 +34,7 @@ import re
 import shutil
 import signal
 import subprocess
-import platform
+from platform import machine
 from itertools import chain
 from subprocess import check_call, check_output
 from typing import *
@@ -359,7 +359,7 @@ def main() -> int:
 
     parser.add_argument("-A", "--architecture",
                         help="Architecture of images to build (x86_64 or aarch64). Default is current machine type.",
-                        default=platform.machine(),
+                        default=machine(),
                         dest='architecture')
 
     parser.add_argument("-b", "--build-only",
