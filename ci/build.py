@@ -47,7 +47,7 @@ from util import *
 DOCKER_COMPOSE_FILES = set(['docker/build.centos7'])
 
 # keywords to identify arm-based dockerfiles
-AARCH_FILE_KEYWORDS = ['armv', 'aarch64']
+AARCH_FILE_KEYWORDS = ['aarch64']
 
 def get_dockerfiles_path():
     return "docker"
