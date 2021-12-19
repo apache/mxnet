@@ -61,7 +61,7 @@ def get_docker_compose_platforms(path: str = get_dockerfiles_path()):
     return platforms
 
 
-def get_platforms(path: str = get_dockerfiles_path(), arch='x86_64') -> List[str]:
+def get_platforms(path: str = get_dockerfiles_path(), arch=machine()) -> List[str]:
     """Get a list of platforms given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
@@ -301,7 +301,7 @@ def container_run(platform: str,
     return 0
 
 
-def list_platforms(arch='x86_64') -> str:
+def list_platforms(arch=machine()) -> str:
     return "\nSupported platforms:\n{}".format('\n'.join(get_platforms(arch=arch)))
 
 
