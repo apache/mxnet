@@ -34,6 +34,7 @@ import re
 import shutil
 import signal
 import subprocess
+import platform
 from itertools import chain
 from subprocess import check_call, check_output
 from typing import *
@@ -60,7 +61,7 @@ def get_docker_compose_platforms(path: str = get_dockerfiles_path()):
     return platforms
 
 
-def get_platforms(path: str = get_dockerfiles_path(), arch='x86') -> List[str]:
+def get_platforms(path: str = get_dockerfiles_path(), arch='x86_64') -> List[str]:
     """Get a list of platforms given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
@@ -68,7 +69,7 @@ def get_platforms(path: str = get_dockerfiles_path(), arch='x86') -> List[str]:
     files = files - DOCKER_COMPOSE_FILES
     files.update(["build."+x for x in get_docker_compose_platforms()])
     arm_files = set(filter(lambda x: any(y in x for y in AARCH_FILE_KEYWORDS), files))
-    if arch == 'x86':
+    if arch == 'x86_64':
         files = files - arm_files
     elif arch == 'aarch64':
         files = arm_files
@@ -300,7 +301,7 @@ def container_run(platform: str,
     return 0
 
 
-def list_platforms(arch='x86') -> str:
+def list_platforms(arch='x86_64') -> str:
     return "\nSupported platforms:\n{}".format('\n'.join(get_platforms(arch=arch)))
 
 
@@ -357,8 +358,8 @@ def main() -> int:
                         type=str)
 
     parser.add_argument("-A", "--architecture",
-                        help="Architecture of images to build (x86 or aarch64). Default is x86.",
-                        default='x86',
+                        help="Architecture of images to build (x86_64 or aarch64). Default is current machine type.",
+                        default=platform.machine(),
                         dest='architecture')
 
     parser.add_argument("-b", "--build-only",
