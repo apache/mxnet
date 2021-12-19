@@ -30,3 +30,4 @@ astroid==2.3.3  # pylint and astroid need to be aligned
 requests<2.19.0,>=2.18.4
 setuptools
 coverage
+wheel
