@@ -70,7 +70,8 @@ void DNNLPoolingFwd::Init(const mxnet::NDArray& input,
 void DNNLPoolingFwd::Execute(const NDArray& in_data,
                              const OpReqType req,
                              const NDArray& out_data,
-                             const NDArray* workspace) {
+                             const NDArray* workspace,
+                             const bool use_adaptive_pooling) {
   NDArray in_buffer = in_data;
   if (in_data.IsView() && in_data.IsDNNLData())
     in_buffer = in_data.Reorder2Default();
@@ -83,7 +84,7 @@ void DNNLPoolingFwd::Execute(const NDArray& in_data,
       {DNNL_ARG_DST, *(output_mem_t_.second)},
   };
 
-  if (this->with_workspace_) {
+  if (this->with_workspace_ && !use_adaptive_pooling) {
     auto engine = CpuEngine::Get()->get_engine();
 
     if (workspace == nullptr) {
@@ -416,51 +417,51 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
   return it->second;
 }
 
-void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<NDArray>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<NDArray>& outputs) {
-  if (req[0] == kNullOp) {
-    return;
-  }
+// void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
+//                             const OpContext& ctx,
+//                             const std::vector<NDArray>& inputs,
+//                             const std::vector<OpReqType>& req,
+//                             const std::vector<NDArray>& outputs) {
+//   if (req[0] == kNullOp) {
+//     return;
+//   }
 
-  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+//   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
 
-  const NDArray& out_grad  = inputs[0];
-  const NDArray* workspace = nullptr;
-  const NDArray* in_data   = nullptr;
-  if (DNNLRequireWorkspace(param)) {
-    // The first two elements are the gradient of the outputs in forward.
-    // The third is the input of forward.
-    // The fourth and the fifth are the outputs of forward.
-    CHECK_EQ(inputs.size(), 5U);
-    in_data   = &inputs[2];
-    workspace = &inputs[4];
-  } else {
-    CHECK_EQ(inputs.size(), 3U);
-    in_data = &inputs[1];
-  }
-  const NDArray& in_grad = outputs[0];
+//   const NDArray& out_grad  = inputs[0];
+//   const NDArray* workspace = nullptr;
+//   const NDArray* in_data   = nullptr;
+//   if (DNNLRequireWorkspace(param)) {
+//     // The first two elements are the gradient of the outputs in forward.
+//     // The third is the input of forward.
+//     // The fourth and the fifth are the outputs of forward.
+//     CHECK_EQ(inputs.size(), 5U);
+//     in_data   = &inputs[2];
+//     workspace = &inputs[4];
+//   } else {
+//     CHECK_EQ(inputs.size(), 3U);
+//     in_data = &inputs[1];
+//   }
+//   const NDArray& in_grad = outputs[0];
 
-  std::cout << "Inside DNNLPoolingGradCompute\n";
-  TmpMemMgr::Get()->Init(ctx.requested[0]);
+//   std::cout << "Inside DNNLPoolingGradCompute\n";
+//   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
-  auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad, use_adaptive_pooling);
-  auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
-  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
-  dnnl_args_map_t args = {
-      {DNNL_ARG_DIFF_DST, *diff_dst_mem},
-      {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
-  };
-  if (DNNLRequireWorkspace(param) && workspace != nullptr) {
-    args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
-  }
+//   auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad, use_adaptive_pooling);
+//   auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
+//   auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
+//   dnnl_args_map_t args = {
+//       {DNNL_ARG_DIFF_DST, *diff_dst_mem},
+//       {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
+//   };
+//   if (DNNLRequireWorkspace(param) && workspace != nullptr) {
+//     args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
+//   }
 
-  DNNLStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);
-  CommitOutput(in_grad, diff_src_mem);
-  DNNLStream::Get()->Submit();
-}
+//   DNNLStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);
+//   CommitOutput(in_grad, diff_src_mem);
+//   DNNLStream::Get()->Submit();
+// }
 
 }  // namespace op
 }  // namespace mxnet

@@ -325,7 +325,7 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 
   if (SupportDNNLPooling(param, inputs[0])) {
     DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLPoolingGradCompute, attrs, ctx, inputs, req, outputs);
+    DNNLRun(DNNLPoolingGradCompute<false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

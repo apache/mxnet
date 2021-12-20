@@ -94,7 +94,6 @@ inline void AdaptiveAvgPoolOpBackward(const nnvm::NodeAttrs& attrs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<TBlob>& outputs) {
   std::cout << "Naive backward\n";
-  std::cerr << "Naive backward err\n";
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
