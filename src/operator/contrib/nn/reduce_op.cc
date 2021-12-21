@@ -56,6 +56,7 @@ NNVM_REGISTER_OP(_contrib_NCCLReduce)
 .set_attr_parser(ParamParser<NCCLReduceParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
+.set_attr<FCompute>("FCompute<cpu>", NCCLReduceCompute<cpu>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
@@ -83,7 +84,6 @@ NNVM_REGISTER_OP(_backward_NCCLReduce)
 .set_attr_parser(ParamParser<NCCLReduceParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NCCLReduceBackward<cpu>);
+.set_attr<nnvm::TIsBackward>("TIsBackward", true);
 }
 }
