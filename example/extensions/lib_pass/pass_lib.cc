@@ -31,11 +31,29 @@
 using namespace mxnet::ext;
 
 /* \brief a basic pass that prints out the options and the graph */
+/*
 MXReturnValue myPass(mxnet::ext::Graph* g,
                      const std::unordered_map<std::string, std::string>& options) {
+  int cur_rank = -1;
+  std::string nccl_unique_id = "asd";
   for (auto kv : options) {
-    std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
+    std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;}
+
+  std::cout<<" print options" << std::endl;
+  size_t length = g->size();
+  mxnet::ext::Node *tmp;
+  for (int i = 0;i < length; i += 1)
+  {
+    tmp = g->getNode(i);
+    std::cout<<tmp->name<<std::endl;
+    auto attrs = tmp->attrs;
+    for (auto it = attrs.begin(); it!=attrs.end(); it ++ )
+  {
+    std::cout<<tmp->name<<":attrs:"<<it->first<<" : "<<it->second<<std::endl;
   }
+  }
+  //g->addNode("myConv","_contrib_NCCLReduce");
+  /*
   //g->addNode("myConv","Convolution");
   mxnet::ext::Node *copy_old_layer = g->getNode(g->size()-2);
   mxnet::ext::Node *old_layer = g->getNode(g->size()-1);
@@ -92,6 +110,78 @@ MXReturnValue myPass(mxnet::ext::Graph* g,
 
   return MX_SUCCESS;
 }
+*/
+
+
+MXReturnValue myPass(mxnet::ext::Graph* g,
+                     const std::unordered_map<std::string, std::string>& options) {
+  std::string cur_rank = "";
+  std::string nccl_unique_id = "";
+  std::string num_gpus = "";
+  for (auto kv : options) {
+    std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
+    if (kv.first == "rank")
+    {
+        cur_rank = kv.second.c_str();
+    }
+    if (kv.first == "nccl_unique_id")
+        nccl_unique_id = kv.second.c_str();
+    if (kv.first == "num_gpus")
+        num_gpus = kv.second.c_str();
+    }
+  std::cout<<"nccl:"<<nccl_unique_id<<std::endl;
+
+  size_t length = g->size();
+  mxnet::ext::Node *tmp;
+  std::string root_rank;
+  mxnet::ext::Node *target_node;
+  int index = 0;
+  for (int i = 0;i < length; i += 1)
+  {
+    target_node = g->getNode(i);
+    std::cout<<"deal with:" << target_node->name<<std::endl;
+    auto it = options.find(target_node->name);
+    if (it == options.end()) {continue;} // req_grad == null
+    root_rank = it->second;
+    mxnet::ext::Node *new_reduce = g->addNode("ncclreduce_" + std::to_string(index),"_contrib_NCCLReduce");
+    index += 1;
+    auto new_attrs = &new_reduce->attrs;
+    auto old_attrs = target_node->attrs;
+    for (auto it = old_attrs.begin(); it!=old_attrs.end(); it++)
+    {
+        if (it->first == "__ext_dtype__" || it->first == "__ext_shape__" || it->first == "__profiler_scope__")
+        {
+            new_attrs ->insert({{it->first, it->second}});
+        }
+    }
+    new_attrs->insert({{"nccl_unique_id", nccl_unique_id}});
+    new_attrs->insert({{"num_gpus", num_gpus}});
+    new_attrs->insert({{"rank", cur_rank}});
+    new_attrs->insert({{"root_rank", root_rank}});
+
+  for (int i=0;i<target_node->outputs.size(); i++)
+  {
+     new_reduce->outputs.push_back(target_node->outputs[i]);
+     mxnet::ext::Node *output_node = target_node->outputs[i].node;
+     int index = target_node->outputs[i].entry;
+     //std::cout<<"try change:"<<output_node->name<<":"<<output_node->inputs.size()<<std::endl;
+     output_node->inputs[index].node = new_reduce;
+  }
+  for (int i=0;i<target_node->outputs.size(); i++)
+  {
+     target_node->outputs.pop_back();
+  }
+  target_node->outputs.push_back({new_reduce, 0});
+  new_reduce->inputs.push_back({target_node, 0});
+
+  }
+  g->print();
+
+
+  return MX_SUCCESS;
+}
+
+
 
 REGISTER_PASS(myPass).setBody(myPass);
 
