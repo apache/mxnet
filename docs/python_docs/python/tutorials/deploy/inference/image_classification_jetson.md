@@ -94,7 +94,7 @@ with open(lbl_path, 'r') as f:
 img_path = gluon.utils.download('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true')
 img = mx.image.imread(img_path)
 img = mx.image.imresize(img, 224, 224) # resize
-img = mx.image.color_normalize(img.astype(dtype='float32')/255,
+img = mx.image.color_normalize(img.astype(dtype='float64')/255,
                                mean=mx.np.array([0.485, 0.456, 0.406]),
                                std=mx.np.array([0.229, 0.224, 0.225])) # normalize
 img = img.transpose((2, 0, 1)) # channel first
