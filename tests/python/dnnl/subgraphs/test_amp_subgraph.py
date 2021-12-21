@@ -33,28 +33,26 @@ def check_amp_with_quantization(sym_fp32, args, quantized_nodes, amp_dtype):
   # Check if amp (after the fuse) changes the name of tensors for calibration
 
   sym_fp32 = sym_fp32.get_backend_symbol(SG_PASS_NAME)
-  a, calib_tensors1 = mx.contrib.quantization._quantize_symbol(
+  _, calib_tensors1 = mx.contrib.quantization._quantize_symbol(
       sym_fp32, mx.cpu(), excluded_symbols=quant_excluded_nodes)
 
   sym_lp, _, _ = amp.convert_model(sym_fp32, args, {}, target_dtype=amp_dtype,
                                    excluded_sym_names=quantized_nodes,
                                    cast_optional_params=True)
   sym_sg_lp = sym_lp.get_backend_symbol(AMP_SG_PASS_NAME)  # fuse amp casts
-  b, calib_tensors2 = mx.contrib.quantization._quantize_symbol(
+  _, calib_tensors2 = mx.contrib.quantization._quantize_symbol(
       sym_sg_lp, mx.cpu(), excluded_symbols=quant_excluded_nodes)
-
-  outputs = {out for sym in sym_sg_lp.get_internals() for out in sym.list_outputs()}
   assert calib_tensors1 == calib_tensors2
 
 
 def same_graph_structure(symnet1, symnet2, expected):
-    nodes1 = json.loads(symnet1.tojson(remove_amp_cast=False))['nodes']
-    nodes2 = json.loads(symnet2.tojson(remove_amp_cast=False))['nodes']
-    assert (len(nodes1) == len(nodes2)) == expected
-    for node1, node2 in zip(nodes1, nodes2):
-        if node1['op'] != node2['op'] or node1['inputs'] != node2['inputs']:
-          assert expected == False
-          break
+  nodes1 = json.loads(symnet1.tojson(remove_amp_cast=False))['nodes']
+  nodes2 = json.loads(symnet2.tojson(remove_amp_cast=False))['nodes']
+  assert (len(nodes1) == len(nodes2)) == expected
+  for node1, node2 in zip(nodes1, nodes2):
+    if node1['op'] != node2['op'] or node1['inputs'] != node2['inputs']:
+      assert expected == False
+      break
 
 
 def check_amp_fuse(sym_fp32, any_input_name, args, dtype, expected_sym=None, quantized_nodes=[],
@@ -146,7 +144,7 @@ def test_amp_conv():
   exp_conv1 = mx.symbol.Convolution(data=data, weight=weight1, bias=bias1, kernel=weight1_nd.shape[2:],
                                     num_filter=weight1_nd.shape[0])
   exp_conv2 = mx.symbol.Convolution(data=exp_conv1, weight=weight2, no_bias=True, kernel=weight2_nd.shape[2:],
-                                  num_filter=weight2_nd.shape[0])
+                                    num_filter=weight2_nd.shape[0])
   exp_amp_cast = mx.symbol.amp_cast(exp_conv2, dtype='float32')
   exp_sym = exp_amp_cast.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym)
@@ -155,7 +153,7 @@ def test_amp_conv():
                                     num_filter=weight1_nd.shape[0])
   exp_amp_cast = mx.symbol.amp_cast(exp_conv1, dtype=bfloat16)
   exp_conv2 = mx.symbol.Convolution(data=exp_amp_cast, weight=weight2, no_bias=True, kernel=weight2_nd.shape[2:],
-                                  num_filter=weight2_nd.shape[0])
+                                    num_filter=weight2_nd.shape[0])
   exp_sym = exp_conv2.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_conv_1'])
 
@@ -220,6 +218,7 @@ def test_amp_common_params():
                                      num_hidden=weight_nd.shape[0])
   exp_mc = mx.symbol.amp_multicast(exp_fc1, exp_fc2, exp_fc3, num_outputs=3)
   exp_sym = mx.symbol.Concat(*exp_mc[:3])
+  exp_sym = mx.symbol.amp_cast(exp_sym, dtype='float32')
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
 
   check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_fully_connected_2'],
