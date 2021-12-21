@@ -231,7 +231,9 @@ class SequenceMaskProp : public OperatorProperty {
                  std::vector<int>* aux_type) const override {
     CHECK_GE(in_type->size(), param_.use_sequence_length ? 2U : 1U);
     int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
+    if (dtype == -1){
+      return false;
+    }
     for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
