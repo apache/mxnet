@@ -151,7 +151,7 @@ def compile_unix_int64_gpu(lib_name) {
         ws('workspace/build-gpu-int64') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_large_tensor', false)
+            utils.docker_run('ubuntu_gpu_cu114', 'build_ubuntu_gpu_large_tensor', false)
             utils.pack_lib(lib_name, mx_cmake_lib)
           }
         }
