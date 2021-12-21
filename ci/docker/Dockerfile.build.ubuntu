@@ -89,7 +89,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libb2-dev \
         libzstd-dev \
         gfortran && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    add-apt-repository -r "deb https://apt.repos.intel.com/oneapi all main"
 
 # Build OpenBLAS from source
 RUN export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/7/ && \

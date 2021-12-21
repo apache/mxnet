@@ -29,12 +29,10 @@
 
 #include <dmlc/parameter.h>
 
-#include <algorithm>
 #include <cstdlib>
 #include <iomanip>
 #include <iterator>
 #include <limits>
-#include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -77,10 +75,6 @@ std::vector<size_t> LayoutInfo::Order() const {
 
 size_t LayoutInfo::ChannelIdx() const {
   return channel_last ? 1 + n_space_dims : 1;
-}
-
-std::vector<int64_t> LayoutInfo::Strides(const std::vector<int64_t>& dims) const {
-  return PackedStrides(Order(), dims);
 }
 
 LayoutInfo GetLayoutInfo(mshadow::LayoutFlag layout) {
@@ -165,14 +159,8 @@ Descriptor MakeTensorDesc(int64_t uid,
   for (size_t i = 0; i < dims.size(); ++i)
     dims[i] = blob.shape_[rev_order[i]];
   auto strides = li.Strides(dims);
-  if (li.n_space_dims == 1 && expand_1d) {
-    dims.insert(dims.begin() + 2, 1);
-    std::vector<size_t> order(dims.size());
-    std::iota(order.begin(), order.end(), 0);
-    if (li.channel_last)
-      std::rotate(order.begin() + 1, order.begin() + 2, order.end());
-    strides = PackedStrides(order, dims);
-  }
+  if (expand_1d)
+    li.ExpandIf1d(&dims, &strides);
   return MakeTensorDesc(
       uid, CudnnType(static_cast<mshadow::TypeFlag>(blob.type_flag_)), dims, strides, is_virtual);
 }
@@ -756,6 +744,109 @@ void ConvWgrad::Exec(const cudnn_cxx::Descriptor& plan,
                                 CUDNN_ATTR_VARIANT_PACK_WORKSPACE,
                                 workspace);
   CUDNN_CALL(cudnnBackendExecute(s->dnn_handle_, plan.get(), var_pack.get()));
+}
+
+struct LegacyTensorDestroyer {
+  using pointer = cudnnTensorDescriptor_t;
+
+  void operator()(cudnnTensorDescriptor_t desc) {
+    CUDNN_CALL_NONFATAL(cudnnDestroyTensorDescriptor(desc));
+  }
+};
+
+using LegacyTensor = std::unique_ptr<cudnnTensorDescriptor_t, LegacyTensorDestroyer>;
+
+LegacyTensor MakeLegacyTensor() {
+  cudnnTensorDescriptor_t desc{};
+  CUDNN_CALL(cudnnCreateTensorDescriptor(&desc));
+  return LegacyTensor(desc);
+}
+
+union ScalingParam {
+  double d;
+  float f;
+};
+
+std::pair<ScalingParam, ScalingParam> AlphaBeta(int type_flag, double init_a, double init_b) {
+  ScalingParam a, b;
+  switch (type_flag) {
+    case kFloat64:
+      a.d = init_a;
+      b.d = init_b;
+      break;
+    case kFloat32:  // fallthrough
+    case kFloat16:
+      a.f = init_a;
+      b.f = init_b;
+      break;
+    default:
+      LOG(FATAL) << "Unexpected type: " << type_flag;
+  }
+  return {a, b};
+}
+
+void SetLegacyTensor(cudnnTensorDescriptor_t desc, const TBlob& blob, const LayoutInfo& li) {
+  std::vector<int> dims(blob.shape_.ndim());
+  CHECK_EQ(dims.size(), li.n_space_dims + 2);
+  auto rev_order = ReverseOrder(li.Order());
+  for (size_t i = 0; i < dims.size(); ++i)
+    dims[i] = blob.shape_[rev_order[i]];
+  auto strides = li.Strides(dims);
+  li.ExpandIf1d(&dims, &strides);
+  auto type = static_cast<mshadow::TypeFlag>(blob.type_flag_);
+  CUDNN_CALL(cudnnSetTensorNdDescriptor(desc, CudnnType(type), dims.size(), &dims[0], &strides[0]));
+}
+
+void SetLegacyCTensorExpandDims(cudnnTensorDescriptor_t desc,
+                                const TBlob& blob,
+                                const LayoutInfo& li) {
+  std::vector<int> dims(li.n_space_dims + 2, 1);
+  dims[1] = blob.shape_[0];
+  std::vector<int> strides(dims.size(), 1);
+  strides[0] = blob.shape_[0];
+  li.ExpandIf1d(&dims, &strides);
+  auto type = static_cast<mshadow::TypeFlag>(blob.type_flag_);
+  CUDNN_CALL(cudnnSetTensorNdDescriptor(desc, CudnnType(type), dims.size(), &dims[0], &strides[0]));
+}
+
+bool LegacyAddBias(const OpContext& ctx, const LayoutInfo& li, const TBlob& y, const TBlob& b) {
+  thread_local auto y_desc = MakeLegacyTensor();
+  thread_local auto b_desc = MakeLegacyTensor();
+
+  auto s             = ctx.get_stream<gpu>();
+  auto [alpha, beta] = AlphaBeta(y.type_flag_, 1.0, 1.0);  // NOLINT(whitespace/braces)
+
+  SetLegacyTensor(y_desc.get(), y, li);
+  SetLegacyCTensorExpandDims(b_desc.get(), b, li);
+
+  auto err =
+      cudnnAddTensor(s->dnn_handle_, &alpha, b_desc.get(), b.dptr_, &beta, y_desc.get(), y.dptr_);
+  if (err == CUDNN_STATUS_NOT_SUPPORTED)
+    return false;
+  CHECK_EQ(err, CUDNN_STATUS_SUCCESS);
+  return true;
+}
+
+bool LegacyBiasGrad(const OpContext& ctx,
+                    const LayoutInfo& li,
+                    bool add_to,
+                    const TBlob& db,
+                    const TBlob& dy) {
+  thread_local auto db_desc = MakeLegacyTensor();
+  thread_local auto dy_desc = MakeLegacyTensor();
+
+  auto s             = ctx.get_stream<gpu>();
+  auto [alpha, beta] = AlphaBeta(dy.type_flag_, 1.0, add_to ? 1.0 : 0.0);  // NOLINT(*)
+
+  SetLegacyCTensorExpandDims(db_desc.get(), db, li);
+  SetLegacyTensor(dy_desc.get(), dy, li);
+
+  auto err = cudnnConvolutionBackwardBias(
+      s->dnn_handle_, &alpha, dy_desc.get(), dy.dptr_, &beta, db_desc.get(), db.dptr_);
+  if (err == CUDNN_STATUS_NOT_SUPPORTED)
+    return false;
+  CHECK_EQ(err, CUDNN_STATUS_SUCCESS);
+  return true;
 }
 
 }  // namespace cudnn
