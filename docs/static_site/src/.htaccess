@@ -124,4 +124,4 @@ Redirect 301 /faq/index.html /api
 Redirect 301 /tutorials/index.html /api
 Redirect 301 /architecture/index.html /api/architecture/overview
 Redirect 301 /community/ecosystem.html /ecosystem
-Redirect 301 /community/powered_by.html /ecosystem
+Redirect 301 /community/powered_by.html /powered_by
