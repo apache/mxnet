@@ -18,7 +18,7 @@ namespace mxnet {
 namespace op {
 
 
-void NCCLReduceCompute(const nnvm::NodeAttrs& attrs,
+void NCCLReduceBackward(const nnvm::NodeAttrs& attrs,
                                      const OpContext& ctx,
                                      const std::vector<TBlob>& inputs,
                                      const std::vector<OpReqType>& req,
@@ -50,10 +50,10 @@ void NCCLReduceCompute(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_NCCLReduce)
-.set_attr<FCompute>("FCompute<gpu>", NCCLReduceCompute);
+.set_attr<FCompute>("FCompute<gpu>", NCCLReduceCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_NCCLReduce)
-.set_attr<FCompute>("FCompute<gpu>", NCCLReduceBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NCCLReduceBackward);
 
 }  // namespace op
 }  // namespace mxnet
