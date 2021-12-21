@@ -306,6 +306,21 @@ build_centos7_gpu() {
     ninja
 }
 
+build_centos7_gpu_cu101() {
+  build_centos7_gpu
+}
+build_centos7_gpu_cu102() {
+  build_centos7_gpu
+}
+
+build_centos7_gpu_cu110() {
+  build_centos7_gpu
+}
+
+build_centos7_gpu_cu112() {
+  build_centos7_gpu
+}
+
 build_ubuntu_cpu() {
     build_ubuntu_cpu_openblas
 }
