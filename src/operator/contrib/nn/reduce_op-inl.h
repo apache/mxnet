@@ -38,7 +38,7 @@ struct NCCLReduceParam : public dmlc::Parameter<NCCLReduceParam> {
 };
 
 template <int req>
-struct ncclreduce_backward {
+struct ncclreduce_compute {
   template <typename DType>
   MSHADOW_XINLINE static void Map(int i,
                                   DType* in_grad,
@@ -48,7 +48,7 @@ struct ncclreduce_backward {
 };
 
 template <typename xpu>
-void NCCLReduceBackward(const nnvm::NodeAttrs& attrs,
+void NCCLReduceCompute(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
@@ -63,7 +63,7 @@ void NCCLReduceBackward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<ncclreduce_backward<req_type>, xpu>::Launch(s,
+      Kernel<ncclreduce_compute<req_type>, xpu>::Launch(s,
                                                         in_grad.Size(),
                                                         in_grad.dptr<DType>(),
                                                         out_grad.dptr<DType>());
