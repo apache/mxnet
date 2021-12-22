@@ -34,6 +34,7 @@ import re
 import shutil
 import signal
 import subprocess
+from platform import machine
 from itertools import chain
 from subprocess import check_call, check_output
 from typing import *
@@ -46,7 +47,7 @@ from util import *
 DOCKER_COMPOSE_FILES = set(['docker/build.centos7'])
 
 # keywords to identify arm-based dockerfiles
-AARCH_FILE_KEYWORDS = ['armv', 'aarch64']
+AARCH_FILE_KEYWORDS = ['aarch64']
 
 def get_dockerfiles_path():
     return "docker"
@@ -60,7 +61,7 @@ def get_docker_compose_platforms(path: str = get_dockerfiles_path()):
     return platforms
 
 
-def get_platforms(path: str = get_dockerfiles_path(), arch='x86') -> List[str]:
+def get_platforms(path: str = get_dockerfiles_path(), arch=machine()) -> List[str]:
     """Get a list of platforms given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
@@ -68,7 +69,7 @@ def get_platforms(path: str = get_dockerfiles_path(), arch='x86') -> List[str]:
     files = files - DOCKER_COMPOSE_FILES
     files.update(["build."+x for x in get_docker_compose_platforms()])
     arm_files = set(filter(lambda x: any(y in x for y in AARCH_FILE_KEYWORDS), files))
-    if arch == 'x86':
+    if arch == 'x86_64':
         files = files - arm_files
     elif arch == 'aarch64':
         files = arm_files
@@ -273,15 +274,10 @@ def container_run(platform: str,
         # mount mxnet/build for storing build
         '-v', "{}:/work/build".format(local_build_folder),
         '-v', "{}:/work/ccache".format(local_ccache_dir),
-        '-u', '{}:{}'.format(os.getuid(), os.getgid()),
-        '-e', 'CCACHE_MAXSIZE={}'.format(environment['CCACHE_MAXSIZE']),
-        # temp dir should be local and not shared
-        '-e', 'CCACHE_TEMPDIR={}'.format(environment['CCACHE_TEMPDIR']),
-        # this path is inside the container as /work/ccache is mounted
-        '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),
-        # a container-scoped log, useful for ccache verification.
-        '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
+        '-u', '{}:{}'.format(os.getuid(), os.getgid())
     ]
+    for e in environment.keys():
+        docker_arg_list += ['-e', '{}={}'.format(e, environment[e])]
     docker_arg_list += [tag]
     docker_arg_list.extend(command)
 
@@ -305,7 +301,7 @@ def container_run(platform: str,
     return 0
 
 
-def list_platforms(arch='x86') -> str:
+def list_platforms(arch=machine()) -> str:
     return "\nSupported platforms:\n{}".format('\n'.join(get_platforms(arch=arch)))
 
 
@@ -362,8 +358,8 @@ def main() -> int:
                         type=str)
 
     parser.add_argument("-A", "--architecture",
-                        help="Architecture of images to build (x86 or aarch64). Default is x86.",
-                        default='x86',
+                        help="Architecture of images to build (x86_64 or aarch64). Default is current machine type.",
+                        default=machine(),
                         dest='architecture')
 
     parser.add_argument("-b", "--build-only",
