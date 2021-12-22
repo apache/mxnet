@@ -170,7 +170,7 @@ void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<cpu>* s,
 }
 
 #if MXNET_USE_ONEDNN == 1
-bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data, const bool forward) {
+bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) {
   for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
     // std::cout << "idx = " << idx << std::endl;
 
@@ -183,7 +183,7 @@ bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data, 
     }
     if (s1 % s2 != 0) {
     // if ((s1 % s2 != 0 && forward) || (s2 % s1 != 0 && !true)) {
-      std::cout << "Inside check || forward = " << forward << std::endl;
+      // std::cout << "Inside check || forward = " << forward << std::endl;
       std::cout << "s1 \% s2 != 0\n";
       std::cout << "s1 = " << s1 << std::endl;
       std::cout << "s2 = " << s2 << std::endl;
@@ -224,9 +224,9 @@ void AdaptiveAvgPoolOpBackwardExCPU(const nnvm::NodeAttrs& attrs,
 
   CHECK_EQ(inputs.size(), 1U);
 
-  const bool check = SupportDNNLAveragePooling(inputs[0], outputs[0], false); 
+  const bool check = SupportDNNLAveragePooling(outputs[0], inputs[0]);
   std::cout << "DNNL Backward Average Pooling support = " << check << std::endl;
-  if (check) {  // zmienic parametry in_data, out_data
+  if (check) {  
 
     std::cout << "Here\n";
     DNNL_OPCHECK_INIT(true, 1, inputs, outputs);
@@ -302,7 +302,7 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
   oneDNN doesn't support adaptive pooling.
   Fallback is needed when padding is not equal 0;
   */
-  const bool check = SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0], true);
+  const bool check = SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0]);
   std::cout << "DNNL Forward Average Pooling support = " << check << std::endl;
   if (check) {
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);

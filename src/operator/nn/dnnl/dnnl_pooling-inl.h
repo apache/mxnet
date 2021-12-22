@@ -209,7 +209,6 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
   }
 
   std::cout << "1st check DNNLPoolingGradCompute\n";
-
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
 
   const NDArray& out_grad  = inputs[0];
@@ -225,6 +224,8 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
   } else if (!IsAdaptivePooling(param)) {
     CHECK_EQ(inputs.size(), 3U);
     in_data = &inputs[1];
+  } else {
+    in_data = &outputs[0];
   }
   const NDArray& in_grad = outputs[0];
 

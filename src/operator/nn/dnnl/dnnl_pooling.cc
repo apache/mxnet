@@ -242,7 +242,7 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
   CHECK((param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3) || use_adaptive_pooling)
       << "Not Implemented";  // to be changed
 
-  const int kernel_ndims = use_adaptive_pooling ? param.kernel.ndim() : mxnet::TShape(data_md.dims()).ndim();
+  const int kernel_ndims = use_adaptive_pooling ? mxnet::TShape(data_md.dims()).ndim() : param.kernel.ndim();
   dnnl::memory::dims kernel(kernel_ndims);
   dnnl::memory::dims strides(kernel_ndims);
   dnnl::memory::dims pad_l(kernel_ndims);
@@ -257,7 +257,7 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
   std::cout << "Getting PoolingAlg\n";
   std::cout << "use_adaptive=" << use_adaptive_pooling << '\n';
   if (use_adaptive_pooling) {
-    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, input_shape, output_shape);
+    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, input_shape, output_shape); // ten stride jest cos nie tak
     dnnl::memory::validate_dims(kernel);
     dnnl::memory::validate_dims(strides);
     dnnl::memory::validate_dims(pad_l);
@@ -357,11 +357,10 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
   DNNLPoolingSignature key(param);
   if (&in_data != nullptr) {
     std::cout << "in_data is not null\n";
-    // std::cout << in_data.shape() << '\n'; // na odczytywaniu in_data tez leci segmentation fault
     key.AddSign(in_data);
   }
   std::cout << "After in_data\n";
-  // key.AddSign(in_data); // Tutaj leci pierwszy segmentation fault
+  key.AddSign(in_data);
   key.AddSign(in_grad);
   key.AddSign(out_grad);
   if (use_adaptive_pooling) {
@@ -397,7 +396,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
 
     if (use_adaptive_pooling) {
       UseAdaptivePaddingKernel(
-          &kernel, &strides, &pad_l, &pad_r, in_data.shape(), out_grad.shape());
+          &kernel, &strides, &pad_l, &pad_r, in_grad.shape(), out_grad.shape()); 
       dnnl::memory::validate_dims(kernel);
       dnnl::memory::validate_dims(strides);
       dnnl::memory::validate_dims(pad_l);
