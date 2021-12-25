@@ -42,6 +42,7 @@
 #include "../common/utils.h"
 
 namespace mxnet {
+
 namespace op {
 /*!
  * \brief assign the expression to out according to request

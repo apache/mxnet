@@ -18,11 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file torch_module-inl.h
  * \brief torch module operator
  * \author Min Lin
-*/
+ */
 #ifndef PLUGIN_TORCH_TORCH_CRITERION_INL_H_
 #define PLUGIN_TORCH_TORCH_CRITERION_INL_H_
 
@@ -46,14 +45,14 @@ struct TorchCriterionParam : public dmlc::Parameter<TorchCriterionParam> {
   float grad_scale;
   DMLC_DECLARE_PARAMETER(TorchCriterionParam) {
     DMLC_DECLARE_FIELD(lua_string)
-    .describe("lua string that is called to generate the torch criterion object");
+        .describe("lua string that is called to generate the torch criterion object");
     DMLC_DECLARE_FIELD(label_shape)
-    .set_default(mxnet::TShape())
-    .enforce_nonzero()
-    .describe("Shape of label (without batch size).");
+        .set_default(mxnet::TShape())
+        .enforce_nonzero()
+        .describe("Shape of label (without batch size).");
     DMLC_DECLARE_FIELD(grad_scale)
-    .set_default(1.0f)
-    .describe("Scale the gradient by a float factor (a.k.a weight of this loss).");
+        .set_default(1.0f)
+        .describe("Scale the gradient by a float factor (a.k.a weight of this loss).");
   }
 };
 
@@ -61,7 +60,7 @@ struct TorchCriterionParam : public dmlc::Parameter<TorchCriterionParam> {
  * \brief This is the implementation of activation operator.
  * \tparam xpu The device that the op will be executed on.
  */
-template<typename xpu>
+template <typename xpu>
 class TorchCriterionOp : public Operator {
  private:
   TorchCriterionParam param_;
@@ -70,12 +69,12 @@ class TorchCriterionOp : public Operator {
 
  public:
   explicit TorchCriterionOp(TorchCriterionParam p) {
-    this->param_ = p;
+    this->param_      = p;
     this->torchState_ = new TorchState();
-    lua_State *L = torchState_->L;
+    lua_State* L      = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
-    std::string exec = std::string("return ") + p.lua_string
-      + TorchTensor::ModuleType(xpu::kDevMask);
+    std::string exec =
+        std::string("return ") + p.lua_string + TorchTensor::ModuleType(xpu::kDevMask);
     CHECK_EQ(luaL_loadstring(L, exec.c_str()), 0);
     int err = lua_pcall(L, 0, 1, 0);
     CHECK_EQ(err, 0) << lua_tostring(L, -1);
@@ -87,17 +86,17 @@ class TorchCriterionOp : public Operator {
     delete this->torchState_;
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  virtual void Forward(const OpContext& ctx,
+                       const std::vector<TBlob>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& out_data,
+                       const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
-    lua_State *L = torchState_->L;
+    lua_State* L = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     torchState_->SetStream(s);
     lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
     // call forward
@@ -117,26 +116,26 @@ class TorchCriterionOp : public Operator {
     real_t loss = static_cast<real_t>(lua_tonumber(L, -1));
     lua_pop(L, 1);
     Tensor<xpu, 2> out = out_data[0].FlatTo2D<xpu, real_t>(s);
-    Assign(out, req[0], loss*param_.grad_scale);
+    Assign(out, req[0], loss * param_.grad_scale);
     lua_pop(L, 1);
     CHECK_EQ(lua_gettop(L), 0);
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  virtual void Backward(const OpContext& ctx,
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
-    lua_State *L = torchState_->L;
+    lua_State* L = torchState_->L;
     CHECK_EQ(lua_gettop(L), 0);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(req[0], kWriteTo) << "Torch Criterion only supports write to in_grad";
     CHECK_EQ(req[1], kNullOp) << "Torch Criterion cannot back prop to label";
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     torchState_->SetStream(s);
     lua_rawgeti(L, LUA_REGISTRYINDEX, lua_reference_);
     THGeneralTensor th = TorchTensor::TBlobToTHTensor(torchState_, in_grad[0]);
@@ -161,7 +160,7 @@ class TorchCriterionOp : public Operator {
 };  // class TorchCriterionOp
 
 // Decalre Factory function, used for dispatch specialization
-template<typename xpu>
+template <typename xpu>
 Operator* CreateOp(TorchCriterionParam type);
 
 #if DMLC_USE_CXX11
@@ -183,17 +182,19 @@ class TorchCriterionProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2);
-    const mxnet::TShape &dshape = in_shape->at(0);
-    if (dshape.ndim() == 0) return false;
+    const mxnet::TShape& dshape = in_shape->at(0);
+    if (dshape.ndim() == 0)
+      return false;
     std::vector<index_t> lshape;
     lshape.push_back(dshape[0]);
-    lshape.insert(lshape.end(), param_.label_shape.data(),
-      param_.label_shape.data() +  param_.label_shape.ndim());
+    lshape.insert(lshape.end(),
+                  param_.label_shape.data(),
+                  param_.label_shape.data() + param_.label_shape.ndim());
     mxnet::TShape shape(lshape.begin(), lshape.end());
     SHAPE_ASSIGN_CHECK(*in_shape, 1, shape);
     out_shape->clear();
@@ -202,7 +203,7 @@ class TorchCriterionProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new TorchCriterionProp();
+    auto ptr    = new TorchCriterionProp();
     ptr->param_ = param_;
     return ptr;
   }
@@ -212,10 +213,9 @@ class TorchCriterionProp : public OperatorProperty {
   }
 
   // decalre dependency and inplace optimization options
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(const std::vector<int>& out_grad,
+                                             const std::vector<int>& in_data,
+                                             const std::vector<int>& out_data) const override {
     std::vector<int> dep;
     dep.insert(dep.end(), in_data.begin(), in_data.end());
     // Ensure that the backward and forward cannot be called at the same time

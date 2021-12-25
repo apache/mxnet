@@ -142,7 +142,7 @@ static void DNNLRequantizeForward(const nnvm::NodeAttrs& attrs,
   } else if (out_type == mshadow::kInt8) {
     DNNLRequantizeForwardKer<int8_t>(attrs, ctx, inputs, req, outputs, real_range);
   } else {
-    LOG(FATAL) << "dnnl requantize op only supports int8 and uint8 as output type";
+    LOG(FATAL) << "oneDNN requantize op only supports int8 and uint8 as output type";
   }
 }
 

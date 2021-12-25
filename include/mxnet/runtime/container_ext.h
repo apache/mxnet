@@ -83,67 +83,93 @@ class MapObj : public Object {
   static_assert(sizeof(KVType) == 16 || sizeof(KVType) == 8, "sizeof(KVType) incorrect");
 
   static constexpr const uint32_t _type_index = runtime::TypeIndex::kMXNetMap;
-  static constexpr const char* _type_key = "MXNet.Map";
+  static constexpr const char* _type_key      = "MXNet.Map";
   MXNET_DECLARE_FINAL_OBJECT_INFO(MapObj, Object);
 
   /*!
    * \brief Number of elements in the MapObj
    * \return The result
    */
-  size_t size() const { return data_.size(); }
+  size_t size() const {
+    return data_.size();
+  }
   /*!
    * \brief Count the number of times a key exists in the hash map
    * \param key The indexing key
    * \return The result, 0 or 1
    */
-  size_t count(const key_type& key) const { return data_.count(key); }
+  size_t count(const key_type& key) const {
+    return data_.count(key);
+  }
   /*!
    * \brief Index value associated with a key, throw exception if the key does not exist
    * \param key The indexing key
    * \return The const reference to the value
    */
-  const mapped_type& at(const key_type& key) const { return data_.at(key); }
+  const mapped_type& at(const key_type& key) const {
+    return data_.at(key);
+  }
   /*!
    * \brief Index value associated with a key, throw exception if the key does not exist
    * \param key The indexing key
    * \return The mutable reference to the value
    */
-  mapped_type& at(const key_type& key) { return data_.at(key); }
+  mapped_type& at(const key_type& key) {
+    return data_.at(key);
+  }
   /*! \return begin iterator */
-  iterator begin() { return data_.begin(); }
+  iterator begin() {
+    return data_.begin();
+  }
   /*! \return const begin iterator */
-  const_iterator begin() const { return data_.begin(); }
+  const_iterator begin() const {
+    return data_.begin();
+  }
   /*! \return end iterator */
-  iterator end() { return data_.end(); }
+  iterator end() {
+    return data_.end();
+  }
   /*! \return end iterator */
-  const_iterator end() const { return data_.end(); }
+  const_iterator end() const {
+    return data_.end();
+  }
   /*!
    * \brief Index value associated with a key
    * \param key The indexing key
    * \return The iterator of the entry associated with the key, end iterator if not exists
    */
-  const_iterator find(const key_type& key) const { return data_.find(key); }
+  const_iterator find(const key_type& key) const {
+    return data_.find(key);
+  }
   /*!
    * \brief Index value associated with a key
    * \param key The indexing key
    * \return The iterator of the entry associated with the key, end iterator if not exists
    */
-  iterator find(const key_type& key) { return data_.find(key); }
+  iterator find(const key_type& key) {
+    return data_.find(key);
+  }
   /*!
    * \brief Erase the entry associated with the iterator
    * \param position The iterator
    */
-  void erase(const iterator& position) { data_.erase(position); }
+  void erase(const iterator& position) {
+    data_.erase(position);
+  }
   /*!
    * \brief Erase the entry associated with the key, do nothing if not exists
    * \param key The indexing key
    */
-  void erase(const key_type& key) { data_.erase(key); }
+  void erase(const key_type& key) {
+    data_.erase(key);
+  }
   /*!
    * \brief Create an empty container
    * \return The object created
    */
-  static ObjectPtr<MapObj> Empty() { return make_object<MapObj>(); }
+  static ObjectPtr<MapObj> Empty() {
+    return make_object<MapObj>();
+  }
 
  protected:
   /*!
@@ -156,7 +182,7 @@ class MapObj : public Object {
   template <typename IterType>
   static ObjectPtr<Object> CreateFromRange(IterType first, IterType last) {
     ObjectPtr<MapObj> p = make_object<MapObj>();
-    p->data_ = ContainerType(first, last);
+    p->data_            = ContainerType(first, last);
     return p;
   }
   /*!
@@ -165,7 +191,7 @@ class MapObj : public Object {
    * \param map The pointer to the map, can be changed if re-hashing happens
    */
   static void InsertMaybeReHash(const KVType& kv, ObjectPtr<Object>* map) {
-    MapObj* map_node = static_cast<MapObj*>(map->get());
+    MapObj* map_node          = static_cast<MapObj*>(map->get());
     map_node->data_[kv.first] = kv.second;
   }
   /*!
@@ -175,7 +201,7 @@ class MapObj : public Object {
    */
   static ObjectPtr<MapObj> CopyFrom(MapObj* from) {
     ObjectPtr<MapObj> p = make_object<MapObj>();
-    p->data_ = ContainerType(from->data_.begin(), from->data_.end());
+    p->data_            = ContainerType(from->data_.begin(), from->data_.end());
     return p;
   }
   /*! \brief The real container storing data */
@@ -193,23 +219,28 @@ class MapObj : public Object {
  * \tparam K The key NodeRef type.
  * \tparam V The value NodeRef type.
  */
-template <typename K, typename V,
+template <typename K,
+          typename V,
           typename = typename std::enable_if<std::is_base_of<ObjectRef, K>::value>::type,
           typename = typename std::enable_if<std::is_base_of<ObjectRef, V>::value>::type>
 class Map : public ObjectRef {
  public:
-  using key_type = K;
+  using key_type    = K;
   using mapped_type = V;
   class iterator;
   /*!
    * \brief default constructor
    */
-  Map() { data_ = MapObj::Empty(); }
+  Map() {
+    data_ = MapObj::Empty();
+  }
   /*!
    * \brief move constructor
    * \param other source
    */
-  Map(Map<K, V>&& other) { data_ = std::move(other.data_); }
+  Map(Map<K, V>&& other) {
+    data_ = std::move(other.data_);
+  }
   /*!
    * \brief copy constructor
    * \param other source
@@ -268,13 +299,17 @@ class Map : public ObjectRef {
    * \param key The key
    * \return the corresonding element.
    */
-  const V at(const K& key) const { return DowncastNoCheck<V>(GetMapObj()->at(key)); }
+  const V at(const K& key) const {
+    return DowncastNoCheck<V>(GetMapObj()->at(key));
+  }
   /*!
    * \brief Read element from map.
    * \param key The key
    * \return the corresonding element.
    */
-  const V operator[](const K& key) const { return this->at(key); }
+  const V operator[](const K& key) const {
+    return this->at(key);
+  }
   /*! \return The size of the array */
   size_t size() const {
     MapObj* n = GetMapObj();
@@ -286,7 +321,9 @@ class Map : public ObjectRef {
     return n == nullptr ? 0 : GetMapObj()->count(key);
   }
   /*! \return whether array is empty */
-  bool empty() const { return size() == 0; }
+  bool empty() const {
+    return size() == 0;
+  }
   /*!
    * \brief set the Map.
    * \param key The index key.
@@ -297,13 +334,21 @@ class Map : public ObjectRef {
     MapObj::InsertMaybeReHash(MapObj::KVType(key, value), &data_);
   }
   /*! \return begin iterator */
-  iterator begin() const { return iterator(GetMapObj()->begin()); }
+  iterator begin() const {
+    return iterator(GetMapObj()->begin());
+  }
   /*! \return end iterator */
-  iterator end() const { return iterator(GetMapObj()->end()); }
+  iterator end() const {
+    return iterator(GetMapObj()->end());
+  }
   /*! \return find the key and returns the associated iterator */
-  iterator find(const K& key) const { return iterator(GetMapObj()->find(key)); }
+  iterator find(const K& key) const {
+    return iterator(GetMapObj()->find(key));
+  }
 
-  void erase(const K& key) { CopyOnWrite()->erase(key); }
+  void erase(const K& key) {
+    CopyOnWrite()->erase(key);
+  }
 
   /*!
    * \brief copy on write semantics
@@ -328,17 +373,21 @@ class Map : public ObjectRef {
   class iterator {
    public:
     using iterator_category = std::bidirectional_iterator_tag;
-    using difference_type = int64_t;
-    using value_type = const std::pair<K, V>;
-    using pointer = value_type*;
-    using reference = value_type;
+    using difference_type   = int64_t;
+    using value_type        = const std::pair<K, V>;
+    using pointer           = value_type*;
+    using reference         = value_type;
 
     iterator() : itr() {}
 
     /*! \brief Compare iterators */
-    bool operator==(const iterator& other) const { return itr == other.itr; }
+    bool operator==(const iterator& other) const {
+      return itr == other.itr;
+    }
     /*! \brief Compare iterators */
-    bool operator!=(const iterator& other) const { return itr != other.itr; }
+    bool operator!=(const iterator& other) const {
+      return itr != other.itr;
+    }
     /*! \brief De-reference iterators is not allowed */
     pointer operator->() const = delete;
     /*! \brief De-reference iterators */
@@ -370,7 +419,9 @@ class Map : public ObjectRef {
 
  private:
   /*! \brief Return data_ as type of pointer of MapObj */
-  MapObj* GetMapObj() const { return static_cast<MapObj*>(data_.get()); }
+  MapObj* GetMapObj() const {
+    return static_cast<MapObj*>(data_.get());
+  }
 };
 
 /*!
@@ -379,7 +430,8 @@ class Map : public ObjectRef {
  * \param rhs the second Map to merge.
  * @return The merged Array. Original Maps are kept unchanged.
  */
-template <typename K, typename V,
+template <typename K,
+          typename V,
           typename = typename std::enable_if<std::is_base_of<ObjectRef, K>::value>::type,
           typename = typename std::enable_if<std::is_base_of<ObjectRef, V>::value>::type>
 inline Map<K, V> Merge(Map<K, V> lhs, const Map<K, V>& rhs) {
@@ -399,7 +451,7 @@ class StringObj : public Object {
   uint64_t size;
 
   static constexpr const uint32_t _type_index = TypeIndex::kMXNetString;
-  static constexpr const char* _type_key = "MXNet.String";
+  static constexpr const char* _type_key      = "MXNet.String";
   MXNET_DECLARE_FINAL_OBJECT_INFO(StringObj, Object);
 
  private:
@@ -515,7 +567,9 @@ class String : public ObjectRef {
    *
    * \return const char*
    */
-  const char* c_str() const { return get()->data; }
+  const char* c_str() const {
+    return get()->data;
+  }
 
   /*!
    * \brief Return the length of the string
@@ -532,33 +586,41 @@ class String : public ObjectRef {
    *
    * \return size_t string length
    */
-  size_t length() const { return size(); }
+  size_t length() const {
+    return size();
+  }
 
   /*!
    * \brief Retun if the string is empty
    *
    * \return true if empty, false otherwise.
    */
-  bool empty() const { return size() == 0; }
+  bool empty() const {
+    return size() == 0;
+  }
 
   /*!
    * \brief Return the data pointer
    *
    * \return const char* data pointer
    */
-  const char* data() const { return get()->data; }
+  const char* data() const {
+    return get()->data;
+  }
 
   /*!
    * \brief Convert String to an std::string object
    *
    * \return std::string
    */
-  operator std::string() const { return std::string{get()->data, size()}; }
+  operator std::string() const {
+    return std::string{get()->data, size()};
+  }
 
   /*!
-   * \brief Check if a MXNetArgValue can be converted to String, i.e. it can be std::string or String
-   * \param val The value to be checked
-   * \return A boolean indicating if val can be converted to String
+   * \brief Check if a MXNetArgValue can be converted to String, i.e. it can be std::string or
+   * String \param val The value to be checked \return A boolean indicating if val can be converted
+   * to String
    */
   inline static bool CanConvertFrom(const MXNetArgValue& val);
 
@@ -636,10 +698,10 @@ class StringObj::FromStd : public StringObj {
 };
 
 inline String::String(std::string other) {
-  auto ptr = make_object<StringObj::FromStd>(std::move(other));
+  auto ptr  = make_object<StringObj::FromStd>(std::move(other));
   ptr->size = ptr->data_container.size();
   ptr->data = ptr->data_container.data();
-  data_ = std::move(ptr);
+  data_     = std::move(ptr);
 }
 
 inline String& String::operator=(std::string other) {
@@ -648,7 +710,9 @@ inline String& String::operator=(std::string other) {
   return *this;
 }
 
-inline String& String::operator=(const char* other) { return operator=(std::string(other)); }
+inline String& String::operator=(const char* other) {
+  return operator=(std::string(other));
+}
 
 inline String operator+(const String& lhs, const String& rhs) {
   size_t lhs_size = lhs.size();
@@ -681,70 +745,130 @@ inline String operator+(const String& lhs, const char* rhs) {
 }
 
 // Overload < operator
-inline bool operator<(const String& lhs, const std::string& rhs) { return lhs.compare(rhs) < 0; }
+inline bool operator<(const String& lhs, const std::string& rhs) {
+  return lhs.compare(rhs) < 0;
+}
 
-inline bool operator<(const std::string& lhs, const String& rhs) { return rhs.compare(lhs) > 0; }
+inline bool operator<(const std::string& lhs, const String& rhs) {
+  return rhs.compare(lhs) > 0;
+}
 
-inline bool operator<(const String& lhs, const String& rhs) { return lhs.compare(rhs) < 0; }
+inline bool operator<(const String& lhs, const String& rhs) {
+  return lhs.compare(rhs) < 0;
+}
 
-inline bool operator<(const String& lhs, const char* rhs) { return lhs.compare(rhs) < 0; }
+inline bool operator<(const String& lhs, const char* rhs) {
+  return lhs.compare(rhs) < 0;
+}
 
-inline bool operator<(const char* lhs, const String& rhs) { return rhs.compare(lhs) > 0; }
+inline bool operator<(const char* lhs, const String& rhs) {
+  return rhs.compare(lhs) > 0;
+}
 
 // Overload > operator
-inline bool operator>(const String& lhs, const std::string& rhs) { return lhs.compare(rhs) > 0; }
+inline bool operator>(const String& lhs, const std::string& rhs) {
+  return lhs.compare(rhs) > 0;
+}
 
-inline bool operator>(const std::string& lhs, const String& rhs) { return rhs.compare(lhs) < 0; }
+inline bool operator>(const std::string& lhs, const String& rhs) {
+  return rhs.compare(lhs) < 0;
+}
 
-inline bool operator>(const String& lhs, const String& rhs) { return lhs.compare(rhs) > 0; }
+inline bool operator>(const String& lhs, const String& rhs) {
+  return lhs.compare(rhs) > 0;
+}
 
-inline bool operator>(const String& lhs, const char* rhs) { return lhs.compare(rhs) > 0; }
+inline bool operator>(const String& lhs, const char* rhs) {
+  return lhs.compare(rhs) > 0;
+}
 
-inline bool operator>(const char* lhs, const String& rhs) { return rhs.compare(lhs) < 0; }
+inline bool operator>(const char* lhs, const String& rhs) {
+  return rhs.compare(lhs) < 0;
+}
 
 // Overload <= operator
-inline bool operator<=(const String& lhs, const std::string& rhs) { return lhs.compare(rhs) <= 0; }
+inline bool operator<=(const String& lhs, const std::string& rhs) {
+  return lhs.compare(rhs) <= 0;
+}
 
-inline bool operator<=(const std::string& lhs, const String& rhs) { return rhs.compare(lhs) >= 0; }
+inline bool operator<=(const std::string& lhs, const String& rhs) {
+  return rhs.compare(lhs) >= 0;
+}
 
-inline bool operator<=(const String& lhs, const String& rhs) { return lhs.compare(rhs) <= 0; }
+inline bool operator<=(const String& lhs, const String& rhs) {
+  return lhs.compare(rhs) <= 0;
+}
 
-inline bool operator<=(const String& lhs, const char* rhs) { return lhs.compare(rhs) <= 0; }
+inline bool operator<=(const String& lhs, const char* rhs) {
+  return lhs.compare(rhs) <= 0;
+}
 
-inline bool operator<=(const char* lhs, const String& rhs) { return rhs.compare(lhs) >= 0; }
+inline bool operator<=(const char* lhs, const String& rhs) {
+  return rhs.compare(lhs) >= 0;
+}
 
 // Overload >= operator
-inline bool operator>=(const String& lhs, const std::string& rhs) { return lhs.compare(rhs) >= 0; }
+inline bool operator>=(const String& lhs, const std::string& rhs) {
+  return lhs.compare(rhs) >= 0;
+}
 
-inline bool operator>=(const std::string& lhs, const String& rhs) { return rhs.compare(lhs) <= 0; }
+inline bool operator>=(const std::string& lhs, const String& rhs) {
+  return rhs.compare(lhs) <= 0;
+}
 
-inline bool operator>=(const String& lhs, const String& rhs) { return lhs.compare(rhs) >= 0; }
+inline bool operator>=(const String& lhs, const String& rhs) {
+  return lhs.compare(rhs) >= 0;
+}
 
-inline bool operator>=(const String& lhs, const char* rhs) { return lhs.compare(rhs) >= 0; }
+inline bool operator>=(const String& lhs, const char* rhs) {
+  return lhs.compare(rhs) >= 0;
+}
 
-inline bool operator>=(const char* lhs, const String& rhs) { return rhs.compare(rhs) <= 0; }
+inline bool operator>=(const char* lhs, const String& rhs) {
+  return rhs.compare(rhs) <= 0;
+}
 
 // Overload == operator
-inline bool operator==(const String& lhs, const std::string& rhs) { return lhs.compare(rhs) == 0; }
+inline bool operator==(const String& lhs, const std::string& rhs) {
+  return lhs.compare(rhs) == 0;
+}
 
-inline bool operator==(const std::string& lhs, const String& rhs) { return rhs.compare(lhs) == 0; }
+inline bool operator==(const std::string& lhs, const String& rhs) {
+  return rhs.compare(lhs) == 0;
+}
 
-inline bool operator==(const String& lhs, const String& rhs) { return lhs.compare(rhs) == 0; }
+inline bool operator==(const String& lhs, const String& rhs) {
+  return lhs.compare(rhs) == 0;
+}
 
-inline bool operator==(const String& lhs, const char* rhs) { return lhs.compare(rhs) == 0; }
+inline bool operator==(const String& lhs, const char* rhs) {
+  return lhs.compare(rhs) == 0;
+}
 
-inline bool operator==(const char* lhs, const String& rhs) { return rhs.compare(lhs) == 0; }
+inline bool operator==(const char* lhs, const String& rhs) {
+  return rhs.compare(lhs) == 0;
+}
 
 // Overload != operator
-inline bool operator!=(const String& lhs, const std::string& rhs) { return lhs.compare(rhs) != 0; }
+inline bool operator!=(const String& lhs, const std::string& rhs) {
+  return lhs.compare(rhs) != 0;
+}
 
-inline bool operator!=(const std::string& lhs, const String& rhs) { return rhs.compare(lhs) != 0; }
+inline bool operator!=(const std::string& lhs, const String& rhs) {
+  return rhs.compare(lhs) != 0;
+}
 
-inline bool operator!=(const String& lhs, const String& rhs) { return lhs.compare(rhs) != 0; }
+inline bool operator!=(const String& lhs, const String& rhs) {
+  return lhs.compare(rhs) != 0;
+}
 
-inline bool operator!=(const String& lhs, const char* rhs) { return lhs.compare(rhs) != 0; }
+inline bool operator!=(const String& lhs, const char* rhs) {
+  return lhs.compare(rhs) != 0;
+}
 
-inline bool operator!=(const char* lhs, const String& rhs) { return rhs.compare(lhs) != 0; }
+inline bool operator!=(const char* lhs, const String& rhs) {
+  return rhs.compare(lhs) != 0;
+}
 
 inline std::ostream& operator<<(std::ostream& out, const String& input) {
   out.write(input.data(), input.size());
@@ -752,11 +876,14 @@ inline std::ostream& operator<<(std::ostream& out, const String& input) {
 }
 
 inline int String::memncmp(const char* lhs, const char* rhs, size_t lhs_count, size_t rhs_count) {
-  if (lhs == rhs && lhs_count == rhs_count) return 0;
+  if (lhs == rhs && lhs_count == rhs_count)
+    return 0;
 
   for (size_t i = 0; i < lhs_count && i < rhs_count; ++i) {
-    if (lhs[i] < rhs[i]) return -1;
-    if (lhs[i] > rhs[i]) return 1;
+    if (lhs[i] < rhs[i])
+      return -1;
+    if (lhs[i] > rhs[i])
+      return 1;
   }
   if (lhs_count < rhs_count) {
     return -1;

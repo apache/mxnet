@@ -38,7 +38,7 @@ namespace mxnet {
  * \brief iterator type
  * \tparam DType data type
  */
-template<typename DType>
+template <typename DType>
 class IIterator : public dmlc::DataIter<DType> {
  public:
   /*!
@@ -51,7 +51,7 @@ class IIterator : public dmlc::DataIter<DType> {
   /*! \brief move to next item */
   virtual bool Next(void) = 0;
   /*! \brief get current data */
-  virtual const DType &Value(void) const = 0;
+  virtual const DType& Value(void) const = 0;
   /*! \brief constructor */
   virtual ~IIterator(void) {}
   /*! \brief store the name of each data, it could be used for making NDArrays */
@@ -94,14 +94,11 @@ struct DataBatch {
 };  // struct DataBatch
 
 /*! \brief typedef the factory function of data iterator */
-typedef std::function<IIterator<DataBatch> *()> DataIteratorFactory;
+typedef std::function<IIterator<DataBatch>*()> DataIteratorFactory;
 /*!
  * \brief Registry entry for DataIterator factory functions.
  */
-struct DataIteratorReg
-    : public dmlc::FunctionRegEntryBase<DataIteratorReg,
-                                        DataIteratorFactory> {
-};
+struct DataIteratorReg : public dmlc::FunctionRegEntryBase<DataIteratorReg, DataIteratorFactory> {};
 //--------------------------------------------------------------
 // The following part are API Registration of Iterators
 //--------------------------------------------------------------
@@ -117,7 +114,7 @@ struct DataIteratorReg
  *   });
  * \endcode
  */
-#define MXNET_REGISTER_IO_ITER(name)                                    \
+#define MXNET_REGISTER_IO_ITER(name) \
   DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name)
 
 /*!
@@ -129,29 +126,26 @@ struct DataIteratorReg
 class Dataset {
  public:
   /*!
-  *  \brief Get the size of the dataset
-  */
+   *  \brief Get the size of the dataset
+   */
   virtual uint64_t GetLen(void) const = 0;
   /*!
-  *  \brief Get the ndarray items given index in dataset
-  *  \param idx the integer index for required data
-  *  \param ret the returned ndarray items
-  */
+   *  \brief Get the ndarray items given index in dataset
+   *  \param idx the integer index for required data
+   *  \param ret the returned ndarray items
+   */
   virtual bool GetItem(uint64_t idx, std::vector<NDArray>* ret) = 0;
   // virtual destructor
   virtual ~Dataset(void) {}
 };  // class Dataset
 
 /*! \brief typedef the factory function of dataset */
-typedef std::function<Dataset *(
-  const std::vector<std::pair<std::string, std::string> >&)> DatasetFactory;
+typedef std::function<Dataset*(const std::vector<std::pair<std::string, std::string> >&)>
+    DatasetFactory;
 /*!
  * \brief Registry entry for Dataset factory functions.
  */
-struct DatasetReg
-    : public dmlc::FunctionRegEntryBase<DatasetReg,
-                                        DatasetFactory> {
-};
+struct DatasetReg : public dmlc::FunctionRegEntryBase<DatasetReg, DatasetFactory> {};
 //--------------------------------------------------------------
 // The following part are API Registration of Datasets
 //--------------------------------------------------------------
@@ -167,7 +161,7 @@ struct DatasetReg
  *   });
  * \endcode
  */
-#define MXNET_REGISTER_IO_DATASET(name)                                    \
+#define MXNET_REGISTER_IO_DATASET(name) \
   DMLC_REGISTRY_REGISTER(::mxnet::DatasetReg, DatasetReg, name)
 
 class BatchifyFunction {
@@ -182,15 +176,13 @@ class BatchifyFunction {
 using BatchifyFunctionPtr = std::shared_ptr<BatchifyFunction>;
 
 /*! \brief typedef the factory function of data sampler */
-typedef std::function<BatchifyFunction *(
-  const std::vector<std::pair<std::string, std::string> >&)> BatchifyFunctionFactory;
+typedef std::function<BatchifyFunction*(const std::vector<std::pair<std::string, std::string> >&)>
+    BatchifyFunctionFactory;
 /*!
  * \brief Registry entry for DataSampler factory functions.
  */
 struct BatchifyFunctionReg
-    : public dmlc::FunctionRegEntryBase<BatchifyFunctionReg,
-                                        BatchifyFunctionFactory> {
-};
+    : public dmlc::FunctionRegEntryBase<BatchifyFunctionReg, BatchifyFunctionFactory> {};
 //--------------------------------------------------------------
 // The following part are API Registration of Batchify Function
 //--------------------------------------------------------------
@@ -206,7 +198,7 @@ struct BatchifyFunctionReg
  *   });
  * \endcode
  */
-#define MXNET_REGISTER_IO_BATCHIFY_FUNCTION(name)                                    \
+#define MXNET_REGISTER_IO_BATCHIFY_FUNCTION(name) \
   DMLC_REGISTRY_REGISTER(::mxnet::BatchifyFunctionReg, BatchifyFunctionReg, name)
 }  // namespace mxnet
 #endif  // MXNET_IO_H_

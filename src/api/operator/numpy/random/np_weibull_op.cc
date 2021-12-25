@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.weibull")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_weibull");
-      op::NumpyWeibullParam param;
+      op::NumpyWeibullParam param = {};
       nnvm::NodeAttrs attrs;
       attrs.op = op;
       if (args[1].type_code() == kDLInt) {

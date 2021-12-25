@@ -38,26 +38,31 @@ header:
     - 'src/operator/nn/dnnl/dnnl_base-inl.h'
     # files licensed under boost license
     - 'cmake/Modules/FindJeMalloc.cmake'
-    # files licensed under bsd 3-clause
-    - 'cmake/upstream/FindBLAS.cmake'
-    - 'cmake/upstream/FindCUDAToolkit.cmake'
-    - 'cmake/upstream/select_compute_arch.cmake'
-    - 'src/operator/contrib/erfinv-inl.h'
-    - 'src/operator/numpy/np_einsum_op-inl.h'
-    - 'src/operator/numpy/np_einsum_op.cc'
-    - 'src/operator/numpy/np_einsum_path_op-inl.h'
-    # files licensed under caffe/mit license
-    - 'src/operator/modulated_deformable_convolution-inl.h'
-    - 'src/operator/modulated_deformable_convolution.cc'
-    - 'src/operator/modulated_deformable_convolution.cu'
+    # files licensed under bsd 2-clause + caffe
+    - 'src/operator/nn/pool.cuh'
+    - 'src/operator/nn/pool.h'
+    - 'src/operator/nn/im2col.cuh'
+    - 'src/operator/nn/im2col.h'
     - 'src/operator/contrib/nn/deformable_im2col.cuh'
     - 'src/operator/contrib/nn/deformable_im2col.h'
     - 'src/operator/contrib/nn/modulated_deformable_im2col.cuh'
     - 'src/operator/contrib/nn/modulated_deformable_im2col.h'
-    - 'src/operator/nn/im2col.cuh'
-    - 'src/operator/nn/im2col.h'
-    - 'src/operator/nn/pool.cuh'
-    - 'src/operator/nn/pool.h'
+    # files licensed under bsd 3-clause
+    - 'cmake/upstream/FindBLAS.cmake'
+    - 'cmake/upstream/FindCUDAToolkit.cmake'
+    - 'cmake/upstream/select_compute_arch.cmake'
+    - 'python/mxnet/onnx/mx2onnx/_export_onnx.py'
+    - 'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py'
+    - 'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py'
+    - 'src/operator/contrib/erfinv-inl.h'
+    - 'src/operator/numpy/np_einsum_op-inl.h'
+    - 'src/operator/numpy/np_einsum_op.cc'
+    - 'src/operator/numpy/np_einsum_path_op-inl.h'
+    # files licensed under mit license
+    - 'src/operator/modulated_deformable_convolution-inl.h'
+    - 'src/operator/modulated_deformable_convolution.cc'
+    - 'src/operator/modulated_deformable_convolution.cu'
+    - 'src/operator/nn/layer_norm_cpu.h'
     # symlinks
     - 'include/dlpack' # symlink to 3rdparty/dlpack/include/dlpack
     - 'include/dmlc' # symlink to 3rdparty/dmlc-core/include/dmlc

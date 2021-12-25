@@ -46,7 +46,7 @@ MXNET_REGISTER_API("_npx.dropout")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_dropout");
-      op::DropoutParam param;
+      op::DropoutParam param = {};
       // inputs
       int num_inputs    = 1;
       NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};

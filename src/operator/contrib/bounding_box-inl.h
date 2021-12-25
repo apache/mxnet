@@ -943,21 +943,21 @@ struct box_encode {
     out_masks[a_index + 2] = valid;
     out_masks[a_index + 3] = valid;
     out_targets[a_index + 0] =
-        valid > static_cast<DType>(0.5)
-            ? ((ref_x - a_x) / a_width - static_cast<DType>(means[0])) / static_cast<DType>(stds[0])
-            : static_cast<DType>(0.0);
-    out_targets[a_index + 1] = valid > static_cast<DType>(0.5)
-                                   ? ((ref_y - a_y) / a_height - static_cast<DType>(means[1])) /
-                                         static_cast<DType>(stds[1])
-                                   : static_cast<DType>(0.0);
-    out_targets[a_index + 2] = valid > static_cast<DType>(0.5)
-                                   ? (log(ref_width / a_width) - static_cast<DType>(means[2])) /
-                                         static_cast<DType>(stds[2])
-                                   : static_cast<DType>(0.0);
-    out_targets[a_index + 3] = valid > static_cast<DType>(0.5)
-                                   ? (log(ref_height / a_height) - static_cast<DType>(means[3])) /
-                                         static_cast<DType>(stds[3])
-                                   : static_cast<DType>(0.0);
+        valid > static_cast<DType>(0.5) ?
+            ((ref_x - a_x) / a_width - static_cast<DType>(means[0])) / static_cast<DType>(stds[0]) :
+            static_cast<DType>(0.0);
+    out_targets[a_index + 1] = valid > static_cast<DType>(0.5) ?
+                                   ((ref_y - a_y) / a_height - static_cast<DType>(means[1])) /
+                                       static_cast<DType>(stds[1]) :
+                                   static_cast<DType>(0.0);
+    out_targets[a_index + 2] = valid > static_cast<DType>(0.5) ?
+                                   (log(ref_width / a_width) - static_cast<DType>(means[2])) /
+                                       static_cast<DType>(stds[2]) :
+                                   static_cast<DType>(0.0);
+    out_targets[a_index + 3] = valid > static_cast<DType>(0.5) ?
+                                   (log(ref_height / a_height) - static_cast<DType>(means[3])) /
+                                       static_cast<DType>(stds[3]) :
+                                   static_cast<DType>(0.0);
   }
 };
 

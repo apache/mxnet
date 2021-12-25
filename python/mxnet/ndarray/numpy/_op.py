@@ -1611,7 +1611,7 @@ def argsort(a, axis=-1, descending=False, stable=True):
     Notes
     -----
     `argsort` is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#argsort-x-axis-1-descending-false-stable-true
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.sorting_functions.argsort.html
     instead of an official NumPy operator.
 
     Parameters
@@ -1689,7 +1689,7 @@ def sort(a, axis=-1, descending=False, stable=True):
     Notes
     -----
     `sort` is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#sort-x-axis-1-descending-false-stable-true
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.sorting_functions.sort.html
     instead of an official NumPy operator.
 
     Parameters
@@ -2033,7 +2033,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     if dtype is None:
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if retstep:
-        step = (stop - start) / (num - 1)
+        step = (stop - start) / (num - int(endpoint))
         return _api_internal.linspace(start, stop, num, endpoint, device, dtype), step
     else:
         return _api_internal.linspace(start, stop, num, endpoint, device, dtype)
@@ -3757,6 +3757,8 @@ def ceil(x, out=None, **kwargs):
     >>> a
     array(4.)
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.ceil, _np.ceil, out=out, **kwargs)
 
 
@@ -3796,6 +3798,8 @@ def floor(x, out=None, **kwargs):
     >>> a
     array(3.)
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.floor, _np.floor, out=out, **kwargs)
 
 
@@ -3941,6 +3945,8 @@ def trunc(x, out=None, **kwargs):
     >>> np.trunc(a)
     array([-1., -1., -0.,  0.,  1.,  1.,  2.])
     """
+    if isinstance(x, NDArray) and _np.issubdtype(x.dtype, _np.integer):
+        return x
     return _pure_unary_func_helper(x, _api_internal.trunc, _np.trunc, out=out, **kwargs)
 
 
@@ -6097,9 +6103,10 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     if order == 'C':
         if isinstance(indices, numeric_types):
             return _np.unravel_index(indices, shape)
-        return tuple(_npi.unravel_index_fallback(indices, shape=shape))
-    else:
-        raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
+        if isinstance(indices, NDArray):
+            return tuple(_api_internal.unravel_index(indices, shape))
+        raise TypeError('Do not support type {} as indices.'.format(str(type(indices))))
+    raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
 
 
 def flatnonzero(a):

@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   macosx-x86_64:
-    runs-on: macos-latest
+    runs-on: macos-10.15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2

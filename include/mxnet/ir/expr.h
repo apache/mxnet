@@ -100,7 +100,7 @@ class PrimExprNode : public BaseExprNode {
  */
 class PrimExpr : public BaseExpr {
  public:
-    /*! \brief Cosntructor */
+  /*! \brief Cosntructor */
   PrimExpr() {}
   /*!
    * \brief Cosntructor from object ptr.

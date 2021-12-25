@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.rayleigh")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_rayleigh");
-      op::NumpyRayleighParam param;
+      op::NumpyRayleighParam param = {};
       nnvm::NodeAttrs attrs;
       attrs.op = op;
       if (args[1].type_code() == kDLInt) {

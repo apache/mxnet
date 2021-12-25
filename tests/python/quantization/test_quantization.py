@@ -218,7 +218,7 @@ def test_quantized_conv():
             return
         elif is_test_for_dnnl():
             # (TODO)Xinyu: https://github.com/apache/incubator-mxnet/issues/16830
-            print('skipped testing quantized_conv for dnnl cpu since it is a flaky case')
+            print('skipped testing quantized_conv for oneDNN cpu since it is a flaky case')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_conv for gpu uint8 since it is not supported yet')
@@ -823,7 +823,7 @@ def test_quantized_act():
             print('skipped testing quantized_act for native cpu since it is not supported yet')
             return
         elif qdtype == 'int8' and is_test_for_dnnl():
-            print('skipped testing quantized_act for dnnl cpu int8 since it is not supported yet')
+            print('skipped testing quantized_act for oneDNN cpu int8 since it is not supported yet')
             return
         elif is_test_for_gpu():
             print('skipped testing quantized_act for gpu since it is not supported yet')
@@ -1058,7 +1058,7 @@ def test_quantize_model():
             print('skipped testing quantize_model for native cpu since it is not supported yet')
             return True
         elif qdtype == 'int8' and is_test_for_dnnl():
-            print('skipped testing quantize_model for dnnl cpu int8 since it is not supported yet')
+            print('skipped testing quantize_model for oneDNN cpu int8 since it is not supported yet')
             return True
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantize_model for gpu uint8 since it is not supported yet')
@@ -1070,7 +1070,7 @@ def test_quantize_model():
             print('skipped testing quantize_model for native cpu since it is not supported yet')
             return
         elif qdtype == 'int8' and is_test_for_dnnl():
-            print('skipped testing quantize_model for dnnl cpu int8 since it is not supported yet')
+            print('skipped testing quantize_model for oneDNN cpu int8 since it is not supported yet')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantize_model for gpu uint8 since it is not supported yet')

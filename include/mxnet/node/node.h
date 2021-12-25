@@ -46,17 +46,17 @@
 
 namespace mxnet {
 
-using runtime::TypeIndex;
 using runtime::Object;
+using runtime::TypeIndex;
 // We strictly restrict ObjectPtr to ::mxnet::runtime
 // as it may conflict with ::nnvm::ObjectPtr
 // using runtime::ObjectPtr;
-using runtime::ObjectRef;
-using runtime::GetRef;
 using runtime::Downcast;
-using runtime::ObjectHash;
-using runtime::ObjectEqual;
+using runtime::GetRef;
 using runtime::make_object;
+using runtime::ObjectEqual;
+using runtime::ObjectHash;
+using runtime::ObjectRef;
 
 }  // namespace mxnet
 

@@ -28,7 +28,7 @@ from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 from common import assertRaises, assert_raises_cudnn_not_satisfied, \
-    xfail_when_nonstandard_decimal_separator, environment
+    xfail_when_nonstandard_decimal_separator, environment, with_environment
 import numpy as onp
 from numpy.testing import assert_array_equal
 import pytest
@@ -1832,6 +1832,7 @@ def test_conv2d_16c(chn_num, kernel):
 @use_np
 @pytest.mark.parametrize('grp', [16])
 @pytest.mark.parametrize('kernel_size', [1, 3])
+@with_environment('MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES', '5')  # eng:5 causes test failure on M60
 def test_group_conv2d_16c(grp, kernel_size):
     input_size_list = onp.random.randint(low=3, high=65, size=10).tolist()
     batch_size = 4

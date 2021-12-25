@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.exponential")
     .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_exponential");
-      op::NumpyExponentialParam param;
+      op::NumpyExponentialParam param = {};
       nnvm::NodeAttrs attrs;
       attrs.op = op;
       if (args[1].type_code() == kDLInt) {

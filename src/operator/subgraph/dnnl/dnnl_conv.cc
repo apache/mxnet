@@ -321,7 +321,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
       if (dnnl_param.with_act &&
           full_conv_param.act_param.alg == dnnl::algorithm::eltwise_bounded_relu) {
         if (dnnl_param.with_sum) {
-          LOG(ERROR) << "dnnl doesn't support conv + relu + sum fusion yet.";
+          LOG(ERROR) << "oneDNN doesn't support conv + relu + sum fusion yet.";
           full_conv_param.act_param.alpha *= output_scale;
         } else {
           // For conv+relu6 without sum, we don't need post_ops as output_scale can do the cut off.
@@ -414,9 +414,10 @@ static uint32_t SgDNNLConvNumInputs(const NodeAttrs& attrs) {
   auto num_input    = DefaultSubgraphOpNumInputs(attrs);
   if (param.full_conv_param.dnnl_param.quantized)
     return num_input + 2 +
-           (param.full_conv_param.dnnl_param.with_sum && !param.full_conv_param.dnnl_param.dedup_sum
-                ? 2
-                : 0);
+           (param.full_conv_param.dnnl_param.with_sum &&
+                    !param.full_conv_param.dnnl_param.dedup_sum ?
+                2 :
+                0);
   else
     return num_input;
 }
@@ -468,9 +469,9 @@ static void SgDNNLConvParamParser(nnvm::NodeAttrs* attrs) {
     } else if (node_name == "Convolution") {
       param_.full_conv_param.conv_param = nnvm::get<ConvolutionParam>(node->attrs.parsed);
     } else if (node_name == "Activation" || node_name == "LeakyReLU" || node_name == "clip") {
-      auto& post_act_param = (param_.full_conv_param.dnnl_param.with_act && !with_act)
-                                 ? param_.full_conv_param.act_param
-                                 : param_.full_conv_param.postsum_act_param;
+      auto& post_act_param = (param_.full_conv_param.dnnl_param.with_act && !with_act) ?
+                                 param_.full_conv_param.act_param :
+                                 param_.full_conv_param.postsum_act_param;
       with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);

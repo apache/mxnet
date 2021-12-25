@@ -62,9 +62,9 @@ option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects supp
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_LAYERNORM "Use layer normalization from MKL, which is currently slower than internal. No effect unless USE_BLAS=MKL (or mkl)." OFF)
 if((NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
-  option(USE_ONEDNN "Build with ONEDNN support" ON)
+  option(USE_ONEDNN "Build with oneDNN support" ON)
 else()
-  option(USE_ONEDNN "Build with ONEDNN support" OFF)
+  option(USE_ONEDNN "Build with oneDNN support" OFF)
 endif()
 cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
 if(NOT MSVC)
@@ -101,6 +101,32 @@ message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
+
+find_package(Git QUIET)
+if(${GIT_FOUND})
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD 
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_BRANCH
+    RESULT_VARIABLE BRANCH_FAILED
+  )
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT
+    RESULT_VARIABLE COMMIT_FAILED
+  )
+  if(NOT BRANCH_FAILED)
+    string(REGEX REPLACE "\n$" "" GIT_BRANCH "${GIT_BRANCH}")
+    add_compile_definitions(MXNET_BRANCH="${GIT_BRANCH}")
+  else()
+    add_compile_definitions(MXNET_BRANCH="Unavailable")
+  endif()
+  if(NOT COMMIT_FAILED)
+    string(REGEX REPLACE "\n$" "" GIT_COMMIT "${GIT_COMMIT}")
+    add_compile_definitions(MXNET_COMMIT_HASH="${GIT_COMMIT}")
+  else()
+    add_compile_definitions(MXNET_COMMIT_HASH="Unavailable")
+  endif()
+endif()
 
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)

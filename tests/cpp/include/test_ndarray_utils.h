@@ -41,8 +41,8 @@ using namespace mxnet;
 #define TEST_DTYPE float
 #define TEST_ITYPE int32_t
 
-inline void CheckDataRegion(const TBlob &src, const TBlob &dst) {
-  auto size = src.shape_.Size() * mshadow::mshadow_sizeof(src.type_flag_);
+inline void CheckDataRegion(const TBlob& src, const TBlob& dst) {
+  auto size   = src.shape_.Size() * mshadow::mshadow_sizeof(src.type_flag_);
   auto equals = memcmp(src.dptr_, dst.dptr_, size);
   EXPECT_EQ(equals, 0);
 }
@@ -55,13 +55,14 @@ inline unsigned gen_rand_seed() {
 
 inline float RandFloat() {
   static unsigned seed = gen_rand_seed();
-  double v = rand_r(&seed) * 1.0 / RAND_MAX;
+  double v             = rand_r(&seed) * 1.0 / RAND_MAX;
   return static_cast<float>(v);
 }
 
 // Get an NDArray with provided indices, prepared for a RowSparse NDArray.
-inline NDArray RspIdxND(const mxnet::TShape shape, const Context ctx,
-                        const std::vector<TEST_ITYPE> &values) {
+inline NDArray RspIdxND(const mxnet::TShape shape,
+                        const Context ctx,
+                        const std::vector<TEST_ITYPE>& values) {
   NDArray nd(shape, ctx, false, ROW_SPARSE_IDX_TYPE);
   size_t num_val = values.size();
   MSHADOW_TYPE_SWITCH(nd.dtype(), DType, {
@@ -92,8 +93,8 @@ inline NDArray DnsND(const mxnet::TShape shape, const Context ctx, std::vector<T
   return nd;
 }
 
-template<typename xpu>
-static void inline CopyBlob(mshadow::Stream<xpu> *s,
+template <typename xpu>
+static void inline CopyBlob(mshadow::Stream<xpu>* s,
                             const TBlob& dest_blob,
                             const TBlob& src_blob) {
   using namespace mshadow;
@@ -125,10 +126,9 @@ inline NDArray RspND(const mxnet::TShape shape,
   print(&std::cout, "data", data);
   // create result nd
   mxnet::ShapeVector aux_shapes = {mshadow::Shape1(num_rows)};
-  NDArray nd(kRowSparseStorage, shape, ctx, false, mshadow::default_type_flag,
-             {}, aux_shapes);
+  NDArray nd(kRowSparseStorage, shape, ctx, false, mshadow::default_type_flag, {}, aux_shapes);
 
-  mshadow::Stream<cpu> *s = nullptr;
+  mshadow::Stream<cpu>* s = nullptr;
   CopyBlob(s, nd.aux_data(rowsparse::kIdx), index.data());
   CopyBlob(s, nd.data(), data.data());
 
@@ -137,15 +137,15 @@ inline NDArray RspND(const mxnet::TShape shape,
 }
 
 /*! \brief Array - utility class to construct sparse arrays
- *  \warning This class is not meant to run in a production environment.  Since it is for unit tests only,
- *           simplicity has been chosen over performance.
+ *  \warning This class is not meant to run in a production environment.  Since it is for unit tests
+ *only, simplicity has been chosen over performance.
  **/
-template<typename DType>
+template <typename DType>
 class Array {
   typedef std::map<size_t, std::map<size_t, DType> > TItems;
   static constexpr double EPSILON = 1e-5;
 
-  static const char *st2str(const NDArrayStorageType storageType) {
+  static const char* st2str(const NDArrayStorageType storageType) {
     switch (storageType) {
       case kDefaultStorage:
         return "kDefaultStorage";
@@ -163,15 +163,13 @@ class Array {
 
   /*! \brief Remove all zero entries */
   void Prune() {
-    for (typename TItems::iterator i = items_.begin(), e = items_.end();
-         i != e;) {
-      const size_t y = i->first;
-      std::map<size_t, DType> &m = i->second;
+    for (typename TItems::iterator i = items_.begin(), e = items_.end(); i != e;) {
+      const size_t y             = i->first;
+      std::map<size_t, DType>& m = i->second;
       ++i;
-      for (typename std::map<size_t, DType>::const_iterator j = m.begin(), jn = m.end();
-           j != jn;) {
+      for (typename std::map<size_t, DType>::const_iterator j = m.begin(), jn = m.end(); j != jn;) {
         const size_t x = j->first;
-        const DType v = j->second;
+        const DType v  = j->second;
         ++j;
         if (IsZero(v)) {
           m.erase(x);
@@ -186,20 +184,19 @@ class Array {
   /*! \brief Create a dense NDArray from our mapped data */
   NDArray CreateDense(const Context& ctx) const {
     NDArray array(shape_, Context::CPU(-1));
-    TBlob data = array.data();
-    DType *p_data = data.dptr<DType>();
+    TBlob data    = array.data();
+    DType* p_data = data.dptr<DType>();
     memset(p_data, 0, array.shape().Size() * sizeof(DType));
-    for (typename TItems::const_iterator i = items_.begin(), e = items_.end();
-         i != e; ++i) {
-      const size_t y = i->first;
-      const std::map<size_t, DType> &m = i->second;
-      for (typename std::map<size_t, DType>::const_iterator j = m.begin(), jn = m.end();
-           j != jn; ++j) {
+    for (typename TItems::const_iterator i = items_.begin(), e = items_.end(); i != e; ++i) {
+      const size_t y                   = i->first;
+      const std::map<size_t, DType>& m = i->second;
+      for (typename std::map<size_t, DType>::const_iterator j = m.begin(), jn = m.end(); j != jn;
+           ++j) {
         const size_t x = j->first;
-        const DType v = j->second;
+        const DType v  = j->second;
         if (!IsZero(v)) {
           const size_t offset = mxnet::test::offset(shape_, {y, x});
-          p_data[offset] = v;
+          p_data[offset]      = v;
         }
       }
     }
@@ -215,11 +212,9 @@ class Array {
  public:
   Array() = default;
 
-  explicit Array(const mxnet::TShape &shape)
-    : shape_(shape) {}
+  explicit Array(const mxnet::TShape& shape) : shape_(shape) {}
 
-  explicit Array(const NDArray &arr)
-    : shape_(arr.shape()) {
+  explicit Array(const NDArray& arr) : shape_(arr.shape()) {
     Load(arr);
   }
 
@@ -228,19 +223,25 @@ class Array {
     shape_ = mxnet::TShape(0);
   }
 
-  static inline bool IsNear(const DType v1, const DType v2) { return fabs(v2 - v1) <= EPSILON; }
-  static inline bool IsZero(const DType v) { return IsNear(v, DType(0)); }
+  static inline bool IsNear(const DType v1, const DType v2) {
+    return fabs(v2 - v1) <= EPSILON;
+  }
+  static inline bool IsZero(const DType v) {
+    return IsNear(v, DType(0));
+  }
 
   /*! Index into value maps via: [y][x] (row, col) */
-  std::map<size_t, DType> &operator[](const size_t idx) { return items_[idx]; }
+  std::map<size_t, DType>& operator[](const size_t idx) {
+    return items_[idx];
+  }
 
-  const std::map<size_t, DType> &operator[](const size_t idx) const {
+  const std::map<size_t, DType>& operator[](const size_t idx) const {
     typename TItems::const_iterator i = items_.find(idx);
     if (i != items_.end()) {
       return i->second;
     }
     CHECK(false) << "Attempt to access a non-existent key in a constant map";
-    return *static_cast<std::map<size_t, DType> *>(nullptr);
+    return *static_cast<std::map<size_t, DType>*>(nullptr);
   }
 
   bool Contains(const size_t row, const size_t col) const {
@@ -255,12 +256,12 @@ class Array {
   }
 
   /*! \brief Convert from one storage type NDArray to another */
-  static NDArray Convert(const Context& ctx, const NDArray& src,
+  static NDArray Convert(const Context& ctx,
+                         const NDArray& src,
                          const NDArrayStorageType storageType) {
-    std::unique_ptr<NDArray> pArray(
-      storageType == kDefaultStorage
-      ? new NDArray(src.shape(), ctx)
-      : new NDArray(storageType, src.shape(), ctx));
+    std::unique_ptr<NDArray> pArray(storageType == kDefaultStorage ?
+                                        new NDArray(src.shape(), ctx) :
+                                        new NDArray(storageType, src.shape(), ctx));
     OpContext opContext;
     MXNET_CUDA_ONLY(std::unique_ptr<test::op::GPUStreamScope> gpuScope;);
     switch (ctx.dev_type) {
@@ -269,7 +270,7 @@ class Array {
         gpuScope.reset(new test::op::GPUStreamScope(&opContext));
         mxnet::op::CastStorageComputeImpl<gpu>(s, src, dest);
         break;
-#endif  // MNXNET_USE_CUDA
+#endif            // MNXNET_USE_CUDA
       default: {  // CPU
         OpContext op_ctx;
         mxnet::op::CastStorageComputeImpl<cpu>(op_ctx, src, *pArray);
@@ -308,7 +309,7 @@ class Array {
     }
 #endif  // MXNET_USE_CUDA
     const TBlob blob = array.data();
-    DType *p = blob.dptr<DType>();
+    DType* p         = blob.dptr<DType>();
     CHECK_EQ(shape_.ndim(), 2U);
     for (size_t row = 0, nrow = shape_[0]; row < nrow; ++row) {
       for (size_t col = 0, ncol = shape_[1]; col < ncol; ++col) {
@@ -321,15 +322,14 @@ class Array {
   }
 
   void print() const {
-    for (typename TItems::const_iterator i = items_.begin(), e = items_.end();
-         i != e; ++i) {
-      const size_t y = i->first;
-      const std::map<size_t, DType> &m = i->second;
+    for (typename TItems::const_iterator i = items_.begin(), e = items_.end(); i != e; ++i) {
+      const size_t y                   = i->first;
+      const std::map<size_t, DType>& m = i->second;
       CHECK_EQ(m.empty(), false);  // How did it get to have an empty map?
-      for (typename std::map<size_t, DType>::const_iterator j = m.begin(), jn = m.end();
-           j != jn; ++j) {
+      for (typename std::map<size_t, DType>::const_iterator j = m.begin(), jn = m.end(); j != jn;
+           ++j) {
         const size_t x = j->first;
-        const DType v = j->second;
+        const DType v  = j->second;
         if (!IsZero(v)) {
           std::cout << "[row=" << y << ", col=" << x << "]: " << v << std::endl;
         }
@@ -343,11 +343,10 @@ class Array {
   TItems items_;
 };
 
-template<typename StreamType>
-inline StreamType& print_dense(StreamType *_os, const std::string& label, const NDArray& arr) {
+template <typename StreamType>
+inline StreamType& print_dense(StreamType* _os, const std::string& label, const NDArray& arr) {
   MSHADOW_TYPE_SWITCH(arr.data().type_flag_, DType, {
-    print(_os, label, test::Array<DType>(arr).Save(arr.ctx(), kDefaultStorage))
-      << std::endl;
+    print(_os, label, test::Array<DType>(arr).Save(arr.ctx(), kDefaultStorage)) << std::endl;
   });
   return *_os;
 }

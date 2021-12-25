@@ -25,6 +25,7 @@
 #define MXNET_OPERATOR_TENSOR_RAVEL_H_
 
 #include <mxnet/operator_util.h>
+#include <string>
 #include <vector>
 #include <algorithm>
 #include "../mshadow_op.h"
@@ -41,6 +42,11 @@ struct RavelParam : public dmlc::Parameter<RavelParam> {
     DMLC_DECLARE_FIELD(shape)
         .set_default(mxnet::TShape())
         .describe("Shape of the array into which the multi-indices apply.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s;
+    shape_s << shape;
+    (*dict)["shape"] = shape_s.str();
   }
 };
 
@@ -75,7 +81,7 @@ inline bool UnravelOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   CHECK_GT(shape.ndim(), 0) << "Empty shape parameter for unravel operator.";
   const mxnet::TShape& in_shape = (*in_attrs)[0];
-  if (in_shape.ndim() > 0) {
+  if (in_shape.ndim() >= 0) {
     mxnet::TShape out_shape(in_shape.ndim() + 1, -1);
     out_shape[0] = shape.ndim();
     for (int i = 0; i < in_shape.ndim(); ++i) {

@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.gamma").set_body([](runtime::MXNetArgs args, runtime::M
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_gamma");
   nnvm::NodeAttrs attrs;
-  op::NumpyGammaParam param;
+  op::NumpyGammaParam param = {};
   int num_inputs = 0;
   std::vector<NDArray*> inputs;
   if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {

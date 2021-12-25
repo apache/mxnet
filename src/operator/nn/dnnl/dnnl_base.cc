@@ -76,8 +76,8 @@ dnnl::memory* TmpMemMgr::Alloc(const dnnl::memory::desc& md) {
     // the space by itself. Thus, we just let it continue for estimating the maximum
     // required space size. It will be allocated at next call.
     if (this->curr_mem && dmlc::GetEnv("MXNET_ONEDNN_DEBUG", false)) {
-      LOG(WARNING) << "DNNL debug message: The rest of the temporary space is not "
-                   << "adequate for allocating " << md.get_size() << " bytes. Thus, DNNL "
+      LOG(WARNING) << "oneDNN debug message: The rest of the temporary space is not "
+                   << "adequate for allocating " << md.get_size() << " bytes. Thus, oneDNN "
                    << "allocate the space by itself.";
     }
     dnnl_mem_ptr ret(new dnnl::memory(md, CpuEngine::Get()->get_engine()));
@@ -242,31 +242,30 @@ const dnnl::memory* GetWeights(const NDArray& arr, int num_groups) {
     tz         = dnnl::memory::dims{arr.shape()[O], arr.shape()[I]};
     format_tag = dnnl::memory::format_tag::oi;
   } else if (ndim == 3) {
-    tz = num_groups > 1 ? dnnl::memory::dims{num_groups,
-                                             arr.shape()[O] / num_groups,
-                                             arr.shape()[I],
-                                             arr.shape()[H]}
-                        : dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H]};
+    tz = num_groups > 1 ?
+             dnnl::memory::dims{
+                 num_groups, arr.shape()[O] / num_groups, arr.shape()[I], arr.shape()[H]} :
+             dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H]};
     format_tag = num_groups > 1 ? dnnl::memory::format_tag::goiw : dnnl::memory::format_tag::oiw;
   } else if (ndim == 4) {
-    tz = num_groups > 1
-             ? dnnl::memory::dims{num_groups,
-                                  arr.shape()[O] / num_groups,
-                                  arr.shape()[I],
-                                  arr.shape()[H],
-                                  arr.shape()[W]}
-             : dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H], arr.shape()[W]};
+    tz = num_groups > 1 ?
+             dnnl::memory::dims{num_groups,
+                                arr.shape()[O] / num_groups,
+                                arr.shape()[I],
+                                arr.shape()[H],
+                                arr.shape()[W]} :
+             dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H], arr.shape()[W]};
     format_tag = num_groups > 1 ? dnnl::memory::format_tag::goihw : dnnl::memory::format_tag::oihw;
   } else if (ndim == 5) {
-    tz = num_groups > 1
-             ? dnnl::memory::dims{num_groups,
-                                  arr.shape()[O] / num_groups,
-                                  arr.shape()[I],
-                                  arr.shape()[D],
-                                  arr.shape()[H],
-                                  arr.shape()[W]}
-             : dnnl::memory::dims{
-                   arr.shape()[O], arr.shape()[I], arr.shape()[D], arr.shape()[H], arr.shape()[W]};
+    tz = num_groups > 1 ?
+             dnnl::memory::dims{num_groups,
+                                arr.shape()[O] / num_groups,
+                                arr.shape()[I],
+                                arr.shape()[D],
+                                arr.shape()[H],
+                                arr.shape()[W]} :
+             dnnl::memory::dims{
+                 arr.shape()[O], arr.shape()[I], arr.shape()[D], arr.shape()[H], arr.shape()[W]};
     format_tag =
         num_groups > 1 ? dnnl::memory::format_tag::goidhw : dnnl::memory::format_tag::oidhw;
   } else {
@@ -331,7 +330,7 @@ dnnl_format_tag_t GetDefaultFormat(int num_dims) {
     case 6:
       return dnnl_abcdef;
     default:
-      LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for DNNL";
+      LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for oneDNN";
       return dnnl_format_tag_undef;
   }
 }

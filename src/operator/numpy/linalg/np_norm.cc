@@ -165,8 +165,8 @@ bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
   } else {
     TShape axis(param.axis.value().ndim(), 0);
     for (int i = 0; i < param.axis.value().ndim(); ++i) {
-      axis[i] = param.axis.value()[i] < 0 ? (*in_attrs)[0].ndim() + param.axis.value()[i]
-                                          : param.axis.value()[i];
+      axis[i] = param.axis.value()[i] < 0 ? (*in_attrs)[0].ndim() + param.axis.value()[i] :
+                                            param.axis.value()[i];
     }
     const_cast<NumpyNormParam&>(param).axis = axis;
     if (param.axis.value().ndim() == 2) {

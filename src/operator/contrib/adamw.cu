@@ -28,8 +28,10 @@ namespace mxnet {
 namespace op {
 namespace adamw {
 
+// clang-format off
 template <>
 void GetScaleFloat<gpu>(mshadow::Stream<gpu>* s, const TBlob& scale_blob, float* pScalef) {
+    // clang-format on
     MSHADOW_REAL_TYPE_SWITCH(
         scale_blob.type_flag_,
         DType,

@@ -68,7 +68,7 @@ MXNET_REGISTER_API("_npx.convolution")
       using namespace runtime;
       nnvm::NodeAttrs attrs;
       const nnvm::Op* op = Op::Get("_npx_convolution");
-      op::ConvolutionParam param;
+      op::ConvolutionParam param = {};
       int args_size = args.size();
       // no_bias
       if (args[args_size - 4].type_code() == kNull) {

@@ -161,7 +161,7 @@ void Imperative::MarkVariables(const std::vector<NDArray*>& variables,
     } else {
       AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
       CHECK_EQ(info.out_grads.size(), 0)
-        <<"The node has already been marked. Cannot mark it again.";
+          << "The node has already been marked. Cannot mark it again.";
       info.out_grads.emplace_back(gradients[i]->Detach());
       info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
       info.ctx      = variables[i]->ctx();
@@ -175,7 +175,7 @@ void Imperative::DropGrads(const std::vector<NDArray*>& variables) {
     if (variable->autograd_entry_.node) {
       AGInfo& info = AGInfo::Get(variable->autograd_entry_.node);
       CHECK_NE(info.out_grads.size(), 0)
-        <<"The node has empty out_grads already. Cannot DropGrads again.";
+          << "The node has empty out_grads already. Cannot DropGrads again.";
       for (auto grad : info.out_grads) {
         grad.ReInit();
       }
@@ -188,8 +188,8 @@ void Imperative::DropGrads(const std::vector<NDArray*>& variables) {
 void Imperative::GetBackwardDependency(const nnvm::ObjectPtr& node,
                                        uint32_t num_inputs,
                                        uint32_t num_outputs,
-                                       std::vector<bool> *p_save_inputs,
-                                       std::vector<bool> *p_save_outputs) {
+                                       std::vector<bool>* p_save_inputs,
+                                       std::vector<bool>* p_save_outputs) {
   static auto& fgradient          = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
   std::vector<bool>& save_inputs  = *p_save_inputs;
   std::vector<bool>& save_outputs = *p_save_outputs;
@@ -609,12 +609,11 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
     arrays[eid]    = x_grads[i - num_forward_outputs];
     ref_count[eid] = 1;
   }
-  const std::vector<NodeEntry>& us_grads =
-    g_graph.GetAttr<std::vector<NodeEntry>>("nleaf_grads");
+  const std::vector<NodeEntry>& us_grads = g_graph.GetAttr<std::vector<NodeEntry>>("nleaf_grads");
   CHECK_EQ(us_grads.size(), us.size())
-    << "Size of queried nleaf_vars and size of their gradients don't match.";
+      << "Size of queried nleaf_vars and size of their gradients don't match.";
   for (size_t i = 0; i < us_grads.size(); i++) {
-    size_t eid = idx.entry_id(us_grads[i]);
+    size_t eid   = idx.entry_id(us_grads[i]);
     AGInfo& info = AGInfo::Get(us[i].node);
     if (arrays[eid]->dtype_ == -1) {
       arrays[eid] = &info.out_grads[0];
@@ -676,8 +675,8 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
     array_reqs[eid] = x_reqs[i - num_forward_outputs];
   }
   for (size_t i = 0; i < us_grads.size(); i++) {
-    size_t eid = idx.entry_id(us_grads[i]);
-    AGInfo& info = AGInfo::Get(us[i].node);
+    size_t eid      = idx.entry_id(us_grads[i]);
+    AGInfo& info    = AGInfo::Get(us[i].node);
     array_reqs[eid] = info.grad_req;
   }
 

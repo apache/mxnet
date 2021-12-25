@@ -22,6 +22,7 @@
  * \brief CPU Implementation of broadcast and reduce sum (and related) functions based on value.
  */
 #include "./broadcast_reduce_op.h"
+#include "../numpy/np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -67,6 +68,9 @@ Example::
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum>)
     .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsMKLDNN", true)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -84,6 +88,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(mean)
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum, true>)
     .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsMKLDNN", true)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

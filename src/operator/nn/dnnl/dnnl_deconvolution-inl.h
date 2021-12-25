@@ -289,9 +289,9 @@ inline const dnnl::memory* DNNLDeconvBwd::OutGradMem(const NDArray& out_grad) co
 
 inline const dnnl::memory* DNNLDeconvBwd::OutGradMem(const NDArray& out_grad,
                                                      const dnnl::memory* const out_grad_mem) const {
-  return (out_grad_mem && out_grad_mem->get_desc() == bwd_weights_pd->diff_dst_desc())
-             ? out_grad_mem
-             : out_grad.GetDNNLDataReorder(bwd_weights_pd->diff_dst_desc());
+  return (out_grad_mem && out_grad_mem->get_desc() == bwd_weights_pd->diff_dst_desc()) ?
+             out_grad_mem :
+             out_grad.GetDNNLDataReorder(bwd_weights_pd->diff_dst_desc());
 }
 
 inline dnnl_output_t DNNLDeconvBwd::DataGradMem(const OpReqType req,
@@ -315,8 +315,8 @@ inline dnnl_output_t DNNLDeconvBwd::WeightsGradMem(const uint32_t num_group,
 
 inline dnnl_output_t DNNLDeconvBwd::BiasGradMem(const OpReqType req,
                                                 const NDArray* const bias) const {
-  return bias ? CreateDNNLMem(*bias, bwd_weights_pd->diff_bias_desc(), req)
-              : dnnl_output_t(OutDataOp::Noop, nullptr);
+  return bias ? CreateDNNLMem(*bias, bwd_weights_pd->diff_bias_desc(), req) :
+                dnnl_output_t(OutDataOp::Noop, nullptr);
 }
 
 // Utility class for creating operation descriptors of deconvolution primitives

@@ -588,8 +588,8 @@ inline int KLGenerateBinaryTree(const std::vector<T>& W,
       parent    = (parent == -1) ? GetRoot(P, color, *roots) : parent;
 
       int from_cluster = color;
-      int dest_cluster = (from_cluster == (*cluster_pairs)[i].first) ? (*cluster_pairs)[i].second
-                                                                     : (*cluster_pairs)[i].first;
+      int dest_cluster = (from_cluster == (*cluster_pairs)[i].first) ? (*cluster_pairs)[i].second :
+                                                                       (*cluster_pairs)[i].first;
 
       std::vector<int> candidates;
       T weight;

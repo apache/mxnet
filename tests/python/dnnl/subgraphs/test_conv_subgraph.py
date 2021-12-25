@@ -446,10 +446,10 @@ def test_deduplication(data_shape, reverse_sum_order, model_name):
   model_dedup.initialize()
   model_no_dedup = copy.copy(model_dedup)
 
-  model_dedup.optimize_for(data_nd, backend='DNNL', dedup_subgraph = True, skip_infer = True)
+  model_dedup.optimize_for(data_nd, backend='ONEDNN', dedup_subgraph = True, skip_infer = True)
   out = model_dedup(data_nd)
 
-  model_dedup.optimize_for(data_nd, backend='DNNL', dedup_subgraph = False, skip_infer = True)
+  model_dedup.optimize_for(data_nd, backend='ONEDNN', dedup_subgraph = False, skip_infer = True)
   out_dedup = model_no_dedup(data_nd)
 
   assert_almost_equal(out.asnumpy(), out_dedup.asnumpy(), rtol=1e-3, atol=1e-1)
@@ -776,7 +776,7 @@ def test_bn_relu_fusion(axis):
 
     out1 = net(dummy_data)
     out1.wait_to_read()
-    net.optimize_for(dummy_data, backend='DNNL')
+    net.optimize_for(dummy_data, backend='ONEDNN')
     out2 = net(dummy_data)
 
     assert_almost_equal(out1, out2)

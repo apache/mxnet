@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.uniform")
       using namespace runtime;
       const nnvm::Op* op = Op::Get("_npi_uniform");
       nnvm::NodeAttrs attrs;
-      op::NumpyUniformParam param;
+      op::NumpyUniformParam param = {};
       int num_inputs = 0;
       std::vector<NDArray*> inputs;
       if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {

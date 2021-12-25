@@ -23,9 +23,24 @@
  */
 
 #include "./amp_cast.h"
+#include "../../common/alm.h"
 
 namespace mxnet {
 namespace op {
+
+static bool MCastChangeLayout(nnvm::NodeAttrs* attrs,
+                              mshadow::LayoutFlag targetLayout,
+                              std::vector<alm::Transpose>* inpTransposes,
+                              std::vector<alm::Transpose>* outTransposes) {
+  auto n_inps = attrs->op->get_num_inputs(*attrs);
+  auto n_outs = attrs->op->get_num_outputs(*attrs);
+  CHECK_EQ(n_inps, n_outs) << "This operator should have the same number inputs and outputs";
+  CHECK_EQ(inpTransposes->size(), n_inps);
+  CHECK_EQ(targetLayout, mshadow::kUNKNOWN);
+  *outTransposes = std::move(*inpTransposes);
+  inpTransposes->assign(n_inps, alm::Transpose());
+  return false;
+}
 
 DMLC_REGISTER_PARAMETER(AMPCastParam);
 DMLC_REGISTER_PARAMETER(AMPMultiCastParam);
@@ -46,9 +61,9 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
     dnnl::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
     if (data.IsView() && data.IsDNNLData())
       data = data.Reorder2Default();
-    const auto i_mem            = data.GetDNNLData();
-    const size_t i_ndim         = data.shape().ndim();
-    dnnl::memory::dims i_dims   = dnnl::memory::dims(i_ndim);
+    const auto i_mem          = data.GetDNNLData();
+    const size_t i_ndim       = data.shape().ndim();
+    dnnl::memory::dims i_dims = dnnl::memory::dims(i_ndim);
     for (size_t i = 0; i < i_ndim; i++) {
       i_dims[i] = static_cast<int>(data.shape()[i]);
     }
@@ -94,9 +109,9 @@ static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs,
     auto data = inputs[i];
     if (data.IsView() && data.IsDNNLData())
       data = data.Reorder2Default();
-    const auto i_mem            = data.GetDNNLData();
-    const size_t i_ndim         = data.shape().ndim();
-    dnnl::memory::dims i_dims   = dnnl::memory::dims(i_ndim);
+    const auto i_mem          = data.GetDNNLData();
+    const size_t i_ndim       = data.shape().ndim();
+    dnnl::memory::dims i_dims = dnnl::memory::dims(i_ndim);
     for (size_t j = 0; j < i_ndim; j++) {
       i_dims[j] = static_cast<int>(data.shape()[j]);
     }
@@ -135,6 +150,7 @@ It casts only between low precision float/FP32 and does not do anything for othe
     .set_attr_parser(ParamParser<AMPCastParam>)
     .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
     .set_attr<nnvm::FInferType>("FInferType", AMPCastType)
+    .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", ElemwiseChangeLayout)
     .set_attr<nnvm::FInplaceOption>("FInplaceOption",
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int>>{{0, 0}};
@@ -188,6 +204,7 @@ It casts only between low precision float/FP32 and does not do anything for othe
     .set_attr_parser(ParamParser<AMPMultiCastParam>)
     .set_attr<mxnet::FInferShape>("FInferShape", AMPMultiCastShape)
     .set_attr<nnvm::FInferType>("FInferType", AMPMultiCastType)
+    .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", MCastChangeLayout)
     .set_attr<nnvm::FListInputNames>("FListInputNames",
                                      [](const NodeAttrs& attrs) {
                                        uint32_t num_args =

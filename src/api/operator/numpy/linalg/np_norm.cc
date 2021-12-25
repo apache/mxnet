@@ -32,7 +32,7 @@ MXNET_REGISTER_API("_npi.norm").set_body([](runtime::MXNetArgs args, runtime::MX
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npi_norm");
-  op::NumpyNormParam param;
+  op::NumpyNormParam param = {};
   param.ord = args[1].operator double();
   if (args[2].type_code() == kNull) {
     param.axis = dmlc::optional<mxnet::TShape>();

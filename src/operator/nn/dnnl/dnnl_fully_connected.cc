@@ -39,9 +39,9 @@ dnnl::inner_product_forward::primitive_desc GetFCFwdImpl(const DNNLFCFullParam& 
                                                          const dnnl::memory::desc& out_md) {
   auto engine    = CpuEngine::Get()->get_engine();
   auto data_md   = GetMemDesc(data);
-  auto weight_md = full_param.dnnl_param.quantized
-                       ? GetFCWeightDesc(weight, data.shape()[0], mshadow::kInt8)
-                       : GetFCWeightDesc(weight, data.shape()[0]);
+  auto weight_md = full_param.dnnl_param.quantized ?
+                       GetFCWeightDesc(weight, data.shape()[0], mshadow::kInt8) :
+                       GetFCWeightDesc(weight, data.shape()[0]);
   auto propagation =
       is_train ? dnnl::prop_kind::forward_training : dnnl::prop_kind::forward_scoring;
 
@@ -65,7 +65,8 @@ dnnl::inner_product_forward::primitive_desc GetFCFwdImpl(const DNNLFCFullParam& 
       return dnnl::inner_product_forward::primitive_desc(desc, attr, engine);
     } catch (dnnl::error& e) {
       if (e.status == dnnl_unimplemented && full_param.dnnl_param.quantized) {
-        LOG(ERROR) << "AVX512-BW support or DNNL v0.18 is required for INT8 fully_connected.";
+        LOG(ERROR)
+            << "AVX512-BW support or oneDNN v0.18 or later is required for INT8 fully_connected.";
       } else {
         LOG(ERROR) << e.message;
       }

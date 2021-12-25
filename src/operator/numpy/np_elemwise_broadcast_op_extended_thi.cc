@@ -44,24 +44,10 @@ namespace op {
       .add_argument("data", "NDArray-or-Symbol", "source input")              \
       .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
-NNVM_REGISTER_OP(_npi_bitwise_left_shift)
-    .set_num_inputs(2)
-    .set_num_outputs(1)
-    .set_attr<nnvm::FListInputNames>("FListInputNames",
-                                     [](const NodeAttrs& attrs) {
-                                       return std::vector<std::string>{"lhs", "rhs"};
-                                     })
-    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-    .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<2, 1>)
-    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs& attrs) {
-                                      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
-                                    })
+MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION(_npi_bitwise_left_shift)
     .set_attr<FCompute>("FCompute<cpu>",
-                        BinaryBroadcastCompute<cpu, mshadow_op::bitwise_left_shift>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_left_shift"})
-    .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
-    .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
+                        NumpyBinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_left_shift>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_left_shift"});
 
 NNVM_REGISTER_OP(_npi_bitwise_left_shift_scalar)
     .set_num_inputs(1)
@@ -126,24 +112,10 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rbitwise_left_shift_scalar)
     .set_attr<FCompute>("FCompute<cpu>",
                         BinaryScalarOp::Backward<cpu, mshadow_op::rbitwise_left_shift_grad>);
 
-NNVM_REGISTER_OP(_npi_bitwise_right_shift)
-    .set_num_inputs(2)
-    .set_num_outputs(1)
-    .set_attr<nnvm::FListInputNames>("FListInputNames",
-                                     [](const NodeAttrs& attrs) {
-                                       return std::vector<std::string>{"lhs", "rhs"};
-                                     })
-    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-    .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<2, 1>)
-    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs& attrs) {
-                                      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
-                                    })
+MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_INT_PRECISION(_npi_bitwise_right_shift)
     .set_attr<FCompute>("FCompute<cpu>",
-                        BinaryBroadcastCompute<cpu, mshadow_op::bitwise_right_shift>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_right_shift"})
-    .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
-    .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
+                        NumpyBinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_right_shift>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_bitwise_right_shift"});
 
 NNVM_REGISTER_OP(_npi_bitwise_right_shift_scalar)
     .set_num_inputs(1)
