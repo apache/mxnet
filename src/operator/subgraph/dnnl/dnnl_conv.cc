@@ -183,21 +183,9 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
     if (!inplace_) {
       auto in_dnnl_mem  = inputs[in_sum].GetDNNLData();
       auto out_dnnl_mem = outputs[kOut].GetDNNLData();
-      if (outputs[kOut].dtype() == mshadow::kInt32) {
+      if (outputs[kOut].dtype() == mshadow::kInt32 || outputs[kOut].dtype() == mshadow::kFloat32) {
         const auto& mem_desc  = in_dnnl_mem->get_desc();
-        const auto this_dtype = get_dnnl_type(mshadow::kInt32);
-        auto omd              = mem_desc;
-        omd.data.data_type    = static_cast<dnnl_data_type_t>(this_dtype);
-        dnnl_mem_ptr tmp_mem(
-            new dnnl::memory(omd, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
-        DNNLStream::Get()->RegisterMem(tmp_mem);
-        DNNLStream::Get()->RegisterPrimArgs(
-            dnnl::reorder(*in_dnnl_mem, *tmp_mem),
-            {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
-        output = NDArray(tmp_mem);
-      } else if (outputs[kOut].dtype() == mshadow::kFloat32) {
-        const auto& mem_desc  = in_dnnl_mem->get_desc();
-        const auto this_dtype = get_dnnl_type(mshadow::kFloat32);
+        const auto this_dtype = get_dnnl_type(outputs[kOut].dtype());
         auto omd              = mem_desc;
         omd.data.data_type    = static_cast<dnnl_data_type_t>(this_dtype);
         dnnl_mem_ptr tmp_mem(
@@ -306,7 +294,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
         for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
           full_conv_param.requantize_scales[c] = 1.0 / data_scale_ / weight_scales_[c];
         }
-        if(dnnl_param.with_act) {
+        if (dnnl_param.with_act) {
           full_conv_param.act_param.scale = output_scale;
         } else {
           for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
