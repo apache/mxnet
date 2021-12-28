@@ -51,7 +51,7 @@ void PoolingParamParser(nnvm::NodeAttrs* attrs) {
       param.pad = Shape2(0, 0);
   } else {
     // ignore kernel size only if global_pool not assigned false
-    if (param.global_pool == false) {
+    if (param.global_pool == false && !param.output_size.has_value()) {
       CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim() << "D pooling not supported";
     }
     if (param.stride.ndim() == 0)

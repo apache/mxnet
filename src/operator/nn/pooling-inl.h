@@ -209,7 +209,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream kernel_s, stride_s, pad_s, pool_type_s, pooling_convention_s, global_pool_s,
-        cudnn_off_s, p_value_s, count_include_pad_s, layout_s;
+        cudnn_off_s, p_value_s, count_include_pad_s, layout_s, output_size_s;
     kernel_s << kernel;
     stride_s << stride;
     pad_s << pad;
@@ -220,6 +220,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     p_value_s << p_value;
     count_include_pad_s << count_include_pad;
     layout_s << layout;
+    output_size_s << output_size;
     (*dict)["kernel"]             = kernel_s.str();
     (*dict)["stride"]             = stride_s.str();
     (*dict)["pad"]                = pad_s.str();
@@ -234,6 +235,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     } else {
       (*dict)["layout"] = layout_s.str();
     }
+    (*dict)["output_size"] = output_size_s.str();
   }
 };
 

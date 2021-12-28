@@ -119,11 +119,10 @@ inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
 }
 
 inline bool SupportDNNLPooling(const PoolingParam& param) {
-  // Jak moge wypsiac param, zeby zobaczyc co ma w srodeczku?
-  std::cout << "kernel_ndim=" << param.kernel.ndim() << "\n";
-  std::cout << "pool_type=" << param.pool_type << "\n";
+  std::cout << "kernel_ndim=" << param.kernel.ndim() << "\n";  // DELETE_THIS
+  std::cout << "pool_type=" << param.pool_type << "\n";  // DELETE_THIS
   if (param.layout.has_value()) {
-    std::cout << "layout=" << param.GetLayout(param.kernel.ndim()) << "\n";
+    std::cout << "layout=" << param.GetLayout(param.kernel.ndim()) << "\n";  // DELETE_THIS
   }
   return (param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3) &&
          (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) &&
@@ -176,10 +175,6 @@ inline bool SupportDNNLPooling(const PoolingParam& param, const NDArray& input) 
   }
 }
 
-inline bool IsAdaptivePooling(const PoolingParam param) {
-  return param.output_size.has_value();
-}
-
 inline bool DNNLRequireWorkspace(const PoolingParam& param) {
   return param.pool_type != pool_enum::kAvgPooling && !IsAdaptivePooling(param);
 }
@@ -208,7 +203,7 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  std::cout << "1st check DNNLPoolingGradCompute\n";
+  std::cout << "1st check DNNLPoolingGradCompute\n";  // DELETE_THIS
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
 
   const NDArray& out_grad  = inputs[0];
@@ -225,11 +220,11 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs.size(), 3U);
     in_data = &inputs[1];
   } else {
-    in_data = &outputs[0];
+    in_data = &inputs[0];
   }
   const NDArray& in_grad = outputs[0];
 
-  std::cout << "Inside DNNLPoolingGradCompute\n";
+  std::cout << "Inside DNNLPoolingGradCompute\n"; // DELETE_THIS
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
   auto& bwd            = GetPoolingBwd(param, *in_data, in_grad, out_grad, use_adaptive_pooling);

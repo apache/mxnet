@@ -172,32 +172,25 @@ void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<cpu>* s,
 #if MXNET_USE_ONEDNN == 1
 bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) {
   for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
-    // std::cout << "idx = " << idx << std::endl;
-
     const int s1 = in_data.shape()[idx];
     const int s2 = out_data.shape()[idx];
     if (s2 == 0) {
-    // if ((s2 == 0 && forward) || (s1 == 0 && !true)) {
-      std::cout << "s2 == 0\n";
-      return false;
+    std::cout << "s2 == 0\n";  // DELETE_THIS
+    return false;
     }
     if (s1 % s2 != 0) {
-    // if ((s1 % s2 != 0 && forward) || (s2 % s1 != 0 && !true)) {
-      // std::cout << "Inside check || forward = " << forward << std::endl;
-      std::cout << "s1 \% s2 != 0\n";
-      std::cout << "s1 = " << s1 << std::endl;
-      std::cout << "s2 = " << s2 << std::endl;
-      return false;
+    std::cout << "s1 \% s2 != 0\n";  // DELETE_THIS
+    std::cout << "s1 = " << s1 << std::endl;  // DELETE_THIS
+    std::cout << "s2 = " << s2 << std::endl;  // DELETE_THIS
+    return false;
     }
   }
-  std::cout << "in_data.shape() = " << in_data.shape() << std::endl;
-  std::cout << "out_data.shape() = " << out_data.shape() << std::endl;
-  // std::cout << "After loop\n";
+  std::cout << "in_data.shape() = " << in_data.shape() << std::endl;  // DELETE_THIS
+  std::cout << "out_data.shape() = " << out_data.shape() << std::endl;  // DELETE_THIS
   const int IH = in_data.shape()[2];
   const int IW = in_data.shape()[3];
   const int OH = out_data.shape()[2];
   const int OW = out_data.shape()[3];
-  // std::cout << "After declarations\n";
   const int strides_H  = floor((IH << 1) / OH) - floor(IH / OH);
   const int strides_W  = floor((IW << 1) / OW) - floor(IW / OW);
   const int kernel_H   = ceil((IH << 1) / OH) - floor(IH / OH);
@@ -212,24 +205,24 @@ void AdaptiveAvgPoolOpBackwardExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  std::cout << "Backward adaptive pooling inputs size = " << inputs.size() << "\n";
-  std::cout << "Backward adaptive pooling outputs size = " << outputs.size() << "\n";
+  std::cout << "Backward adaptive pooling inputs size = " << inputs.size() << "\n";  // DELETE_THIS
+  std::cout << "Backward adaptive pooling outputs size = " << outputs.size()
+            << "\n";  // DELETE_THIS
   // Pooling does not currently support working with views
   if (inputs[0].IsView() || outputs[0].IsView()) {
     FallBackCompute(AdaptiveAvgPoolOpBackward<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
 
-  std::cout << "Checking DNNL Average Pooling support\n";
+  std::cout << "Checking DNNL Average Pooling support\n";  // DELETE_THIS
 
   CHECK_EQ(inputs.size(), 1U);
 
   const bool check = SupportDNNLAveragePooling(outputs[0], inputs[0]);
-  std::cout << "DNNL Backward Average Pooling support = " << check << std::endl;
-  if (check) {  
-
-    std::cout << "Here\n";
-    DNNL_OPCHECK_INIT(true, 1, inputs, outputs);
+  std::cout << "DNNL Backward Average Pooling support = " << check << std::endl;  // DELETE_THIS
+  if (check) {
+    std::cout << "Here\n";  // DELETE_THIS
+    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     DNNLRun(DNNLPoolingGradCompute<true>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(AdaptiveAvgPoolOpBackward<cpu>, attrs, ctx, inputs, req, outputs);
     return;
@@ -243,13 +236,16 @@ inline static bool BackwardAdaptivePoolingStorageType(const nnvm::NodeAttrs& att
                                                       DispatchMode* dispatch_mode,
                                                       std::vector<int>* in_attrs,
                                                       std::vector<int>* out_attrs) {
-  std::cout << "BackwardPoolingStorageType\n";
+  std::cout << "BackwardAdaptivePoolingStorageType\n";  // DELETE_THIS
 
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  bool support_dnnl_pool = true; //SupportDNNLAveragePooling(NDArray(in_attrs[0]), NDArray(out_attrs[0]));
 
-  std::cout << "Supported=" << support_dnnl_pool << '\n';
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+
+  bool support_dnnl_pool = true; // SupportDNNLAveragePooling(NDArray(in_attrs[0]), NDArray(out_attrs[0]));
+`
+  std::cout << "Supported=" << support_dnnl_pool << '\n';  // DELETE_THIS
 
   return DNNLStorageType(attrs, dev_mask, support_dnnl_pool, dispatch_mode, in_attrs, out_attrs);
 }
@@ -296,14 +292,14 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  std::cout << "Forward adaptive pooling inputs size = " << inputs.size() << "\n";
-  std::cout << "Forward adaptive pooling outputs size = " << outputs.size() << "\n";
+  std::cout << "Forward adaptive pooling inputs size = " << inputs.size() << "\n";  // DELETE_THIS
+  std::cout << "Forward adaptive pooling outputs size = " << outputs.size() << "\n";  // DELETE_THIS
   /*
   oneDNN doesn't support adaptive pooling.
   Fallback is needed when padding is not equal 0;
   */
   const bool check = SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0]);
-  std::cout << "DNNL Forward Average Pooling support = " << check << std::endl;
+  std::cout << "DNNL Forward Average Pooling support = " << check << std::endl;  // DELETE_THIS
   if (check) {
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
     DNNLRun(DNNLPoolingCompute<true>, attrs, ctx, inputs, req, outputs);
@@ -320,12 +316,11 @@ inline static bool AdaptivePoolingStorageType(const nnvm::NodeAttrs& attrs,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
-  std::cout << "Adaptive storage type\n";
+  std::cout << "Adaptive storage type\n";  // DELETE_THIS
   bool dispatched = false;
 #if MXNET_USE_ONEDNN == 1
   if (!dispatched) {
     dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
-    std::cout << "dispatched = " << dispatched << std::endl;
   }
   if (!DNNLEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
@@ -357,7 +352,7 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
   (N x C x height x width) for any input (NCHW).
 
 )code" ADD_FILELINE)
-    .set_attr_parser(ParamParser<PoolingParam>)
+    .set_attr_parser(PoolingParamParser)
     .set_num_inputs(1)
     .set_num_outputs(1)
     .set_attr<mxnet::FInferShape>("FInferShape", AdaptiveAvgPoolOpInferShape)
@@ -373,12 +368,12 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
     .add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
-    .set_attr_parser(ParamParser<PoolingParam>)
+    .set_attr_parser(PoolingParamParser)
     .set_num_inputs(1)
     .set_num_outputs(1)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<FInferStorageType>("FInferStorageType", AdaptivePoolingStorageType)
+    .set_attr<FInferStorageType>("FInferStorageType", BackwardAdaptivePoolingStorageType)
     // Different backend requires different FInplaceOption
     .set_attr<nnvm::FInplaceOption>("FInplaceOption",
                                     [](const NodeAttrs& attrs) {

@@ -47,6 +47,10 @@
 namespace mxnet {
 namespace op {
 
+inline bool IsAdaptivePooling(const PoolingParam param) {
+  return param.output_size.has_value();
+}
+
 static inline bool IsWriting(const OpReqType ort) {
   return ort == kWriteTo || ort == kWriteInplace;
 }
@@ -93,7 +97,7 @@ inline void AdaptiveAvgPoolOpBackward(const nnvm::NodeAttrs& attrs,
                                       const std::vector<TBlob>& inputs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<TBlob>& outputs) {
-  std::cout << "Naive backward\n";
+  std::cout << "Naive backward\n";  // DELETE_THIS
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 

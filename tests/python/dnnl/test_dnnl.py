@@ -396,7 +396,7 @@ def test_adaptive_pooling():
         
     stypes = ['default', 'row_sparse']
     for stype in stypes:
-        for i in range(1,20): # why it brokes down at the same size as the input? ie. i=20 for shape=(1,1,20,20)
+        for i in range(4,20): # why it brokes down at the same size as the input? ie. i=20 for shape=(1,1,20,20)
             check_adaptive_pooling_training(stype, i)
 
 def test_activation():
