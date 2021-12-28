@@ -47,6 +47,24 @@ bool QuantizeStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+#if MXNET_USE_ONEDNN == 1
+static void QuantizeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+  const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
+
+  if (param.out_type == mshadow::kUint8 || param.out_type == mshadow::kInt8) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLQuantizeCompute, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(QuantizeCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  FallBackCompute(QuantizeCompute<cpu>, attrs, ctx, inputs, req, outputs);
+}
+#endif
+
 NNVM_REGISTER_OP(_contrib_quantize)
     .add_alias("_npx_contrib_quantize")
     .describe(R"code(Quantize a input tensor from float to `out_type`,
