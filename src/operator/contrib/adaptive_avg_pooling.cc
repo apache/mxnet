@@ -214,6 +214,7 @@ bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) 
       return false;
     }
   }
+  
   const int IH         = in_data.shape()[2];
   const int IW         = in_data.shape()[3];
   const int OH         = out_data.shape()[2];
