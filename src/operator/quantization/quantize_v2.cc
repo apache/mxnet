@@ -65,6 +65,22 @@ static OpStatePtr CreateQuantizeV2State(const nnvm::NodeAttrs& attrs,
   return state;
 }
 
+// DNNLRun doeas not support StatefullComputeEx
+// void QuantizeV2ForwardExCPU(const OpStatePtr& state,
+//                             const OpContext& ctx,
+//                             const std::vector<TBlob>& inputs,
+//                             const std::vector<OpReqType>& req,
+//                             const std::vector<TBlob>& outputs) {
+//   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
+//   if (SupportDNNLConv(params, inputs[0])) {
+//     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+//     DNNLRun(SgDNNLQuantizeForward, state, ctx, inputs, req, outputs);
+//     DNNL_OPCHECK_RUN(QuantizeV2Forward<cpu>, attrs, ctx, inputs, req, outputs);
+//     return;
+//   }
+//   FallBackCompute(QuantizeV2Forward<cpu>, attrs, ctx, inputs, req, outputs);
+// }
+
 NNVM_REGISTER_OP(_contrib_quantize_v2)
     .add_alias("_npx_contrib_quantize_v2")
     .describe(R"code(Quantize a input tensor from float to `out_type`,
