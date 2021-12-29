@@ -106,7 +106,7 @@ where
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsDNNL", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizeCompute)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", QuantizeComputeExCPU)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", QuantizeCompute<cpu>)
     .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
