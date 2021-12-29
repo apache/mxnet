@@ -308,7 +308,6 @@ void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs& attrs,
                                          const std::vector<NDArray>& inputs,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
-  FullyConnectedParam param = nnvm::get<FullyConnectedParam>(attrs.parsed);
 
   DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
   DNNLRun(DNNLQuantizedFullyConnectedForward, attrs, ctx, inputs, req, outputs);
