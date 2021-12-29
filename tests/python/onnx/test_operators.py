@@ -721,7 +721,7 @@ def test_onnx_export_npx_box_decode(tmp_path, dtype, fmt, clip):
     op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
 
 
-# @pytest.mark.skip(reason='AdaptiveAvgPooling2D is deprecated in MXNet 2.0')
+@pytest.mark.skip(reason='AdaptiveAvgPooling2D is deprecated in MXNet 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 def test_onnx_export_contrib_AdaptiveAvgPooling2D(tmp_path, dtype):
     x = mx.nd.random.uniform(0, 1, (1, 2, 3, 4), dtype=dtype)
