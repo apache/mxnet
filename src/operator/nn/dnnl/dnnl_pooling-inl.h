@@ -32,7 +32,6 @@
 
 #include "../pooling-inl.h"
 #include "./dnnl_base-inl.h"
-#include "../../contrib/adaptive_avg_pooling-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -119,11 +118,6 @@ inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
 }
 
 inline bool SupportDNNLPooling(const PoolingParam& param) {
-  std::cout << "kernel_ndim=" << param.kernel.ndim() << "\n";  // DELETE_THIS
-  std::cout << "pool_type=" << param.pool_type << "\n";  // DELETE_THIS
-  if (param.layout.has_value()) {
-    std::cout << "layout=" << param.GetLayout(param.kernel.ndim()) << "\n";  // DELETE_THIS
-  }
   return (param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3) &&
          (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) &&
          (!param.layout.has_value() ||
@@ -176,7 +170,7 @@ inline bool SupportDNNLPooling(const PoolingParam& param, const NDArray& input) 
 }
 
 inline bool DNNLRequireWorkspace(const PoolingParam& param) {
-  return param.pool_type != pool_enum::kAvgPooling && !IsAdaptivePooling(param);
+  return param.pool_type != pool_enum::kAvgPooling && !param.is_adaptive_pooling;
 }
 
 typedef ParamOpSign<PoolingParam> DNNLPoolingSignature;
@@ -193,71 +187,17 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
                               const NDArray& out_grad,
                               const bool use_adaptive_pooling);
 
-template <bool use_adaptive_pooling>
 void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const std::vector<NDArray>& inputs,
                             const std::vector<OpReqType>& req,
-                            const std::vector<NDArray>& outputs) {
-  if (req[0] == kNullOp) {
-    return;
-  }
+                            const std::vector<NDArray>& outputs);
 
-  std::cout << "1st check DNNLPoolingGradCompute\n";  // DELETE_THIS
-  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-
-  const NDArray& out_grad  = inputs[0];
-  const NDArray* workspace = nullptr;
-  const NDArray* in_data   = nullptr;
-  if (DNNLRequireWorkspace(param)) {
-    // The first two elements are the gradient of the outputs in forward.
-    // The third is the input of forward.
-    // The fourth and the fifth are the outputs of forward.
-    CHECK_EQ(inputs.size(), 5U);
-    in_data   = &inputs[2];
-    workspace = &inputs[4];
-  } else if (!IsAdaptivePooling(param)) {
-    CHECK_EQ(inputs.size(), 3U);
-    in_data = &inputs[1];
-  } else {
-    in_data = &inputs[0];
-  }
-  const NDArray& in_grad = outputs[0];
-
-  std::cout << "Inside DNNLPoolingGradCompute\n"; // DELETE_THIS
-  TmpMemMgr::Get()->Init(ctx.requested[0]);
-
-  auto& bwd            = GetPoolingBwd(param, *in_data, in_grad, out_grad, use_adaptive_pooling);
-  auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
-  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
-  dnnl_args_map_t args = {
-      {DNNL_ARG_DIFF_DST, *diff_dst_mem},
-      {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
-  };
-  if (DNNLRequireWorkspace(param) && workspace != nullptr) {
-    args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
-  }
-
-  DNNLStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);
-  CommitOutput(in_grad, diff_src_mem);
-  DNNLStream::Get()->Submit();
-}
-
-template <bool use_adaptive_pooling>
 void DNNLPoolingCompute(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
                         const std::vector<NDArray>& in_data,
                         const std::vector<OpReqType>& req,
-                        const std::vector<NDArray>& out_data) {
-  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  const NDArray* workspace  = nullptr;
-  if (DNNLRequireWorkspace(param) && !use_adaptive_pooling) {
-    CHECK_GT(out_data.size(), 1U);
-    workspace = &out_data[1];
-  }
-  auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0], use_adaptive_pooling);
-  fwd.Execute(in_data[0], req[0], out_data[0], workspace, use_adaptive_pooling);
-}
+                        const std::vector<NDArray>& out_data);
 
 }  // namespace op
 }  // namespace mxnet

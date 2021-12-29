@@ -59,6 +59,11 @@ void PoolingParamParser(nnvm::NodeAttrs* attrs) {
     if (param.pad.ndim() == 0)
       param.pad = Shape3(0, 0, 0);
   }
+
+  if (param.output_size.has_value()) {
+    param.is_adaptive_pooling = true;
+  }
+
   attrs->parsed = std::move(param);
 }
 
@@ -303,7 +308,7 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
 
   if (SupportDNNLPooling(param, inputs[0])) {
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
-    DNNLRun(DNNLPoolingCompute<false>, attrs, ctx, inputs, req, outputs);
+    DNNLRun(DNNLPoolingCompute, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -325,7 +330,7 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 
   if (SupportDNNLPooling(param, inputs[0])) {
     DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLPoolingGradCompute<false>, attrs, ctx, inputs, req, outputs);
+    DNNLRun(DNNLPoolingGradCompute, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
