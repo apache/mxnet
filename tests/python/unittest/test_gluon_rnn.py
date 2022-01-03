@@ -72,7 +72,7 @@ def test_lstm():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+@assert_raises_cudnn_not_satisfied(min_version='8.2.1')
 @pytest.mark.serial
 def test_lstmp():
     hidden_size, projection_size = 512, 256

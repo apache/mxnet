@@ -58,6 +58,7 @@ FP16_FP32_FUNCS = [
     '_contrib_mrcnn_mask_target',
     '_contrib_round_ste',
     '_contrib_sign_ste',
+    '_TensorRT',
     'Crop',
     'Dropout',
     'Embedding',

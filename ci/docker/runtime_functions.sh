@@ -22,8 +22,10 @@
 
 set -ex
 
-CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-CI_CMAKE_CUDA_ARCH="5.2 7.0"
+#CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
+#CI_CMAKE_CUDA_ARCH="5.2 7.0"
+CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_86,code=sm_86"
+CI_CMAKE_CUDA_ARCH="8.6"
 
 clean_repo() {
     set -ex
@@ -601,6 +603,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_CUDNN=1                           \
           -DUSE_OPENCV=1                          \
           -DUSE_TENSORRT=1                        \
+          -DBUILD_CYTHON_MODULES=ON               \
           -DUSE_CPP_PACKAGE=1                     \
           -DBUILD_CPP_EXAMPLES=1                  \
           -DUSE_OPENMP=0                          \
@@ -608,6 +611,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_ONEDNN=0                          \
           -DUSE_NVML=OFF                          \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+          -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
           -G Ninja                                \
           /work/mxnet
 
@@ -618,6 +622,9 @@ build_ubuntu_tensorrt_cu114() {
   build_ubuntu_gpu_tensorrt
 }
 
+build_ubuntu_gpu_cu114() {
+  build_ubuntu_tensorrt_cu114
+}
 
 build_ubuntu_gpu_onednn() {
     set -ex
@@ -935,7 +942,7 @@ unittest_ubuntu_python3_gpu() {
     export MXNET_ONEDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.2.1}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
@@ -953,10 +960,11 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ONEDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.2.1}
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=100
+    export LD_LIBRARY_PATH=/work/mxnet/lib
     check_cython
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator and not test_amp_init.py' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
