@@ -22,10 +22,8 @@
 
 set -ex
 
-#CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-#CI_CMAKE_CUDA_ARCH="5.2 7.0"
-CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_86,code=sm_86"
-CI_CMAKE_CUDA_ARCH="8.6"
+CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
+CI_CMAKE_CUDA_ARCH="5.2 7.0"
 
 clean_repo() {
     set -ex
