@@ -249,7 +249,7 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
   const mxnet::TShape output_shape = mxnet::TShape(out_md.dims());
 
   if (use_adaptive_pooling) {
-    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, input_shape, output_shape); // ten stride jest cos nie tak
+    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, input_shape, output_shape);
     dnnl::memory::validate_dims(kernel);
     dnnl::memory::validate_dims(strides);
     dnnl::memory::validate_dims(pad_l);
@@ -397,7 +397,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto pdesc = dnnl::pooling_backward::primitive_desc(bwd_desc, cpu_engine, fwd_pd);
 
     DNNLPoolingBwd bwd(pdesc, with_workspace);
-    it = AddToCache(&pooling_bwds, key, bwd);  // Dodawanie do cache'a
+    it = AddToCache(&pooling_bwds, key, bwd);
   }
   return it->second;
 }
