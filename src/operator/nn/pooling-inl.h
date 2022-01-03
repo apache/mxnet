@@ -50,7 +50,6 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   int pooling_convention;
   bool global_pool;
   bool cudnn_off;
-  bool is_adaptive_pooling;
   dmlc::optional<int> p_value;
   dmlc::optional<bool> count_include_pad;
   dmlc::optional<int> layout;
@@ -75,9 +74,6 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
 
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false).describe(
         "Turn off cudnn pooling and use MXNet pooling operator. ");
-
-    DMLC_DECLARE_FIELD(is_adaptive_pooling).set_default(false).describe(
-        "Used to determine type of pooling used (standard or adaptive). ");
 
     DMLC_DECLARE_FIELD(pooling_convention)
         .set_default(pool_enum::kValid)
@@ -133,6 +129,10 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->global_pool == other.global_pool && this->cudnn_off == other.cudnn_off &&
            this->p_value == other.p_value && this->count_include_pad == other.count_include_pad &&
            this->layout == other.layout && this->output_size == other.output_size;
+  }
+
+  bool IsAdaptivePooling() const {
+    return output_size.has_value();
   }
 
   // Extract layout from param, or supply default layout based on provided input dimension.

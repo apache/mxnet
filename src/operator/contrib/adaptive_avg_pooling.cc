@@ -175,16 +175,16 @@ bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) 
     const int s1 = in_data.shape()[idx];
     const int s2 = out_data.shape()[idx];
     if (s2 == 0) {
-    return false;
+      return false;
     }
     if (s1 % s2 != 0) {
-    return false;
+      return false;
     }
   }
-  const int IH = in_data.shape()[2];
-  const int IW = in_data.shape()[3];
-  const int OH = out_data.shape()[2];
-  const int OW = out_data.shape()[3];
+  const int IH         = in_data.shape()[2];
+  const int IW         = in_data.shape()[3];
+  const int OH         = out_data.shape()[2];
+  const int OW         = out_data.shape()[3];
   const int strides_H  = floor((IH << 1) / OH) - floor(IH / OH);
   const int strides_W  = floor((IW << 1) / OW) - floor(IW / OW);
   const int kernel_H   = ceil((IH << 1) / OH) - floor(IH / OH);
@@ -222,7 +222,6 @@ inline static bool BackwardAdaptivePoolingStorageType(const nnvm::NodeAttrs& att
                                                       DispatchMode* dispatch_mode,
                                                       std::vector<int>* in_attrs,
                                                       std::vector<int>* out_attrs) {
-
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
@@ -354,7 +353,7 @@ NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
                                     [](const NodeAttrs& attrs) {
                                       const PoolingParam& param =
                                           nnvm::get<PoolingParam>(attrs.parsed);
-                                      if (DNNLRequireWorkspace(param) && param.is_adaptive_pooling)
+                                      if (DNNLRequireWorkspace(param) && param.IsAdaptivePooling())
                                         return std::vector<std::pair<int, int>>{{1, 0}};
                                       return std::vector<std::pair<int, int>>();
                                     })

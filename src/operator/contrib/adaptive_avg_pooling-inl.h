@@ -117,7 +117,7 @@ static bool AdaptiveAvgPoolOpInferShape(const nnvm::NodeAttrs& attrs,
   if (mxnet::op::shape_is_none(dshape)) {
     return false;
   }
-  if (param.output_size.has_value()) {
+  if (param.IsAdaptivePooling()) {
     if (param.output_size.value().ndim() == 1) {
       dshape[2] = param.output_size.value()[0];
       dshape[3] = param.output_size.value()[0];

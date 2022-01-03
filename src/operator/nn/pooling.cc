@@ -51,17 +51,13 @@ void PoolingParamParser(nnvm::NodeAttrs* attrs) {
       param.pad = Shape2(0, 0);
   } else {
     // ignore kernel size only if global_pool not assigned false
-    if (param.global_pool == false && !param.output_size.has_value()) {
+    if (param.global_pool == false && !param.IsAdaptivePooling()) {
       CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim() << "D pooling not supported";
     }
     if (param.stride.ndim() == 0)
       param.stride = Shape3(1, 1, 1);
     if (param.pad.ndim() == 0)
       param.pad = Shape3(0, 0, 0);
-  }
-
-  if (param.output_size.has_value()) {
-    param.is_adaptive_pooling = true;
   }
 
   attrs->parsed = std::move(param);

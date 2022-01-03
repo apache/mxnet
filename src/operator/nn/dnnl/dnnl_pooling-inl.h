@@ -170,7 +170,7 @@ inline bool SupportDNNLPooling(const PoolingParam& param, const NDArray& input) 
 }
 
 inline bool DNNLRequireWorkspace(const PoolingParam& param) {
-  return param.pool_type != pool_enum::kAvgPooling && !param.is_adaptive_pooling;
+  return param.pool_type != pool_enum::kAvgPooling && !param.IsAdaptivePooling();
 }
 
 typedef ParamOpSign<PoolingParam> DNNLPoolingSignature;
