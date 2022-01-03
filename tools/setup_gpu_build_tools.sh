@@ -35,7 +35,7 @@ if [[ $VARIANT == cu112* ]]; then
     CUDA_LIBS_VERSION='10.2.3.135-1'
     CUDA_SOLVER_VERSION='11.1.0.135-1'
     LIBCUDA_VERSION='460.32.03-0ubuntu1'
-    LIBCUDNN_VERSION='8.1.0.77-1+cuda11.2'
+    LIBCUDNN_VERSION='8.1.1.33-1+cuda11.2'
     LIBNCCL_VERSION='2.8.3-1+cuda11.2'
     LIBCUDART_VERSION='11.2.72-1'
     LIBCUFFT_VERSION='10.4.0.135-1'
@@ -52,8 +52,8 @@ elif [[ $VARIANT == cu102* ]]; then
     CUDA_VERSION='10.2.89-1'
     CUDA_PATCH_VERSION='10.2.2.89-1'
     LIBCUDA_VERSION='440.33.01-0ubuntu1'
-    LIBCUDNN_VERSION='8.0.4.30-1+cuda10.2'
-    LIBNCCL_VERSION='2.5.6-1+cuda10.2'
+    LIBCUDNN_VERSION='8.2.4.15-1+cuda10.2'
+    LIBNCCL_VERSION='2.11.4-1+cuda10.2'
 elif [[ $VARIANT == cu101* ]]; then
     CUDA_VERSION='10.1.105-1'
     CUDA_PATCH_VERSION='10.1.0.105-1'
@@ -134,8 +134,6 @@ elif [[ $VARIANT == cu110* ]]; then
       "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
       "cuda-nvprof-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-    )
-    ml_files=( \
       "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
       "libcudnn${LIBCUDNN_MAJOR}_${LIBCUDNN_VERSION}_amd64.deb" \
       "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
@@ -161,8 +159,6 @@ elif [[ $VARIANT == cu102* ]]; then
       "cuda-nvtx-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
       "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-    )
-    ml_files=( \
       "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
       "libcudnn${LIBCUDNN_MAJOR}_${LIBCUDNN_VERSION}_amd64.deb" \
       "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
