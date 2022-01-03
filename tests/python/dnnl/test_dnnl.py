@@ -386,13 +386,13 @@ def test_pooling():
 
 def test_adaptive_pooling():
     def check_adaptive_pooling_training(stype, i):
-        shape = (3, 3, 20, 20)
-        data_tmp = mx.nd.random.uniform(shape=shape)
-        data = mx.symbol.Variable('data', stype=stype)
-        in_location = [data_tmp.tostype(stype)]
+        for shape in [(3, 3, 8, 8), (3, 3, 20, 20), (3, 3, 32, 32)]:
+            data_tmp = mx.nd.random.uniform(shape=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [data_tmp.tostype(stype)]
 
-        test = mx.symbol.contrib.AdaptiveAvgPooling2D(data=data, output_size=i)
-        check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+            test = mx.symbol.contrib.AdaptiveAvgPooling2D(data=data, output_size=i)
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
         
     stypes = ['default', 'row_sparse']
     for stype in stypes:
