@@ -17,11 +17,11 @@
 
 ## Introduction
 
-After successful model building and achieving desired accuracy on the test data, often next step is to optimize inference to deploy the model to production. One of the key feature of usable model is to have as small latency as possible to serve services to large number of customers at the same time. In addition to customer satisfaction, with well optimized model,  hardware load is reduced which also reduces energy costs needed to perform inference.
+After successful model building and achieving desired accuracy on the test data, often next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers at the same time. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
 
 Two main types of software optimizations can be characerized as:
-- memory-bound optimizations - in this type main objective of optimization is to reduce memory operations (reads and writes) - it is done by e.g. chaining sequence of operations which can be performed one after one immediately (example: ReLU activation)
-- compute-bound optimization -  these optimization are mainly done on operations which requires large number of CPU cycles like FullyConnected and Convolution - one of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization
+- memory-bound optimizations - in this type main objective of optimization is to reduce memory operations (reads and writes) - it is done by e.g. chaining sequence of operations which can be performed one after another immediately (example: ReLU activation)
+- compute-bound optimization - these optimizations are mainly done on operations which require large number of CPU cycles to complete, like FullyConnected and Convolution - one of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization
 
 In version 2.0 of the Apache MXNet (incubating) GluonAPI2.0 replaced Symbolic API known from versions 1.x, thus there are some differences between API to perform graph fusion and quantization.
 
@@ -232,7 +232,7 @@ In MXNet 2.0 new interface for creating custom calibration collector was created
 
 Layer collectors are responsible for collecting statistics of each node in the graph — it means that the input/output data of every operator executed can be observed. Collector utilize the register_op_hook method of HybridBlock class.
 
-Custom layer collector has to inherit from the CalibrationCollector class, which is provided in `contrib.quantization` package. This ingeritation allows API to be consistent. Below is an example implementation of CalibrationCollector:
+Custom layer collector has to inherit from the CalibrationCollector class, which is provided in `contrib.quantization` package. This inheritance allows API to be consistent. Below is an example implementation of CalibrationCollector:
 
 ```
 class ExampleNaiveCollector(CalibrationCollector):
