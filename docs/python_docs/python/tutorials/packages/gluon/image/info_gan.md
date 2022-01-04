@@ -19,7 +19,7 @@
 # Image similarity search with InfoGAN
 
 This notebook shows how to implement an InfoGAN based on Gluon. InfoGAN is an extension of GANs, where the generator input is split in 2 parts: random noise and a latent code (see [InfoGAN Paper](https://arxiv.org/pdf/1606.03657.pdf)).
-The codes are made meaningful by maximizing the mutual information between code and generator output. InfoGAN learns a disentangled representation in a completely unsupervised manner. It can be used for many applications such as image similarity search. This notebook uses the DCGAN example from the [Straight Dope Book](https://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html) and extends it to create an InfoGAN.
+The codes are made meaningful by maximizing the mutual information between code and generator output. InfoGAN learns a disentangled representation in a completely unsupervised manner. It can be used for many applications such as image similarity search. This notebook uses the DCGAN example and extends it to create an InfoGAN.
 
 
 ```{.python .input}
@@ -112,7 +112,7 @@ train_dataloader = gluon.data.DataLoader(train_data, batch_size=batch_size, shuf
 ```
 
 ## Generator
-Define the Generator model. Architecture is taken from the DCGAN implementation in [Straight Dope Book](https://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html). The Generator consist of  4 layers where each layer involves a strided convolution, batch normalization, and rectified nonlinearity. It takes as input random noise and the latent code and produces an `(64,64,3)` output image.
+Define the Generator model. The Generator consist of  4 layers where each layer involves a strided convolution, batch normalization, and rectified nonlinearity. It takes as input random noise and the latent code and produces an `(64,64,3)` output image.
 
 
 ```{.python .input}
