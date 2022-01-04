@@ -58,7 +58,6 @@ FP16_FP32_FUNCS = [
     '_contrib_mrcnn_mask_target',
     '_contrib_round_ste',
     '_contrib_sign_ste',
-    '_TensorRT',
     'Crop',
     'Dropout',
     'Embedding',
@@ -628,6 +627,11 @@ if Features().is_enabled('ONEDNN'):
         '_sg_onednn_selfatt_qk',
         '_sg_onednn_selfatt_valatt',
         '_sg_onednn_batch_dot'
+    ])
+
+if Features().is_enabled('TENSORRT'):
+    FP32_FUNCS.extend([
+        '_TensorRT'
     ])
 
 # Functions that have to be cast to FP32 only for
