@@ -440,7 +440,7 @@ In versions 1.x of MXNet pattern fusion in execution graph was enabled by defaul
 
  - the model must have specific operator patterns which can be fused
 
-Both HybridBlock and Symbol classes provide API to easily run fusion of operators. All we have to do is add single line of code enabling fusion passes on our model:
+Both HybridBlock and Symbol classes provide API to easily run fusion of operators. All we have to do is to add single line of code running fusion passes on our model:
 ```{.python}
 # on HybridBlock
 net.optimize_for(data, backend='ONEDNN')
@@ -452,7 +452,7 @@ Controling which patterns should be fused still can be done by setting proper en
 
 ### INT8 Quantization / Precision reduction
 Quantization API was also refactored to be consistent with other new features and mechanisms. In comparison to MXNet 1.x releases, in MXNet 2.0 `quantize_net_v2` function has been removed and development focused mainly on `quantize_net` function to make it easier to use for end user and ultimately give him more flexibility.
-Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with `quantize_model` (it is deprecated method, left only to provide backward compatibility and its usage is strongly discouraged).
+Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with deprecated `quantize_model` (`quantize_model` is left only to provide backward compatibility and its usage is strongly discouraged).
 
 ```{.python}
 import mxnet as mx
