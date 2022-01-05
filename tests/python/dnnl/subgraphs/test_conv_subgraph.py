@@ -91,7 +91,7 @@ def test_pos_conv_add(use_bias, data_shape):
     
   attr = {'conv': {'with_sum': 'true'}}
   net = ConvAdd(use_bias=use_bias)
-  check_fusion(net, data_shape, attr)
+  check_fusion(net, data_shape, attr, check_quantization=False)
 
 
 @mx.util.use_np
@@ -112,14 +112,14 @@ def test_pos_conv_add2(no_bias, data_shape):
 
   attr = {'conv': {'with_sum': 'true'}}
   net = ConvAdd(use_bias=True)
-  check_fusion(net, data_shape, attr)
+  check_fusion(net, data_shape, attr, check_quantization=False)
 
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", False), #TODO(bgawrych): investigate
-    ("sigmoid", True),
+    ("sigmoid", False),
     ("log_sigmoid", False),
     ("mish", False),
     ("tanh", False), #TODO(bgawrych): investigate
@@ -162,11 +162,11 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
-    ("sigmoid", True),
-    ("log_sigmoid", True),
-    ("mish", True),
-    ("tanh", True),
-    ("softrelu", True),
+    ("sigmoid", False),
+    ("log_sigmoid", False),
+    ("mish", False),
+    ("tanh", False),
+    ("softrelu", False),
     ("relu6", True),
     ("leakyrelu", True),
     ("gelu", True)
@@ -200,14 +200,14 @@ def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
-    ("relu", True),
-    ("sigmoid", True),
-    ("log_sigmoid", True),
-    ("mish", True),
-    ("tanh", True),
+    ("relu", False),
+    ("sigmoid", False),
+    ("log_sigmoid", False),
+    ("mish", False),
+    ("tanh", False),
     #("softrelu", True), #TODO(bgawrych): failing fusion check - difference in random single element
-    ("relu6", True),
-    ("leakyrelu", True),
+    ("relu6", False),
+    ("leakyrelu", False),
     ("gelu", False) #TODO: for True we get assert instead of not fusing pattern
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
@@ -321,11 +321,11 @@ def test_pos_concat_scale_align(data_shape, out_type):
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
-    ("sigmoid", True),
-    ("log_sigmoid", True),
-    ("mish", True),
-    ("tanh", True),
-    ("softrelu", True),
+    ("sigmoid", False),
+    ("log_sigmoid", False),
+    ("mish", False),
+    ("tanh", False),
+    ("softrelu", False),
     ("relu6", True),
     ("leakyrelu", True),
     ("gelu", True)
