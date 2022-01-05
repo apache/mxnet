@@ -39,8 +39,6 @@ static void LogSoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
-  if (inputs[0].shape().Size() == 0U)
-    return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportDNNLLogSoftmax(param, inputs[0], outputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
@@ -57,8 +55,6 @@ static void LogSoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                        const std::vector<NDArray>& inputs,
                                        const std::vector<OpReqType>& req,
                                        const std::vector<NDArray>& outputs) {
-  if (inputs[0].shape().Size() == 0U)
-    return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportDNNLLogSoftmax(param, inputs[1], outputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
