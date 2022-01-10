@@ -387,14 +387,21 @@ def test_pooling():
 def test_adaptive_pooling():
     def check_adaptive_pooling_training(stype, i):
         for shape in [(3, 3, 8, 8), (3, 3, 20, 20), (3, 3, 32, 32)]:
-            data_tmp = mx.nd.random.normal(-0.1, 1, size=shape)
-            data = mx.symbol.Variable('data', stype=stype)
-            in_location = [data_tmp.tostype(stype)]
-            test = mx.symbol.Convolution(data=data, kernel=(3, 3), stride=(1, 1), pad=(0,0), num_filter=4)
-            test = mx.symbol.contrib.AdaptiveAvgPooling2D(data=test, output_size=i)
-            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+            data_tmp = mx.nd.random.normal(-0.1, 1, shape=shape)
+            data = mx.sym.var('data', stype=stype)
+
+            data = mx.sym.Convolution(data=data, kernel=(3, 3), pad=(1,1), num_filter=4, name="conv", weight=None)
+            data = mx.sym.contrib.AdaptiveAvgPooling2D(data=data, output_size=i)
+
+            weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3))
+            bias_tmp = np.random.normal(0.1, 0.1, size=(4,))
+
+            in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
+                            mx.nd.array(bias_tmp).tostype(stype)]
+                            
+            check_numeric_gradient(data, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
         
-    stypes = ['default', 'row_sparse']
+    stypes = ['row_sparse', 'default']
     for stype in stypes:
         for i in range(4,20):
             check_adaptive_pooling_training(stype, i)
