@@ -49,7 +49,7 @@ void DNNLSplitForward(const nnvm::NodeAttrs& attrs,
       (param.sections > 0) ? GetSplitIndices(tensors.input.shape(), split_axis, param.sections) :
                              param.indices;
 
-  const auto fwd = DNNLSplitFwd::GetCached(param, tensors, split_pts, split_axis);
+  const auto& fwd = DNNLSplitFwd::GetCached(param, tensors, split_pts, split_axis);
   fwd.Execute(tensors, split_pts, split_axis, req);
 }
 
@@ -58,10 +58,10 @@ DNNLSplitFwd::Tensors::Tensors(const NDArray& input, const std::vector<NDArray>&
 
 typedef ParamOpSign<SplitParam> DNNLSplitSignature;
 
-DNNLSplitFwd DNNLSplitFwd::GetCached(const SplitParam& param,
-                                     const Tensors& tensors,
-                                     const TShape& split_pts,
-                                     const int split_axis) {
+DNNLSplitFwd& DNNLSplitFwd::GetCached(const SplitParam& param,
+                                      const Tensors& tensors,
+                                      const TShape& split_pts,
+                                      const int split_axis) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLSplitSignature, DNNLSplitFwd, OpHash> fwds;
 #else

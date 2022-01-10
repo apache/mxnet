@@ -45,10 +45,10 @@ class DNNLSplitFwd {
     const std::vector<NDArray>& outputs;
   };
 
-  static DNNLSplitFwd GetCached(const SplitParam& param,
-                                const Tensors& tensors,
-                                const TShape& split_pts,
-                                const int split_axis);
+  static DNNLSplitFwd& GetCached(const SplitParam& param,
+                                 const Tensors& tensors,
+                                 const TShape& split_pts,
+                                 const int split_axis);
 
   DNNLSplitFwd(const Tensors& tensors, const TShape& split_pts, const int split_axis);
 
