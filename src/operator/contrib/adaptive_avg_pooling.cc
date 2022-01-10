@@ -179,16 +179,15 @@ bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) 
     }
     if (s1 % s2 != 0) {
       return false;
-    }
-  }
-  const int IH         = in_data.shape()[2];
-  const int IW         = in_data.shape()[3];
-  const int OH         = out_data.shape()[2];
-  const int OW         = out_data.shape()[3];
-  const int strides_H  = ((IH << 1) / OH) - (IH / OH);
-  const int strides_W  = ((IW << 1) / OW) - (IW / OW);
-  const int kernel_H   = ((IH << 1) / OH) - (IH / OH);
-  const int kernel_W   = ((IW << 1) / OW) - (IW / OW);
+   * 2.0
+  const float IH         = in_data.shape()[2];
+  const float IW         = in_data.shape()[3];
+  const float OH         = out_data.shape()[2];
+  const float OW         = out_data.shape()[3];
+  const int strides_H  = floor((IH * 2.0) / OH) - floor(IH / OH);
+  const int strides_W  = floor((IW * 2.0) / OW) - floor(IW / OW);
+  const int kernel_H   = ceil((IH * 2.0) / OH) - floor(IH / OH);
+  const int kernel_W   = ceil((IW * 2.0) / OW) - floor(IW / OW);
   const int pad_l_top  = (strides_H * (OH - 1) + kernel_H - IH) / 2;
   const int pad_l_left = (strides_W * (OW - 1) + kernel_W - IW) / 2;
   return pad_l_top == 0 && pad_l_left == 0;
