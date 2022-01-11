@@ -17,11 +17,11 @@
 
 ## Introduction
 
-After successful model building and achieving desired accuracy on the test data, often next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers at the same time. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
+After successful model building and achieving desired accuracy on the test data, often the next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers at the same time. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
 
 Two main types of software optimizations can be characerized as:
-- memory-bound optimizations - in this type main objective of optimization is to reduce memory operations (reads and writes) - it is done by e.g. chaining sequence of operations which can be performed one after another immediately (example: ReLU activation)
-- compute-bound optimization - these optimizations are mainly done on operations which require large number of CPU cycles to complete, like FullyConnected and Convolution - one of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization
+- memory-bound optimizations - main objective of these optimizations is to reduce memory operations (reads and writes) - it is done by e.g. chaining sequence of operations which can be performed one after another immediately (example: ReLU activation)
+- compute-bound optimizations - these optimizations are mainly done on operations which require large number of CPU cycles to complete, like FullyConnected and Convolution - one of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization
 
 In version 2.0 of the Apache MXNet (incubating) GluonAPI2.0 replaced Symbolic API known from versions 1.x, thus there are some differences between API to perform graph fusion and quantization.
 
@@ -31,11 +31,11 @@ Models are often represented as directed graph of operations (represented by nod
 ![base_model](https://i.imgur.com/ZVvGGND.png)
 
 
-The simplest way to explain what is and how fusion works is to present an example. On the image above is shown a sequence of popular operations taken from ResNet architecture. This type of architecture is built with many similar block called residual blocks. Some possible fusion patterns are:
+The simplest way to explain what fusion is and how it works is to present an example. On the image above is shown a sequence of popular operations taken from ResNet architecture. This type of architecture is built with many similar block called residual blocks. Some possible fusion patterns are:
 
-- Conv2D + BatchNorm => BatchNorm fusin with convolution can be performed by modifing weights and bias of Convolution - this way BatchNorm is completly done within convolution which makes BatchNorm zero time operation. Only cost of this is time needed to prepare weights and bias based on BatchNorm parameters.
-- Conv2D + ReLU => this type of fuse is very popular also with other layers (e.g. FullyConnected + Activation). It's very simple idea where before writing data to output, activation is performed on that data. Main benefit of this fusion is that, there is no need to read and write back data in other layer only to perform simple activation function. 
-- Conv2D + Add => even simpler idea than the previous one - instead of overwriting output memory, results are added to the output memory. In the simplest words: `out_mem = conv_result` is replaced by `out_mem += conv_result`
+- Conv2D + BatchNorm => Fusing BatchNorm with Convolution can be performed by modifing weights and bias of Convolution - this way BatchNorm is completely contained within Convolution which makes BatchNorm zero time operation. Only cost of fusing is time needed to prepare weights and bias in Convolution based on BatchNorm parameters.
+- Conv2D + ReLU => this type of fusion is very popular also with other layers (e.g. FullyConnected + Activation). It is very simple idea where before writing data to output, activation is performed on that data. Main benefit of this fusion is that, there is no need to read and write back data in other layer only to perform simple activation function. 
+- Conv2D + Add => even simpler idea than the previous one - instead of overwriting output memory, results are added to the output memory. In the simplest terms: `out_mem = conv_result` is replaced by `out_mem += conv_result`
 
 Above examples are presented as atomic ones, but in this example they can be combined together, thus two fused patterns are visible in example:
 - Conv2D + BatchNorm + ReLU
@@ -47,11 +47,11 @@ After fusing all patterns, computational graph will be changed to the following 
 
 
 ### Operator fusion in MXNet
-Since the version 1.6 of MXNet built with oneDNN support, operator fusion was enabled by default if executing model with Module API, however in version 2.0 it was decided to remove setting this feature by environment flag and replace it by aware user API call.
+Since the version 1.6 of MXNet built with oneDNN support, operator fusion had been enabled by default if executing model with Module API, however in version 2.0 it has been decided to remove setting this feature by environment flag and replace it by aware user API call.
 
 To fuse model in MXNet 2.0 there are two requirements:
-- the model must be defined as a subclass of HybridBlock or Symbol
-- the model must have specific operator patterns which can be fused
+- the model must be defined as a subclass of HybridBlock or Symbol,
+- the model must have specific operator patterns which can be fused.
 
 As an example we define example network (sample block from ResNet architecture):
 
@@ -92,7 +92,7 @@ Both HybridBlock and Symbol classes provide API to easily run fusion of operator
 net.optimize_for(data, backend='ONEDNN')
 ```
 
-*optimize_for* function is available also as Symbol class method. Example call to this API is shown below. Notice that Symbol’s *optimize_for* method is not done in-place, so assign it to a new variable is required:
+*optimize_for* function is available also as Symbol class method. Example call to this API is shown below. Notice that Symbol’s *optimize_for* method is not done in-place, so assigning it to a new variable is required:
 
 ```
 optimized_symbol = sym.optimize_for(backend='ONEDNN')
@@ -102,9 +102,9 @@ For the above model definition in a naive benchmark with artificial data, we can
 
 
 ## Quantization
-As mentioned in introduction, precision reduction is another very popular method of increasing performance of workloads and, what is important, in most cases is combined together with operator fusion which improves performance even more. In training precision reduction utilizes 16 bit data types like bfloat or float16, but for inference great results can be achieved using int8. 
+As mentioned in the introduction, precision reduction is another very popular method of improving performance of workloads and, what is important, in most cases is combined together with operator fusion which improves performance even more. In training precision reduction utilizes 16 bit data types like bfloat or float16, but for inference great results can be achieved using int8. 
 
-Model quantization helps on both memory-bound and compute bound operations. In quantized model IO operations are reduced as int8 data type is 4x smaller than float32, and also computational throughput is increased as more data can be SIMD'ed. On modern Intel architectures using int8 data type can bring even more speedup by utilizing special VNNI instruction set. 
+Model quantization helps on both memory-bound and compute-bound operations. In quantized model IO operations are reduced as int8 data type is 4x smaller than float32, and also computational throughput is increased as more data can be SIMD'ed. On modern Intel architectures using int8 data type can bring even more speedup by utilizing special VNNI instruction set. 
 
 ![before_quant](https://i.imgur.com/XUVFnFQ.png)
 
@@ -113,21 +113,21 @@ Firstly quantization performs operator fusion on floating-point model as mention
 ![quant_not_calib](https://i.imgur.com/fV84H6b.png)
 
 
-After injection step it's important to perform calibration of a model, however this step is optional. Quantizing without calibration is not recommended in terms of performance. It will result in calculating data minimum and maximum in quantize and requantize nodes during each inference pass. Calibrating a model greatly improves performance as minimum and maximum values are collected offline and are saved inside node - this way there is no need to searching these values during inference pass. 
+After injection step it is important to perform calibration of the model, however this step is optional. Quantizing without calibration is not recommended in terms of performance. It will result in calculating data minimum and maximum in quantize and requantize nodes during each inference pass. Calibrating a model greatly improves performance as minimum and maximum values are collected offline and are saved inside node - this way there is no need to search for these values during inference pass. 
 
 ![quant_calib](https://i.imgur.com/anNMPUS.png)
 
 
-Currently, there are three calibration methods supported:
-- naive — min/max values from the calibration run.
-- entropy— uses KL divergence to determine the best symmetrical quantization thresholds for a given histogram of values.
-- custom — uses user-defined CalibrationCollector to control a calibration process.
+Currently, there are three supported calibration methods:
+- naive — min/max values from the calibration run,
+- entropy — uses KL divergence to determine the best symmetrical quantization thresholds for a given histogram of values.
+- custom — uses user-defined CalibrationCollector to control the calibration process.
 
-Last operation in quantization flow is to perform additional operator fusion. Second fusion is about meging requantize and dequantize operators into preceding node - oneDNN kernels can perform needed scaling before writing result to output which results in model execution speed-up. Notice that last convolution do not need minimum and maximum values as it's not requantizing int32 to int8, but dequantizing directly to float32 and scale is calculated basing on minimum and maximum of input and weights.
+Last operation in quantization flow is to perform additional operator fusion. Second fusion is about merging requantize and dequantize operators into preceding node - oneDNN kernels can perform needed scaling before writing result to output which results in model execution speed-up. Notice that last Convolution does not need minimum and maximum values as it is not requantizing int32 to int8, but dequantizing directly to float32 and scale is calculated basing on minimum and maximum of input and weights.
 
 ![quant_calib_fused](https://i.imgur.com/eiaBrLF.png)
 
-In MXNet 2.0, the quantization procedure has been adjusted to work well with Gluon models since it’s the main API now. The goal was to allow the user to quantize fp32 HybridBlock model in just a few lines of code.
+In MXNet 2.0, the quantization procedure has been adjusted to work well with Gluon models since it is the main API now. The goal was to allow the user to quantize fp32 HybridBlock model in just a few lines of code.
 
 ### Quantization in MXNet
 
@@ -142,7 +142,7 @@ net = resnet50_v1(pretrained=True)
 
 Now, to get a ready-to-deploy quantized model two steps are required:
 - prepare data loader with calibration data - this data will be used as input to the network. All necessary layers will be observed with layer collector to calculate minimum and maximum value of that layer. This flow is internal mechanism and all what useer need to do is to provide data loader
-- call `quantize_net` function from `contrib.quantize` package - both operator fusion calls will be called inside this API
+- call `quantize_net` function from `contrib.quantize` package - both operator fusion calls will be called inside this API.
 
 ```
 calib_data_loader = mx.gluon.data.DataLoader(dummy_data, batch_size=batch_size)
@@ -228,7 +228,7 @@ print('INT8Entropy Top1 Accuracy: {} Top5 Accuracy: {}'.format(top1, top5))
 With quantized model there is tiny accuracy drop, however this is cost of great performance optimization and memory footprint. The difference between calibration method is dependent on the model itself, used activation layers and the size of calibration data.
 
 ### Custom layer collectors and calibrating the model
-In MXNet 2.0 new interface for creating custom calibration collector was created. Main goal of this interface is to give the user as much flexibility as possible in almost every step of quantization. Creating own layer collector is pretty easy, however computing effective min/max values can be not a trival task. 
+In MXNet 2.0 new interface for creating custom calibration collector has been added. Main goal of this interface is to give the user as much flexibility as possible in almost every step of quantization. Creating own layer collector is pretty easy, however computing effective min/max values can be not a trivial task. 
 
 Layer collectors are responsible for collecting statistics of each node in the graph — it means that the input/output data of every operator executed can be observed. Collector utilize the register_op_hook method of HybridBlock class.
 
@@ -269,7 +269,7 @@ def post_collect(self):
   # need to override this function, however we are doing this for the sake of this article
   return self.min_max_dict
 ```
-Quantization API ‘inject’ names of nodes which require calibration into the include_layers attribute of custom collector — list of included layers allows to avoid unnecessary collecting on nodes which are not relevant in terms of quantization. Using this attribute is fully optional and userr can implement his own logic.
+Quantization API ‘injects’ names of nodes which require calibration into the include_layers attribute of custom collector — list of included layers allows to avoid unnecessary collecting on nodes which are not relevant in terms of quantization. Using this attribute is fully optional and user can implement his own logic.
 
 After collecting all statistic data post_collect function is called. In post_collect additional processing logic can be implemented, but it must return dictionary of nodes names as key and tuple of minimum and maximum values which should be used to calculate data scaling factors.
 
