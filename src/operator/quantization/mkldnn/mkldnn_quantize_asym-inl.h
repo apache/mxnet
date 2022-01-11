@@ -69,7 +69,7 @@ void MKLDNNQuantizeAsymOp::Forward(const OpContext& ctx,
     *outputs[1].data().dptr<float>() = 1;
     *outputs[2].data().dptr<float>() = 0;
     if (req[0] != kWriteInplace) {
-      const_cast<NDArray&>(outputs[0]).CopyFrom(inputs[0].GetMKLDNNData());
+      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetMKLDNNData());
       MKLDNNStream::Get()->Submit();
     }
   } else {
