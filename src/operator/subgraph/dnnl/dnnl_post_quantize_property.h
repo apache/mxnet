@@ -40,7 +40,7 @@ namespace {
 const std::set<std::string> support_req_fusion_op = {
     "_contrib_quantized_elemwise_add",
     "_contrib_quantized_elemwise_mul",
-    //"_contrib_quantized_npi_add",  // to be added later on
+    // "_contrib_quantized_npi_add" - to be added later on
     "_sg_onednn_conv",
     "_sg_onednn_fully_connected",
     "_sg_onednn_selfatt_qk",
@@ -190,7 +190,7 @@ class SgDNNLPostQuantizeProperty : public SubgraphProperty {
     nnvm::ObjectPtr fuse_node                               = nullptr;
     nnvm::ObjectPtr requantize_node                         = nullptr;
     nnvm::ObjectPtr dequantize_node                         = nullptr;
-    const static std::set<const Op*> no_enable_float_output = {
+    static const std::set<const Op*> no_enable_float_output = {
         Op::Get("_contrib_quantized_elemwise_add")};
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
