@@ -392,7 +392,7 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
     The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
+    https://www.tensorflow.org/lite/performance/post_training_quantization.
     The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
     http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
     and adapts the method to MXNet.
