@@ -130,10 +130,9 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   auto& dnnl_param      = full_conv_param.dnnl_param;
   auto& conv_param      = full_conv_param.conv_param;
   auto bn_param         = param_.bn_param.get();
-  size_t input_size =
-      2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
-      (dnnl_param.with_sum ? 1 : 0) +
-      (dnnl_param.quantized ? 2 + (dnnl_param.with_sum ? 2 : 0) : 0);
+  size_t input_size     = 2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
+                      (dnnl_param.with_sum ? 1 : 0) +
+                      (dnnl_param.quantized ? 2 + (dnnl_param.with_sum ? 2 : 0) : 0);
   // When dedup is on, in_data is used to calculate sum instead of in_sum
   if (dnnl_param.dedup_sum) {
     input_size -= 1;
@@ -195,7 +194,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
             dnnl::reorder(*in_dnnl_mem, *tmp_mem),
             {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
         output = NDArray(tmp_mem);
-       } else {
+      } else {
         dnnl_mem_ptr tmp_mem(new dnnl::memory(in_dnnl_mem->get_desc(),
                                               CpuEngine::Get()->get_engine(),
                                               out_dnnl_mem->get_data_handle()));
@@ -758,7 +757,9 @@ NNVM_REGISTER_OP(_sg_onednn_conv)
     .set_num_outputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
       return param.full_conv_param.dnnl_param.quantized &&
-             !param.full_conv_param.dnnl_param.enable_float_output ? 3 : 1;
+                     !param.full_conv_param.dnnl_param.enable_float_output ?
+                 3 :
+                 1;
     })
     .set_attr_parser(SgDNNLConvParamParser)
     .set_attr<nnvm::FListInputNames>("FListInputNames", SgDNNLConvListInputNames)
