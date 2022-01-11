@@ -37,7 +37,7 @@ The simplest way to explain what fusion is and how it works is to present an exa
 - Conv2D + ReLU => this type of fusion is very popular also with other layers (e.g. FullyConnected + Activation). It is very simple idea where before writing data to output, activation is performed on that data. Main benefit of this fusion is that, there is no need to read and write back data in other layer only to perform simple activation function. 
 - Conv2D + Add => even simpler idea than the previous one - instead of overwriting output memory, results are added to the output memory. In the simplest terms: `out_mem = conv_result` is replaced by `out_mem += conv_result`
 
-Above examples are presented as atomic ones, but in this example they can be combined together, thus two fused patterns are visible in example:
+Above examples are presented as atomic ones, but often they can be combined together, thus two patterns can be fused in above example:
 - Conv2D + BatchNorm + ReLU
 - Conv2D + BatchNorm + Add + ReLU
 
@@ -108,7 +108,7 @@ Model quantization helps on both memory-bound and compute-bound operations. In q
 
 ![before_quant](https://i.imgur.com/XUVFnFQ.png)
 
-Firstly quantization performs operator fusion on floating-point model as mentioned in paragraph earlier. Next, all operators which supports int8 data type are marked as quantized and if needed additional operators are injected into graph surrounding quantizable operator - the goal of this additional operators is to quantize, dequantize or requantize data to keep data type compatible.
+Firstly quantization performs operator fusion on floating-point model as mentioned in paragraph earlier. Next, all operators which support int8 data type are marked as quantized and if needed additional operators are injected into graph surrounding quantizable operator - the goal of this additional operators is to quantize, dequantize or requantize data to keep data type between operators compatible.
  
 ![quant_not_calib](https://i.imgur.com/fV84H6b.png)
 
@@ -141,8 +141,8 @@ net = resnet50_v1(pretrained=True)
 ```
 
 Now, to get a ready-to-deploy quantized model two steps are required:
-- prepare data loader with calibration data - this data will be used as input to the network. All necessary layers will be observed with layer collector to calculate minimum and maximum value of that layer. This flow is internal mechanism and all what useer need to do is to provide data loader
-- call `quantize_net` function from `contrib.quantize` package - both operator fusion calls will be called inside this API.
+1. Prepare data loader with calibration data - this data will be used as input to the network. All necessary layers will be observed with layer collector to calculate minimum and maximum value of that layer. This flow is internal mechanism and all what user needs to do is to provide data loader.
+2. Call `quantize_net` function from `contrib.quantize` package - both operator fusion calls will be called inside this API.
 
 ```
 calib_data_loader = mx.gluon.data.DataLoader(dummy_data, batch_size=batch_size)
