@@ -92,7 +92,7 @@ inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched     = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
 #if MXNET_USE_ONEDNN == 1
-    if (dev_mask == mshadow::cpu::kDevMask)
+    if (dev_mask == mshadow::cpu::kDevMask && DNNLEnvSet())
       dispatched = storage_type_assign(
           &out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
 #else
@@ -123,7 +123,7 @@ inline bool BinaryBroadcastAddStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched     = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
 #if MXNET_USE_ONEDNN == 1
-    if (dev_mask == mshadow::cpu::kDevMask)
+    if (dev_mask == mshadow::cpu::kDevMask && DNNLEnvSet())
       dispatched = storage_type_assign(
           &out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
 #else

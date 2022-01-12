@@ -35,17 +35,15 @@
 namespace mxnet {
 namespace op {
 
-using binary_op_fwd_t    = dnnl::binary;
-using binary_op_fwd_pd_t = dnnl::binary::primitive_desc;
+using binary_fwd_t    = dnnl::binary;
+using binary_fwd_pd_t = dnnl::binary::primitive_desc;
 
 class DNNLBinaryOpFwd {
  public:
   template <dnnl::algorithm alg>
-  static DNNLBinaryOpFwd& GetBinaryOpForward(const nnvm::NodeAttrs& attrs,
-                                             const std::vector<NDArray>& inputs,
+  static DNNLBinaryOpFwd& GetBinaryOpForward(const std::vector<NDArray>& inputs,
                                              const std::vector<NDArray>& outputs);
   DNNLBinaryOpFwd(const dnnl::algorithm alg,
-                  const nnvm::NodeAttrs& attrs,
                   const std::vector<NDArray>& inputs,
                   const std::vector<NDArray>& outputs);
 
@@ -54,13 +52,12 @@ class DNNLBinaryOpFwd {
                const std::vector<NDArray>& outputs);
 
  private:
-  std::shared_ptr<binary_op_fwd_t> fwd;
-  std::shared_ptr<binary_op_fwd_pd_t> fwd_pd;
+  std::shared_ptr<binary_fwd_t> fwd;
+  std::shared_ptr<binary_fwd_pd_t> fwd_pd;
 };
 
 template <dnnl::algorithm alg>
-DNNLBinaryOpFwd& DNNLBinaryOpFwd::GetBinaryOpForward(const nnvm::NodeAttrs& attrs,
-                                                     const std::vector<NDArray>& inputs,
+DNNLBinaryOpFwd& DNNLBinaryOpFwd::GetBinaryOpForward(const std::vector<NDArray>& inputs,
                                                      const std::vector<NDArray>& outputs) {
   using binary_op_fwd_map = std::unordered_map<OpSignature, DNNLBinaryOpFwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
@@ -76,7 +73,7 @@ DNNLBinaryOpFwd& DNNLBinaryOpFwd::GetBinaryOpForward(const nnvm::NodeAttrs& attr
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    const DNNLBinaryOpFwd fwd(alg, attrs, inputs, outputs);
+    const DNNLBinaryOpFwd fwd(alg, inputs, outputs);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;

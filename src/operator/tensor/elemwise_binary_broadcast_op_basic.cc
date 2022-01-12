@@ -61,7 +61,7 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
     new_outputs = {outputs[0]};
   }
 
-  DNNLBinaryOpFwd& fwd = DNNLBinaryOpFwd::GetBinaryOpForward<alg>(attrs, new_inputs, new_outputs);
+  DNNLBinaryOpFwd& fwd = DNNLBinaryOpFwd::GetBinaryOpForward<alg>(new_inputs, new_outputs);
   fwd.Execute(new_inputs, req, new_outputs);
 }
 #endif

@@ -29,7 +29,6 @@ namespace mxnet {
 namespace op {
 
 DNNLBinaryOpFwd::DNNLBinaryOpFwd(const dnnl::algorithm alg,
-                                 const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<NDArray>& outputs) {
   auto src0_desc = inputs[0].GetDNNLData()->get_desc();
@@ -37,8 +36,8 @@ DNNLBinaryOpFwd::DNNLBinaryOpFwd(const dnnl::algorithm alg,
   auto dst_desc  = outputs[0].GetDNNLData()->get_desc();
 
   dnnl::binary::desc fwd_desc(alg, src0_desc, src1_desc, dst_desc);
-  fwd_pd = std::make_shared<binary_op_fwd_pd_t>(fwd_desc, mxnet::CpuEngine::Get()->get_engine());
-  fwd    = std::make_shared<binary_op_fwd_t>(*fwd_pd);
+  fwd_pd = std::make_shared<binary_fwd_pd_t>(fwd_desc, mxnet::CpuEngine::Get()->get_engine());
+  fwd    = std::make_shared<binary_fwd_t>(*fwd_pd);
 }
 
 void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
@@ -47,7 +46,11 @@ void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
   auto engine           = mxnet::CpuEngine::Get()->get_engine();
   auto src0             = inputs[0].GetDNNLData();
   auto src1             = inputs[1].GetDNNLData();
-  dnnl_output_t out_mem = CreateDNNLMem(outputs[0], fwd_pd->dst_desc(), req[0], &inputs[0]);
+  dnnl_output_t out_mem;
+  if (outputs[0].GetDNNLData()->get_data_handle() == inputs[1].GetDNNLData()->get_data_handle())
+    out_mem = CreateDNNLMem(outputs[0], fwd_pd->dst_desc(), req[0], &inputs[1]);
+  else
+    out_mem = CreateDNNLMem(outputs[0], fwd_pd->dst_desc(), req[0], &inputs[0]);
 
   dnnl_args_map_t args = {
       {DNNL_ARG_SRC_0, *src0},
