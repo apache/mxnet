@@ -384,13 +384,14 @@ def test_pooling():
     for stype in stypes:
         check_pooling_training(stype)
 
-def test_adaptive_pooling():
+@pytest.mark.parametrize('num_filter', [4, 8, 16]) 
+def test_adaptive_pooling(num_filter):
     def check_adaptive_pooling_training(stype, i):
         for shape in [(3, 3, 8, 8), (3, 3, 20, 20), (3, 3, 32, 32)]:
             data_tmp = mx.nd.random.uniform(shape=shape)
             data = mx.sym.var('data', stype=stype)
 
-            data = mx.sym.Convolution(data=data, kernel=(3, 3), pad=(1,1), num_filter=4)
+            data = mx.sym.Convolution(data=data, kernel=(3, 3), pad=(1,1), num_filter=num_filter)
             data = mx.sym.contrib.AdaptiveAvgPooling2D(data=data, output_size=i)
 
             weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3))
