@@ -595,6 +595,69 @@ def test_quantized_fc():
         check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
 
 @with_seed()
+def test_quantized_rnn():
+    def check_quantized_rnn(num_layers, bidirectional, seq_len, batch_size, input_dim, state_dim):
+        if is_test_for_gpu():
+            print('skipped testing test_quantized_rnn for gpu since it is not supported yet')
+            return
+        if is_test_for_native_cpu():
+            print('skipped testing test_quantized_rnn for native cpu since it is not supported yet')
+            return
+
+        data_shape = (seq_len, batch_size, input_dim)
+        data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
+        rnn_fp32 = mx.sym.RNN(data=data,
+                              num_layers=num_layers,
+                              bidirectional=bidirectional,
+                              state_outputs=True,
+                              state_size=state_dim,
+                              mode='lstm',
+                              name='rnn')
+        arg_shapes, _, _ = rnn_fp32.infer_shape(data=data_shape)
+        arg_names  = rnn_fp32.list_arguments()
+        rnn_fp32_exe = rnn_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+
+        data = mx.nd.random.uniform(low=-1, high=1, shape=arg_shapes[0])
+        weight = mx.nd.random.uniform(low=-1, high=1, shape=arg_shapes[1])
+        state = mx.nd.random.uniform(low=-1, high=1, shape=arg_shapes[2])
+        cell = mx.nd.random.uniform(low=-1, high=1, shape=arg_shapes[3])
+
+        rnn_fp32_exe.arg_dict[arg_names[0]][:] = data
+        rnn_fp32_exe.arg_dict[arg_names[1]][:] = weight
+        rnn_fp32_exe.arg_dict[arg_names[2]][:] = state
+        rnn_fp32_exe.arg_dict[arg_names[3]][:] = cell
+        output = rnn_fp32_exe.forward()[0]
+
+        data_min = mx.nd.min(data)
+        data_max = mx.nd.max(data)
+        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype='uint8')
+        rnn_int8 = mx.sym.contrib.quantized_rnn(data=qdata,
+                                                num_layers=num_layers,
+                                                bidirectional=bidirectional,
+                                                state_outputs=True,
+                                                state_size=state_dim,
+                                                mode='lstm',
+                                                name='qrnn')
+        qarg_names = rnn_int8.list_arguments()
+        rnn_int8_exe = rnn_int8.simple_bind(ctx=mx.current_context(), grad_req='null')
+        data_scale = 128.0 / (data_max - data_min)
+        data_shift = 128.0 - data_max * data_scale
+        qdata = (data * data_scale + data_shift + 0.5).astype('uint8')
+        rnn_int8_exe.arg_dict[qarg_names[0]][:] = qdata
+        rnn_int8_exe.arg_dict[qarg_names[1]][:] = weight
+        rnn_int8_exe.arg_dict[qarg_names[2]][:] = state
+        rnn_int8_exe.arg_dict[qarg_names[3]][:] = cell
+        rnn_int8_exe.arg_dict[qarg_names[4]][:] = data_scale
+        rnn_int8_exe.arg_dict[qarg_names[5]][:] = data_shift
+        qoutput = rnn_int8_exe.forward()[0]
+
+        mse = np.mean((output.asnumpy() - qoutput.asnumpy())**2)
+        assert mse < 0.001
+
+    check_quantized_rnn(1, False, 5, 2, 16, 16)
+    check_quantized_rnn(1, True, 5, 2, 16, 16)
+    
+@with_seed()
 def test_quantized_embedding():
     def check_quantized_embedding(data_shape, input_dim, output_dim):
         if is_test_for_gpu():

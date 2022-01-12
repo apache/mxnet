@@ -84,3 +84,8 @@ def _getdata_by_idx(data, idx):
             shuffle_data.append((k, array(v.asnumpy()[idx], v.context)))
 
     return shuffle_data
+
+def _slice_along_batch_axis(data, s, batch_axis):
+    """Apply slice along the batch axis"""
+    ret = data.slice_axis(axis=batch_axis, begin=s.start, end=s.stop)
+    return ret
