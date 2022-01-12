@@ -1724,6 +1724,7 @@ def test_groupnorm():
                                 atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)
 
 
+@pytest.mark.serial
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
         num_filter = 4
@@ -2285,6 +2286,7 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     assert(out[center] - np.sum(kernel_gradient) - out_orig[center] < 0.001)
 
 
+@pytest.mark.serial
 def test_convolution_dilated_impulse_response():
     # 1D
     for dil in [ (1,), (2,), (3,) ]:

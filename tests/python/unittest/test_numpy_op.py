@@ -6477,6 +6477,9 @@ def test_np_linalg_qr():
 
         data_np = onp.array(data_np, dtype=dtype)
         data = np.array(data_np, dtype=dtype)
+        if effective_dtype(data) == onp.dtype(np.float16):
+            print('Skipping test on this platform: {} has a float16 effective dtype'.format(dtype))
+            pytest.skip()
 
         data.attach_grad()
         with mx.autograd.record():
