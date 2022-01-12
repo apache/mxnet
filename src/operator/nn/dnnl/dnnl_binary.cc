@@ -43,9 +43,9 @@ DNNLBinaryOpFwd::DNNLBinaryOpFwd(const dnnl::algorithm alg,
 void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
-  auto engine           = mxnet::CpuEngine::Get()->get_engine();
-  auto src0             = inputs[0].GetDNNLData();
-  auto src1             = inputs[1].GetDNNLData();
+  auto engine = mxnet::CpuEngine::Get()->get_engine();
+  auto src0   = inputs[0].GetDNNLData();
+  auto src1   = inputs[1].GetDNNLData();
   dnnl_output_t out_mem;
   if (outputs[0].GetDNNLData()->get_data_handle() == inputs[1].GetDNNLData()->get_data_handle())
     out_mem = CreateDNNLMem(outputs[0], fwd_pd->dst_desc(), req[0], &inputs[1]);
