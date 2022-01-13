@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Quantize with MKL-DNN backend
+# Native model quantization with MKL-DNN backend
 
 This document is to introduce how to quantize the customer models from FP32 to INT8 with Apache/MXNet toolkit and APIs under Intel CPU.
 
@@ -254,5 +254,143 @@ BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON
 ## Deploy with Python/C++
 
 MXNet also supports deploy quantized models with C++. Refer [MXNet C++ Package](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/README.md) for more details.
+
+# Model quantization using Intel® Neural Compressor
+
+The accuracy of the model can decrease drastically as a result of quantization. In such cases we could try to manually find a better quantization configuration (exclude some layers, try different calibration methods, etc.) but for bigger models, this might prove to be a difficult and time consuming task. [Intel® Neural Compressor](https://github.com/intel/neural-compressor) (INC) tries to automate this process using a set of several tuning heuristics, finding the best quantization configuration that satisfies the specified accuracy requirement. 
+
+**NOTE:**
+
+Most tuning strategies will try different configurations on an evaluation dataset in order to find out how each layer affects the accuracy of the model. This means that for larger models, it may take a long time to find a solution (as the tuning space is usually larger then and the evaluation itself takes longer).
+
+## Installation and Prerequisites
+
+- Install MXNet with MKLDNN enabled as described in the [previous section](#Installation-and-Prerequisites).
+
+- Install Intel® Neural Compressor:
+  
+  Supported python versions are: 3.6, 3.7, 3.8, 3.9.
+  ```bash
+  # install stable version from pip
+  pip install neural-compressor
+
+  # install nightly version from pip
+  pip install -i https://test.pypi.org/simple/ neural-compressor
+
+  # install stable version from from conda
+  conda install neural-compressor -c conda-forge -c intel
+  ```
+
+## Configuration file
+
+You can customize the quantization tuning process in the yaml configuration file. Here is a simple example:
+
+file: cnn.yaml
+```yaml
+version: 1.0
+
+model:
+  name: cnn
+  framework: mxnet
+
+quantization:
+  calibration:
+    sampling_size: 160 # number of samples for calibration
+
+tuning:
+  strategy:
+    name: basic
+  accuracy_criterion:
+    relative: 0.01
+  exit_policy:
+    timeout: 0 # end on the first configuration that meet the accuracy criterion
+  random_seed: 9527
+```
+
+We are using the `basic` strategy, but you could also try out different ones. [Here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md) you can find a list of strategies available in INC and details of how they work. You can also add your own strategy if the existing ones do not suit your needs.
+
+For more information about the configuration file, see the [template](https://github.com/intel/neural-compressor/blob/master/neural_compressor/template/ptq.yaml) from the original INC repo. Keep in mind that only post training quantization is currently supported for MXNet.
+
+## Model quantization and tuning
+
+In general, Intel® Neural Compressor requires 4 elements in order to run: 
+1. Config file - like the example above
+2. Model to be quantized
+3. Calibration dataloader
+4. Evaluation function - a function that takes a model as an argument and returns the accuracy that it achieves on a certain evaluation dataset.
+
+Here is how to achieve the quantization using INC:
+
+1. Get the model
+
+```python
+import logging
+import mxnet as mx
+from mxnet.gluon.model_zoo import vision
+
+logging.basicConfig()
+logger = logging.getLogger('logger')
+logger.setLevel(logging.INFO)
+
+batch_shape = (1, 3, 224, 224)
+resnet18 = vision.resnet18_v1(pretrained=True)
+```
+
+2. Prepare the dataset:
+
+```python
+mx.test_utils.download('https://data.mxnet.io/data/val_256_q90.rec', 'data/val_256_q90.rec')
+
+batch_size = 16
+mean_std = {'mean_r': 123.68, 'mean_g': 116.779, 'mean_b': 103.939,
+            'std_r': 58.393, 'std_g': 57.12, 'std_b': 57.375}
+
+data = mx.io.ImageRecordIter(path_imgrec='data/val_256_q90.rec', 
+                             batch_size=batch_size,
+                             data_shape=batch_shape[1:], 
+                             rand_crop=False, 
+                             rand_mirror=False,
+                             shuffle=False, 
+                             **mean_std)
+data.batch_size = batch_size
+```
+
+3. Prepare the evaluation function:
+
+```python
+eval_samples = batch_size*10
+
+def eval_func(model):
+    data.reset()
+    metric = mx.metric.Accuracy()
+    for i, batch in enumerate(data):
+        if i * batch_size >= eval_samples:
+            break
+        x = batch.data[0].as_in_context(mx.cpu())
+        label = batch.label[0].as_in_context(mx.cpu())
+        outputs = model.forward(x)
+        metric.update(label, outputs)
+    return metric.get()[1]
+```
+
+4. Run Intel® Neural Compressor:
+
+```python
+from neural_compressor.experimental import Quantization
+quantizer = Quantization("./cnn.yaml")
+quantizer.model = resnet18
+quantizer.calib_dataloader = data
+quantizer.eval_func = eval_func
+qnet = quantizer().model
+```
+
+## Tips
+- In order to get a solution that generalizes well, evaluate the model (in eval_func) on a representative dataset.
+- Using `history.snapshot` file (generated by INC) you can recover any model that was generated during the tuning process:
+  ```python
+  from neural_compressor.utils.utility import recover
+
+  qmodel = recover(f32_model, 'nc_workspace/<tuning date>/history.snapshot', 1)
+  ```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
