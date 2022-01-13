@@ -29,10 +29,10 @@ namespace op {
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_subtract)
     .set_attr<FCompute>("FCompute<cpu>",
-                        NumpyBinaryBroadcastCompute<cpu,
-                                                    op::mshadow_op::minus,
-                                                    op::mshadow_op::mixed_minus,
-                                                    op::mshadow_op::mixed_rminus>)
+                        NumpyBinaryBroadcastComputeWithBool<cpu,
+                                                            op::mshadow_op::minus,
+                                                            op::mshadow_op::mixed_minus,
+                                                            op::mshadow_op::mixed_rminus>)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_sub"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_sub)

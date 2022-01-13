@@ -11761,3 +11761,29 @@ def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref
                 assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
                                     use_broadcast=False, equal_nan=True)
 
+
+@use_np
+@pytest.mark.parametrize('a_dtype', np.numeric_dtypes)
+@pytest.mark.parametrize('b_dtype', np.numeric_dtypes)
+@pytest.mark.parametrize('shape', [
+    (),
+    (2, 0, 2, 2),
+    (5, 5)
+])
+@pytest.mark.parametrize('op', [
+    '__iadd__', '__iand__', '__ior__', '__ixor__', '__isub__', '__imul__', '__imod__',
+    '__itruediv__', '__idiv__', '__ifloordiv__', '__ipow__', '__ilshift__', '__irshift__'])
+def test_in_place_dtype(a_dtype, b_dtype, shape, op):
+    try:
+        promote_type = np.result_type(a_dtype, b_dtype)
+    except Exception as e:
+        # Unkown type promotion between two types
+        return
+    if op in ('__ilshift__', '__irshift__', '__iand__', '__ior__', '__ixor__') and \
+        (a_dtype not in np.integer_dtypes or b_dtype not in np.integer_dtypes):
+        return
+    a = np.array(onp.random.uniform(1, 5, shape), dtype=a_dtype)
+    b = np.array(onp.random.uniform(1, 5, shape), dtype=b_dtype)
+    getattr(a, op)(b)
+    assert a.dtype == a_dtype
+    npx.waitall()

@@ -25,6 +25,7 @@
 #include "utils.h"
 #include "../../imperative/imperative_utils.h"
 #include "../../operator/tensor/elemwise_binary_scalar_op.h"
+#include "../../operator/numpy/np_elemwise_broadcast_op.h"
 
 namespace mxnet {
 
@@ -43,6 +44,31 @@ void UFuncHelper(NDArray* lhs,
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   attrs.op          = op;
+  NDArray* inputs[] = {lhs, rhs};
+  int num_inputs    = 2;
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs   = out != nullptr;
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (outputs) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  }
+}
+
+void UFuncHelper(NDArray* lhs,
+                 NDArray* rhs,
+                 NDArray* out,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op,
+                 bool in_place) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  op::NumpyBinaryParam param = {};
+  param.in_place             = in_place;
+  attrs.op                   = op;
+  attrs.parsed               = param;
+  SetAttrDict<op::NumpyBinaryParam>(&attrs);
   NDArray* inputs[] = {lhs, rhs};
   int num_inputs    = 2;
   NDArray** outputs = out == nullptr ? nullptr : &out;
@@ -164,7 +190,19 @@ void UFuncHelper(runtime::MXNetArgs args,
   NDArray* out = args[2].operator NDArray*();
   if (args[0].type_code() == kNDArrayHandle) {
     if (args[1].type_code() == kNDArrayHandle) {
-      UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array);
+      int args_size = args.size();
+      if (args_size == 4) {
+        bool in_place = args[3].operator bool();
+        if (in_place) {
+          UFuncHelper(
+              args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array, true);
+        } else {
+          UFuncHelper(
+              args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array, false);
+        }
+      } else {
+        UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array);
+      }
     } else if (args[1].type_code() == kDLInt) {
       UFuncHelper(args[0].operator NDArray*(), args[1].operator int64_t(), out, ret, lfn_scalar);
     } else {

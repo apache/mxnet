@@ -51,8 +51,17 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
     if (dtype == -1)
       return false;
   }
-
   const int lhs_dtype = in_attrs->at(0);
+
+  if (num_inputs == 2) {
+    const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+    bool is_inplace               = param.in_place;
+    if (is_inplace) {
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, lhs_dtype);
+      return true;
+    }
+  }
+
   const int rhs_dtype =
       (num_inputs == 2) ?
           in_attrs->at(1) :
@@ -64,6 +73,7 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(_npi_true_divide)
     .set_num_inputs(2)
     .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NumpyBinaryParam>)
     .set_attr<nnvm::FListInputNames>("FListInputNames",
                                      [](const NodeAttrs& attrs) {
                                        return std::vector<std::string>{"lhs", "rhs"};

@@ -1027,7 +1027,7 @@ def add(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.add(x1, x2, out=out)
-    return _api_internal.add(x1, x2, out)
+    return _api_internal.add(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1063,7 +1063,7 @@ def subtract(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.subtract(x1, x2, out=out)
-    return _api_internal.subtract(x1, x2, out)
+    return _api_internal.subtract(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1099,7 +1099,7 @@ def multiply(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.multiply(x1, x2, out=out)
-    return _api_internal.multiply(x1, x2, out)
+    return _api_internal.multiply(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1138,7 +1138,7 @@ def divide(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.divide(x1, x2, out=out)
-    return _api_internal.true_divide(x1, x2, out)
+    return _api_internal.true_divide(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1179,7 +1179,7 @@ def true_divide(x1, x2, out=None):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.true_divide(x1, x2, out=out)
-    return _api_internal.true_divide(x1, x2, out)
+    return _api_internal.true_divide(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1218,7 +1218,7 @@ def floor_divide(x1, x2, out=None):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.floor_divide(x1, x2, out=out)
-    return _api_internal.floor_divide(x1, x2, out)
+    return _api_internal.floor_divide(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1247,7 +1247,7 @@ def mod(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.mod(x1, x2, out=out)
-    return _api_internal.mod(x1, x2, out)
+    return _api_internal.mod(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1437,7 +1437,7 @@ def matmul(a, b, out=None):
     ...
     mxnet.base.MXNetError: ... : Multiplication by scalars is not allowed.
     """
-    return _api_internal.matmul(a, b, out)
+    return _api_internal.matmul(a, b, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1466,7 +1466,7 @@ def remainder(x1, x2, out=None):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         _np.mod(x1, x2, out=out)
-    return _api_internal.mod(x1, x2, out)
+    return _api_internal.mod(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1496,7 +1496,7 @@ def power(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.power(x1, x2, out=out)
-    return _api_internal.power(x1, x2, out)
+    return _api_internal.power(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6883,7 +6883,7 @@ def bitwise_and(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.bitwise_and(x1, x2, out=out)
-    return _api_internal.bitwise_and(x1, x2, out)
+    return _api_internal.bitwise_and(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6923,7 +6923,7 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.bitwise_xor(x1, x2, out=out)
-    return _api_internal.bitwise_xor(x1, x2, out)
+    return _api_internal.bitwise_xor(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6963,7 +6963,7 @@ def bitwise_or(x1, x2, out=None, **kwargs):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.bitwise_or(x1, x2, out=out)
-    return _api_internal.bitwise_or(x1, x2, out)
+    return _api_internal.bitwise_or(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -10089,7 +10089,7 @@ def bitwise_left_shift(x1, x2, out=None):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.left_shift(x1, x2, out=out)
-    return _api_internal.bitwise_left_shift(x1, x2, out)
+    return _api_internal.bitwise_left_shift(x1, x2, out, False)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -10128,4 +10128,4 @@ def bitwise_right_shift(x1, x2, out=None):
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.right_shift(x1, x2, out=out)
-    return _api_internal.bitwise_right_shift(x1, x2, out)
+    return _api_internal.bitwise_right_shift(x1, x2, out, False)
