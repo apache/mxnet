@@ -38,6 +38,7 @@ inline bool QuantizedTransposeShape(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_transpose)
+    .add_alias("_npx_quantized_transpose")
     .set_num_inputs(3)
     .set_num_outputs(3)
     .set_attr_parser(ParamParser<TransposeParam>)
