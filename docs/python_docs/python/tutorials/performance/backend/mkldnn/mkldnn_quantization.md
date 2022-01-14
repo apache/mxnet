@@ -283,7 +283,7 @@ Most tuning strategies will try different configurations on an evaluation datase
 
 ## Configuration file
 
-Quantization tuning process can be customized in the yaml configuation file. Here is a simple example:
+Quantization tuning process can be customized in the yaml configuration file. Here is a simple example:
 
 file: cnn.yaml
 ```yaml
