@@ -257,11 +257,11 @@ MXNet also supports deploy quantized models with C++. Refer [MXNet C++ Package](
 
 # Model quantization using Intel® Neural Compressor
 
-The accuracy of the model can decrease drastically as a result of quantization. In such cases we could try to manually find a better quantization configuration (exclude some layers, try different calibration methods, etc.) but for bigger models, this might prove to be a difficult and time consuming task. [Intel® Neural Compressor](https://github.com/intel/neural-compressor) (INC) tries to automate this process using a set of several tuning heuristics, finding the best quantization configuration that satisfies the specified accuracy requirement. 
+The accuracy of a model can decrease drastically as a result of quantization. In such cases we could try to manually find a better quantization configuration (exclude some layers, try different calibration methods, etc.) but for bigger models, this might prove to be a difficult and time consuming task. [Intel® Neural Compressor](https://github.com/intel/neural-compressor) (INC) tries to automate this process using a set of several tuning heuristics, finding the best quantization configuration that satisfies the specified accuracy requirement. 
 
 **NOTE:**
 
-Most tuning strategies will try different configurations on an evaluation dataset in order to find out how each layer affects the accuracy of the model. This means that for larger models, it may take a long time to find a solution (as the tuning space is usually larger then and the evaluation itself takes longer).
+Most tuning strategies will try different configurations on an evaluation dataset in order to find out how each layer affects the accuracy of the model. This means that for larger models, it may take a long time to find a solution (as the tuning space is usually larger and the evaluation itself takes longer).
 
 ## Installation and Prerequisites
 
@@ -277,13 +277,13 @@ Most tuning strategies will try different configurations on an evaluation datase
   # install nightly version from pip
   pip install -i https://test.pypi.org/simple/ neural-compressor
 
-  # install stable version from from conda
+  # install stable version from conda
   conda install neural-compressor -c conda-forge -c intel
   ```
 
 ## Configuration file
 
-You can customize the quantization tuning process in the yaml configuration file. Here is a simple example:
+Quantization tuning process can be customized in the yaml configuation file. Here is a simple example:
 
 file: cnn.yaml
 ```yaml
@@ -317,7 +317,7 @@ In general, Intel® Neural Compressor requires 4 elements in order to run:
 1. Config file - like the example above
 2. Model to be quantized
 3. Calibration dataloader
-4. Evaluation function - a function that takes a model as an argument and returns the accuracy that it achieves on a certain evaluation dataset.
+4. Evaluation function - a function that takes a model as an argument and returns the accuracy it achieves on a certain evaluation data set.
 
 Here is how to achieve the quantization using INC:
 
