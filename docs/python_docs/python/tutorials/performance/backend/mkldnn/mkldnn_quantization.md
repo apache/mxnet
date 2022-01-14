@@ -317,7 +317,7 @@ In general, Intel® Neural Compressor requires 4 elements in order to run:
 1. Config file - like the example above
 2. Model to be quantized
 3. Calibration dataloader
-4. Evaluation function - a function that takes a model as an argument and returns the accuracy it achieves on a certain evaluation data set.
+4. Evaluation function - a function that takes a model as an argument and returns the accuracy it achieves on a certain evaluation dataset.
 
 Here is how to achieve the quantization using INC:
 
