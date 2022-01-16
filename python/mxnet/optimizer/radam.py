@@ -126,7 +126,7 @@ class RAdam(Optimizer):
             # maximum length of the approximated SMA
             rho_inf = 2 / (1 - self.beta2) - 1
             # compute the length of the approximated SMA
-            rho_t = rho_inf - 2 * step * (self.beta2 ** step) / bias_correction2
+            rho_t = rho_inf - 2 * t * (self.beta2 ** t) / bias_correction2
 
             #update weight
             if rho_t >= 5:
