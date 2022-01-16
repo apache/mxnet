@@ -47,6 +47,7 @@ core_logic: {
     custom_steps.test_unix_python3_onednn_gpu('onednn_gpu'),
     custom_steps.test_unix_python3_onednn_nocudnn_gpu('onednn_gpu_nocudnn'),
     custom_steps.test_unix_cpp_package_gpu('gpu'),
+    custom_steps.test_unix_python3_data_interchange_gpu('gpu'),
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098
     // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
     // TODO(spanev): reenable when byteps is updated with the new dep engine API

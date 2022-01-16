@@ -496,6 +496,8 @@ const int index_type_flag = DataType<lapack_index_t>::kFlag;
 
 /*! layout flag */
 enum LayoutFlag {
+  kUNKNOWN = -1,
+
   kNCHW = 0,
   kNHWC,
   kCHWN,
@@ -508,6 +510,64 @@ enum LayoutFlag {
   kNDHWC,
   kCDHWN
 };
+
+inline LayoutFlag layoutFlag(std::string layoutstr) {
+  switch (layoutstr.length()) {
+    case 4:
+      if (layoutstr == "NHWC")
+        return kNHWC;
+      if (layoutstr == "NCHW")
+        return kNCHW;
+      if (layoutstr == "CHWN")
+        return kCHWN;
+      return kUNKNOWN;
+    case 3:
+      if (layoutstr == "NWC")
+        return kNWC;
+      if (layoutstr == "NCW")
+        return kNCW;
+      if (layoutstr == "CWN")
+        return kCWN;
+      return kUNKNOWN;
+    case 5:
+      if (layoutstr == "NDHWC")
+        return kNDHWC;
+      if (layoutstr == "NCDHW")
+        return kNCDHW;
+      if (layoutstr == "CDHWN")
+        return kCDHWN;
+      return kUNKNOWN;
+    default:
+      return kUNKNOWN;
+  }
+}
+
+inline std::string toString(LayoutFlag layout) {
+  switch (layout) {
+    case kUNKNOWN:
+      return "";
+    case kNCHW:
+      return "NCHW";
+    case kNHWC:
+      return "NHWC";
+    case kCHWN:
+      return "CHWN";
+    case kNCW:
+      return "NCW";
+    case kNWC:
+      return "NWC";
+    case kCWN:
+      return "CWN";
+    case kNCDHW:
+      return "NCDHW";
+    case kNDHWC:
+      return "NDHWC";
+    case kCDHWN:
+      return "CDHWN";
+    default:
+      return "";
+  }
+}
 
 template<int layout>
 struct LayoutType;

@@ -56,14 +56,18 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
     if (ok && !param.no_bias) {
       CHECK_EQ(inputs[deconv::kBias].shape_.ndim(), 1);
       auto layout = static_cast<mshadow::LayoutFlag>(param.layout.value());
-      int k       = inputs[deconv::kBias].shape_.Size();
-      auto b      = inputs[deconv::kBias].reshape(cudnn::ExpandChannelDims(layout, k));
-      BinaryBroadcastRTCCompute{"add"}(  // NOLINT(whitespace/braces)
-          attrs,
-          ctx,
-          {outputs[deconv::kOut], b},
-          {kWriteInplace},
-          {outputs[deconv::kOut]});
+      auto li     = cudnn::GetLayoutInfo(layout);
+      if (li.channel_last ||
+          !cudnn::LegacyAddBias(ctx, li, outputs[deconv::kOut], inputs[deconv::kBias])) {
+        int k  = inputs[deconv::kBias].shape_.Size();
+        auto b = inputs[deconv::kBias].reshape(cudnn::ExpandChannelDims(layout, k));
+        BinaryBroadcastRTCCompute{"add"}(  // NOLINT(whitespace/braces)
+            attrs,
+            ctx,
+            {outputs[deconv::kOut], b},
+            {kWriteInplace},
+            {outputs[deconv::kOut]});
+      }
     }
     if (!ok) {
       if (!param.cudnn_off)
@@ -115,17 +119,25 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
           cudnn::Exec<cudnn::ConvWgrad>(
               ctx, conv_param, inputs[0], inputs[1 + deconv::kData], outputs[deconv::kWeight]));
     if (ok && !param.no_bias && req[deconv::kBias] != kNullOp) {
-      auto li = cudnn::GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
-      if (li.channel_last) {
-        // This kernel should be faster.
-        auto y_grad = FlattenAs2DHead<gpu, DType>(inputs[0], ctx);
-        AddBiasGrad(outputs[deconv::kBias], y_grad, req[deconv::kBias], param.num_filter, ctx);
-      } else {
-        TShape axes{static_cast<int>(li.ChannelIdx())};
-        TShape small =
-            ReduceAxesShapeImpl(inputs[0].shape_, dmlc::optional<mxnet::TShape>(axes), true, true);
-        ReduceAxesRTCComputeImpl(
-            ctx, {inputs[0]}, {req[deconv::kBias]}, {outputs[deconv::kBias]}, small, "red::sum{}");
+      auto li     = cudnn::GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
+      auto add_to = req[conv::kBias] == kAddTo;
+      if (li.channel_last ||
+          !cudnn::LegacyBiasGrad(ctx, li, add_to, outputs[deconv::kBias], inputs[0])) {
+        if (li.channel_last) {
+          // This kernel should be faster.
+          auto y_grad = FlattenAs2DHead<gpu, DType>(inputs[0], ctx);
+          AddBiasGrad(outputs[deconv::kBias], y_grad, req[deconv::kBias], param.num_filter, ctx);
+        } else {
+          TShape axes{static_cast<int>(li.ChannelIdx())};
+          TShape small = ReduceAxesShapeImpl(
+              inputs[0].shape_, dmlc::optional<mxnet::TShape>(axes), true, true);
+          ReduceAxesRTCComputeImpl(ctx,
+                                   {inputs[0]},
+                                   {req[deconv::kBias]},
+                                   {outputs[deconv::kBias]},
+                                   small,
+                                   "red::sum{}");
+        }
       }
     }
     if (!ok) {

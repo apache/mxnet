@@ -997,6 +997,14 @@ integrationtest_ubuntu_cpp_package_gpu() {
     cpp-package/tests/ci_test.sh
 }
 
+test_python3_data_interchange_gpu() {
+    set -ex
+    python3 -m pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 \
+        -f https://download.pytorch.org/whl/cu113/torch_stable.html
+    MXNET_ENGINE_TYPE=ThreadedEngineAsync \
+        python3 -m pytest --durations=50 tests/python/array-api/test_data_interchange.py
+}
+
 integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
@@ -1321,7 +1329,7 @@ build_docs() {
 
     # copy the full site for this version to versions folder
     mkdir -p html/versions/master
-    for f in 404.html api assets blog community ecosystem features feed.xml get_started index.html; do
+    for f in 404.html api assets blog community ecosystem features trusted_by feed.xml get_started index.html; do
         cp -r html/$f html/versions/master/
     done
 
@@ -1347,7 +1355,6 @@ build_docs_beta() {
 push_docs() {
     folder_name=$1
     set -ex
-    pip3 install --user awscli
     export PATH=~/.local/bin:$PATH
     pushd docs/_build
     tar -xzf full_website.tgz --strip-components 1
@@ -1463,7 +1470,6 @@ cd_pypi_publish() {
 
 cd_s3_publish() {
     set -ex
-    pip3 install --upgrade --user awscli
     filepath=$(readlink -f wheel_build/dist/*.whl)
     filename=$(basename $filepath)
     variant=$(echo $filename | cut -d'-' -f1 | cut -d'_' -f2 -s)

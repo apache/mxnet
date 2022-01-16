@@ -540,13 +540,20 @@ void NDArray::Chunk::Reorder2Default() {
 
   dnnl_format_tag_t format    = dnnl_mem_->GetDefaultFormat();
   dnnl::memory::desc def_desc = dnnl_mem_->GetDesc(format);
-  dnnl_mem_ptr def_mem(new dnnl::memory(def_desc, CpuEngine::Get()->get_engine()));
-  dnnl_mem_->ReorderTo(def_mem.get());
 
   CHECK(shandle.size >= def_desc.get_size());
   CheckAndAlloc(def_desc.get_size());
-  // TODO(zhengda) We need to avoid memory copy here.
-  memcpy(shandle.dptr, def_mem->get_data_handle(), def_desc.get_size());
+
+  // oneDNN reorder can't be performed in-place
+  if (shandle.dptr == dnnl_mem_->GetDataHandle()) {
+    dnnl_mem_ptr def_mem(new dnnl::memory(def_desc, CpuEngine::Get()->get_engine()));
+    dnnl_mem_->ReorderTo(def_mem.get());
+    memcpy(shandle.dptr, def_mem->get_data_handle(), def_desc.get_size());
+  } else {
+    dnnl_mem_ptr def_mem(new dnnl::memory(def_desc, CpuEngine::Get()->get_engine(), shandle.dptr));
+    dnnl_mem_->ReorderTo(def_mem.get());
+  }
+
   dnnl_mem_ = nullptr;
 }
 
@@ -2481,6 +2488,65 @@ void NDArray::WaitToWrite() const {
       {},
       {ptr_->var});
   Engine::Get()->WaitForVar(ptr_->var);
+}
+
+void NDArray::StreamSync(int stream) const {
+  if (is_none())
+    return;
+  Imperative::DCInfo::Compute(*this);
+#if MXNET_USE_CUDA
+  Engine::Get()->PushAsync(
+      [this, stream](RunContext ctx,
+                     Engine::CallbackOnStart on_start,
+                     Engine::CallbackOnComplete on_complete) {
+        on_start();
+        cudaStream_t consumer = reinterpret_cast<cudaStream_t>(stream);
+        std::unordered_map<cudaStream_t, engine::EventInfo> events_per_stream;
+        auto& sync_obj = this->var()->sync_object;
+        std::lock_guard<std::mutex> l(sync_obj.mutex);
+        auto& reader_events = sync_obj.reader_events;
+        reader_events.erase(
+            std::remove_if(reader_events.begin(),
+                           reader_events.end(),
+                           [&](const engine::EventInfo e_i) { return e_i.event.expired(); }),
+            reader_events.end());
+        for (auto& writer : sync_obj.writer_event) {
+          if (writer.event.expired()) {
+            sync_obj.writer_event.clear();
+            break;
+          }
+          if (writer.stream != consumer) {
+            bool found = false;
+            for (const auto& reader : reader_events) {
+              if (reader.stream == consumer) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              auto event_stream = writer.stream;
+              if (events_per_stream.count(event_stream) > 0) {
+                if (events_per_stream[event_stream].pool_index < writer.pool_index) {
+                  events_per_stream[event_stream] = writer;
+                }
+              } else {
+                events_per_stream.emplace(event_stream, writer);
+              }
+            }
+          }
+        }
+        for (auto event : events_per_stream) {
+          auto ev = event.second.event.lock();
+          MSHADOW_CUDA_CALL(cudaStreamWaitEvent(consumer, *ev, 0));
+        }
+        on_complete();
+      },
+      this->ctx(),
+      {},
+      {});
+#else
+  LOG(FATAL) << "GPU is not enabled";
+#endif
 }
 
 #if MXNET_PREDICT_ONLY == 0

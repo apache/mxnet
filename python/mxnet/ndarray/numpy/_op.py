@@ -1611,7 +1611,7 @@ def argsort(a, axis=-1, descending=False, stable=True):
     Notes
     -----
     `argsort` is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#argsort-x-axis-1-descending-false-stable-true
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.sorting_functions.argsort.html
     instead of an official NumPy operator.
 
     Parameters
@@ -1689,7 +1689,7 @@ def sort(a, axis=-1, descending=False, stable=True):
     Notes
     -----
     `sort` is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/sorting_functions.html#sort-x-axis-1-descending-false-stable-true
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.sorting_functions.sort.html
     instead of an official NumPy operator.
 
     Parameters
@@ -2033,7 +2033,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     if dtype is None:
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if retstep:
-        step = (stop - start) / (num - 1)
+        step = (stop - start) / (num - int(endpoint))
         return _api_internal.linspace(start, stop, num, endpoint, device, dtype), step
     else:
         return _api_internal.linspace(start, stop, num, endpoint, device, dtype)

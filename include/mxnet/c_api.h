@@ -53,6 +53,14 @@ extern "C" {
 #define MXNET_DLL
 #endif
 
+#ifndef MXNET_BRANCH
+#define MXNET_BRANCH "NotProvided"
+#endif
+
+#ifndef MXNET_COMMIT_HASH
+#define MXNET_COMMIT_HASH "NotProvided"
+#endif
+
 /*! \brief manually define unsigned int */
 typedef uint32_t mx_uint;
 /*! \brief manually define float */
@@ -541,6 +549,20 @@ MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t* free_mem, uint64_t*
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXGetVersion(int* out);
+
+/*!
+ * \brief get the MXNet library branch at build time, usually provided by cmake
+ * \param pointer to the string holding the branch name
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetBranch(const char** out);
+
+/*!
+ * \brief get the MXNet library commit hash at build time, usually provided by cmake
+ * \param pointer to the string holding the commit hash
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetCommitHash(const char** out);
 
 /*!
  * \brief Load TVM operator from the binary library
@@ -3125,6 +3147,20 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func,
 MXNET_DLL int MXCheckDynamicShapeOp(SymbolHandle sym_handle, bool* has_dynamic_shape);
 
 /*!
+ * \brief Synchronize the consumer stream with the producer stream where the NDArray lives.
+ * \param handle NDArray handle of producer.
+ * \param stream A pointer to a stream from consumer.
+ */
+MXNET_DLL int MXPushStreamDep(NDArrayHandle handle, int stream);
+
+/*!
+ * \brief Get current stream pointer based on current device type and id
+ * \param device_id Current device id.
+ * \param stream A pointer pointing to current stream.
+ */
+MXNET_DLL int MXGetCurrentStream(int device_id, int* stream);
+
+/*!
  * \brief Push a new NVTX range. Requires building with CUDA and NVTX.
  * \param name Name of the range.
  * \param color Color used to display the range in the visual profiling tools.
@@ -3146,6 +3182,16 @@ MXNET_DLL int MXCUDAProfilerStart();
  * \brief End CUDA profiling session. Requires building with CUDA and NVTX.
  */
 MXNET_DLL int MXCUDAProfilerStop();
+
+/*!
+ * \brief Turns on or off Layout Optimization
+ */
+MXNET_DLL int MXSetOptimizeLayout(bool val);
+
+/*!
+ * \brief Get current Layout Optimization status
+ */
+MXNET_DLL int MXGetOptimizeLayout(bool* val);
 
 #ifdef __cplusplus
 }
