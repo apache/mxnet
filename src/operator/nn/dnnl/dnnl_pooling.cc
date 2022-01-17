@@ -431,9 +431,9 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
 
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
-  auto& bwd = GetPoolingBwd(param, *in_data, in_grad, out_grad, param.IsAdaptivePooling());
-  auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
-  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
+  auto& bwd         = GetPoolingBwd(param, *in_data, in_grad, out_grad, param.IsAdaptivePooling());
+  auto diff_dst_mem = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
+  auto diff_src_mem = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
   dnnl_args_map_t args = {
       {DNNL_ARG_DIFF_DST, *diff_dst_mem},
       {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
