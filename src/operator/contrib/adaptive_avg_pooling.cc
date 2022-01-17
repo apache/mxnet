@@ -217,7 +217,6 @@ void AdaptiveAvgPoolOpBackwardExCPU(const nnvm::NodeAttrs& attrs,
   }
   FallBackCompute(AdaptiveAvgPoolOpBackward<cpu>, attrs, ctx, inputs, req, outputs);
 }
-#endif
 
 inline static bool BackwardAdaptivePoolingStorageType(const nnvm::NodeAttrs& attrs,
                                                       const int dev_mask,
@@ -231,6 +230,7 @@ inline static bool BackwardAdaptivePoolingStorageType(const nnvm::NodeAttrs& att
   // to check if DNNLAdaptivePooling is supported
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
+#endif
 
 template <typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
