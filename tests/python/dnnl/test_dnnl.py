@@ -394,8 +394,8 @@ def test_adaptive_pooling(num_filter):
             data = mx.sym.Convolution(data=data, kernel=(3, 3), pad=(1,1), num_filter=num_filter)
             data = mx.sym.contrib.AdaptiveAvgPooling2D(data=data, output_size=i)
 
-            weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3))
-            bias_tmp = np.random.normal(0.1, 0.1, size=(4,))
+            weight_tmp = np.random.normal(-0.1, 0.1, size=(num_filter, 3, 3, 3))
+            bias_tmp = np.random.normal(0.1, 0.1, size=(num_filter,))
 
             in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
                             mx.nd.array(bias_tmp).tostype(stype)]
