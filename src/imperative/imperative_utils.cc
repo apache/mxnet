@@ -89,10 +89,6 @@ void InvokeOperator(const nnvm::IndexedGraph& idx,
     const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
     nnvm::Node* fwd_node  = node.source->control_deps[0].get();
     auto fwd_node_id      = idx.node_id(fwd_node);
-    for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
-  {
-    std::cout<< "in line 94 in imperative_utils.cc:" << it->first << " : " << it->second<<std::endl;
-  }
     cached_op->Backward(retain_graph, states[fwd_node_id], ndinputs, req, ndoutputs, backward_options_map);
   } else if (createop.count(node.source->op())) {
     mxnet::ShapeVector arg_shapes;
@@ -167,10 +163,7 @@ void RunGraph(const bool retain_graph,
         Imperative::Get()->RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, state);
       }
     };
-    for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
-  {
-    std::cout<< "in line 172 in rungraph in imperative_utils.cc:" << it->first << " : " << it->second<<std::endl;
-  }
+
     InvokeOperator(
         idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs, &req, &ref_count, invoke, backward_options_map);
     if (callback) {

@@ -520,7 +520,6 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
   for (const auto& i : nleaf_vars) {
     us.emplace_back(NodeEntry{i, 0, 0});
   }
-  std::cout<<"in imperative.cc in line 522"<<std::endl;
   Graph g_graph = pass::MXGradient(graph,
                                    graph.outputs,
                                    xs,
@@ -542,10 +541,6 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
     } else {
       graph.outputs.push_back(e);
     }
-  }
-  for (auto it = graph.outputs.begin(); it != graph.outputs.end(); it++ )
-  {
-     std::cout<<"in line 547 in imperative.cc graph node " << it->node ->attrs.name << std::endl;
   }
   const auto& idx = graph.indexed_graph();
   // get number of nodes used in forward pass
@@ -717,10 +712,7 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
   bool prev_recording = set_is_recording(create_graph);
   bool prev_training  = set_is_training(is_train);
   int prev_bulk_size  = Engine::Get()->set_bulk_size(backward_bulk_size_);
-  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
-  {
-    std::cout<< "in line 722 in imperative.cc:" << it->first << " : " << it->second<<std::endl;
-  }
+
   try {
     RunGraph(retain_graph,
              idx,

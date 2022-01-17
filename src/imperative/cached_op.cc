@@ -286,7 +286,6 @@ bool CachedOp::SetBackwardGraph(GraphInfo* info,
   {
      auto it = backward_options_map.find("current_rank");
      int cur_rank = std::atoi(it->second.c_str());
-     auto help_it = g.outputs.begin();
      auto output_it = g.outputs.begin();
      while (output_it!=g.outputs.end())
      {
@@ -399,10 +398,7 @@ bool CachedOp::SetBackwardGraph(GraphInfo* info,
                                {num_forward_entries, idx.num_node_entries()},
                                detect_inplace_addto);
   g.attrs[AddPrefix(BACKWARD, MEM_PLAN)] = std::make_shared<dmlc::any>(std::move(mem_plan));
-  for (auto it = g.outputs.begin(); it != g.outputs.end(); it++ )
-  {
-     std::cout<<"in line 383 graph node " << it->node ->attrs.name << std::endl;
-  }
+
   return false;
 }
 
@@ -940,20 +936,11 @@ void CachedOp::DynamicBackward(const bool retain_graph,
     std::lock_guard<std::mutex> lock(state.mutex);
     state.info.fwd_graph = runtime.info.fwd_graph;
     state.info.input_map = runtime.info.input_map;
-    std::cout<<"in line 918 in cached_op.cc" << std::endl;
     SetBackwardGraph(&state.info, reqs, inputs, false, backward_options_map);
     runtime.info.full_graph    = state.info.full_graph;
     runtime.info.bwd_input_eid = state.info.bwd_input_eid;
   }
   nnvm::Graph& g  = runtime.info.full_graph;
-  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++)
-  {
-    std::cout<<"in line 930 backward:" << it->first<<":"<<it->second << std::endl;
-  }
-  for (auto it = g.outputs.begin(); it != g.outputs.end(); it++ )
-  {
-     std::cout<<"in line 926 graph node " << it->node ->attrs.name << std::endl;
-  }
   const auto& idx = g.indexed_graph();
   auto& buff      = runtime.buff;
   auto& states    = runtime.op_states;
@@ -1052,12 +1039,7 @@ void CachedOp::StaticBackward(const bool retain_graph,
   bool match = SetBackwardGraph(&state.info, reqs, inputs, true, backward_options_map);
 
   nnvm::Graph& g         = state.info.full_graph;
-  //deal with options
-  //
-  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
-  {
-    std::cout<< "in line 1034 in cachedop:" << it->first << " : " << it->second<<std::endl;
-  }
+
   const auto& idx        = g.indexed_graph();
   auto num_forward_nodes = state.info.fwd_graph.indexed_graph().num_nodes();
 
@@ -1163,10 +1145,8 @@ void CachedOp::Backward(const bool retain_graph,
 
   try {
     if (config_.static_alloc) {
-      std::cout<<"call static back"<<std::endl;
       StaticBackward(retain_graph, state, inputs, reqs, outputs, backward_options_map);
     } else {
-      std::cout<<"call dynamic back"<<std::endl;
       DynamicBackward(retain_graph, state, inputs, reqs, outputs, backward_options_map);
     }
   } catch (const dmlc::Error& e) {
