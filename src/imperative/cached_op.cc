@@ -259,7 +259,8 @@ void SetBackwardInputEid(const std::vector<uint32_t>& bwd_in_dep,
 bool CachedOp::SetBackwardGraph(GraphInfo* info,
                                 const std::vector<OpReqType>& reqs,
                                 const std::vector<NDArray*>& inputs,
-                                bool detect_inplace_addto) {
+                                bool detect_inplace_addto,
+                                const std::unordered_map<std::string, std::string> backward_options_map) {
   using namespace nnvm;
   using namespace imperative;
   std::lock_guard<std::mutex> lock(mutex_);
@@ -279,7 +280,27 @@ bool CachedOp::SetBackwardGraph(GraphInfo* info,
     g.attrs["context"] = std::make_shared<dmlc::any>(
         std::vector<Context>(g.indexed_graph().num_nodes(), default_ctx));
   }
+  //deal with delete
+  auto pg_option = backward_options_map.find("partition_grad");
+  if (pg_option != backward_options_map.end())
+  {
+     auto it = backward_options_map.find("current_rank");
+     int cur_rank = std::atoi(it->second.c_str());
+     auto help_it = g.outputs.begin();
+     auto output_it = g.outputs.begin();
+     while (output_it!=g.outputs.end())
+     {
+        it = backward_options_map.find(output_it->node ->attrs.name);
+        if (it!=backward_options_map.end() && atoi(it->second.c_str()) != cur_rank)
+        {
+            g.outputs.erase(output_it);
+        }
+        else{
+            output_it++;
+        }
+     }
 
+  }
   const auto& idx = g.indexed_graph();
 
   if (info->bwd_input_eid.size() != inputs.size()) {
@@ -378,7 +399,10 @@ bool CachedOp::SetBackwardGraph(GraphInfo* info,
                                {num_forward_entries, idx.num_node_entries()},
                                detect_inplace_addto);
   g.attrs[AddPrefix(BACKWARD, MEM_PLAN)] = std::make_shared<dmlc::any>(std::move(mem_plan));
-
+  for (auto it = g.outputs.begin(); it != g.outputs.end(); it++ )
+  {
+     std::cout<<"in line 383 graph node " << it->node ->attrs.name << std::endl;
+  }
   return false;
 }
 
@@ -902,7 +926,8 @@ void CachedOp::DynamicBackward(const bool retain_graph,
                                const OpStatePtr& op_state,
                                const std::vector<NDArray*>& inputs,
                                const std::vector<OpReqType>& reqs,
-                               const std::vector<NDArray*>& outputs) {
+                               const std::vector<NDArray*>& outputs,
+                               const std::unordered_map<std::string, std::string> backward_options_map) {
   using namespace nnvm;
   using namespace imperative;
 
@@ -915,11 +940,20 @@ void CachedOp::DynamicBackward(const bool retain_graph,
     std::lock_guard<std::mutex> lock(state.mutex);
     state.info.fwd_graph = runtime.info.fwd_graph;
     state.info.input_map = runtime.info.input_map;
-    SetBackwardGraph(&state.info, reqs, inputs);
+    std::cout<<"in line 918 in cached_op.cc" << std::endl;
+    SetBackwardGraph(&state.info, reqs, inputs, false, backward_options_map);
     runtime.info.full_graph    = state.info.full_graph;
     runtime.info.bwd_input_eid = state.info.bwd_input_eid;
   }
   nnvm::Graph& g  = runtime.info.full_graph;
+  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++)
+  {
+    std::cout<<"in line 930 backward:" << it->first<<":"<<it->second << std::endl;
+  }
+  for (auto it = g.outputs.begin(); it != g.outputs.end(); it++ )
+  {
+     std::cout<<"in line 926 graph node " << it->node ->attrs.name << std::endl;
+  }
   const auto& idx = g.indexed_graph();
   auto& buff      = runtime.buff;
   auto& states    = runtime.op_states;
@@ -1005,7 +1039,8 @@ void CachedOp::StaticBackward(const bool retain_graph,
                               const OpStatePtr& state_ptr,
                               const std::vector<NDArray*>& inputs,
                               const std::vector<OpReqType>& reqs,
-                              const std::vector<NDArray*>& outputs) {
+                              const std::vector<NDArray*>& outputs,
+                              const std::unordered_map<std::string, std::string> backward_options_map) {
   using namespace nnvm;
   using namespace imperative;
 
@@ -1014,9 +1049,15 @@ void CachedOp::StaticBackward(const bool retain_graph,
   auto& state = state_ptr.get_state<CachedOpState>();
   std::lock_guard<std::mutex> lock(state.mutex);
 
-  bool match = SetBackwardGraph(&state.info, reqs, inputs, true);
+  bool match = SetBackwardGraph(&state.info, reqs, inputs, true, backward_options_map);
 
   nnvm::Graph& g         = state.info.full_graph;
+  //deal with options
+  //
+  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
+  {
+    std::cout<< "in line 1034 in cachedop:" << it->first << " : " << it->second<<std::endl;
+  }
   const auto& idx        = g.indexed_graph();
   auto num_forward_nodes = state.info.fwd_graph.indexed_graph().num_nodes();
 
@@ -1090,7 +1131,8 @@ void CachedOp::Backward(const bool retain_graph,
                         const OpStatePtr& state,
                         const std::vector<NDArray*>& inputs,
                         const std::vector<OpReqType>& reqs,
-                        const std::vector<NDArray*>& outputs) {
+                        const std::vector<NDArray*>& outputs,
+                        const std::unordered_map<std::string, std::string> backward_options_map) {
   const auto& fwd_idx             = fwd_graph_.indexed_graph();
   const auto& full_idx            = full_graph_.indexed_graph();
   const auto& mutable_input_nodes = fwd_idx.mutable_input_nodes();
@@ -1121,9 +1163,11 @@ void CachedOp::Backward(const bool retain_graph,
 
   try {
     if (config_.static_alloc) {
-      StaticBackward(retain_graph, state, inputs, reqs, outputs);
+      std::cout<<"call static back"<<std::endl;
+      StaticBackward(retain_graph, state, inputs, reqs, outputs, backward_options_map);
     } else {
-      DynamicBackward(retain_graph, state, inputs, reqs, outputs);
+      std::cout<<"call dynamic back"<<std::endl;
+      DynamicBackward(retain_graph, state, inputs, reqs, outputs, backward_options_map);
     }
   } catch (const dmlc::Error& e) {
     Engine::Get()->set_bulk_size(prev_bulk_size);
@@ -1261,7 +1305,7 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
   // pass a flag to determine whether to record computation inside an operator.
   // Let's use false here for now and design a solution when the second-order
   // differentiation is supported.
-  s.op->Backward(false, s.forward_state, in_ptrs, req, out_ptrs);
+  s.op->Backward(false, s.forward_state, in_ptrs, req, out_ptrs, {});
   Imperative::Get()->set_is_training(orig_is_train);
 
   // Clean up what we recorded.

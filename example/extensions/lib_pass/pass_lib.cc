@@ -143,7 +143,7 @@ MXReturnValue myPass(mxnet::ext::Graph* g,
     auto it = options.find(target_node->name);
     if (it == options.end()) {continue;} // req_grad == null
     root_rank = it->second;
-    mxnet::ext::Node *new_reduce = g->addNode("ncclreduce_" + std::to_string(index),"_contrib_NCCLReduce");
+    mxnet::ext::Node *new_reduce = g->addNode("ncclreduce_" + target_node->name,"_contrib_NCCLReduce");
     index += 1;
     auto new_attrs = &new_reduce->attrs;
     auto old_attrs = target_node->attrs;

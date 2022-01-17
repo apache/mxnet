@@ -132,7 +132,9 @@ class Executor {
                                       1,
                                       nullptr,
                                       nullptr),
-                 0);
+                 0,
+                 nullptr,
+                 nullptr);
       } else {
         CHECK_EQ(MXAutogradBackwardEx(out_handles.size(),
                                       out_handles.data(),
@@ -144,7 +146,10 @@ class Executor {
                                       1,
                                       nullptr,
                                       nullptr),
-                 0);
+                 0,
+                 0,
+                 nullptr,
+                 nullptr);
       }
       grad_arrays.clear();
       grad_arrays.reserve(arg_arrays.size());

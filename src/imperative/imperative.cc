@@ -440,7 +440,8 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
                                            const std::vector<NDArray*>& variables,
                                            bool is_train,
                                            bool retain_graph,
-                                           bool create_graph) {
+                                           bool create_graph,
+                                           const std::unordered_map<std::string, std::string> backward_options_map) {
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
@@ -519,7 +520,7 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
   for (const auto& i : nleaf_vars) {
     us.emplace_back(NodeEntry{i, 0, 0});
   }
-
+  std::cout<<"in imperative.cc in line 522"<<std::endl;
   Graph g_graph = pass::MXGradient(graph,
                                    graph.outputs,
                                    xs,
@@ -541,6 +542,10 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
     } else {
       graph.outputs.push_back(e);
     }
+  }
+  for (auto it = graph.outputs.begin(); it != graph.outputs.end(); it++ )
+  {
+     std::cout<<"in line 547 in imperative.cc graph node " << it->node ->attrs.name << std::endl;
   }
   const auto& idx = graph.indexed_graph();
   // get number of nodes used in forward pass
@@ -712,7 +717,10 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
   bool prev_recording = set_is_recording(create_graph);
   bool prev_training  = set_is_training(is_train);
   int prev_bulk_size  = Engine::Get()->set_bulk_size(backward_bulk_size_);
-
+  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
+  {
+    std::cout<< "in line 722 in imperative.cc:" << it->first << " : " << it->second<<std::endl;
+  }
   try {
     RunGraph(retain_graph,
              idx,
@@ -723,7 +731,11 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
              std::move(ref_count),
              &states,
              dispatch_modes,
-             is_recording());
+             is_recording(),
+             nullptr,
+             nullptr,
+             false,
+             backward_options_map);
   } catch (const dmlc::Error& e) {
     Engine::Get()->set_bulk_size(prev_bulk_size);
     set_is_recording(prev_recording);

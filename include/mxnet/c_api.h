@@ -1342,7 +1342,10 @@ MXNET_DLL int MXAutogradBackwardEx(uint32_t num_output,
                                    int create_graph,
                                    int is_train,
                                    NDArrayHandle** grad_handles,
-                                   int** grad_stypes);
+                                   int** grad_stypes,
+                                   const mx_uint num_options,
+                                   const char** keys,
+                                   const char** vals);
 /*
  * \brief get the graph constructed by autograd.
  * \param handle ndarray handle
