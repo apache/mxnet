@@ -25,6 +25,7 @@
 // #include "elemwise_op_common.h"
 #include "../elemwise_op_common.h"
 #if MXNET_USE_ONEDNN == 1
+#include "./dnnl/dnnl_base-inl.h"
 #include "../nn/dnnl/dnnl_pooling-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
