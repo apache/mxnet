@@ -132,6 +132,12 @@ void DNNLSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data);
 
+void DNNLSplitForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs);
+
 /* For sum */
 void DNNLSumForward(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,

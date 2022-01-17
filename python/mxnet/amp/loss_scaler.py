@@ -46,14 +46,14 @@ class LossScaler(object):
         """Check gradients for overflow."""
         if is_np_array():
             all_finite_f = ndarray.numpy._internal.multi_all_finite
-            ones_f = ndarray.numpy.ones
+            ones_f = lambda ctx: ndarray.numpy.ones((1,), device=ctx)
         else:
             all_finite_f = ndarray.multi_all_finite
-            ones_f = ndarray.ones
+            ones_f = lambda ctx: ndarray.ones((1,), ctx=ctx)
         with ag.pause():
             chunk_size = 200
             valid_params = [p._grad[0] for p in params if p._grad is not None]
-            gpu_output = ones_f((1,), ctx=valid_params[0].context)
+            gpu_output = ones_f(valid_params[0].context)
             nb_params = len(valid_params)
             for idx in range(0, nb_params, chunk_size):
                 all_finite_f(*valid_params[idx:idx+chunk_size],

@@ -34,11 +34,10 @@ download () {
     fi
 
     echo "Downloading ${URL} ..."
-    local CURL_OPTIONS="--connect-timeout 10 \
+    local CURL_OPTIONS="--connect-timeout 60 \
               --max-time 300 \
-              --retry-delay 10 \
-              --retry 3 \
-              --retry-delay 0 \
+              --retry-delay 30 \
+              --retry 5 \
               --location \
               --silent"
     curl ${CURL_OPTIONS} ${URL} -o ${OUT_FILE}

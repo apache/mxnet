@@ -19,7 +19,6 @@ include README
 include LICENSE
 include DISCLAIMER
 include NOTICE
-include mxnet/COMMIT_HASH
 recursive-include mxnet/tools *
 recursive-include mxnet *.py
 recursive-include mxnet *.so

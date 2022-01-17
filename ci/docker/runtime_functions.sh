@@ -1329,7 +1329,7 @@ build_docs() {
 
     # copy the full site for this version to versions folder
     mkdir -p html/versions/master
-    for f in 404.html api assets blog community ecosystem features feed.xml get_started index.html; do
+    for f in 404.html api assets blog community ecosystem features trusted_by feed.xml get_started index.html; do
         cp -r html/$f html/versions/master/
     done
 
@@ -1355,7 +1355,6 @@ build_docs_beta() {
 push_docs() {
     folder_name=$1
     set -ex
-    pip3 install --user awscli
     export PATH=~/.local/bin:$PATH
     pushd docs/_build
     tar -xzf full_website.tgz --strip-components 1
@@ -1471,7 +1470,6 @@ cd_pypi_publish() {
 
 cd_s3_publish() {
     set -ex
-    pip3 install --upgrade --user awscli
     filepath=$(readlink -f wheel_build/dist/*.whl)
     filename=$(basename $filepath)
     variant=$(echo $filename | cut -d'-' -f1 | cut -d'_' -f2 -s)

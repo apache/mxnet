@@ -30,6 +30,7 @@
 #include "../nn/dnnl/dnnl_reshape-inl.h"
 #include "../nn/dnnl/dnnl_slice-inl.h"
 #include "../nn/dnnl/dnnl_transpose-inl.h"
+#include "../nn/dnnl/dnnl_split-inl.h"
 #endif
 
 namespace mxnet {
@@ -1177,6 +1178,32 @@ Example::
     .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
     .add_arguments(DepthToSpaceParam::__FIELDS__());
 
+#if MXNET_USE_ONEDNN == 1
+static void SplitForwardEx(const nnvm::NodeAttrs& attrs,
+                           const OpContext& op_ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs) {
+  CHECK(!inputs.empty());
+  if (SupportDNNLSplit(inputs[0])) {
+    DNNL_OPCHECK_INIT(/*is backward*/ false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLSplitForward, attrs, op_ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  }
+}
+
+inline static bool SplitInferStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  return DNNLStorageType(
+      attrs, dev_mask, /*support onednn*/ true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif  // MXNET_USE_ONEDNN == 1
+
 NNVM_REGISTER_OP(_split_v2)
     .add_alias("_npi_split")
     .add_alias("_npi_array_split")
@@ -1246,6 +1273,11 @@ Example::
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", SplitForwardEx)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FInferStorageType>("FInferStorageType", SplitInferStorageType)
+#endif
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
     .add_argument("data", "NDArray-or-Symbol", "The input")

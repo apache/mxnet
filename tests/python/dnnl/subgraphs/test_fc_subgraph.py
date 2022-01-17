@@ -208,18 +208,27 @@ def test_fc_identity_eltwise(identity_node):
   class FCIdentityEltwise(nn.HybridBlock):
     def __init__(self, identity_node, **kwargs):
       super(FCIdentityEltwise, self).__init__(**kwargs)
-      self.fc = nn.Dense(units=64, use_bias=False, weight_initializer=None, flatten=True)
+      self.fc1 = nn.Dense(units=64, use_bias=False, weight_initializer=None, flatten=True)
+      self.fc2 = nn.Dense(units=64, use_bias=False, weight_initializer=None, flatten=True)
       self.identity_node = identity_node
+
     def forward(self, x):
-      fc_out = self.fc(x)
+      out = self.fc1(x)
       if self.identity_node == 'copy':
-        fc_out = mx.np.copy(fc_out)
+        out = mx.np.copy(out)
       else:
-        fc_out = mx.npx.dropout(fc_out)
-      out = mx.npx.activation(fc_out, act_type='relu')
+        out = mx.npx.dropout(out)
+      out = mx.npx.activation(out, act_type='relu')
+      out = self.fc2(out)
+      if self.identity_node == 'copy':
+        out = mx.np.copy(out)
+      else:
+        out = mx.npx.dropout(out)
+      out = mx.npx.activation(out, act_type='relu')
       return out
 
   data_shape = (64, 4, 10, 10)
-  attrs = {'fc': {'with_eltwise': 'true'}}
+  attrs = {'sg_onednn_fully_connected_eltwise_0' : {'with_eltwise': 'true'},
+           'sg_onednn_fully_connected_eltwise_1' : {'with_eltwise': 'true'}}
   net = FCIdentityEltwise(identity_node)
   check_fusion(net, data_shape, attrs, check_quantization=False)
