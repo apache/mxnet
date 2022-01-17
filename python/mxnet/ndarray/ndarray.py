@@ -2942,13 +2942,11 @@ fixed-size items.
             ograd_handles = [NDArrayHandle(0)]
         else:
             ograd_handles = [out_grad.handle]
-        print("in ndarray.py in line 2945")
         key_list = []
         val_list = []
         for key, val in backward_option.items():
             key_list.append(key)
             val_list.append(str(val))
-        print("in ndarray.py in line 2951", key_list, val_list)
         check_call(_LIB.MXAutogradBackwardEx(
             1, c_handle_array([self]),
             c_array(NDArrayHandle, ograd_handles),

@@ -95,7 +95,7 @@ class Easynet(nn.HybridBlock):
     def __init__(self):
         super().__init__()
         self.l1 = nn.Dense(in_units=2, units=2, flatten=False)
-        #self.l2 = nn.Dense(in_units=2, units=2, flatten=False)
+        self.l2 = nn.Dense(in_units=2, units=2, flatten=False)
         #self.act1 = get_activation('relu')
 
         #self.seq.add(nn.Dense(in_units=2, units=2, flatten=False))
@@ -105,11 +105,12 @@ class Easynet(nn.HybridBlock):
         #self.l1.register_op_hook(mon_callback,  monitor_all=True)
 
 
-    def forward(self, input):
-        input = self.l1(input)
+    def forward(self, input1, input2):
+        output_1 = self.l1(input1)
+        output_2 = self.l2(input2)
         #print(input)
         #input = self.act1(input)
-        return input
+        return output_1 + output_2
 
 
 def test_model(pass_name):
@@ -144,9 +145,13 @@ def test_model(pass_name):
     if rank == 0:
         model.l1.weight.initialize(init=init.One(), ctx=ctx)
         model.l1.bias.initialize(init=init.One(), ctx=ctx)
+        model.l2.weight.initialize(init=init.One(), ctx=ctx)
+        model.l2.bias.initialize(init=init.One(), ctx=ctx)
     else:
         model.l1.weight.initialize(init = init.Zero(), ctx = ctx)
         model.l1.bias.initialize(init=init.Zero(), ctx=ctx)
+        model.l2.weight.initialize(init=init.Zero(), ctx=ctx)
+        model.l2.bias.initialize(init=init.Zero(), ctx=ctx)
     model.hybridize()
     #param_dict = classify_net.collect_params()
     #params = [p for p in param_dict.values() if p.grad_req != 'null']
@@ -174,24 +179,32 @@ def test_model(pass_name):
 
     options.update(dic)
     print(options)
+
     #return
+    '''
     backward_options = {"partition_grad":True, "current_rank":rank}
     for k in options:
         if k in ['num_gpus', 'rank', 'nccl_unique_id']:
             continue
         backward_options['ncclreduce_' + k + '_backward'] = options[k]
     print(backward_options)
+    '''
+    options = trainer.generate_graph_pass_options()
+    print(options)
+    backward_options = trainer.generate_backward_options()
+    print(backward_options)
     x = np.ones((1,2), ctx = ctx)
+    x2 = np.ones((1, 2), ctx=ctx)
     label = np.ones((2, ), ctx = ctx) * rank
     #print(options)
 
     loss_function = gluon.loss.L2Loss()
 
-    model.optimize_for(x, backend = pass_name, **options)
+    model.optimize_for(x, x2, backend = "myPass", **options)
     #model.export("my_reduce_" + str(rank))
     for i in range(1):
         with mx.autograd.record():
-            out = model(x)
+            out = model(x, x2)
             loss = loss_function(out, label).mean() / size
             print("now call backward in python")
             #print(loss.backward)

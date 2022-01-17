@@ -405,11 +405,6 @@ int MXAutogradBackwardEx(uint32_t num_output,
   for (uint32_t i = 0; i < num_variables; ++i) {
     variables.emplace_back(reinterpret_cast<NDArray*>(var_handles[i]));
   }
-  std::cout<<"in c_api_ndarray.cc in line 400" << std::endl;
-  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
-  {
-    std::cout<< "in line 408 in c_api_ndarray.cc:" << it->first << " : " << it->second<<std::endl;
-  }
   auto grads =
       Imperative::Get()->Backward(outputs, ograds, variables, is_train, retain_graph, create_graph, backward_options_map);
   if (num_variables != 0) {
