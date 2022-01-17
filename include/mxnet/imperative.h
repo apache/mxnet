@@ -279,7 +279,8 @@ class Imperative {
                                  const std::vector<NDArray*>& variables,
                                  bool is_train,
                                  bool retain_graph,
-                                 bool create_graph);
+                                 bool create_graph,
+                                 const std::unordered_map<std::string, std::string> backward_options_map = {});
   /*! \brief Return the marked nonleaf nodes. */
   std::vector<nnvm::ObjectPtr> ListNonleafVariables(const nnvm::Symbol& sym) const;
   /*! \return AutogradRuntime singleton */

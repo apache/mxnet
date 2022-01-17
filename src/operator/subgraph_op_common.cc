@@ -274,7 +274,7 @@ void LoopState::Backward(int iter_no,
     outputs.push_back(&igrad_bufs[i]);
   CHECK_EQ(outputs.size(), op->num_inputs());
   auto state = all_states[iter_no];
-  op->Backward(false, state, inputs, req, outputs);
+  op->Backward(false, state, inputs, req, outputs, {});
   // If an input and an output share the array, the output array will be changed
   // by CachedOp. We need to copy data to the real output.
   for (size_t i = 0; i < igrads.size(); i++)

@@ -362,6 +362,9 @@ int MXAutogradBackward(uint32_t num_output,
                               false,
                               true,
                               nullptr,
+                              nullptr,
+                              0,
+                              nullptr,
                               nullptr);
 }
 
@@ -374,10 +377,15 @@ int MXAutogradBackwardEx(uint32_t num_output,
                          int create_graph,
                          int is_train,
                          NDArrayHandle** grad_handles,
-                         int** grad_stypes) {
+                         int** grad_stypes,
+                         const mx_uint num_options,
+                         const char** keys,
+                         const char** vals) {
   MXAPIThreadLocalEntry<>* ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
-
+  std::unordered_map<std::string, std::string> backward_options_map;
+  for (mx_uint i = 0; i < num_options; ++i)
+    backward_options_map.emplace(keys[i], vals[i]);
   std::vector<NDArray*> outputs, ograds, variables;
   outputs.reserve(num_output);
   for (uint32_t i = 0; i < num_output; ++i) {
@@ -397,9 +405,13 @@ int MXAutogradBackwardEx(uint32_t num_output,
   for (uint32_t i = 0; i < num_variables; ++i) {
     variables.emplace_back(reinterpret_cast<NDArray*>(var_handles[i]));
   }
-
+  std::cout<<"in c_api_ndarray.cc in line 400" << std::endl;
+  for (auto it = backward_options_map.begin(); it!=backward_options_map.end(); it ++ )
+  {
+    std::cout<< "in line 408 in c_api_ndarray.cc:" << it->first << " : " << it->second<<std::endl;
+  }
   auto grads =
-      Imperative::Get()->Backward(outputs, ograds, variables, is_train, retain_graph, create_graph);
+      Imperative::Get()->Backward(outputs, ograds, variables, is_train, retain_graph, create_graph, backward_options_map);
   if (num_variables != 0) {
     ret->ret_handles.clear();
     ret->out_types.clear();
