@@ -844,14 +844,12 @@ def test_rnn_unroll_variant_length():
                                               inputs=data_nd[i:(i+1), :ele_length, :],
                                               merge_outputs=True,
                                               layout='NTC')
-            assert_allclose(ele_out.asnumpy(), outs[i:(i+1), :ele_length, :].asnumpy(),
-                            atol=1E-4, rtol=1E-4)
+            assert_almost_equal(ele_out, outs[i:(i+1), :ele_length, :])
             if ele_length < max_length:
                 # Check the padded outputs are all zero
-                assert_allclose(outs[i:(i+1), ele_length:max_length, :].asnumpy(), 0)
+                assert_almost_equal(outs[i:(i+1), ele_length:max_length, :], 0)
             for valid_out_state, gt_state in zip(states, ele_states):
-                assert_allclose(valid_out_state[i:(i+1)].asnumpy(), gt_state.asnumpy(),
-                                atol=1E-4, rtol=1E-4)
+                assert_almost_equal(valid_out_state[i:(i+1)], gt_state)
 
         # Test for TNC layout
         data_nd = mx.np.random.normal(0, 1, size=(max_length, batch_size, 20))
@@ -864,14 +862,12 @@ def test_rnn_unroll_variant_length():
                                               inputs=data_nd[:ele_length, i:(i+1), :],
                                               merge_outputs=True,
                                               layout='TNC')
-            assert_allclose(ele_out.asnumpy(), outs[:ele_length, i:(i + 1), :].asnumpy(),
-                            atol=1E-4, rtol=1E-4)
+            assert_almost_equal(ele_out, outs[:ele_length, i:(i + 1), :])
             if ele_length < max_length:
                 # Check the padded outputs are all zero
-                assert_allclose(outs[ele_length:max_length, i:(i+1), :].asnumpy(), 0)
+                assert_almost_equal(outs[ele_length:max_length, i:(i+1), :], 0)
             for valid_out_state, gt_state in zip(states, ele_states):
-                assert_allclose(valid_out_state[i:(i+1)].asnumpy(), gt_state.asnumpy(),
-                                atol=1E-4, rtol=1E-4)
+                assert_almost_equal(valid_out_state[i:(i+1)], gt_state)
 
 
 def test_cell_fill_shape():
