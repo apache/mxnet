@@ -215,7 +215,7 @@ inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-/*! \brief TakeNonzeroAxis is desinated for general take when
+/*! \brief TakeNonzeroAxis is designated for general take when
  *         axis is not zero (for CPU optimized version use TakeNonZeroAxisCPU and
            for axis zero use TakeZeroAxisGPU or TakeZeroAxisCPU)
  */
