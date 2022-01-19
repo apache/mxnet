@@ -63,7 +63,7 @@ static void UpdateConvWeightBias(NDArray* weight,
   const auto wshape        = weight->shape();
   size_t offset            = wshape.ProdShape(1, wshape.ndim());
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (int c = 0; c < static_cast<int>(channel); ++c) {
+  for (index_t c = 0; c < static_cast<index_t>(channel); ++c) {
     const DType* p1 = weight_ptr + c * offset;
     DType* p2       = update_weight_ptr + c * offset;
     float alpha     = (param->fix_gamma ? 1.0f : gamma_ptr[c]) / sqrt(var_ptr[c] + param->eps);
