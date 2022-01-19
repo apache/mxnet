@@ -215,8 +215,9 @@ inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-/*! \brief name the struct TakeNonzeroAxis for general take when
- *         axis is not zero, use TakeZeroAxisGPU or TakeZeroAxisCPU for axis zero
+/*! \brief TakeNonzeroAxis is designated for general take when
+ *         axis is not zero (for CPU optimized version use TakeNonZeroAxisCPU and
+           for axis zero use TakeZeroAxisGPU or TakeZeroAxisCPU)
  */
 template <bool clip = true>
 struct TakeNonzeroAxis {
