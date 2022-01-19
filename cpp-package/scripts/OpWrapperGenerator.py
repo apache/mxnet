@@ -99,9 +99,7 @@ class Arg:
         'double or None':'dmlc::optional<double>',\
         'Shape or None':'dmlc::optional<Shape>',\
         'string':'const std::string&',\
-        'tuple of <float>':'nnvm::Tuple<mx_float>',\
-        'tuple of <>':'mxnet::cpp::Shape',\
-        '':'index_t'}
+        'tuple of <float>':'nnvm::Tuple<mx_float>'}
     name = ''
     type = ''
     description = ''

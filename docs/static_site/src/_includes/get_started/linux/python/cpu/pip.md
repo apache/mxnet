@@ -9,16 +9,9 @@ page](https://mxnet.apache.org/get_started/download).
 
 Run the following command:
 
-<div class="v1-9-0">
-{% highlight bash %}
-pip install mxnet
-{% endhighlight %}
-
-</div> <!-- End of v1-9-0 -->
-
 <div class="v1-8-0">
 {% highlight bash %}
-pip install mxnet==1.8.0.post0
+pip install mxnet
 {% endhighlight %}
 
 Start from 1.7.0 release, oneDNN(previously known as: MKL-DNN/DNNL) is enabled
@@ -42,7 +35,7 @@ MXNet tuning guide</a>.
 To install native MXNet without oneDNN, run the following command:
 
 {% highlight bash %}
-pip install mxnet-native==1.8.0.post0
+pip install mxnet-native
 {% endhighlight %}
 
 </div> <!-- End of v1-8-0 -->
