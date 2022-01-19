@@ -26,9 +26,9 @@ permalink: /api/faq/large_tensor_support
 # Using MXNet with Large Tensor Support
 
 ## What is large tensor support?
-When creating a network that uses large amounts of data, as in a deep graph problem, you may need large tensor support. This means tensors indexed using INT64, not INT32 indices.
+When creating a network that uses large amounts of data, as in a deep graph problem, you may need large tensor support. This means tensors are indexed using INT64, instead of INT32 indices.
 
-This feature is enabled when MXNet is built with a flag *USE_INT64_TENSOR_SIZE=1* or with CMAKE using *USE_INT64_TENSOR_SIZE:“ON”*, which is now a default setting. You can also make MXNet use INT32 indices by changing these flags.
+This feature is enabled when MXNet is built with a flag *USE_INT64_TENSOR_SIZE=1*, which is now a default setting. You can also make MXNet use INT32 indices by changing this flag.
 
 ## When do you need it?
 1. When you are creating NDArrays of size larger than 2^31 elements.
