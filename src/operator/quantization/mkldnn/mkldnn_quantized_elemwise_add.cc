@@ -125,7 +125,7 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   mkldnn::memory* rescaled_mem;
 
   // output default set as int32
-  float output_data_range = kInt32Range;
+  double output_data_range = kInt32Range;
   auto output_data_type   = mkldnn::memory::data_type::s32;
   // dataA && dataB are uint8
   if (out_data[quantized_elemwise_add_enum::kOut].dtype() == mshadow::kInt8) {
