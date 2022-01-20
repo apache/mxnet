@@ -58,6 +58,27 @@ def test_single_fc(data_shape, use_bias, flatten):
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
+def test_fc_reshape(data_shape, use_bias, flatten):
+
+  class FC_Reshape(nn.HybridBlock):
+    def __init__(self, use_bias, flatten, **kwargs):
+      super(FC_Reshape, self).__init__(**kwargs)
+      self.fc = nn.Dense(units=64, use_bias=use_bias, flatten=flatten)
+
+    def forward(self, x):
+      out = self.fc(x)
+      out = mx.npx.reshape(out, newshape=(1, -1))
+      return out
+
+  attrs = {'fc': {}}
+  net = FC_Reshape(use_bias, flatten)
+  check_fusion(net, data_shape, attrs, check_quantization=flatten)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('use_bias', [True, False])
+@pytest.mark.parametrize('flatten', [True, False])
 @pytest.mark.parametrize('alg', fc_post_ops_list)
 def test_fc_eltwise(data_shape, use_bias, flatten, alg):
   # fc + eltwise fusion case

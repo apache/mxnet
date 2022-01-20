@@ -76,6 +76,28 @@ def test_pos_single_conv(use_bias, data_shape):
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
+def test_conv_reshape_conv(use_bias, data_shape):
+
+  class Conv_Reshape_Conv(nn.HybridBlock):
+    def __init__(self, **kwargs):
+        super(Conv_Reshape_Conv, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
+        self.conv1 = nn.Conv2D(channels=32, kernel_size=(5, 5), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = self.conv0(x)
+      out = mx.npx.reshape(out, newshape=(-1, int(out.shape[1]/4), out.shape[2]*2, out.shape[3]*2))
+      out = self.conv1(out)
+      return out
+
+  attr = {'conv': []}
+  net = Conv_Reshape_Conv()
+  check_fusion(net, data_shape, attr)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_add(use_bias, data_shape):
   # conv + add fusion case
   class ConvAdd(nn.HybridBlock):
