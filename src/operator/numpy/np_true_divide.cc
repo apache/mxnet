@@ -61,6 +61,16 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+#if MXNET_USE_ONEDNN == 1
+void NumpyDivideBroadcastComputeCPU(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
+  TrueDivideBroadcastCompute<cpu>(attrs, ctx, inputs, req, outputs);
+}
+#endif  // MXNET_USE_ONEDNN
+
 NNVM_REGISTER_OP(_npi_true_divide)
     .set_num_inputs(2)
     .set_num_outputs(1)
@@ -79,6 +89,10 @@ NNVM_REGISTER_OP(_npi_true_divide)
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
     .set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", NumpyBinaryOperatorComputeExCPU<op::mshadow_op::div>)
+    .set_attr<FInferStorageType>("FInferStorageType", NumpyBinaryBroadcastStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_div"})
     .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
     .add_argument("rhs", "NDArray-or-Symbol", "Divisor array");

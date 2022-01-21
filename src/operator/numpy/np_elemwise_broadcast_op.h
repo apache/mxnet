@@ -851,6 +851,53 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
   }
 }
 
+#if MXNET_USE_ONEDNN == 1
+inline bool NumpyBinaryBroadcastStorageType(const nnvm::NodeAttrs& attrs,
+                                            const int dev_mask,
+                                            DispatchMode* dispatch_mode,
+                                            std::vector<int>* in_attrs,
+                                            std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
+void NumpyDivideBroadcastComputeCPU(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs);
+
+template <typename OP>
+void NumpyBinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<mxnet::NDArray>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<mxnet::NDArray>& outputs) {
+  if (SupportDNNLBinary(inputs)) {
+    const dnnl::algorithm alg = DNNLAlgorithm<OP>::value;
+    DNNLRun(DNNLBinaryOpForward<alg>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  using namespace op::mshadow_op;
+  std::vector<mxnet::TBlob> in_data  = {inputs[0].data(), inputs[1].data()};
+  std::vector<mxnet::TBlob> out_data = {outputs[0].data()};
+  if (std::is_same<OP, plus>::value) {
+    NumpyBinaryBroadcastComputeWithBool<cpu, OP, mixed_plus, mixed_plus>(
+        attrs, ctx, in_data, req, out_data);
+  } else if (std::is_same<OP, minus>::value) {
+    NumpyBinaryBroadcastCompute<cpu, OP, mixed_minus, mixed_rminus>(
+        attrs, ctx, in_data, req, out_data);
+  } else if (std::is_same<OP, mul>::value) {
+    NumpyBinaryBroadcastComputeWithBool<cpu, OP, mixed_mul, mixed_mul>(
+        attrs, ctx, in_data, req, out_data);
+  } else if (std::is_same<OP, div>::value) {
+    NumpyDivideBroadcastComputeCPU(attrs, ctx, in_data, req, out_data);
+  }
+}
+#endif  // MXNET_USE_ONEDNN
+
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                        \
   NNVM_REGISTER_OP(name)                                                      \
       .set_num_inputs(1)                                                      \
