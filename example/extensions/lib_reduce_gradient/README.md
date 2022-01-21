@@ -52,7 +52,7 @@ trainer = POS_Trainer(params_dict, "adam", optimizer_params)
 Then trainer can generate corresponding options like:
  ```python
 options = trainer.generate_graph_pass_options()
-backward_options = trainer.generate_backward_options()]
+backward_options = trainer.generate_backward_options()
 ```
 ### modify graph
 Before forward, we use 
@@ -64,3 +64,11 @@ Then we call backward option as
  ```python
 loss.backward(backward_option = backward_options)
 ```
+###Simple Example
+Please see `test_reduce.py` 
+
+###Current problem
+1. The reduce operation will cause deadlock (it won't happen in NaiveEngine). Moreover, it will meet invalid address 
+problem in complex model like Bert-Base.
+2. We do remove outputs from backward graph using backward option. But we need to verify whether it decrease the memory 
+consumption.
