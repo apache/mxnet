@@ -66,10 +66,10 @@ Then we call backward option as
  ```python
 loss.backward(backward_option = backward_options)
 ```
-###Simple Example
+### Simple Example
 Please see `test_reduce.py` 
 
-###Current problem
+### Current problem
 1. The reduce operation will cause deadlock (it won't happen in NaiveEngine). Moreover, it will meet invalid address 
 problem in complex model like Bert-Base.
 2. We do remove outputs from backward graph using backward option. But we need to verify whether it decrease the memory 
