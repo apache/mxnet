@@ -171,14 +171,8 @@ class POS_Trainer(mx.gluon.Trainer):
         for param in self._all_params:
             broadcast_(param.data(), self._param2rank[param._uuid], name=str(self._all_param2idx[param._uuid]))
 
-    def correspond_ranks(self):
-        return self._param2rank
-
     def generate_graph_pass_options(self):
-        #helper = _NCCLReduceHelper
-        #helper.init(size(), 0)
-        #helper2 = _NCCLReduceHelper
-        #helper2.init(size(), 0)
+        #Generate options for graph pass, key is parameter name and value is its rank
         options = {}
         for name in self._all_params_with_names:
             type = name.split('.')[-1]
@@ -192,6 +186,7 @@ class POS_Trainer(mx.gluon.Trainer):
         return options
 
     def generate_backward_options(self):
+        #generate backward option for deleting, key is the node name and value is its corresponding rank
         backward_option = {"partition_grad":True, "current_rank":rank()}
         for name in self._all_params_with_names:
             type = name.split('.')[-1]
