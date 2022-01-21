@@ -60,7 +60,8 @@ Before forward, we use
 model.optimize_for(x, backend = "add_reduce_op", **options)
 ```
 to insert reduce operation into graphs.   
-![example add reduce](addreduce.png) 
+![example add reduce](addreduce.png)   
+
 Then we call backward option as 
  ```python
 loss.backward(backward_option = backward_options)
