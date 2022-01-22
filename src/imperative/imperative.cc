@@ -440,7 +440,8 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
                                            const std::vector<NDArray*>& variables,
                                            bool is_train,
                                            bool retain_graph,
-                                           bool create_graph) {
+                                           bool create_graph,
+                                           const std::unordered_map<std::string, std::string> backward_options_map) {
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
@@ -519,7 +520,6 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
   for (const auto& i : nleaf_vars) {
     us.emplace_back(NodeEntry{i, 0, 0});
   }
-
   Graph g_graph = pass::MXGradient(graph,
                                    graph.outputs,
                                    xs,
@@ -723,7 +723,11 @@ std::vector<NDArray*> Imperative::Backward(const std::vector<NDArray*>& outputs,
              std::move(ref_count),
              &states,
              dispatch_modes,
-             is_recording());
+             is_recording(),
+             nullptr,
+             nullptr,
+             false,
+             backward_options_map);
   } catch (const dmlc::Error& e) {
     Engine::Get()->set_bulk_size(prev_bulk_size);
     set_is_recording(prev_recording);

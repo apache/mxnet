@@ -62,6 +62,13 @@
 #include "miniz.h"
 #include "nnvm/pass_functions.h"
 
+#if MXNET_USE_CUDA
+#include "../common/cuda/utils.h"
+#endif
+#if MXNET_USE_NCCL
+#include <nccl.h>
+#endif
+
 // FTZ only applies to SSE and AVX instructions.
 #if defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || \
     (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
@@ -1936,6 +1943,16 @@ int MXGetGPUCount(int* out) {
   API_END();
 }
 
+int MXGetGPUSMArch(int dev, int* out) {
+  API_BEGIN();
+#if MXNET_USE_CUDA == 1
+  *out = SMArch(dev);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to query CUDA device properties.";
+#endif
+  API_END();
+}
+
 // Deprecated: use MXGetGPUMemoryInformation64() instead.
 int MXGetGPUMemoryInformation(int dev, int* free_mem, int* total_mem) {
   API_BEGIN();
@@ -1952,6 +1969,30 @@ int MXGetGPUMemoryInformation64(int dev, uint64_t* free_mem, uint64_t* total_mem
   Context::GetGPUMemoryInformation(dev, free_mem, total_mem);
   API_END();
 }
+
+int MXNCCLGetUniqueIdSize(int* size) {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NCCL
+  *size = sizeof(ncclUniqueId);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NCCL=1 to have NCCL support.";
+#endif
+  API_END();
+}
+
+int MXNCCLGetUniqueId(void* out) {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NCCL
+  auto ret = ncclGetUniqueId(reinterpret_cast<ncclUniqueId*>(out));
+  if (ret != ncclSuccess) {
+    LOG(FATAL) << "Failed to get the NCCL unique id";
+  }
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NCCL=1 to have NCCL support.";
+#endif
+  API_END();
+}
+
 
 int MXGetVersion(int* out) {
   API_BEGIN();

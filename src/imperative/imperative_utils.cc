@@ -75,7 +75,8 @@ void InvokeOperator(const nnvm::IndexedGraph& idx,
                     const std::vector<NDArray*>& ndoutputs,
                     std::vector<OpReqType>* p_req,
                     std::vector<uint32_t>* p_ref_count,
-                    std::function<void(const OpStatePtr& state)> invoke) {
+                    std::function<void(const OpStatePtr& state)> invoke,
+                    const std::unordered_map<std::string, std::string> backward_options_map) {
   static const auto bwd_cached_op  = Op::Get("_backward_CachedOp");
   static auto& createop            = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   static auto& is_layer_backward   = Op::GetAttr<bool>("TIsLayerOpBackward");
@@ -88,7 +89,7 @@ void InvokeOperator(const nnvm::IndexedGraph& idx,
     const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
     nnvm::Node* fwd_node  = node.source->control_deps[0].get();
     auto fwd_node_id      = idx.node_id(fwd_node);
-    cached_op->Backward(retain_graph, states[fwd_node_id], ndinputs, req, ndoutputs);
+    cached_op->Backward(retain_graph, states[fwd_node_id], ndinputs, req, ndoutputs, backward_options_map);
   } else if (createop.count(node.source->op())) {
     mxnet::ShapeVector arg_shapes;
     nnvm::DTypeVector arg_dtypes;
@@ -138,7 +139,8 @@ void RunGraph(const bool retain_graph,
               bool recording,
               mxnet::ShapeVector* shapes,
               const imperative::CachedOpMonCallback& callback,
-              const bool monitor_all) {
+              const bool monitor_all,
+              const std::unordered_map<std::string, std::string> backward_options_map) {
   CHECK(shapes == nullptr);
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
@@ -161,8 +163,9 @@ void RunGraph(const bool retain_graph,
         Imperative::Get()->RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, state);
       }
     };
+
     InvokeOperator(
-        idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs, &req, &ref_count, invoke);
+        idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs, &req, &ref_count, invoke, backward_options_map);
     if (callback) {
       mxnet::common::ExecuteMonOutputCallback(idx, arrays, i, callback);
     }
@@ -224,7 +227,7 @@ void NaiveRunGraph(const bool retain_graph,
       }
     };
     InvokeOperator(
-        idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs, &req, &ref_count, invoke);
+        idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs, &req, &ref_count, invoke, {});
     if (callback) {
       mxnet::common::ExecuteMonOutputCallback(idx, arrays, i, callback);
     }

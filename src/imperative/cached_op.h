@@ -501,7 +501,8 @@ class CachedOp {
                         const OpStatePtr& state,
                         const std::vector<NDArray*>& inputs,
                         const std::vector<OpReqType>& reqs,
-                        const std::vector<NDArray*>& outputs);
+                        const std::vector<NDArray*>& outputs,
+                        const std::unordered_map<std::string, std::string> backward_options_map);
   // backward storage type inference
   virtual bool BackwardStorageType(const nnvm::NodeAttrs& attrs,
                                    const int dev_mask,
@@ -606,7 +607,8 @@ class CachedOp {
   bool SetBackwardGraph(GraphInfo* info,
                         const std::vector<OpReqType>& reqs,
                         const std::vector<NDArray*>& inputs,
-                        bool detect_inplace_addto = false);
+                        bool detect_inplace_addto = false,
+                        const std::unordered_map<std::string, std::string> backward_options_map = {});
   bool CheckDynamicShapeExists(const Context& default_ctx,
                                const std::vector<NDArray*>& inputs,
                                bool erase_result);
@@ -632,12 +634,14 @@ class CachedOp {
                        const OpStatePtr& op_state,
                        const std::vector<NDArray*>& inputs,
                        const std::vector<OpReqType>& reqs,
-                       const std::vector<NDArray*>& outputs);
+                       const std::vector<NDArray*>& outputs,
+                       const std::unordered_map<std::string, std::string> backward_options_map);
   void StaticBackward(const bool retain_graph,
                       const OpStatePtr& state_ptr,
                       const std::vector<NDArray*>& inputs,
                       const std::vector<OpReqType>& reqs,
-                      const std::vector<NDArray*>& outputs);
+                      const std::vector<NDArray*>& outputs,
+                      const std::unordered_map<std::string, std::string> backward_options_map);
   size_t BwdOriginalInput(const std::vector<size_t>& input_map, size_t new_i);
 
   CachedOpConfig config_;
