@@ -31,7 +31,7 @@
 
 #define START_IND(a, b, c) static_cast<int>(std::floor(static_cast<float>(a * c) / b))
 #define END_IND(a, b, c)   static_cast<int>(std::ceil(static_cast<float>((a + 1) * c) / b))
-#define DIV_ROUND_UP(a, b) (((a) + (b - 1)) / b)
+#define DIV_ROUND_UP(a, b) ((a + (b - 1)) / b)
 
 namespace mxnet {
 namespace op {

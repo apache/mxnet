@@ -33,7 +33,7 @@
 #include "../pooling-inl.h"
 #include "./dnnl_base-inl.h"
 
-#define DIV_ROUND_UP(a, b) (((a) + (b - 1)) / b)
+#define DIV_ROUND_UP(a, b) ((a + (b - 1)) / b)
 
 namespace mxnet {
 namespace op {

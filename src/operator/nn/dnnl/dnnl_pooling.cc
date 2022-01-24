@@ -237,7 +237,7 @@ dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& par
                                                          const dnnl::memory::desc& out_md,
                                                          const bool use_adaptive_pooling) {
   CHECK((param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3) || use_adaptive_pooling)
-      << "Not Implemented";  // to be changed
+      << "Not Implemented";
 
   const int kernel_ndims =
       use_adaptive_pooling ? mxnet::TShape(data_md.dims()).ndim() : param.kernel.ndim();
@@ -366,7 +366,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     // fwd hint
     auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md, use_adaptive_pooling);
 
-    // creat bwd desc
+    // create bwd desc
     auto diff_src_dims = dnnl::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
     auto diff_src_md   = dnnl::memory::desc(diff_src_dims, get_data_type(data_md), any);
     auto cpu_engine    = CpuEngine::Get()->get_engine();
@@ -415,7 +415,7 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
   const NDArray* workspace = nullptr;
   const NDArray* in_data   = nullptr;
   if (DNNLRequireWorkspace(param)) {
-    // The first two elements are the gradient of the outputs in forward.
+    // The first two elements are the gradients of the outputs in forward.
     // The third is the input of forward.
     // The fourth and the fifth are the outputs of forward.
     CHECK_EQ(inputs.size(), 5U);
