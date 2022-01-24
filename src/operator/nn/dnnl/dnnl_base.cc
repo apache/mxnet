@@ -364,7 +364,6 @@ dnnl::memory::desc GetDesc(const dnnl::memory::desc& desc, const dnnl_format_tag
     dims[i] = desc.data.dims[i];
   dnnl::memory::format_tag cpp_format = static_cast<dnnl::memory::format_tag>(format);
   dnnl::memory::data_type cpp_type    = static_cast<dnnl::memory::data_type>(desc.data.data_type);
-  dnnl::memory::desc data_md(dims, cpp_type, cpp_format);
   return dnnl::memory::desc(dims, cpp_type, cpp_format);
 }
 

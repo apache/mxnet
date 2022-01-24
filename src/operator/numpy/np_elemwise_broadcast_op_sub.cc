@@ -33,6 +33,10 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_subtract)
                                                     op::mshadow_op::minus,
                                                     op::mshadow_op::mixed_minus,
                                                     op::mshadow_op::mixed_rminus>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", NumpyBinaryOperatorComputeExCPU<op::mshadow_op::minus>)
+    .set_attr<FInferStorageType>("FInferStorageType", NumpyBinaryBroadcastStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_sub"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_sub)

@@ -31,6 +31,7 @@ namespace op {
 
 bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& data, const NDArray& output) {
   const int ndim      = data.shape().ndim();
+  const int in_size   = data.shape().Size();
   const int in_dtype  = data.dtype();
   const int out_dtype = output.dtype();
   const int axis      = CheckAxis(param.axis, ndim);
@@ -44,7 +45,7 @@ bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& data, const ND
   }
 
   // Supports ndim up to 6
-  return (ndim >= 1 && ndim <= 6);
+  return (ndim >= 1 && ndim <= 6 && in_size != 0);
 }
 
 void DNNLSoftmaxForward(const nnvm::NodeAttrs& attrs,

@@ -112,15 +112,6 @@ std::vector<Descriptor> GetSomeAttrs(size_t max_n,
   return ret;
 }
 
-std::vector<int64_t> PackedStrides(const std::vector<size_t>& order,
-                                   const std::vector<int64_t>& dims) {
-  CHECK_EQ(order.size(), dims.size());
-  std::vector<int64_t> ret(dims.size(), 1);
-  for (size_t i = dims.size() - 1; i--;)
-    ret[order[i]] = dims[order[i + 1]] * ret[order[i + 1]];
-  return ret;
-}
-
 std::vector<Descriptor> GetPlans(cudnnBackendHeurMode_t h_mode,
                                  cudnnHandle_t handle,
                                  const Descriptor& op_graph,

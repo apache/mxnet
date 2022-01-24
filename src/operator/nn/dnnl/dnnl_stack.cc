@@ -41,7 +41,7 @@ bool SupportDNNLStack(const std::vector<NDArray>& inputs) {
     if (arr.dtype() != src_dtype) {
       return false;
     }
-    // DO not support zero-size tensors.
+    // Do not support zero-size tensors.
     if (arr.shape().Size() == 0) {
       return false;
     }
