@@ -85,7 +85,7 @@ inline void InitLogging(const char* argv0) {
 // Always-on checking
 #define CHECK(x)                                           \
   if (!(x))                                                \
-    dmlc::LogMessageFatal(__FILE__, __LINE__).stream() << "Check "  \
+    dmlc::LogMessageFatalM(__FILE__, __LINE__).stream() << "Check "  \
       "failed: " #x << ' '
 #define CHECK_LT(x, y) CHECK((x) < (y))
 #define CHECK_GT(x, y) CHECK((x) > (y))
@@ -94,7 +94,7 @@ inline void InitLogging(const char* argv0) {
 #define CHECK_EQ(x, y) CHECK((x) == (y))
 #define CHECK_NE(x, y) CHECK((x) != (y))
 #define CHECK_NOTNULL(x) \
-  ((x) == NULL ? dmlc::LogMessageFatal(__FILE__, __LINE__).stream() << "Check  notnull: "  #x << ' ', (x) : (x)) // NOLINT(*)
+  ((x) == NULL ? dmlc::LogMessageFatalM(__FILE__, __LINE__).stream() << "Check  notnull: "  #x << ' ', (x) : (x)) // NOLINT(*)
 // Debug-only checking.
 #ifdef NDEBUG
 #define DCHECK(x) \
@@ -124,7 +124,7 @@ inline void InitLogging(const char* argv0) {
 #define LOG_INFO dmlc::LogMessage(__FILE__, __LINE__)
 #define LOG_ERROR LOG_INFO
 #define LOG_WARNING LOG_INFO
-#define LOG_FATAL dmlc::LogMessageFatal(__FILE__, __LINE__)
+#define LOG_FATAL dmlc::LogMessageFatalM(__FILE__, __LINE__)
 #define LOG_QFATAL LOG_FATAL
 
 // Poor man version of VLOG
@@ -200,27 +200,27 @@ class LogMessage {
 };
 
 #if DMLC_LOG_FATAL_THROW == 0
-class LogMessageFatal : public LogMessage {
+class LogMessageFatalM : public LogMessage {
  public:
-  LogMessageFatal(const char* file, int line) : LogMessage(file, line) {}
-  ~LogMessageFatal() {
+  LogMessageFatalM(const char* file, int line) : LogMessage(file, line) {}
+  ~LogMessageFatalM() {
     log_stream_ << "\n";
     abort();
   }
 
  private:
-  LogMessageFatal(const LogMessageFatal&);
-  void operator=(const LogMessageFatal&);
+  LogMessageFatalM(const LogMessageFatalM&);
+  void operator=(const LogMessageFatalM&);
 };
 #else
-class LogMessageFatal {
+class LogMessageFatalM {
  public:
-  LogMessageFatal(const char* file, int line) {
+  LogMessageFatalM(const char* file, int line) {
     log_stream_ << "[" << pretty_date_.HumanDate() << "] " << file << ":"
                 << line << ": ";
   }
   std::ostringstream &stream() { return log_stream_; }
-  ~LogMessageFatal() MSHADOW_THROW_EXCEPTION {
+  ~LogMessageFatalM() MSHADOW_THROW_EXCEPTION {
     // throwing out of destructor is evil
     // hopefully we can do it here
 #pragma GCC diagnostic push
@@ -234,8 +234,8 @@ class LogMessageFatal {
  private:
   std::ostringstream log_stream_;
   DateLogger pretty_date_;
-  LogMessageFatal(const LogMessageFatal&);
-  void operator=(const LogMessageFatal&);
+  LogMessageFatalM(const LogMessageFatalM&);
+  void operator=(const LogMessageFatalM&);
 };
 #endif
 
