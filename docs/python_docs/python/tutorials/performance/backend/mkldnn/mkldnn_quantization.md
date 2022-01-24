@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Native model quantization with MKL-DNN backend
+# Quantize with MKL-DNN backend
 
 This document is to introduce how to quantize the customer models from FP32 to INT8 with Apache/MXNet toolkit and APIs under Intel CPU.
 
@@ -155,7 +155,7 @@ cqsym, cqarg_params, aux_params, collector = quantize_graph(sym=sym, arg_params=
                                                           quantized_dtype=quantized_dtype, logger=logger)
 
 # download imagenet validation dataset
-mx.test_utils.download('https://data.mxnet.io/data/val_256_q90.rec', 'dataset.rec')
+mx.test_utils.download('http://data.mxnet.io/data/val_256_q90.rec', 'dataset.rec')
 # set rgb info for data
 mean_std = {'mean_r': 123.68, 'mean_g': 116.779, 'mean_b': 103.939, 'std_r': 58.393, 'std_g': 57.12, 'std_b': 57.375}
 # set batch size
@@ -243,6 +243,8 @@ BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON
 
 - Change calibration dataset by setting different `num_calib_batches` or shuffle your validation dataset;
 
+- Use Intel® Neural Compressor ([see below](#Improving-accuracy-with-Intel-Neural-Compressor))
+
 #### Performance Tuning
 
 - Keep sure to perform graph fusion before quantization;
@@ -255,9 +257,9 @@ BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON
 
 MXNet also supports deploy quantized models with C++. Refer [MXNet C++ Package](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/README.md) for more details.
 
-# Model quantization using Intel® Neural Compressor
+# Improving accuracy with Intel® Neural Compressor
 
-The accuracy of a model can decrease drastically as a result of quantization. In such cases we could try to manually find a better quantization configuration (exclude some layers, try different calibration methods, etc.) but for bigger models, this might prove to be a difficult and time consuming task. [Intel® Neural Compressor](https://github.com/intel/neural-compressor) (INC) tries to automate this process using a set of several tuning heuristics, finding the best quantization configuration that satisfies the specified accuracy requirement. 
+The accuracy of a model can decrease as a result of quantization. When the accuracy drop is significant, we can try to manually find a better quantization configuration (exclude some layers, try different calibration methods, etc.) but for bigger models, this might prove to be a difficult and time consuming task. [Intel® Neural Compressor](https://github.com/intel/neural-compressor) (INC) tries to automate this process using several tuning heuristics, finding the quantization configuration that satisfies the specified accuracy requirement. 
 
 **NOTE:**
 
@@ -269,7 +271,8 @@ Most tuning strategies will try different configurations on an evaluation datase
 
 - Install Intel® Neural Compressor:
   
-  Supported python versions are: 3.6, 3.7, 3.8, 3.9.
+  Use one of the commands below to install INC (supported python versions are: 3.6, 3.7, 3.8, 3.9):
+
   ```bash
   # install stable version from pip
   pip install neural-compressor
@@ -285,8 +288,9 @@ Most tuning strategies will try different configurations on an evaluation datase
 
 Quantization tuning process can be customized in the yaml configuration file. Here is a simple example:
 
-file: cnn.yaml
 ```yaml
+# cnn.yaml
+
 version: 1.0
 
 model:
@@ -303,11 +307,13 @@ tuning:
   accuracy_criterion:
     relative: 0.01
   exit_policy:
-    timeout: 0 # end on the first configuration that meet the accuracy criterion
+    timeout: 0
   random_seed: 9527
 ```
 
 We are using the `basic` strategy, but you could also try out different ones. [Here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md) you can find a list of strategies available in INC and details of how they work. You can also add your own strategy if the existing ones do not suit your needs.
+
+Since the value of `timeout` is 0, INC will run until it finds a configuration that satisfy the accuracy criterion and then exit. Depending on the strategy this may not be ideal, as sometimes it would be better to further explore the tuning space to find a superior configuration both in terms of accuracy and speed. To achive this, we can set a specific timeout - how long (in seconds) do we want INC to run.
 
 For more information about the configuration file, see the [template](https://github.com/intel/neural-compressor/blob/master/neural_compressor/template/ptq.yaml) from the official INC repo. Keep in mind that only the `post training quantization` is currently supported for MXNet.
 
@@ -319,7 +325,9 @@ In general, Intel® Neural Compressor requires 4 elements in order to run:
 3. Calibration dataloader
 4. Evaluation function - a function that takes a model as an argument and returns the accuracy it achieves on a certain evaluation dataset.
 
-Here is how to achieve the quantization using INC:
+### Quantizing ResNet
+
+The previous sections described how to quantize ResNet using the native MXNet quantization. This example shows how we can achieve the same (plus the auto-tuning) using INC.
 
 1. Get the model
 
@@ -339,7 +347,7 @@ resnet18 = vision.resnet18_v1(pretrained=True)
 2. Prepare the dataset:
 
 ```python
-mx.test_utils.download('https://data.mxnet.io/data/val_256_q90.rec', 'data/val_256_q90.rec')
+mx.test_utils.download('http://data.mxnet.io/data/val_256_q90.rec', 'data/val_256_q90.rec')
 
 batch_size = 16
 mean_std = {'mean_r': 123.68, 'mean_g': 116.779, 'mean_b': 103.939,
@@ -384,13 +392,155 @@ quantizer.eval_func = eval_func
 qnet = quantizer().model
 ```
 
+Since this model already achieves good accuracy using native quantization (less than 1% accuracy drop), for the given configuration file, INC will end on the first configuration, quantizing all layers using `naive` calibration mode for each. To see the true potential of INC, we need a model which suffers from a larger accuracy drop after quantization.
+
+### Quantizing BERT
+
+This example shows how to use INC to quantize BERT-base for MRPC. In this case, the native MXNet quantization usually introduce a significant accuracy drop (2% - 5% using `naive` calibration mode).  To simplify the code, model and task specific boilerplate has been moved to the `details.py` file.
+
+Here is the configuration file:
+```yaml
+version: 1.0
+
+model:
+  name: bert
+  framework: mxnet
+
+quantization:
+  calibration:
+    sampling_size: 320 # number of samples for calibration
+
+tuning:
+  strategy:
+    name: basic
+  accuracy_criterion:
+    relative: 0.01
+  exit_policy:
+    timeout: 0
+    max_trials: 9999 # default is 100
+  random_seed: 9527
+```
+
+And here is the script:
+
+```python
+from pathlib import Path
+from functools import partial
+
+import details
+from neural_compressor.experimental import Quantization, common
+
+# constants
+INC_CONFIG_PATH = Path('./bert.yaml').resolve()
+PARAMS_PATH = Path('./bert_mrpc.params').resolve()
+OUTPUT_DIR_PATH = Path('./output/').resolve()
+OUTPUT_MODEL_PATH = OUTPUT_DIR_PATH/'quantized_model'
+OUTPUT_DIR_PATH.mkdir(parents=True, exist_ok=True)
+
+# Prepare the dataloaders (calib_dataloader is same as train_dataloader but without shuffling)
+train_dataloader, dev_dataloader, calib_dataloader = details.preprocess_data()
+
+# Get the model
+model = details.BERTModel(details.BACKBONE, dropout=0.1, num_classes=details.NUM_CLASSES)
+model.hybridize(static_alloc=True)
+
+# finetune or load the parameters of already finetuned model
+if not PARAMS_PATH.exists():
+    model = details.finetune(model, train_dataloader, dev_dataloader, OUTPUT_DIR_PATH)
+    model.save_parameters(str(PARAMS_PATH))
+else:
+    model.load_parameters(str(PARAMS_PATH), ctx=details.CTX, cast_dtype=True)
+
+# run INC
+calib_dataloader.batch_size = details.BATCH_SIZE
+eval_func = partial(details.evaluate, dataloader=dev_dataloader)
+
+quantizer = Quantization(str(INC_CONFIG_PATH))  # 1. Config file
+quantizer.model = common.Model(model)           # 2. Model to be quantized
+quantizer.calib_dataloader = calib_dataloader   # 3. Calibration dataloader
+quantizer.eval_func = eval_func                 # 4. Evaluation function
+quantized_model = quantizer.fit().model
+
+# save the quantized model
+quantized_model.export(str(OUTPUT_MODEL_PATH))
+```
+
+With the evaluation function hidden in the `details.py` file:
+
+```python
+def evaluate(model, dataloader):
+    metric = METRIC()
+    for batch in dataloader:
+        input_ids, segment_ids, valid_length, label = batch
+        input_ids = input_ids.as_in_context(CTX)
+        segment_ids = segment_ids.as_in_context(CTX)
+        valid_length = valid_length.as_in_context(CTX)
+        label = label.as_in_context(CTX).reshape((-1))
+
+        out = model(input_ids, segment_ids, valid_length)
+        metric.update([label], [out])
+
+    metric_name, metric_val = metric.get()
+    return metric_val
+```
+
+For comparision, this is how one could quantize this model using MXNet native quantization (this function is also located in the `details.py` file):
+
+```python
+def native_quantization(model, calib_dataloader, dev_dataloader):
+    quantized_model = quantize_net_v2(model,
+                                      quantize_mode='smart',
+                                      calib_data=calib_dataloader,
+                                      calib_mode='naive',
+                                      num_calib_examples=BATCH_SIZE*10)
+    print('Native quantization results: {}'.format(evaluate(quantized_model, dev_dataloader)))
+    return quantized_model
+```
+
+For complete code, see this example on the [official GitHub repository](TODO link).
+
+#### Results:
+
+Results of the f32 model on the dev split: Accuracy = 0.8529, F1 = 0.8940
+
+Results of quantized models on the dev split:
+
+|      Quantization method     | Accuracy |   F1   | Relative accuracy loss [%] | Calibration/tuning  time [s] |
+|:----------------------------:|:--------:|:------:|:--------------------------:|:----------------------------:|
+| Native 'naive', 10 batches   |  0.8309  | 0.8799 |           2.5794           |              35              |
+| Native 'naive', 20 batches   |  0.8284  | 0.8783 |           2.8725           |              65              |
+| Native 'entropy', 10 batches |  0.7524  | 0.7856 |           11.7833          |              60              |
+| Native 'entropy', 20 batches |  0.7107  | 0.7388 |           16.6725          |              122             |
+| INC, 'basic'                 |  0.8480  | 0.8918 |           0.5745           |              352             |
+| INC, 'bayesian'              |  0.8529  | 0.8935 |              0             |              242             |
+| INC, 'mse'                   |  0.8456  | 0.8957 |           0.8559           |              703             |
+
+We can see that all INC strategies found configurations meeting the 1% relative accuracy loss criterion.
+
+Configuration generated by INC with `basic` strategy:
+
+- Layers quantized using min-max (`naive`) calibration algorithm: 
+    ```
+    {'bertclassifier0_dropout0_fwd', 'bertencoder0_layernorm0_layernorm0', 'bertencoder0_transformer0_dotproductselfattentioncell0_dropout0_fwd', ..., 'sg_mkldnn_fully_connected_0', 'sg_mkldnn_fully_connected_1', ..., 'sg_mkldnn_selfatt_valatt_7', 'sg_mkldnn_selfatt_valatt_9'}
+    ```
+
+- Layers quantized using KL (`entropy`) calibration algorithm: 
+    ```
+    {'sg_mkldnn_selfatt_qk_2', 'sg_mkldnn_selfatt_qk_4', ..., 'sg_mkldnn_selfatt_qk_20', 'sg_mkldnn_selfatt_qk_22'}
+    ```
+
+- Layers excluded from quantization: 
+    ```
+    {'sg_mkldnn_fully_connected_39'}
+    ```
+
 ## Tips
 - In order to get a solution that generalizes well, evaluate the model (in eval_func) on a representative dataset.
-- Using `history.snapshot` file (generated by INC) you can recover any model that was generated during the tuning process:
+- With `history.snapshot` file (generated by INC) you can recover any model that was generated during the tuning process:
   ```python
   from neural_compressor.utils.utility import recover
 
-  qmodel = recover(f32_model, 'nc_workspace/<tuning date>/history.snapshot', 1)
+  quantized_model = recover(f32_model, 'nc_workspace/<tuning date>/history.snapshot', configuration_idx)
   ```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
