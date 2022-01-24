@@ -20,6 +20,7 @@
 
 /*!
  * \file dnnl_quantized_transpose.cc
+ * \author: Rafal Litka, rafal.litka@intel.com
  */
 #if MXNET_USE_ONEDNN == 1
 #include "../../nn/dnnl/dnnl_transpose-inl.h"
@@ -38,19 +39,32 @@ inline static bool QuantizedTransposeStorageType(const nnvm::NodeAttrs& attrs,
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
+bool SupportDNNLQuantizedTranspose(const NDArray& data) {
+  auto data_ndim = data.shape().ndim();
+
+  if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0)
+    return false;
+
+  return true;
+}
+
 static void DNNLQuantizedTransposeForward(const nnvm::NodeAttrs& attrs,
                                           const OpContext& ctx,
                                           const std::vector<NDArray>& inputs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
   CHECK(inputs[0].dtype() == mshadow::kUint8 || inputs[0].dtype() == mshadow::kInt8)
-      << "dnnl_quantized_pooling op only supports uint8 and int8 as input type";
+      << "dnnl_quantized_transpose only supports uint8 and int8 as input type";
   if (req[0] == kNullOp) {
     return;
   }
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 3U);
-  DNNLRun(DNNLTransposeForward<TransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportDNNLQuantizedTranspose(inputs[0])) {
+    DNNLRun(DNNLTransposeForward<TransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  }
   outputs[1].data().dptr<float>()[0] = inputs[1].data().dptr<float>()[0];
   outputs[2].data().dptr<float>()[0] = inputs[2].data().dptr<float>()[0];
 }

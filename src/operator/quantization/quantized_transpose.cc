@@ -19,6 +19,7 @@
 
 /*!
  * \file quantized_transpose.cc
+ * \author: Rafal Litka, rafal.litka@intel.com
  */
 #include <mxnet/op_attr_types.h>
 #include "../tensor/matrix_op-inl.h"
@@ -83,7 +84,9 @@ NNVM_REGISTER_OP(_contrib_quantized_transpose)
         [](const NodeAttrs& attrs) {
           return std::vector<std::pair<int, int> >{{0, 0}, {1, 1}, {2, 2}};
         })
-    .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
+    .set_attr<FQuantizable>("FQuantizable",
+                            [](const NodeAttrs& attrs) { return QuantizeType::kSupport; })
+    .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")
     .add_argument("min_data",
                   "NDArray-or-Symbol",
                   "The minimum scalar value "
