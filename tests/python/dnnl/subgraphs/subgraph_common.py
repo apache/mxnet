@@ -42,7 +42,10 @@ config =  {
   }
 }
 
-DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
+DATA_SHAPE=[(64, 4, 10, 10), (4, 4, 24, 24), (1, 16, 32, 32)]
+# Second shape has been temporairly changed from (4, 3, 24, 24) to (4, 4, 24, 24) due to
+# a bug regarding conv+sum fuse with the amount of input channels < 4. It will be reverted
+# as soon as the problem is fixed. Issue: https://github.com/apache/incubator-mxnet/issues/20826.
 
 # Helpers
 class RELU6(nn.HybridBlock):
