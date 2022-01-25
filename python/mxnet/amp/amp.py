@@ -37,7 +37,7 @@ from ..device import gpu
 from ..symbol import Symbol
 from ..symbol import contrib as symbol_contrib
 from .. import ndarray
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, bfloat16
 from . import lists
 from ..gluon import Block, trainer
 from .. import base
@@ -48,8 +48,6 @@ from .. import optimizer as opt
 from .loss_scaler import LossScaler
 from ..operator import get_all_registered_operators_grouped
 from ..util import wrap_ctx_to_device_func
-
-bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
 float_types_gpu = (np.float16, np.float32)
 float_types_cpu = (bfloat16, np.float32)
@@ -429,7 +427,7 @@ def unscale(optimizer_or_trainer):
 
 def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                    fp32_ops=None, conditional_fp32_ops=None,
-                   excluded_sym_names=None, data_names=None,
+                   excluded_sym_names=[], data_names=None,
                    cast_optional_params=False):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_dtype_ops, fp32_ops,
@@ -465,30 +463,27 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
         overhead of the model if casted.
     """
     assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
+    assert target_dtype_ops is None or isinstance(target_dtype_ops, list), \
+        "target_dtype_ops should be a list of strs"
+    assert fp32_ops is None or isinstance(fp32_ops, list), \
+        "fp32_ops should be a list of strs"
+    assert conditional_fp32_ops is None or isinstance(conditional_fp32_ops, list), \
+        "conditional_fp32_ops should be a list"
 
-    if isinstance(target_dtype, np.dtype):
-        target_dtype_name = target_dtype.names[0] if target_dtype.names else target_dtype.name
-    else:
-        target_dtype_name = target_dtype
-    assert target_dtype_name in ['float16', 'bfloat16'], \
-               "Only target_dtype float16 and bfloat16 are supported currently"
-
-    if target_dtype_name == 'bfloat16':
+    if target_dtype in [bfloat16, bfloat16.names[0]]:
         target_dtype = bfloat16
-
-    if target_dtype_ops is not None:
-        assert isinstance(target_dtype_ops, list), "target_dtype_ops should be a list of strs"
+        target_dtype_name = bfloat16.names[0]
     else:
+        target_dtype = np.dtype(target_dtype)
+        target_dtype_name = target_dtype.name
+    assert target_dtype_name in ['float16', 'bfloat16'], \
+        "Only target_dtype float16 and bfloat16 are supported currently"
+
+    if target_dtype_ops is None:
         target_dtype_ops = list_lp16_ops(target_dtype)
-
-    if fp32_ops is not None:
-        assert isinstance(fp32_ops, list), "fp32_ops should be a list of strs"
-    else:
+    if fp32_ops is None:
         fp32_ops = list_fp32_ops(target_dtype)
-
-    if conditional_fp32_ops is not None:
-        assert isinstance(conditional_fp32_ops, list), "conditional_fp32_ops should be a list"
-    else:
+    if conditional_fp32_ops is None:
         conditional_fp32_ops = list_conditional_fp32_ops(target_dtype)
 
     original_conditional_op_names = []
@@ -497,18 +492,13 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     param_vals = []
     indptr = [0]
     for conditional_fp32_op in conditional_fp32_ops:
-        assert isinstance(conditional_fp32_op[0], str) and isinstance(conditional_fp32_op[1], str) \
-            and isinstance(conditional_fp32_op[2], list), "conditional_fp32_ops should be a list of " \
-                                                          "(str, str, list of str)"
+        assert (isinstance(conditional_fp32_op[0], str) and isinstance(conditional_fp32_op[1], str)
+                and isinstance(conditional_fp32_op[2], list)), \
+            "conditional_fp32_ops should be a list of (str, str, list of str)"
         param_vals += conditional_fp32_op[2]
         indptr.append(len(param_vals))
         param_names.append(conditional_fp32_op[1])
         conditional_op_names.append(conditional_fp32_op[0])
-
-    if excluded_sym_names is not None:
-        assert isinstance(excluded_sym_names, list), "excluded_sym_names should be a list of strs"
-    else:
-        excluded_sym_names = []
 
     for original_conditional_fp32_op in list_conditional_fp32_ops(target_dtype):
         original_conditional_op_names.append(original_conditional_fp32_op[0])
@@ -538,10 +528,6 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                             Op %s not in any of them''' % (illegal_ops)
 
     widest_dtype_ops = list_widest_type_cast(target_dtype)
-    if target_dtype == bfloat16:
-        target_dtype = _DTYPE_NP_TO_MX[bfloat16]
-    else:
-        target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
     # Prepare a data_names list based on list_inputs if its not provided
     # Add all names in list for the nodes in the symbol which don't have
@@ -572,7 +558,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                                             c_array_buf(ctypes.c_int, array('i', sdata)),
                                             mx_uint(len(indptr)),
                                             c_array_buf(ctypes.c_int, array('i', indptr)),
-                                            ctypes.byref(ctypes.c_int(target_dtype)),
+                                            ctypes.byref(ctypes.c_int(dtype_np_to_mx(target_dtype))),
                                             ctypes.c_int(cast_optional_params),
                                             mx_uint(len(target_dtype_ops)),
                                             mx_uint(len(fp32_ops)),
@@ -592,7 +578,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     return Symbol(out)
 
 def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dtype_ops=None,
-                  fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=None,
+                  fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=[],
                   cast_optional_params=False):
     """API for converting a model from FP32 model to a mixed precision model.
     MXNet tries to convert the FP32 model to mixed precision model by adding
@@ -631,15 +617,6 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
-    if excluded_sym_names is None:
-        excluded_sym_names = []
-        if not isinstance(excluded_sym_names, list):
-            raise ValueError('excluded_sym_names must be a list of strings representing'
-                             ' the names of the symbols that should not be casted,'
-                             ' while received type %s' % str(type(excluded_sym_names)))
-    assert target_dtype in ['float16', 'bfloat16'], \
-               "Only target_dtype float16 and bfloat16 are supported currently"
-
     assert isinstance(sym, Symbol), "First argument to convert_model should be Symbol"
     assert isinstance(arg_params, dict), "Second argument to convert_model should be a dict of name to ndarray"
     assert isinstance(aux_params, dict), "Third argument to convert_model should be a dict of name to ndarray"
@@ -657,22 +634,14 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     attr_dict = sym.attr_dict()
     for sym_name in sym.list_arguments():
         if attr_dict.get(sym_name, {}).get("__dtype__", "-1") != "-1" and sym_name in arg_params:
-            typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
-            if arg_params[sym_name].dtype == typ:
-                continue
-            if typ == bfloat16:
-                arg_params[sym_name] = _cast_symbol_NDArray(arg_params[sym_name], bfloat16, isinstance(arg_params[sym_name], numpy.ndarray))
-            else:
+            typ = dtype_mx_to_np(int(attr_dict[sym_name]["__dtype__"]))
+            if arg_params[sym_name].dtype != typ:
                 arg_params[sym_name] = arg_params[sym_name].astype(typ)
 
     for sym_name in sym.list_auxiliary_states():
         if attr_dict.get(sym_name, {}).get("__dtype__", "-1") != "-1" and sym_name in aux_params:
-            typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
-            if aux_params[sym_name].dtype == typ:
-                continue
-            if typ == bfloat16:
-                aux_params[sym_name] = _cast_symbol_NDArray(aux_params[sym_name], bfloat16, isinstance(aux_params[sym_name], numpy.ndarray))
-            else:
+            typ = dtype_mx_to_np(int(attr_dict[sym_name]["__dtype__"]))
+            if aux_params[sym_name].dtype != typ:
                 aux_params[sym_name] = aux_params[sym_name].astype(typ)
 
     # Return the converted symbol and casted params
@@ -681,7 +650,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 @wrap_ctx_to_device_func
 def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
-                         excluded_sym_names=None, device=gpu(0),
+                         excluded_sym_names=[], device=gpu(0),
                          cast_optional_params=False):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
     return a block with mixed precision support which can be used for inference use cases.
@@ -718,62 +687,28 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
             "Please first call block.hybridize() and then run forward with "
             "this block at least once before calling export.")
 
-    # Prepare inputs to pass to the convert_symbol API
-    inputs, _ = block._cached_graph
-    sym, _ = block.export(None, remove_amp_cast=False)
-    input_names = []
-    for inp in inputs:
-        input_names.append(inp.name)
-    converted_sym = convert_symbol(sym, target_dtype, target_dtype_ops,
-                                   fp32_ops, conditional_fp32_ops,
-                                   excluded_sym_names, data_names=input_names,
-                                   cast_optional_params=cast_optional_params)
-
-    arg_names = set(converted_sym.list_arguments())
-    aux_names = set(converted_sym.list_auxiliary_states())
-    arg_dict = {}
-
-    # If dtype for the param was set in the json, cast the
-    # param to this dtype
-    attr_dict = converted_sym.attr_dict()
-    for name, param in block.collect_params().items():
-        if name in arg_names:
-            arg_name = 'arg:%s' % name
-            arg_dict[arg_name] = param._reduce()
-            if attr_dict.get(name, {}).get("__dtype__", "-1") != "-1":
-                typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
-                if arg_dict[arg_name].dtype == typ:
-                    continue
-                if typ == bfloat16:
-                    arg_dict[arg_name] = _cast_symbol_NDArray(arg_dict[arg_name], bfloat16, isinstance(arg_dict[arg_name], numpy.ndarray))
-                else:
-                    arg_dict[arg_name] = arg_dict[arg_name].astype(typ)
+    sym, params = block.export(None, remove_amp_cast=False)
+    args, auxs = {}, {}
+    for name, data in params.items():
+        if name.startswith('arg:'):
+            arg_name = name[len('arg:'):]
+            args[arg_name] = data
         else:
-            assert name in aux_names
-            aux_name = 'aux:%s' % name
-            arg_dict[aux_name] = param._reduce()
-            if attr_dict.get(name, {}).get("__dtype__", "-1") != "-1":
-                typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
-                if arg_dict[aux_name].dtype == typ:
-                    continue
-                if typ == bfloat16:
-                    arg_dict[aux_name] = _cast_symbol_NDArray(arg_dict[aux_name], 'bfloat16', isinstance(arg_dict[aux_name], numpy.ndarray))
-                else:
-                    arg_dict[aux_name] = arg_dict[aux_name].astype(typ)
+            assert name.startswith('aux:')
+            aux_name = name[len('aux:'):]
+            auxs[aux_name] = data
+    input_names = set(sym.list_arguments()) - (set(args.keys()) | set(auxs.keys()))
 
-    # Create a symbolblock and cast the params to the dtypes based
-    # on the dtype information from the converted_symbol
-    ret = SymbolBlock(converted_sym, inputs)
-    for key, param in ret.collect_params().items():
-        arg_param_name = "arg:%s" % key
-        if arg_param_name in arg_dict and param.dtype != arg_dict[arg_param_name].dtype:
-            param.cast(arg_dict[arg_param_name].dtype)
+    lp_sym, lp_args, lp_auxs = convert_model(sym, args, auxs, target_dtype, target_dtype_ops,
+                                             fp32_ops, conditional_fp32_ops, excluded_sym_names, 
+                                             cast_optional_params)
 
-        aux_param_name = "aux:%s" % key
-        if aux_param_name in arg_dict and param.dtype != arg_dict[aux_param_name].dtype:
-            param.cast(arg_dict[aux_param_name].dtype)
+    inputs = [in_sym for in_sym in lp_sym.get_inputs() if in_sym.name in input_names]
+    param_dict = lp_args
+    param_dict.update(lp_auxs)
 
-    ret.load_dict(arg_dict, device=device)
+    ret = SymbolBlock(lp_sym, inputs)
+    ret.load_dict(param_dict, device=device, cast_dtype=True, dtype_source='saved')
     return ret
 
 def list_lp16_ops(target_dtype):

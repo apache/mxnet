@@ -37,7 +37,7 @@ import warnings
 import numpy as _np
 from .. import _deferred_compute as dc
 from ..autograd import is_recording
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
+from ..ndarray import NDArray, dtype_np_to_mx, _GRAD_REQ_MAP
 from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_code,\
                       get_oshape_of_gather_nd_op
 from ..ndarray._internal import _set_np_ndarray_class
@@ -132,7 +132,7 @@ def _new_alloc_handle(shape, device, delay_alloc, dtype=mx_real_t):  # pylint: d
             ctypes.c_int(device.device_typeid),
             ctypes.c_int(device.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[_np.dtype(dtype).type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             ctypes.byref(hdl)))
     else:
         # When shape is larger than uint32 then there is an overflow error at python end itself.
@@ -144,17 +144,13 @@ def _new_alloc_handle(shape, device, delay_alloc, dtype=mx_real_t):  # pylint: d
             raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
                             "larger than 2^31 elements. Please build with flag " +
                             "USE_INT64_TENSOR_SIZE=1")
-        if _np.dtype(dtype) == _np.dtype([('bfloat16', _np.uint16)]):
-            dtype_type = _np.dtype(dtype)
-        else:
-            dtype_type = _np.dtype(dtype).type
         check_call(_LIB.MXNDArrayCreate(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(device.device_typeid),
             ctypes.c_int(device.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             ctypes.byref(hdl)))
     return hdl
 

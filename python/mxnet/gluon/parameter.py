@@ -295,24 +295,17 @@ class Parameter(object):
             self.shape = tuple(i if i != unknown_dim_size else j
                                for i, j in zip(self.shape, data.shape))
         if self.dtype:
-            if cast_dtype and np.dtype(self.dtype).type != data.dtype:
+            if cast_dtype and self.dtype != data.dtype:
                 if dtype_source == 'current':
                     data = data.astype(self.dtype, copy=False)
                 elif dtype_source == 'saved':
                     self.dtype = data.dtype
             else:
-                if data.dtype == np.dtype([('bfloat16', np.uint16)]):
-                    assert np.dtype(self.dtype) == data.dtype, \
-                    "Failed loading Parameter '%s' from saved params: " \
-                    "dtype incompatible expected %s vs saved %s. " \
-                    "Set cast_dtype=True to cast the dtype of saved params."%(
-                        self.name, str(self.dtype), str(data.dtype))
-                else:
-                    assert np.dtype(self.dtype).type == data.dtype, \
-                    "Failed loading Parameter '%s' from saved params: " \
-                    "dtype incompatible expected %s vs saved %s. " \
-                    "Set cast_dtype=True to cast the dtype of saved params."%(
-                        self.name, str(self.dtype), str(data.dtype))
+                assert self.dtype == data.dtype, \
+                "Failed loading Parameter '%s' from saved params: " \
+                "dtype incompatible expected %s vs saved %s. " \
+                "Set cast_dtype=True to cast the dtype of saved params."%(
+                    self.name, str(self.dtype), str(data.dtype))
         if self._stype != data.stype:
             data = data.tostype(self._stype)
         if isinstance(device, Device):

@@ -46,20 +46,22 @@ from . import _internal
 from . import op
 from ._internal import NDArrayBase
 
-__all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
+__all__ = ["NDArray", "concatenate", "dtype_np_to_mx", "dtype_mx_to_np", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "linspace", "eye", "divide", "equal", "full", "greater",
            "greater_equal", "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or",
            "logical_xor", "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal",
            "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
            "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
            "from_numpy", "zeros", "indexing_key_expand_implicit_axes", "get_indexing_dispatch_code",
-           "get_oshape_of_gather_nd_op"]
+           "get_oshape_of_gather_nd_op", "bfloat16"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
 _STORAGE_TYPE_ROW_SPARSE = 1
 _STORAGE_TYPE_CSR = 2
 _SIGNED_INT32_UPPER_LIMIT = (2**31 - 1)
+
+bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
@@ -76,7 +78,7 @@ _DTYPE_NP_TO_MX = {
     np.uint16 : 9,
     np.uint32 : 10,
     np.uint64 : 11,
-    np.dtype([('bfloat16', np.uint16)]): 12,
+    bfloat16: 12,
 }
 
 def _register_platform_dependent_mx_dtype():
@@ -108,8 +110,26 @@ _DTYPE_MX_TO_NP = {
     9: np.uint16,
     10: np.uint32,
     11: np.uint64,
-    12: np.dtype([('bfloat16', np.uint16)]),
+    12: bfloat16,
 }
+
+
+def get_dtype_type(dtype):
+    if dtype in [bfloat16, bfloat16.names[0]]:
+        return bfloat16
+    return np.dtype(dtype).type
+
+
+def dtype_np_to_mx(dtype):
+    dtype_type = get_dtype_type(dtype)
+    if dtype_type not in _DTYPE_NP_TO_MX:
+        raise TypeError('dtype must be one of: ' + str(_DTYPE_NP_TO_MX))
+    return _DTYPE_NP_TO_MX[dtype_type]
+
+
+def dtype_mx_to_np(dtype_idx):
+    return _DTYPE_MX_TO_NP[dtype_idx]
+
 
 _STORAGE_TYPE_STR_TO_ID = {
     'undefined': _STORAGE_TYPE_UNDEFINED,
@@ -179,17 +199,13 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """
     hdl = NDArrayHandle()
     if _int64_enabled():
-        if np.dtype(dtype) == np.dtype([('bfloat16', np.uint16)]):
-            dtype_type = np.dtype(dtype)
-        else:
-            dtype_type = np.dtype(dtype).type
         check_call(_LIB.MXNDArrayCreate64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             ctypes.byref(hdl)))
     else:
         # When shape is larger than unit32 then there is an overflow error at python end itself.
@@ -201,17 +217,13 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
                             "larger than 2^31 elements. Please build with flag " +
                             "USE_INT64_TENSOR_SIZE=1")
-        if np.dtype(dtype) == np.dtype([('bfloat16', np.uint16)]):
-            dtype_type = np.dtype(dtype)
-        else:
-            dtype_type = np.dtype(dtype).type
         check_call(_LIB.MXNDArrayCreate(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             ctypes.byref(hdl)))
     return hdl
 
@@ -223,7 +235,7 @@ def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
         ctypes.c_int(shared_id),
         c_array(mx_int, shape),
         mx_int(len(shape)),
-        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+        ctypes.c_int(int(dtype_np_to_mx(dtype))),
         ctypes.byref(hdl)))
     return hdl
 
@@ -460,7 +472,7 @@ fixed-size items.
 
     def __str__(self):
         """Returns a readable string representation of the array."""
-        if self.dtype == np.dtype([('bfloat16', np.uint16)]):
+        if self.dtype == bfloat16:
             return super(NDArray, self.astype(float)).__str__()
         else:
             return super(NDArray, self).__str__()
@@ -2565,7 +2577,7 @@ fixed-size items.
         mx_dtype = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetDType(
             self.handle, ctypes.byref(mx_dtype)))
-        return _DTYPE_MX_TO_NP[mx_dtype.value]
+        return dtype_mx_to_np(mx_dtype.value)
 
     @property
     def stype(self):

@@ -24,6 +24,7 @@ import warnings
 import collections
 import ctypes
 from mxnet import amp
+from mxnet.amp.amp import bfloat16
 import pytest
 from mxnet.test_utils import set_default_device, same_symbol_structure, assert_almost_equal
 from mxnet.gluon.model_zoo.vision import get_model
@@ -31,7 +32,6 @@ from mxnet.gluon import SymbolBlock, nn, rnn
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 
-bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
 def test_amp_coverage():
     conditional = [item[0] for item in amp.lists.symbol_bf16.CONDITIONAL_FP32_FUNCS]

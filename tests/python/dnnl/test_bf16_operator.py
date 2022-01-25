@@ -25,6 +25,7 @@ import collections
 import ctypes
 import itertools
 from mxnet import amp
+from mxnet.amp.amp import bfloat16
 from mxnet.test_utils import set_default_device, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
@@ -32,7 +33,6 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 import pytest
 
-bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
 def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf16_use_fp32_params=False, rtol=1e-1, atol=5e-1, etol=0):
     """

@@ -36,6 +36,7 @@ from numpy.testing import assert_allclose, assert_array_equal, assert_array_almo
 import mxnet.autograd
 from mxnet.base import integer_types
 from mxnet.ndarray.ndarray import py_slice
+from mxnet.amp.amp import bfloat16
 
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -2058,7 +2059,7 @@ def test_load_saved_gpu_array_when_no_gpus_are_present():
     array.__setstate__(ndarray_state)
 
 def test_readable_bfloat16_print():
-    arr_bfloat16 = mx.nd.linspace(0, 1, 16).reshape((2, 2, 2, 2)).astype(np.dtype([('bfloat16', np.uint16)]))
+    arr_bfloat16 = mx.nd.linspace(0, 1, 16).reshape((2, 2, 2, 2)).astype(bfloat16)
     arr_uint16 = arr_bfloat16.asnumpy()
     arr_float = arr_bfloat16.astype(float)
     assert (arr_bfloat16.__str__() == arr_float.__str__())

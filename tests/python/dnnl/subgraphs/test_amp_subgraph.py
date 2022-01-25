@@ -24,9 +24,10 @@ from subgraph_common import SG_PASS_NAME
 from test_matmul_subgraph import MultiHeadAttention
 
 AMP_SG_PASS_NAME = 'ONEDNN_AMP'
+AMP_DTYPE = bfloat16
 
 
-def check_amp_with_quantization(sym_fp32, args, quantized_nodes, amp_dtype):
+def check_amp_with_quantization(sym_fp32, args, quantized_nodes):
   nodes = {n['name'] for n in json.loads(sym_fp32[0].tojson())['nodes'] if n['op'] != 'null'}
   quant_excluded_nodes = list(nodes - set(quantized_nodes))
 
@@ -36,7 +37,7 @@ def check_amp_with_quantization(sym_fp32, args, quantized_nodes, amp_dtype):
   _, calib_tensors1 = mx.contrib.quantization._quantize_symbol(
       sym_fp32, mx.cpu(), excluded_symbols=quant_excluded_nodes)
 
-  sym_lp, _, _ = amp.convert_model(sym_fp32, args, {}, target_dtype=amp_dtype,
+  sym_lp, _, _ = amp.convert_model(sym_fp32, args.copy(), {}, target_dtype=AMP_DTYPE,
                                    excluded_sym_names=quantized_nodes,
                                    cast_optional_params=True)
   sym_sg_lp = sym_lp.get_backend_symbol(AMP_SG_PASS_NAME)  # fuse amp casts
@@ -55,14 +56,13 @@ def same_graph_structure(symnet1, symnet2, expected):
       break
 
 
-def check_amp_fuse(sym_fp32, any_input_name, args, dtype, expected_sym=None, quantized_nodes=[],
+def check_amp_fuse(sym_fp32, any_input_name, args, expected_sym=None, quantized_nodes=[],
                    rtol=0.05, inputs_casted=True):
-  args = args.copy()
   ex_ref = sym_fp32._bind(mx.cpu(), args)
   out_ref = ex_ref.forward()[0]
 
   sym_sg_fp32 = sym_fp32.get_backend_symbol(SG_PASS_NAME)  # amp pass works only on onednn nodes
-  sym_sg_lp, args_sg_lp, _ = amp.convert_model(sym_sg_fp32, args, {}, target_dtype=dtype,
+  sym_sg_lp, args_sg_lp, _ = amp.convert_model(sym_sg_fp32, args.copy(), {}, target_dtype=AMP_DTYPE,
                                                excluded_sym_names=quantized_nodes,
                                                cast_optional_params=True)
   sym_sg_lp = sym_sg_lp.get_backend_symbol(AMP_SG_PASS_NAME)
@@ -71,7 +71,7 @@ def check_amp_fuse(sym_fp32, any_input_name, args, dtype, expected_sym=None, qua
 
   no_input_args = args.copy()
   no_input_args.pop(any_input_name)
-  sym_sg_lp_no_args, _, _ = amp.convert_model(sym_sg_fp32, no_input_args, {}, target_dtype=dtype,
+  sym_sg_lp_no_args, _, _ = amp.convert_model(sym_sg_fp32, no_input_args, {}, target_dtype=AMP_DTYPE,
                                               excluded_sym_names=quantized_nodes,
                                               cast_optional_params=True)
   sym_sg_lp_no_args = sym_sg_lp_no_args.get_backend_symbol(AMP_SG_PASS_NAME)
@@ -88,9 +88,10 @@ def check_amp_fuse(sym_fp32, any_input_name, args, dtype, expected_sym=None, qua
       same_graph_structure(sym_sg_lp_no_args, expected_sym, False)
 
   # check amp with quantization
-  check_amp_with_quantization(sym_fp32, args, quantized_nodes, dtype)
+  check_amp_with_quantization(sym_fp32, args, quantized_nodes)
 
 
+@use_np
 def test_amp_fc():
   data_nd = mx.random.uniform(-1, 1, shape=(1, 8), dtype='float32')
   weight1_nd = mx.random.normal(-0.1, 0.1, shape=(16, data_nd.shape[1]), dtype='float32')
@@ -117,10 +118,11 @@ def test_amp_fc():
                                      num_hidden=weight2_nd.shape[0])
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
 
-  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym)
-  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_fully_connected_1'])
+  check_amp_fuse(sym, 'data', args, exp_sym)
+  check_amp_fuse(sym, 'data', args, exp_sym, ['sg_onednn_fully_connected_1'])
 
 
+@use_np
 def test_amp_conv():
   data_nd = mx.random.uniform(-1, 1, shape=(1, 3, 8, 8), dtype='float32')
   weight1_nd = mx.random.normal(-0.1, 0.1, shape=(8, 3, 3, 3), dtype='float32')
@@ -147,15 +149,15 @@ def test_amp_conv():
                                     num_filter=weight2_nd.shape[0])
   exp_amp_cast = mx.symbol.amp_cast(exp_conv2, dtype='float32')
   exp_sym = exp_amp_cast.get_backend_symbol(SG_PASS_NAME)
-  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym)
+  check_amp_fuse(sym, 'data', args, exp_sym)
 
   exp_conv1 = mx.symbol.Convolution(data=data, weight=weight1, bias=bias1, kernel=weight1_nd.shape[2:],
                                     num_filter=weight1_nd.shape[0])
-  exp_amp_cast = mx.symbol.amp_cast(exp_conv1, dtype=bfloat16)
+  exp_amp_cast = mx.symbol.amp_cast(exp_conv1, dtype=AMP_DTYPE)
   exp_conv2 = mx.symbol.Convolution(data=exp_amp_cast, weight=weight2, no_bias=True, kernel=weight2_nd.shape[2:],
                                     num_filter=weight2_nd.shape[0])
   exp_sym = exp_conv2.get_backend_symbol(SG_PASS_NAME)
-  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_conv_1'])
+  check_amp_fuse(sym, 'data', args, exp_sym, ['sg_onednn_conv_1'])
 
 
 @use_np
@@ -178,11 +180,12 @@ def test_amp_transformers():
   params['data1'] = mask
   net.export('test', 0, False)
   sym, _ = net.export(None)
-  check_amp_fuse(sym, 'data0', params, 'bfloat16', None)
-  check_amp_fuse(sym, 'data0', params, 'bfloat16', None, ['sg_onednn_fully_connected_0'])
+  check_amp_fuse(sym, 'data0', params, None)
+  check_amp_fuse(sym, 'data0', params, None, ['sg_onednn_fully_connected_0'])
 
 
 def test_amp_common_params():
+  mx.npx.reset_np()
   data_nd = mx.random.uniform(-1, 1, shape=(1, 8), dtype='float32')
   weight_nd = mx.random.normal(-0.1, 0.1, shape=(16, data_nd.shape[1]), dtype='float32')
   bias_nd = mx.random.normal(-0.1, 0.1, shape=(weight_nd.shape[0],), dtype='float32')
@@ -205,11 +208,11 @@ def test_amp_common_params():
 
   exp_sym = mx.symbol.amp_cast(sym, 'float32')
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
-  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym)
+  check_amp_fuse(sym, 'data', args, exp_sym)
 
-  exp_amp_data = mx.symbol.amp_cast(data, dtype=bfloat16)
-  exp_amp_wieght = mx.symbol.amp_cast(weight, dtype=bfloat16)
-  exp_amp_bias = mx.symbol.amp_cast(bias, dtype=bfloat16)
+  exp_amp_data = mx.symbol.amp_cast(data, dtype=AMP_DTYPE)
+  exp_amp_wieght = mx.symbol.amp_cast(weight, dtype=AMP_DTYPE)
+  exp_amp_bias = mx.symbol.amp_cast(bias, dtype=AMP_DTYPE)
   exp_fc1 = mx.symbol.FullyConnected(data=exp_amp_data, weight=exp_amp_wieght, bias=exp_amp_bias,
                                      num_hidden=weight_nd.shape[0])
   exp_fc2 = mx.symbol.FullyConnected(data=exp_amp_data, weight=exp_amp_wieght, bias=exp_amp_bias,
@@ -221,10 +224,11 @@ def test_amp_common_params():
   exp_sym = mx.symbol.amp_cast(exp_sym, dtype='float32')
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
 
-  check_amp_fuse(sym, 'data', args, 'bfloat16', exp_sym, ['sg_onednn_fully_connected_2'],
+  check_amp_fuse(sym, 'data', args, exp_sym, ['sg_onednn_fully_connected_2'],
                  inputs_casted=False)
 
 
+@use_np
 def test_amp_fuse_with_branch():
   class TestNet(mx.gluon.nn.HybridBlock):
     def __init__(self, **kwargs):
@@ -242,7 +246,7 @@ def test_amp_fuse_with_branch():
   net.initialize()
   net.hybridize()
   net.optimize_for(mx.np.ones((10,)), backend='ONEDNN')
-  net_lp = amp.convert_hybrid_block(net, target_dtype=bfloat16,
+  net_lp = amp.convert_hybrid_block(net, target_dtype=AMP_DTYPE,
                                     cast_optional_params=True, device=mx.cpu())
   net_lp.optimize_for(mx.np.ones((10,)), backend='ONEDNN_AMP')
 
@@ -251,7 +255,7 @@ def test_amp_fuse_with_branch():
   exp_bias1 = mx.sym.Variable('fc1.bias')
   exp_weights2 = mx.sym.Variable('fc2.weight')
   exp_bias2 = mx.sym.Variable('fc2.bias')
-  exp_amp_cast1 = mx.sym.amp_cast(exp_data, dtype=bfloat16)
+  exp_amp_cast1 = mx.sym.amp_cast(exp_data, dtype=AMP_DTYPE)
   exp_fc1 = mx.sym.FullyConnected(exp_amp_cast1, exp_weights1, exp_bias1, num_hidden=16)
   exp_fc2 = mx.sym.FullyConnected(exp_fc1, exp_weights2, exp_bias2, num_hidden=16)
   exp_amp_cast2 = mx.sym.amp_cast(exp_fc1, dtype='float32')
