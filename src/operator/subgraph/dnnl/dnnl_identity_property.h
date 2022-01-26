@@ -137,7 +137,6 @@ class SgDNNLIdentityProperty : public SubgraphProperty {
     // Create copy of original node
     nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs          = org_node->attrs;
-    CHECK(n->op()) << "WRTF";
     if (n->op()->attr_parser) {
       n->op()->attr_parser(&(n->attrs));
     }
