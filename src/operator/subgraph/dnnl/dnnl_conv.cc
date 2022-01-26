@@ -130,10 +130,9 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   auto& dnnl_param      = full_conv_param.dnnl_param;
   auto& conv_param      = full_conv_param.conv_param;
   auto bn_param         = param_.bn_param.get();
-  size_t input_size =
-      2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
-      (dnnl_param.with_sum ? 1 : 0) +
-      (dnnl_param.quantized ? 2 + (dnnl_param.with_sum ? 2 : 0) : 0);
+  size_t input_size     = 2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
+                      (dnnl_param.with_sum ? 1 : 0) +
+                      (dnnl_param.quantized ? 2 + (dnnl_param.with_sum ? 2 : 0) : 0);
   // When dedup is on, in_data is used to calculate sum instead of in_sum
   if (dnnl_param.dedup_sum) {
     input_size -= 1;
