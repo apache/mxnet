@@ -124,7 +124,7 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
               // With the upgrade of oneDNN to version 2.4+
               // tests/python/dnnl/subgraphs/test_conv_subgraph.py::test_pos_conv_add[True-data_shape1]
               // started failing. Switching away from primitive with weight dnnl::format_tag
-              // ABcd4b16a4b is in place to temporairly fix the issue until full fix arrives.
+              // ABcd4b16a4b in order to temporarily fix the issue until full fix arrives.
               // Tracking issue: https://github.com/apache/incubator-mxnet/issues/20826.
               (param.dnnl_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
                conv_pd->weights_desc().data.padded_dims[1] == 16)) {
