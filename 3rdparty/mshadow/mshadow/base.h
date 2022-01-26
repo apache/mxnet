@@ -330,7 +330,7 @@ MSHADOW_HALF_BF_OPERATOR(bool, >=)
 /*! \brief overloaded <= operator between half_t and bf16_t */
 MSHADOW_HALF_BF_OPERATOR(bool, <=)
 
-#include "./logging.h"
+#include "dmlc/logging.h"
 /*! \brief namespace for mshadow */
 namespace mshadow {
 /*! \brief buffer size for each random number generator */
