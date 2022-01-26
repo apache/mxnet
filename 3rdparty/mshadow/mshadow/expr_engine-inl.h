@@ -26,7 +26,7 @@
 #define MSHADOW_EXPR_ENGINE_INL_H_
 #include <utility>
 #include <algorithm>
-#include "./logging.h"
+#include "dmlc/logging.h"
 #include "./expression.h"
 #include "./tensor.h"
 
