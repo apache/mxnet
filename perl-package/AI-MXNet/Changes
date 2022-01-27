@@ -1,4 +1,8 @@
 Revision history for Perl extension AI::MXNet
+        - Update mapping between PDL and MX types - Zakariyya Mughal
+        - Upgrade minimum PDL dependency to PDL v2.064 for
+          int8 (PDL: sbyte) type - Zakariyya Mughal
+
 1.5     Sun Feb 16 19:56:17 PST 2020
         - Runtime features
         - INT64 Tensor support

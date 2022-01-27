@@ -79,7 +79,7 @@ use overload '""' => sub {
 has 'name'       => (is => 'rw', isa => 'Str');
 has 'num'        => (is => 'rw', isa => 'Int');
 has 'num_inst'   => (is => 'rw', isa => 'Maybe[Int|ArrayRef[Int]]');
-has 'sum_metric' => (is => 'rw', isa => 'Maybe[Num|ArrayRef[Num]]');
+has 'sum_metric' => (is => 'rw', isa => 'Maybe[Num|ArrayRef[Num]|PDL]');
 has '_kwargs'    => (is => 'rw', init_arg => undef);
 around BUILDARGS => \&AI::MXNet::Base::process_arguments;
 
@@ -168,8 +168,8 @@ method get()
 method get_name_value()
 {
     my ($name, $value) = $self->get;
-    $name = [$name] unless ref $name;
-    $value = [$value] unless ref $value;
+    $name = [$name] unless ref $name eq 'ARRAY';
+    $value = [$value] unless ref $value eq 'ARRAY';
     my %ret;
     @ret{ @$name } = @$value;
     return \%ret;
@@ -221,8 +221,8 @@ method get()
     for my $metric (@{ $self->metrics })
     {
         my ($name, $result) = $metric->get;
-        $name = [$name] unless ref $name;
-        $result = [$result] unless ref $result;
+        $name = [$name] unless ref $name eq 'ARRAY';
+        $result = [$result] unless ref $result eq 'ARRAY';
         push @$names, @$name;
         push @$results, @$result;
     }
