@@ -384,7 +384,6 @@ mkldnn::memory::desc GetDesc(const mkldnn::memory::desc& desc, const mkldnn_form
     dims[i] = desc.data.dims[i];
   mkldnn::memory::format_tag cpp_format = static_cast<mkldnn::memory::format_tag>(format);
   mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(desc.data.data_type);
-  mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
   return mkldnn::memory::desc(dims, cpp_type, cpp_format);
 }
 
