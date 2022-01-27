@@ -23,11 +23,11 @@
 #include <utility>
 #include <vector>
 
-#include "../../contrib/transformer-inl.h"
-#include "../../quantization/quantization_utils.h"
-#include "../../tensor/elemwise_unary_op.h"
-#include "../common.h"
-#include "./dnnl_transformer-inl.h"
+#include "operator/contrib/transformer-inl.h"
+#include "operator/quantization/quantization_utils.h"
+#include "operator/tensor/elemwise_unary_op.h"
+#include "operator/subgraph/common.h"
+#include "dnnl_transformer-inl.h"
 
 // 3 tensors within one (queries key values) =
 #define QKV_NUM 3

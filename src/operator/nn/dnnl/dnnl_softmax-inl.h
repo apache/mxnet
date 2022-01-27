@@ -36,10 +36,10 @@
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
 
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "dnnl_base-inl.h"
+#include "dnnl_ops-inl.h"
 
-#include "../softmax-inl.h"
+#include "operator/nn/softmax-inl.h"
 
 namespace mxnet {
 namespace op {

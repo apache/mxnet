@@ -18,9 +18,10 @@
  */
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_SUBGRAPH_BASE_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_SUBGRAPH_BASE_INL_H_
+
 #if MXNET_USE_ONEDNN == 1
 
-#include "../subgraph_property.h"
+#include "operator/subgraph/subgraph_property.h"
 
 namespace mxnet {
 namespace op {

@@ -23,12 +23,12 @@
 #include <utility>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_act-inl.h"
-#include "../../nn/dnnl/dnnl_base-inl.h"
-#include "../../nn/dnnl/dnnl_ops-inl.h"
-#include "../../quantization/quantization_utils.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../common.h"
+#include "operator/nn/dnnl/dnnl_act-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_ops-inl.h"
+#include "operator/quantization/quantization_utils.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/subgraph/common.h"
 #include "dnnl_common.h"
 #include "dnnl_conv-inl.h"
 

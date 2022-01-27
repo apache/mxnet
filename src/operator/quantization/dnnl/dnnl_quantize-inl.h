@@ -30,8 +30,8 @@
 #include <string>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_base-inl.h"
-#include "../quantize-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/quantization/quantize-inl.h"
 
 namespace mxnet {
 namespace op {

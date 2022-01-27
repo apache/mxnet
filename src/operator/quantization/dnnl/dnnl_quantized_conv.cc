@@ -24,12 +24,13 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../elemwise_op_common.h"
-#include "../../nn/convolution-inl.h"
-#include "../../nn/dnnl/dnnl_base-inl.h"
-#include "../../nn/dnnl/dnnl_convolution-inl.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../quantization_utils.h"
+#include "operator/elemwise_op_common.h"
+#include "operator/nn/convolution-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_convolution-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/quantization/quantization_utils.h"
+
 namespace mxnet {
 namespace op {
 

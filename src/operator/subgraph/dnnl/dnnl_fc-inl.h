@@ -19,13 +19,14 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_INL_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_fully_connected-inl.h"
+#include "operator/nn/dnnl/dnnl_fully_connected-inl.h"
 #include "dnnl.hpp"
 
 namespace mxnet {

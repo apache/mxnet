@@ -26,8 +26,9 @@
 #if MXNET_USE_ONEDNN == 1
 
 #include <numeric>
+#include <functional>
 
-#include "./dnnl_rnn-inl.h"
+#include "dnnl_rnn-inl.h"
 
 namespace mxnet {
 namespace op {

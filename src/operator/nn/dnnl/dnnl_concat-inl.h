@@ -29,9 +29,9 @@
 #include <utility>
 #include <vector>
 
-#include "../concat-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "operator/nn/concat-inl.h"
+#include "dnnl_base-inl.h"
+#include "dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {

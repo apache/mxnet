@@ -19,12 +19,13 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "../common.h"
+#include "operator/subgraph/common.h"
 #include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {

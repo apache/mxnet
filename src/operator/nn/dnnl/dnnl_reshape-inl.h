@@ -28,7 +28,7 @@
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
 
-#include "../../tensor/matrix_op-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
 #include "dnnl_base-inl.h"
 
 namespace mxnet {

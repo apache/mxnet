@@ -24,8 +24,8 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/dnnl/dnnl_fully_connected-inl.h"
-#include "../quantization_utils.h"
+#include "operator/nn/dnnl/dnnl_fully_connected-inl.h"
+#include "operator/quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {

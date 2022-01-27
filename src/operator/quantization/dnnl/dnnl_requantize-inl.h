@@ -29,8 +29,8 @@
 #include <string>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_base-inl.h"
-#include "../requantize-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/quantization/requantize-inl.h"
 
 namespace mxnet {
 namespace op {

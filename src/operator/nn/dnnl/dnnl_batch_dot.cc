@@ -24,8 +24,8 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "./dnnl_batch_dot-inl.h"
-#include "../../quantization/quantization_utils.h"
+#include "dnnl_batch_dot-inl.h"
+#include "operator/quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {

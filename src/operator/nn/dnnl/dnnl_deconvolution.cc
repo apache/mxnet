@@ -23,8 +23,8 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "../deconvolution-inl.h"
-#include "./dnnl_deconvolution-inl.h"
+#include "operator/nn/deconvolution-inl.h"
+#include "dnnl_deconvolution-inl.h"
 
 namespace mxnet {
 namespace op {
