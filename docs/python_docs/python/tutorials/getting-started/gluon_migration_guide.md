@@ -436,11 +436,11 @@ A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. 
 ### Operator Fusion
 In versions 1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support and could have been disabled by setting 'MXNET_SUBGRAPH_BACKEND' environment flag to `None`. MXNet 2.0 introduced changes in forward inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
 
- - the model must be defined as a subclass of HybridBlock or Symbol
+ - the model must be defined as a subclass of HybridBlock or Symbol,
 
- - the model must have specific operator patterns which can be fused
+ - the model must have specific operator patterns which can be fused.
 
-Both HybridBlock and Symbol classes provide API to easily run fusion of operators. All we have to do is to add single line of code running fusion passes on our model:
+Both HybridBlock and Symbol classes provide API to easily run fusion of operators. Adding only one line of code is needed to run fusion passes on model:
 ```{.python}
 # on HybridBlock
 net.optimize_for(data, backend='ONEDNN')

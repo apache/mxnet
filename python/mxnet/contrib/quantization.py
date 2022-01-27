@@ -178,12 +178,12 @@ class CalibrationCollector(object):
         Parameters
         ----------
         name : str
-            Node name from which collected data comes from
+            Node name from which collected data comes from.
         op_name : str
             Operator name from which collected data comes from. Single operator
-            can have multiple inputs/ouputs nodes - each should have different name
+            can have multiple input/ouput nodes - each should have different name.
         arr : NDArray
-            NDArray containing data of monitored node
+            NDArray containing data of monitored node.
         """
 
     def post_collect(self):
