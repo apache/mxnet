@@ -28,7 +28,7 @@ In version 2.0 of the Apache MXNet (incubating) GluonAPI2.0 replaced Symbolic AP
 ## Operator Fusion
 
 Models are often represented as directed graph of operations (represented by nodes) and data flow (representad as edges). This way of visualizing helps a lot when searching for common patterns in whole model which can be optimized by fusion. Example:
-![base_model](https://i.imgur.com/ZVvGGND.png)
+![base_model](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/sample_net.png?raw=true)
 
 
 The simplest way to explain what fusion is and how it works is to present an example. On the image above is shown a sequence of popular operations taken from ResNet architecture. This type of architecture is built with many similar block called residual blocks. Some possible fusion patterns are:
@@ -42,7 +42,7 @@ Above examples are presented as atomic ones, but often they can be combined toge
 - Conv2D + BatchNorm + Add + ReLU
 
 After fusing all patterns, computational graph will be changed to the following one:
-![fused_fp32_model](https://i.imgur.com/0XFBas1.png)
+![fused_fp32_model](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/fused_f32.png?raw=true)
 
 
 
@@ -106,16 +106,16 @@ As mentioned in the introduction, precision reduction is another very popular me
 
 Model quantization helps on both memory-bound and compute-bound operations. In quantized model IO operations are reduced as int8 data type is 4x smaller than float32, and also computational throughput is increased as more data can be SIMD'ed. On modern Intel architectures using int8 data type can bring even more speedup by utilizing special VNNI instruction set. 
 
-![before_quant](https://i.imgur.com/XUVFnFQ.png)
+![before_quant](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/before_quant.png?raw=true)
 
 Firstly quantization performs operator fusion on floating-point model as mentioned in paragraph earlier. Next, all operators which support int8 data type are marked as quantized and if needed additional operators are injected into graph surrounding quantizable operator - the goal of this additional operators is to quantize, dequantize or requantize data to keep data type between operators compatible.
  
-![quant_not_calib](https://i.imgur.com/fV84H6b.png)
+![quant_not_calib](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/quant_not_calib.png?raw=true)
 
 
 After injection step it is important to perform calibration of the model, however this step is optional. Quantizing without calibration is not recommended in terms of performance. It will result in calculating data minimum and maximum in quantize and requantize nodes during each inference pass. Calibrating a model greatly improves performance as minimum and maximum values are collected offline and are saved inside node - this way there is no need to search for these values during inference pass. 
 
-![quant_calib](https://i.imgur.com/anNMPUS.png)
+![quant_calib](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/quant_calib.png?raw=true)
 
 
 Currently, there are three supported calibration methods:
@@ -125,7 +125,7 @@ Currently, there are three supported calibration methods:
 
 Last operation in quantization flow is to perform additional operator fusion. Second fusion is about merging requantize and dequantize operators into preceding node - oneDNN kernels can perform needed scaling before writing result to output which results in model execution speed-up. Notice that last Convolution does not need minimum and maximum values as it is not requantizing int32 to int8, but dequantizing directly to float32 and scale is calculated basing on minimum and maximum of input and weights.
 
-![quant_calib_fused](https://i.imgur.com/eiaBrLF.png)
+![quant_calib_fused](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/quant_calib_fused.png?raw=true)
 
 In MXNet 2.0, the quantization procedure has been adjusted to work well with Gluon models since it is the main API now. The goal was to allow the user to quantize fp32 HybridBlock model in just a few lines of code.
 
@@ -291,10 +291,14 @@ qnet = quantize_net(net, calib_mode='custom', calib_data=calib_data_loader, Laye
 
 ### Performance
 Performance results of CV models. Chart presents three different runs: base float32 model without optimizations, fused float32 model with optimizations and quantized model.
-![performance](https://i.imgur.com/N6cxhAW.png)
+![performance](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/speedup.png?raw=true)
 ###### Relative Inference Performance (img/sec) for Batch Size 128
 
 ### Accuracy
 Accuracy results of CV models. Chart presents three different runs: base float32 model without optimizations, fused float32 model with optimizations and quantized model.
-![accuracy](https://i.imgur.com/2tzEUtf.png)
+![accuracy](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/accuracy.png?raw=true)
 ###### ImageNet(ILSVRC2012) TOP1 validation accuracy
+
+##Notes
+- Accuracy and speedup tested on AWS c6i.16xlarge
+- MXNet SHA: 9fa75b470b8f0238a98635f20f5af941feb60929 / oneDNN SHA: f40443c413429c29570acd6cf5e3d1343cf647b4
