@@ -139,7 +139,8 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
   float out_data_scale = 1.f;
   float out_scale = 1.f;
   if (!params.enable_float_output) {
-    float output_data_range = kInt32Range;
+    // The impact of rounding in line below is negligible
+    float output_data_range = static_cast<float>(kInt32Range);
     // dataA && dataB are int8
     if (outputs[quantized_elemwise_mul::kOut].type_flag_ == mshadow::kInt8) {
       output_data_range = kInt8Range;
