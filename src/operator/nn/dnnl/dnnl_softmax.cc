@@ -191,7 +191,6 @@ void DNNLSoftmaxBackward(const nnvm::NodeAttrs& attrs,
   bwd.Execute(tensors, req);
 }
 
-
 DNNLSoftmaxBwd::Tensors::Tensors(const std::vector<NDArray>& inputs,
                                  const std::vector<NDArray>& outputs)
     : out_grad(inputs[0]), out(inputs[1]), data_grad(outputs[0]) {}
@@ -230,7 +229,7 @@ DNNLSoftmaxBwd::DNNLSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors
       GetSoftmaxBwdPd(*out_grad_mem, *out_mem, axis, softmax_fwd_pd));
   softmax_bwd = std::make_shared<softmax_bwd_t>(*softmax_bwd_pd);
 
-  if (temperature != 1.0f) { // avoid dividing by 1
+  if (temperature != 1.0f) {  // avoid dividing by 1
     temperature_pd =
         std::make_shared<linear_pd_t>(DNNLSoftmaxFwd::GetTemperaturePd(*out_mem, temperature));
     temperature_fwd = std::make_shared<linear_t>(*temperature_pd);

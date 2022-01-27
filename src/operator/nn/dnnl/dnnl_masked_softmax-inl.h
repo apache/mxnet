@@ -38,8 +38,6 @@ namespace op {
 
 struct Primitives {
  public:
-  Primitives(){};
-
   dnnl::eltwise_forward minusone;
   dnnl::eltwise_forward::primitive_desc minusone_pd;
 
