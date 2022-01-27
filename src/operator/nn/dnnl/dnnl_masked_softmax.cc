@@ -21,8 +21,8 @@
  * \file dnnl_maskedsoftmax.cc
  */
 
-#include "./dnnl_masked_softmax-inl.h"
-#include "./dnnl_softmax-inl.h"
+#include "dnnl_masked_softmax-inl.h"
+#include "dnnl_softmax-inl.h"
 
 #if MXNET_USE_ONEDNN == 1
 namespace mxnet {
@@ -167,8 +167,6 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
   SoftmaxParam p;
   p.axis        = param.axis;
   p.temperature = param.temperature;
-  // int axis             = CheckAxis(param.axis, input.shape().ndim());
-  // auto softmax         = DNNLSoftmaxFwd::GetSoftmaxFwd(p, axis, is_train, output, output);
 
   auto softmax_tensors = DNNLSoftmaxFwd::Tensors(output, output);
   auto softmax_op      = DNNLSoftmaxFwd::GetCached(p, softmax_tensors, is_train);
@@ -183,9 +181,6 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
   stream->Submit();
 
   // 2. out = softmax(out)
-  // stream->RegisterPrimArgs(
-  //     softmax.GetFwd(), {{DNNL_ARG_SRC, *softmax_out_mem}, {DNNL_ARG_DST, *softmax_out_mem}});
-  // stream->Submit();
   softmax_op.Execute(softmax_tensors);
 
   // 3. out = out * mask
