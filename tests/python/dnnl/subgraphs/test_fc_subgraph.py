@@ -236,16 +236,19 @@ def test_fc_identity_eltwise(identity_node):
   check_fusion(net, data_shape, attrs, check_quantization=False)
 
 
-def function_fc_add(data_shape, add_op, quantize_mode, fc_out_add, flatten, out_type):
+def function_fc_add(data_shape, add_op, quantize_mode, fc_out_add, flatten, relu, out_type):
   class FCWithSumExample(nn.HybridBlock):
     def __init__(self,  num_hidden, add_op, fc_out_add, **kwargs):
       super(FCWithSumExample, self).__init__(**kwargs)
       self.fca = nn.Dense(units=num_hidden, flatten=flatten)
       self.elemwise_add = (add_op == 'elemwise_add')
       self.fc_out_as_rhs = (fc_out_add == 'rhs')
+      self.relu = (relu == 'leaky_relu')
 
     def forward(self, data1a, data2):
       fc_out = self.fca(data1a)
+      if self.relu:
+        fc_out = mx.npx.leaky_relu(fc_out, act_type='gelu')
       if self.fc_out_as_rhs:
         if  self.elemwise_add:
           sum1 = mx.nd.elemwise_add(data2.as_nd_ndarray(), fc_out.as_nd_ndarray()).as_np_ndarray()
@@ -277,11 +280,12 @@ def function_fc_add(data_shape, add_op, quantize_mode, fc_out_add, flatten, out_
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('relu', ['noleaky_re', 'leaky_relu'])
 @pytest.mark.parametrize('flatten', ['flat', 'nofl'])
 @pytest.mark.parametrize('fc_out_add', ['lhs', 'rhs'])
 @pytest.mark.parametrize('add_op', ['elemwise_add'])
-def test_fc_add(data_shape, add_op, fc_out_add, flatten):
-  function_fc_add(data_shape, add_op, None, fc_out_add, flatten=='flat', None)
+def test_fc_add(data_shape, add_op, fc_out_add, flatten, relu):
+  function_fc_add(data_shape, add_op, None, fc_out_add, flatten=='flat', relu, None)
 
 @mx.util.use_np
 @pytest.mark.seed(1234) # Seed set because the test is not robust enough to operate on random data
@@ -291,7 +295,7 @@ def test_fc_add(data_shape, add_op, fc_out_add, flatten):
 @pytest.mark.parametrize('fc_out_add', ['lhs', 'rhs'])
 @pytest.mark.parametrize('add_op', ['elemwise_add'])
 def test_fc_add_quantized(data_shape, add_op, quantize_mode, fc_out_add, out_type):
-  function_fc_add(data_shape, add_op, quantize_mode, fc_out_add, True, out_type)
+  function_fc_add(data_shape, add_op, quantize_mode, fc_out_add, True, 'noleaky_re', out_type)
 
 
 class NegFCAdd(nn.HybridBlock):

@@ -75,9 +75,10 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
         (seed_node.outputs.size() == 1)) {
       auto const& fc_param = nnvm::get<DNNLFCFullParam>(n->attrs.parsed);
       if ((!quantized_ && !fc_param.dnnl_param.first_quantization_pass) ||
-          fc_param.dnnl_param.quantized) {
+          (fc_param.dnnl_param.quantized && !fc_param.dnnl_param.with_eltwise)) {
         // Start subgraph when fusing for floats (quantized_ is false for DNNL backend) or
-        // when FC is already quantized (second pass for DNNL_QUANTIZE).
+        // when FC is already quantized (second pass for DNNL_QUANTIZE) but not already fuzed
+        // with elemwise operator.
         status_ = kStart;
         matched_list_.clear();
         matched_list_.push_back(&seed_node);
@@ -183,30 +184,27 @@ class SgDNNLFCSumFuseProperty : public SubgraphProperty {
     CHECK_NOTNULL(fc_node);
     if (ew_add_node != nullptr) {
       CHECK_NOTNULL(fc_node->attrs.subgraphs[0]);
-      auto fc_orginal = fc_node->attrs.subgraphs[0]->outputs[0].node;
+      auto subgraph_output_node = fc_node->attrs.subgraphs[0]->outputs[0].node;
+      nnvm::Symbol new_sym;
+      // Create a new elemwise_add node to not alter the original one.
+      // It is needed in subgraph to properly calculate InferShape.
+      nnvm::ObjectPtr n = nnvm::Node::Create();
+      n->attrs.op       = Op::Get("elemwise_add");
+      n->attrs.name     = ew_add_node->attrs.name;
 
-      if (fc_orginal->op() == Op::Get("FullyConnected")) {
-        nnvm::Symbol new_sym;
-        // Create a new elemwise_add node to not alter the original one.
-        // It is needed in subgraph to properly calculate InferShape.
-        nnvm::ObjectPtr n = nnvm::Node::Create();
-        n->attrs.op       = Op::Get("elemwise_add");
-        n->attrs.name     = ew_add_node->attrs.name;
-
-        if (ew_add_node->inputs[0].node == fc_node) {
-          n->inputs.emplace_back(fc_orginal);
-          n->inputs.emplace_back(ew_add_node->inputs[1]);
-        } else {
-          n->inputs.emplace_back(ew_add_node->inputs[0]);
-          n->inputs.emplace_back(fc_orginal);
-        }
-        new_sym.outputs.emplace_back(n);
-        fc_node->attrs.subgraphs.clear();
-        fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
-        fc_node->attrs.dict["with_sum"] = "True";
-        fc_node->attrs.dict.erase("first_quantization_pass");  // Removed as not needed any longer
-        fc_node->op()->attr_parser(&(fc_node->attrs));
+      if (ew_add_node->inputs[0].node == fc_node) {
+        n->inputs.emplace_back(subgraph_output_node);
+        n->inputs.emplace_back(ew_add_node->inputs[1]);
+      } else {
+        n->inputs.emplace_back(ew_add_node->inputs[0]);
+        n->inputs.emplace_back(subgraph_output_node);
       }
+      new_sym.outputs.emplace_back(n);
+      fc_node->attrs.subgraphs.clear();
+      fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
+      fc_node->attrs.dict["with_sum"] = "True";
+      fc_node->attrs.dict.erase("first_quantization_pass");  // Removed as not needed any longer
+      fc_node->op()->attr_parser(&(fc_node->attrs));
     }
     return fc_node;
   }
