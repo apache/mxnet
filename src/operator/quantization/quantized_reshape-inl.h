@@ -18,19 +18,17 @@
  */
 
 /*!
- * \file dnnl_quantized_reshape-inl.h
+ * \file quantized_reshape-inl.h
  * \author: Adam Grabowski, adam.grabowski@intel.com
  */
 
-#ifndef MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZED_RESHAPE_INL_H_
-#define MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZED_RESHAPE_INL_H_
+#ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RESHAPE_INL_H_
+#define MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RESHAPE_INL_H_
 
-#if MXNET_USE_ONEDNN == 1
 #include <string>
 #include <vector>
-#include "../../tensor/matrix_op-inl.h"
-#include "../../numpy/np_matrix_op-inl.h"
-#include "../../nn/dnnl/dnnl_ops-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -67,9 +65,9 @@ struct QuantizedReshapeParam : public dmlc::Parameter<QuantizedReshapeParam> {
   }
 };
 
-bool QuantizedReshapeInferShape(const nnvm::NodeAttrs& attrs,
-                                mxnet::ShapeVector* in_attrs,
-                                mxnet::ShapeVector* out_attrs) {
+inline bool QuantizedReshapeInferShape(const nnvm::NodeAttrs& attrs,
+                                       mxnet::ShapeVector* in_attrs,
+                                       mxnet::ShapeVector* out_attrs) {
   const QuantizedReshapeParam& param = nnvm::get<QuantizedReshapeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
@@ -102,19 +100,9 @@ bool QuantizedReshapeInferShape(const nnvm::NodeAttrs& attrs,
   return ret;
 }
 
-bool QuantizedReshapeStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
+inline bool QuantizedReshapeType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int>* in_attrs,
                                  std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 3U);
-  CHECK_EQ(out_attrs->size(), 3U);
-  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
-}
-
-bool QuantizedReshapeType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int>* in_attrs,
-                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
   TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kFloat32);
@@ -125,30 +113,7 @@ bool QuantizedReshapeType(const nnvm::NodeAttrs& attrs,
   return (*in_attrs)[0] != -1;
 }
 
-static void DNNLQuantizedReshapeForward(const nnvm::NodeAttrs& attrs,
-                                        const OpContext& ctx,
-                                        const std::vector<NDArray>& inputs,
-                                        const std::vector<OpReqType>& req,
-                                        const std::vector<NDArray>& outputs) {
-  CHECK(inputs[0].dtype() == mshadow::kUint8 || inputs[0].dtype() == mshadow::kInt8)
-      << "dnnl_quantized_reshape op only supports uint8 and int8 as input type";
-
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
-    OpReqType reqType;
-    if (inputs[0].GetDNNLData()->get_data_handle() != outputs[0].GetDNNLData()->get_data_handle())
-      reqType = kWriteTo;
-    else
-      reqType = req[0];
-    DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], reqType, outputs[0]);
-  } else {
-    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
-  }
-  *outputs[1].data().dptr<float>() = *inputs[1].data().dptr<float>();
-  *outputs[2].data().dptr<float>() = *inputs[2].data().dptr<float>();
-}
-
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_QUANTIZATION_DNNL_DNNL_QUANTIZED_RESHAPE_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_RESHAPE_INL_H_
