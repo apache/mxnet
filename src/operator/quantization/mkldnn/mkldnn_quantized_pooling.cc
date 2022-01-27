@@ -39,8 +39,7 @@ static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs,
       << "mkldnn_quantized_pooling op only supports uint8 and int8 as input "
          "type";
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  MKLDNNPoolingCompute(
-      ctx, param, in_data[0], req[0], out_data[0], nullptr, /*use_adaptive*/ false);
+  MKLDNNRun(MKLDNNPoolingCompute, attrs, ctx, in_data, req, out_data);
   out_data[1].data().dptr<float>()[0] = in_data[1].data().dptr<float>()[0];
   out_data[2].data().dptr<float>()[0] = in_data[2].data().dptr<float>()[0];
 }

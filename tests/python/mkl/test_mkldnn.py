@@ -32,6 +32,7 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
 import itertools
+import pytest
 
 
 def test_mkldnn_model():
@@ -420,6 +421,26 @@ def test_pooling():
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_pooling_training(stype)
+
+@pytest.mark.parametrize('num_filter', [4, 8, 16])
+@pytest.mark.parametrize('output_size', [4, 5, 8, 16])
+@pytest.mark.parametrize('stype', ['row_sparse', 'default'])
+@pytest.mark.parametrize('shape', [(3, 3, 8, 8), (3, 3, 20, 20), (3, 3, 32, 32)])
+def test_adaptive_pooling(num_filter, output_size, stype, shape):
+    data_tmp = mx.nd.random.uniform(shape=shape)
+    data = mx.sym.var('data', stype=stype)
+    in_channels = shape[1]
+
+    data = mx.sym.Convolution(data=data, kernel=(3, 3), pad=(1,1), num_filter=num_filter)
+    data = mx.sym.contrib.AdaptiveAvgPooling2D(data=data, output_size=output_size)
+
+    weight_tmp = np.random.normal(-0.1, 0.1, size=(num_filter, in_channels, 3, 3))
+    bias_tmp = np.random.normal(0.1, 0.1, size=(num_filter,))
+
+    in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
+                    mx.nd.array(bias_tmp).tostype(stype)]
+
+    check_numeric_gradient(data, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
 
 @with_seed()
