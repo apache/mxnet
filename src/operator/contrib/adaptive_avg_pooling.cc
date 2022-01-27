@@ -361,7 +361,7 @@ NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
                                     [](const NodeAttrs& attrs) {
                                       const PoolingParam& param =
                                           nnvm::get<PoolingParam>(attrs.parsed);
-                                      if (MKLDNNRequireWorkspace(param) && 
+                                      if (MKLDNNRequireWorkspace(param) &&
                                           param.IsAdaptivePooling())
                                         return std::vector<std::pair<int, int>>{{1, 0}};
                                       return std::vector<std::pair<int, int>>();
