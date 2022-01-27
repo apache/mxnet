@@ -144,8 +144,6 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
     // dataA && dataB are int8
     if (outputs[quantized_elemwise_mul::kOut].type_flag_ == mshadow::kInt8) {
       output_data_range = kInt8Range;
-    } else {
-      output_data_range = kInt32Range;
     }
     if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
       cached_output_min_ = params.min_calib_range.value();
