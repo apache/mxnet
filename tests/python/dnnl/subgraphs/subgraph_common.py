@@ -114,8 +114,27 @@ def check_qsym_scale_align(qsym):
         assert max_calib_range == v['max_calib_range']
 
 
-def check_quantize(net_original, data_shape, out_type, name='conv',
-                   check_calibration=True, check_scale_align=False):
+def check_fusion_parameter(sym, attrs_dict):
+  for name, attrs in attrs_dict.items():
+    if name in config:
+      op_name = config[name][OP_NAME]
+    else:
+      op_name = name
+    assert ''.join(sym.get_internals().list_outputs()).find(op_name) != -1
+    if len(attrs):
+      found = False
+      for k, v in sym.attr_dict().items():
+        if k.find('_quantize') != -1:
+          continue
+        if k.find(op_name) != -1:
+          found = True
+          for attr_name, attr_value in attrs.items():
+            assert v[attr_name].lower() == attr_value.lower()
+      assert found
+
+def check_quantize(net_original, data_shapes, out_type, name='conv',
+                   check_calibration=True, check_scale_align=False, quantize_mode='full',
+                   attrs_dict={}):
   quantize_granularity_list = ['tensor-wise']
   if name == 'fc':
     quantize_granularity_list += ['channel-wise']
@@ -125,92 +144,108 @@ def check_quantize(net_original, data_shape, out_type, name='conv',
 
   net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
   min_value = -1 if out_type != 'uint8' else 0
-  data = mx.np.random.uniform(min_value, 1.0, size=data_shape, dtype='float32', ctx=mx.current_device())
+  one_shape = isinstance(data_shapes, tuple)
+  if one_shape:
+    # replace one shape with list of shapes with one element inside to follow later the same schema
+    data_shapes=[data_shapes]
+  data = []
+  for shape in data_shapes:
+    data.append(mx.np.random.uniform(min_value, 1.0, size=shape, dtype='float32', device=mx.cpu()))
 
-  outputs = net_original(data)
+  outputs = net_original(*data)
   for output in outputs:
       output.wait_to_read()
   ref_out = outputs
 
-  calib_data = mx.gluon.data.DataLoader(data, batch_size=1)
+  dataArray= mx.gluon.data.ArrayDataset(*data)
+
+  calib_data = mx.gluon.data.DataLoader(dataArray, batch_size=1)
   for quantize_granularity in quantize_granularity_list:
     qnet = quantization.quantize_net(net_original,
-                                     ctx=mx.current_device(),
+                                     device=mx.cpu(),
                                      exclude_layers=None,
                                      exclude_operators=None,
                                      quantized_dtype=out_type,
                                      calib_mode='naive',
                                      calib_data=calib_data,
                                      num_calib_batches=1,
-                                     quantize_mode='full',
+                                     quantize_mode=quantize_mode,
                                      quantize_granularity=quantize_granularity)
     qsym, _ = qnet.export(None)
+    check_fusion_parameter(qsym, attrs_dict)
     if check_calibration:
       check_qsym_calibrated(qsym, out_type, name=name)
     if check_scale_align:
       check_qsym_scale_align(qsym)
 
-    quantized_out = qnet(data)
+    quantized_out = qnet(*data)
     for i in range(len(ref_out)):
       min_range = mx.np.min(ref_out[i]).item()
       max_range = mx.np.max(ref_out[i]).item()
       atol = 0.1 * max(abs(min_range), abs(max_range))
-      assert_almost_equal_with_err(quantized_out.asnumpy(), ref_out.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+      assert_almost_equal_with_err(quantized_out.asnumpy(), ref_out.asnumpy(),
+                                   rtol=0.1, atol=atol, etol=0.2)
 
 
-def check_fusion(net_original, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True,
-                 out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True):
+def check_fusion(net_original, data_shapes, attrs_dict, check_fp32_fusion=True,
+                 check_quantization=True, out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True,
+                 quantize_mode='full'):
   net_original.initialize()
   net_original.hybridize(static_alloc=False, static_shape=False)
-  data = mx.np.random.uniform(size=data_shape, dtype='float32', ctx=mx.current_device())
-  net_original(data)
+  one_shape = isinstance(data_shapes, tuple)
+  data_min = -1.0
+  data_max = 1.0
+
+  if one_shape:
+    # replace one shape with list of shapes with one element to follow later the same schema
+    data_shapes=[data_shapes]
+  data = []
+  for shape in data_shapes:
+    data.append(mx.np.random.uniform(size=shape, dtype='float32', device=mx.cpu(),
+                low=data_min, high=data_max))
+  net_original(*data)
   net_fusion = copy.copy(net_original)
   sym, params = net_original.export(None)
 
   if check_fp32_fusion:
-    data_min = -1.0
-    data_max = 1.0
     if ''.join(sym.get_internals().list_outputs()).find('sqrt') != -1:
       check_quantization = False
       data_min = 0
 
     sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=dedup_subgraph, skip_infer=True)
-    for name, attrs in attrs_dict.items():
-      if name in config:
-        op_name = config[name][OP_NAME]
-      else:
-        op_name = name
-      assert ''.join(sym_sg.get_internals().list_outputs()).find(op_name) != -1
-      if len(attrs):
-          found = False
-          for k, v in sym_sg.attr_dict().items():
-            if k.find(op_name) != -1:
-              found = True
-              for attr_name, attr_value in attrs.items():
-                assert v[attr_name].lower() == attr_value.lower()
-          assert found
+    check_fusion_parameter(sym_sg, attrs_dict)
+    if data_min == 0 and mx.npx.is_np_default_dtype():
+      # regenerate inputs if they have different range or data type
+      data = []
+      for shape in data_shapes:
+        data.append(mx.np.random.uniform(size=shape, device=mx.cpu(), low=data_min, high=data_max))
+    out_unfused = net_original(*data)
 
-    data = mx.np.random.uniform(size=data_shape, low=data_min, high=data_max)
-    out_unfused = net_original(data)
-
-    net_fusion.optimize_for(data, backend=SG_PASS_NAME)
-    out_fused = net_fusion(data)
+    net_fusion.optimize_for(*data, backend=SG_PASS_NAME)
+    out_fused = net_fusion(*data)
 
     assert_almost_equal(out_unfused.asnumpy(), out_fused.asnumpy(), rtol=1e-3, atol=1e-1)
 
   if check_quantization:
     # fp32 to int8
     for out_type in out_types:
-      check_quantize(net_original, data_shape, out_type, name=name)
+      check_quantize(net_original, data_shapes, out_type, name=list(attrs_dict.keys())[0],
+                     quantize_mode=quantize_mode, attrs_dict=attrs_dict)
 
 def check_neg_fusion(net_original, attrs_name=None, excluded_attrs=None,
-                     data_shapes=(4,4,10,10), name='conv'):
+                     data_shapes=[(4,4,10,10)], name='conv'):
   op_name = config[name][OP_NAME]
+  one_shape = isinstance(data_shapes, tuple)
+  if one_shape:
+    # replace one shape with list of shapes with one element to follow later the same schema
+    data_shapes = [data_shapes]
+  data = []
+  for shape in data_shapes:
+    data.append(mx.np.random.uniform(size=shape))
 
-  data_nd = mx.np.random.uniform(size=data_shapes)
   net_original.initialize()
   net_original.hybridize()
-  net_original(data_nd)
+  net_original(*data)
 
   sym, _ = net_original.export(None)
   sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
@@ -221,4 +256,41 @@ def check_neg_fusion(net_original, attrs_name=None, excluded_attrs=None,
       for attr in attrs_name:
         assert v[attr] == 'true'
       for exc_attr in excluded_attrs:
-        assert exc_attr not in v.keys()
+        assert exc_attr not in v.keys(), exc_attr + " atribute shouldn't exist"
+
+
+
+def check_neg_fusion_quantized(net_original, attrs_name=None, excluded_attrs=None,
+                     data_shapes=[(4,4,10,10)], name='conv'):
+  op_name = config[name][OP_NAME]
+  net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
+  one_shape = isinstance(data_shapes, tuple)
+  if one_shape:
+    # replace one shape with list of shapes with one element inside to follow later the same schema
+    data_shapes=[data_shapes]
+  data = []
+  for shape in data_shapes:
+    data.append(mx.np.random.uniform(size=shape, dtype='float32', device=mx.cpu()))
+
+  dataArray= mx.gluon.data.ArrayDataset(*data)
+  calib_data = mx.gluon.data.DataLoader(dataArray, batch_size=1)
+
+  qnet = quantization.quantize_net(net_original,
+                                    device=mx.cpu(),
+                                    exclude_layers=None,
+                                    exclude_operators=None,
+                                    quantized_dtype='int8',
+                                    calib_mode='naive',
+                                    calib_data=calib_data,
+                                    num_calib_batches=1,
+                                    quantize_mode='full',
+                                    quantize_granularity='tensor-wise')
+  qsym, _ = qnet.export(None)
+  attrs_dict = qsym.attr_dict()
+  for k, v in attrs_dict.items():
+    if k.find(op_name) != -1:
+      for attr in attrs_name:
+        assert v[attr] == 'true'
+      for exc_attr in excluded_attrs:
+        assert exc_attr not in v.keys(), exc_attr + " atribute shouldn't exist"
+

@@ -749,6 +749,17 @@ void CreateSubgraphNode(nnvm::Graph* g,
         for (BiDirectedNode* dest_node : subgraph_nodes) {
           sn->outputs.erase(dest_node->node);
         }
+      }
+    }
+
+    // Set outputs according to current inputs
+    for (size_t i = 0; i < n->inputs.size(); ++i) {
+      auto& e = n->inputs[i];
+      // update input entries' source simple nodes' outputs map
+      nnvm::Node* node = e.node.get();
+      if (indexed_graph.exist(node)) {
+        const auto nid     = indexed_graph.node_id(node);
+        BiDirectedNode* sn = simple_nodes[nid].get();
         sn->outputs[n.get()].push_back(i);
       }
     }
