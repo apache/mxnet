@@ -48,4 +48,4 @@ requires:
   IO::Zlib: '0'
   JSON::PP: '0'
   parent: '0'
-version: '1.5'
+version: '1.6'

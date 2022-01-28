@@ -54,7 +54,7 @@ use AI::MXNet::Gluon 'gluon';
 use AI::MXNet::NDArray::Sparse;
 use AI::MXNet::Symbol::Sparse;
 use AI::MXNet::Engine 'engine';
-our $VERSION = '1.5';
+our $VERSION = '1.6';
 
 sub cpu { AI::MXNet::Context->cpu($_[1]//0) }
 sub cpu_pinned { AI::MXNet::Context->cpu_pinned($_[1]//0) }
