@@ -54,7 +54,7 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 | Dependencies  | MXNet Version |
 | :------------: |:-------------:| 
 |OpenBLAS| 0.3.3 |
-|MKLDNN| 0.19 | 
+|MKLDNN| 2.4.4 | 
 |CUDA| 10.1 |
 |cuDNN| 7.5.1 |
 |NCCL| 2.4.2 |
