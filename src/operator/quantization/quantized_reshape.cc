@@ -22,6 +22,7 @@
  * \author: Adam Grabowski, adam.grabowski@intel.com
  */
 
+#include <utility>
 #include "quantized_reshape-inl.h"
 
 namespace mxnet {
