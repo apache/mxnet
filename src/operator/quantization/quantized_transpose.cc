@@ -80,10 +80,6 @@ NNVM_REGISTER_OP(_contrib_quantized_transpose)
           return std::vector<std::string>{"output", "min_output", "max_output"};
         })
     .set_attr<nnvm::FInplaceOption>(
-        "FInplaceOption",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::pair<int, int> >{{0, 0}, {1, 1}, {2, 2}};
-        })
     .set_attr<FQuantizable>("FQuantizable",
                             [](const NodeAttrs& attrs) { return QuantizeType::kSupport; })
     .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")
