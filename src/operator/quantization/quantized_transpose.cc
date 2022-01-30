@@ -103,5 +103,16 @@ NNVM_REGISTER_OP(transpose).set_attr<FQuantizedOp>("FQuantizedOp", [](const Node
   return node;
 });
 
+NNVM_REGISTER_OP(_npi_transpose).set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
+  nnvm::ObjectPtr node = nnvm::Node::Create();
+  node->attrs.op       = Op::Get("_npx_quantized_transpose");
+  node->attrs.name     = "quantized_" + attrs.name;
+  node->attrs.dict     = attrs.dict;
+  if (node->op()->attr_parser != nullptr) {
+    node->op()->attr_parser(&(node->attrs));
+  }
+  return node;
+});
+
 }  // namespace op
 }  // namespace mxnet
