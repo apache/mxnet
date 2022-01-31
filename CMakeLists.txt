@@ -940,14 +940,10 @@ target_link_libraries(mxnet PUBLIC dmlc)
 
 if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   add_executable(im2rec "tools/im2rec.cc")
-  if(MSVC)
-    target_link_libraries(im2rec mxnet)
-  else()
-    target_link_libraries(im2rec ${BEGIN_WHOLE_ARCHIVE} mxnet ${END_WHOLE_ARCHIVE})
-  endif()
   target_link_libraries(im2rec
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
+    mxnet
     dmlc
     )
 else()
