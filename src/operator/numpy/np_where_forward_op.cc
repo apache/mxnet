@@ -114,8 +114,12 @@ inline static bool WhereInferStorageType(const nnvm::NodeAttrs& attrs,
                                          DispatchMode* dispatch_mode,
                                          std::vector<int>* in_attrs,
                                          std::vector<int>* out_attrs) {
-  return DNNLStorageType(
-      attrs, dev_mask, /*support onednn*/ true, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs,
+                         dev_mask,
+                         /*support onednn*/ true,
+                         dispatch_mode,
+                         in_attrs,
+                         out_attrs);
 }
 #endif  // MXNET_USE_ONEDNN == 1
 
@@ -145,8 +149,8 @@ NNVM_REGISTER_OP(_npi_where)
     .set_attr<nnvm::FGradient>(
         "FGradient",
         // Use the following lambda function instead of ElemwiseGradUseIn
-        // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
-        // we need only condition from input.
+        // for best efficiency. grad[condition] = 0; to calculate grad[x] and
+        // grad[y] we need only condition from input.
         [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
           std::vector<nnvm::NodeEntry> ret;
           // make zero grad node for grad[condition]
