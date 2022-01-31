@@ -24,7 +24,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
 #Some things have order. This must be put in front alone
-option(USE_CUDA "Build with CUDA support"   ON)
+option(MXNET_BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
+option(USE_CUDA "Build with CUDA support" ON)
 set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture.
 Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
 - \"Auto\" detects local machine GPU compute arch at runtime.
@@ -278,6 +279,8 @@ if(ENABLE_TESTCOVERAGE)
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
   set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
   link_libraries(gcov)
+  target_compile_options(mxnet PUBLIC "--coverage")
+  target_link_libraries(mxnet PUBLIC gcov)
 endif()
 
 if(USE_MKL_LAYERNORM)
@@ -719,7 +722,6 @@ endif()
 # Add cmake targets
 add_subdirectory("3rdparty/mshadow")
 
-set(MXNET_INSTALL_TARGETS mxnet)
 if(USE_CUDA AND USE_FATBIN_COMPRESSION)
   string(APPEND CMAKE_CUDA_FLAGS " --fatbin-options --compress-all")
   message("-- CUDA: Adding NVCC options: --fatbin-options --compress-all")
@@ -729,14 +731,14 @@ if(UNIX)
   # Create dummy file since we want an empty shared library before linking
   set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c)
   file(WRITE ${DUMMY_SOURCE} "")
-  list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
-  add_library(mxnet_static STATIC ${SOURCE})
-  target_link_libraries(mxnet_static PUBLIC mshadow)
-  add_library(mxnet SHARED ${DUMMY_SOURCE})
-  target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
-  target_link_libraries(mxnet PRIVATE mxnet_static)
-  target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
-  set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
+  if(MXNET_BUILD_SHARED_LIBS)
+    add_library(mxnet SHARED ${SOURCE})
+  else()
+    add_library(mxnet STATIC ${SOURCE})
+  endif()
+  target_link_libraries(mxnet PUBLIC mshadow)
+  target_link_libraries(mxnet PUBLIC ${CMAKE_DL_LIBS})
+  target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
 elseif(MSVC)
   if(USE_CUDA)
     if(USE_SPLIT_ARCH_DLL)
@@ -889,7 +891,7 @@ if(USE_MKLDNN)
 endif()
 
 if(USE_INTGEMM)
-  target_link_libraries(mxnet_static PRIVATE intgemm)
+  target_link_libraries(mxnet PRIVATE intgemm)
 endif()
 
 function(BuildTVMOP)
@@ -926,20 +928,15 @@ if(USE_PLUGINS_WARPCTC)
   list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
 endif()
 
-if(MSVC)
-  if(USE_SPLIT_ARCH_DLL AND USE_CUDA)
-    foreach(arch ${arch_code_list})
-      target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
-      target_link_libraries(mxnet_${arch} PUBLIC dmlc)
-    endforeach()
-  else()
-    target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
-    target_link_libraries(mxnet PUBLIC dmlc)
-  endif()
-else()
-  target_link_libraries(mxnet_static PUBLIC ${mxnet_LINKER_LIBS})
-  target_link_libraries(mxnet PUBLIC dmlc)
+if(MSVC AND USE_SPLIT_ARCH_DLL AND USE_CUDA)
+  foreach(arch ${arch_code_list})
+    target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
+    target_link_libraries(mxnet_${arch} PUBLIC dmlc)
+  endforeach()
 endif()
+
+target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+target_link_libraries(mxnet PUBLIC dmlc)
 
 if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   add_executable(im2rec "tools/im2rec.cc")
@@ -951,6 +948,7 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   target_link_libraries(im2rec
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
+    mxnet
     dmlc
     )
 else()
@@ -968,7 +966,7 @@ endif()
 #       https://cmake.org/cmake/help/v3.13/variable/CMAKE_INSTALL_PREFIX.html
 #       https://cmake.org/cmake/help/v3.13/module/GNUInstallDirs.html
 include(GNUInstallDirs)
-install(TARGETS ${MXNET_INSTALL_TARGETS}
+install(TARGETS mxnet
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
