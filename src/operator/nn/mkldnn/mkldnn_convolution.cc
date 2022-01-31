@@ -129,7 +129,7 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
                  // With the upgrade of MKLDNN to version 2.4+
                  // tests/python/mkl/test_subgraph.py::test_pos_conv_add started failing. Switching
                  // away from primitive with weight mkldnn::format_tag ABcd4b16a4b in order to
-                 // temporairly fix the issue until full fix arrives. Tracking issue:
+                 // temporarily fix the issue until full fix arrives. Tracking issue:
                  // https://github.com/apache/incubator-mxnet/issues/20826.
                  (param.mkldnn_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
                   conv_pd->weights_desc().data.padded_dims[1] == 16)) {
