@@ -24,7 +24,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
 #Some things have order. This must be put in front alone
-option(USE_CUDA "Build with CUDA support"   ON)
+option(MXNET_BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
+option(USE_CUDA "Build with CUDA support" ON)
 set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture.
 Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
 - \"Auto\" detects local machine GPU compute arch at runtime.
@@ -278,6 +279,8 @@ if(ENABLE_TESTCOVERAGE)
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
   set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
   link_libraries(gcov)
+  target_compile_options(mxnet PUBLIC "--coverage")
+  target_link_libraries(mxnet PUBLIC gcov)
 endif()
 
 if(USE_MKL_LAYERNORM)
@@ -371,15 +374,6 @@ include_directories("3rdparty/dlpack/include")
 #if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack)
 #  add_subdirectory(3rdparty/dlpack)
 #endif()
-
-# Prevent stripping out symbols (operator registrations, for example)
-if(NOT MSVC AND NOT APPLE)
-  set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
-  set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # using regular Clang or AppleClang
-  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load)
-endif()
 
 if(UNIX)
   find_library(RTLIB rt)
@@ -567,15 +561,15 @@ assign_source_group("Include" ${GROUP_Include})
 assign_source_group("CUDA" ${GROUP_CUDA})
 
 if(USE_PLUGINS_WARPCTC)
-    set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
-    set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
-    set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
-    include_directories(SYSTEM ${WARPCTC_INCLUDE})
-    list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
-    FILE(GLOB_RECURSE PLUGINS_SOURCE "plugin/warpctc/*.cc" "plugin/warpctc/*.h")
-    FILE(GLOB_RECURSE PLUGINS_CUSRC "plugin/warpctc/*.cu")
-    list(APPEND SOURCE ${PLUGINS_SOURCE})
-    list(APPEND CUDA ${PLUGINS_CUSRC})
+  set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
+  set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
+  set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
+  include_directories(SYSTEM ${WARPCTC_INCLUDE})
+  list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
+  FILE(GLOB_RECURSE PLUGINS_SOURCE "plugin/warpctc/*.cc" "plugin/warpctc/*.h")
+  FILE(GLOB_RECURSE PLUGINS_CUSRC "plugin/warpctc/*.cu")
+  list(APPEND SOURCE ${PLUGINS_SOURCE})
+  list(APPEND CUDA ${PLUGINS_CUSRC})
 endif()
 
 if(USE_OPERATOR_TUNING AND USE_OPENMP)
@@ -618,11 +612,11 @@ if(USE_PLUGIN_CAFFE)
 endif()
 
 if (NOT (EXTRA_OPERATORS STREQUAL ""))
-    mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
-    mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
-    FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
-    FILE(GLOB_RECURSE EXTRA_CUSRC "${EXTRA_OPERATORS}/*.cu")
-    list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
+  mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
+  mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
+  FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
+  FILE(GLOB_RECURSE EXTRA_CUSRC "${EXTRA_OPERATORS}/*.cu")
+  list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
 endif()
 
 if(MSVC AND NOT MXNET_FORCE_SHARED_CRT)
@@ -719,7 +713,6 @@ endif()
 # Add cmake targets
 add_subdirectory("3rdparty/mshadow")
 
-set(MXNET_INSTALL_TARGETS mxnet)
 if(USE_CUDA AND USE_FATBIN_COMPRESSION)
   string(APPEND CMAKE_CUDA_FLAGS " --fatbin-options --compress-all")
   message("-- CUDA: Adding NVCC options: --fatbin-options --compress-all")
@@ -729,14 +722,14 @@ if(UNIX)
   # Create dummy file since we want an empty shared library before linking
   set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c)
   file(WRITE ${DUMMY_SOURCE} "")
-  list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
-  add_library(mxnet_static STATIC ${SOURCE})
-  target_link_libraries(mxnet_static PUBLIC mshadow)
-  add_library(mxnet SHARED ${DUMMY_SOURCE})
-  target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
-  target_link_libraries(mxnet PRIVATE mxnet_static)
-  target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
-  set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
+  if(MXNET_BUILD_SHARED_LIBS)
+    add_library(mxnet SHARED ${SOURCE})
+  else()
+    add_library(mxnet STATIC ${SOURCE})
+  endif()
+  target_link_libraries(mxnet PUBLIC mshadow)
+  target_link_libraries(mxnet PUBLIC ${CMAKE_DL_LIBS})
+  target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
 elseif(MSVC)
   if(USE_CUDA)
     if(USE_SPLIT_ARCH_DLL)
@@ -881,15 +874,15 @@ if(USE_DIST_KVSTORE)
 endif()
 
 if(USE_MKLDNN)
-    add_custom_command(TARGET mxnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
-      COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
 endif()
 
 if(USE_INTGEMM)
-  target_link_libraries(mxnet_static PRIVATE intgemm)
+  target_link_libraries(mxnet PRIVATE intgemm)
 endif()
 
 function(BuildTVMOP)
@@ -926,36 +919,27 @@ if(USE_PLUGINS_WARPCTC)
   list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
 endif()
 
-if(MSVC)
-  if(USE_SPLIT_ARCH_DLL AND USE_CUDA)
-    foreach(arch ${arch_code_list})
-      target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
-      target_link_libraries(mxnet_${arch} PUBLIC dmlc)
-    endforeach()
-  else()
-    target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
-    target_link_libraries(mxnet PUBLIC dmlc)
-  endif()
-else()
-  target_link_libraries(mxnet_static PUBLIC ${mxnet_LINKER_LIBS})
-  target_link_libraries(mxnet PUBLIC dmlc)
+if(MSVC AND USE_SPLIT_ARCH_DLL AND USE_CUDA)
+  foreach(arch ${arch_code_list})
+    target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
+    target_link_libraries(mxnet_${arch} PUBLIC dmlc)
+  endforeach()
 endif()
+
+target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+target_link_libraries(mxnet PUBLIC dmlc)
 
 if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   add_executable(im2rec "tools/im2rec.cc")
-  if(MSVC)
-    target_link_libraries(im2rec mxnet)
-  else()
-    target_link_libraries(im2rec ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE})
-  endif()
   target_link_libraries(im2rec
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
+    mxnet
     dmlc
     )
 else()
-    message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
-    is required for im2rec, im2rec will not be available")
+  message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
+  is required for im2rec, im2rec will not be available")
 endif()
 
 
@@ -968,7 +952,7 @@ endif()
 #       https://cmake.org/cmake/help/v3.13/variable/CMAKE_INSTALL_PREFIX.html
 #       https://cmake.org/cmake/help/v3.13/module/GNUInstallDirs.html
 include(GNUInstallDirs)
-install(TARGETS ${MXNET_INSTALL_TARGETS}
+install(TARGETS mxnet
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -983,7 +967,7 @@ if (INSTALL_EXAMPLES)
 endif()
 
 if (USE_SIGNAL_HANDLER)
-    add_definitions(-DMXNET_USE_SIGNAL_HANDLER=1)
+  add_definitions(-DMXNET_USE_SIGNAL_HANDLER=1)
 endif()
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
