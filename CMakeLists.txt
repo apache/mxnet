@@ -375,15 +375,6 @@ include_directories("3rdparty/dlpack/include")
 #  add_subdirectory(3rdparty/dlpack)
 #endif()
 
-# Prevent stripping out symbols (operator registrations, for example)
-if(NOT MSVC AND NOT APPLE)
-  set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
-  set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # using regular Clang or AppleClang
-  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load)
-endif()
-
 if(UNIX)
   find_library(RTLIB rt)
   if(RTLIB)
@@ -570,15 +561,15 @@ assign_source_group("Include" ${GROUP_Include})
 assign_source_group("CUDA" ${GROUP_CUDA})
 
 if(USE_PLUGINS_WARPCTC)
-    set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
-    set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
-    set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
-    include_directories(SYSTEM ${WARPCTC_INCLUDE})
-    list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
-    FILE(GLOB_RECURSE PLUGINS_SOURCE "plugin/warpctc/*.cc" "plugin/warpctc/*.h")
-    FILE(GLOB_RECURSE PLUGINS_CUSRC "plugin/warpctc/*.cu")
-    list(APPEND SOURCE ${PLUGINS_SOURCE})
-    list(APPEND CUDA ${PLUGINS_CUSRC})
+  set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
+  set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
+  set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
+  include_directories(SYSTEM ${WARPCTC_INCLUDE})
+  list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
+  FILE(GLOB_RECURSE PLUGINS_SOURCE "plugin/warpctc/*.cc" "plugin/warpctc/*.h")
+  FILE(GLOB_RECURSE PLUGINS_CUSRC "plugin/warpctc/*.cu")
+  list(APPEND SOURCE ${PLUGINS_SOURCE})
+  list(APPEND CUDA ${PLUGINS_CUSRC})
 endif()
 
 if(USE_OPERATOR_TUNING AND USE_OPENMP)
@@ -621,11 +612,11 @@ if(USE_PLUGIN_CAFFE)
 endif()
 
 if (NOT (EXTRA_OPERATORS STREQUAL ""))
-    mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
-    mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
-    FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
-    FILE(GLOB_RECURSE EXTRA_CUSRC "${EXTRA_OPERATORS}/*.cu")
-    list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
+  mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
+  mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
+  FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
+  FILE(GLOB_RECURSE EXTRA_CUSRC "${EXTRA_OPERATORS}/*.cu")
+  list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
 endif()
 
 if(MSVC AND NOT MXNET_FORCE_SHARED_CRT)
@@ -883,11 +874,11 @@ if(USE_DIST_KVSTORE)
 endif()
 
 if(USE_MKLDNN)
-    add_custom_command(TARGET mxnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
-      COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
 endif()
 
 if(USE_INTGEMM)
@@ -947,8 +938,8 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     dmlc
     )
 else()
-    message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
-    is required for im2rec, im2rec will not be available")
+  message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
+  is required for im2rec, im2rec will not be available")
 endif()
 
 
@@ -976,7 +967,7 @@ if (INSTALL_EXAMPLES)
 endif()
 
 if (USE_SIGNAL_HANDLER)
-    add_definitions(-DMXNET_USE_SIGNAL_HANDLER=1)
+  add_definitions(-DMXNET_USE_SIGNAL_HANDLER=1)
 endif()
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
