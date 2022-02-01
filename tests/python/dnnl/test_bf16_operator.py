@@ -34,7 +34,7 @@ import pytest
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
-def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf16_use_fp32_params=False, is_broadcast_function=False, rtol=1e-1, atol=5e-1, etol=0):
+def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf16_use_fp32_params=False, rtol=1e-1, atol=5e-1, etol=0):
     """
     check accuracy for bfloat16 operators
 
@@ -55,23 +55,22 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
     etol: float
         The error rate threshold, allow a small amount of value not consistent between bf16 and fp32
     """
-    if not isinstance(data_shape, tuple):
-        data_shape = tuple(data_shape)
+    if isinstance(data_shape, tuple):
+        data_shape = {"data": data_shape}
     data_range = (0.0, 10.0)
     data_list_fp32 = list()
     data_list_bf16 = list()
-    for i in range(num_input_data):
-        data_list_fp32.append(mx.nd.random.uniform(low=data_range[0], high=data_range[1], shape=data_shape))
+    for i, obj in enumerate(data_shape):
+        shape = data_shape[obj]
+        data_list_fp32.append(mx.nd.random.uniform(low=data_range[0], high=data_range[1], shape=shape))
         data_list_bf16.append(mx.nd.amp_cast(data_list_fp32[i], dtype=bfloat16))
 
     # Functions such as broadcast_add require shapes for both inputs in order to infer shape
-    arg_shapes, _, aux_shapes = sym_fp32.infer_shape(data=data_shape) if not is_broadcast_function else \
-                                sym_fp32.infer_shape(data=data_shape, data_1=data_shape)
+    arg_shapes, _, aux_shapes = sym_fp32.infer_shape(**data_shape)
     arg_names = sym_fp32.list_arguments()
     aux_names = sym_fp32.list_auxiliary_states()
 
-    exe_fp32 = sym_fp32._simple_bind(ctx=mx.cpu(), data=data_shape) if not is_broadcast_function else \
-               sym_fp32._simple_bind(ctx=mx.cpu(), data=data_shape, data_1=data_shape)
+    exe_fp32 = sym_fp32._simple_bind(ctx=mx.cpu(), **data_shape)
 
     arg_params_fp32 = {}
     aux_params_fp32 = {}
@@ -92,8 +91,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
 
     output_fp32 = exe_fp32.forward()[0]
 
-    exe_bf16 = sym_bf16._simple_bind(ctx=mx.cpu(), data=data_shape, type_dict=type_dict) if not is_broadcast_function else \
-               sym_bf16._simple_bind(ctx=mx.cpu(), data=data_shape, data_1=data_shape, type_dict=type_dict)
+    exe_bf16 = sym_bf16._simple_bind(ctx=mx.cpu(), **data_shape, type_dict=type_dict)
 
     arg_params_bf16 = {}
     aux_params_bf16 = {}
@@ -196,10 +194,18 @@ def test_bf16_elemwiseadd():
     b_sym_bf16 = mx.sym.Variable("data_1", dtype=bfloat16)
     sym_bf16 = mx.sym.elemwise_add(a_sym_bf16, b_sym_bf16)
 
-    check_operator_accuracy(sym_fp32, sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
+    dshapes = {"data": dshape, "data_1": dshape}
+    check_operator_accuracy(sym_fp32, sym_bf16, dshapes, num_input_data=2, bf16_use_fp32_params=True)
 
 def test_bf16_binary_broadcast_elemwise_funcs():
-    dshape = rand_shape_nd(4)
+    dshape_0 = rand_shape_nd(4)
+    dshape_1 = tuple()
+    for i in range(4):
+        if(randint(0,1)):
+            dshape_1 += (dshape_0[i], )
+        else:
+            dshape_1 += (1, )
+
     functions = [mx.sym.broadcast_add,
                  mx.sym.broadcast_sub,
                  mx.sym.broadcast_mul,
@@ -214,7 +220,8 @@ def test_bf16_binary_broadcast_elemwise_funcs():
     for func in functions:
         sym_fp32 = func(a_sym_fp32, b_sym_fp32)
         sym_bf16 = func(a_sym_bf16, b_sym_bf16)
-        check_operator_accuracy(sym_fp32, sym_bf16, data_shape=dshape, num_input_data=2, is_broadcast_function=True, bf16_use_fp32_params=False)
+        dshapes = {"data": dshape_0, "data_1": dshape_1}
+        check_operator_accuracy(sym_fp32, sym_bf16, dshapes, num_input_data=2, bf16_use_fp32_params=False)
 
 @pytest.mark.skip(reason="env dependent, need check further.")
 def test_bf16_concat():
