@@ -23,8 +23,11 @@
 
 #if MXNET_USE_ONEDNN == 1
 
+#include <algorithm>
+#include <set>
+#include <unordered_set>
 #include "dnnl_where-inl.h"
-#include "src/operator/operator_common.h"
+#include "operator/operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -168,7 +171,7 @@ void DNNLWhereFwd::Execute(const Tensors& tensors,
 
   // allocate temporary memory for 4 additional tensors
   mshadow::Tensor<cpu, 1> tmp_workspace = ctx.requested[0].get_space<cpu>(
-      mshadow::Shape1(tensors.output.shape().Size() * 4 * dtype_size, cpu_stream);
+      mshadow::Shape1(tensors.output.shape().Size() * 4 * dtype_size), cpu_stream);
   char* workspace_ptr   = reinterpret_cast<char*>(tmp_workspace.dptr_);
   const int offset_size = tensors.output.shape().Size() * dtype_size;
 

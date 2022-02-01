@@ -25,8 +25,9 @@
 #define MXNET_OPERATOR_NN_DNNL_DNNL_WHERE_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
+#include <memory>
+#include <unordered_map>
 #include <vector>
-
 #include "./dnnl_base-inl.h"
 #include "./dnnl_ops-inl.h"
 
@@ -45,7 +46,7 @@ class DNNLWhereFwd {
 
   static DNNLWhereFwd GetCached(const Tensors& tensors);
 
-  DNNLWhereFwd(const Tensors& tensors);
+  explicit DNNLWhereFwd(const Tensors& tensors);
 
   void Execute(const Tensors& tensors,
                const std::vector<OpReqType>& req,
