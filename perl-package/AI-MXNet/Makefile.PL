@@ -41,12 +41,12 @@ my %WriteMakefileArgs = (
     "Function::Parameters" => "1.0705",
     "Hash::Ordered" => "0.012",
     "Mouse" => "v2.1.0",
-    "PDL" => "2.007",
+    "PDL" => "2.064",
     "PDL::CCS" => "1.23.4",
     "GraphViz" => "2.14"
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.5",
+  "VERSION" => "1.6",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -59,7 +59,7 @@ my %FallbackPrereqs = (
   "Function::Parameters" => "1.0705",
   "Hash::Ordered" => "0.012",
   "Mouse" => "v2.1.0",
-  "PDL" => "2.007",
+  "PDL" => "2.064",
   "PDL::CCS" => "1.23.4",
   "GraphViz" => "2.14"
 );

@@ -36,7 +36,7 @@
             "Hash::Ordered" : "0.012",
             "GraphViz" : "2.14",
             "Mouse" : "v2.1.0",
-            "PDL" : "2.007",
+            "PDL" : "2.064",
             "PDL::CCS" : "1.23.4",
             "Archive::Tar": "0",
             "Digest::SHA": "0",
@@ -51,5 +51,5 @@
       }
    },
    "release_status" : "stable",
-   "version" : "1.5"
+   "version" : "1.6"
 }

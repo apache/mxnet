@@ -40,7 +40,7 @@ requires:
   Hash::Ordered: '0.012'
   GraphViz: '2.14'
   Mouse: v2.1.0
-  PDL: '2.007'
+  PDL: '2.064'
   PDL::CCS: '1.23.4'
   Archive::Tar: '0'
   Digest::SHA: '0'
@@ -48,4 +48,4 @@ requires:
   IO::Zlib: '0'
   JSON::PP: '0'
   parent: '0'
-version: '1.5'
+version: '1.6'
