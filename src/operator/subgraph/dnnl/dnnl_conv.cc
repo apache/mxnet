@@ -130,17 +130,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   auto& dnnl_param      = full_conv_param.dnnl_param;
   auto& conv_param      = full_conv_param.conv_param;
   auto bn_param         = param_.bn_param.get();
-  size_t input_size     = 2 + (conv_param.no_bias ? 0 : 1) + (dnnl_param.with_bn ? 4 : 0) +
-                      (dnnl_param.with_sum ? 1 : 0) +
-                      (dnnl_param.quantized ? 2 + (dnnl_param.with_sum ? 2 : 0) : 0);
-  // When dedup is on, in_data is used to calculate sum instead of in_sum
-  if (dnnl_param.dedup_sum) {
-    input_size -= 1;
-    if (dnnl_param.quantized) {
-      input_size -= 2;
-    }
-  }
-  CHECK_EQ(inputs.size(), input_size);
+
   index_t idx = 0;
 
   auto in_data   = idx++;
@@ -164,7 +154,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
       sum_max = inputs[idx++].data().dptr<float>()[0];
     }
   }
-  CHECK_EQ(input_size, idx);
+  CHECK_EQ(inputs.size(), idx);
   bool has_bias  = dnnl_param.with_bn || !conv_param.no_bias;
   NDArray data   = inputs[in_data];
   NDArray output = dnnl_param.with_sum ? inputs[in_sum] : outputs[kOut];
@@ -528,11 +518,9 @@ static std::vector<std::string> SgDNNLConvListInputNames(const NodeAttrs& attrs)
 
 static std::vector<std::string> SgDNNLConvListOutputNames(const NodeAttrs& attrs) {
   auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.dnnl_param.quantized) {
-    if (param.full_conv_param.dnnl_param.enable_float_output)
-      return std::vector<std::string>{"output"};
-    else
-      return std::vector<std::string>{"output", "output_min", "output_max"};
+  if (param.full_conv_param.dnnl_param.quantized &&
+      !param.full_conv_param.dnnl_param.enable_float_output) {
+    return std::vector<std::string>{"output", "output_min", "output_max"};
   } else {
     return std::vector<std::string>{"output"};
   }
