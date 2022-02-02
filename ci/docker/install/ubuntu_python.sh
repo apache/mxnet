@@ -23,14 +23,19 @@
 set -ex
 # install libraries for mxnet's python package on ubuntu
 apt-get update || true
-apt-get install -y software-properties-common
-add-apt-repository -y ppa:deadsnakes/ppa
-apt-get update || true
-apt-get install -y python3.7-dev python3.7-distutils virtualenv wget
-# setup symlink in /usr/local/bin to override python3 version
-ln -sf /usr/bin/python3.7 /usr/local/bin/python3
+apt-get install -y software-properties-common build-essential wget \
+    libbz2-dev libc6-dev libffi-dev libgdbm-dev liblzma-dev \
+    libncursesw5-dev libreadline-gplv2-dev libsqlite3-dev \
+    libssl-dev tk-dev ffmpeg libsm6 libxext6 gfortran
 
-# the version of the pip shipped with ubuntu may be too lower, install a recent version here
-wget -nv https://bootstrap.pypa.io/get-pip.py
-/usr/local/bin/python3 get-pip.py
-/usr/local/bin/python3 -m pip install -r /work/requirements
+PYTHON_VERSION=3.8.12
+wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
+tar -xzf Python-$PYTHON_VERSION.tgz
+cd Python-$PYTHON_VERSION
+./configure --prefix=/usr/local
+make -j $(nproc)
+make install
+cd ..
+rm -rf Python-$PYTHON_VERSION*
+pip3 install --upgrade pip setuptools wheel
+pip3 install -r /work/requirements
