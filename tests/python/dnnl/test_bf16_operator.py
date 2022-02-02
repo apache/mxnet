@@ -60,8 +60,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
     data_range = (0.0, 10.0)
     data_list_fp32 = list()
     data_list_bf16 = list()
-    for i, obj in enumerate(data_shape):
-        shape = data_shape[obj]
+    for i, (_, shape) in enumerate(data_shape.items()):
         data_list_fp32.append(mx.nd.random.uniform(low=data_range[0], high=data_range[1], shape=shape))
         data_list_bf16.append(mx.nd.amp_cast(data_list_fp32[i], dtype=bfloat16))
 
