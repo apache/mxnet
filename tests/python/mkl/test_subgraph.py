@@ -710,6 +710,28 @@ def fc_eltwise(no_bias, data_shape, flatten=True, alg='relu'):
 
   return sym, attr
 
+def fc_identity_eltwise(data_shape, identity_node):
+  attrs = {'sg_mkldnn_fully_connected_eltwise_0' : {'with_eltwise': 'true'},
+           'sg_mkldnn_fully_connected_eltwise_1' : {'with_eltwise': 'true'}}
+  data, fc1_weight = head_symbol(data_shape)
+  fc2_weight = mx.symbol.Variable('fc2_weight', dtype='float32')
+
+  sym = mx.symbol.FullyConnected(name='fc1', data=data, weight=fc1_weight, num_hidden=64,
+                                no_bias=True, flatten=True)
+  if identity_node == 'copy':
+    sym = mx.symbol.identity(sym)
+  else:
+    sym = mx.symbol.Dropout(sym)
+  sym = mx.symbol.Activation(sym, act_type='relu')
+  sym = mx.symbol.FullyConnected(name='fc2', data=sym, weight=fc2_weight, num_hidden=64,
+                                no_bias=True, flatten=True)
+  if identity_node == 'copy':
+    sym = mx.symbol.identity(sym)
+  else:
+    sym = mx.symbol.Dropout(sym)
+  sym = mx.symbol.Activation(sym, act_type='relu')
+  return sym, attrs
+
 def single_selfatt_qk(data_shape, nheads=16):
   attr = {'selfatt_qk': {}}
   data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
@@ -999,6 +1021,12 @@ def test_single_fc():
       check_fusion(syms, dshape, attrs, check_quantization=True)
     else:
       check_fusion(syms, dshape, attrs, check_quantization=False)
+
+@with_seed()
+def test_fc_eltwise_identity():
+  for dshape, identity_node in itertools.product(DATA_SHAPE, ['copy', 'dropout']):
+    syms, attrs = fc_identity_eltwise(dshape, identity_node)
+    check_fusion(syms, dshape, attrs, check_quantization=False)
 
 @with_seed()
 def test_fc_eltwise():
