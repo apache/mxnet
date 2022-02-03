@@ -47,7 +47,7 @@ bool SupportDNNLQuantizedTranspose(const NDArray& data) {
 
   return true;
 }
-
+template<class ParamType>
 static void DNNLQuantizedTransposeForward(const nnvm::NodeAttrs& attrs,
                                           const OpContext& ctx,
                                           const std::vector<NDArray>& inputs,
@@ -61,7 +61,7 @@ static void DNNLQuantizedTransposeForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 3U);
   if (SupportDNNLQuantizedTranspose(inputs[0])) {
-    DNNLRun(DNNLTransposeForward<TransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNLRun(DNNLTransposeForward<ParamType>, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
   }
@@ -69,13 +69,22 @@ static void DNNLQuantizedTransposeForward(const nnvm::NodeAttrs& attrs,
   outputs[2].data().dptr<float>()[0] = inputs[2].data().dptr<float>()[0];
 }
 
+NNVM_REGISTER_OP(_npx_quantized_transpose)
+    .set_attr<FInferStorageType>("FInferStorageType", QuantizedTransposeStorageType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedTransposeForward<NumpyTransposeParam>)
+    .set_attr<bool>("TIsDNNL", true);
+
 NNVM_REGISTER_OP(_contrib_quantized_transpose)
     .set_attr<FInferStorageType>("FInferStorageType", QuantizedTransposeStorageType)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedTransposeForward)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedTransposeForward<TransposeParam>)
     .set_attr<bool>("TIsDNNL", true);
 
 }  // namespace op
