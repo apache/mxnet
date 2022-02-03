@@ -33,4 +33,4 @@ ln -sf /usr/bin/python3.7 /usr/local/bin/python3
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 wget -nv https://bootstrap.pypa.io/get-pip.py
 /usr/local/bin/python3 get-pip.py
-pip3 install -r /work/requirements
+/usr/local/bin/python3 -m pip install -r /work/requirements
