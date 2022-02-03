@@ -151,7 +151,7 @@ class SgMKLDNNIdentityProperty : public SubgraphProperty {
     //         (n) slice
     //                  \--index 1--> Dropout --index 0--> OUT_NODE
     //  for OUT_NODE index 0 must be changed to index 1
-    for (int i = 0; i < output_entries->size(); ++i) {
+    for (size_t i = 0; i < output_entries->size(); ++i) {
       auto out_node = output_entries->at(i)->node;
       if (IsIdentityNode(out_node)) {
         output_entries->at(i)->index = out_node->inputs[0].index;
