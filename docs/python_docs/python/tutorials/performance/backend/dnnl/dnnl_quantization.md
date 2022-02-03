@@ -20,24 +20,24 @@
 After successful model building and achieving desired accuracy on the test data, often the next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers at the same time. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
 
 Two main types of software optimizations can be characerized as:
-- memory-bound optimizations - main objective of these optimizations is to reduce memory operations (reads and writes) - it is done by e.g. chaining sequence of operations which can be performed one after another immediately (example: ReLU activation)
+- memory-bound optimizations - main objective of these optimizations is to reduce memory operations (reads and writes) - it is done by e.g. chaining operations which can be performed one after another immediately, where input of every subsequent operation is the output of the previous one (example: ReLU activation after convolution)
 - compute-bound optimizations - these optimizations are mainly done on operations which require large number of CPU cycles to complete, like FullyConnected and Convolution - one of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization
 
 In version 2.0 of the Apache MXNet (incubating) GluonAPI2.0 replaced Symbolic API known from versions 1.x, thus there are some differences between API to perform graph fusion and quantization.
 
 ## Operator Fusion
 
-Models are often represented as directed graph of operations (represented by nodes) and data flow (representad as edges). This way of visualizing helps a lot when searching for common patterns in whole model which can be optimized by fusion. Example:
+Models are often represented as a directed graph of operations (represented by nodes) and data flow (represented as edges). This way of visualizing helps a lot when searching for common patterns in whole model which can be optimized by fusion. Example:
 ![base_model](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/sample_net.png?raw=true)
 
 
-The simplest way to explain what fusion is and how it works is to present an example. On the image above is shown a sequence of popular operations taken from ResNet architecture. This type of architecture is built with many similar block called residual blocks. Some possible fusion patterns are:
+The simplest way to explain what fusion is and how it works is to present an example. Image above depicts a sequence of popular operations taken from ResNet architecture. This type of architecture is built with many similar blocks called residual blocks. Some possible fusion patterns are:
 
 - Conv2D + BatchNorm => Fusing BatchNorm with Convolution can be performed by modifing weights and bias of Convolution - this way BatchNorm is completely contained within Convolution which makes BatchNorm zero time operation. Only cost of fusing is time needed to prepare weights and bias in Convolution based on BatchNorm parameters.
 - Conv2D + ReLU => this type of fusion is very popular also with other layers (e.g. FullyConnected + Activation). It is very simple idea where before writing data to output, activation is performed on that data. Main benefit of this fusion is that, there is no need to read and write back data in other layer only to perform simple activation function. 
-- Conv2D + Add => even simpler idea than the previous one - instead of overwriting output memory, results are added to the output memory. In the simplest terms: `out_mem = conv_result` is replaced by `out_mem += conv_result`
+- Conv2D + Add => even simpler idea than the previous ones - instead of overwriting output memory, results are added to the output memory. In the simplest terms: `out_mem = conv_result` is replaced by `out_mem += conv_result`.
 
-Above examples are presented as atomic ones, but often they can be combined together, thus two patterns can be fused in above example:
+Above examples are presented as atomic ones, but often they can be combined together, thus two patterns that can be fused in above example are:
 - Conv2D + BatchNorm + ReLU
 - Conv2D + BatchNorm + Add + ReLU
 
@@ -47,7 +47,7 @@ After fusing all patterns, computational graph will be changed to the following 
 
 
 ### Operator fusion in MXNet
-Since the version 1.6 of MXNet built with oneDNN support, operator fusion had been enabled by default if executing model with Module API, however in version 2.0 it has been decided to remove setting this feature by environment flag and replace it by aware user API call.
+Since the version 1.6 of MXNet built with oneDNN support, operator fusion had been enabled by default for executing model with Module API, however in version 2.0 it has been decided to remove setting this feature by environment flag and replace it by aware user API call.
 
 To fuse model in MXNet 2.0 there are two requirements:
 - the model must be defined as a subclass of HybridBlock or Symbol,
@@ -120,10 +120,10 @@ After injection step it is important to perform calibration of the model, howeve
 
 Currently, there are three supported calibration methods:
 - naive — min/max values from the calibration run,
-- entropy — uses KL divergence to determine the best symmetrical quantization thresholds for a given histogram of values.
+- entropy — uses KL divergence to determine the best symmetrical quantization thresholds for a given histogram of values,
 - custom — uses user-defined CalibrationCollector to control the calibration process.
 
-Last operation in quantization flow is to perform additional operator fusion. Second fusion is about merging requantize and dequantize operators into preceding node - oneDNN kernels can perform needed scaling before writing result to output which results in model execution speed-up. Notice that last Convolution does not need minimum and maximum values as it is not requantizing int32 to int8, but dequantizing directly to float32 and scale is calculated basing on minimum and maximum of input and weights.
+Last stage of quantization flow is to perform additional operator fusion. Second fusion is about merging requantize and dequantize operators into preceding node - oneDNN kernels can perform needed scaling before writing result to output which results in model execution speed-up. Notice that last Convolution does not need minimum and maximum values as it is not requantizing int32 to int8, but dequantizing directly to float32 and scale is calculated basing on minimum and maximum of input and weights.
 
 ![quant_calib_fused](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/quant_calib_fused.png?raw=true)
 
