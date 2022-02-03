@@ -148,9 +148,8 @@ NNVM_REGISTER_OP(_npi_where)
 #endif
     .set_attr<nnvm::FGradient>(
         "FGradient",
-        // Use the following lambda function instead of ElemwiseGradUseIn
-        // for best efficiency. grad[condition] = 0; to calculate grad[x] and
-        // grad[y] we need only condition from input.
+        // Use the following lambda function instead of ElemwiseGradUseIn for best efficiency.
+        // grad[condition] = 0; to calculate grad[x] and grad[y] we need only condition from input.
         [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
           std::vector<nnvm::NodeEntry> ret;
           // make zero grad node for grad[condition]
