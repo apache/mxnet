@@ -133,6 +133,7 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
   using namespace mxnet::op::mxnet_op;
   using namespace dnnl;
   /*
+   Three steps of masked softmax:
    1. out = input * [(mask - 1) * inf]
    2. out = softmax(out)
    3. out = out * mask

@@ -21,13 +21,13 @@
  * \file masked_softmax.cc
  */
 
-#include "./softmax-inl.h"
-#include "../tensor/elemwise_unary_op.h"
-#include "../tensor/elemwise_binary_op.h"
-#include "../operator_common.h"
+#include "softmax-inl.h"
+#include "operator/tensor/elemwise_unary_op.h"
+#include "operator/tensor/elemwise_binary_op.h"
+#include "operator/operator_common.h"
 #if MXNET_USE_ONEDNN == 1
-#include "dnnl/dnnl_base-inl.h"
-#include "dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_ops-inl.h"
 #endif
 
 namespace mxnet {
