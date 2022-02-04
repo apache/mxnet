@@ -25,4 +25,4 @@ cd python/
 python3 setup.py bdist_wheel
 
 wheel_name=$(ls -t dist | head -n 1)
-pip install -U --user --force-reinstall dist/$wheel_name
+pip3 install -U --user --force-reinstall dist/$wheel_name
