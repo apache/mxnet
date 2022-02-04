@@ -30,5 +30,5 @@ numpy>=1.22.1,<2.0
 pylint==2.3.1  # pylint and astroid need to be aligned
 astroid==2.3.3  # pylint and astroid need to be aligned
 requests<2.19.0,>=2.18.4
-scipy
+scipy<1.7.0 # Restrict scipy version due to https://github.com/apache/incubator-mxnet/issues/20389
 coverage
