@@ -5,5 +5,5 @@ nose
 nose-timer
 ipython
 numpy>=1.22.1,<2.0
-scipy
+scipy<1.7.0 # Restrict scipy version due to https://github.com/apache/incubator-mxnet/issues/20389
 onnxruntime
