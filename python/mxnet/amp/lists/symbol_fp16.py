@@ -108,6 +108,7 @@ FP16_FP32_FUNCS = [
     '_contrib_quantized_elemwise_add',
     '_contrib_quantized_act',
     '_contrib_quantized_reshape',
+    '_npx_quantized_reshape',
     '_image_crop',
     '_linspace',
     '_contrib_requantize',
