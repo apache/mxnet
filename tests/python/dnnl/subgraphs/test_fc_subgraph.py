@@ -17,7 +17,7 @@
 
 import mxnet as mx
 import pytest
-from subgraph_common import check_fusion, check_neg_fusion, check_neg_fusion_quantized
+from subgraph_common import check_fusion, check_neg_fusion, check_neg_fusion_quantized, check_quantize
 from subgraph_common import CustomNormalInit, DATA_SHAPE, TailNegBlock
 from mxnet.contrib import quantization
 from mxnet.gluon import nn
@@ -58,7 +58,9 @@ def test_single_fc(data_shape, use_bias, flatten):
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
-def test_fc_reshape(data_shape, use_bias, flatten):
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('module', [mx.npx, mx.nd])
+def test_fc_reshape(data_shape, use_bias, out_type, flatten, module):
 
   class FC_Reshape(nn.HybridBlock):
     def __init__(self, use_bias, flatten, **kwargs):
@@ -67,12 +69,16 @@ def test_fc_reshape(data_shape, use_bias, flatten):
 
     def forward(self, x):
       out = self.fc(x)
-      out = mx.npx.reshape(out, newshape=(1, -1))
-      return out
+      if module == mx.npx:
+        attrs = {"newshape": (1,-1)}
+      else:
+        attrs = {"shape": (1,-1)}
+        out = out.as_nd_ndarray()
+      out = getattr(module, "reshape")(out, **attrs)
+      return out.as_np_ndarray()
 
-  attrs = {'fc': {}}
   net = FC_Reshape(use_bias, flatten)
-  check_fusion(net, data_shape, attrs, check_quantization=flatten)
+  check_quantize(net, data_shape, out_type, name='fc')
 
 
 @mx.util.use_np

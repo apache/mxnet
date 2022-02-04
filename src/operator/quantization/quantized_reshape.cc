@@ -28,8 +28,6 @@
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(QuantizedReshapeParam);
-
 void QuantizedReshapeCompute(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
                              const std::vector<TBlob>& inputs,
@@ -46,69 +44,68 @@ void QuantizedReshapeCompute(const nnvm::NodeAttrs& attrs,
   *outputs[2].dptr<float>() = *inputs[2].dptr<float>();
 }
 
-NNVM_REGISTER_OP(_contrib_quantized_reshape)
-    .add_alias("_npx_quantized_reshape")
-    .set_num_inputs(3)
-    .set_num_outputs(3)
-    .set_attr_parser(ParamParser<QuantizedReshapeParam>)
-    .set_attr<nnvm::FListInputNames>(
-        "FListInputNames",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"data", "min_data", "max_data"};
-        })
-    .set_attr<nnvm::FListOutputNames>(
-        "FListOutputNames",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"output", "min_output", "max_output"};
-        })
-    .set_attr<nnvm::FInplaceOption>(
-        "FInplaceOption",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::pair<int, int> >{{0, 0}, {1, 1}, {2, 2}};
-        })
-    .set_attr<FCompute>("FCompute<cpu>", QuantizedReshapeCompute)
-    .set_attr<FResourceRequest>("FResourceRequest",
-                                [](const NodeAttrs& n) {
-                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-                                })
-    .set_attr<mxnet::FInferShape>("FInferShape", QuantizedReshapeInferShape)
-    .set_attr<nnvm::FInferType>("FInferType", QuantizedReshapeType)
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .set_attr<FQuantizable>("FQuantizable",
-                            [](const NodeAttrs& attrs) { return QuantizeType::kSupport; })
-    .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")
-    .add_argument("min_data",
-                  "NDArray-or-Symbol",
-                  "The minimum scalar value "
-                  "possibly produced for the data")
-    .add_argument("max_data",
-                  "NDArray-or-Symbol",
-                  "The maximum scalar value "
-                  "possibly produced for the data")
-    .add_arguments(QuantizedReshapeParam::__FIELDS__());
+#define MXNET_OPERATOR_REGISTER_QUANTIZED_RESHAPE(name)                                      \
+  NNVM_REGISTER_OP(name)                                                                     \
+      .set_num_inputs(3)                                                                     \
+      .set_num_outputs(3)                                                                    \
+      .set_attr<nnvm::FListInputNames>(                                                      \
+          "FListInputNames",                                                                 \
+          [](const NodeAttrs& attrs) {                                                       \
+            return std::vector<std::string>{"data", "min_data", "max_data"};                 \
+          })                                                                                 \
+      .set_attr<nnvm::FListOutputNames>(                                                     \
+          "FListOutputNames",                                                                \
+          [](const NodeAttrs& attrs) {                                                       \
+            return std::vector<std::string>{"output", "min_output", "max_output"};           \
+          })                                                                                 \
+      .set_attr<nnvm::FInplaceOption>(                                                       \
+          "FInplaceOption",                                                                  \
+          [](const NodeAttrs& attrs) {                                                       \
+            return std::vector<std::pair<int, int> >{{0, 0}, {1, 1}, {2, 2}};                \
+          })                                                                                 \
+      .set_attr<FCompute>("FCompute<cpu>", QuantizedReshapeCompute)                          \
+      .set_attr<FResourceRequest>(                                                           \
+          "FResourceRequest",                                                                \
+          [](const NodeAttrs& n) {                                                           \
+            return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};                \
+          })                                                                                 \
+      .set_attr<nnvm::FInferType>("FInferType", QuantizedReshapeType)                        \
+      .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                             \
+      .set_attr<FQuantizable>("FQuantizable",                                                \
+                              [](const NodeAttrs& attrs) { return QuantizeType::kSupport; }) \
+      .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")                    \
+      .add_argument("min_data",                                                              \
+                    "NDArray-or-Symbol",                                                     \
+                    "The minimum scalar value "                                              \
+                    "possibly produced for the data")                                        \
+      .add_argument("max_data",                                                              \
+                    "NDArray-or-Symbol",                                                     \
+                    "The maximum scalar value "                                              \
+                    "possibly produced for the data")
+
+MXNET_OPERATOR_REGISTER_QUANTIZED_RESHAPE(_contrib_quantized_reshape)
+    .add_alias("quantized_reshape")
+    .set_attr_parser(ParamParser<ReshapeParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", QuantizedReshapeInferShape<ReshapeShape>)
+    .add_arguments(ReshapeParam::__FIELDS__());
+
+MXNET_OPERATOR_REGISTER_QUANTIZED_RESHAPE(_npx_quantized_reshape)
+    .set_attr_parser(ParamParser<NumpyXReshapeParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", QuantizedReshapeInferShape<NumpyXReshapeShape>)
+    .add_arguments(NumpyXReshapeParam::__FIELDS__());
 
 template <bool is_numpy_op>
 nnvm::ObjectPtr QuantizedReshapeNode(const NodeAttrs& attrs) {
-  QuantizedReshapeParam param;
-  if (is_numpy_op) {
-    const NumpyXReshapeParam& _param = nnvm::get<NumpyXReshapeParam>(attrs.parsed);
-    param.newshape                   = _param.newshape;
-    param.reverse                    = _param.reverse;
-    param.order                      = _param.order;
-    param.keep_highest               = false;
-    param.is_numpy_op                = true;
-  } else {
-    const ReshapeParam& _param = nnvm::get<ReshapeParam>(attrs.parsed);
-    param.shape                = _param.shape;
-    param.keep_highest         = _param.keep_highest;
-    param.reverse              = _param.reverse;
-    param.is_numpy_op          = false;
-  }
-
   nnvm::ObjectPtr node = nnvm::Node::Create();
-  node->attrs.op       = Op::Get("_contrib_quantized_reshape");
-  node->attrs.name     = "quantized_" + attrs.name;
-  param.SetAttrDict(&(node->attrs.dict));
+
+  if constexpr (is_numpy_op) {
+    node->attrs.op = Op::Get("_npx_quantized_reshape");
+  } else {
+    node->attrs.op = Op::Get("_contrib_quantized_reshape");
+  }
+  node->attrs.name = "quantized_" + attrs.name;
+  node->attrs.dict = attrs.dict;
+
   if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
     node->op()->attr_parser(&(node->attrs));
   }

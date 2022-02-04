@@ -967,7 +967,7 @@ def test_quantized_reshape():
     def check_quantized_reshape(shape, qdtype, newshape, reverse, expected_ret_shape):
         if qdtype == 'uint8':
             data_low = 0.0
-            data_high = 127.0
+            data_high = 255.0
         else:
             data_low = -127.0
             data_high = 127.0

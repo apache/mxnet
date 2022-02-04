@@ -66,6 +66,10 @@ NNVM_REGISTER_OP(_contrib_quantized_reshape)
     .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedReshapeForward)
     .set_attr<FInferStorageType>("FInferStorageType", QuantizedReshapeStorageType);
 
+NNVM_REGISTER_OP(_npx_quantized_reshape)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedReshapeForward)
+    .set_attr<FInferStorageType>("FInferStorageType", QuantizedReshapeStorageType);
+
 }  // namespace op
 }  // namespace mxnet
 

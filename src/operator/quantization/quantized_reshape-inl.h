@@ -33,64 +33,18 @@
 namespace mxnet {
 namespace op {
 
-struct QuantizedReshapeParam : public dmlc::Parameter<QuantizedReshapeParam> {
-  mxnet::TShape newshape;
-  mxnet::Tuple<int> shape;
-  bool reverse, keep_highest, is_numpy_op;
-  std::string order;
-
-  DMLC_DECLARE_PARAMETER(QuantizedReshapeParam) {
-    DMLC_DECLARE_FIELD(newshape).set_default(mxnet::TShape(0, -1));
-    DMLC_DECLARE_FIELD(shape).set_default(mxnet::Tuple<int>());
-    DMLC_DECLARE_FIELD(reverse).set_default(false);
-    DMLC_DECLARE_FIELD(order).set_default("C");
-    DMLC_DECLARE_FIELD(keep_highest).set_default(false);
-    DMLC_DECLARE_FIELD(is_numpy_op).set_default(true);
-  }
-
-  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream newshape_s, shape_s, reverse_s, order_s, keep_highest_s, is_numpy_op_s;
-    newshape_s << newshape;
-    shape_s << shape;
-    reverse_s << reverse;
-    order_s << order;
-    keep_highest_s << keep_highest;
-    is_numpy_op_s << is_numpy_op;
-    (*dict)["newshape"]     = newshape_s.str();
-    (*dict)["shape"]        = shape_s.str();
-    (*dict)["reverse"]      = reverse_s.str();
-    (*dict)["order"]        = order_s.str();
-    (*dict)["keep_highest"] = keep_highest_s.str();
-    (*dict)["is_numpy_op"]  = is_numpy_op_s.str();
-  }
-};
-
+template <
+    bool (*ReshapeShapeFunc)(const nnvm::NodeAttrs&, mxnet::ShapeVector*, mxnet::ShapeVector*)>
 inline bool QuantizedReshapeInferShape(const nnvm::NodeAttrs& attrs,
                                        mxnet::ShapeVector* in_attrs,
                                        mxnet::ShapeVector* out_attrs) {
-  const QuantizedReshapeParam& param = nnvm::get<QuantizedReshapeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
   mxnet::ShapeVector input  = {in_attrs->at(0)};
   mxnet::ShapeVector output = {out_attrs->at(0)};
-  nnvm::NodeAttrs _attrs;
-  bool ret;
 
-  if (param.is_numpy_op) {
-    NumpyXReshapeParam _param;
-    _param.newshape = param.newshape;
-    _param.reverse  = param.reverse;
-    _param.order    = param.order;
-    _attrs.parsed   = _param;
-    ret             = NumpyXReshapeShape(_attrs, &input, &output);
-  } else {
-    ReshapeParam _param;
-    _param.shape        = param.shape;
-    _param.keep_highest = param.keep_highest;
-    _param.reverse      = param.reverse;
-    _attrs.parsed       = _param;
-    ret                 = ReshapeShape(_attrs, &input, &output);
-  }
+  bool ret = ReshapeShapeFunc(attrs, &input, &output);
+
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, mxnet::TShape{1});
   SHAPE_ASSIGN_CHECK(*in_attrs, 2, mxnet::TShape{1});
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, output[0]);
