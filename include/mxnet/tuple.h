@@ -387,7 +387,7 @@ class Tuple {
 
  protected:
   // stack cache size
-  static const int kStackCache = 4;
+  static const int kStackCache = 8;
   /*! \brief number of dimension of the tuple */
   int ndim_{0};
   /*! \brief number of cells allocated in data_heap_ */
