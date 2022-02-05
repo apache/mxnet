@@ -33,6 +33,7 @@ DMLC_REGISTER_PARAMETER(SampleNormalParam);
 DMLC_REGISTER_PARAMETER(SampleGammaParam);
 DMLC_REGISTER_PARAMETER(SampleExponentialParam);
 DMLC_REGISTER_PARAMETER(SamplePoissonParam);
+DMLC_REGISTER_PARAMETER(SampleBinomialParam);
 DMLC_REGISTER_PARAMETER(SampleNegBinomialParam);
 DMLC_REGISTER_PARAMETER(SampleGenNegBinomialParam);
 DMLC_REGISTER_PARAMETER(SampleRandIntParam);
@@ -42,6 +43,7 @@ DMLC_REGISTER_PARAMETER(SampleNormalLikeParam);
 DMLC_REGISTER_PARAMETER(SampleGammaLikeParam);
 DMLC_REGISTER_PARAMETER(SampleExponentialLikeParam);
 DMLC_REGISTER_PARAMETER(SamplePoissonLikeParam);
+DMLC_REGISTER_PARAMETER(SampleBinomialLikeParam);
 DMLC_REGISTER_PARAMETER(SampleNegBinomialLikeParam);
 DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
 
@@ -147,6 +149,20 @@ Example::
 
    poisson(lam=4, shape=(2,2)) = [[ 5.,  2.],
                                   [ 4.,  6.]]
+)code" ADD_FILELINE);
+
+MXNET_OPERATOR_REGISTER_SAMPLE(_random_binomial, SampleBinomialParam)
+    .add_alias("random_binomial")
+    .describe(R"code(Draw random samples from a binomial distribution.
+
+Samples are distributed according to a binomial distribution parametrized by
+*n* (number of experiments) and *p* (success probability in each experiment).
+Samples will always be returned as a floating point data type.
+
+Example::
+
+   binomial(n=3, p=0.4, shape=(2,2)) = [[ 1.,  0.],
+                                        [ 1.,  2.]]
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_negative_binomial, SampleNegBinomialParam)

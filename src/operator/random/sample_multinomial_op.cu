@@ -26,10 +26,13 @@
 namespace mxnet {
 namespace op {
 
+NNVM_REGISTER_OP(_sample_categorical)
+    .set_attr<FCompute>("FCompute<gpu>", SampleCategoricalForward<gpu>);
+
 NNVM_REGISTER_OP(_sample_multinomial)
     .set_attr<FCompute>("FCompute<gpu>", SampleMultinomialForward<gpu>);
 
-struct SampleMultinomialBackwardGPUKernel {
+struct SampleCategoricalBackwardGPUKernel {
   template <typename DType, typename IType>
   MSHADOW_XINLINE static void
   Map(int i, index_t K, index_t M, DType* ograd, DType* dist, IType* out, DType* igrad) {
@@ -40,9 +43,9 @@ struct SampleMultinomialBackwardGPUKernel {
   }
 };
 
-NNVM_REGISTER_OP(_backward_sample_multinomial)
+NNVM_REGISTER_OP(_backward_sample_categorical)
     .set_attr<FCompute>("FCompute<gpu>",
-                        SampleMultinomialBackward<SampleMultinomialBackwardGPUKernel, gpu>);
+                        SampleCategoricalBackward<SampleCategoricalBackwardGPUKernel, gpu>);
 
 }  // namespace op
 }  // namespace mxnet

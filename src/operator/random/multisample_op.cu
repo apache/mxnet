@@ -42,6 +42,9 @@ NNVM_REGISTER_OP(_sample_exponential)
 NNVM_REGISTER_OP(_sample_poisson)
     .set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, PoissonSampler<gpu>, 1>);
 
+NNVM_REGISTER_OP(_sample_binomial)
+    .set_attr<FCompute>("FCompute<gpu>", MultiSampleOpForward<gpu, BinomialSampler<gpu>, 2>);
+
 NNVM_REGISTER_OP(_sample_negative_binomial)
     .set_attr<FCompute>("FCompute<gpu>",
                         MultiSampleOpForward<gpu, NegativeBinomialSampler<gpu>, 2>);
