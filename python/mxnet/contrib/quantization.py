@@ -46,7 +46,7 @@ def _quantize_params(qsym, params, min_max_dict):
     qsym : Symbol
         Quantized symbol from FP32 symbol.
     params : dict of str->NDArray
-    min_max_dict: dict of min/max pairs of layers' output
+    min_max_dict : dict of min/max pairs of layers' output
     """
     inputs_name = qsym.list_arguments()
     quantized_params = {}
@@ -110,11 +110,11 @@ def _quantize_symbol(sym, device, excluded_symbols=None, excluded_operators=None
         Names of the parameters that users want to quantize offline. It's always recommended to
         quantize parameters offline so that quantizing parameters during the inference can be
         avoided.
-    quantized_dtype: str
+    quantized_dtype : str
         The quantized destination type for input data.
-    quantize_mode: str
+    quantize_mode : str
         The mode that quantization pass to apply.
-    quantize_granularity: str
+    quantize_granularity : str
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
         quantization. The default value is 'tensor-wise'.
     """
@@ -174,15 +174,16 @@ class CalibrationCollector(object):
     def collect(self, name, op_name, arr):
         """Function which is registered to Block as monitor callback. Names of layers
         requiring calibration are stored in `self.include_layers` variable.
-            Parameters
-            ----------
-            name : str
-                Node name from which collected data comes from
-            op_name : str
-                Operator name from which collected data comes from. Single operator
-                can have multiple inputs/ouputs nodes - each should have different name
-            arr : NDArray
-                NDArray containing data of monitored node
+
+        Parameters
+        ----------
+        name : str
+            Node name from which collected data comes from.
+        op_name : str
+            Operator name from which collected data comes from. Single operator
+            can have multiple input/ouput nodes - each should have different name.
+        arr : NDArray
+            NDArray containing data of monitored node.
         """
 
     def post_collect(self):
@@ -227,8 +228,7 @@ class _LayerHistogramCollector(CalibrationCollector):
 
     @staticmethod
     def combine_histogram(old_hist, arr, new_min, new_max, new_th):
-        """ Collect layer histogram for arr and combine it with old histogram.
-        """
+        """Collect layer histogram for arr and combine it with old histogram."""
         (old_hist, old_hist_edges, old_min, old_max, old_th) = old_hist
         if new_th <= old_th:
             hist, _ = np.histogram(arr, bins=len(old_hist), range=(-old_th, old_th))
@@ -392,21 +392,22 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
     The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
+    https://www.tensorflow.org/lite/performance/post_training_quantization.
     The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
     http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
     and adapts the method to MXNet.
 
     .. _`quantize_model_params`:
+
     Parameters
     ----------
-    sym : str or Symbol
+    sym : Symbol
         Defines the structure of a neural network for FP32 data types.
     arg_params : dict
         Dictionary of name to `NDArray`.
     aux_params : dict
         Dictionary of name to `NDArray`.
-    data_names : a list of strs
+    data_names : list of strings
         Data names required for creating a Module object to run forward propagation on the
         calibration dataset.
     device : Device
@@ -441,7 +442,7 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
         The mode that quantization pass to apply. Support 'full' and 'smart'.
         'full' means quantize all operator if possible.
         'smart' means quantization pass will smartly choice which operator should be quantized.
-    quantize_granularity: str
+    quantize_granularity : str
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
         quantization. The default value is 'tensor-wise'.
     logger : Object
@@ -449,7 +450,7 @@ def quantize_model(sym, arg_params, aux_params, data_names=('data',),
 
     Returns
     -------
-    quantized_model: tuple
+    quantized_model : tuple
         A tuple of quantized symbol, quantized arg_params, and aux_params.
     """
     warnings.warn('WARNING: This will be deprecated please use quantize_net with Gluon models')
@@ -582,9 +583,10 @@ def quantize_graph(sym, arg_params, aux_params, device=cpu(),
     and a collector for naive or entropy calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
+
     Parameters
     ----------
-    sym : str or Symbol
+    sym : Symbol
         Defines the structure of a neural network for FP32 data types.
     device : Device
         Defines the device that users want to run forward propagation on the calibration
@@ -616,7 +618,7 @@ def quantize_graph(sym, arg_params, aux_params, device=cpu(),
         The mode that quantization pass to apply. Support 'full' and 'smart'.
         'full' means quantize all operator if possible.
         'smart' means quantization pass will smartly choice which operator should be quantized.
-    quantize_granularity: str
+    quantize_granularity : str
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
         quantization. The default value is 'tensor-wise'.
     LayerOutputCollector : subclass of CalibrationCollector
@@ -700,13 +702,14 @@ def quantize_graph(sym, arg_params, aux_params, device=cpu(),
     return qsym, qarg_params, aux_params, collector, calib_layers
 
 def calib_graph(qsym, arg_params, aux_params, collector,
-                calib_mode='entropy', logger=logging):
+                calib_mode='entropy', logger=None):
     """User-level API for calibrating a quantized model using a filled collector.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
+
     Parameters
     ----------
-    qsym : str or Symbol
+    qsym : Symbol
         Defines the structure of a neural network for INT8 data types.
     arg_params : dict
         Dictionary of name to `NDArray`.
