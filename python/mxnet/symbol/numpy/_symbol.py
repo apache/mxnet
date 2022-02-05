@@ -3005,7 +3005,7 @@ def arcsin(x, out=None, **kwargs):
     The inverse sine is also known as `asin` or sin^{-1}.
     The output `symbol` has the same `ctx` as the input `symbol`.
     This function differs from the original `numpy.arcsin
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.arcsin.html>`_ in
     the following aspects:
     - Only support _Symbol or scalar now.
     - `where` argument is not supported.
@@ -4878,7 +4878,7 @@ def argmax(a, axis=None, out=None):
     corresponding to the first occurrence are returned.
 
     This function differs from the original `numpy.argmax
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.argmax.html>`_ in
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
@@ -4917,7 +4917,7 @@ def argmin(a, axis=None, out=None):
     corresponding to the first occurrence are returned.
 
     This function differs from the original `numpy.argmin
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmin.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.argmin.html>`_ in
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
