@@ -2365,6 +2365,11 @@ def _add_workload_min_scalar_type():
     OpArgMngr.add_workload('min_scalar_type', a)
 
 
+def _add_workload_mirr():
+    val = np.array([-4500, -800, 800, 800, 600, 600, 800, 800, 700, 3000])
+    OpArgMngr.add_workload('mirr', val, 0.08, 0.055)
+
+
 def _add_workload_modf():
     a = np.array([0, 3.5])
     b = -0.5
@@ -2469,6 +2474,11 @@ def _add_workload_ndim():
     OpArgMngr.add_workload('ndim', b)
 
 
+def _add_workload_npv():
+    rate, cashflows = 0.281, np.array([-100, 39, 59, 55, 20])
+    OpArgMngr.add_workload('npv', rate, cashflows)
+
+
 def _add_workload_partition():
     a = np.array([3, 4, 2, 1])
     OpArgMngr.add_workload('partition', a, 3)
@@ -2542,6 +2552,10 @@ def _add_workload_positive(array_pool):
     OpArgMngr.add_workload('positive', array_pool['4x1'])
 
 
+def _add_workload_ppmt():
+    OpArgMngr.add_workload('ppmt', 0.1 / 12, 1, 60, 55000)
+
+
 def _add_workload_promote_types():
     OpArgMngr.add_workload('promote_types', np.float16, np.float64)
 
@@ -2552,6 +2566,12 @@ def _add_workload_ptp():
     OpArgMngr.add_workload('ptp', x, axis=0)
     OpArgMngr.add_workload('ptp', x, axis=1)
     OpArgMngr.add_workload('ptp', x, keepdims=True)
+
+
+def _add_workload_pv():
+    a = np.array((0.05, 0.04, 0.03))/12
+    OpArgMngr.add_workload('pv', 0.05/12, 10*12, -100, 15692.93)
+    OpArgMngr.add_workload('pv', a, 10*12, -100, 15692.93)
 
 
 def _add_workload_rate():
@@ -2912,6 +2932,7 @@ def _prepare_workloads():
     _add_workload_ix_()
     _add_workload_lexsort()
     _add_workload_min_scalar_type()
+    _add_workload_mirr()
     _add_workload_modf()
     _add_workload_msort()
     _add_workload_nanargmax()
@@ -2925,6 +2946,7 @@ def _prepare_workloads():
     _add_workload_nanprod()
     _add_workload_nanquantile()
     _add_workload_ndim()
+    _add_workload_npv()
     _add_workload_pad()
     _add_workload_partition()
     _add_workload_piecewise()
@@ -2937,8 +2959,10 @@ def _prepare_workloads():
     _add_workload_polymul()
     _add_workload_polysub()
     _add_workload_positive(array_pool)
+    _add_workload_ppmt()
     _add_workload_promote_types()
     _add_workload_ptp()
+    _add_workload_pv()
     _add_workload_rate()
     _add_workload_real()
     _add_workload_real_if_close()
