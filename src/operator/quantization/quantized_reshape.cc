@@ -94,15 +94,24 @@ MXNET_OPERATOR_REGISTER_QUANTIZED_RESHAPE(_npx_quantized_reshape)
     .set_attr<mxnet::FInferShape>("FInferShape", QuantizedReshapeInferShape<NumpyXReshapeShape>)
     .add_arguments(NumpyXReshapeParam::__FIELDS__());
 
-template <bool is_numpy_op>
+enum ReshapeModule { NumPy = 0, NDArray = 1 };
+
+inline const char* QuantizedReshapeModeMap(ReshapeModule module) {
+  switch (module) {
+    case ReshapeModule::NumPy:
+      return "_npx_quantized_reshape";
+    case ReshapeModule::NDArray:
+      return "_contrib_quantized_reshape";
+    default:
+      return nullptr;
+  }
+}
+
+template <ReshapeModule module>
 nnvm::ObjectPtr QuantizedReshapeNode(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node = nnvm::Node::Create();
 
-  if constexpr (is_numpy_op) {
-    node->attrs.op = Op::Get("_npx_quantized_reshape");
-  } else {
-    node->attrs.op = Op::Get("_contrib_quantized_reshape");
-  }
+  node->attrs.op   = Op::Get(QuantizedReshapeModeMap(module));
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
 
@@ -112,9 +121,11 @@ nnvm::ObjectPtr QuantizedReshapeNode(const NodeAttrs& attrs) {
   return node;
 }
 
-NNVM_REGISTER_OP(_npx_reshape).set_attr<FQuantizedOp>("FQuantizedOp", QuantizedReshapeNode<true>);
+NNVM_REGISTER_OP(_npx_reshape)
+    .set_attr<FQuantizedOp>("FQuantizedOp", QuantizedReshapeNode<ReshapeModule::NumPy>);
 
-NNVM_REGISTER_OP(Reshape).set_attr<FQuantizedOp>("FQuantizedOp", QuantizedReshapeNode<false>);
+NNVM_REGISTER_OP(Reshape).set_attr<FQuantizedOp>("FQuantizedOp",
+                                                 QuantizedReshapeNode<ReshapeModule::NDArray>);
 
 }  // namespace op
 }  // namespace mxnet
