@@ -806,7 +806,7 @@ def test_pos_conv_bn_act():
       check_fusion(net, data_shape, attrs, check_quantization=quantize)
 
 
-@with_seed()
+@with_seed(657935851)
 def test_pos_fc_sum():
   def check_fusion_parameter(sym_sg, attrs_dict):
     for name, attrs in attrs_dict.items():
