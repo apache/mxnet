@@ -24,6 +24,7 @@
 #include "mkldnn_fc_post_quantize_property.h"
 #include "mkldnn_fc_property.h"
 #include "mkldnn_fc_sum_fuse.h"
+#include "mkldnn_identity_property.h"
 #include "mkldnn_post_quantize_align_scale_property.h"
 #include "mkldnn_post_quantize_property.h"
 #include "mkldnn_transformer_post_quantize_property.h"
@@ -36,6 +37,7 @@ MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN)
     .set_attr("enable", MKLDNNEnvSet())
     .set_attr("context", Context::CPU());
 
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNIdentityProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNFCProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNTransformerProperty);
@@ -43,6 +45,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNFCSumFuseProperty);
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN_QUANTIZE).set_attr("context", Context::CPU());
 
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNIdentityProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNConvProperty).set_attr("quantize", true);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCProperty).set_attr("quantize", true);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNTransformerProperty);
