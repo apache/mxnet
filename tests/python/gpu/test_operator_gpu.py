@@ -54,7 +54,8 @@ del test_custom_op_fork  #noqa
 
 set_default_device(mx.gpu(0))
 
-# Log GPU compute cababilities even if output is captured and not displayed for a passing test
+# For info purposes, log GPU compute cababilities.  Run serially so output appears in log.
+@pytest.mark.serial
 def test_report_compute_capabilities(capsys):
     with capsys.disabled():
         sys.stdout.write('= {} '.format(

@@ -44,7 +44,7 @@ core_logic: {
 
   utils.parallel_stage('Tests', [
     custom_steps.test_unix_python3_gpu('gpu'),
-    custom_steps.test_unix_python3_gpu('ampere_gpu'),
+    custom_steps.test_unix_python3_ampere_gpu('gpu'),
     custom_steps.test_unix_python3_onednn_gpu('onednn_gpu'),
     custom_steps.test_unix_python3_onednn_nocudnn_gpu('onednn_gpu_nocudnn'),
     custom_steps.test_unix_cpp_package_gpu('gpu'),
