@@ -27,7 +27,7 @@ import scipy.sparse as sps
 import mxnet.ndarray.sparse as mxsps
 from mxnet.test_utils import check_consistency, set_default_device, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_device, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
+from mxnet.test_utils import default_device, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts, get_cuda_compute_capability
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -53,6 +53,12 @@ from test_optimizer import test_adamW
 del test_custom_op_fork  #noqa
 
 set_default_device(mx.gpu(0))
+
+# Log GPU compute cababilities even if output is captured and not displayed for a passing test
+def test_report_compute_capabilities(capsys):
+    with capsys.disabled():
+        sys.stdout.write('= {} '.format(
+            [get_cuda_compute_capability(mx.gpu(i)) for i in range(mx.device.num_gpus())] ))
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
