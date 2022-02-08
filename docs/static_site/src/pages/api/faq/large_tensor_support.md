@@ -146,9 +146,9 @@ Not supported:
 
 
 ## Other known Issues:
-Randint operator is flaky: https://github.com/apache/incubator-mxnet/issues/16172.  
-dgemm operations using BLAS libraries currently don’t support int64.  
-linspace() is not supported.
+* Randint operator is flaky: https://github.com/apache/incubator-mxnet/issues/16172.
+* dgemm operations using BLAS libraries currently don’t support int64.
+* linspace() is not supported.
 
 ```python
 a = mx.sym.Variable('a')
