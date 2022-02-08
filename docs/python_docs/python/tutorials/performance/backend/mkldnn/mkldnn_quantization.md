@@ -27,9 +27,10 @@ Installing MXNet with MKLDNN backend is an easy and essential process. You can f
 
 ```
 # release version
-pip install mxnet-mkl
+pip install mxnet
+
 # nightly version
-pip install mxnet-mkl --pre
+pip install --pre "mxnet<2" -f https://dist.mxnet.io/python
 ```
 
 ## Image Classification Demo
