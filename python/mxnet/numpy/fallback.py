@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=undefined-all-variable, not-callable, cell-var-from-loop
 """Operators that fallback to official NumPy implementation."""
 
 import sys
