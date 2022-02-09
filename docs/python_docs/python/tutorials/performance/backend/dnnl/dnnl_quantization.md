@@ -17,11 +17,11 @@
 
 ## Introduction
 
-After successful model building and achieving desired accuracy on the test data, often the next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers at the same time. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
+After successful model building and achieving desired accuracy on the test data, often the next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers simultaneously. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
 
 Two main types of software optimizations can be characerized as:
-- memory-bound optimizations - main objective of these optimizations is to reduce memory operations (reads and writes) - it is done by e.g. chaining operations which can be performed one after another immediately, where input of every subsequent operation is the output of the previous one (example: ReLU activation after convolution)
-- compute-bound optimizations - these optimizations are mainly done on operations which require large number of CPU cycles to complete, like FullyConnected and Convolution - one of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization
+- memory-bound optimizations - main objective of these optimizations is to reduce the amount of memory operations (reads and writes) - it is done by e.g. chaining operations which can be performed one after another immediately, where input of every subsequent operation is the output of the previous one (example: ReLU activation after convolution),
+- compute-bound optimizations - these optimizations are mainly made on operations which require large number of CPU cycles to complete, like FullyConnected and Convolution. One of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization.
 
 In version 2.0 of the Apache MXNet (incubating) GluonAPI2.0 replaced Symbolic API known from versions 1.x, thus there are some differences between API to perform graph fusion and quantization.
 
@@ -225,12 +225,12 @@ print('INT8Entropy Top1 Accuracy: {} Top5 Accuracy: {}'.format(top1, top5))
 > INT8Naive Top1 Accuracy: 0.76028 Top5 Accuracy: 0.92796
 > INT8Entropy Top1 Accuracy: 0.76404 Top5 Accuracy: 0.93042
 
-With quantized model there is tiny accuracy drop, however this is cost of great performance optimization and memory footprint. The difference between calibration method is dependent on the model itself, used activation layers and the size of calibration data.
+With quantized model there is tiny accuracy drop, however this is the cost of great performance optimization and memory footprint reduction. The difference between calibration methods is dependent on the model itself, used activation layers and the size of calibration data.
 
 ### Custom layer collectors and calibrating the model
 In MXNet 2.0 new interface for creating custom calibration collector has been added. Main goal of this interface is to give the user as much flexibility as possible in almost every step of quantization. Creating own layer collector is pretty easy, however computing effective min/max values can be not a trivial task. 
 
-Layer collectors are responsible for collecting statistics of each node in the graph — it means that the input/output data of every operator executed can be observed. Collector utilize the register_op_hook method of HybridBlock class.
+Layer collectors are responsible for collecting statistics of each node in the graph — it means that the input/output data of every operator executed can be observed. Collector utilizes the register_op_hook method of HybridBlock class.
 
 Custom layer collector has to inherit from the CalibrationCollector class, which is provided in `contrib.quantization` package. This inheritance allows API to be consistent. Below is an example implementation of CalibrationCollector:
 
@@ -299,6 +299,6 @@ Accuracy results of CV models. Chart presents three different runs: base float32
 ![accuracy](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/accuracy.png?raw=true)
 ###### ImageNet(ILSVRC2012) TOP1 validation accuracy
 
-##Notes
+## Notes
 - Accuracy and speedup tested on AWS c6i.16xlarge
 - MXNet SHA: 9fa75b470b8f0238a98635f20f5af941feb60929 / oneDNN SHA: f40443c413429c29570acd6cf5e3d1343cf647b4
