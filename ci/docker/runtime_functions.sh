@@ -22,8 +22,9 @@
 
 set -ex
 
-CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-CI_CMAKE_CUDA_ARCH="5.2 7.0"
+# compute capabilities for p3, g4 and g5 instances
+CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_86,code=sm_86"
+CI_CMAKE_CUDA_ARCH="5.2 7.0 8.6"
 
 clean_repo() {
     set -ex
