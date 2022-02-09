@@ -103,6 +103,7 @@ inline const char* QuantizedReshapeModeMap(ReshapeModule module) {
     case ReshapeModule::NDArray:
       return "_contrib_quantized_reshape";
     default:
+      LOG(ERROR) << "Invalid ReshapeModule was passed";
       return nullptr;
   }
 }
