@@ -42,7 +42,7 @@ def matrix_rank(M, rtol=None, hermitian=False):
     Notes
     -----
     `rtol` param is requested in array-api-standard in
-    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-matrix-rank-x-rtol-none
+    https://data-apis.org/array-api/latest/extensions/generated/signatures.linalg.matrix_rank.html
     instead of a parameter in official NumPy operator.
 
     Parameters
@@ -518,7 +518,7 @@ def pinv(a, rtol=None, hermitian=False):
     Notes
     -----
     `rtol` param is requested in array-api-standard in
-    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-pinv-x-rtol-none
+    https://data-apis.org/array-api/latest/extensions/generated/signatures.linalg.pinv.html
     instead of a parameter in official NumPy operator.
 
     Parameters
@@ -830,7 +830,7 @@ def cholesky(a, upper=False):
     Notes
     -----
     `upper` param is requested by API standardization in
-    https://data-apis.org/array-api/latest/extensions/linear_algebra_functions.html#linalg-cholesky-x-upper-false
+    https://data-apis.org/array-api/latest/extensions/generated/signatures.linalg.cholesky.html
     instead of parameter in official NumPy operator.
 
     Return the Cholesky decomposition, `L * L.T`, of the square matrix `a`,
