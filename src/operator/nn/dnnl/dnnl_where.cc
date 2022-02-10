@@ -86,7 +86,7 @@ static mxnet::TShape GetBroadcastableShape(const mxnet::TShape& in_shape,
     return in_shape;
   }
 
-  mxnet::TShape broadcastable_in_shape(out_shape.ndim(), -1);
+  mxnet::TShape broadcastable_in_shape(out_shape.ndim(), 1);
   const int lack_dims = out_shape.ndim() - in_shape.ndim();
   for (int i = lack_dims; i < out_shape.ndim(); ++i) {
     broadcastable_in_shape[i] = in_shape[i - lack_dims];
