@@ -157,12 +157,12 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
 
   // 1. B) out = out * inf
   const memory::desc converted_mask_desc = this->primitives->mask_input_pd.src1_desc();
-  dnnl::memory* convertedmask_mem        = TmpMemMgr::Get()->Alloc(converted_mask_desc);
+  dnnl::memory* converted_mask_mem       = TmpMemMgr::Get()->Alloc(converted_mask_desc);
   dnnl::primitive_attr attr;
   attr.set_output_scales(0, {mshadow::red::limits::MaxValue<float>()});
   std::unordered_map<int, dnnl::memory> args(
-      {{DNNL_ARG_FROM, *mask_minusone_mem}, {DNNL_ARG_TO, *convertedmask_mem}});
-  stream->RegisterPrimArgs(dnnl::reorder(*mask_minusone_mem, *convertedmask_mem, attr), args);
+      {{DNNL_ARG_FROM, *mask_minusone_mem}, {DNNL_ARG_TO, *converted_mask_mem}});
+  stream->RegisterPrimArgs(dnnl::reorder(*mask_minusone_mem, *converted_mask_mem, attr), args);
 
   // prepare softmax primitive and memory
   SoftmaxParam p;
@@ -177,7 +177,7 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
   // 1. C) out = input * out
   stream->RegisterPrimArgs(this->primitives->mask_input,
                            {{DNNL_ARG_SRC_0, *input_mem},
-                            {DNNL_ARG_SRC_1, *convertedmask_mem},
+                            {DNNL_ARG_SRC_1, *converted_mask_mem},
                             {DNNL_ARG_DST, *softmax_out_mem}});
   stream->Submit();
 
