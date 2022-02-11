@@ -69,7 +69,7 @@ bool SupportDNNLBinary(const std::vector<NDArray>& inputs) {
   auto ndim_1 = inputs[1].shape().ndim();
   return ndim_0 >= 1 && ndim_0 <= 6 && ndim_1 >= 1 && ndim_1 <= 6 &&
          inputs[0].shape().Size() != 0 && inputs[1].shape().Size() != 0 &&
-         dtype == mshadow::kFloat32 && dtype == inputs[1].dtype();
+         (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) && dtype == inputs[1].dtype();
 }
 
 }  // namespace op
