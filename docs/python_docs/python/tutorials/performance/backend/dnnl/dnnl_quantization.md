@@ -19,7 +19,7 @@
 
 After successful model building and achieving desired accuracy on the test data, often the next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers simultaneously. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
 
-Two main types of software optimizations can be characerized as:
+Two main types of software optimizations can be characterized as:
 - memory-bound optimizations - main objective of these optimizations is to reduce the amount of memory operations (reads and writes) - it is done by e.g. chaining operations which can be performed one after another immediately, where input of every subsequent operation is the output of the previous one (example: ReLU activation after convolution),
 - compute-bound optimizations - these optimizations are mainly made on operations which require large number of CPU cycles to complete, like FullyConnected and Convolution. One of the methods to speedup compute-bound operations is to lower computation precision - this type of optimization is called quantization.
 
@@ -35,7 +35,7 @@ The simplest way to explain what fusion is and how it works is to present an exa
 
 - Conv2D + BatchNorm => Fusing BatchNorm with Convolution can be performed by modifing weights and bias of Convolution - this way BatchNorm is completely contained within Convolution which makes BatchNorm zero time operation. Only cost of fusing is time needed to prepare weights and bias in Convolution based on BatchNorm parameters.
 - Conv2D + ReLU => this type of fusion is very popular also with other layers (e.g. FullyConnected + Activation). It is very simple idea where before writing data to output, activation is performed on that data. Main benefit of this fusion is that, there is no need to read and write back data in other layer only to perform simple activation function. 
-- Conv2D + Add => even simpler idea than the previous ones - instead of overwriting output memory, results are added to the output memory. In the simplest terms: `out_mem = conv_result` is replaced by `out_mem += conv_result`.
+- Conv2D + Add => even simpler idea than the previous ones - instead of overwriting the output memory, results are added to it. In the simplest terms: `out_mem = conv_result` is replaced by `out_mem += conv_result`.
 
 Above examples are presented as atomic ones, but often they can be combined together, thus two patterns that can be fused in above example are:
 - Conv2D + BatchNorm + ReLU
@@ -53,7 +53,7 @@ To fuse model in MXNet 2.0 there are two requirements:
 - the model must be defined as a subclass of HybridBlock or Symbol,
 - the model must have specific operator patterns which can be fused.
 
-As an example we define example network (sample block from ResNet architecture):
+As an example we define sample block taken from ResNet architecture:
 
 ```
 import mxnet as mx
@@ -102,6 +102,7 @@ For the above model definition in a naive benchmark with artificial data, we can
 
 
 ## Quantization
+
 As mentioned in the introduction, precision reduction is another very popular method of improving performance of workloads and, what is important, in most cases is combined together with operator fusion which improves performance even more. In training precision reduction utilizes 16 bit data types like bfloat or float16, but for inference great results can be achieved using int8. 
 
 Model quantization helps on both memory-bound and compute-bound operations. In quantized model IO operations are reduced as int8 data type is 4x smaller than float32, and also computational throughput is increased as more data can be SIMD'ed. On modern Intel architectures using int8 data type can bring even more speedup by utilizing special VNNI instruction set. 
@@ -225,7 +226,7 @@ print('INT8Entropy Top1 Accuracy: {} Top5 Accuracy: {}'.format(top1, top5))
 > INT8Naive Top1 Accuracy: 0.76028 Top5 Accuracy: 0.92796
 > INT8Entropy Top1 Accuracy: 0.76404 Top5 Accuracy: 0.93042
 
-With quantized model there is tiny accuracy drop, however this is the cost of great performance optimization and memory footprint reduction. The difference between calibration methods is dependent on the model itself, used activation layers and the size of calibration data.
+With quantized model there is a tiny accuracy drop, however this is the cost of great performance optimization and memory footprint reduction. The difference between calibration methods is dependent on the model itself, used activation layers and the size of calibration data.
 
 ### Custom layer collectors and calibrating the model
 In MXNet 2.0 new interface for creating custom calibration collector has been added. Main goal of this interface is to give the user as much flexibility as possible in almost every step of quantization. Creating own layer collector is pretty easy, however computing effective min/max values can be not a trivial task. 
@@ -295,7 +296,7 @@ Performance results of CV models. Chart presents three different runs: base floa
 ###### Relative Inference Performance (img/sec) for Batch Size 128
 
 ### Accuracy
-Accuracy results of CV models. Chart presents three different runs: base float32 model without optimizations, fused float32 model with optimizations and quantized model.
+Accuracy results of CV models. Chart presents three different runs: base float32 model without optimizations, fused float32 model with optimizations and fused quantized model.
 ![accuracy](https://github.com/dmlc/web-data/blob/main/mxnet/tutorials/onednn/quantization_2_0/accuracy.png?raw=true)
 ###### ImageNet(ILSVRC2012) TOP1 validation accuracy
 
