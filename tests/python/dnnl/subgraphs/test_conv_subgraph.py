@@ -117,6 +117,45 @@ def test_pos_conv_add2(no_bias, data_shape):
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+def test_pos_conv_add3(no_bias, data_shape, out_type):
+  # conv + add fusion case 3
+  class ConvAdd(nn.HybridBlock):
+    def __init__(self, use_bias, **kwargs):
+        super(ConvAdd, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=data_shape[1], kernel_size=(1, 1), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = x + self.conv0(x)
+      return out
+
+  net = ConvAdd(use_bias=True)
+  check_quantize(net, data_shape, out_type)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+def test_pos_conv_add4(no_bias, data_shape, out_type):
+  # conv + add fusion case 4
+  class ConvAdd(nn.HybridBlock):
+    def __init__(self, use_bias, **kwargs):
+        super(ConvAdd, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=data_shape[1], kernel_size=(1, 1), strides=1, use_bias=use_bias)
+        self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = self.conv1(x + self.conv0(x))
+      return out
+
+  net = ConvAdd(use_bias=True)
+  check_quantize(net, data_shape, out_type)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", False), #TODO(bgawrych): investigate
     ("sigmoid", False),
