@@ -1012,6 +1012,11 @@ struct MaskedSoftmaxParam : public dmlc::Parameter<MaskedSoftmaxParam> {
     (*dict)["temperature"] = temperature_s.str();
     (*dict)["normalize"]   = normalize_s.str();
   }
+
+  bool operator==(const MaskedSoftmaxParam& other) const {
+    return this->axis == other.axis && this->temperature == other.temperature &&
+           this->normalize == other.normalize;
+  }
 };
 
 static inline bool softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {
@@ -1542,6 +1547,17 @@ struct hash<mxnet::op::SoftmaxParam> {
     ret        = dmlc::HashCombine(ret, val.temperature);
     ret        = dmlc::HashCombine(ret, val.dtype);
     ret        = dmlc::HashCombine(ret, val.use_length);
+    return ret;
+  }
+};
+
+template <>
+struct hash<mxnet::op::MaskedSoftmaxParam> {
+  size_t operator()(const mxnet::op::MaskedSoftmaxParam& val) {
+    size_t ret = 0;
+    ret        = dmlc::HashCombine(ret, val.axis);
+    ret        = dmlc::HashCombine(ret, val.temperature);
+    ret        = dmlc::HashCombine(ret, val.normalize);
     return ret;
   }
 };

@@ -125,6 +125,12 @@ void DNNLLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
                             const std::vector<OpReqType>& req,
                             const std::vector<NDArray>& out_data);
 
+void DNNLMaskedSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs);
+
 /* For softmax_output */
 void DNNLSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
