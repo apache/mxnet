@@ -324,6 +324,7 @@ if(USE_ONEDNN)
       set(ONEDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
     endif()
 
+    include(GNUInstallDirs)
     set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/onednn")
     add_subdirectory(3rdparty/onednn)
   endfunction()
