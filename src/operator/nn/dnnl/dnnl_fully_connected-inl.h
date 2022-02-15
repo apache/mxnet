@@ -44,7 +44,6 @@ struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
   bool enable_float_output;
   bool with_eltwise;
   bool with_sum;
-  bool first_quantization_pass;  // True for operator created during first quantization pass
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   dmlc::optional<bool> channel_wise_quantize;
@@ -59,9 +58,6 @@ struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
         .set_default(false)
         .describe("Whether there's a post with_eltwise after FullyConnected operator");
     DMLC_DECLARE_FIELD(with_sum).set_default(false).describe("Add post sum");
-    DMLC_DECLARE_FIELD(first_quantization_pass)
-        .set_default(false)
-        .describe("True for first quantization pass");
     DMLC_DECLARE_FIELD(min_calib_range)
         .set_default(dmlc::optional<float>())
         .describe(
