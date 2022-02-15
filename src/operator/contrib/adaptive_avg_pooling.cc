@@ -201,11 +201,6 @@ void AdaptiveAvgPoolOpBackwardExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  // Pooling does not currently support working with views
-  if (inputs[0].IsView() || outputs[0].IsView()) {
-    FallBackCompute(AdaptiveAvgPoolOpBackward<cpu>, attrs, ctx, inputs, req, outputs);
-    return;
-  }
 
   CHECK_EQ(inputs.size(), 1U);
 
@@ -223,6 +218,39 @@ inline static bool BackwardAdaptivePoolingStorageType(const nnvm::NodeAttrs& att
                                                       DispatchMode* dispatch_mode,
                                                       std::vector<int>* in_attrs,
                                                       std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+
+  // support_dnnl is set to true, because at this point there is no way
+  // to check if DNNLAdaptivePooling is supported
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
+void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  /*
+  oneDNN doesn't support adaptive pooling.
+  Fallback is needed when padding is not equal 0;
+  */
+  if (SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0])) {
+    DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
+    DNNLRun(DNNLPoolingCompute, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  FallBackCompute(AdaptiveAvgPoolOpForward<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+inline static bool AdaptivePoolingStorageType(const nnvm::NodeAttrs& attrs,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int>* in_attrs,
+                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
@@ -265,56 +293,6 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
   }
 }
 
-#if MXNET_USE_ONEDNN == 1
-void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                 const OpContext& ctx,
-                                 const std::vector<NDArray>& inputs,
-                                 const std::vector<OpReqType>& req,
-                                 const std::vector<NDArray>& outputs) {
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  /*
-  oneDNN doesn't support adaptive pooling.
-  Fallback is needed when padding is not equal 0;
-  */
-  if (SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0])) {
-    DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
-    DNNLRun(DNNLPoolingCompute, attrs, ctx, inputs, req, outputs);
-    DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
-    return;
-  }
-  FallBackCompute(AdaptiveAvgPoolOpForward<cpu>, attrs, ctx, inputs, req, outputs);
-}
-#endif
-
-inline static bool AdaptivePoolingStorageType(const nnvm::NodeAttrs& attrs,
-                                              const int dev_mask,
-                                              DispatchMode* dispatch_mode,
-                                              std::vector<int>* in_attrs,
-                                              std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  bool dispatched = false;
-#if MXNET_USE_ONEDNN == 1
-  if (!dispatched) {
-    dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
-  }
-  if (!DNNLEnvSet()) {
-    *dispatch_mode = DispatchMode::kFComputeFallback;
-  }
-#else
-  for (int& v : *in_attrs)
-    if (v == -1)
-      v = kDefaultStorage;
-  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
-    dispatched =
-        storage_type_assign(out_attrs, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
-  }
-  if (!dispatched) {
-    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-  }
-#endif
-  return dispatched;
-}
 
 NNVM_REGISTER_OP(_contrib_AdaptiveAvgPooling2D)
     .describe(R"code(
@@ -335,8 +313,8 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
     .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpForward<cpu>)
     .set_attr<nnvm::FGradient>("FGradient",
                                ElemwiseGradUseNone{"_backward_contrib_AdaptiveAvgPooling2D"})
-    .set_attr<FInferStorageType>("FInferStorageType", AdaptivePoolingStorageType)
 #if MXNET_USE_ONEDNN == 1
+    .set_attr<FInferStorageType>("FInferStorageType", AdaptivePoolingStorageType)
     .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", AdaptiveAvgPoolComputeExCPU)
 #endif
@@ -363,15 +341,13 @@ NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", AdaptiveAvgPoolOpBackwardExCPU)
 #else
     .set_attr<nnvm::FInplaceOption>("FInplaceOption",
                                     [](const NodeAttrs& attrs) {
                                       return std::vector<std::pair<int, int>>();
                                     })
-#endif
-#if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsDNNL", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", AdaptiveAvgPoolOpBackwardExCPU)
 #endif
     .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpBackward<cpu>);
 

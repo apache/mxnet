@@ -296,12 +296,6 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& outputs) {
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
 
-  // Pooling does not currently support working with views
-  if (inputs[0].IsView() || outputs[0].IsView()) {
-    FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
-    return;
-  }
-
   if (SupportDNNLPooling(param, inputs[0])) {
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
     DNNLRun(DNNLPoolingCompute, attrs, ctx, inputs, req, outputs);
