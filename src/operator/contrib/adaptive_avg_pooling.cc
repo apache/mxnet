@@ -201,7 +201,6 @@ void AdaptiveAvgPoolOpBackwardExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-
   CHECK_EQ(inputs.size(), 1U);
 
   if (SupportDNNLAveragePooling(outputs[0], inputs[0])) {
