@@ -293,7 +293,6 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu>* s,
   }
 }
 
-
 NNVM_REGISTER_OP(_contrib_AdaptiveAvgPooling2D)
     .describe(R"code(
 Applies a 2D adaptive average pooling over a 4D input with the shape of (NCHW).
