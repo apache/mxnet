@@ -85,13 +85,13 @@ def test_conv_transpose_conv(use_bias, data_shape):
 
     def forward(self, x):
       out = self.conv0(x)
-      out = mx.np.transpose(out, axes=[0,1,3,2])
+      out = mx.np.transpose(out, axes=[0,1,2,3])
       out = self.conv1(out)
       return out
 
-  attr = {'conv': []}
+  attr = 'int8'
   net = Conv_Transpose_Conv()
-  check_fusion(net, data_shape, attr)
+  check_quantize(net, data_shape, attr)
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)

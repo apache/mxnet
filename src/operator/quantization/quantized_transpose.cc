@@ -22,8 +22,8 @@
  * \author: Rafal Litka, rafal.litka@intel.com
  */
 #include <mxnet/op_attr_types.h>
-#include "../tensor/matrix_op-inl.h"
 #include "../numpy/np_matrix_op-inl.h"
+#include "../tensor/matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -55,14 +55,14 @@ inline bool QuantizedTransposeShape(const nnvm::NodeAttrs& attrs,
   mxnet::ShapeVector qout_attrs(1);
   SHAPE_ASSIGN_CHECK(qin_attrs, 0, (*in_attrs)[0]);
   SHAPE_ASSIGN_CHECK(qout_attrs, 0, (*out_attrs)[0]);
-  TransposeShapeFun(attrs, &qin_attrs, &qout_attrs);
+  bool ret = TransposeShapeFun(attrs, &qin_attrs, &qout_attrs);
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, qin_attrs[0]);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, qout_attrs[0]);
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, mxnet::TShape{1});
   SHAPE_ASSIGN_CHECK(*in_attrs, 2, mxnet::TShape{1});
   SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape{1});
   SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape{1});
-  return shape_is_known(qout_attrs[0]);
+  return ret;
 }
 NNVM_REGISTER_OP(_npx_quantized_transpose)
     .set_num_inputs(3)
@@ -76,7 +76,7 @@ NNVM_REGISTER_OP(_npx_quantized_transpose)
     .set_attr<nnvm::FListInputNames>(
         "FListInputNames",
         [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"data", "min_data", "max_data"};
+          return std::vector<std::string>{"a", "min_a", "max_a"};
         })
     .set_attr<nnvm::FListOutputNames>(
         "FListOutputNames",
@@ -85,16 +85,16 @@ NNVM_REGISTER_OP(_npx_quantized_transpose)
         })
     .set_attr<FQuantizable>("FQuantizable",
                             [](const NodeAttrs& attrs) { return QuantizeType::kSupport; })
-    .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")
-    .add_argument("min_data",
+    .add_argument("a", "NDArray-or-Symbol", "Array to be reshaped.")
+    .add_argument("min_a",
                   "NDArray-or-Symbol",
                   "The minimum scalar value "
                   "possibly produced for the data")
-    .add_argument("max_data",
+    .add_argument("max_a",
                   "NDArray-or-Symbol",
                   "The maximum scalar value "
                   "possibly produced for the data")
-    .add_arguments(TransposeParam::__FIELDS__());
+    .add_arguments(NumpyTransposeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_quantized_transpose)
     .set_num_inputs(3)

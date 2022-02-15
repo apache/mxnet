@@ -23,8 +23,9 @@
  * \author: Rafal Litka, rafal.litka@intel.com
  */
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/dnnl/dnnl_transpose-inl.h"
+#include "../../numpy/np_matrix_op-inl.h"
 #include "../../tensor/matrix_op-inl.h"
+#include "../../nn/dnnl/dnnl_transpose-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -63,7 +64,7 @@ static void DNNLQuantizedTransposeForward(const nnvm::NodeAttrs& attrs,
   if (SupportDNNLQuantizedTranspose(inputs[0])) {
     DNNLRun(DNNLTransposeForward<ParamType>, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
-    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    FallBackCompute(NumpyTranspose<cpu>, attrs, ctx, inputs, req, outputs);
   }
   outputs[1].data().dptr<float>()[0] = inputs[1].data().dptr<float>()[0];
   outputs[2].data().dptr<float>()[0] = inputs[2].data().dptr<float>()[0];
