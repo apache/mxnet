@@ -1051,90 +1051,58 @@ static void _UpdateSymDTypeAttrs(const std::unordered_map<std::string, int>& nod
 
 int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             SymbolHandle* ret_sym_handle,
-                            uint32_t num_args,
-                            const int* arg_type_data,
-                            uint32_t num_ind_ptr,
-                            const int* ind_ptr,
-                            const int* target_dtype,
-                            const int cast_optional_params,
-                            const uint32_t num_target_dtype_op_names,
-                            const uint32_t num_fp32_op_names,
-                            const uint32_t num_widest_dtype_op_names,
-                            const uint32_t num_conditional_fp32_op_names,
+                            const int target_dtype,
+                            const int cast_params_offline,
+                            const uint32_t num_inputs,
+                            const uint32_t num_all_args,
+                            const uint32_t num_target_dtype_ops,
+                            const uint32_t num_fp32_ops,
+                            const uint32_t num_widest_dtype_ops,
                             const uint32_t num_excluded_symbols,
-                            const uint32_t num_model_params,
-                            const char** target_dtype_op_names,
-                            const char** fp32_op_names,
-                            const char** widest_dtype_op_names,
-                            const char** conditional_fp32_op_names,
-                            const char** excluded_symbols,
-                            const char** param_names,
-                            const char** param_vals,
-                            const char** model_param_names,
-                            const char** arg_names) {
+                            const char** input_names_p,
+                            const char** all_arg_names_p,
+                            const int* all_arg_types_p,
+                            const char** target_dtype_ops_p,
+                            const char** fp32_ops_p,
+                            const char** widest_dtype_ops_p,
+                            const char** excluded_syms_p) {
   nnvm::Symbol* result_sym = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
   nnvm::Graph g     = Symbol2Graph(*sym);
-  std::unordered_set<std::string> target_dtype_ops;
-  std::unordered_set<std::string> fp32_ops;
-  std::unordered_set<std::string> widest_dtype_ops;
-  std::unordered_set<std::string> excluded_syms;
-  std::unordered_set<std::string> model_params;
+  CHECK_EQ(num_all_args, g.indexed_graph().input_nodes().size());
 
-  // conditional_fp32_ops contains the mapping of op_name -> (map of param_name -> param_values)
-  // which need to be conditionally selected to be casted to FP32
-  std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>>
-      conditional_fp32_ops;
-  int target_dt = *target_dtype;
+  std::unordered_set<std::string> input_names(input_names_p, input_names_p + num_inputs);
+  std::unordered_set<std::string> target_dtype_ops(target_dtype_ops_p,
+                                                   target_dtype_ops_p + num_target_dtype_ops);
+  std::unordered_set<std::string> fp32_ops(fp32_ops_p, fp32_ops_p + num_fp32_ops);
+  std::unordered_set<std::string> widest_dtype_ops(widest_dtype_ops_p,
+                                                   widest_dtype_ops_p + num_widest_dtype_ops);
+  std::unordered_set<std::string> excluded_syms(excluded_syms_p,
+                                                excluded_syms_p + num_excluded_symbols);
 
-  for (size_t i = 0; i < num_target_dtype_op_names; ++i) {
-    target_dtype_ops.emplace(target_dtype_op_names[i]);
+  nnvm::DTypeVector arg_types(num_all_args);
+  std::unordered_map<std::string, int> node_name_to_type_map;
+  for (int i = 0; i < num_all_args; ++i) {
+    node_name_to_type_map[all_arg_names_p[i]] = all_arg_types_p[i];
   }
-  for (size_t i = 0; i < num_fp32_op_names; ++i) {
-    fp32_ops.emplace(fp32_op_names[i]);
-  }
-  for (size_t i = 0; i < num_widest_dtype_op_names; ++i) {
-    widest_dtype_ops.emplace(widest_dtype_op_names[i]);
-  }
-  for (size_t i = 0; i < num_excluded_symbols; ++i) {
-    excluded_syms.emplace(excluded_symbols[i]);
-  }
-  for (size_t i = 0; i < num_model_params; ++i) {
-    model_params.emplace(model_param_names[i]);
-  }
-
-  for (size_t i = 0; i < num_ind_ptr - 1; ++i) {
-    for (int j = ind_ptr[i]; j < ind_ptr[i + 1]; ++j) {
-      conditional_fp32_ops[conditional_fp32_op_names[i]][param_names[i]].emplace_back(
-          std::string(param_vals[j]));
-    }
-  }
-
-  std::unordered_map<std::string, int> kwargs;
-  for (uint32_t i = 0; i < num_args; ++i) {
-    kwargs[arg_names[i]] = arg_type_data[i];
-  }
-
-  g.attrs["target_dtype_ops"]     = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
-  g.attrs["fp32_ops"]             = std::make_shared<nnvm::any>(std::move(fp32_ops));
-  g.attrs["widest_dtype_ops"]     = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
-  g.attrs["conditional_fp32_ops"] = std::make_shared<nnvm::any>(std::move(conditional_fp32_ops));
-  g.attrs["excluded_syms"]        = std::make_shared<nnvm::any>(std::move(excluded_syms));
-  g.attrs["target_dtype"]         = std::make_shared<nnvm::any>(target_dt);
-  g.attrs["data_name_types"]      = std::make_shared<nnvm::any>(std::move(kwargs));
-  g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
-  g                               = ApplyPass(std::move(g), "ReducePrecision");
-
-  const nnvm::IndexedGraph& idx = g.indexed_graph();
-  nnvm::DTypeVector arg_types   = g.GetAttr<nnvm::DTypeVector>("arg_types");
-  mxnet::MatchArguments(idx, kwargs, &arg_types, "InferType");
+  mxnet::MatchArguments(g.indexed_graph(), node_name_to_type_map, &arg_types, "InferType");
   g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");
 
-  const nnvm::DTypeVector& inferred_dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
-  std::unordered_map<std::string, int> node_name_dtype_map;
-  std::unordered_map<std::string, int> node_without_dtype_map;
-  _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
+  // InferType sets the "dtype" attribute with all infered types
+  g.attrs["target_dtype"]        = std::make_shared<nnvm::any>(target_dtype);
+  g.attrs["cast_params_offline"] = std::make_shared<nnvm::any>(cast_params_offline);
+  g.attrs["input_names"]         = std::make_shared<nnvm::any>(std::move(input_names));
+  g.attrs["target_dtype_ops"]    = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
+  g.attrs["fp32_ops"]            = std::make_shared<nnvm::any>(std::move(fp32_ops));
+  g.attrs["widest_dtype_ops"]    = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
+  g.attrs["excluded_syms"]       = std::make_shared<nnvm::any>(std::move(excluded_syms));
+  g                              = ApplyPass(std::move(g), "ReducePrecision");
+
+  // const nnvm::IndexedGraph& idx = g.indexed_graph();
+  // std::unordered_map<std::string, int> node_name_dtype_map;
+  // std::unordered_map<std::string, int> node_without_dtype_map;
+  // _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
 
   result_sym->outputs                      = g.outputs;
   *ret_sym_handle                          = result_sym;
@@ -1143,7 +1111,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
 
   // update symbol dtype attrs using the node name -> dtype mapping, if dtype is already set
   // in the symbol, else set dtype for the model_params
-  _UpdateSymDTypeAttrs(node_name_dtype_map, node_without_dtype_map, model_params, args);
+  // _UpdateSymDTypeAttrs(node_name_dtype_map, node_without_dtype_map, model_params, args);
 
   API_END_HANDLE_ERROR(delete result_sym);
 }

@@ -1074,6 +1074,10 @@ class HybridBlock(Block):
                 self._active = False
             self._clear_cached_op()
 
+    @staticmethod
+    def generate_arg_names(arg_num):
+        return ['data'] if arg_num == 1 else ['data{}'.format(i) for i in range(arg_num)]
+
     def _get_graph(self, *args):
         if not self._cached_graph:
             flatten_args, self._in_format = _flatten(args, "input")
@@ -1082,10 +1086,7 @@ class HybridBlock(Block):
             if len(real_args) == 0:
                 raise ValueError('All args are None and we do not support such a case.'
                                  ' Received args={}'.format(args))
-            if len(real_args) == 1:
-                arg_names = ['data']
-            else:
-                arg_names = ['data{}'.format(i) for i, ele in enumerate(real_args)]
+            arg_names = HybridBlock.generate_arg_names(len(real_args))
             symbol_inputs = [
                 symbol.var(name).as_np_ndarray()
                 if isinstance(arg, _mx_np.ndarray) else symbol.var(name)
