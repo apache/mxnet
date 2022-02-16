@@ -20,7 +20,7 @@
   :plugins [[lein-cljfmt "0.5.7"]]
   :repositories [["vendredi" {:url "https://repository.hellonico.info/repository/hellonico/"}]]
   :aliases {"predict-image" ["run" "-m" "pre-trained-models.predict-image" ]}
-  :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.9.0-SNAPSHOT"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.10.0-SNAPSHOT"]
                  [origami "4.0.0-3"]]
   :main pre-trained-models.fine-tune)

@@ -18,8 +18,8 @@
 (defproject tutorial "0.1.0-SNAPSHOT"
   :description "MXNET tutorials"
   :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.9.0-SNAPSHOT"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
+  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.10.0-SNAPSHOT"]
 
                  ;; Uncomment the one appropriate for your machine & configuration:
                  #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]

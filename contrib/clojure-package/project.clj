@@ -15,12 +15,12 @@
 ;; limitations under the License.
 ;;
 
-(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.9.0-SNAPSHOT"
+(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.10.0-SNAPSHOT"
   :description "Clojure package for MXNet"
   :url "https://github.com/apache/incubator-mxnet"
   :license {:name "Apache License"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
-  :dependencies [[org.clojure/clojure "1.9.0"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [t6/from-scala "0.3.0"]
 
                  ;; To use with nightly snapshot
