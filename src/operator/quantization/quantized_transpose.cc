@@ -22,8 +22,8 @@
  * \author: Rafal Litka, rafal.litka@intel.com
  */
 #include <mxnet/op_attr_types.h>
-#include "../numpy/np_matrix_op-inl.h"
 #include "../tensor/matrix_op-inl.h"
+#include "../numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -42,10 +42,10 @@ inline bool QuantizedTransposeType(const nnvm::NodeAttrs& attrs,
 }
 
 typedef bool (*TransposeShapeFunAny)(const nnvm::NodeAttrs& attrs,
-                                    mxnet::ShapeVector* in_attrs,
-                                    mxnet::ShapeVector* out_attrs);
+                                     mxnet::ShapeVector* in_attrs,
+                                     mxnet::ShapeVector* out_attrs);
 
-template<TransposeShapeFunAny TransposeShapeFun>
+template <TransposeShapeFunAny TransposeShapeFun>
 inline bool QuantizedTransposeShape(const nnvm::NodeAttrs& attrs,
                                     mxnet::ShapeVector* in_attrs,
                                     mxnet::ShapeVector* out_attrs) {
@@ -73,11 +73,10 @@ NNVM_REGISTER_OP(_npx_quantized_transpose)
     // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
     // will be reverted after the improvement of CachedOP is done.
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .set_attr<nnvm::FListInputNames>(
-        "FListInputNames",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"a", "min_a", "max_a"};
-        })
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "min_a", "max_a"};
+                                     })
     .set_attr<nnvm::FListOutputNames>(
         "FListOutputNames",
         [](const NodeAttrs& attrs) {

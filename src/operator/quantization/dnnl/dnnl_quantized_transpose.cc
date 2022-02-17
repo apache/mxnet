@@ -48,7 +48,13 @@ bool SupportDNNLQuantizedTranspose(const NDArray& data) {
 
   return true;
 }
-template<class ParamType>
+typedef void (*TransposeFallbackFunAny)(const nnvm::NodeAttrs&,
+                                        const OpContext&,
+                                        const std::vector<TBlob>&,
+                                        const std::vector<OpReqType>&,
+                                        const std::vector<TBlob>&);
+
+template <class ParamType, TransposeFallbackFunAny TransposeFallback>
 static void DNNLQuantizedTransposeForward(const nnvm::NodeAttrs& attrs,
                                           const OpContext& ctx,
                                           const std::vector<NDArray>& inputs,
@@ -64,7 +70,7 @@ static void DNNLQuantizedTransposeForward(const nnvm::NodeAttrs& attrs,
   if (SupportDNNLQuantizedTranspose(inputs[0])) {
     DNNLRun(DNNLTransposeForward<ParamType>, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
-    FallBackCompute(NumpyTranspose<cpu>, attrs, ctx, inputs, req, outputs);
+    FallBackCompute(TransposeFallback, attrs, ctx, inputs, req, outputs);
   }
   outputs[1].data().dptr<float>()[0] = inputs[1].data().dptr<float>()[0];
   outputs[2].data().dptr<float>()[0] = inputs[2].data().dptr<float>()[0];
@@ -76,7 +82,8 @@ NNVM_REGISTER_OP(_npx_quantized_transpose)
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedTransposeForward<NumpyTransposeParam>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          DNNLQuantizedTransposeForward<NumpyTransposeParam, NumpyTranspose<cpu>>)
     .set_attr<bool>("TIsDNNL", true);
 
 NNVM_REGISTER_OP(_contrib_quantized_transpose)
@@ -85,7 +92,8 @@ NNVM_REGISTER_OP(_contrib_quantized_transpose)
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedTransposeForward<TransposeParam>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          DNNLQuantizedTransposeForward<TransposeParam, Transpose<cpu>>)
     .set_attr<bool>("TIsDNNL", true);
 
 }  // namespace op
