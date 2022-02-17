@@ -11712,8 +11712,12 @@ def test_np_standard_unary_funcs(func, func2, dtypes, ref_grad, low, high, ndim)
     ((3, 1), (3, 0)),
     ((0, 2), (1, 2)),
     ((2, 3, 4), (3, 1)),
-    ((2, 3), ()),
-    ((), (2, 3))
+# MXNet numpy does not match original numpy behavior when broadcasting 0-dim arrays.
+# See https://github.com/apache/incubator-mxnet/issues/20898.
+#    ((2, 3), ()),
+#    ((), (2, 3))
+    ((2, 3), (1,)),
+    ((1,), (2, 3))
 ])
 def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref_grad_b, low, high, lshape, rshape):
     class TestStandardBinary(HybridBlock):
