@@ -176,8 +176,8 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
-                         mxnet::ShapeVector* in_attrs,
-                         mxnet::ShapeVector* out_attrs) {
+                                mxnet::ShapeVector* in_attrs,
+                                mxnet::ShapeVector* out_attrs) {
   const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
