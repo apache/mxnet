@@ -397,7 +397,7 @@ Since this model already achieves good accuracy using native quantization (less 
 
 ### Quantizing BERT
 
-This example shows how to use INC to quantize BERT-base for MRPC. In this case, the native MXNet quantization usually introduce a significant accuracy drop (2% - 5% using `naive` calibration mode).  To simplify the code, model and task specific boilerplate has been moved to the `details.py` file.
+This example shows how to use INC to quantize BERT-base for MRPC. In this case, the native MXNet quantization usually introduce a significant accuracy drop (2% - 5% using `naive` calibration mode). To simplify the code, model and task specific boilerplate has been moved to the `details.py` file.
 
 This is the configuration file for this example:
 ```yaml
