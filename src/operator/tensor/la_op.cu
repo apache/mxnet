@@ -89,9 +89,7 @@ NNVM_REGISTER_OP(_backward_linalg_maketrian)
 
 NNVM_REGISTER_OP(_linalg_potri)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potri>);
 
 NNVM_REGISTER_OP(_backward_linalg_potri)
@@ -107,45 +105,35 @@ NNVM_REGISTER_OP(_linalg_det)
     // Incompatibility comes from allocs made in linalg_batch_getrf(), called by det::op()
     // see https://github.com/apache/incubator-mxnet/issues/19353
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 1, det>);
 
 NNVM_REGISTER_OP(_backward_linalg_det)
     // Incompatibility comes from allocs made in linalg_batch_getri(),
     // called by linalg_batch_det_backward_helper, called by det_backward::op()
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 1, det_backward>);
 
 NNVM_REGISTER_OP(_linalg_slogdet)
     // Incompatibility comes from allocs made in linalg_batch_getrf(),
     // called by slogdet::op().
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 2, slogdet>);
 
 NNVM_REGISTER_OP(_backward_linalg_slogdet)
     // Incompatibility comes from allocs made in linalg_batch_getri(),
     // called by linalg_batch_det_backward_helper, called by slogdet_backward::op()
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 2, slogdet_backward>);
 
 #if MXNET_USE_CUSOLVER == 1
 
 NNVM_REGISTER_OP(_linalg_potrf)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potrf>);
 
 NNVM_REGISTER_OP(_backward_linalg_potrf)
@@ -153,9 +141,7 @@ NNVM_REGISTER_OP(_backward_linalg_potrf)
 
 NNVM_REGISTER_OP(_linalg_gelqf)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 2, gelqf>);
 
 NNVM_REGISTER_OP(_backward_linalg_gelqf)
@@ -163,9 +149,7 @@ NNVM_REGISTER_OP(_backward_linalg_gelqf)
 
 NNVM_REGISTER_OP(_linalg_syevd)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LaOpForwSyevd<gpu, syevd>);
 
 NNVM_REGISTER_OP(_backward_linalg_syevd)

@@ -116,9 +116,7 @@ NNVM_REGISTER_OP(_npx_nonzero)
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-                                [](const NodeAttrs& attrs, const bool) {
-                                  return false;
-                                })
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
     .set_attr<FComputeEx>("FComputeEx<gpu>", NonzeroForwardGPU);
 
 }  // namespace op

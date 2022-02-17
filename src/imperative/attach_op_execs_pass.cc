@@ -48,8 +48,8 @@ namespace exec {
 class StorageFallbackOpExecutor : public OpExecutor {
  public:
   explicit StorageFallbackOpExecutor(const NodeAttrs& attrs,
-                            DispatchMode dispatch_mode,
-                            std::vector<uint32_t> mutate_idx)
+                                     DispatchMode dispatch_mode,
+                                     std::vector<uint32_t> mutate_idx)
       : OpExecutor(attrs, dispatch_mode), mutate_idx_(std::move(mutate_idx)) {}
 
   void Setup() override {
@@ -253,10 +253,13 @@ class FComputeExExecutor : public OpExecutor {
     return exec_type_;
   }
 
-  explicit FComputeExExecutor(const NodeAttrs& attrs, DispatchMode dispatch_mode,
-                              FComputeEx fcompute, ExecType exec_type)
-      : OpExecutor(attrs, dispatch_mode), fcompute_(std::move(fcompute)), exec_type_(exec_type) {}
-      : attrs_(std::move(attrs)), fcompute_(std::move(fcompute)), exec_type_(exec_type) {}
+  explicit FComputeExExecutor(const NodeAttrs& attrs,
+                              DispatchMode dispatch_mode,
+                              FComputeEx fcompute,
+                              ExecType exec_type)
+      : OpExecutor(attrs, dispatch_mode),
+        fcompute_(std::move(fcompute)),
+        exec_type_(exec_type) {}
 
  private:
   FComputeEx fcompute_;
@@ -312,8 +315,11 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
         common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", vctx[i]);
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
-      ret[i] = std::make_shared<StatefulComputeExExecutor>(
-          inode.source->attrs, dispatch_modes[i], state, fcompute_ex, exec_type);
+      ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs,
+                                                           dispatch_modes[i],
+                                                           state,
+                                                           fcompute_ex,
+                                                           exec_type);
     } else {
       FStatefulCompute fcompute =
           common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", vctx[i]);
@@ -333,7 +339,10 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
       ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs,
-          dispatch_modes[i], ret[fwd_id].get()->state(), fcompute_ex, exec_type);
+                                                           dispatch_modes[i],
+                                                           ret[fwd_id].get()->state(),
+                                                           fcompute_ex,
+                                                           exec_type);
     } else {
       FStatefulCompute fcompute =
           common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", vctx[i]);
@@ -341,8 +350,11 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
           << "One of FStatefulCompute and FStatefulComputeEx must be registered "
           << "for stateful operator " << op->name;
       ret[i] = std::make_shared<StatefulComputeExecutor>(inode.source->attrs,
-          dispatch_modes[i], ret[fwd_id].get()->state(), fcompute, exec_type,
-          mutate_index);
+                                                         dispatch_modes[i],
+                                                         ret[fwd_id].get()->state(),
+                                                         fcompute,
+                                                         exec_type,
+                                                         mutate_index);
     }
   } else {
     FCompute fcompute   = common::GetFCompute<FCompute>(op, "FCompute", vctx[i]);

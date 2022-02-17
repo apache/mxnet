@@ -414,16 +414,12 @@ NNVM_REGISTER_OP(_backward_tile).set_attr<FCompute>("FCompute<gpu>", TileOpBackw
 
 NNVM_REGISTER_OP(reverse)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", ReverseOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_reverse)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", ReverseOpForward<gpu>);
 
 NNVM_REGISTER_OP(stack).set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
@@ -442,17 +438,13 @@ NNVM_REGISTER_OP(space_to_depth).set_attr<FCompute>("FCompute<gpu>", SpaceToDept
 NNVM_REGISTER_OP(_split_v2)
     // Incompatible due to Copy(xpu_tensor, cpu_tensor) in SplitOpForwardImpl
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", SplitOpForwardGPU);
 
 NNVM_REGISTER_OP(_split_v2_backward)
     // Incompatible due to Copy(xpu_tensor, cpu_tensor) in SplitOpBackwardImpl
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", SplitOpBackward<gpu>);
 
 }  // namespace op

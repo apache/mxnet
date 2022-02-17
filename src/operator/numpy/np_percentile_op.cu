@@ -54,9 +54,7 @@ bool CheckInvalidInput(mshadow::Stream<gpu>* s,
 
 NNVM_REGISTER_OP(_npi_percentile)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-                                       [](const NodeAttrs&, const bool) {
-        return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", NumpyPercentileForward<gpu>);
 
 }  // namespace op

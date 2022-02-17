@@ -78,62 +78,71 @@ inline std::string CudaGraphNodeToString(const cudaGraphNode_t node) {
   CUgraphNodeType t;
   CUDA_DRIVER_CALL(cuGraphNodeGetType(cu_node, &t));
   switch (t) {
-    case CU_GRAPH_NODE_TYPE_KERNEL:
-      {
-        CUDA_KERNEL_NODE_PARAMS kparams;
-        auto err = cuGraphKernelNodeGetParams(cu_node, &kparams);
-        if (err == CUDA_SUCCESS) {
-          ss << "GPUKernel@" << kparams.func;
-          dim3 gridDim(kparams.gridDimX, kparams.gridDimY, kparams.gridDimZ);
-          dim3 blockDim(kparams.blockDimX, kparams.blockDimY, kparams.blockDimZ);
-          ss << "<<<gridDim=" << CudaDim3ToString(gridDim)
-             << ", blkDim=" << CudaDim3ToString(blockDim) << ">>>";
-          ss << "(...";
-          if (kparams.sharedMemBytes != 0)
-            ss << ", dynSharedMemBytes=" << kparams.sharedMemBytes;
-          ss << ")";
-        } else {
-          ss << "GPU Kernel: cuGraphKernelNodeGetParams() fails with " << err;
-        }
+    case CU_GRAPH_NODE_TYPE_KERNEL: {
+      CUDA_KERNEL_NODE_PARAMS kparams;
+      auto err = cuGraphKernelNodeGetParams(cu_node, &kparams);
+      if (err == CUDA_SUCCESS) {
+        ss << "GPUKernel@" << kparams.func;
+        dim3 gridDim(kparams.gridDimX, kparams.gridDimY, kparams.gridDimZ);
+        dim3 blockDim(kparams.blockDimX, kparams.blockDimY, kparams.blockDimZ);
+        ss << "<<<gridDim=" << CudaDim3ToString(gridDim)
+           << ", blkDim=" << CudaDim3ToString(blockDim) << ">>>";
+        ss << "(...";
+        if (kparams.sharedMemBytes != 0)
+          ss << ", dynSharedMemBytes=" << kparams.sharedMemBytes;
+        ss << ")";
+      } else {
+        ss << "GPU Kernel: cuGraphKernelNodeGetParams() fails with " << err;
       }
-      break;
-    case CU_GRAPH_NODE_TYPE_MEMCPY:
-      {
-        cudaMemcpy3DParms mparams = {};
-        CUDA_CALL(cudaGraphMemcpyNodeGetParams(node, &mparams));
-        // If memcpy is seen, return without setting up runnable executor
-        switch (mparams.kind) {
-          case cudaMemcpyHostToHost: ss << "Host->Host "; break;
-          case cudaMemcpyHostToDevice: ss << "Host->Device "; break;
-          case cudaMemcpyDeviceToHost: ss << "Device->Host "; break;
-          case cudaMemcpyDeviceToDevice: ss << "Device->Device "; break;
-          default: break;
-        }
-        ss << "Memcpy";
+    } break;
+    case CU_GRAPH_NODE_TYPE_MEMCPY: {
+      cudaMemcpy3DParms mparams = {};
+      CUDA_CALL(cudaGraphMemcpyNodeGetParams(node, &mparams));
+      // If memcpy is seen, return without setting up runnable executor
+      switch (mparams.kind) {
+        case cudaMemcpyHostToHost:
+          ss << "Host->Host ";
+          break;
+        case cudaMemcpyHostToDevice:
+          ss << "Host->Device ";
+          break;
+        case cudaMemcpyDeviceToHost:
+          ss << "Device->Host ";
+          break;
+        case cudaMemcpyDeviceToDevice:
+          ss << "Device->Device ";
+          break;
+        default: break;
       }
-      break;
-    case CU_GRAPH_NODE_TYPE_MEMSET:
-      {
-        cudaMemsetParams mparams = {};
-        CUDA_CALL(cudaGraphMemsetNodeGetParams(node, &mparams));
-        if (mparams.height == 1 && mparams.elementSize == 1) {
-          ss << "cudaMemset(devPtr=" << mparams.dst << ", value=" << mparams.value
-             << ", count=" << mparams.width << ")";
-        } else {
-          if (mparams.elementSize == 1)
-            ss << "cudaMemset2D";
-          else
-            ss << "MemSet<elemBytes=" << mparams.elementSize << ">";
-          ss << "(devPtr=" << mparams.dst << ", pitch=" << mparams.pitch
-             << ", value=" << mparams.value << ", width=" << mparams.width
-             << ", height=" << mparams.height << ")";
-        }
+      ss << "Memcpy";
+    } break;
+    case CU_GRAPH_NODE_TYPE_MEMSET: {
+      cudaMemsetParams mparams = {};
+      CUDA_CALL(cudaGraphMemsetNodeGetParams(node, &mparams));
+      if (mparams.height == 1 && mparams.elementSize == 1) {
+        ss << "cudaMemset(devPtr=" << mparams.dst << ", value=" << mparams.value
+           << ", count=" << mparams.width << ")";
+      } else {
+        if (mparams.elementSize == 1)
+          ss << "cudaMemset2D";
+        else
+          ss << "MemSet<elemBytes=" << mparams.elementSize << ">";
+        ss << "(devPtr=" << mparams.dst << ", pitch=" << mparams.pitch
+           << ", value=" << mparams.value << ", width=" << mparams.width
+           << ", height=" << mparams.height << ")";
       }
+    } break;
+    case CU_GRAPH_NODE_TYPE_HOST:
+      ss << "Host (executable) node";
       break;
-    case CU_GRAPH_NODE_TYPE_HOST: ss << "Host (executable) node"; break;
-    case CU_GRAPH_NODE_TYPE_GRAPH: ss << "Node which executes an embedded graph"; break;
-    case CU_GRAPH_NODE_TYPE_EMPTY: ss << "Empty (no-op) node"; break;
-    default: ss << "Unknown/Invalid node type " << t;
+    case CU_GRAPH_NODE_TYPE_GRAPH:
+      ss << "Node which executes an embedded graph";
+      break;
+    case CU_GRAPH_NODE_TYPE_EMPTY:
+      ss << "Empty (no-op) node";
+      break;
+    default:
+      ss << "Unknown/Invalid node type " << t;
   }
   return ss.str();
 }
@@ -142,7 +151,7 @@ inline std::string CudaGraphNodeToString(const cudaGraphNode_t node) {
 // Function objects (preferred for readability) provide the deleter function.
 class CudaGraphDeleter {
  public:
-  void operator() (cudaGraph_t graph) {
+  void operator()(cudaGraph_t graph) {
     if (graph != nullptr)
       CUDA_CALL(cudaGraphDestroy(graph));
   }
@@ -152,7 +161,7 @@ class CudaGraphDeleter {
 // Function objects (preferred for readability) provide the deleter function.
 class CudaGraphExecDeleter {
  public:
-  void operator() (cudaGraphExec_t graph_exec) {
+  void operator()(cudaGraphExec_t graph_exec) {
     if (graph_exec != nullptr)
       CUDA_CALL(cudaGraphExecDestroy(graph_exec));
   }
@@ -162,25 +171,22 @@ class CudaGraphExecDeleter {
 // characterized by a starting index in the OpExecutor list and a number of ops.
 class CudaGraphsSubSegExec {
  public:
-  CudaGraphsSubSegExec(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
-                       const RunContext &rctx,
+  CudaGraphsSubSegExec(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+                       const RunContext& rctx,
                        bool is_gpu,
                        bool verbose,
                        int from_op_idx,
                        int num_ops,
-                       bool ops_are_cuda_graph_compatible = true) :
-  from_op_idx_(from_op_idx),
-  num_ops_(num_ops),
-  graph_(nullptr),
-  graph_exec_(nullptr) {
+                       bool ops_are_cuda_graph_compatible = true)
+    : from_op_idx_(from_op_idx), num_ops_(num_ops), graph_(nullptr), graph_exec_(nullptr) {
     if (ops_are_cuda_graph_compatible) {
       MakeGraph(exec_list, rctx, is_gpu, verbose, from_op_idx, num_ops);
       MakeGraphExec();
     }
   }
 
-  void Update(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
-              const RunContext &rctx,
+  void Update(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+              const RunContext& rctx,
               bool is_gpu,
               bool verbose) {
     // Current executor should be Runnable with the same parameters
@@ -189,8 +195,8 @@ class CudaGraphsSubSegExec {
 
     cudaGraphExecUpdateResult update_result = cudaGraphExecUpdateError;
     cudaGraphNode_t error_node;
-    cudaError_t e = cudaGraphExecUpdate(graph_exec_.get(), graph_.get(),
-                                        &error_node, &update_result);
+    cudaError_t e =
+        cudaGraphExecUpdate(graph_exec_.get(), graph_.get(), &error_node, &update_result);
     switch (e) {
       case cudaErrorGraphExecUpdateFailure:
         MakeGraphExec();
@@ -204,11 +210,11 @@ class CudaGraphsSubSegExec {
     }
   }
 
-  void RunSubSeg(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
-                 const RunContext &rctx,
+  void RunSubSeg(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+                 const RunContext& rctx,
                  bool is_gpu) {
     if (IsRunnable()) {
-      auto s = rctx.get_stream<gpu>();
+      auto s                  = rctx.get_stream<gpu>();
       const cudaStream_t cu_s = mshadow::Stream<gpu>::GetStream(s);
       CUDA_CALL(cudaGraphLaunch(graph_exec_.get(), cu_s));
     } else {
@@ -218,16 +224,18 @@ class CudaGraphsSubSegExec {
     }
   }
 
-  bool IsRunnable() { return graph_exec_ != nullptr; }
+  bool IsRunnable() {
+    return graph_exec_ != nullptr;
+  }
 
  private:
-  void MakeGraph(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
-                       const RunContext &rctx,
-                       bool is_gpu,
-                       bool verbose,
-                       int from_op_idx,
-                       int num_ops) {
-    auto s = rctx.get_stream<gpu>();
+  void MakeGraph(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+                 const RunContext& rctx,
+                 bool is_gpu,
+                 bool verbose,
+                 int from_op_idx,
+                 int num_ops) {
+    auto s                  = rctx.get_stream<gpu>();
     const cudaStream_t cu_s = mshadow::Stream<gpu>::GetStream(s);
     // Create CUDA Graph
     // Use of cudaStreamCaptureModeThreadLocal allows other threads like GPU Copy workers
@@ -242,38 +250,36 @@ class CudaGraphsSubSegExec {
 
     if (verbose) {
       std::vector<cudaGraphNode_t> graph_nodes = GetCudaGraphNodes(cuda_graph);
-      size_t num_nodes = graph_nodes.size();
+      size_t num_nodes                         = graph_nodes.size();
       LOG(INFO) << "  Graph has " << num_nodes << " nodes:";
       for (size_t i = 0; i != num_nodes; ++i) {
-        LOG(INFO) << "    node " << i << " = "
-                  << CudaGraphNodeToString(graph_nodes[i]);
+        LOG(INFO) << "    node " << i << " = " << CudaGraphNodeToString(graph_nodes[i]);
       }
     }
   }
 
   void MakeGraphExec() {
-      cudaGraphExec_t cuda_graph_exec;
-      cudaGraphNode_t error_node;
-      char log_buffer[1000];
+    cudaGraphExec_t cuda_graph_exec;
+    cudaGraphNode_t error_node;
+    char log_buffer[1000];
 
-      CUDA_CALL(cudaGraphInstantiate(&cuda_graph_exec, graph_.get(),
-                                     &error_node, log_buffer, 1000));
-      graph_exec_.reset(cuda_graph_exec, CudaGraphExecDeleter());
+    CUDA_CALL(cudaGraphInstantiate(&cuda_graph_exec, graph_.get(), &error_node, log_buffer, 1000));
+    graph_exec_.reset(cuda_graph_exec, CudaGraphExecDeleter());
 
-      // At this point we have a CUDA Graph executor
-      static int num_graph_creations_logged = 0;
-      static int max_log_entries = dmlc::GetEnv("MXNET_CUDA_GRAPHS_MAX_LOG_ENTRIES", 0);
-      if (num_graph_creations_logged < max_log_entries) {
-        num_graph_creations_logged++;
-        LOG(INFO) << "Created CUDA graph " << num_graph_creations_logged;
-        if (num_graph_creations_logged == max_log_entries)
-          LOG(INFO) << "Further CUDA graph creation log messages are suppressed.";
-      }
+    // At this point we have a CUDA Graph executor
+    static int num_graph_creations_logged = 0;
+    static int max_log_entries            = dmlc::GetEnv("MXNET_CUDA_GRAPHS_MAX_LOG_ENTRIES", 0);
+    if (num_graph_creations_logged < max_log_entries) {
+      num_graph_creations_logged++;
+      LOG(INFO) << "Created CUDA graph " << num_graph_creations_logged;
+      if (num_graph_creations_logged == max_log_entries)
+        LOG(INFO) << "Further CUDA graph creation log messages are suppressed.";
+    }
   }
 
   int from_op_idx_;
   int num_ops_;
-  using cudaGraphStruct_t = typename std::remove_pointer<cudaGraph_t>::type;
+  using cudaGraphStruct_t     = typename std::remove_pointer<cudaGraph_t>::type;
   using cudaGraphExecStruct_t = typename std::remove_pointer<cudaGraphExec_t>::type;
   std::shared_ptr<cudaGraphStruct_t> graph_;
   std::shared_ptr<cudaGraphExecStruct_t> graph_exec_;
@@ -283,7 +289,7 @@ class CudaGraphsSubSegExec {
 struct CudaGraphInfo {
   std::vector<CudaGraphsSubSegExec> cuda_graph_subseg_execs;
   bool has_been_run_conventionally = false;
-  std::vector<void *> tempspace_dptrs;
+  std::vector<void*> tempspace_dptrs;
 };
 // A CUDA graph is maintained for every combination of cudaStream_t (i.e. GPU Worker) and
 // the state of the is_train flag of the OpContext.  If the tempspace_dptrs change, we
@@ -292,7 +298,7 @@ struct CudaGraphCacheKey {
   cudaStream_t cu_s;
   bool is_train;
   // overload '<' so CudaGraphCacheKey can be used as a std::map key
-  bool operator<(const CudaGraphCacheKey &other) const {
+  bool operator<(const CudaGraphCacheKey& other) const {
     return cu_s < other.cu_s || (cu_s == other.cu_s && is_train < other.is_train);
   }
 };
@@ -300,20 +306,20 @@ using CudaGraphCache = std::map<CudaGraphCacheKey, CudaGraphInfo>;
 
 class CudaGraphsExec {
  public:
-  CudaGraphsExec(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
+  CudaGraphsExec(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
                  bool is_gpu,
-                 const char *opr_names) :
-  verbose_(false), is_enabled_(false) {
+                 const char *opr_names)
+      : verbose_(false), is_enabled_(false) {
     opr_names_ = opr_names ? std::string(opr_names) : std::string();
     if (is_gpu) {
       is_enabled_ = dmlc::GetEnv("MXNET_ENABLE_CUDA_GRAPHS", false);
-      verbose_ = dmlc::GetEnv("MXNET_CUDA_GRAPHS_VERBOSE", false);
+      verbose_    = dmlc::GetEnv("MXNET_CUDA_GRAPHS_VERBOSE", false);
       SetTempSpaces(exec_list);
     }
   }
 
-  void RunAll(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
-              const RunContext &rctx,
+  void RunAll(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+              const RunContext& rctx,
               bool is_gpu) {
     // If this a CPU op or CUDA Graphs use isn't possible, run normally and return
     if (!is_gpu || !is_enabled_) {
@@ -324,14 +330,14 @@ class CudaGraphsExec {
 
     // Also if we're in a warm-up period where tempspace pointers are likely
     // to change, run normally and return
-    auto s = rctx.get_stream<gpu>();
+    auto s                  = rctx.get_stream<gpu>();
     const cudaStream_t cu_s = mshadow::Stream<gpu>::GetStream(s);
     // All the ops in the bulked segment will have the same setting of is_train as the first op
-    const bool is_train = exec_list.size() > 0 && exec_list[0]->op_ctx.is_train;
+    const bool is_train         = exec_list.size() > 0 && exec_list[0]->op_ctx.is_train;
     const CudaGraphCacheKey key = {cu_s, is_train};
     // Look-up the CUDA Graph info for this combo of stream and is_train setting
     // This may create a default-initialized new entry.
-    auto &cuda_graph_info = cache_[key];
+    auto& cuda_graph_info = cache_[key];
     if (!cuda_graph_info.has_been_run_conventionally) {
       // Run all opr in the sub-graph
       exec::OpExecutor::RunAll(exec_list, rctx, is_gpu);
@@ -347,7 +353,7 @@ class CudaGraphsExec {
     if (cuda_graph_info.cuda_graph_subseg_execs.size() > 0 &&
         cuda_graph_info.tempspace_dptrs != before_exec_tempspace_ptrs) {
       // Update all runnable executors.  Non-runnable executors launch their ops conventionally.
-      for (auto &subseg_exec : cuda_graph_info.cuda_graph_subseg_execs) {
+      for (auto& subseg_exec : cuda_graph_info.cuda_graph_subseg_execs) {
         if (subseg_exec.IsRunnable())
           subseg_exec.Update(exec_list, rctx, is_gpu, verbose_);
       }
@@ -365,7 +371,9 @@ class CudaGraphsExec {
             break;
         }
         if (num_good_ops > 0) {
-          CreateSubExecOverRegion(exec_list, rctx, is_gpu,
+          CreateSubExecOverRegion(exec_list,
+                                  rctx,
+                                  is_gpu,
                                   first_op_idx,
                                   first_op_idx + num_good_ops,
                                   &cuda_graph_info.cuda_graph_subseg_execs);
@@ -375,7 +383,7 @@ class CudaGraphsExec {
           // We had to have hit an op that was not OK.
           if (verbose_) {
             LOG(INFO) << "Bypassing notOK op segment[" << first_op_idx << "," << first_op_idx << "]"
-                      << " of op segment "  << opr_names_;
+                      << " of op segment " << opr_names_;
           }
           CudaGraphsSubSegExec notOK_opseg(exec_list, rctx, is_gpu, false, first_op_idx, 1, false);
           cuda_graph_info.cuda_graph_subseg_execs.push_back(notOK_opseg);
@@ -393,19 +401,19 @@ class CudaGraphsExec {
     // Now execute the CUDA Graph that we either just created or looked-up in the cache.
     if (verbose_) {
       int runnable_execs = 0;
-      int bypassed_ops = 0;
-      for (auto &subseg_exec : cuda_graph_info.cuda_graph_subseg_execs) {
+      int bypassed_ops   = 0;
+      for (auto& subseg_exec : cuda_graph_info.cuda_graph_subseg_execs) {
         if (subseg_exec.IsRunnable())
           runnable_execs++;
         else
           bypassed_ops++;
       }
-      LOG(INFO) << "Launching " << runnable_execs
-                << " captured CUDA graph(s) for op segment " << opr_names_;
+      LOG(INFO) << "Launching " << runnable_execs << " captured CUDA graph(s) for op segment "
+                << opr_names_;
       if (bypassed_ops > 0)
         LOG(INFO) << "    (bypassing " << bypassed_ops << " un-capturable ops)";
     }
-    for (auto &subseg_exec : cuda_graph_info.cuda_graph_subseg_execs)
+    for (auto& subseg_exec : cuda_graph_info.cuda_graph_subseg_execs)
       subseg_exec.RunSubSeg(exec_list, rctx, is_gpu);
   }
 
@@ -413,12 +421,12 @@ class CudaGraphsExec {
   // Make a CUDA Graph of the region of ops [from_op_idx, upto_op_idx).  If such a graph
   // is not runnable, e.g. if it includes memcpys from unpinned cpu memory, then make a
   // number of smaller graphs that avoid those ops with the memcpys.
-  void CreateSubExecOverRegion(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
-                               const RunContext &rctx,
+  void CreateSubExecOverRegion(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+                               const RunContext& rctx,
                                bool is_gpu,
                                size_t from_op_idx,
                                size_t upto_op_idx,
-                               std::vector<CudaGraphsSubSegExec> *cuda_graph_subseg_execs) {
+                               std::vector<CudaGraphsSubSegExec>* cuda_graph_subseg_execs) {
     // Optimistically try to create a CUDA Graph of the entire op segment region
 
     int num_ops = upto_op_idx - from_op_idx;
@@ -429,21 +437,20 @@ class CudaGraphsExec {
       if (verbose_)
         LOG(INFO) << "  Graph was not runnable- creating op sub-segments...";
       // Enter fall-back approach to making many sub-execs
-      for (size_t first_op_idx = from_op_idx; first_op_idx != upto_op_idx; ) {
+      for (size_t first_op_idx = from_op_idx; first_op_idx != upto_op_idx;) {
         int num_good_ops = 0;
         for (size_t last_op_idx = first_op_idx; last_op_idx != upto_op_idx; ++last_op_idx) {
           CudaGraphsSubSegExec single_opseg(exec_list, rctx, is_gpu, false, last_op_idx, 1);
           if (single_opseg.IsRunnable())
             num_good_ops++;
           // Is it time to create a subseg exec from accumulated good ops?
-          if (num_good_ops > 0 &&
-              (last_op_idx == upto_op_idx - 1 || !single_opseg.IsRunnable())) {
+          if (num_good_ops > 0 && (last_op_idx == upto_op_idx - 1 || !single_opseg.IsRunnable())) {
             if (verbose_)
-              LOG(INFO) << "Capturing CUDA graph of op sub segment["
-                        << first_op_idx << ":" << (first_op_idx + num_good_ops - 1) << "]"
+              LOG(INFO) << "Capturing CUDA graph of op sub segment[" << first_op_idx << ":"
+                        << (first_op_idx + num_good_ops - 1) << "]"
                         << " of op segment "  << opr_names_;
-            CudaGraphsSubSegExec good_opseg(exec_list, rctx, is_gpu, verbose_,
-                                            first_op_idx, num_good_ops);
+            CudaGraphsSubSegExec good_opseg(
+                exec_list, rctx, is_gpu, verbose_, first_op_idx, num_good_ops);
             CHECK(good_opseg.IsRunnable()) << "Unexpected issue with CUDA Graphs creation";
             cuda_graph_subseg_execs->push_back(good_opseg);
             first_op_idx += num_good_ops;
@@ -452,7 +459,7 @@ class CudaGraphsExec {
           if (!single_opseg.IsRunnable()) {
             if (verbose_) {
               LOG(INFO) << "Bypassing op sub segment[" << last_op_idx << "," << last_op_idx << "]"
-                        << " of op segment "  << opr_names_;
+                        << " of op segment " << opr_names_;
               // Generate throw-away exec in order to produce a diagnostic listing of graph nodes
               CudaGraphsSubSegExec dummy(exec_list, rctx, is_gpu, verbose_, last_op_idx, 1);
             }
@@ -466,11 +473,11 @@ class CudaGraphsExec {
   }
 
   // Is the Op OK to make part of a CUDA Graph?
-  bool OpOK(const std::shared_ptr<exec::OpExecutor> &exec) {
-    static auto& fstateful = Op::GetAttr<FCreateOpState>("FCreateOpState");
+  bool OpOK(const std::shared_ptr<exec::OpExecutor>& exec) {
+    static auto& fstateful        = Op::GetAttr<FCreateOpState>("FCreateOpState");
     static auto& fgraphcompatible = Op::GetAttr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible");
-    static auto& fcompute_ex = Op::GetAttr<FComputeEx>("FComputeEx<gpu>");
-    const auto& attrs = exec->attrs;
+    static auto& fcompute_ex      = Op::GetAttr<FComputeEx>("FComputeEx<gpu>");
+    const auto& attrs             = exec->attrs;
     if (attrs.op != nullptr) {
       const auto f = fgraphcompatible.get(attrs.op, nullptr);
       if (f != nullptr) {
@@ -478,7 +485,7 @@ class CudaGraphsExec {
       }
       if (fstateful.get(attrs.op, nullptr) != nullptr) {
         if (verbose_) {
-          LOG(INFO) << "Omitting stateful operator " << attrs.op->name  << " from CUDA graph.";
+          LOG(INFO) << "Omitting stateful operator " << attrs.op->name << " from CUDA graph.";
         }
         return false;
       }
@@ -507,10 +514,10 @@ class CudaGraphsExec {
   }
 
   // Determine Tempspaces used by ops.  Other resource uses disable CUDA Graphs.
-  void SetTempSpaces(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list) {
+  void SetTempSpaces(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list) {
     // Gather info about the ops use of TempSpace.
     if (is_enabled_) {
-      std::set<Resource *> tempspaces_set;
+      std::set<Resource*> tempspaces_set;
       for (auto& exec : exec_list) {
         for (auto& resource : exec->op_ctx.requested) {
           if (resource.req.type == ResourceRequest::kTempSpace) {
@@ -523,18 +530,18 @@ class CudaGraphsExec {
   }
 
   // Return the addresses of the gpu TempSpace areas
-  std::vector<void *> GetGPUTempspacePtrs(mshadow::Stream<gpu> *s) {
-    std::vector<void *> ret;
+  std::vector<void*> GetGPUTempspacePtrs(mshadow::Stream<gpu>* s) {
+    std::vector<void*> ret;
     for (const auto& resource : tempspaces_) {
       // Ask for minimal allocation to get base pointer without increasing the size
-      auto *base_ptr = resource->get_space_typed<gpu, 1, char>(mshadow::Shape1(1), s).dptr_;
-      ret.push_back(static_cast<void *>(base_ptr));
+      auto* base_ptr = resource->get_space_typed<gpu, 1, char>(mshadow::Shape1(1), s).dptr_;
+      ret.push_back(static_cast<void*>(base_ptr));
     }
     return ret;
   }
 
   CudaGraphCache cache_;
-  std::vector<Resource *> tempspaces_;
+  std::vector<Resource*> tempspaces_;
   std::string opr_names_;
   bool verbose_;
   bool is_enabled_;

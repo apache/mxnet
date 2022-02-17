@@ -1254,10 +1254,10 @@ inline Engine::OprHandle CreateEngineOp(
   // Provide initialized `cuda_graphs_exec`, which when captured
   // by exec_fun, acts like a static variable inside the mutable closure.
   cuda_graphs::CudaGraphsExec cuda_graphs_exec(execs, is_gpu, opr_names);
-  auto exec_fun = [cuda_graphs_exec, execs, is_async, is_gpu] (
-      RunContext ctx,
-      Engine::CallbackOnStart on_start,
-      Engine::CallbackOnComplete on_complete) mutable {
+  auto exec_fun = [cuda_graphs_exec, execs, is_async, is_gpu](
+                      RunContext ctx,
+                      Engine::CallbackOnStart on_start,
+                      Engine::CallbackOnComplete on_complete) mutable {
     on_start();
     if (is_async) {
       execs[0]->op_ctx.async_on_complete = on_complete;

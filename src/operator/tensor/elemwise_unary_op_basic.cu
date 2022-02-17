@@ -117,9 +117,7 @@ void ShapeComputeGPU(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(shape_array)
     .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-        [](const NodeAttrs&, const bool) {
-          return false;
-        })
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", ShapeComputeGPU);
 
 void SizeComputeGPU(const nnvm::NodeAttrs& attrs,

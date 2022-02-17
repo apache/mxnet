@@ -90,8 +90,8 @@ class OpExecutor {
   /*! \brief dispatch mode of the executor */
   DispatchMode dispatch_mode;
 
-  explicit OpExecutor(NodeAttrs  attrs, DispatchMode dispatch_mode) :
-    attrs(std::move(attrs)), dispatch_mode(dispatch_mode) {}
+  explicit OpExecutor(NodeAttrs attrs, DispatchMode dispatch_mode)
+      : attrs(std::move(attrs)), dispatch_mode(dispatch_mode) {}
   /*! \brief virtual destructor */
   virtual ~OpExecutor() {}
   /*!
@@ -111,9 +111,10 @@ class OpExecutor {
    *  This function call does not synchronize the stream.
    * \param rctx The runtime context passed in by environment.
    */
-  static void RunAll(const std::vector<std::shared_ptr<OpExecutor> > &execs,
-                     RunContext rctx, bool is_gpu) {
-    for (auto &exec : execs)
+  static void RunAll(const std::vector<std::shared_ptr<OpExecutor> >& execs,
+                     RunContext rctx,
+                     bool is_gpu) {
+    for (auto& exec : execs)
       exec->Run(rctx, is_gpu);
   }
   /*! \return the execution type */

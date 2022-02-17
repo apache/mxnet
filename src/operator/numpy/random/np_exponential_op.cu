@@ -28,15 +28,9 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_exponential)
-<<<<<<< HEAD
-    .set_attr<FCompute>("FCompute<gpu>", NumpyExponentialForward<gpu>);
-=======
 .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
-    [](const NodeAttrs&, const bool) {
-      return false;
-    })
-.set_attr<FCompute>("FCompute<gpu>", NumpyExponentialForward<gpu>);
->>>>>>> f4bcd48dd... [1.x][FEATURE] CUDA graphs support (#19142)
+                                   [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyExponentialForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_broadcast_exponential)
     .set_attr<FCompute>("FCompute<gpu>", ExponentialReparamBackward<gpu>);
