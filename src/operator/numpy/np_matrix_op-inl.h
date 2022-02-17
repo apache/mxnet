@@ -27,6 +27,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <set>
 #include <utility>
 #include <unordered_map>
 #include "../tensor/matrix_op-inl.h"
