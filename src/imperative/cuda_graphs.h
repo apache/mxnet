@@ -112,7 +112,8 @@ inline std::string CudaGraphNodeToString(const cudaGraphNode_t node) {
         case cudaMemcpyDeviceToDevice:
           ss << "Device->Device ";
           break;
-        default: break;
+        default:
+          break;
       }
       ss << "Memcpy";
     } break;
@@ -178,7 +179,7 @@ class CudaGraphsSubSegExec {
                        int from_op_idx,
                        int num_ops,
                        bool ops_are_cuda_graph_compatible = true)
-    : from_op_idx_(from_op_idx), num_ops_(num_ops), graph_(nullptr), graph_exec_(nullptr) {
+      : from_op_idx_(from_op_idx), num_ops_(num_ops), graph_(nullptr), graph_exec_(nullptr) {
     if (ops_are_cuda_graph_compatible) {
       MakeGraph(exec_list, rctx, is_gpu, verbose, from_op_idx, num_ops);
       MakeGraphExec();
@@ -308,7 +309,7 @@ class CudaGraphsExec {
  public:
   CudaGraphsExec(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
                  bool is_gpu,
-                 const char *opr_names)
+                 const char* opr_names)
       : verbose_(false), is_enabled_(false) {
     opr_names_ = opr_names ? std::string(opr_names) : std::string();
     if (is_gpu) {
@@ -448,7 +449,7 @@ class CudaGraphsExec {
             if (verbose_)
               LOG(INFO) << "Capturing CUDA graph of op sub segment[" << first_op_idx << ":"
                         << (first_op_idx + num_good_ops - 1) << "]"
-                        << " of op segment "  << opr_names_;
+                        << " of op segment " << opr_names_;
             CudaGraphsSubSegExec good_opseg(
                 exec_list, rctx, is_gpu, verbose_, first_op_idx, num_good_ops);
             CHECK(good_opseg.IsRunnable()) << "Unexpected issue with CUDA Graphs creation";

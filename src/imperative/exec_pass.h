@@ -111,7 +111,7 @@ class OpExecutor {
    *  This function call does not synchronize the stream.
    * \param rctx The runtime context passed in by environment.
    */
-  static void RunAll(const std::vector<std::shared_ptr<OpExecutor> >& execs,
+  static void RunAll(const std::vector<std::shared_ptr<OpExecutor>>& execs,
                      RunContext rctx,
                      bool is_gpu) {
     for (auto& exec : execs)

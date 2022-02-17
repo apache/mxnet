@@ -366,7 +366,7 @@ using FNeedCalibrateOutput = std::function<std::vector<int>(const NodeAttrs& att
  * to stay the same as long as the shape and type
  * of input stays the same.
  */
-using FIsCUDAGraphsCompatible = std::function<bool (const NodeAttrs& attrs, const bool is_train)>;
+using FIsCUDAGraphsCompatible = std::function<bool(const NodeAttrs& attrs, const bool is_train)>;
 
 #endif
 

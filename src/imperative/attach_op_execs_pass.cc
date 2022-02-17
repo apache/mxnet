@@ -257,9 +257,7 @@ class FComputeExExecutor : public OpExecutor {
                               DispatchMode dispatch_mode,
                               FComputeEx fcompute,
                               ExecType exec_type)
-      : OpExecutor(attrs, dispatch_mode),
-        fcompute_(std::move(fcompute)),
-        exec_type_(exec_type) {}
+      : OpExecutor(attrs, dispatch_mode), fcompute_(std::move(fcompute)), exec_type_(exec_type) {}
 
  private:
   FComputeEx fcompute_;
@@ -315,11 +313,8 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
         common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", vctx[i]);
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
-      ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs,
-                                                           dispatch_modes[i],
-                                                           state,
-                                                           fcompute_ex,
-                                                           exec_type);
+      ret[i] = std::make_shared<StatefulComputeExExecutor>(
+          inode.source->attrs, dispatch_modes[i], state, fcompute_ex, exec_type);
     } else {
       FStatefulCompute fcompute =
           common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", vctx[i]);

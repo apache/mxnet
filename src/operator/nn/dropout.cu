@@ -34,7 +34,6 @@ NNVM_REGISTER_OP(Dropout)
                                          // Dropout is a passthrough during inference for all impls
                                          if (!is_train)
                                            return true;
-    
                                          // cuDNN impl is compatible during training as well
                                          const DropoutParam& param =
                                              nnvm::get<DropoutParam>(attrs.parsed);
