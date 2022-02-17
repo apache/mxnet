@@ -22,13 +22,13 @@ oneDNN
 
    .. card::
       :title: oneDNN Installation and Verification
-      :link: dnnl_readme
+      :link: dnnl_readme.html
 
       A guide on using oneDNN with MXNet.
 
    .. card::
       :title: oneDNN Quantization
-      :link: dnnl_quantization
+      :link: dnnl_quantization.html
 
       How to perform quantization with oneDNN
 
@@ -37,4 +37,5 @@ oneDNN
    :maxdepth: 1
    :glob:
 
-   *
+   dnnl_readme
+   dnnl_quantization
