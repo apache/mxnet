@@ -718,7 +718,7 @@ def test_quantized_transpose():
     def check_quantized_transpose(shape, qdtype, axes):
         if qdtype == 'uint8':
             data_low = 0.0
-            data_high = 127.0
+            data_high = 255.0
         else:
             data_low = -127.0
             data_high = 127.0
@@ -733,6 +733,7 @@ def test_quantized_transpose():
         assert_almost_equal(max_output.item(), max_data.item())
 
     for qtype in ['int8', 'uint8']:
+        check_quantized_transpose((), qtype, ())
         check_quantized_transpose((2,3), qtype, (1,0))
         check_quantized_transpose((8,21), qtype, (1,0))
         check_quantized_transpose((7,3,9), qtype, (2,1,0))
