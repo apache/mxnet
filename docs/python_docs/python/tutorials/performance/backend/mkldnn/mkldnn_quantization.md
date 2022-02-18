@@ -27,9 +27,10 @@ Installing MXNet with MKLDNN backend is an easy and essential process. You can f
 
 ```
 # release version
-pip install mxnet-mkl
-# nightly version
-pip install mxnet-mkl --pre
+pip install mxnet
+
+# latest nightly development version
+pip install --pre "mxnet<2" -f https://dist.mxnet.io/python
 ```
 
 ## Image Classification Demo
@@ -155,7 +156,7 @@ cqsym, cqarg_params, aux_params, collector = quantize_graph(sym=sym, arg_params=
                                                           quantized_dtype=quantized_dtype, logger=logger)
 
 # download imagenet validation dataset
-mx.test_utils.download('https://data.mxnet.io/data/val_256_q90.rec', 'dataset.rec')
+mx.test_utils.download('http://data.mxnet.io/data/val_256_q90.rec', 'dataset.rec')
 # set rgb info for data
 mean_std = {'mean_r': 123.68, 'mean_g': 116.779, 'mean_b': 103.939, 'std_r': 58.393, 'std_g': 57.12, 'std_b': 57.375}
 # set batch size
@@ -243,6 +244,8 @@ BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON
 
 - Change calibration dataset by setting different `num_calib_batches` or shuffle your validation dataset;
 
+- Use Intel® Neural Compressor ([see below](#Improving-accuracy-with-Intel-Neural-Compressor))
+
 #### Performance Tuning
 
 - Keep sure to perform graph fusion before quantization;
@@ -254,5 +257,296 @@ BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON
 ## Deploy with Python/C++
 
 MXNet also supports deploy quantized models with C++. Refer [MXNet C++ Package](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/README.md) for more details.
+
+# Improving accuracy with Intel® Neural Compressor
+
+The accuracy of a model can decrease as a result of quantization. When the accuracy drop is significant, we can try to manually find a better quantization configuration (exclude some layers, try different calibration methods, etc.), but for bigger models this might prove to be a difficult and time consuming task. [Intel® Neural Compressor](https://github.com/intel/neural-compressor) (INC) tries to automate this process using several tuning heuristics, which aim to find the quantization configuration that satisfies the specified accuracy requirement. 
+
+**NOTE:**
+
+Most tuning strategies will try different configurations on an evaluation dataset in order to find out how each layer affects the accuracy of the model. This means that for larger models, it may take a long time to find a solution (as the tuning space is usually larger and the evaluation itself takes longer).
+
+## Installation and Prerequisites
+
+- Install MXNet with MKLDNN enabled as described in the [previous section](#Installation-and-Prerequisites).
+
+- Install Intel® Neural Compressor:
+  
+  Use one of the commands below to install INC (supported python versions are: 3.6, 3.7, 3.8, 3.9):
+
+  ```bash
+  # install stable version from pip
+  pip install neural-compressor
+
+  # install nightly version from pip
+  pip install -i https://test.pypi.org/simple/ neural-compressor
+
+  # install stable version from conda
+  conda install neural-compressor -c conda-forge -c intel
+  ```
+
+## Configuration file
+
+Quantization tuning process can be customized in the yaml configuration file. Below is a simple example:
+
+```yaml
+# cnn.yaml
+
+version: 1.0
+
+model:
+  name: cnn
+  framework: mxnet
+
+quantization:
+  calibration:
+    sampling_size: 160 # number of samples for calibration
+
+tuning:
+  strategy:
+    name: basic
+  accuracy_criterion:
+    relative: 0.01
+  exit_policy:
+    timeout: 0
+  random_seed: 9527
+```
+
+We are using the `basic` strategy, but you could also try out different ones. [Here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md) you can find a list of strategies available in INC and details of how they work. You can also add your own strategy if the existing ones do not suit your needs.
+
+Since the value of `timeout` is 0, INC will run until it finds a configuration that satisfies the accuracy criterion and then exit. Depending on the strategy this may not be ideal, as sometimes it would be better to further explore the tuning space to find a superior configuration both in terms of accuracy and speed. To achieve this, we can set a specific `timeout` value, which will tell INC how long (in seconds) it should run.
+
+For more information about the configuration file, see the [template](https://github.com/intel/neural-compressor/blob/master/neural_compressor/template/ptq.yaml) from the official INC repo. Keep in mind that only the `post training quantization` is currently supported for MXNet.
+
+## Model quantization and tuning
+
+In general, Intel® Neural Compressor requires 4 elements in order to run: 
+1. Config file - like the example above
+2. Model to be quantized
+3. Calibration dataloader
+4. Evaluation function - a function that takes a model as an argument and returns the accuracy it achieves on a certain evaluation dataset.
+
+### Quantizing ResNet
+
+The previous sections described how to quantize ResNet using the native MXNet quantization. This example shows how we can achieve the same (with the auto-tuning) using INC.
+
+1. Get the model
+
+```python
+import logging
+import mxnet as mx
+from mxnet.gluon.model_zoo import vision
+
+logging.basicConfig()
+logger = logging.getLogger('logger')
+logger.setLevel(logging.INFO)
+
+batch_shape = (1, 3, 224, 224)
+resnet18 = vision.resnet18_v1(pretrained=True)
+```
+
+2. Prepare the dataset:
+
+```python
+mx.test_utils.download('http://data.mxnet.io/data/val_256_q90.rec', 'data/val_256_q90.rec')
+
+batch_size = 16
+mean_std = {'mean_r': 123.68, 'mean_g': 116.779, 'mean_b': 103.939,
+            'std_r': 58.393, 'std_g': 57.12, 'std_b': 57.375}
+
+data = mx.io.ImageRecordIter(path_imgrec='data/val_256_q90.rec', 
+                             batch_size=batch_size,
+                             data_shape=batch_shape[1:], 
+                             rand_crop=False, 
+                             rand_mirror=False,
+                             shuffle=False, 
+                             **mean_std)
+data.batch_size = batch_size
+```
+
+3. Prepare the evaluation function:
+
+```python
+eval_samples = batch_size*10
+
+def eval_func(model):
+    data.reset()
+    metric = mx.metric.Accuracy()
+    for i, batch in enumerate(data):
+        if i * batch_size >= eval_samples:
+            break
+        x = batch.data[0].as_in_context(mx.cpu())
+        label = batch.label[0].as_in_context(mx.cpu())
+        outputs = model.forward(x)
+        metric.update(label, outputs)
+    return metric.get()[1]
+```
+
+4. Run Intel® Neural Compressor:
+
+```python
+from neural_compressor.experimental import Quantization
+quantizer = Quantization("./cnn.yaml")
+quantizer.model = resnet18
+quantizer.calib_dataloader = data
+quantizer.eval_func = eval_func
+qnet = quantizer.fit().model
+```
+
+Since this model already achieves good accuracy using native quantization (less than 1% accuracy drop), for the given configuration file, INC will end on the first configuration, quantizing all layers using `naive` calibration mode for each. To see the true potential of INC, we need a model which suffers from a larger accuracy drop after quantization.
+
+### Quantizing BERT
+
+This example shows how to use INC to quantize BERT-base for MRPC. In this case, the native MXNet quantization usually introduce a significant accuracy drop (2% - 5% using `naive` calibration mode). To simplify the code, model and task specific boilerplate has been moved to the `details.py` file.
+
+This is the configuration file for this example:
+```yaml
+version: 1.0
+
+model:
+  name: bert
+  framework: mxnet
+
+quantization:
+  calibration:
+    sampling_size: 320 # number of samples for calibration
+
+tuning:
+  strategy:
+    name: basic
+  accuracy_criterion:
+    relative: 0.01
+  exit_policy:
+    timeout: 0
+    max_trials: 9999 # default is 100
+  random_seed: 9527
+```
+
+And here is the script:
+
+```python
+from pathlib import Path
+from functools import partial
+
+import details
+from neural_compressor.experimental import Quantization, common
+
+# constants
+INC_CONFIG_PATH = Path('./bert.yaml').resolve()
+PARAMS_PATH = Path('./bert_mrpc.params').resolve()
+OUTPUT_DIR_PATH = Path('./output/').resolve()
+OUTPUT_MODEL_PATH = OUTPUT_DIR_PATH/'quantized_model'
+OUTPUT_DIR_PATH.mkdir(parents=True, exist_ok=True)
+
+# Prepare the dataloaders (calib_dataloader is same as train_dataloader but without shuffling)
+train_dataloader, dev_dataloader, calib_dataloader = details.preprocess_data()
+
+# Get the model
+model = details.BERTModel(details.BACKBONE, dropout=0.1, num_classes=details.NUM_CLASSES)
+model.hybridize(static_alloc=True)
+
+# finetune or load the parameters of already finetuned model
+if not PARAMS_PATH.exists():
+    model = details.finetune(model, train_dataloader, dev_dataloader, OUTPUT_DIR_PATH)
+    model.save_parameters(str(PARAMS_PATH))
+else:
+    model.load_parameters(str(PARAMS_PATH), ctx=details.CTX, cast_dtype=True)
+
+# run INC
+calib_dataloader.batch_size = details.BATCH_SIZE
+eval_func = partial(details.evaluate, dataloader=dev_dataloader)
+
+quantizer = Quantization(str(INC_CONFIG_PATH))  # 1. Config file
+quantizer.model = common.Model(model)           # 2. Model to be quantized
+quantizer.calib_dataloader = calib_dataloader   # 3. Calibration dataloader
+quantizer.eval_func = eval_func                 # 4. Evaluation function
+quantized_model = quantizer.fit().model
+
+# save the quantized model
+quantized_model.export(str(OUTPUT_MODEL_PATH))
+```
+
+With the evaluation function hidden in the `details.py` file:
+
+```python
+def evaluate(model, dataloader):
+    metric = METRIC()
+    for batch in dataloader:
+        input_ids, segment_ids, valid_length, label = batch
+        input_ids = input_ids.as_in_context(CTX)
+        segment_ids = segment_ids.as_in_context(CTX)
+        valid_length = valid_length.as_in_context(CTX)
+        label = label.as_in_context(CTX).reshape((-1))
+
+        out = model(input_ids, segment_ids, valid_length)
+        metric.update([label], [out])
+
+    metric_name, metric_val = metric.get()
+    return metric_val
+```
+
+For comparision, this is how one could quantize this model using MXNet native quantization (this function is also located in the `details.py` file):
+
+```python
+def native_quantization(model, calib_dataloader, dev_dataloader):
+    quantized_model = quantize_net_v2(model,
+                                      quantize_mode='smart',
+                                      calib_data=calib_dataloader,
+                                      calib_mode='naive',
+                                      num_calib_examples=BATCH_SIZE*10)
+    print('Native quantization results: {}'.format(evaluate(quantized_model, dev_dataloader)))
+    return quantized_model
+```
+
+For complete code, see this example on the [official GitHub repository](https://github.com/apache/incubator-mxnet/tree/v1.x/example/quantization_inc/BERT_MRPC).
+
+#### Results:
+
+Environment:
+- c6i.16xlarge Amazon EC2 instance (Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz)
+- Ubuntu 20.04 LTS
+- MXNet 1.9
+- INC 1.9.1
+
+Results on the validation dataset:
+
+|      Quantization method     | Accuracy |   F1   | Relative accuracy loss [%] | Calibration/tuning  time [s] | Speedup |
+|:----------------------------:|:--------:|:------:|:--------------------------:|:----------------------------:|:-------:|
+| **No quantization (f32)**                |  **0.8529**  | **0.8956** |              **0**             |              **0**               |   **1.0**   |
+| Native 'naive', 10 batches   |  0.8259  | 0.8775 |          3.1657            |              31              |  1.3811 |
+| Native 'naive', 20 batches   |  0.8210  | 0.8731 |          3.7402            |              58              |  1.3866 |
+| Native 'entropy', 10 batches |  0.8064  | 0.8557 |          5.4520            |              37              |  1.3789 |
+| Native 'entropy', 20 batches |  0.8137  | 0.8624 |          4.5961            |              67              |  1.3460 |
+| INC, 'basic'                 |  0.8456  | 0.8889 |          0.8559            |              197             |  1.4418 |
+| INC, 'bayesian'              |  0.8529  | 0.8888 |          0                 |              129             |  1.4275 | 
+| INC, 'mse'                   |  0.8480  | 0.8954 |          0.5745            |              974             |  0.9642 |
+
+All INC strategies found configurations meeting the 1% relative accuracy loss criterion. Only the `mse` strategy struggled, taking the longest time and generating configuration that is slower than the f32 model. Although these results may suggest that the `mse` strategy is the worst and the `bayesian` strategy is the best, different strategies may give better results for specific models and tasks. Usually the `basic` strategy is the most stable one.
+
+Here is an example of a configuration generated by INC with the `basic` strategy:
+
+- Layers quantized using min-max (`naive`) calibration algorithm: 
+    ```
+    {'bertclassifier0_dropout0_fwd', 'bertencoder0_layernorm0_layernorm0', 'bertencoder0_transformer0_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer0_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer0_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer0_layernorm0_layernorm0', 'bertencoder0_transformer0_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer10_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer10_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer10_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer10_layernorm0_layernorm0', 'bertencoder0_transformer10_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer11_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer11_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer11_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer11_layernorm0_layernorm0', 'bertencoder0_transformer1_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer1_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer1_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer1_layernorm0_layernorm0', 'bertencoder0_transformer1_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer2_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer2_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer2_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer2_layernorm0_layernorm0', 'bertencoder0_transformer2_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer3_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer3_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer3_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer3_layernorm0_layernorm0', 'bertencoder0_transformer3_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer4_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer4_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer4_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer4_layernorm0_layernorm0', 'bertencoder0_transformer4_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer5_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer5_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer5_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer5_layernorm0_layernorm0', 'bertencoder0_transformer5_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer6_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer6_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer6_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer6_layernorm0_layernorm0', 'bertencoder0_transformer6_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer7_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer7_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer7_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer7_layernorm0_layernorm0', 'bertencoder0_transformer7_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer8_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer8_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer8_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer8_layernorm0_layernorm0', 'bertencoder0_transformer8_positionwiseffn0_layernorm0_layernorm0', 'bertencoder0_transformer9_dotproductselfattentioncell0_dropout0_fwd', 'bertencoder0_transformer9_dotproductselfattentioncell0_reshape3', 'bertencoder0_transformer9_dotproductselfattentioncell0_reshape7', 'bertencoder0_transformer9_layernorm0_layernorm0', 'bertencoder0_transformer9_positionwiseffn0_layernorm0_layernorm0', 'bertmodel0_reshape0', 'sg_mkldnn_fully_connected_0', 'sg_mkldnn_fully_connected_1', 'sg_mkldnn_fully_connected_11', 'sg_mkldnn_fully_connected_12', 'sg_mkldnn_fully_connected_13', 'sg_mkldnn_fully_connected_15', 'sg_mkldnn_fully_connected_16', 'sg_mkldnn_fully_connected_17', 'sg_mkldnn_fully_connected_19', 'sg_mkldnn_fully_connected_20', 'sg_mkldnn_fully_connected_21', 'sg_mkldnn_fully_connected_23', 'sg_mkldnn_fully_connected_24', 'sg_mkldnn_fully_connected_25', 'sg_mkldnn_fully_connected_27', 'sg_mkldnn_fully_connected_28', 'sg_mkldnn_fully_connected_29', 'sg_mkldnn_fully_connected_3', 'sg_mkldnn_fully_connected_31', 'sg_mkldnn_fully_connected_32', 'sg_mkldnn_fully_connected_33', 'sg_mkldnn_fully_connected_35', 'sg_mkldnn_fully_connected_36', 'sg_mkldnn_fully_connected_37', 'sg_mkldnn_fully_connected_39', 'sg_mkldnn_fully_connected_4', 'sg_mkldnn_fully_connected_40', 'sg_mkldnn_fully_connected_41', 'sg_mkldnn_fully_connected_43', 'sg_mkldnn_fully_connected_44', 'sg_mkldnn_fully_connected_45', 'sg_mkldnn_fully_connected_47', 'sg_mkldnn_fully_connected_48', 'sg_mkldnn_fully_connected_49', 'sg_mkldnn_fully_connected_5', 'sg_mkldnn_fully_connected_7', 'sg_mkldnn_fully_connected_8', 'sg_mkldnn_fully_connected_9', 'sg_mkldnn_fully_connected_eltwise_10', 'sg_mkldnn_fully_connected_eltwise_14', 'sg_mkldnn_fully_connected_eltwise_18', 'sg_mkldnn_fully_connected_eltwise_2', 'sg_mkldnn_fully_connected_eltwise_22', 'sg_mkldnn_fully_connected_eltwise_26', 'sg_mkldnn_fully_connected_eltwise_30', 'sg_mkldnn_fully_connected_eltwise_34', 'sg_mkldnn_fully_connected_eltwise_38', 'sg_mkldnn_fully_connected_eltwise_42', 'sg_mkldnn_fully_connected_eltwise_46', 'sg_mkldnn_fully_connected_eltwise_6'}
+    ```
+
+- Layers quantized using KL (`entropy`) calibration algorithm: 
+    ```
+    {'sg_mkldnn_selfatt_qk_0', 'sg_mkldnn_selfatt_qk_10', 'sg_mkldnn_selfatt_qk_12', 'sg_mkldnn_selfatt_qk_14', 'sg_mkldnn_selfatt_qk_16', 'sg_mkldnn_selfatt_qk_18', 'sg_mkldnn_selfatt_qk_2', 'sg_mkldnn_selfatt_qk_20', 'sg_mkldnn_selfatt_qk_22', 'sg_mkldnn_selfatt_qk_4', 'sg_mkldnn_selfatt_qk_6', 'sg_mkldnn_selfatt_qk_8', 'sg_mkldnn_selfatt_valatt_1', 'sg_mkldnn_selfatt_valatt_11', 'sg_mkldnn_selfatt_valatt_13', 'sg_mkldnn_selfatt_valatt_15', 'sg_mkldnn_selfatt_valatt_17', 'sg_mkldnn_selfatt_valatt_19', 'sg_mkldnn_selfatt_valatt_21', 'sg_mkldnn_selfatt_valatt_23', 'sg_mkldnn_selfatt_valatt_3', 'sg_mkldnn_selfatt_valatt_5', 'sg_mkldnn_selfatt_valatt_7', 'sg_mkldnn_selfatt_valatt_9'}
+    ```
+
+- Layers excluded from quantization: 
+    ```
+    {'sg_mkldnn_fully_connected_43'}
+    ```
+
+## Tips
+- In order to get a solution that generalizes well, evaluate the model (in eval_func) on a representative dataset.
+- With `history.snapshot` file (generated by INC) you can recover any model that was generated during the tuning process:
+  ```python
+  from neural_compressor.utils.utility import recover
+
+  quantized_model = recover(f32_model, 'nc_workspace/<tuning date>/history.snapshot', configuration_idx).model
+  ```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
