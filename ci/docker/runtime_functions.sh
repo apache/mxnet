@@ -803,8 +803,9 @@ cd_unittest_ubuntu() {
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
-    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
-    pytest -m 'serial' --durations=50 --verbose tests/python/unittest
+    # Temporarily tell pytest to not capture output ('-s') to get more insight into Python: Aborted error
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -n 4 --durations=50 --verbose -s --log-cli-level=DEBUG tests/python/unittest
+    pytest -m 'serial' --durations=50 --verbose -s --log-cli-level=DEBUG tests/python/unittest
 
     # https://github.com/apache/incubator-mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
