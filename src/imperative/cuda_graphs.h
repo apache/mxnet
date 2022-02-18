@@ -196,9 +196,9 @@ class CudaGraphsSubSegExec {
 
     cudaGraphExecUpdateResult update_result = cudaGraphExecUpdateError;
     cudaGraphNode_t error_node;
-    cudaError_t e =
+    cudaError_t err =
         cudaGraphExecUpdate(graph_exec_.get(), graph_.get(), &error_node, &update_result);
-    switch (e) {
+    switch (err) {
       case cudaErrorGraphExecUpdateFailure:
         MakeGraphExec();
         break;
@@ -207,7 +207,7 @@ class CudaGraphsSubSegExec {
         break;
       default:
         // Respond normally to unusual cudaGraphExecUpdate() ret vals
-        CUDA_CALL(e);
+        CUDA_CALL(err);
     }
   }
 
