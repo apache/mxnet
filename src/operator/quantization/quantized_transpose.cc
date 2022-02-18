@@ -41,9 +41,9 @@ inline bool QuantizedTransposeType(const nnvm::NodeAttrs& attrs,
   return (*in_attrs)[0] != -1;
 }
 
-typedef bool (*TransposeShapeFunAny)(const nnvm::NodeAttrs& attrs,
-                                     mxnet::ShapeVector* in_attrs,
-                                     mxnet::ShapeVector* out_attrs);
+typedef bool (*TransposeShapeFunAny)(const nnvm::NodeAttrs&,
+                                     mxnet::ShapeVector*,
+                                     mxnet::ShapeVector*);
 
 template <TransposeShapeFunAny TransposeShapeFun>
 inline bool QuantizedTransposeShape(const nnvm::NodeAttrs& attrs,
@@ -64,67 +64,43 @@ inline bool QuantizedTransposeShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape{1});
   return ret;
 }
-NNVM_REGISTER_OP(_npx_quantized_transpose)
-    .set_num_inputs(3)
-    .set_num_outputs(3)
+
+#define MXNET_OPERATOR_REGISTER_QUANTIZED_TRANSPOSE(name)                                    \
+  NNVM_REGISTER_OP(name)                                                                     \
+      .set_num_inputs(3)                                                                     \
+      .set_num_outputs(3)                                                                    \
+      .set_attr<nnvm::FInferType>("FInferType", QuantizedTransposeType)                      \
+      .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                             \
+      .set_attr<nnvm::FListInputNames>(                                                      \
+          "FListInputNames",                                                                 \
+          [](const NodeAttrs& attrs) {                                                       \
+            return std::vector<std::string>{"data", "min_data", "max_data"};                 \
+          })                                                                                 \
+      .set_attr<nnvm::FListOutputNames>(                                                     \
+          "FListOutputNames",                                                                \
+          [](const NodeAttrs& attrs) {                                                       \
+            return std::vector<std::string>{"output", "min_output", "max_output"};           \
+          })                                                                                 \
+      .set_attr<FQuantizable>("FQuantizable",                                                \
+                              [](const NodeAttrs& attrs) { return QuantizeType::kSupport; }) \
+      .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")                    \
+      .add_argument("min_data",                                                              \
+                    "NDArray-or-Symbol",                                                     \
+                    "The minimum scalar value "                                              \
+                    "possibly produced for the data")                                        \
+      .add_argument("max_data",                                                              \
+                    "NDArray-or-Symbol",                                                     \
+                    "The maximum scalar value "                                              \
+                    "possibly produced for the data")
+
+MXNET_OPERATOR_REGISTER_QUANTIZED_TRANSPOSE(_npx_quantized_transpose)
     .set_attr_parser(ParamParser<NumpyTransposeParam>)
     .set_attr<mxnet::FInferShape>("FInferShape", QuantizedTransposeShape<NumpyTransposeShape>)
-    .set_attr<nnvm::FInferType>("FInferType", QuantizedTransposeType)
-    // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
-    // will be reverted after the improvement of CachedOP is done.
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .set_attr<nnvm::FListInputNames>("FListInputNames",
-                                     [](const NodeAttrs& attrs) {
-                                       return std::vector<std::string>{"a", "min_a", "max_a"};
-                                     })
-    .set_attr<nnvm::FListOutputNames>(
-        "FListOutputNames",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"output", "min_output", "max_output"};
-        })
-    .set_attr<FQuantizable>("FQuantizable",
-                            [](const NodeAttrs& attrs) { return QuantizeType::kSupport; })
-    .add_argument("a", "NDArray-or-Symbol", "Array to be reshaped.")
-    .add_argument("min_a",
-                  "NDArray-or-Symbol",
-                  "The minimum scalar value "
-                  "possibly produced for the data")
-    .add_argument("max_a",
-                  "NDArray-or-Symbol",
-                  "The maximum scalar value "
-                  "possibly produced for the data")
     .add_arguments(NumpyTransposeParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_contrib_quantized_transpose)
-    .set_num_inputs(3)
-    .set_num_outputs(3)
+MXNET_OPERATOR_REGISTER_QUANTIZED_TRANSPOSE(_contrib_quantized_transpose)
     .set_attr_parser(ParamParser<TransposeParam>)
     .set_attr<mxnet::FInferShape>("FInferShape", QuantizedTransposeShape<TransposeShape>)
-    .set_attr<nnvm::FInferType>("FInferType", QuantizedTransposeType)
-    // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
-    // will be reverted after the improvement of CachedOP is done.
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .set_attr<nnvm::FListInputNames>(
-        "FListInputNames",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"data", "min_data", "max_data"};
-        })
-    .set_attr<nnvm::FListOutputNames>(
-        "FListOutputNames",
-        [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"output", "min_output", "max_output"};
-        })
-    .set_attr<FQuantizable>("FQuantizable",
-                            [](const NodeAttrs& attrs) { return QuantizeType::kSupport; })
-    .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")
-    .add_argument("min_data",
-                  "NDArray-or-Symbol",
-                  "The minimum scalar value "
-                  "possibly produced for the data")
-    .add_argument("max_data",
-                  "NDArray-or-Symbol",
-                  "The maximum scalar value "
-                  "possibly produced for the data")
     .add_arguments(TransposeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(transpose).set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
