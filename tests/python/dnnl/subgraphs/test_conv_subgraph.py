@@ -75,7 +75,9 @@ def test_pos_single_conv(use_bias, data_shape):
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
-def test_conv_transpose_conv(use_bias, data_shape):
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('module', [mx.np, mx.nd])
+def test_conv_transpose_conv(use_bias, data_shape, out_type, module):
 
   class Conv_Transpose_Conv(nn.HybridBlock):
     def __init__(self, **kwargs):
@@ -85,13 +87,14 @@ def test_conv_transpose_conv(use_bias, data_shape):
 
     def forward(self, x):
       out = self.conv0(x)
-      out = mx.np.transpose(out, axes=[0,1,2,3])
-      out = self.conv1(out)
+      if module == mx.nd:
+        out = out.as_nd_ndarray()
+      out = module.transpose(out, axes = [0,1,3,2])
+      out = self.conv1(out.as_np_ndarray())
       return out
 
-  attr = 'int8'
   net = Conv_Transpose_Conv()
-  check_quantize(net, data_shape, attr)
+  check_quantize(net, data_shape, out_type)
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)

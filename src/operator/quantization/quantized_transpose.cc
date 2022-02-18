@@ -99,6 +99,7 @@ MXNET_OPERATOR_REGISTER_QUANTIZED_TRANSPOSE(_npx_quantized_transpose)
     .add_arguments(NumpyTransposeParam::__FIELDS__());
 
 MXNET_OPERATOR_REGISTER_QUANTIZED_TRANSPOSE(_contrib_quantized_transpose)
+    .add_alias("quantized_transpose")
     .set_attr_parser(ParamParser<TransposeParam>)
     .set_attr<mxnet::FInferShape>("FInferShape", QuantizedTransposeShape<TransposeShape>)
     .add_arguments(TransposeParam::__FIELDS__());
