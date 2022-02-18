@@ -34,11 +34,8 @@ namespace op {
 inline bool IsSupportedAMPFuseOp(const nnvm::Node& node) {
   const auto& op = node.op();
   return (op != nullptr &&
-          (
-              // op == Op::Get("_sg_onednn_conv") || - broken, waiting for a fix in oneDNN
-              op == Op::Get("_sg_onednn_fully_connected") ||
-              op == Op::Get("_sg_onednn_selfatt_qk") ||
-              op == Op::Get("_sg_onednn_selfatt_valatt")));
+          (op == Op::Get("_sg_onednn_conv") || op == Op::Get("_sg_onednn_fully_connected") ||
+           op == Op::Get("_sg_onednn_selfatt_qk") || op == Op::Get("_sg_onednn_selfatt_valatt")));
 }
 
 class SgDNNLPostAMPSelector : public SubgraphSelector {
