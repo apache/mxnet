@@ -1995,7 +1995,7 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
  * \param num_args number of arguments for known dtypes
  * \param arg_type_data arg types of the arguments
  * \param target_dtype target_dtype for mixed precision symbol
- * \param cast_optional_params whether to cast optional params to target_dtype
+ * \param cast_params_offline whether to cast optional params to target_dtype
  * \param num_target_dtype_op_names number of ops to be casted to target_dtype
  * \param num_fp32_op_names number of ops to be casted to FP32
  * \param num_widest_dtype_op_names number of ops to be casted to widest dtype

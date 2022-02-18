@@ -119,14 +119,14 @@ def test_fp16_casting(amp_tests):
     # When two ops from data, with different dtypes,
     # data should be float32
     res = mx.sym.Group([out1, out2])
-    final_res = amp.convert_symbol(res, data_names=[], cast_optional_params=True)
+    final_res = amp.convert_symbol(res, data_names=[], cast_params_offline=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float32
 
     # When two ops from data, both casted to float16,
     # data should be float16
     res = mx.sym.Group([out1, out3])
-    final_res = amp.convert_symbol(res, data_names=[], cast_optional_params=True)
+    final_res = amp.convert_symbol(res, data_names=[], cast_params_offline=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
@@ -134,7 +134,7 @@ def test_fp16_casting(amp_tests):
     data = mx.sym.var("data", dtype=np.float32)
     data2 = mx.sym.var("data2", dtype=np.float16)
     out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
-    final_res = amp.convert_symbol(out4, cast_optional_params=True)
+    final_res = amp.convert_symbol(out4, cast_params_offline=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data2=(1, 2), data=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
@@ -147,7 +147,7 @@ def test_fp16_casting(amp_tests):
                                 mx.sym.elemwise_add(data2, data3),
                                 num_outputs=2)
     final_res = amp.convert_symbol(out5, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
+                                   fp32_ops=[], cast_params_offline=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2), data3=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float32
 
@@ -158,7 +158,7 @@ def test_fp16_casting(amp_tests):
     data3 = mx.sym.var("data3")
     out6 = mx.sym.amp_multicast(data, data2, data3, num_outputs=3)
     final_res = amp.convert_symbol(out6, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
+                                   fp32_ops=[], cast_params_offline=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2),
                                 data3=(1, 2))
     assert exe.arg_arrays[2].dtype == np.float32
@@ -169,7 +169,7 @@ def test_fp16_casting(amp_tests):
     data2 = mx.sym.var("data2", dtype=np.float32)
     out7 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
     final_res = amp.convert_symbol(out7, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
+                                   fp32_ops=[], cast_params_offline=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
@@ -179,7 +179,7 @@ def test_fp16_casting(amp_tests):
     data2 = mx.sym.var("data2", dtype=np.float16)
     out8 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
     final_res = amp.convert_symbol(out8, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
+                                   fp32_ops=[], cast_params_offline=True)
     exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 

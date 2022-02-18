@@ -426,8 +426,8 @@ def unscale(optimizer_or_trainer):
                         "an optimizer, instead is %s" % type(optimizer_or_trainer))
 
 
-def convert_symbol(sym, arg_types, input_types, target_dtype="float16", target_dtype_ops=None, fp32_ops=None,
-                   conditional_fp32_ops=None, excluded_sym_names=[], cast_optional_params=False):
+def convert_symbol(sym, param_types, input_dtypes, target_dtype="float16", target_dtype_ops=None, fp32_ops=None,
+                   conditional_fp32_ops=None, excluded_sym_names=[], cast_params_offline=False):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_dtype_ops, fp32_ops,
     conditional_fp32_ops) if provided, otherwise use the default
@@ -456,7 +456,7 @@ def convert_symbol(sym, arg_types, input_types, target_dtype="float16", target_d
         from being casted to LP16 or FP32.
     data_names : list of strs, optional
         A list of strings that represent input data tensor names to the model
-    cast_optional_params : bool, default False
+    cast_params_offline : bool, default False
         Whether to cast the arg_params and aux_params that don't require to be in LP16
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
@@ -496,7 +496,11 @@ def convert_symbol(sym, arg_types, input_types, target_dtype="float16", target_d
         cond_ops[op_name].setdefault(attr_name, []).extend(attr_vals)
 
     nodes_attr = sym.attr_dict()
-    nodes_op =  {n['name']: n['op'] for n in json.loads(sym.tojson())['nodes']}
+    nodes_op = {n['name']: n['op'] for n in json.loads(sym.tojson())['nodes']}
+    assert set(excluded_sym_names).issubset(set(nodes_op.keys())), \
+        "excluded_sym_names are not present in the network. Missing layers: {}".format(
+            set(excluded_sym_names) - set(nodes_op.keys()))
+
     for node_name, node_op in nodes_op.items():
         if node_op not in cond_ops:
             continue
@@ -512,7 +516,8 @@ def convert_symbol(sym, arg_types, input_types, target_dtype="float16", target_d
     common_ops = set(target_dtype_ops) & set(fp32_ops)
     assert len(common_ops) == 0, "Common ops in target_dtype_ops and fp32_ops: {}".format(common_ops)
     common_ops = set(target_dtype_ops) & set(cond_ops)
-    assert len(common_ops) == 0, "Common ops in target_dtype_ops and conditional_fp32_ops: {}".format(common_ops)
+    assert len(common_ops) == 0, "Common ops in target_dtype_ops and conditional_fp32_ops: {}".format(
+        common_ops)
     common_ops = set(cond_ops) & set(fp32_ops)
     assert len(common_ops) == 0, "Common ops in fp32_ops and conditional_fp32_ops: {}".format(common_ops)
 
@@ -532,9 +537,10 @@ def convert_symbol(sym, arg_types, input_types, target_dtype="float16", target_d
 
     widest_dtype_ops = list_widest_type_cast(target_dtype)
 
-    input_names = list(input_types.keys())
+    input_names = list(input_dtypes.keys())
     all_arg_names, all_arg_types = [], []
-    for name, dtype in {**input_types, **arg_types}.items():
+
+    for name, dtype in {**input_dtypes, **param_types}.items():
         all_arg_names.append(name)
         all_arg_types.append(dtype_np_to_mx(dtype))
     out = SymbolHandle()
@@ -555,11 +561,12 @@ def convert_symbol(sym, arg_types, input_types, target_dtype="float16", target_d
                                             c_str_array(fp32_ops),
                                             c_str_array(widest_dtype_ops),
                                             c_str_array(excluded_sym_names)))
-    return Symbol(out)
+    return type(sym)(out)
 
-def convert_model(sym, arg_params, aux_params, input_types, target_dtype="float16", 
+
+def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float16",
                   target_dtype_ops=None, fp32_ops=None, conditional_fp32_ops=None,
-                  excluded_sym_names=[], cast_optional_params=False):
+                  excluded_sym_names=[], cast_params_offline=False):
     """API for converting a model from FP32 model to a mixed precision model.
     MXNet tries to convert the FP32 model to mixed precision model by adding
     cast layers using amp_cast and amp_multicast operators which can be used for inference use cases.
@@ -592,19 +599,23 @@ def convert_model(sym, arg_params, aux_params, input_types, target_dtype="float1
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
         from being executed in lower precision.
-    cast_optional_params : bool, default False
+    cast_params_offline : bool, default False
         Whether to cast the arg_params and aux_params that don't require to be in LP16
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
     assert isinstance(sym, Symbol), "First argument to convert_model should be Symbol"
-    assert isinstance(arg_params, dict), "Second argument to convert_model should be a dict of name to ndarray"
-    assert isinstance(aux_params, dict), "Third argument to convert_model should be a dict of name to ndarray"
+    assert isinstance(
+        arg_params, dict), "Second argument to convert_model should be a dict of name to ndarray"
+    assert isinstance(
+        aux_params, dict), "Third argument to convert_model should be a dict of name to ndarray"
 
-    arg_types = {name: data.dtype for name, data in arg_params.items()}
-    arg_types.update({name: data.dtype for name, data in aux_params.items()})
-    sym = convert_symbol(sym, arg_types, input_types, target_dtype, target_dtype_ops,
-                         fp32_ops, conditional_fp32_ops, excluded_sym_names, cast_optional_params)
+    arg_params = arg_params.copy()
+    aux_params = aux_params.copy()
+    param_types = {name: data.dtype for name, data in arg_params.items()}
+    param_types.update({name: data.dtype for name, data in aux_params.items()})
+    sym = convert_symbol(sym, param_types, input_dtypes, target_dtype, target_dtype_ops,
+                         fp32_ops, conditional_fp32_ops, excluded_sym_names, cast_params_offline)
 
     # If dtype is set for params, cast the param to that dtype
     attr_dict = sym.attr_dict()
@@ -623,11 +634,12 @@ def convert_model(sym, arg_params, aux_params, input_types, target_dtype="float1
     # Return the converted symbol and casted params
     return sym, arg_params, aux_params
 
+
 @wrap_ctx_to_device_func
 def convert_hybrid_block(block, data_example, target_dtype="float16", target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
                          excluded_sym_names=[], device=gpu(0),
-                         cast_optional_params=False):
+                         cast_params_offline=False):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
     return a block with mixed precision support which can be used for inference use cases.
 
@@ -651,7 +663,7 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
         from being quantized
     device : Context
         Context on which model parameters should live
-    cast_optional_params : bool, default False
+    cast_params_offline : bool, default False
         Whether to cast the arg_params and aux_params that don't require to be in LP16
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
@@ -659,7 +671,7 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
     from ..gluon import HybridBlock, SymbolBlock
     from ..ndarray import NDArray as ND_NDArray
     from ..numpy import ndarray as NP_NDArray
-    
+
     assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
     if not isinstance(data_example, list):
         assert isinstance(data_example, (ND_NDArray, NP_NDArray))
@@ -682,12 +694,12 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
 
     input_names = set(sym.list_arguments()) - (set(args.keys()) | set(auxs.keys()))
     input_names_ordered = HybridBlock.generate_arg_names(len(data_example))
-    assert input_names == set(input_names_ordered) # TODO: message
+    assert input_names == set(input_names_ordered)  # TODO: message
 
-    input_types = {name: data.dtype for name, data in zip(input_names_ordered, data_example)}
-    lp_sym, lp_args, lp_auxs = convert_model(sym, args, auxs, input_types, target_dtype,
+    input_dtypes = {name: data.dtype for name, data in zip(input_names_ordered, data_example)}
+    lp_sym, lp_args, lp_auxs = convert_model(sym, args, auxs, input_dtypes, target_dtype,
                                              target_dtype_ops, fp32_ops, conditional_fp32_ops,
-                                             excluded_sym_names, cast_optional_params)
+                                             excluded_sym_names, cast_params_offline)
 
     inputs = [in_sym for in_sym in lp_sym.get_inputs() if in_sym.name in input_names]
     param_dict = lp_args
