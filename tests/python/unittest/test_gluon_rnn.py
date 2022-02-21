@@ -606,7 +606,8 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, device=m
 
 
 @mx.util.use_np
-def run_rnn_layers(dtype, dtype2, device=mx.cpu()):
+def run_rnn_layers(dtype, dtype2):
+    device = default_device()
 
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype), mx.np.ones((8, 3, 20), dtype=dtype), device=device)
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype), device=device)
@@ -673,10 +674,12 @@ def test_rnn_layers_fp32():
     run_rnn_layers('float32', 'float32')
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.skipif(mx.device.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
 @pytest.mark.serial
 def test_rnn_layers_fp16():
-    run_rnn_layers('float16', 'float32', mx.gpu())
+    # Dynamic skip condition is best handled this way, rather than with pytest.mark.skipIf
+    if default_device().device_type == 'cpu':
+        pytest.skip('RNN FP16 only implemented for GPU for now')
+    run_rnn_layers('float16', 'float32')
 
 
 def check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
