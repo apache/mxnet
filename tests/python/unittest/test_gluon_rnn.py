@@ -669,6 +669,7 @@ def run_rnn_layers(dtype, dtype2):
         out.backward()
         out = out.asnumpy()
 
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 @pytest.mark.serial
 def test_rnn_layers_fp32():
     run_rnn_layers('float32', 'float32')
