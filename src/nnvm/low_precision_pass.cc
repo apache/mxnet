@@ -79,7 +79,7 @@ class MappedNodeEntry {
 
  private:
   ObjectPtr CreateCastNode(const std::string& op_name, const std::string& node_name) {
-    CHECK(op_name.size() > 0);
+    CHECK_GT(op_name.size(), 0);
 
     ObjectPtr node   = Node::Create();
     node->attrs.name = node_name;
@@ -90,7 +90,7 @@ class MappedNodeEntry {
 
   NodeEntry cast(const int new_dtype) {
     CHECK(new_dtype == nnvm::kBfloat16 || new_dtype == nnvm::kFloat16 ||
-          new_dtype == nnvm::kFloat32);  // TODO: support every type
+          new_dtype == nnvm::kFloat32);  // TODO(PawelGlomski-Intel): support every type?
 
     const std::string dt_name        = mxnet::op::type_string(new_dtype);
     const std::string suffix         = "_" + std::to_string(entry.index);
@@ -156,7 +156,7 @@ static bool try_low_precision(const int target_dtype,
   }
 
   for (size_t i = 0; i < old_node->num_outputs(); ++i) {
-    // TODO use actual outputs (take version into account)
+    // TODO(PawelGlomski-Intel): use actual outputs (take version into account)
     entry_map->at(NodeEntry(old_node, i, 0)).convert(out_types[i]);
   }
 
@@ -193,7 +193,7 @@ static bool try_widest_dtype_node(const ObjectPtr& old_node,
     CHECK(infertype.count(old_node->op()));
     CHECK(infertype[old_node->op()](old_node->attrs, &in_types, &out_types));
 
-    // TODO use actual outputs (take version into account)
+    // TODO(PawelGlomski-Intel): use actual outputs (take version into account)
     for (size_t i = 0; i < old_node->num_outputs(); ++i) {
       entry_map->at(NodeEntry(old_node, i, 0)).convert(out_types[i]);
     }
