@@ -83,7 +83,7 @@ inline bool QuantizedTransposeShape(const nnvm::NodeAttrs& attrs,
           })                                                                                 \
       .set_attr<FQuantizable>("FQuantizable",                                                \
                               [](const NodeAttrs& attrs) { return QuantizeType::kSupport; }) \
-      .add_argument("data", "NDArray-or-Symbol", "Array to be reshaped.")                    \
+      .add_argument("data", "NDArray-or-Symbol", "Array to be transposed.")                  \
       .add_argument("min_data",                                                              \
                     "NDArray-or-Symbol",                                                     \
                     "The minimum scalar value "                                              \
