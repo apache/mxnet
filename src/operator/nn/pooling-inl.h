@@ -41,7 +41,6 @@
 namespace mxnet {
 namespace op {
 
-void PoolingParamParser(nnvm::NodeAttrs *attrs);
 
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   mxnet::TShape kernel;
@@ -150,6 +149,33 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     return ret_val;
   }
 };
+
+
+template<bool isAdaptive>
+void PoolingParamParser(nnvm::NodeAttrs *attrs) {
+  using namespace mshadow;
+  PoolingParam param;
+  param.Init(attrs->dict);
+  // Set default layout if it can be inferred from kernel shape.
+  if (param.kernel.ndim() > 0)
+    param.layout = param.GetLayout(param.kernel.ndim() + 2);
+  if (param.kernel.ndim() == 1) {
+    if (param.stride.ndim() == 0) param.stride = Shape1(1);
+    if (param.pad.ndim() == 0) param.pad = Shape1(0);
+  } else if (param.kernel.ndim() == 2) {
+    if (param.stride.ndim() == 0) param.stride = Shape2(1, 1);
+    if (param.pad.ndim() == 0) param.pad = Shape2(0, 0);
+  } else {
+      // ignore kernel size only if global_pool not assigned false
+      if (param.global_pool == false && !isAdaptive) {
+        CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
+            << "D pooling not supported";
+      }
+    if (param.stride.ndim() == 0) param.stride = Shape3(1, 1, 1);
+    if (param.pad.ndim() == 0) param.pad = Shape3(0, 0, 0);
+  }
+  attrs->parsed = std::move(param);
+}
 
 }  // namespace op
 }  // namespace mxnet

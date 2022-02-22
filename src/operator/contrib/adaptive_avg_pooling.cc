@@ -334,7 +334,7 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
   (N x C x height x width) for any input (NCHW).
 
 )code" ADD_FILELINE)
-.set_attr_parser(PoolingParamParser)
+.set_attr_parser(PoolingParamParser<true>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", AdaptiveAvgPoolOpInferShape)
@@ -350,7 +350,7 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
 .add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
-.set_attr_parser(ParamParser<PoolingParam>)
+.set_attr_parser(PoolingParamParser<true>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
