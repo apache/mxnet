@@ -426,8 +426,9 @@ def unscale(optimizer_or_trainer):
                         "an optimizer, instead is %s" % type(optimizer_or_trainer))
 
 
-def convert_symbol(sym, param_types, input_dtypes, target_dtype="float16", target_dtype_ops=None, fp32_ops=None,
-                   conditional_fp32_ops=None, excluded_sym_names=[], cast_params_offline=False):
+def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", target_dtype_ops=None,
+                   fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=[], 
+                   cast_params_offline=False):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_dtype_ops, fp32_ops,
     conditional_fp32_ops) if provided, otherwise use the default
@@ -540,7 +541,7 @@ def convert_symbol(sym, param_types, input_dtypes, target_dtype="float16", targe
     input_names = list(input_dtypes.keys())
     all_arg_names, all_arg_types = [], []
 
-    for name, dtype in {**input_dtypes, **param_types}.items():
+    for name, dtype in {**input_dtypes, **param_dtypes}.items():
         all_arg_names.append(name)
         all_arg_types.append(dtype_np_to_mx(dtype))
     out = SymbolHandle()
@@ -612,9 +613,9 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
 
     arg_params = arg_params.copy()
     aux_params = aux_params.copy()
-    param_types = {name: data.dtype for name, data in arg_params.items()}
-    param_types.update({name: data.dtype for name, data in aux_params.items()})
-    sym = convert_symbol(sym, param_types, input_dtypes, target_dtype, target_dtype_ops,
+    param_dtypes = {name: data.dtype for name, data in arg_params.items()}
+    param_dtypes.update({name: data.dtype for name, data in aux_params.items()})
+    sym = convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_ops,
                          fp32_ops, conditional_fp32_ops, excluded_sym_names, cast_params_offline)
 
     # If dtype is set for params, cast the param to that dtype

@@ -21,6 +21,7 @@
 # Functions that should be cast to lower precision
 BF16_FUNCS = [
     'Convolution',
+    'Deconvolution',
     'FullyConnected',
     '_sg_onednn_conv',
     '_sg_onednn_fully_connected',
@@ -512,6 +513,7 @@ CONDITIONAL_FP32_FUNCS = [
 # Functions with multiple inputs, that need the same
 # type of all their inputs
 WIDEST_TYPE_CASTS = [
+    # '_npi_add',
     'Concat',
     'concat',
     '_Plus',

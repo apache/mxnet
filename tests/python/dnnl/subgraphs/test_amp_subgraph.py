@@ -18,7 +18,7 @@
 import json
 import mxnet as mx
 import mxnet.gluon.nn as nn
-from mxnet import amp, use_np
+from mxnet import amp
 from mxnet.amp.amp import bfloat16
 from mxnet.test_utils import assert_almost_equal
 from subgraph_common import SG_PASS_NAME, QUANTIZE_SG_PASS_NAME
@@ -180,8 +180,8 @@ def test_amp_common_params_concat():
 
   data_example = mx.np.random.uniform(-1, 1, (1, 16))
 
-  data = mx.symbol.Variable('data')
-  exp_amp_data = mx.symbol.amp_cast(data, dtype=AMP_DTYPE)
+  exp_data = mx.symbol.Variable('data')
+  exp_amp_data = mx.symbol.amp_cast(exp_data, dtype=AMP_DTYPE)
   exp_weight = mx.symbol.Variable('weight')
   exp_bias = mx.symbol.Variable('bias')
   exp_fc = [mx.symbol.FullyConnected(exp_amp_data, exp_weight, exp_bias, num_hidden=1)
@@ -194,19 +194,13 @@ def test_amp_common_params_concat():
   amp_weight = mx.symbol.amp_cast(exp_weight, dtype=AMP_DTYPE)
   amp_bias = mx.symbol.amp_cast(exp_bias, dtype=AMP_DTYPE)
   exp_fc[0] = mx.symbol.FullyConnected(exp_amp_data, amp_weight, amp_bias, num_hidden=1)
-  exp_fc[1] = mx.symbol.FullyConnected(data, exp_weight, exp_bias, num_hidden=1)
+  exp_fc[1] = mx.symbol.FullyConnected(exp_data, exp_weight, exp_bias, num_hidden=1)
   exp_sym = mx.symbol.Concat(*exp_fc)
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(net, [data_example], exp_sym, ['sg_onednn_fully_connected_1'])
 
 
 def test_amp_fuse_with_branch():
-  #                /---> lp16_op_2
-  # lp16_op_1 -----
-  #                \---> f32_amp_cast -> f32_op
-  #
-  # `lp16_op_1` cannot fuse the `f32_amp_cast` node, since `lp16_op_2` already uses its lp16 output
-
   class TestNet(nn.HybridBlock):
     def __init__(self, **kwargs):
         super(TestNet, self).__init__(**kwargs)
@@ -225,14 +219,20 @@ def test_amp_fuse_with_branch():
 
   data_example = mx.np.ones((10,))
 
+  #              |---> lp16_op_2
+  # lp16_op_1 ---|
+  #              |---> f32_amp_cast ---> f32_op
+  #
+  # `lp16_op_1` cannot fuse the `f32_amp_cast` node, since `lp16_op_2` already uses its lp16 output
+
   exp_data = mx.sym.Variable('data')
   exp_weight = [mx.symbol.Variable('weight{}'.format(i)) for i in range(2)]
   exp_bias = [mx.symbol.Variable('bias{}'.format(i)) for i in range(2)]
-  exp_sym = mx.sym.amp_cast(exp_data, dtype=AMP_DTYPE)
-  exp_fc1 = mx.sym.FullyConnected(exp_sym, exp_weight[0], exp_bias[0], num_hidden=16)
-  exp_fc2 = mx.sym.FullyConnected(exp_fc1, exp_weight[1], exp_bias[1], num_hidden=16)
-  exp_sym = mx.sym.amp_cast(exp_fc1, dtype='float32')
-  exp_sym = mx.sym.softmax(exp_sym)
-  exp_sym = mx.sym.Group([exp_fc2, exp_sym])
+  amp_data = mx.sym.amp_cast(exp_data, dtype=AMP_DTYPE)
+  lp16_op_1 = mx.sym.FullyConnected(amp_data, exp_weight[0], exp_bias[0], num_hidden=16)
+  lp16_op_2 = mx.sym.FullyConnected(lp16_op_1, exp_weight[1], exp_bias[1], num_hidden=16)
+  f32_amp_cast = mx.sym.amp_cast(lp16_op_1, dtype='float32')
+  f32_op = mx.sym.softmax(f32_amp_cast)
+  exp_sym = mx.sym.Group([lp16_op_2, f32_op])
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(net, [data_example], exp_sym)
