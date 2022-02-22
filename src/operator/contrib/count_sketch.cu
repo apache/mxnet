@@ -93,6 +93,9 @@ __global__ void sketch_backward_kernel(const int nthreads,
   // only calculate gradient regarding x
   // can also calculate gradient regarding s if needed
   const int index    = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index >= nthreads) {
+    return;
+  }
   const int i_indim  = index % in_dim;
   const int i_sample = index / in_dim;
   const int i_outdim = i_sample * out_dim + h[i_indim];
