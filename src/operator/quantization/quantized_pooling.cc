@@ -187,7 +187,7 @@ the float32 data into int8.
     This operator only supports `pool_type` of `avg` or `max`.)code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(3)
-.set_attr_parser(PoolingParamParser)
+.set_attr_parser(PoolingParamParser<false>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "min_data", "max_data"};
