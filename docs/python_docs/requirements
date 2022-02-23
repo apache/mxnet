@@ -25,6 +25,7 @@ nbconvert==5.6.1
 jupyter-client<=6.1.12
 nbsphinx==0.4.3
 recommonmark==0.6.0
+markupsafe==2.0.1
 notedown==1.5.1
 pypandoc==1.4
 breathe==4.13.1
