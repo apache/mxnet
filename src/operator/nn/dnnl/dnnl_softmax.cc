@@ -69,6 +69,9 @@ void DNNLSoftmaxForward(const nnvm::NodeAttrs& attrs,
   fwd.Execute(tensors);
 }
 
+DNNLSoftmaxFwd::Tensors::Tensors(const NDArray& data, const NDArray& output)
+    : data(data), out(output) {}
+
 typedef ParamOpSign<SoftmaxParam> DNNLSoftmaxSignature;
 DNNLSoftmaxFwd& DNNLSoftmaxFwd::GetCached(const SoftmaxParam& param,
                                           const Tensors& tensors,
@@ -93,6 +96,22 @@ DNNLSoftmaxFwd& DNNLSoftmaxFwd::GetCached(const SoftmaxParam& param,
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
+}
+
+DNNLSoftmaxFwd::DNNLSoftmaxFwd(const SoftmaxParam& param,
+                               const Tensors& tensors,
+                               const bool is_train) {
+  const float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
+  const int axis          = CheckAxis(param.axis, tensors.data.shape().ndim());
+  const auto input_mem    = tensors.data.GetDNNLData();
+
+  softmax_pd  = std::make_shared<softmax_fwd_pd_t>(GetSoftmaxFwdPd(*input_mem, axis, is_train));
+  softmax_fwd = std::make_shared<softmax_fwd_t>(*softmax_pd);
+
+  if (temperature != 1.0f) {
+    temperature_pd  = std::make_shared<linear_pd_t>(GetTemperaturePd(*input_mem, temperature));
+    temperature_fwd = std::make_shared<linear_t>(*temperature_pd);
+  }
 }
 
 softmax_fwd_pd_t DNNLSoftmaxFwd::GetSoftmaxFwdPd(const dnnl::memory& input_mem,
@@ -172,6 +191,10 @@ void DNNLSoftmaxBackward(const nnvm::NodeAttrs& attrs,
   bwd.Execute(tensors, req);
 }
 
+DNNLSoftmaxBwd::Tensors::Tensors(const std::vector<NDArray>& inputs,
+                                 const std::vector<NDArray>& outputs)
+    : out_grad(inputs[0]), out(inputs[1]), data_grad(outputs[0]) {}
+
 DNNLSoftmaxBwd& DNNLSoftmaxBwd::GetCached(const SoftmaxParam& param, const Tensors& tensors) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLSoftmaxSignature, DNNLSoftmaxBwd, OpHash> bwds;
@@ -193,6 +216,24 @@ DNNLSoftmaxBwd& DNNLSoftmaxBwd::GetCached(const SoftmaxParam& param, const Tenso
     it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
+}
+
+DNNLSoftmaxBwd::DNNLSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors) {
+  const float temperature   = param.temperature.has_value() ? param.temperature.value() : 1.0f;
+  const int axis            = CheckAxis(param.axis, tensors.out.shape().ndim());
+  const auto out_grad_mem   = tensors.out_grad.GetDNNLData();
+  const auto out_mem        = tensors.out.GetDNNLData();
+  const auto softmax_fwd_pd = DNNLSoftmaxFwd::GetSoftmaxFwdPd(*out_mem, axis, /*is_train*/ true);
+
+  softmax_bwd_pd = std::make_shared<softmax_bwd_pd_t>(
+      GetSoftmaxBwdPd(*out_grad_mem, *out_mem, axis, softmax_fwd_pd));
+  softmax_bwd = std::make_shared<softmax_bwd_t>(*softmax_bwd_pd);
+
+  if (temperature != 1.0f) {  // avoid dividing by 1
+    temperature_pd =
+        std::make_shared<linear_pd_t>(DNNLSoftmaxFwd::GetTemperaturePd(*out_mem, temperature));
+    temperature_fwd = std::make_shared<linear_t>(*temperature_pd);
+  }
 }
 
 void DNNLSoftmaxBwd::Execute(const Tensors& tensors, const std::vector<OpReqType>& req) const {

@@ -945,6 +945,46 @@ def test_quantized_bn():
       check_quantized_bn((32, 3, 224, 224), qdtype)
 
 
+def test_quantized_reshape():
+    test_cases = [((2, 3, 5, 5),  (-2, -1),         False, (2, 75)), 
+                  ((2, 3, 5, 5),  (-2, -2, -1),     False, (2, 3, 25)), 
+                  ((5, 3, 4, 5),  (-2, -1, -2),     False, (5, 15, 4)), 
+                  ((2, 3, 5, 4),  (-1, -2, -2),     False, (8, 3, 5)), 
+                  ((2, 3, 5, 5),  (-2, -2, -2, -2), False, (2, 3, 5, 5)), 
+                  ((2, 1, 4, 5),  (-2, -3, -2, -2), False, (2, 4, 5)), 
+                  ((1, 1, 4, 1),  (-3, -3, -2, -2), False, (4, 1)), 
+                  ((1, 1, 1, 1),  (-3, -3, -3, -3), False, ()), 
+                  ((2, 4, 5, 3),  (-1, 2, 2, 1),    False, (30, 2, 2, 1)), 
+                  ((2, 3, 5, 6),  (-4,),            False, (2, 3, 5, 6)), 
+                  ((2, 3, 5, 6),  (6, 1, -4),       False, (6, 1, 5, 6)), 
+                  ((2, 3, 5, 6),  (-5, -5),         False, (6, 30)), 
+                  ((2, 3, 5, 6),  (-5, -1),         False, (6, 30)), 
+                  ((64,),         (-6, 16, 4),      False, (16, 4)), 
+                  ((64,),         (-6, 16, -1),     False, (16, 4)),
+                  ((64, 1, 2, 3), (-6, 16, -1, -4), False, (16, 4, 1, 2, 3)), 
+                  ((8, 5, 4, 6),  (-4, -1, 3, -6),  True,  (8, 5, 4, 2, 3))]
+
+    def check_quantized_reshape(shape, qdtype, newshape, reverse, expected_ret_shape):
+        if qdtype == 'uint8':
+            data_low = 0.0
+            data_high = 255.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+        qdata = mx.np.random.uniform(low=data_low, high=data_high, size=shape).astype(qdtype)
+        min_data = mx.np.array([-1023.343], dtype='float32')
+        max_data = mx.np.array([2343.324275], dtype='float32')
+        qoutput, min_output, max_output = npx.quantized_reshape(qdata, min_data, max_data, newshape=newshape, reverse=reverse)
+        assert qoutput.shape == expected_ret_shape
+        assert same(qdata.asnumpy().flatten(), qoutput.asnumpy().flatten())
+        assert same(min_data.asnumpy(), min_output.asnumpy())
+        assert same(max_data.asnumpy(), max_output.asnumpy())
+
+    for qdtype in ['int8', 'uint8']:
+        for shape, newshape, reverse, expected_ret_shape in test_cases:
+            check_quantized_reshape(shape, qdtype, newshape, reverse, expected_ret_shape)
+
+
 def test_quantize_params():
     if is_test_for_native_cpu():
         print('skipped testing quantized_params for native cpu since it is not supported yet')

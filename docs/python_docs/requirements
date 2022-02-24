@@ -17,7 +17,7 @@
 
 numpy>=1.17,<1.20.0
 jupyter
-Jinja2==2.11.3
+Jinja2==3.0.3
 sphinx==2.4.0
 matplotlib
 notebook

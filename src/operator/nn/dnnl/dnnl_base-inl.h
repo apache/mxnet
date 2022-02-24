@@ -180,6 +180,7 @@ struct LeakyReLUParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
+struct MaskedSoftmaxParam;
 struct SoftmaxOutputParam;
 struct ReshapeParam;
 struct LayerNormParam;
@@ -192,6 +193,9 @@ bool SupportDNNLConv(const ConvolutionParam& params, const NDArray& input);
 bool SupportDNNLDeconv(const DeconvolutionParam& params, const NDArray& input);
 bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& input, const NDArray& output);
 bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& input, const NDArray& output);
+bool SupportDNNLMaskedSoftmax(const MaskedSoftmaxParam& param,
+                              const std::vector<NDArray>& input,
+                              const NDArray& output);
 bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param);
 bool SupportDNNLTranspose(const NDArray& data);
 bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);

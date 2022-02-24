@@ -43,6 +43,7 @@ struct DNNLConvParam : public dmlc::Parameter<DNNLConvParam> {
   bool with_sum;
   bool with_postsum_act;
   bool quantized;
+  bool enable_float_output;
   bool dedup_sum;
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
@@ -56,6 +57,9 @@ struct DNNLConvParam : public dmlc::Parameter<DNNLConvParam> {
         .set_default(false)
         .describe("Add post activation after sum");
     DMLC_DECLARE_FIELD(quantized).set_default(false).describe("enable quantization");
+    DMLC_DECLARE_FIELD(enable_float_output)
+        .set_default(false)
+        .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(dedup_sum).set_default(false).describe("deduplicated sum input");
     DMLC_DECLARE_FIELD(min_calib_range)
         .set_default(dmlc::optional<float>())
