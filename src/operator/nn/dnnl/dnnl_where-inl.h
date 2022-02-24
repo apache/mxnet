@@ -37,7 +37,7 @@ namespace op {
 class DNNLWhereFwd {
  public:
   struct Tensors {
-    Tensors(const std::vector<NDArray>& inputs, const NDArray& output);
+    Tensors(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs);
     const NDArray& condition;
     const NDArray& left;
     const NDArray& right;

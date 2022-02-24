@@ -50,13 +50,14 @@ void DNNLWhereForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  const auto tensors = DNNLWhereFwd::Tensors(inputs, outputs[0]);
+  const auto tensors = DNNLWhereFwd::Tensors(inputs, outputs);
   const auto fwd     = DNNLWhereFwd::GetCached(tensors);
   fwd.Execute(tensors, req, ctx);
 }
 
-DNNLWhereFwd::Tensors::Tensors(const std::vector<NDArray>& inputs, const NDArray& output)
-    : condition(inputs[0]), left(inputs[1]), right(inputs[2]), output(output) {}
+DNNLWhereFwd::Tensors::Tensors(const std::vector<NDArray>& inputs,
+                               const std::vector<NDArray>& outputs)
+    : condition(inputs[0]), left(inputs[1]), right(inputs[2]), output(outputs[0]) {}
 
 DNNLWhereFwd DNNLWhereFwd::GetCached(const Tensors& tensors) {
   using where_op_fwd_map = std::unordered_map<OpSignature, DNNLWhereFwd, OpHash>;
@@ -80,6 +81,13 @@ DNNLWhereFwd DNNLWhereFwd::GetCached(const Tensors& tensors) {
   return it->second;
 }
 
+/*!
+ * \brief Align number of input dimensions to output. It is done by prepending shape with ones.
+ *        oneDNN requires shapes to have same number of dimension even if they are broadcastable.
+ * \param in_shape input shape which should be broadcastable with output
+ * \param out_shape output shape to which number of dimensions of input should be aligned
+ * \return input shape with extended number of dimensions by one
+ */
 static mxnet::TShape GetBroadcastableShape(const mxnet::TShape& in_shape,
                                            const mxnet::TShape& out_shape) {
   if (in_shape == out_shape) {
@@ -122,9 +130,9 @@ DNNLWhereFwd::DNNLWhereFwd(const Tensors& tensors) {
   auto out_md    = dnnl::memory::desc(out_dims, inp_dtype, def_ft);
   auto scalar_md = dnnl::memory::desc(scalar_dims, cnd_dtype, def_ft);
 
-  binary_eq_zero_pd = dnnl::binary::primitive_desc(
-      dnnl::binary::desc(dnnl::algorithm::binary_ne, cnd_md, scalar_md, cnd_md), cpu_engine);
   binary_ne_zero_pd = dnnl::binary::primitive_desc(
+      dnnl::binary::desc(dnnl::algorithm::binary_ne, cnd_md, scalar_md, cnd_md), cpu_engine);
+  binary_eq_zero_pd = dnnl::binary::primitive_desc(
       dnnl::binary::desc(dnnl::algorithm::binary_eq, cnd_md, scalar_md, cnd_md), cpu_engine);
 
   // if broadcast is needed output must be larger in size
@@ -141,13 +149,22 @@ DNNLWhereFwd::DNNLWhereFwd(const Tensors& tensors) {
   binary_sum_pd = dnnl::binary::primitive_desc(
       dnnl::binary::desc(dnnl::algorithm::binary_add, lmask_md, rmask_md, out_md), cpu_engine);
 
-  binary_eq_zero = dnnl::binary(binary_eq_zero_pd);
   binary_ne_zero = dnnl::binary(binary_ne_zero_pd);
+  binary_eq_zero = dnnl::binary(binary_eq_zero_pd);
   binary_mul_l   = dnnl::binary(binary_mul_l_pd);
   binary_mul_r   = dnnl::binary(binary_mul_r_pd);
   binary_sum     = dnnl::binary(binary_sum_pd);
 }
 
+/*!
+ * \brief
+ * Execute where operator by oneDNN primitives.
+ * 1. Create tensor cnd_lhs = condition == 0 ==> convert 0 to 1 and all other values to 0
+ * 2. Create tensor cnd_rhs = condition != 0 ==> convert all non-zero values to 1
+ * 3. Mask lhs tensor by cnd_lhs => mask_lhs = lhs * cnd_lhs
+ * 4. Mask rhs tensor by cnd_hs => mask_rhs = rhs * cnd_rhs
+ * 5. output = mask_lhs + mask_rhs
+ */
 void DNNLWhereFwd::Execute(const Tensors& tensors,
                            const std::vector<OpReqType>& req,
                            const OpContext& ctx) const {
@@ -171,20 +188,20 @@ void DNNLWhereFwd::Execute(const Tensors& tensors,
   char* workspace_ptr   = reinterpret_cast<char*>(tmp_workspace.dptr_);
   const int offset_size = tensors.output.shape().Size() * dtype_size;
 
-  dnnl::memory cnd_lhs(binary_eq_zero_pd.dst_desc(), cpu_engine, workspace_ptr);
-  dnnl::memory cnd_rhs(binary_ne_zero_pd.dst_desc(), cpu_engine, workspace_ptr + offset_size);
+  dnnl::memory cnd_lhs(binary_ne_zero_pd.dst_desc(), cpu_engine, workspace_ptr);
+  dnnl::memory cnd_rhs(binary_eq_zero_pd.dst_desc(), cpu_engine, workspace_ptr + offset_size);
   dnnl::memory masked_lhs(binary_mul_l_pd.dst_desc(), cpu_engine, workspace_ptr + 2 * offset_size);
   dnnl::memory masked_rhs(binary_mul_r_pd.dst_desc(), cpu_engine, workspace_ptr + 3 * offset_size);
 
   double zero{0};
-  dnnl::memory zero_scalar(binary_ne_zero_pd.src1_desc(), cpu_engine, &zero);
-
-  DNNLStream::Get()->RegisterPrimArgs(
-      binary_eq_zero,
-      {{DNNL_ARG_SRC_0, *cnd_tensor}, {DNNL_ARG_SRC_1, zero_scalar}, {DNNL_ARG_DST, cnd_lhs}});
+  dnnl::memory zero_scalar(binary_eq_zero_pd.src1_desc(), cpu_engine, &zero);
 
   DNNLStream::Get()->RegisterPrimArgs(
       binary_ne_zero,
+      {{DNNL_ARG_SRC_0, *cnd_tensor}, {DNNL_ARG_SRC_1, zero_scalar}, {DNNL_ARG_DST, cnd_lhs}});
+
+  DNNLStream::Get()->RegisterPrimArgs(
+      binary_eq_zero,
       {{DNNL_ARG_SRC_0, *cnd_tensor}, {DNNL_ARG_SRC_1, zero_scalar}, {DNNL_ARG_DST, cnd_rhs}});
 
   DNNLStream::Get()->RegisterPrimArgs(
