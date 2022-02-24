@@ -36,7 +36,7 @@ from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, 
     profiler as _profiler, device as _device
 from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol, fromjson
-from ..ndarray import NDArray
+from ..ndarray import NDArray, get_dtype_name
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays, _check_block_input_np_ndarrays
@@ -1855,7 +1855,7 @@ class SymbolBlock(HybridBlock):
     def cast(self, dtype):
         self._clear_cached_op()
         super(SymbolBlock, self).cast(dtype)
-        if np.dtype(dtype).name == 'float16':
+        if get_dtype_name(dtype) == 'float16':
             # correct BatchNorm types back to float32 due to its special requirement
             out = self._cached_graph[1]
             params_list = out.get_internals().list_inputs()

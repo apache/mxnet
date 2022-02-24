@@ -29,6 +29,7 @@ from ..symbol_doc import _build_doc
 from ..base import _Null, _init_op_module, _is_np_op, _output_is_list
 from ..name import NameManager
 from ..profiler import _current_scope as _profiler_scope
+from ..ndarray import get_dtype_name
 # pylint: enable=unused-import
 
 
@@ -162,12 +163,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        if _np.dtype(kwargs['%s']).names:
-            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
-        else:
-            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-                dtype_name, dtype_name, dtype_name,
-                dtype_name, dtype_name, dtype_name))
+        kwargs['%s'] = get_dtype_name(kwargs['%s'])"""%(dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
     kwargs.update(attribute.current().get(attr))
@@ -235,16 +231,12 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                     code.append("""
     if %s is not _Null and %s is not None:
         _keys.append('%s')
-        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name, dtype_name))
+        _vals.append(get_dtype_name(%s))"""%(dtype_name, dtype_name, dtype_name, dtype_name))
                 else:
                     code.append("""
     if %s is not _Null:
         _keys.append('%s')
-        if _np.dtype(%s).names:
-            _vals.append(_np.dtype(%s).names[0])
-        else:
-            _vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
-                                                  dtype_name, dtype_name))
+        _vals.append(get_dtype_name(%s))"""%(dtype_name, dtype_name, dtype_name))
 
             code.append("""
     name = _name.current().get(name, '%s')

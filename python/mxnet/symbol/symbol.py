@@ -36,7 +36,7 @@ from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int6
 from ..base import NDArrayHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..device import Device, current_device
-from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np
+from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, is_mx_dtype
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
 from ..executor import Executor
 from . import _internal
@@ -1029,13 +1029,10 @@ class Symbol(SymbolBase):
         else:
             str_keys = []
             for k, v in kwargs.items():
-                try:
+                if is_mx_dtype(v):
                     v = dtype_np_to_mx(v)
-                except TypeError:
-                    continue
-                str_keys.append(k)
-                sdata.append(v)
-                
+                    str_keys.append(k)
+                    sdata.append(v)
             keys = c_str_array(str_keys)
         arg_type_size = mx_uint()
         arg_type_data = ctypes.POINTER(ctypes.c_int)()

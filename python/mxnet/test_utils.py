@@ -46,7 +46,7 @@ except ImportError:
     pass
 import mxnet as mx
 from .device import current_device
-from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, get_dtype_name
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np, use_np_default_dtype, getenv, setenv  # pylint: disable=unused-import
@@ -1673,8 +1673,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                     assert_almost_equal(arr, gtarr, rtol=rt, atol=at, equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: {} {} ctx {} vs {} {} ctx {} at {}'.format(
-                        np.dtype(arr.dtype).name, arr.device, i,
-                        np.dtype(gtarr.dtype).name, gtarr.device, gt_idx, name))
+                        get_dtype_name(arr.dtype), arr.device, i,
+                        get_dtype_name(gtarr.dtype), gtarr.device, gt_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
                         raise e

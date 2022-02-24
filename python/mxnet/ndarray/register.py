@@ -20,6 +20,7 @@ import os as _os
 import ctypes
 import numpy as _np  # pylint: disable=unused-import
 
+from .ndarray import get_dtype_name
 from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-import
 from ..ndarray_doc import _build_doc
 
@@ -193,11 +194,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        if _np.dtype(kwargs['%s']).names:
-            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
-        else:
-            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-                dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
+        kwargs['%s'] = get_dtype_name(kwargs['%s'])"""%(dtype_name, dtype_name, dtype_name))
             code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
@@ -229,19 +226,13 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                 if is_np_op:
                     code.append("""
     if %s is not _Null and %s is not None:
-        dname = _np.dtype(%s).name if _np.dtype(%s).names is None else _np.dtype(%s).names[0]
         keys.append('%s')
-        vals.append(dname)"""%(dtype_name, dtype_name, dtype_name, dtype_name, dtype_name,
-                               dtype_name))
+        vals.append(get_dtype_name(%s))"""%(dtype_name, dtype_name, dtype_name, dtype_name))
                 else:
                     code.append("""
     if %s is not _Null:
         keys.append('%s')
-        if _np.dtype(%s).names:
-            vals.append(_np.dtype(%s).names[0])
-        else:
-            vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
-                                                 dtype_name, dtype_name))
+        vals.append(get_dtype_name(%s))"""%(dtype_name, dtype_name, dtype_name))
 
     verify_ndarrays_fn =\
         _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_legacy_ndarrays.__name__

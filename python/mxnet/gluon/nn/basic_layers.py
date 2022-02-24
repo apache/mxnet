@@ -31,7 +31,7 @@ from ..utils import _indent
 from ... import np, npx, device as _device
 from ...util import use_np
 from ..parameter import Parameter
-
+from ...ndarray import get_dtype_name
 
 class Sequential(Block):
     """Stacks Blocks sequentially.
@@ -377,7 +377,7 @@ class _BatchNorm(HybridBlock):
                                      differentiable=False)
 
     def cast(self, dtype):
-        if _np.dtype(dtype).name == 'float16':
+        if get_dtype_name(dtype) == 'float16':
             dtype = 'float32'
         super(_BatchNorm, self).cast(dtype)
 

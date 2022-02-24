@@ -53,7 +53,8 @@ __all__ = ["NDArray", "concatenate", "dtype_np_to_mx", "dtype_mx_to_np", "_GRAD_
            "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
            "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
            "from_numpy", "zeros", "indexing_key_expand_implicit_axes", "get_indexing_dispatch_code",
-           "get_oshape_of_gather_nd_op", "bfloat16"]
+           "get_oshape_of_gather_nd_op", "bfloat16", "get_dtype_type", "is_mx_dtype",
+           "get_dtype_name"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -113,19 +114,23 @@ _DTYPE_MX_TO_NP = {
     12: bfloat16,
 }
 
-
 def get_dtype_type(dtype):
-    if dtype in [bfloat16, bfloat16.names[0]]:
+    if (isinstance(dtype, str) and dtype in bfloat16.names) or np.dtype(dtype) == bfloat16:
         return bfloat16
     return np.dtype(dtype).type
 
+def is_mx_dtype(dtype):
+    return get_dtype_type(dtype) in _DTYPE_NP_TO_MX
+
+def get_dtype_name(dtype):
+    dtype = np.dtype(get_dtype_type(dtype))
+    return bfloat16.names[0] if dtype == bfloat16 else dtype.name
 
 def dtype_np_to_mx(dtype):
-    dtype_type = get_dtype_type(dtype)
-    if dtype_type not in _DTYPE_NP_TO_MX:
+    if not is_mx_dtype(dtype):
         raise TypeError('dtype must be one of: ' + str(_DTYPE_NP_TO_MX))
+    dtype_type = get_dtype_type(dtype)
     return _DTYPE_NP_TO_MX[dtype_type]
-
 
 def dtype_mx_to_np(dtype_idx):
     return _DTYPE_MX_TO_NP[dtype_idx]

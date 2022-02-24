@@ -37,7 +37,7 @@ from ..device import gpu
 from ..symbol import Symbol
 from ..symbol import contrib as symbol_contrib
 from .. import ndarray
-from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, bfloat16
+from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, get_dtype_name, get_dtype_type, bfloat16
 from . import lists
 from ..gluon import Block, trainer
 from .. import base
@@ -427,7 +427,7 @@ def unscale(optimizer_or_trainer):
 
 
 def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", target_dtype_ops=None,
-                   fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=[], 
+                   fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=[],
                    cast_params_offline=False):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_dtype_ops, fp32_ops,
@@ -472,14 +472,9 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
     assert conditional_fp32_ops is None or isinstance(conditional_fp32_ops, list), \
         "conditional_fp32_ops should be a list"
 
-    if target_dtype in [bfloat16, *bfloat16.names]:
-        target_dtype = bfloat16
-        target_dtype_name = bfloat16.names[0]
-    else:
-        target_dtype = np.dtype(target_dtype)
-        target_dtype_name = target_dtype.name
-    assert target_dtype_name in ['float16', *bfloat16.names], \
-        "Only target_dtype float16 and bfloat16 are supported currently"
+    target_dtype = get_dtype_name(target_dtype)
+    assert target_dtype in ['float16', *bfloat16.names], \
+        "Only float16 and bfloat16 types are currently supported as target_dtype"
 
     if target_dtype_ops is None:
         target_dtype_ops = list_lp16_ops(target_dtype)
@@ -716,7 +711,7 @@ def list_lp16_ops(target_dtype):
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP16_FUNCS
     else:
-        assert (target_dtype == bfloat16), "not supported type"
+        assert get_dtype_name(target_dtype) in bfloat16.names, "not supported type"
         return lists.symbol_bf16.BF16_FUNCS
 
 def list_fp32_ops(target_dtype):
@@ -725,7 +720,7 @@ def list_fp32_ops(target_dtype):
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP32_FUNCS
     else:
-        assert (target_dtype == bfloat16), "not supported type"
+        assert get_dtype_name(target_dtype) in bfloat16.names, "not supported type"
         return lists.symbol_bf16.FP32_FUNCS
 
 def list_lp16_fp32_ops(target_dtype):
@@ -734,7 +729,7 @@ def list_lp16_fp32_ops(target_dtype):
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP16_FP32_FUNCS
     else:
-        assert (target_dtype == bfloat16), "not supported type"
+        assert get_dtype_name(target_dtype) in bfloat16.names, "not supported type"
         return lists.symbol_bf16.BF16_FP32_FUNCS
 
 def list_conditional_fp32_ops(target_dtype):
@@ -743,7 +738,7 @@ def list_conditional_fp32_ops(target_dtype):
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.CONDITIONAL_FP32_FUNCS
     else:
-        assert (target_dtype == bfloat16), "not supported type"
+        assert get_dtype_name(target_dtype) in bfloat16.names, "not supported type"
         return lists.symbol_bf16.CONDITIONAL_FP32_FUNCS
 
 def list_widest_type_cast(target_dtype):
@@ -752,7 +747,7 @@ def list_widest_type_cast(target_dtype):
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.WIDEST_TYPE_CASTS
     else:
-        assert (target_dtype == bfloat16), "not supported type"
+        assert get_dtype_name(target_dtype) in bfloat16.names, "not supported type"
         return lists.symbol_bf16.WIDEST_TYPE_CASTS
 
 def list_loss_output_functions(target_dtype):
@@ -761,7 +756,7 @@ def list_loss_output_functions(target_dtype):
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.LOSS_OUTPUT_FUNCTIONS
     else:
-        assert (target_dtype == bfloat16), "not supported type"
+        assert get_dtype_name(target_dtype) in bfloat16.names, "not supported type"
         return lists.symbol_bf16.LOSS_OUTPUT_FUNCTIONS
 
 def list_lp16_use_fp32_params(target_dtype):
@@ -771,5 +766,5 @@ def list_lp16_use_fp32_params(target_dtype):
     if target_dtype in ['float16', np.float16]:
         return None
     else:
-        assert (target_dtype == bfloat16), "not supported type"
+        assert get_dtype_name(target_dtype) in bfloat16.names, "not supported type"
         return lists.symbol_bf16.BF16_USE_FP32_PARAMS

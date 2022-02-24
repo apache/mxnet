@@ -59,7 +59,6 @@ BF16_USE_FP32_PARAMS = {
 # Functions that have to be cast to FP32 due to possible
 # overflows
 FP32_FUNCS = [
-    'Deconvolution',
     'RNN',
     'BilinearSampler',
     'BlockGrad',
@@ -293,7 +292,7 @@ FP32_FUNCS = [
     'hard_sigmoid',
     'identity',
     'logical_not',
-    'log_sigmoid'
+    'log_sigmoid',
     'max_axis',
     'max',
     'min',
