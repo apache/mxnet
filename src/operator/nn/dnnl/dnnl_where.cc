@@ -177,8 +177,6 @@ void DNNLWhereFwd::Execute(const Tensors& tensors,
 
   mxnet::dnnl_output_t out_mem = CreateDNNLMem(tensors.output, binary_sum_pd.dst_desc(), req[0]);
 
-  const auto& ishape = tensors.left.shape();
-
   const int dtype_size =
       std::max(GetTypeSize(tensors.condition.dtype()), GetTypeSize(tensors.left.dtype()));
 
