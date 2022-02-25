@@ -84,6 +84,7 @@ def check_amp_fuse(net, data_example, expected_sym=None, quantized_nodes=[], rto
   check_amp_with_quantization(net, data_example, quantized_nodes)
 
 
+@mx.util.use_np
 def test_amp_fc():
   class TestNet(mx.gluon.HybridBlock):
     def __init__(self):
@@ -112,6 +113,7 @@ def test_amp_fc():
   check_amp_fuse(net, [data_example], exp_sym, ['sg_onednn_fully_connected_1'])
 
 
+@mx.util.use_np
 def test_amp_conv():
   class TestNet(mx.gluon.HybridBlock):
     def __init__(self):
@@ -145,6 +147,7 @@ def test_amp_conv():
   check_amp_fuse(net, [data_example], exp_sym, ['sg_onednn_conv_1'])
 
 
+@mx.util.use_np
 def test_amp_transformers():
   batch_size = 16
   seq_length = 32
@@ -161,7 +164,8 @@ def test_amp_transformers():
   check_amp_fuse(net, [in_data, mask], None, ['sg_onednn_fully_connected_0'])
 
 
-def test_amp_common_params_concat():
+@mx.util.use_np
+def test_amp_concat():
   class TestNet(mx.gluon.HybridBlock):
     def __init__(self):
       super(TestNet, self).__init__()
@@ -200,6 +204,7 @@ def test_amp_common_params_concat():
   check_amp_fuse(net, [data_example], exp_sym, ['sg_onednn_fully_connected_1'])
 
 
+@mx.util.use_np
 def test_amp_fuse_with_branch():
   class TestNet(nn.HybridBlock):
     def __init__(self, **kwargs):

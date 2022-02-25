@@ -90,6 +90,7 @@ def test_amp_coverage():
                          safest option""")
 
 
+@mx.util.use_np
 def test_bf16_offline_casting():
   class TestNet(nn.HybridBlock):
     def __init__(self):
@@ -116,6 +117,7 @@ def test_bf16_offline_casting():
     assert data.dtype == (np.float32 if 'fp32_op' in name else bfloat16)
 
 
+@mx.util.use_np
 def test_bf16_offline_casting_shared_params():
   COMMON_SIZE = 4
 

@@ -111,6 +111,7 @@ def test_amp_conversion_rnn(amp_tests):
         mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
 
 
+@mx.util.use_np
 def test_bf16_offline_casting():
   class TestNet(nn.HybridBlock):
     def __init__(self):
@@ -137,6 +138,7 @@ def test_bf16_offline_casting():
     assert data.dtype == (np.float32 if 'fp32_op' in name else 'float16')
 
 
+@mx.util.use_np
 def test_bf16_offline_casting_shared_params():
   COMMON_SIZE = 4
 
