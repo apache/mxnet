@@ -43,7 +43,7 @@ bool is_cast_op(const nnvm::Op* const op) {
 
 class MappedNodeEntry {
  public:
-  MappedNodeEntry(const NodeEntry node_entry, const int original_dtype)
+  MappedNodeEntry(NodeEntry node_entry, const int original_dtype)
       : entry(std::move(node_entry)), original_dtype(original_dtype) {
     dtype = original_dtype;
   }
