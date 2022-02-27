@@ -30,6 +30,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <sstream>
 
 #include "./exec_pass.h"
 #include "../common/cuda/utils.h"
@@ -179,10 +180,11 @@ class CudaGraphsSubSegExec {
                        int from_op_idx,
                        int num_ops,
                        bool ops_are_cuda_graph_compatible = true)
-      : from_op_idx_(from_op_idx), num_ops_(num_ops), graph_(nullptr), graph_exec_(nullptr) {
+      : from_op_idx_(from_op_idx), num_ops_(num_ops), graph_(nullptr), graph_exec_(nullptr),
+        graph_exec_id_(0) {
     if (ops_are_cuda_graph_compatible) {
       MakeGraph(exec_list, rctx, is_gpu, verbose, from_op_idx, num_ops);
-      MakeGraphExec();
+      MakeGraphExec(exec_list, rctx);
     }
   }
 
@@ -200,7 +202,7 @@ class CudaGraphsSubSegExec {
         cudaGraphExecUpdate(graph_exec_.get(), graph_.get(), &error_node, &update_result);
     switch (err) {
       case cudaErrorGraphExecUpdateFailure:
-        MakeGraphExec();
+        MakeGraphExec(exec_list, rctx);
         break;
       case cudaSuccess:
         CHECK_EQ(update_result, cudaGraphExecUpdateSuccess);
@@ -227,6 +229,12 @@ class CudaGraphsSubSegExec {
 
   bool IsRunnable() {
     return graph_exec_ != nullptr;
+  }
+
+  int NumGraphNodes() {
+    size_t numNodes;
+    CUDA_CALL(cudaGraphGetNodes(graph_.get(), static_cast<cudaGraphNode_t*>(nullptr), &numNodes));
+    return numNodes;
   }
 
  private:
@@ -259,7 +267,9 @@ class CudaGraphsSubSegExec {
     }
   }
 
-  void MakeGraphExec() {
+  void MakeGraphExec(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
+                     const RunContext& rctx) {
+    // Note that this routine is not invoked when a graph executor is merely updated.
     cudaGraphExec_t cuda_graph_exec;
     cudaGraphNode_t error_node;
     char log_buffer[1000];
@@ -268,13 +278,33 @@ class CudaGraphsSubSegExec {
     graph_exec_.reset(cuda_graph_exec, CudaGraphExecDeleter());
 
     // At this point we have a CUDA Graph executor
-    static int num_graph_creations_logged = 0;
-    static int max_log_entries            = dmlc::GetEnv("MXNET_CUDA_GRAPHS_MAX_LOG_ENTRIES", 0);
-    if (num_graph_creations_logged < max_log_entries) {
-      num_graph_creations_logged++;
-      LOG(INFO) << "Created CUDA graph " << num_graph_creations_logged;
-      if (num_graph_creations_logged == max_log_entries)
+    static int num_graph_creations = 0;
+    graph_exec_id_ = num_graph_creations++;
+
+    static size_t max_log_entries = dmlc::GetEnv("MXNET_CUDA_GRAPHS_MAX_LOG_ENTRIES", 0);
+    if (graph_exec_id_ < max_log_entries) {
+      LOG(INFO) << "Created CUDA graph " << graph_exec_id_;
+      if (num_graph_creations == max_log_entries)
         LOG(INFO) << "Further CUDA graph creation log messages are suppressed.";
+    }
+    // Create a .dot file for graph visualization if requested
+    static std::string dotfile_base = dmlc::GetEnv("MXNET_CUDA_GRAPHS_DBG_FILE", std::string());
+    if (dotfile_base.size() > 0) {
+#if CUDA_VERSION >= 11030
+      static int dotfile_flags = dmlc::GetEnv("MXNET_CUDA_GRAPHS_DBG_FILE_FLAGS",
+                                              static_cast<int>(cudaGraphDebugDotFlagsVerbose));
+      std::ostringstream filename;
+      const bool is_train = exec_list.size() > 0 && exec_list[0]->op_ctx.is_train;
+      int dev_id = rctx.ctx.dev_id;
+      filename << dotfile_base << "-" << "dev" << dev_id << "-" << (is_train ? "trn" : "inf")
+               << "-" << graph_exec_id_ << ".dot";
+      CUDA_CALL(cudaGraphDebugDotPrint(graph_.get(), filename.str().c_str(), dotfile_flags));
+#else
+      static bool dot_file_unsupported = []() {
+        LOG(INFO) << "MXNET_CUDA_GRAPHS_DBG_FILE setting ignored- requires CUDA version >= 11.3";
+        return true;
+      }();
+#endif  // CUDA_VERSION >= 11030
     }
   }
 
@@ -284,6 +314,7 @@ class CudaGraphsSubSegExec {
   using cudaGraphExecStruct_t = typename std::remove_pointer<cudaGraphExec_t>::type;
   std::shared_ptr<cudaGraphStruct_t> graph_;
   std::shared_ptr<cudaGraphExecStruct_t> graph_exec_;
+  size_t graph_exec_id_;
 };
 
 // The CudaGraph executor and associated Tempspace ptrs for which it is valid.
@@ -404,13 +435,13 @@ class CudaGraphsExec {
       int runnable_execs = 0;
       int bypassed_ops   = 0;
       for (auto& subseg_exec : cuda_graph_info.cuda_graph_subseg_execs) {
-        if (subseg_exec.IsRunnable())
+        if (subseg_exec.IsRunnable()) {
+          LOG(INFO) << "Launching captured graph with " << subseg_exec.NumGraphNodes() << " nodes.";
           runnable_execs++;
-        else
+        } else {
           bypassed_ops++;
+        }
       }
-      LOG(INFO) << "Launching " << runnable_execs << " captured CUDA graph(s) for op segment "
-                << opr_names_;
       if (bypassed_ops > 0)
         LOG(INFO) << "    (bypassing " << bypassed_ops << " un-capturable ops)";
     }
