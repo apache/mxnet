@@ -457,7 +457,7 @@ class CudaGraphsExec {
   // Make a CUDA Graph of the region of ops [from_op_idx, upto_op_idx).  If such a graph
   // is not runnable, e.g. if it includes memcpys from unpinned cpu memory, then make a
   // number of smaller graphs that avoid those ops with the memcpys.
-  void CreateSubExecOverRegion(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+  void CreateSubExecOverRegion(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
                                const RunContext& rctx,
                                bool is_gpu,
                                size_t from_op_idx,
