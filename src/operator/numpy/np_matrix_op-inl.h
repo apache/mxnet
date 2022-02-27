@@ -144,6 +144,10 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
   }
 };
 
+bool NumpyXReshapeShape(const nnvm::NodeAttrs& attrs,
+                        mxnet::ShapeVector* in_attrs,
+                        mxnet::ShapeVector* out_attrs);
+
 template <typename xpu>
 void NumpyTranspose(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,

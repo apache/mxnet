@@ -76,6 +76,34 @@ def test_pos_single_conv(use_bias, data_shape):
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('module', [mx.npx, mx.nd])
+def test_conv_reshape_conv(use_bias, data_shape, out_type, module):
+
+  class Conv_Reshape_Conv(nn.HybridBlock):
+    def __init__(self, **kwargs):
+        super(Conv_Reshape_Conv, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
+        self.conv1 = nn.Conv2D(channels=32, kernel_size=(5, 5), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = self.conv0(x)
+      if module == mx.npx:
+        attrs = {"newshape": (-1, int(out.shape[1]/4), out.shape[2]*2, out.shape[3]*2)}
+      else:
+        attrs = {"shape": (-1, int(out.shape[1]/4), out.shape[2]*2, out.shape[3]*2)}
+        out = out.as_nd_ndarray()
+      out = getattr(module, "reshape")(out, **attrs)
+      out = self.conv1(out.as_np_ndarray())
+      return out
+
+  net = Conv_Reshape_Conv()
+  check_quantize(net, data_shape, out_type)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_add(use_bias, data_shape):
   # conv + add fusion case
   class ConvAdd(nn.HybridBlock):
