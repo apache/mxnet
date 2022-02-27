@@ -173,14 +173,17 @@ class CudaGraphExecDeleter {
 // characterized by a starting index in the OpExecutor list and a number of ops.
 class CudaGraphsSubSegExec {
  public:
-  CudaGraphsSubSegExec(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+  CudaGraphsSubSegExec(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
                        const RunContext& rctx,
                        bool is_gpu,
                        bool verbose,
                        int from_op_idx,
                        int num_ops,
                        bool ops_are_cuda_graph_compatible = true)
-      : from_op_idx_(from_op_idx), num_ops_(num_ops), graph_(nullptr), graph_exec_(nullptr),
+      : from_op_idx_(from_op_idx),
+        num_ops_(num_ops),
+        graph_(nullptr),
+        graph_exec_(nullptr),
         graph_exec_id_(0) {
     if (ops_are_cuda_graph_compatible) {
       MakeGraph(exec_list, rctx, is_gpu, verbose, from_op_idx, num_ops);
@@ -188,7 +191,7 @@ class CudaGraphsSubSegExec {
     }
   }
 
-  void Update(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+  void Update(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
               const RunContext& rctx,
               bool is_gpu,
               bool verbose) {
@@ -213,7 +216,7 @@ class CudaGraphsSubSegExec {
     }
   }
 
-  void RunSubSeg(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+  void RunSubSeg(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
                  const RunContext& rctx,
                  bool is_gpu) {
     if (IsRunnable()) {
@@ -238,7 +241,7 @@ class CudaGraphsSubSegExec {
   }
 
  private:
-  void MakeGraph(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+  void MakeGraph(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
                  const RunContext& rctx,
                  bool is_gpu,
                  bool verbose,
@@ -279,7 +282,7 @@ class CudaGraphsSubSegExec {
 
     // At this point we have a CUDA Graph executor
     static int num_graph_creations = 0;
-    graph_exec_id_ = num_graph_creations++;
+    graph_exec_id_                 = num_graph_creations++;
 
     static size_t max_log_entries = dmlc::GetEnv("MXNET_CUDA_GRAPHS_MAX_LOG_ENTRIES", 0);
     if (graph_exec_id_ < max_log_entries) {
@@ -295,9 +298,10 @@ class CudaGraphsSubSegExec {
                                               static_cast<int>(cudaGraphDebugDotFlagsVerbose));
       std::ostringstream filename;
       const bool is_train = exec_list.size() > 0 && exec_list[0]->op_ctx.is_train;
-      int dev_id = rctx.ctx.dev_id;
-      filename << dotfile_base << "-" << "dev" << dev_id << "-" << (is_train ? "trn" : "inf")
-               << "-" << graph_exec_id_ << ".dot";
+      int dev_id          = rctx.ctx.dev_id;
+      filename << dotfile_base << "-"
+               << "dev" << dev_id << "-" << (is_train ? "trn" : "inf") << "-" << graph_exec_id_
+               << ".dot";
       CUDA_CALL(cudaGraphDebugDotPrint(graph_.get(), filename.str().c_str(), dotfile_flags));
 #else
       static bool dot_file_unsupported = []() {
@@ -338,7 +342,7 @@ using CudaGraphCache = std::map<CudaGraphCacheKey, CudaGraphInfo>;
 
 class CudaGraphsExec {
  public:
-  CudaGraphsExec(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+  CudaGraphsExec(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
                  bool is_gpu,
                  const char* opr_names)
       : verbose_(false), is_enabled_(false) {
@@ -350,7 +354,7 @@ class CudaGraphsExec {
     }
   }
 
-  void RunAll(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list,
+  void RunAll(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list,
               const RunContext& rctx,
               bool is_gpu) {
     // If this a CPU op or CUDA Graphs use isn't possible, run normally and return
@@ -546,7 +550,7 @@ class CudaGraphsExec {
   }
 
   // Determine Tempspaces used by ops.  Other resource uses disable CUDA Graphs.
-  void SetTempSpaces(const std::vector<std::shared_ptr<exec::OpExecutor> >& exec_list) {
+  void SetTempSpaces(const std::vector<std::shared_ptr<exec::OpExecutor>>& exec_list) {
     // Gather info about the ops use of TempSpace.
     if (is_enabled_) {
       std::set<Resource*> tempspaces_set;
