@@ -437,7 +437,6 @@ class DropoutOp {
     using namespace mshadow::expr;
     Stream<xpu>* s = ctx.get_stream<xpu>();
     if (!this->dropout_passthrough_) {
-      this->dropout_passthrough_ = true;
       const TBlob& gdata         = in_grad[dropout::kData];
       const TBlob& grad          = out_grad[dropout::kOut];
       const TBlob& mask          = out_data[dropout::kMask];
