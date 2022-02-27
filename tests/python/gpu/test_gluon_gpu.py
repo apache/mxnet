@@ -596,21 +596,22 @@ def test_cudnn_dropout_reproducibility():
 
     assert_almost_equal(a.grad, b.grad)
 
+@mx.util.use_np
 def test_cuda_graphs():
     class GraphTester(gluon.HybridBlock):
         def __init__(self, function_to_test, **kwargs):
             super(GraphTester, self).__init__(**kwargs)
             self.f = function_to_test()
 
-        def hybrid_forward(self, F, *args):
+        def forward(self, *args):
             # We need to isolate the operation to be fully inside the graph
             # in order for graphs usage to be possible
-            copied_args = [F.identity(a) for a in args]
+            copied_args = [mx.np.copy(a) for a in args]
             outputs = self.f(*copied_args)
             if isinstance(outputs, (list, tuple)):
-                return [F.identity(o) for o in outputs]
+                return [mx.np.copy(o) for o in outputs]
             else:
-                return F.identity(outputs)
+                return mx.np.copy(outputs)
 
     class TestDesc:
         def __init__(self, name, f, num_inputs=1, input_dim=4):
@@ -620,8 +621,8 @@ def test_cuda_graphs():
             self.input_dim = input_dim
 
         def generate_inputs(self):
-            shape = tuple(np.random.randint(4, 11, size=self.input_dim))
-            ret = [mx.random.uniform(shape=shape) for _ in range(self.num_inputs)]
+            shape = tuple(_np.random.randint(4, 11, size=self.input_dim))
+            ret = [mx.np.random.uniform(size=shape) for _ in range(self.num_inputs)]
             for r in ret:
                 r.attach_grad()
             return ret
@@ -654,6 +655,7 @@ def test_cuda_graphs():
 
     with environment({'MXNET_ENABLE_CUDA_GRAPHS': '1',
                       'MXNET_USE_FUSION': '0'}):
+        device = mx.gpu(0)
         for test_desc in tested_ops:
             print("Testing ", test_desc.name)
             inputs = test_desc.generate_inputs()
@@ -665,8 +667,8 @@ def test_cuda_graphs():
             netg = GraphTester(test_desc.f)
 
             # initialize parameters
-            net.initialize()
-            netg.initialize()
+            net.initialize(device=device)
+            netg.initialize(device=device)
 
             net(*inputs)
 
@@ -680,7 +682,7 @@ def test_cuda_graphs():
                 for _ in range(N):
                     assert_almost_equal(net(*inputs), netg(*inputsg))
 
-            mx.nd.waitall()
+            mx.npx.waitall()
             print("Testing training mode")
             for _ in range(N):
                 with random_seed(seed):
@@ -701,4 +703,4 @@ def test_cuda_graphs():
                     assert_almost_equal(p1.data(), p2.data())
                     if p1.grad_req != 'null':
                         assert_almost_equal(p1.grad(), p2.grad())
-            mx.nd.waitall()
+            mx.npx.waitall()
