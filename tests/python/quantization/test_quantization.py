@@ -1414,3 +1414,77 @@ def test_get_optimal_thresholds():
         assert 'layer1' in min_max_dict
         assert_almost_equal(onp.array([min_max_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
+
+
+
+@use_np
+def test_quantized_rnn():
+    data_low = -1
+    data_high = 1
+    def check_quantized_rnn(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size):
+        data_shape = (seq_len, batch_size, input_dim)
+
+        print(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size)
+        rnn_fp32 = mx.gluon.rnn.LSTM(hidden_size=state_size,
+                                     num_layers = num_layers,
+                                     bidirectional=bidirectional)
+        # run fp32 bn
+        data = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape)
+        states_shape = (num_layers * 2 if bidirectional else num_layers, batch_size, state_size)
+        states = [mx.np.zeros((states_shape)) for _ in range(batch_size)]
+
+        rnn_fp32.initialize()
+        rnn_fp32.hybridize()
+        
+        ref_out = rnn_fp32(data, states)
+        # print(ref_out)
+        fp32_params = rnn_fp32.collect_params()
+        sym, p = rnn_fp32.export(None)
+        rnn_fp32.export("WTF")
+        data_min = mx.np.min(data)
+        data_max = mx.np.max(data)
+        data_scale = 128.0 / (data_max - data_min)
+        data_shift = 128.0 - data_max * data_scale
+        qdata = (data * data_scale + data_shift + 0.5).astype('uint8')
+
+        class RNNDataLoader(mx.gluon.data.DataLoader):
+            def __init__(self, data, states):
+                super().__init__(mx.gluon.data.SimpleDataset([]), 1)
+                self.data = data
+                self.states = states
+
+            def __iter__(self):
+                return self
+            
+            def __next__(self):
+                return [self.data, self.states]
+
+            def __bool__(self):
+                return bool(self.dataiter.iter_next())
+
+        # generate int8 bn from fp32 bn
+        # dataset = mx.gluon.data.ArrayDataset(data, [states[0]], [states[1]])
+        # calib_data = mx.gluon.data.DataLoader(dataset, batch_size=batch_size)
+        calib_data = RNNDataLoader(data, states)
+        # qsym, qparams = mx.contrib.quant._quantize_symbol(sym, device=mx.current_device(),
+        #                                     offline_params=p, quantize_mode='full')
+        # qsym.save("XDD")
+        # inputs = [mx.sym.var('data0'), mx.sym.var('data1'), mx.sym.var('data2')]
+        # calib_net = mx.gluon.SymbolBlock(qsym, inputs)
+        quant_rnn = mx.contrib.quant.quantize_net(rnn_fp32,
+                                                 quantized_dtype='auto',
+                                                 quantize_mode='full',
+                                                 calib_data=calib_data,
+                                                 calib_mode='naive',
+                                                 num_calib_batches=1,
+                                                 device=mx.current_device())
+        #calib_net.load_dict(p, cast_dtype=True, dtype_source='saved', allow_missing=True)
+        output_int8_to_fp32 = quant_rnn(data, states)
+        
+        assert_almost_equal(ref_out[0].asnumpy(), output_int8_to_fp32[0].asnumpy(), rtol=1e-1, atol=8)
+        print(ref_out[0][0])
+        print("============")
+        print(output_int8_to_fp32[0][0])
+    for qdtype in ['int8', 'uint8']:
+        check_quantized_rnn(1, False, 5, 2, 16, 16)
+        check_quantized_rnn(1, True, 5, 2, 16, 16)

@@ -33,6 +33,20 @@ from ..device import cpu, Device
 from ..util import is_np_array, wrap_ctx_to_device_func
 
 
+def _multilist_iterator(arg, func):
+    """Iterate over multidiemnsional list and returns new list
+    with same dimensions, but applied `func` function on list elements.
+    E.g. _multilist_iterator([1, 2, [3, 4]], lambda x: x**2) = [1, 4, [9, 16]]
+    """
+    ret = []
+    if isinstance(arg, list):
+        for el in arg:
+            ret.append(_multilist_iterator(el, func))
+    else:
+        return func(arg)
+
+    return ret
+
 def _quantize_params(qsym, params, min_max_dict):
     """Given a quantized symbol and a dict of params that have not been quantized,
     generate quantized params. Currently only supports quantizing the arg_params
@@ -357,7 +371,7 @@ def _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_
     for batch in data:
         if not isinstance(batch, list):
             batch = [batch]
-        batch = [b.as_in_context(mx.cpu()) for b in batch]
+        batch = _multilist_iterator(batch, lambda b: b.as_in_context(mx.cpu()))
         sym_block(*batch[:num_inputs])
         num_batches += 1
         if num_calib_batches is not None and num_batches >= num_calib_batches:
@@ -368,19 +382,40 @@ def _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_
 
 
 def _generate_list_of_data_desc(data_shapes, data_types):
-    """"Convert list ot tuples to list of DataDesc."""
-    if isinstance(data_shapes, list):
-        if all(isinstance(x, DataDesc) for x in data_shapes):
-            return data_shapes
-        if all(isinstance(x, tuple) for x in data_shapes):
-            if len(data_shapes) == 1:
-                data_shapes = [DataDesc(name='data', shape=data_shapes[0], dtype=data_types[0])]
+    """"Convert list of tuples to list of DataDesc."""
+    def flatten_list(arg):
+        ret = []
+        for el in arg:
+            if isinstance(el, list):
+                ret += flatten_list(el)
             else:
-                data_shapes = [DataDesc(name='data' + str(i), shape=data_shapes[i],
-                                        dtype=data_types[i]) for i in range(len(data_shapes))]
-            return data_shapes
-    raise ValueError('data_shapes must be either a list of DataDesc or a list of Tuple')
+                ret.append(el)
+        return ret
 
+    flattened_data_types = flatten_list(data_types)
+    flattened_data_shapes = flatten_list(data_shapes)
+    assert len(flattened_data_types) == len(flattened_data_shapes)
+
+    # pass integral type as reference
+    counter = [0]
+    def get_data_desc(data_shape, counter=counter, data_types=flattened_data_types):
+        if isinstance(data_shape, DataDesc):
+            return data_shape
+        elif isinstance(data_shape, tuple):
+            desc = DataDesc(name='data' + str(counter[0]), shape=data_shape,
+                                        dtype=data_types[counter[0]])
+            counter[0] += 1
+            return desc
+        else:
+            raise ValueError('data_shapes must be either a list of DataDesc or a list of Tuple')
+
+
+    if len(data_shapes) == 1 and not isinstance(data_shapes[0], list):
+        data_descs = [DataDesc(name='data', shape=data_shapes[0], dtype=data_types[0])]
+    else:
+        data_descs = _multilist_iterator(data_shapes, get_data_desc)
+
+    return data_descs
 
 @wrap_ctx_to_device_func
 def quantize_model(sym, arg_params, aux_params, data_names=('data',),
@@ -841,8 +876,8 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
             x = iter(calib_data)
             batch = next(x)
             if isinstance(batch, list):
-                data_shapes = [b.shape for b in batch]
-                data_types = [b.dtype for b in batch]
+                data_shapes = _multilist_iterator(batch, lambda x: x.shape)
+                data_types = _multilist_iterator(batch, lambda x: x.dtype)
             else:
                 data_shapes = [batch.shape]
                 data_types = [batch.dtype]
@@ -850,16 +885,15 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
             raise ValueError('calib_data expects mx.gluon.data.DataLoader')
 
     if data_types is None:
-        data_types = [mx_real_t] * len(data_shapes)
+        data_types = _multilist_iterator(data_shapes, lambda x: mx_real_t)
+
     data_descs = _generate_list_of_data_desc(data_shapes, data_types)
 
     num_inputs = len(data_descs)
     data_nd = []
-    for desc in data_descs:
-        if is_np_array():
-            data_nd.append(mx.np.zeros(shape=desc.shape, dtype=desc.dtype))
-        else:
-            data_nd.append(mx.nd.zeros(shape=desc.shape, dtype=desc.dtype))
+    arr_fn = mx.np if is_np_array() else mx.nd
+    data_nd = _multilist_iterator(data_descs, lambda d, F=arr_fn: F.zeros(shape=d.shape, dtype=d.dtype))
+
     while True:
         try:
             network(*data_nd)
@@ -919,7 +953,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
             raise ValueError(
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'custom']:
-            inputs = [mx.sym.var(desc.name) for desc in data_descs]
+            inputs = _multilist_iterator(data_descs, lambda dd: mx.sym.var(dd.name))
             calib_net = SymbolBlock(symnet, inputs)
             for k, v in calib_net.collect_params().items():
                v.grad_req = 'null'
@@ -939,7 +973,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
         else:
             raise ValueError('calib_mode has to be one of: naive, entropy, custom')
     elif calib_mode is not None and calib_mode == 'none':
-        inputs = [mx.sym.var(desc.name) for desc in data_descs]
+        inputs = _multilist_iterator(data_descs, lambda dd: mx.sym.var(dd.name))
 
     net = SymbolBlock(qsym, inputs)
     for k, v in net.collect_params().items():
