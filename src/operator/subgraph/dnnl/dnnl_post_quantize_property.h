@@ -37,7 +37,7 @@
 namespace mxnet {
 namespace op {
 namespace {
-const std::set<const Op*>* SupportReqFusionOps() {
+bool SupportsRequantizeFusion(const Op* op) {
   static const std::set<const Op*> support_requantize_fusion_ops = {
       Op::Get("_contrib_quantized_elemwise_add"),
       Op::Get("_contrib_quantized_elemwise_mul"),
@@ -48,7 +48,7 @@ const std::set<const Op*>* SupportReqFusionOps() {
       Op::Get("_sg_onednn_selfatt_valatt"),
       Op::Get("_sg_onednn_batch_dot")};
 
-  return &support_requantize_fusion_ops;
+  return support_requantize_fusion_ops.count(op) > 0;
 }
 }  // namespace
 
@@ -72,10 +72,9 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
       : fuse_all(fuse_all), float_output(float_output){};
 
   bool Select(const BiDirectedNode& n) override {
-    const nnvm::Node* raw_node                               = n.node;
-    const std::set<const Op*>* support_requantize_fusion_ops = SupportReqFusionOps();
+    const nnvm::Node* raw_node = n.node;
 
-    if (fuse_all && raw_node->op() && support_requantize_fusion_ops->count(raw_node->op())) {
+    if (fuse_all && raw_node->op() && SupportsRequantizeFusion(raw_node->op())) {
       status = SelectStatus::kStart;
       matched_list.clear();
       matched_list.emplace_back(&n);
@@ -197,11 +196,10 @@ class SgDNNLPostQuantizeProperty : public SubgraphProperty {
     nnvm::ObjectPtr requantize_node = nullptr;
     nnvm::ObjectPtr dequantize_node = nullptr;
 
-    const std::set<const Op*>* support_requantize_fusion_ops = SupportReqFusionOps();
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
         return;
-      if (node->op() && support_requantize_fusion_ops->count(node->op())) {
+      if (node->op() && SupportsRequantizeFusion(node->op())) {
         fuse_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;
