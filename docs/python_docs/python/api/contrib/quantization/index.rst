@@ -15,27 +15,9 @@
    specific language governing permissions and limitations
    under the License.
 
-oneDNN
-=============
+contrib.quantization
+====================
 
-.. container:: cards
-
-   .. card::
-      :title: oneDNN Installation and Verification
-      :link: dnnl_readme.html
-
-      A guide on using oneDNN with MXNet.
-
-   .. card::
-      :title: oneDNN Quantization
-      :link: dnnl_quantization.html
-
-      How to perform quantization with oneDNN
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :glob:
-
-   dnnl_readme
-   dnnl_quantization
+.. automodule:: mxnet.contrib.quantization
+    :members:
+    :autosummary:

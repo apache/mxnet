@@ -67,6 +67,11 @@ Contributed modules
 
       Functions for manipulating text data.
 
+   .. card::
+      :title: contrib.quantization
+      :link: quantization/index.html
+
+      Functions for precision reduction.
 
 .. toctree::
    :hidden:

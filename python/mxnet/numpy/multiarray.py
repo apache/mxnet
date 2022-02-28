@@ -4522,7 +4522,7 @@ def arcsin(x, out=None, **kwargs):
        The inverse sine is also known as `asin` or sin^{-1}.
        The output `ndarray` has the same `device` as the input `ndarray`.
        This function differs from the original `numpy.arcsin
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.arcsin.html>`_ in
        the following aspects:
 
        * Only support ndarray or scalar now.
@@ -4571,7 +4571,7 @@ asin.__doc__ = """
 
     .. note::
        `asin` is a alias for `arcsin`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asin-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.asin.html
        instead of an official NumPy operator.
        
        `asin` is a multivalued function: for each `x` there are infinitely
@@ -4583,7 +4583,7 @@ asin.__doc__ = """
        The inverse sine is also known as `asin` or sin^{-1}.
        The output `ndarray` has the same `ctx` as the input `ndarray`.
        This function differs from the original `numpy.arcsin
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.arcsin.html>`_ in
        the following aspects:
 
        * Only support ndarray or scalar now.
@@ -4662,7 +4662,7 @@ acos.__doc__ = """
     Notes
     ----------
     `acos` is a alias for `arccos`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acos-x
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.acos.html
     instead of an official NumPy operator.
     
     acos is a multivalued function: for each x there are infinitely many numbers z such that
@@ -4749,7 +4749,7 @@ atan.__doc__ = """
     Notes
     -----
     `atan` is a alias for `arctan`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan-x
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.atan.html
     instead of an official NumPy operator.
     
     `atan` is a multi-valued function: for each `x` there are infinitely
@@ -5751,7 +5751,7 @@ asinh.__doc__ = """
 
     .. note::
        `asinh` is a alias for `arcsinh`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asinh-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.asinh.html
        instead of an official NumPy operator.
        
        `asinh` is a multivalued function: for each `x` there are infinitely
@@ -5848,7 +5848,7 @@ acosh.__doc__ = """
 
     .. note::
        `acosh` is a alias for `arccosh`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acosh-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.acosh.html
        instead of an official NumPy operator.
        
        `acosh` is a multivalued function: for each `x` there are infinitely
@@ -5944,7 +5944,7 @@ atanh.__doc__ = """
 
     .. note::
        `atanh` is a alias for `arctanh`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atanh-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.atanh.html
        instead of an official NumPy operator.
     
        `atanh` is a multivalued function: for each `x` there are infinitely
@@ -8076,14 +8076,14 @@ def argmax(a, axis=None, out=None, keepdims=False):
 
     .. note::
        ``keepdims`` param is part of request in data-api-standard
-       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+       <https://data-apis.org/array-api/latest/API_specification/generated/signatures.searching_functions.argmax.html>`_,
        which is not the parameter in official NumPy
 
        In case of multiple occurrences of the maximum values, the indices
        corresponding to the first occurrence are returned.
 
        This function differs from the original `numpy.argmax
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.argmax.html>`_ in
        the following aspects:
 
        * Input type does not support Python native iterables(list, tuple, ...).
@@ -8154,14 +8154,14 @@ def argmin(a, axis=None, out=None, keepdims=False):
 
     .. note::
        ``keepdims`` param is part of request in data-api-standard
-       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+       <https://data-apis.org/array-api/latest/API_specification/generated/signatures.searching_functions.argmin.html>`_,
        which is not the parameter in official NumPy
 
        In case of multiple occurrences of the minimum values, the indices
        corresponding to the first occurrence are returned.
 
        This function differs from the original `numpy.argmin
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmin.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.argmin.html>`_ in
        the following aspects:
 
        * Input type does not support Python native iterables(list, tuple, ...).
@@ -9563,7 +9563,7 @@ atan2.__doc__ = """
 
     .. notes::
        `atan2` is a alias for `arctan2`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x1-x2
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.atan2.html
        instead of an official NumPy operator.
        
        *atan2* is identical to the ``atan2`` function of the underlying

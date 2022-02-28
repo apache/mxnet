@@ -111,6 +111,7 @@ DNNLReshapeFwd& GetReshapeForward(const OpReqType& req,
   DNNLReshapeSignature key;
   key.AddSign(req);
   key.AddSign(input);
+  key.AddSign(output);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {

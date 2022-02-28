@@ -26,10 +26,9 @@ permalink: /api/faq/large_tensor_support
 # Using MXNet with Large Tensor Support
 
 ## What is large tensor support?
-When creating a network that uses large amounts of data, as in a deep graph problem, you may need large tensor support. This is a relatively new feature as tensors are indexed in MXNet using INT32 indices by default. Now MXNet build with Large Tensor supports INT64 indices.
+When creating a network that uses large amounts of data, as in a deep graph problem, you may need large tensor support. This means tensors are indexed using INT64, instead of INT32 indices.
 
-It is MXNet built with an additional flag *USE_INT64_TENSOR_SIZE=1*
-in CMAKE it is built using *USE_INT64_TENSOR_SIZE:“ON”*
+This feature is enabled when MXNet is built with a flag *USE_INT64_TENSOR_SIZE=1*, which is now a default setting. You can also make MXNet use INT32 indices by changing this flag.
 
 ## When do you need it?
 1. When you are creating NDArrays of size larger than 2^31 elements.
@@ -71,8 +70,8 @@ The following are the cases for large tensor usage where you must specify `dtype
 * _randint():_
 
 ```python
-low_large_value = 2*32*
-*high_large_value = 2*34
+low_large_value = 2**32
+high_large_value = 2**34
 # dtype is explicitly specified since default type is int32 for randint
 a = nd.random.randint(low_large_value, high_large_value, dtype=np.int64)
 ```
@@ -141,16 +140,15 @@ Backward pass is partially supported and not completely tested, so it is conside
 
 Not supported:
 
-* GPU and oneDNN. 
+* GPU. 
 * Windows, ARM or any operating system other than Ubuntu
-* Any permutation of MXNet wheel that contains oneDNN. 
 * Other language bindings like Scala, Java, R,  and Julia.
 
 
 ## Other known Issues:
-Randint operator is flaky: https://github.com/apache/incubator-mxnet/issues/16172
-dgemm operations using BLAS libraries currently don’t support int64.
-linspace() is not supported.
+* Randint operator is flaky: https://github.com/apache/incubator-mxnet/issues/16172.
+* dgemm operations using BLAS libraries currently don’t support int64.
+* linspace() is not supported.
 
 ```python
 a = mx.sym.Variable('a')

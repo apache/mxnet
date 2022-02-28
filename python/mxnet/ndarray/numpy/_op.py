@@ -3077,7 +3077,7 @@ def arcsin(x, out=None, **kwargs):
     The inverse sine is also known as `asin` or sin^{-1}.
     The output `ndarray` has the same `device` as the input `ndarray`.
     This function differs from the original `numpy.arcsin
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.arcsin.html>`_ in
     the following aspects:
     - Only support ndarray or scalar now.
     - `where` argument is not supported.
@@ -5474,14 +5474,14 @@ def argmax(a, axis=None, out=None, keepdims=False):
     Notes
     -----
     ``keepdims`` param is part of request in data-api-standard
-    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+    <https://data-apis.org/array-api/latest/API_specification/generated/signatures.searching_functions.argmax.html>`_,
     which is not the parameter in official NumPy
 
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
     This function differs from the original `numpy.argmax
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.argmax.html>`_ in
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
@@ -5551,14 +5551,14 @@ def argmin(a, axis=None, out=None, keepdims=False):
     Notes
     -----
     ``keepdims`` param is part of request in data-api-standard
-    <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+    <https://data-apis.org/array-api/latest/API_specification/generated/signatures.searching_functions.argmin.html>`_,
     which is not the parameter in official NumPy
 
     In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
     This function differs from the original `numpy.argmax
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.argmax.html>`_ in
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
