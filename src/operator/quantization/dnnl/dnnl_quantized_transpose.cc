@@ -23,9 +23,9 @@
  * \author: Rafal Litka, rafal.litka@intel.com
  */
 #if MXNET_USE_ONEDNN == 1
-#include "../../numpy/np_matrix_op-inl.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../../nn/dnnl/dnnl_transpose-inl.h"
+#include "operator/numpy/np_matrix_op-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/nn/dnnl/dnnl_transpose-inl.h"
 
 namespace mxnet {
 namespace op {
