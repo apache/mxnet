@@ -214,7 +214,8 @@ static int GetTypeSize(int dtype) {
 
 static inline size_t GetArraySize(const NDArray& arr) {
   if (arr.IsDNNLData()) {
-    return arr.GetDNNLData()->get_desc().get_size();
+    auto arr_data = static_cast<const dnnl::memory*>(arr.GetDNNLData());
+    return arr_data->get_desc().get_size();
   }
   return arr.shape().Size() * GetTypeSize(arr.dtype());
 }

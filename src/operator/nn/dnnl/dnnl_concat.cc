@@ -71,7 +71,7 @@ void DNNLConcatForward(const nnvm::NodeAttrs& attrs,
   data_md.reserve(num_in_data);
   data_mem.reserve(num_in_data);
   for (int i = 0; i < num_in_data; i++) {
-    const dnnl::memory* tmp_mem = in_data[i].GetDNNLData();
+    const dnnl::memory* tmp_mem = static_cast<const dnnl::memory*>(in_data[i].GetDNNLData());
     dnnl::memory::desc tmp_md   = tmp_mem->get_desc();
     data_md.push_back(tmp_md);
     data_mem.push_back(tmp_mem);
@@ -99,7 +99,7 @@ void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
   const int num_in_data    = param.num_args;
   int concat_dim           = param.dim.has_value() ? param.dim.value() : 0;
   concat_dim               = CheckAxis(concat_dim, outputs[concat_enum::kData0].shape().ndim());
-  const auto gradz_mem     = inputs[0].GetDNNLData();
+  const auto gradz_mem     = static_cast<const dnnl::memory*>(inputs[0].GetDNNLData());
   /* init the offset */
   dnnl::memory::dims offsets(outputs[0].shape().ndim());
   for (auto& v : offsets) {
@@ -108,7 +108,7 @@ void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
 
   for (int i = 0; i < num_in_data; i++) {
     dnnl::memory::dims diff_src_tz(outputs[i].shape().begin(), outputs[i].shape().end());
-    auto diff_src_md = outputs[i].GetDNNLData()->get_desc();
+    auto diff_src_md = static_cast<const dnnl::memory*>(outputs[i].GetDNNLData())->get_desc();
     auto gradi_mem   = CreateDNNLMem(outputs[i], diff_src_md, req[i]);
 
     auto from_md = gradz_mem->get_desc().submemory_desc(diff_src_tz, offsets);

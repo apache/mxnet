@@ -151,9 +151,11 @@ void DNNLMemoryCopy(const dnnl::memory& mem, const dnnl::memory* this_mem) {
 }
 
 bool CanWriteTo(const NDArray& out_arr, const NDArray& in_arr, const dnnl::memory::desc& desc) {
-  auto in_mem     = in_arr.GetDNNLData();
-  bool add_same   = in_mem->get_data_handle() == out_arr.GetDNNLData()->get_data_handle();
-  bool pdesc_same = out_arr.GetDNNLData()->get_desc() == desc && in_mem->get_desc() == desc;
+  auto in_mem   = static_cast<const dnnl::memory*>(in_arr.GetDNNLData());
+  bool add_same = in_mem->get_data_handle() ==
+                  static_cast<const dnnl::memory*>(out_arr.GetDNNLData())->get_data_handle();
+  bool pdesc_same = static_cast<const dnnl::memory*>(out_arr.GetDNNLData())->get_desc() == desc &&
+                    in_mem->get_desc() == desc;
   return add_same && pdesc_same;
 }
 
@@ -165,7 +167,8 @@ dnnl_output_t CreateDNNLMem(const NDArray& out_arr,
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return dnnl_output_t(OutDataOp::AddBack, tmp);
   } else if (kWriteInplace == req && in_arr != nullptr && CanWriteTo(out_arr, *in_arr, desc)) {
-    dnnl::memory* mem = const_cast<NDArray&>(out_arr).CreateDNNLData(desc);
+    dnnl::memory* mem =
+        static_cast<dnnl::memory*>(const_cast<NDArray&>(out_arr).CreateDNNLData(&desc));
     // mem is nullptr if out_arr is view and desc is DNNL format.
     // need to Reorder2Default before calling CreateDNNLMem
     CHECK(mem != nullptr);
@@ -174,7 +177,8 @@ dnnl_output_t CreateDNNLMem(const NDArray& out_arr,
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return dnnl_output_t(OutDataOp::CopyBack, tmp);
   } else if (kWriteTo == req) {
-    dnnl::memory* mem = const_cast<NDArray&>(out_arr).CreateDNNLData(desc);
+    dnnl::memory* mem =
+        static_cast<dnnl::memory*>(const_cast<NDArray&>(out_arr).CreateDNNLData(&desc));
     if (nullptr == mem) {
       auto tmp = TmpMemMgr::Get()->Alloc(desc);
       return dnnl_output_t(OutDataOp::CopyBack, tmp);
@@ -197,7 +201,7 @@ dnnl_output_t CreateDNNLWeightGrad(const NDArray& out_arr,
   } else {
     dnnl::memory* mem = nullptr;
     if (IsDefaultFormat(desc)) {
-      mem = const_cast<NDArray&>(out_arr).CreateDNNLData(desc);
+      mem = static_cast<dnnl::memory*>(const_cast<NDArray&>(out_arr).CreateDNNLData(&desc));
     }
     if (mem == nullptr) {
       auto tmp = TmpMemMgr::Get()->Alloc(desc);
@@ -210,16 +214,17 @@ dnnl_output_t CreateDNNLWeightGrad(const NDArray& out_arr,
 
 void CommitOutput(const NDArray& arr, const dnnl_output_t& res) {
   if (res.first == CopyBack) {
-    const_cast<NDArray&>(arr).CopyFrom(*res.second);
+    const_cast<NDArray&>(arr).CopyFrom(res.second);
   } else if (res.first == AddBack) {
     auto res_memory = res.second;
-    auto target_pd  = arr.GetDNNLData()->get_desc();
-    auto mem        = arr.GetDNNLData(res.second->get_desc());
+    auto target_pd  = static_cast<const dnnl::memory*>(arr.GetDNNLData())->get_desc();
+    auto res_desc   = res.second->get_desc();
+    auto mem        = static_cast<const dnnl::memory*>(arr.GetDNNLData(&res_desc));
     if (mem == nullptr) {
       auto tmp_memory = TmpMemMgr::Get()->Alloc(target_pd);
       DNNLMemoryCopy(*res_memory, tmp_memory);
       res_memory = tmp_memory;
-      mem        = arr.GetDNNLData();
+      mem        = static_cast<const dnnl::memory*>(arr.GetDNNLData());
     }
     op::DNNLSum(*mem, *res_memory, *mem);
   }
@@ -238,6 +243,7 @@ const dnnl::memory* GetWeights(const NDArray& arr, int num_groups) {
     H = 3;
     W = 4;
   }
+  // clang-format off
   if (ndim == 2) {
     tz         = dnnl::memory::dims{arr.shape()[O], arr.shape()[I]};
     format_tag = dnnl::memory::format_tag::oi;
@@ -246,6 +252,7 @@ const dnnl::memory* GetWeights(const NDArray& arr, int num_groups) {
              dnnl::memory::dims{
                  num_groups, arr.shape()[O] / num_groups, arr.shape()[I], arr.shape()[H]} :
              dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H]};
+
     format_tag = num_groups > 1 ? dnnl::memory::format_tag::goiw : dnnl::memory::format_tag::oiw;
   } else if (ndim == 4) {
     tz = num_groups > 1 ?
@@ -255,6 +262,7 @@ const dnnl::memory* GetWeights(const NDArray& arr, int num_groups) {
                                 arr.shape()[H],
                                 arr.shape()[W]} :
              dnnl::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H], arr.shape()[W]};
+
     format_tag = num_groups > 1 ? dnnl::memory::format_tag::goihw : dnnl::memory::format_tag::oihw;
   } else if (ndim == 5) {
     tz = num_groups > 1 ?
@@ -266,25 +274,27 @@ const dnnl::memory* GetWeights(const NDArray& arr, int num_groups) {
                                 arr.shape()[W]} :
              dnnl::memory::dims{
                  arr.shape()[O], arr.shape()[I], arr.shape()[D], arr.shape()[H], arr.shape()[W]};
+
     format_tag =
         num_groups > 1 ? dnnl::memory::format_tag::goidhw : dnnl::memory::format_tag::oidhw;
   } else {
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
   }
+  // clang-format on
   const auto md = dnnl::memory::desc{tz, type, format_tag};
-  return arr.GetDNNLData(md);
+  return static_cast<const dnnl::memory*>(arr.GetDNNLData(&md));
 }
 
 const dnnl::memory* GetWeights(const NDArray& arr,
                                const dnnl::memory::desc& target_desc,
                                int num_groups) {
-  const dnnl::memory* mem = arr.GetDNNLData(target_desc);
+  const dnnl::memory* mem = static_cast<const dnnl::memory*>(arr.GetDNNLData(&target_desc));
   // If the weight array already uses the target layout, simply return it directly.
   if (mem)
     return mem;
   mem = GetWeights(arr, num_groups);
   if (mem == nullptr)
-    mem = arr.GetDNNLDataReorder(target_desc);
+    mem = static_cast<const dnnl::memory*>(arr.GetDNNLDataReorder(&target_desc));
   if (mem->get_desc() == target_desc)
     return mem;
 
@@ -440,8 +450,8 @@ void FallBackCompute(Compute fn,
   fn(attrs_states, ctx, in_blobs, new_req, out_blobs);
   for (size_t i = 0, bf16_pos = 0; i < out_blobs.size(); i++) {
     if (outputs[i].dtype() == mshadow::kBfloat16) {
-      auto src_mem = temp_bf16_src[bf16_pos].GetDNNLData();
-      auto dst_mem = temp_bf16_dst[bf16_pos].GetDNNLData();
+      auto src_mem = static_cast<const dnnl::memory*>(temp_bf16_src[bf16_pos].GetDNNLData());
+      auto dst_mem = static_cast<const dnnl::memory*>(temp_bf16_dst[bf16_pos].GetDNNLData());
       bf16_pos++;
       ReorderTo(src_mem, dst_mem);
     } else if (req[i] == kAddTo && outputs[i].IsDNNLData()) {
@@ -475,13 +485,13 @@ static bool SimilarArray(const mxnet::NDArray& arr1,
   NDArray buf1, buf2;
   if (arr1.IsDNNLData()) {
     buf1     = NDArray(arr1.shape(), arr1.ctx(), false, arr1.dtype());
-    auto mem = arr1.GetDNNLData();
-    buf1.CopyFrom(*mem);
+    auto mem = static_cast<const dnnl::memory*>(arr1.GetDNNLData());
+    buf1.CopyFrom(mem);
   }
   if (arr2.IsDNNLData()) {
     buf2     = NDArray(arr2.shape(), arr2.ctx(), false, arr2.dtype());
-    auto mem = arr2.GetDNNLData();
-    buf2.CopyFrom(*mem);
+    auto mem = static_cast<const dnnl::memory*>(arr2.GetDNNLData());
+    buf2.CopyFrom(mem);
   }
   DNNLStream::Get()->Submit();
 
@@ -537,14 +547,14 @@ void OpCheck::Init(const std::vector<mxnet::NDArray>& inputs_,
     inputs.emplace_back(data.shape(), ctx, false, data.dtype());
     if (data.IsDNNLData() && data.IsView())
       data = data.Reorder2Default();
-    auto mem = data.GetDNNLData();
-    inputs[i].CopyFrom(*mem);
+    auto mem = static_cast<const dnnl::memory*>(data.GetDNNLData());
+    inputs[i].CopyFrom(mem);
   }
   for (size_t i = 0; i < outputs_.size(); i++) {
     outputs.emplace_back(outputs_[i].shape(), ctx, false, outputs_[i].dtype());
     if (backward) {
-      auto mem = outputs_[i].GetDNNLData();
-      outputs[i].CopyFrom(*mem);
+      auto mem = static_cast<const dnnl::memory*>(outputs_[i].GetDNNLData());
+      outputs[i].CopyFrom(mem);
     }
   }
   DNNLStream::Get()->Submit();
@@ -592,8 +602,8 @@ void OpCheck::CopyResult(const std::vector<mxnet::NDArray>& outputs_,
   CHECK(!DNNLStream::Get()->HasOps());
   auto non_const_outputs_ = const_cast<std::vector<mxnet::NDArray>&>(outputs_);
   for (auto i = indice.begin(); i != indice.end(); ++i) {
-    auto mem = outputs[*i].GetDNNLData();
-    non_const_outputs_[*i].CopyFrom(*mem);
+    auto mem = static_cast<const dnnl::memory*>(outputs[*i].GetDNNLData());
+    non_const_outputs_[*i].CopyFrom(mem);
   }
   DNNLStream::Get()->Submit();
 }

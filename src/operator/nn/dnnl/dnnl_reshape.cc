@@ -41,7 +41,7 @@ bool SupportDNNLReshape(const NDArray& input, const NDArray& output) {
 
 DNNLReshapeFwd::DNNLReshapeFwd(const OpReqType& req, const NDArray& input, const NDArray& output) {
   const auto engine = CpuEngine::Get()->get_engine();
-  auto in_mem       = input.GetDNNLData();
+  auto in_mem       = static_cast<const dnnl::memory*>(input.GetDNNLData());
 
   // Create temp memory
   auto temp_dims = dnnl::memory::dims(input.shape().begin(), input.shape().end());
@@ -76,18 +76,21 @@ void DNNLReshapeFwd::Execute(const NDArray& input,
                              const OpReqType& req,
                              void* workspace) {
   auto stream = DNNLStream::Get();
-  auto in_mem = input.GetDNNLData();
+  auto in_mem =
+      static_cast<const dnnl::memory*>(static_cast<const dnnl::memory*>(input.GetDNNLData()));
   // register primitives and arguments
   std::vector<dnnl_args_map_t> args_map;
   size_t prims_size = prims_.size();
   if (prims_size == 1) {
-    args_map.push_back({{DNNL_ARG_FROM, *in_mem}, {DNNL_ARG_TO, *output.GetDNNLData()}});
+    args_map.push_back({{DNNL_ARG_FROM, *in_mem},
+                        {DNNL_ARG_TO, *static_cast<const dnnl::memory*>(output.GetDNNLData())}});
   } else if (prims_size == 2) {
     if (workspace) {
       temp_->set_data_handle(workspace);
     }
     args_map.push_back({{DNNL_ARG_FROM, *in_mem}, {DNNL_ARG_TO, *temp_}});
-    args_map.push_back({{DNNL_ARG_FROM, *temp_}, {DNNL_ARG_TO, *output.GetDNNLData()}});
+    args_map.push_back({{DNNL_ARG_FROM, *temp_},
+                        {DNNL_ARG_TO, *static_cast<const dnnl::memory*>(output.GetDNNLData())}});
   } else {
     CHECK(prims_size == 0 && req != kWriteTo) << "kWriteTo should never reach here.";
   }

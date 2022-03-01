@@ -166,13 +166,13 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
 
   // prepare softmax primitive and memory
   SoftmaxParam p;
-  p.axis        = param.axis;
-  p.temperature = param.temperature;
-
-  auto softmax_tensors = DNNLSoftmaxFwd::Tensors(output, output);
-  auto softmax_op      = DNNLSoftmaxFwd::GetCached(p, softmax_tensors, is_train);
-  auto softmax_out_mem = output.GetDNNLData(softmax_op.softmax_pd->dst_desc());
-  const auto input_mem = input.GetDNNLData();
+  p.axis                   = param.axis;
+  p.temperature            = param.temperature;
+  auto softmax_tensors     = DNNLSoftmaxFwd::Tensors(output, output);
+  auto softmax_op          = DNNLSoftmaxFwd::GetCached(p, softmax_tensors, is_train);
+  auto softmax_op_dst_desc = softmax_op.softmax_pd->dst_desc();
+  auto softmax_out_mem = static_cast<const dnnl::memory*>(output.GetDNNLData(&softmax_op_dst_desc));
+  const auto input_mem = static_cast<const dnnl::memory*>(input.GetDNNLData());
 
   // 1. C) out = input * out
   stream->RegisterPrimArgs(this->primitives->mask_input,

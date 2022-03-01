@@ -81,7 +81,6 @@ class DNNLSoftmaxFwd {
   std::shared_ptr<linear_t> temperature_fwd;
 };
 
-
 class DNNLSoftmaxBwd {
  public:
   struct Tensors {
@@ -106,7 +105,6 @@ class DNNLSoftmaxBwd {
   std::shared_ptr<linear_pd_t> temperature_pd;
   std::shared_ptr<linear_t> temperature_fwd;
 };
-
 
 }  // namespace op
 }  // namespace mxnet

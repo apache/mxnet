@@ -163,15 +163,15 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
     if (!initialized_) {
       // TODO(zhennan): Currently, dnnl fallback mechanism will break inplace option,
       // which make check (req[kOut] == kWriteInplace) useless.
-      auto in_dnnl_mem  = inputs[in_sum].GetDNNLData();
-      auto out_dnnl_mem = outputs[kOut].GetDNNLData();
+      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(inputs[in_sum].GetDNNLData());
+      auto out_dnnl_mem = static_cast<const dnnl::memory*>(outputs[kOut].GetDNNLData());
       if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle()) {
         inplace_ = true;
       }
     }
     if (!inplace_) {
-      auto in_dnnl_mem  = inputs[in_sum].GetDNNLData();
-      auto out_dnnl_mem = outputs[kOut].GetDNNLData();
+      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(inputs[in_sum].GetDNNLData());
+      auto out_dnnl_mem = static_cast<const dnnl::memory*>(outputs[kOut].GetDNNLData());
       if (outputs[kOut].dtype() == mshadow::kInt32 || outputs[kOut].dtype() == mshadow::kFloat32) {
         const auto& mem_desc  = in_dnnl_mem->get_desc();
         const auto this_dtype = get_dnnl_type(outputs[kOut].dtype());
@@ -345,20 +345,22 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
                            conv_param.num_group,
                            data_scale_,
                            weight_scales_);
-    args_[DNNL_ARG_SRC]     = *data.GetDNNLData();
-    args_[DNNL_ARG_WEIGHTS] = *cached_weight_.GetDNNLData();
+    args_[DNNL_ARG_SRC]     = *static_cast<const dnnl::memory*>(data.GetDNNLData());
+    args_[DNNL_ARG_WEIGHTS] = *static_cast<const dnnl::memory*>(cached_weight_.GetDNNLData());
     if (has_bias)
-      args_[DNNL_ARG_BIAS] = *cached_bias_.GetDNNLData();
-    args_[DNNL_ARG_DST] = *output.GetDNNLData();
+      args_[DNNL_ARG_BIAS] = *static_cast<const dnnl::memory*>(cached_bias_.GetDNNLData());
+    args_[DNNL_ARG_DST] = *static_cast<const dnnl::memory*>(output.GetDNNLData());
     initialized_        = true;
   }
 
   if (dnnl_param.with_sum) {
-    const auto& output_mem   = output.GetDNNLData();
+    const auto& output_mem   = static_cast<const dnnl::memory*>(output.GetDNNLData());
     const auto& out_mem_desc = output_mem->get_desc();
     const auto& dst_mem_desc = fwd_->GetPd().dst_desc();
     if (out_mem_desc != dst_mem_desc) {
-      auto tmp_out_mem       = output.GetDNNLDataReorder(fwd_->GetPd().dst_desc());
+      auto dst_mem_desc_mem = fwd_->GetPd().dst_desc();
+      auto tmp_out_mem =
+          static_cast<const dnnl::memory*>(output.GetDNNLDataReorder(&dst_mem_desc_mem));
       auto data_md           = dst_mem_desc;
       data_md.data.data_type = static_cast<dnnl_data_type_t>(out_mem_desc.data.data_type);
       dnnl_mem_ptr new_out_mem(
@@ -370,10 +372,12 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   }
 
   if (dnnl_param.quantized) {
-    auto data_mem       = data.GetDNNLDataReorder(fwd_->GetPd().src_desc());
-    dnnl::memory* mem   = output.CreateDNNLData(fwd_->GetPd().dst_desc());
-    args_[DNNL_ARG_SRC] = *data_mem;
-    args_[DNNL_ARG_DST] = *mem;
+    auto fwd_src_desc    = fwd_->GetPd().src_desc();
+    auto data_mem        = static_cast<const dnnl::memory*>(data.GetDNNLDataReorder(&fwd_src_desc));
+    auto fwd_pd_dst_desc = fwd_->GetPd().dst_desc();
+    dnnl::memory* mem    = static_cast<dnnl::memory*>(output.CreateDNNLData(&fwd_pd_dst_desc));
+    args_[DNNL_ARG_SRC]  = *data_mem;
+    args_[DNNL_ARG_DST]  = *mem;
     DNNLStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
     DNNLStream::Get()->Submit();
   } else {
@@ -391,8 +395,9 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
     *outputs[kMax].data().dptr<float>() = cached_output_max_;
   }
   if (dnnl_param.with_sum) {
-    auto out = const_cast<NDArray&>(outputs[kOut]);
-    out.UpdateDNNLMemDesc(fwd_->GetPd().dst_desc());
+    auto out          = const_cast<NDArray&>(outputs[kOut]);
+    auto fwd_dst_desc = fwd_->GetPd().dst_desc();
+    out.UpdateDNNLMemDesc(&fwd_dst_desc);
   }
 }
 
@@ -468,6 +473,7 @@ static void SgDNNLConvParamParser(nnvm::NodeAttrs* attrs) {
       auto& post_act_param = (param_.full_conv_param.dnnl_param.with_act && !with_act) ?
                                  param_.full_conv_param.act_param :
                                  param_.full_conv_param.postsum_act_param;
+
       with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);

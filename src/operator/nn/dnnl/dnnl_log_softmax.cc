@@ -107,7 +107,8 @@ static DNNLLogSoftmaxFwd& GetLogSoftmaxFwd(const SoftmaxParam& param,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    DNNLLogSoftmaxFwd fwd(is_train, real_axis, *(data.GetDNNLData()));
+    DNNLLogSoftmaxFwd fwd(
+        is_train, real_axis, *(static_cast<const dnnl::memory*>(data.GetDNNLData())));
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
@@ -127,9 +128,10 @@ void DNNLLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
   int axis                  = CheckAxis(param.axis, in_data.shape().ndim());
   auto fwd                  = GetLogSoftmaxFwd(param, axis, ctx.is_train, in_data, out_data);
 
-  auto in_mem        = in_data.GetDNNLData();
-  auto out_mem       = out_data.GetDNNLData(fwd.pd.dst_desc());
-  DNNLStream* stream = DNNLStream::Get();
+  auto in_mem          = static_cast<const dnnl::memory*>(in_data.GetDNNLData());
+  auto fwd_pd_dst_desc = fwd.pd.dst_desc();
+  auto out_mem         = static_cast<const dnnl::memory*>(out_data.GetDNNLData(&fwd_pd_dst_desc));
+  DNNLStream* stream   = DNNLStream::Get();
   stream->RegisterPrimArgs(fwd.GetFwd(), {{DNNL_ARG_SRC, *in_mem}, {DNNL_ARG_DST, *out_mem}});
   stream->Submit();
 }
@@ -171,8 +173,8 @@ static DNNLLogSoftmaxBwd& GetLogSoftmaxBwd(const SoftmaxParam& param,
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
-    auto diff_mem = data[0].GetDNNLData();
-    auto data_mem = data[1].GetDNNLData();
+    auto diff_mem = static_cast<const dnnl::memory*>(data[0].GetDNNLData());
+    auto data_mem = static_cast<const dnnl::memory*>(data[1].GetDNNLData());
     auto fwd_pd   = GetLogSoftmaxFwdPd(true, real_axis, *data_mem);
     DNNLLogSoftmaxBwd bwd(*diff_mem, *data_mem, real_axis, fwd_pd);
     it = AddToCache(&bwds, key, bwd);
@@ -190,8 +192,8 @@ void DNNLLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_data.size(), 2U);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis                  = CheckAxis(param.axis, in_data[1].shape().ndim());
-  auto diff_mem             = in_data[0].GetDNNLData();
-  auto data_mem             = in_data[1].GetDNNLData();
+  auto diff_mem             = static_cast<const dnnl::memory*>(in_data[0].GetDNNLData());
+  auto data_mem             = static_cast<const dnnl::memory*>(in_data[1].GetDNNLData());
   auto bwd                  = GetLogSoftmaxBwd(param, axis, in_data, out_data);
 
   auto out_mem         = CreateDNNLMem(out_data[0], bwd.pd.diff_src_desc(), req[0]);

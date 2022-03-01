@@ -84,7 +84,7 @@ static DNNLSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam& p
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    auto in_mem = *(in_data.GetDNNLData());
+    auto in_mem = *(static_cast<const dnnl::memory*>(in_data.GetDNNLData()));
     DNNLSoftmaxOutputFwd fwd(param, ctx.is_train, axis, in_mem);
     it = AddToCache(&fwds, key, fwd);
   }
@@ -109,7 +109,7 @@ void DNNLSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
     idata = in_data[softmaxout_enum::kData].Reorder2Default();
   }
 
-  auto input_mem = idata.GetDNNLData();
+  auto input_mem = static_cast<const dnnl::memory*>(idata.GetDNNLData());
   auto out_mem   = CreateDNNLMem(
       out_data[softmaxout_enum::kOut], input_mem->get_desc(), req[softmaxout_enum::kOut]);
 

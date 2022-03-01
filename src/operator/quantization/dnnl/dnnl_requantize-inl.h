@@ -80,7 +80,7 @@ static void DNNLRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
   if (inputs[0].IsView() && inputs[0].IsDNNLData())
     in_buffer = inputs[0].Reorder2Default();
 
-  auto i_mem            = in_buffer.GetDNNLData();
+  auto i_mem            = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
   auto i_desc           = i_mem->get_desc();
   auto o_desc           = i_desc;
   o_desc.data.data_type = get_dnnl_type_t<DstType>();

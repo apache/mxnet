@@ -41,7 +41,7 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   const NDArray& data         = in_data[quantized_batchnorm::kData];
-  auto data_mem               = data.GetDNNLData();
+  auto data_mem               = static_cast<const dnnl::memory*>(data.GetDNNLData());
 
   // reorder if data type = uint8
   if (in_data[quantized_batchnorm::kData].dtype() == mshadow::kUint8) {
@@ -97,8 +97,10 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   float* moving_var_ptr      = moving_var.data().dptr<float>();
 
   // rescale gamma and beta, to make mean=0 and var=1
-  auto rescaled_mean_mem   = TmpMemMgr::Get()->Alloc(moving_mean.GetDNNLData()->get_desc());
-  auto rescaled_var_mem    = TmpMemMgr::Get()->Alloc(moving_var.GetDNNLData()->get_desc());
+  auto rescaled_mean_mem = TmpMemMgr::Get()->Alloc(
+      static_cast<const dnnl::memory*>(moving_mean.GetDNNLData())->get_desc());
+  auto rescaled_var_mem = TmpMemMgr::Get()->Alloc(
+      static_cast<const dnnl::memory*>(moving_var.GetDNNLData())->get_desc());
   float* rescaled_mean_ptr = reinterpret_cast<float*>(rescaled_mean_mem->get_data_handle());
   float* rescaled_var_ptr  = reinterpret_cast<float*>(rescaled_var_mem->get_data_handle());
 
@@ -114,7 +116,9 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   }
 
   const NDArray& out = outputs[batchnorm::kOut];
-  auto out_mem       = const_cast<NDArray&>(out).CreateDNNLData(fwd.GetPd().dst_desc());
+  auto fwd_dst_desc  = fwd.GetPd().dst_desc();
+  auto out_mem =
+      static_cast<const dnnl::memory*>(const_cast<NDArray&>(out).CreateDNNLData(&fwd_dst_desc));
   dnnl_args_map_t net_args;
   net_args[DNNL_ARG_SRC]         = *data_mem;
   net_args[DNNL_ARG_SCALE_SHIFT] = weight_mem;

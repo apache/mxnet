@@ -176,11 +176,13 @@ void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
   NDArray& data = in_data[batchnorm::kData];
   if (data.IsDNNLData() && data.IsView())
     data = data.Reorder2Default();
-  auto data_mem = data.GetDNNLData();
+  auto data_mem = static_cast<const dnnl::memory*>(data.GetDNNLData());
   auto& fwd     = GetBNForward<DType>(param, ctx, data_mem, flags);
 
   // for output memory
-  auto out_mem = const_cast<NDArray&>(out).CreateDNNLData(fwd.GetPd().dst_desc());
+  auto fwd_dst_desc = fwd.GetPd().dst_desc();
+  auto out_mem =
+      static_cast<const dnnl::memory*>(const_cast<NDArray&>(out).CreateDNNLData(&fwd_dst_desc));
 
   // mxnet will always use scale shift.
   // But if fix_gamma is true, then all scale elements will be set to 1.0f
@@ -226,7 +228,9 @@ void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
         LOG(FATAL) << "oneDNN BatchNorm: incorrect workspace input";
       }
       auto ws = std::make_shared<dnnl::memory>(
-          fwd.GetPd().workspace_desc(), engine, workspace->GetDNNLData()->get_data_handle());
+          fwd.GetPd().workspace_desc(),
+          engine,
+          static_cast<const dnnl::memory*>(workspace->GetDNNLData())->get_data_handle());
       net_args[DNNL_ARG_WORKSPACE] = *ws;
     }
     if (!ctx.is_train || param.use_global_stats) {
@@ -239,15 +243,17 @@ void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
         omean[i] = inmean[i];
         ovar[i]  = VARIANCE_TO_INVSTD(invar[i], param.eps);
       }
-      net_args[DNNL_ARG_MEAN]     = *(aux_states[batchnorm::kMovingMean].GetDNNLData());
-      net_args[DNNL_ARG_VARIANCE] = *(aux_states[batchnorm::kMovingVar].GetDNNLData());
+      net_args[DNNL_ARG_MEAN] =
+          *(static_cast<const dnnl::memory*>(aux_states[batchnorm::kMovingMean].GetDNNLData()));
+      net_args[DNNL_ARG_VARIANCE] =
+          *(static_cast<const dnnl::memory*>(aux_states[batchnorm::kMovingVar].GetDNNLData()));
       DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       DNNLStream::Get()->Submit();
     } else {  // training
       const NDArray& outMean      = outputs[batchnorm::kMean];
       const NDArray& outVar       = outputs[batchnorm::kVar];
-      net_args[DNNL_ARG_MEAN]     = *(outMean.GetDNNLData());
-      net_args[DNNL_ARG_VARIANCE] = *(outVar.GetDNNLData());
+      net_args[DNNL_ARG_MEAN]     = *(static_cast<const dnnl::memory*>(outMean.GetDNNLData()));
+      net_args[DNNL_ARG_VARIANCE] = *(static_cast<const dnnl::memory*>(outVar.GetDNNLData()));
       DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       DNNLStream::Get()->Submit();
 
@@ -374,14 +380,17 @@ void DNNLBatchNormBackward(const nnvm::NodeAttrs& attrs,
     gradIn = gradIn.Reshape(new_shape);
   }
 
-  auto data_mem = data.GetDNNLData();
-  auto diff_mem = diff.GetDNNLData();
+  auto data_mem = static_cast<const dnnl::memory*>(data.GetDNNLData());
+  auto diff_mem = static_cast<const dnnl::memory*>(diff.GetDNNLData());
   // DNNL batchnorm should run on special layouts. If one of them isn't, we
   // should reorder them.
-  if (data.IsDefaultData())
-    data_mem = data.GetDNNLDataReorder(diff_mem->get_desc());
-  else if (diff.IsDefaultData())
-    diff_mem = diff.GetDNNLDataReorder(data_mem->get_desc());
+  if (data.IsDefaultData()) {
+    auto diff_desc = diff_mem->get_desc();
+    data_mem       = static_cast<const dnnl::memory*>(data.GetDNNLDataReorder(&diff_desc));
+  } else if (diff.IsDefaultData()) {
+    auto data_desc = data_mem->get_desc();
+    diff_mem       = static_cast<const dnnl::memory*>(diff.GetDNNLDataReorder(&data_desc));
+  }
   auto& bwd = GetBNBackward<DType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
   auto gradi_mem =
       CreateDNNLMem(const_cast<NDArray&>(gradIn), bwd.pd.diff_src_desc(), req[batchnorm::kData]);
@@ -414,7 +423,8 @@ void DNNLBatchNormBackward(const nnvm::NodeAttrs& attrs,
       const NDArray* workspace = nullptr;
       workspace                = &inputs[8];
       if (workspace != nullptr) {
-        net_args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
+        net_args[DNNL_ARG_WORKSPACE] =
+            *(static_cast<const dnnl::memory*>(workspace->GetDNNLData()));
       }
     }
 
@@ -434,11 +444,11 @@ void DNNLBatchNormBackward(const nnvm::NodeAttrs& attrs,
         tmp_var_ptr[i]     = variance;
         moving_var_ptr[i]  = moving_var_ptr[i] * param.momentum + variance * minus_mom;
       }
-      net_args[DNNL_ARG_MEAN]     = *(out_mean.GetDNNLData());
+      net_args[DNNL_ARG_MEAN]     = *(static_cast<const dnnl::memory*>(out_mean.GetDNNLData()));
       net_args[DNNL_ARG_VARIANCE] = var_mem;
     } else {
-      net_args[DNNL_ARG_MEAN]     = *(moving_mean.GetDNNLData());
-      net_args[DNNL_ARG_VARIANCE] = *(moving_var.GetDNNLData());
+      net_args[DNNL_ARG_MEAN]     = *(static_cast<const dnnl::memory*>(moving_mean.GetDNNLData()));
+      net_args[DNNL_ARG_VARIANCE] = *(static_cast<const dnnl::memory*>(moving_var.GetDNNLData()));
     }
     DNNLStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
     CommitOutput(gradIn, gradi_mem);

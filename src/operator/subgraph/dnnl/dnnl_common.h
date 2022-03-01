@@ -103,8 +103,8 @@ static inline void ConvertWeightBias2DNNL(NDArray* weight,
                                           const std::vector<float>& weight_scales,
                                           const bool submit = true) {
   DNNLStream* stream             = DNNLStream::Get();
-  const auto new_weight          = NDArray(weight_md);
-  const auto conv_weights_memory = new_weight.GetDNNLData();
+  const auto new_weight          = NDArray(&weight_md);
+  const auto conv_weights_memory = static_cast<const dnnl::memory*>(new_weight.GetDNNLData());
   dnnl::primitive_attr weight_attr;
   if (weight_scales.size()) {
     const int weight_mask = (weight_scales.size()) == 1 ? 0 : 1;
@@ -112,7 +112,7 @@ static inline void ConvertWeightBias2DNNL(NDArray* weight,
   }
   auto default_weights_memory = GetWeights(*weight, num_group);
   if (default_weights_memory == nullptr)
-    default_weights_memory = weight->GetDNNLData();
+    default_weights_memory = static_cast<const dnnl::memory*>(weight->GetDNNLData());
   const auto weight_reorder_pd =
       dnnl::reorder::primitive_desc(*default_weights_memory, *conv_weights_memory, weight_attr);
   DNNLStream::Get()->RegisterPrimArgs(
@@ -124,12 +124,12 @@ static inline void ConvertWeightBias2DNNL(NDArray* weight,
     for (size_t c = 0; c < weight_scales.size(); ++c) {
       bias_scales[c] = weight_scales[c] * data_scale;
     }
-    new_bias                    = NDArray(*bias_md);
-    const auto conv_bias_memory = new_bias.GetDNNLData();
+    new_bias                    = NDArray(bias_md);
+    const auto conv_bias_memory = static_cast<const dnnl::memory*>(new_bias.GetDNNLData());
     const int bias_mask         = (bias_scales.size()) == 1 ? 0 : 1;
     dnnl::primitive_attr bias_attr;
     bias_attr.set_output_scales(bias_mask, bias_scales);
-    auto bias_weights_memory = bias->GetDNNLData();
+    auto bias_weights_memory = static_cast<const dnnl::memory*>(bias->GetDNNLData());
     const auto bias_reorder_pd =
         dnnl::reorder::primitive_desc(*bias_weights_memory, *conv_bias_memory, bias_attr);
     DNNLStream::Get()->RegisterPrimArgs(

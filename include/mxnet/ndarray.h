@@ -36,9 +36,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#if MXNET_USE_ONEDNN == 1
-#include <dnnl.hpp>
-#endif
 #include "./base.h"
 #include "./engine.h"
 #include "./storage.h"
@@ -738,12 +735,12 @@ class NDArray {
    * Create NDArray from dnnl memory.
    * dnnl_mem The dnnl memory to be managed.
    */
-  explicit NDArray(const std::shared_ptr<dnnl::memory>& dnnl_mem);
+  explicit NDArray(const std::shared_ptr<void>& dnnl_mem);
   /*
    * Create NDArray from dnnl memory descriptor.
    * mem_pd The dnnl memory descriptor to be created.
    */
-  explicit NDArray(const dnnl::memory::desc& md);
+  explicit NDArray(const void* md);
   /*
    * Test if the data is stored in one of special DNNL formats.
    */
@@ -766,28 +763,28 @@ class NDArray {
   /*
    * This function returns dnnl::memory with the default primitive_desc.
    */
-  const dnnl::memory* GetDNNLData() const;
+  const void* GetDNNLData() const;
   /*
    * This function returns dnnl::memory with the given primitive_desc
    * as long as the array size meets the required size in the given primitive_desc.
    */
-  const dnnl::memory* GetDNNLData(const dnnl::memory::desc& md) const;
+  const void* GetDNNLData(const void* md) const;
   /*
    * This function returns dnnl::memory with the given primitive_desc.
    * The returned dnnl::memory will have the same physical layout as
    * the given primitive_desc.
    */
-  const dnnl::memory* GetDNNLDataReorder(const dnnl::memory::desc& md) const;
+  const void* GetDNNLDataReorder(const void* md) const;
 
   /*
    * This function copies data from dnnl memory.
    */
-  void CopyFrom(const dnnl::memory& mem);
+  void CopyFrom(const void* mem);
   /*
    * This function allocates memory for array and creates dnnl memory
    * with the specified format.
    */
-  dnnl::memory* CreateDNNLData(const dnnl::memory::desc& md);
+  void* CreateDNNLData(const void* md);
 
   /*
    * These are the async version of the methods above.
@@ -795,7 +792,7 @@ class NDArray {
    * the array are complete.
    */
   void Reorder2DefaultAsync() const;
-  void DNNLDataReorderAsync(const dnnl::memory::desc& md) const;
+  void DNNLDataReorderAsync(const void* md) const;
 
   /*
    * This creates a new NDArray with the reordered data.
@@ -826,7 +823,7 @@ class NDArray {
   /*!
    * \ Fix dnnl memory descriptor mismatch from NDArray.
    */
-  void UpdateDNNLMemDesc(const dnnl::memory::desc& desc);
+  void UpdateDNNLMemDesc(const void* desc);
 #endif
 
   /*!
@@ -1111,7 +1108,7 @@ class NDArray {
     // save the result in shandle.
     void Reorder2Default();
     // Reroder data to a specified layout.
-    void DNNLDataReorder(const dnnl::memory::desc& md);
+    void DNNLDataReorder(const void* md);
     bool IsDNNL() const;
     bool IsDefault() const;
 #endif

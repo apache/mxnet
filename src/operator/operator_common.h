@@ -615,7 +615,8 @@ class OpSignature {
   void AddSign(const NDArray& arr) {
 #if MXNET_USE_ONEDNN == 1
     if (arr.IsDNNLData()) {
-      AddSign(*(arr.GetDNNLData()));
+      auto arr_data = static_cast<const dnnl::memory*>(arr.GetDNNLData());
+      AddSign(*(arr_data));
     } else {
 #endif
       hash = hash * 2 + arr.dtype();

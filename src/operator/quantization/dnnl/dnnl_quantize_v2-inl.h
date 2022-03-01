@@ -79,13 +79,14 @@ void SgDNNLQuantizeOperator::Forward(const OpContext& ctx,
       }
     }
     if (req[0] != kWriteInplace) {
-      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetDNNLData());
+      const_cast<NDArray&>(outputs[0])
+          .CopyFrom(static_cast<const dnnl::memory*>(inputs[0].GetDNNLData()));
       DNNLStream::Get()->Submit();
     }
   } else {
     if (in_buffer.IsView() && in_buffer.IsDNNLData())
       in_buffer = inputs[0].Reorder2Default();
-    auto i_mem = in_buffer.GetDNNLData();
+    auto i_mem = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
 
     if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
       data_min = param_.min_calib_range.value();

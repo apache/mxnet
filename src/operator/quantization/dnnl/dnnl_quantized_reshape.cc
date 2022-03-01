@@ -39,7 +39,9 @@ static void DNNLQuantizedReshapeForward(const nnvm::NodeAttrs& attrs,
 
   if (SupportDNNLReshape(inputs[0], outputs[0])) {
     OpReqType reqType;
-    if (inputs[0].GetDNNLData()->get_data_handle() != outputs[0].GetDNNLData()->get_data_handle())
+    auto input_data  = static_cast<const dnnl::memory*>(inputs[0].GetDNNLData());
+    auto output_data = static_cast<const dnnl::memory*>(outputs[0].GetDNNLData());
+    if (input_data->get_data_handle() != output_data->get_data_handle())
       reqType = kWriteTo;
     else
       reqType = req[0];
