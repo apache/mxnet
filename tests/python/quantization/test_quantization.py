@@ -1415,37 +1415,24 @@ def test_get_optimal_thresholds():
         assert_almost_equal(onp.array([min_max_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
 
-
-
 @use_np
-def test_quantized_rnn():
+def test_rnn_quantization():
     data_low = -1
     data_high = 1
-    def check_quantized_rnn(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size):
+    def check_rnn_quantization(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size):
         data_shape = (seq_len, batch_size, input_dim)
 
-        print(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size)
         rnn_fp32 = mx.gluon.rnn.LSTM(hidden_size=state_size,
                                      num_layers = num_layers,
                                      bidirectional=bidirectional)
-        # run fp32 bn
+
         data = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape)
         states_shape = (num_layers * 2 if bidirectional else num_layers, batch_size, state_size)
         states = [mx.np.zeros((states_shape)) for _ in range(batch_size)]
 
         rnn_fp32.initialize()
         rnn_fp32.hybridize()
-        
         ref_out = rnn_fp32(data, states)
-        # print(ref_out)
-        fp32_params = rnn_fp32.collect_params()
-        sym, p = rnn_fp32.export(None)
-        rnn_fp32.export("WTF")
-        data_min = mx.np.min(data)
-        data_max = mx.np.max(data)
-        data_scale = 128.0 / (data_max - data_min)
-        data_shift = 128.0 - data_max * data_scale
-        qdata = (data * data_scale + data_shift + 0.5).astype('uint8')
 
         class RNNDataLoader(mx.gluon.data.DataLoader):
             def __init__(self, data, states):
@@ -1462,29 +1449,73 @@ def test_quantized_rnn():
             def __bool__(self):
                 return bool(self.dataiter.iter_next())
 
-        # generate int8 bn from fp32 bn
-        # dataset = mx.gluon.data.ArrayDataset(data, [states[0]], [states[1]])
-        # calib_data = mx.gluon.data.DataLoader(dataset, batch_size=batch_size)
         calib_data = RNNDataLoader(data, states)
-        # qsym, qparams = mx.contrib.quant._quantize_symbol(sym, device=mx.current_device(),
-        #                                     offline_params=p, quantize_mode='full')
-        # qsym.save("XDD")
-        # inputs = [mx.sym.var('data0'), mx.sym.var('data1'), mx.sym.var('data2')]
-        # calib_net = mx.gluon.SymbolBlock(qsym, inputs)
         quant_rnn = mx.contrib.quant.quantize_net(rnn_fp32,
-                                                 quantized_dtype='auto',
-                                                 quantize_mode='full',
-                                                 calib_data=calib_data,
-                                                 calib_mode='naive',
-                                                 num_calib_batches=1,
-                                                 device=mx.current_device())
-        #calib_net.load_dict(p, cast_dtype=True, dtype_source='saved', allow_missing=True)
-        output_int8_to_fp32 = quant_rnn(data, states)
-        
-        assert_almost_equal(ref_out[0].asnumpy(), output_int8_to_fp32[0].asnumpy(), rtol=1e-1, atol=8)
-        print(ref_out[0][0])
-        print("============")
-        print(output_int8_to_fp32[0][0])
+                                                  quantized_dtype='auto',
+                                                  quantize_mode='full',
+                                                  calib_data=calib_data,
+                                                  calib_mode='naive',
+                                                  num_calib_batches=1,
+                                                  device=mx.current_device())
+        qout = quant_rnn(data, states)
+
+        qsym, _ = quant_rnn.export(None)
+        assert qsym.tojson().find("quantized_rnn") != -1
+
+        ref_out = [ref_out[0], ref_out[1][0], ref_out[1][1]]
+        for i in range(len(qout)):
+            mse = onp.mean((ref_out[i].asnumpy() - qout[i].asnumpy())**2)
+            assert mse < 0.001
+
+    for qdtype in ['int8', 'uint8']:
+        check_rnn_quantization(1, False, 5, 2, 16, 16)
+        check_rnn_quantization(1, True, 5, 2, 16, 16)
+
+
+
+@use_np
+def test_quantized_rnn():
+    def check_quantized_rnn(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size):
+        ndir = 2 if bidirectional else 1
+        size = ndir*state_size*4
+        first_lyr_param_size = (input_dim + state_size + 2) * size
+        other_lyr_param_size = (state_size * ndir + state_size + 2) * size
+        full_param_size = first_lyr_param_size + (num_layers - 1) * other_lyr_param_size
+
+        data = mx.np.random.uniform(-1, 1, (seq_len, batch_size, input_dim))
+        state = mx.np.random.uniform(-1, 1, (num_layers*ndir, batch_size, state_size))
+        state_cell = mx.np.random.uniform(0, 1, (num_layers*ndir, batch_size, state_size))
+        params = mx.np.random.normal(0, 1, (full_param_size,))
+
+        out = npx.rnn(data=data,
+                      parameters=params,
+                      mode='lstm',
+                      state=state,
+                      state_size=state_size,
+                      state_cell=state_cell,
+                      num_layers=num_layers,
+                      bidirectional=bidirectional)
+
+        data_min = mx.np.min(data)
+        data_max = mx.np.max(data)
+        data_scale = mx.np.array(128.0 / (data_max - data_min)).reshape((1,))
+        data_shift = mx.np.array(128.0 - data_max * data_scale).reshape((1,))
+
+        qdata = (data * data_scale + data_shift + 0.5).astype('uint8')
+        qout = npx.contrib_quantized_rnn(data=qdata,
+                                         parameters=params,
+                                         mode='lstm',
+                                         state=state,
+                                         state_size=state_size,
+                                         state_cell=state_cell,
+                                         num_layers=num_layers,
+                                         bidirectional=bidirectional,
+                                         data_scale=data_scale,
+                                         data_shift=data_shift)
+
+        mse = onp.mean((out.asnumpy() - qout.asnumpy())**2)
+        assert mse < 0.001
+
     for qdtype in ['int8', 'uint8']:
         check_quantized_rnn(1, False, 5, 2, 16, 16)
         check_quantized_rnn(1, True, 5, 2, 16, 16)

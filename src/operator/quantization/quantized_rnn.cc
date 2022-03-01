@@ -288,6 +288,7 @@ static std::vector<ResourceRequest> QuantizedRnnResourceEx(const NodeAttrs& attr
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_rnn)
+    .add_alias("_npx_contrib_quantized_rnn")
     .describe(
         R"code(RNN operator for input data type of uint8. The weight of each gates is converted
 to int8, while bias is accumulated in type float32. The hidden state and cell state are in type
@@ -328,8 +329,12 @@ NNVM_REGISTER_OP(RNN)
                               const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
                               if (param.mode != rnn_enum::kLstm)
                                 LOG(INFO) << "Quantized RNN only supports LSTM mode.";
-                              return param.mode == rnn_enum::kLstm ? QuantizeType::kMust :
-                                                                     QuantizeType::kNone;
+                              if (param.mode == rnn_enum::kLstm &&
+                                  !param.projection_size.has_value()) {
+                                return QuantizeType::kMust;
+                              } else {
+                                return QuantizeType::kNone;
+                              }
 #else
     LOG(INFO) << "Quantized RNN is not supported by this MXNet release. Please enable oneDNN to "
               << "use the feature.";
