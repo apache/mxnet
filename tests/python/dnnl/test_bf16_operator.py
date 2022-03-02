@@ -222,23 +222,23 @@ def test_bf16_binary_broadcast_elemwise_funcs():
         dshapes = {"data": dshape_0, "data_1": dshape_1}
         check_operator_accuracy(sym_fp32, sym_bf16, dshapes, num_input_data=2, bf16_use_fp32_params=False)
 
-@pytest.mark.skip(reason="env dependent, need check further.")
 def test_bf16_concat():
     dshape = rand_shape_nd(4)
     a_shape = tuple(dshape)
     b_shape = tuple(dshape)
 
-    a_sym_fp32 = mx.sym.Variable("data", shape=a_shape)
-    b_sym_fp32 = mx.sym.Variable("data_1", shape=b_shape)
+    a_sym_fp32 = mx.sym.Variable("data")
+    b_sym_fp32 = mx.sym.Variable("data_1")
 
-    a_sym_bf16 = mx.sym.Variable("data", dtype=bfloat16, shape=a_shape)
-    b_sym_bf16 = mx.sym.Variable("data_1", dtype=bfloat16, shape=b_shape)
+    a_sym_bf16 = mx.sym.Variable("data", dtype=bfloat16)
+    b_sym_bf16 = mx.sym.Variable("data_1", dtype=bfloat16)
     for axis in range(0, 4):
-        print(axis, a_shape)
         concat_sym_fp32 = mx.sym.concat(a_sym_fp32, b_sym_fp32, dim=axis)
         concat_sym_bf16 = mx.sym.concat(a_sym_bf16, b_sym_bf16, dim=axis)
 
-        check_operator_accuracy(concat_sym_fp32, concat_sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
+        dshapes = {'data': a_shape, 'data_1': b_shape}
+        check_operator_accuracy(concat_sym_fp32, concat_sym_bf16, dshapes,
+                                num_input_data=2, bf16_use_fp32_params=True)
 
 def test_bf16_abs():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
