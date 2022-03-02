@@ -113,6 +113,8 @@ class MappedNodeEntry {
 using EntryMap_t     = nnvm::NodeEntryMap<MappedNodeEntry>;
 using NodeMap_t      = std::unordered_map<Node*, ObjectPtr>;
 using NodeEntrySet_t = std::unordered_set<NodeEntry, nnvm::NodeEntryHash, nnvm::NodeEntryEqual>;
+using NodesEntries_t = std::unordered_map<Node*, NodeEntrySet_t>;
+using DstNodes_t     = std::unordered_map<Node*, std::unordered_map<Node*, NodeEntry>>;
 
 static void keep_original_node(const ObjectPtr& old_node,
                                const NodeMap_t& node_map,
@@ -126,6 +128,7 @@ static void keep_original_node(const ObjectPtr& old_node,
 static bool try_low_precision(const int target_dtype,
                               const ObjectPtr& old_node,
                               const NodeMap_t& node_map,
+                              const NodesEntries_t& nodes_entries,
                               EntryMap_t* const entry_map) {
   static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
@@ -155,9 +158,8 @@ static bool try_low_precision(const int target_dtype,
     new_node->inputs.push_back(entry_map->at(old_node->inputs[i]).as_type(in_types[i]));
   }
 
-  for (size_t i = 0; i < old_node->num_outputs(); ++i) {
-    // TODO(PawelGlomski-Intel): use actual outputs (take version into account)
-    entry_map->at(NodeEntry(old_node, i, 0)).convert(out_types[i]);
+  for (const NodeEntry& old_ne : nodes_entries.at(old_node.get())) {
+    entry_map->at(old_ne).convert(out_types[old_ne.index]);
   }
 
   return true;
@@ -166,6 +168,7 @@ static bool try_low_precision(const int target_dtype,
 static bool try_widest_dtype_node(const ObjectPtr& old_node,
                                   const int target_dtype,
                                   const NodeMap_t& node_map,
+                                  const NodesEntries_t& nodes_entries,
                                   EntryMap_t* entry_map) {
   static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
@@ -193,10 +196,10 @@ static bool try_widest_dtype_node(const ObjectPtr& old_node,
     CHECK(infertype.count(old_node->op()));
     CHECK(infertype[old_node->op()](old_node->attrs, &in_types, &out_types));
 
-    // TODO(PawelGlomski-Intel): use actual outputs (take version into account)
-    for (size_t i = 0; i < old_node->num_outputs(); ++i) {
-      entry_map->at(NodeEntry(old_node, i, 0)).convert(out_types[i]);
+    for (const NodeEntry& old_ne : nodes_entries.at(old_node.get())) {
+      entry_map->at(old_ne).convert(out_types[old_ne.index]);
     }
+
   } else {
     for (const NodeEntry& old_ne : old_node->inputs) {
       new_node->inputs.push_back(entry_map->at(old_ne).as_original());
@@ -204,6 +207,44 @@ static bool try_widest_dtype_node(const ObjectPtr& old_node,
     // no need to update outputs in the entry_map since this node is unchanged
   }
   return true;
+}
+
+static void remove_param_casts(const NodeMap_t& node_map,
+                               const DstNodes_t& old_param_dst_nodes,
+                               const int target_dtype,
+                               EntryMap_t* entry_map) {
+  for (const auto& [old_param, old_param_dsts] : old_param_dst_nodes) {
+    const ObjectPtr& new_param      = node_map.at(old_param);
+    const auto& can_be_cast_offline = [&](const auto& old_node_x_ne_pair) {
+      const ObjectPtr& new_node        = node_map.at(old_node_x_ne_pair.first);
+      const MappedNodeEntry& mapped_ne = entry_map->at(old_node_x_ne_pair.second);
+      for (const NodeEntry& node_entry : new_node->inputs) {
+        if (node_entry.node == new_param) {
+          return false;
+        }
+      }
+      return mapped_ne.can_be_cast_offline_to(target_dtype);
+    };
+
+    if (std::all_of(old_param_dsts.begin(), old_param_dsts.end(), can_be_cast_offline)) {
+      nnvm::NodeEntryEqual are_equal;
+      for (const auto& [old_dst_node, old_ne] : old_param_dsts) {
+        MappedNodeEntry& mapped_ne      = entry_map->at(old_ne);
+        const NodeEntry& new_ne_to_skip = mapped_ne.as_type(target_dtype);
+        const ObjectPtr& new_dst_node   = node_map.at(old_dst_node);
+        bool skipped_amp_cast           = false;
+        for (NodeEntry& new_ne : new_dst_node->inputs) {
+          if (are_equal(new_ne, new_ne_to_skip)) {
+            new_ne           = mapped_ne.entry;
+            skipped_amp_cast = true;
+            break;
+          }
+        }
+        CHECK(skipped_amp_cast);
+      }
+      new_param->attrs.dict["__dtype__"] = std::to_string(target_dtype);
+    }
+  }
 }
 
 Graph ReducePrecision(Graph&& src) {
@@ -227,8 +268,8 @@ Graph ReducePrecision(Graph&& src) {
 
   NodeMap_t node_map;
   EntryMap_t entry_map;
-  std::unordered_map<Node*, NodeEntrySet_t> node_out_entries;
-  std::unordered_map<Node*, std::unordered_map<Node*, NodeEntry>> old_param_dst_nodes;
+  NodesEntries_t nodes_entries;
+  DstNodes_t old_param_dst_nodes;
 
   const auto& register_node_entry =
       [&](const NodeEntry& old_ne, Node* const old_dst_node, Node* const new_dst_node) {
@@ -240,7 +281,7 @@ Graph ReducePrecision(Graph&& src) {
         const NodeEntry new_ne        = NodeEntry(new_src_node, old_ne.index, old_ne.version);
 
         entry_map.emplace(old_ne, MappedNodeEntry(new_ne, original_ne_dtype));
-        node_out_entries[new_src_node.get()].insert(new_ne);
+        nodes_entries[old_src_node.get()].insert(old_ne);
 
         if (new_dst_node && old_src_node->is_variable() &&
             input_names.count(old_src_node->attrs.name) == 0) {
@@ -276,11 +317,11 @@ Graph ReducePrecision(Graph&& src) {
     if (fp32_ops.count(old_node->op()->name) > 0 || excluded_syms.count(old_node->attrs.name) > 0) {
       keep_original_node(old_node, node_map, &entry_map);
     } else if (target_dtype_ops.count(old_node->op()->name) > 0) {
-      if (!try_low_precision(target_dtype, old_node, node_map, &entry_map)) {
+      if (!try_low_precision(target_dtype, old_node, node_map, nodes_entries, &entry_map)) {
         keep_original_node(old_node, node_map, &entry_map);
       }
     } else if (widest_dtype_ops.count(old_node->op()->name) > 0) {
-      if (!try_widest_dtype_node(old_node, target_dtype, node_map, &entry_map))
+      if (!try_widest_dtype_node(old_node, target_dtype, node_map, nodes_entries, &entry_map))
         keep_original_node(old_node, node_map, &entry_map);
     } else {
       // handle operators that can run on lp16, but only when inputs are already cast
@@ -289,7 +330,7 @@ Graph ReducePrecision(Graph&& src) {
       };
       bool runs_lp = false;
       if (std::any_of(old_node->inputs.begin(), old_node->inputs.end(), has_lp_inputs)) {
-        runs_lp = try_low_precision(target_dtype, old_node, node_map, &entry_map);
+        runs_lp = try_low_precision(target_dtype, old_node, node_map, nodes_entries, &entry_map);
       }
       if (!runs_lp) {
         keep_original_node(old_node, node_map, &entry_map);
@@ -303,38 +344,7 @@ Graph ReducePrecision(Graph&& src) {
   }
 
   if (cast_params_offline) {
-    for (const auto& [old_param, old_param_dsts] : old_param_dst_nodes) {
-      const ObjectPtr& new_param      = node_map.at(old_param);
-      const auto& can_be_cast_offline = [&](const auto& old_node_x_ne_pair) {
-        const ObjectPtr& new_node        = node_map.at(old_node_x_ne_pair.first);
-        const MappedNodeEntry& mapped_ne = entry_map.at(old_node_x_ne_pair.second);
-        for (const NodeEntry& node_entry : new_node->inputs) {
-          if (node_entry.node == new_param) {
-            return false;
-          }
-        }
-        return mapped_ne.can_be_cast_offline_to(target_dtype);
-      };
-
-      if (std::all_of(old_param_dsts.begin(), old_param_dsts.end(), can_be_cast_offline)) {
-        nnvm::NodeEntryEqual are_equal;
-        for (const auto& [old_dst_node, old_ne] : old_param_dsts) {
-          MappedNodeEntry& mapped_ne      = entry_map.at(old_ne);
-          const NodeEntry& new_ne_to_skip = mapped_ne.as_type(target_dtype);
-          const ObjectPtr& new_dst_node   = node_map.at(old_dst_node);
-          bool skipped_amp_cast           = false;
-          for (NodeEntry& new_ne : new_dst_node->inputs) {
-            if (are_equal(new_ne, new_ne_to_skip)) {
-              new_ne           = mapped_ne.entry;
-              skipped_amp_cast = true;
-              break;
-            }
-          }
-          CHECK(skipped_amp_cast);
-        }
-        new_param->attrs.dict["__dtype__"] = std::to_string(target_dtype);
-      }
-    }
+    remove_param_casts(node_map, old_param_dst_nodes, target_dtype, &entry_map);
   }
 
   Graph ret;
