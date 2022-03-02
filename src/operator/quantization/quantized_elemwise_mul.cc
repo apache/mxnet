@@ -198,7 +198,7 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
       }
     }
   } else {
-    typedef float_t out_type;
+    typedef float out_type;
     auto *out_data = outputs[quantized_elemwise_mul::kOut].dptr<out_type>();
 #if !defined(_MSC_VER)
 #pragma omp simd
