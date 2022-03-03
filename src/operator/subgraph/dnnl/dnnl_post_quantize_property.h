@@ -69,7 +69,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
 
  public:
   explicit SgDNNLPostQuantizeSelector(const bool fuse_all, const bool float_output)
-      : fuse_all(fuse_all), float_output(float_output){};
+      : fuse_all(fuse_all), float_output(float_output) {}
 
   bool Select(const BiDirectedNode& n) override {
     const nnvm::Node* raw_node = n.node;
