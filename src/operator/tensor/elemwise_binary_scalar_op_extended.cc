@@ -49,8 +49,47 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_minimum_scalar)
     .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::le>);
 
+#if MXNET_USE_ONEDNN == 1
+bool PowerStorageType(const nnvm::NodeAttrs& attrs,
+                      const int dev_mask,
+                      DispatchMode* dispatch_mode,
+                      std::vector<int>* inputs,
+                      std::vector<int>* outputs) {
+  CHECK_EQ(inputs->size(), 1);
+  CHECK_EQ(outputs->size(), 1);
+
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, inputs, outputs);
+}
+
+void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const NDArray& input,
+                      const OpReqType& req,
+                      const NDArray& output) {
+  DNNLPowerFwd& fwd = DNNLPowerFwd::GetPowerForward(attrs, input, output);
+  fwd.Execute(input, req, output);
+}
+
+void PowerComputeExCPU(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<mxnet::NDArray>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<mxnet::NDArray>& outputs) {
+  if (SupportDNNL(inputs[0])) {
+    DNNLRun(DNNLPowerForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    FallBackCompute(
+        BinaryScalarOp::Compute<cpu, mshadow_op::power>, attrs, ctx, inputs, req, outputs);
+  }
+}
+#endif  // MXNET_USE_ONEDNN == 1
+
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_power_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::power>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", PowerComputeExCPU)
+    .set_attr<FInferStorageType>("FInferStorageType", PowerStorageType)
+#endif
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_power_scalar"})
     .add_alias("_PowerScalar");
 
