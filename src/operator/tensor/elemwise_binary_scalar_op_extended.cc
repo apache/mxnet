@@ -61,15 +61,6 @@ bool PowerStorageType(const nnvm::NodeAttrs& attrs,
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, inputs, outputs);
 }
 
-void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const NDArray& input,
-                      const OpReqType& req,
-                      const NDArray& output) {
-  DNNLPowerFwd& fwd = DNNLPowerFwd::GetPowerForward(attrs, input, output);
-  fwd.Execute(input, req, output);
-}
-
 void PowerComputeExCPU(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<mxnet::NDArray>& inputs,

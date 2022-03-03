@@ -55,6 +55,12 @@ class DNNLPowerFwd {
 
 typedef OpSignature DNNLPowerSignature;
 
+void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const NDArray& input,
+                      const OpReqType& req,
+                      const NDArray& output);
+
 }  // namespace op
 }  // namespace mxnet
 

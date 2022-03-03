@@ -74,6 +74,15 @@ void DNNLPowerFwd::Execute(const NDArray& input, const OpReqType& req, const NDA
   DNNLStream::Get()->Submit();
 }
 
+void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const NDArray& input,
+                      const OpReqType& req,
+                      const NDArray& output) {
+  DNNLPowerFwd& fwd = DNNLPowerFwd::GetPowerForward(attrs, input, output);
+  fwd.Execute(input, req, output);
+}
+
 }  // namespace op
 }  // namespace mxnet
 
