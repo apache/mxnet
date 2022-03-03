@@ -78,28 +78,37 @@ void ShuffleND(DType* const out,
   std::shuffle(index.begin(), index.end(), *prnd);
   if (reqT != kWriteInplace) {
     for (index_t i = 0; i < first_axis_len; ++i) {
-      auto j = index[i];
-      std::memcpy(out + stride * j, in + stride * i, stride_bytes);
+      auto j          = index[i];
+      void* const dst = static_cast<void* const>(out + stride * j);
+      void* const src = static_cast<void* const>(in + stride * i);
+      std::memcpy(dst, src, stride_bytes);
     }
   } else {
+    assert(in == out);
     std::vector<bool> done(first_axis_len, false);
     Tensor<cpu, 1, DType> tmp_buf =
         ctx.requested[1].get_space_typed<cpu, 1, DType>(Shape1(stride), ctx.get_stream<cpu>());
+    void* const tmp = static_cast<void*>(tmp_buf.dptr_);
     for (index_t i = 0; i < first_axis_len; ++i) {
       if (!done[i]) {
         index_t pos = index[i];
         if (pos != i) {
-          std::memcpy(tmp_buf.dptr_, in + stride * i, stride_bytes);
-          std::memcpy(out + stride * i, in + stride * pos, stride_bytes);
-          done[i] = true;
+          void* const dst = static_cast<void*>(out + stride * i);
+          void* const src = static_cast<void*>(out + stride * pos);
+          std::memcpy(tmp, dst, stride_bytes);
+          std::memcpy(dst, src, stride_bytes);
+          done[i]        = true;
+          void* dst_loop = static_cast<void*>(out + stride * pos);
           // go through indexes until return to the starting one
           while (index[pos] != i) {
-            index_t next_pos = index[pos];
-            std::memcpy(out + stride * pos, in + stride * next_pos, stride_bytes);
+            const index_t next_pos = index[pos];
+            void* src_loop         = static_cast<void*>(out + stride * next_pos);
+            std::memcpy(dst_loop, src_loop, stride_bytes);
             done[pos] = true;
+            dst_loop  = src_loop;
             pos       = next_pos;
           }
-          std::memcpy(out + stride * pos, tmp_buf.dptr_, stride_bytes);
+          std::memcpy(dst_loop, tmp, stride_bytes);
           done[pos] = true;
         }
       }
