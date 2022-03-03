@@ -145,12 +145,12 @@ static MKLDNNBNForward& GetBNForward(const BatchNormParam& param,
 }
 
 template <typename DType>
-void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<NDArray>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<NDArray>& outputs,
-                            bool fuse_relu) {
+void MKLDNNBatchNormForwardImpl(const nnvm::NodeAttrs &attrs,
+                                const OpContext &ctx,
+                                const std::vector<NDArray> &inputs,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &outputs,
+                                bool fuse_relu) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
 
@@ -267,6 +267,15 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
   }
 }
 
+template <typename DType, bool fuse_relu>
+void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                            const std::vector<NDArray> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<NDArray> &outputs) {
+  MKLDNNBatchNormForwardImpl<DType>(attrs, ctx, inputs, req, outputs,
+                                    fuse_relu);
+}
+
 class MKLDNNBNBackward {
   std::shared_ptr<mkldnn::batch_normalization_backward> bwd;
   const std::shared_ptr<mkldnn::memory> weight_m;
@@ -323,12 +332,12 @@ static MKLDNNBNBackward& GetBNBackward(const BatchNormParam& param,
 }
 
 template <typename DType>
-void MKLDNNBatchNormBackward(const nnvm::NodeAttrs& attrs,
-                             const OpContext& ctx,
-                             const std::vector<NDArray>& inputs,
-                             const std::vector<OpReqType>& req,
-                             const std::vector<NDArray>& outputs,
-                             bool fuse_relu) {
+void MKLDNNBatchNormBackwardImpl(const nnvm::NodeAttrs &attrs,
+                                 const OpContext &ctx,
+                                 const std::vector<NDArray> &inputs,
+                                 const std::vector<OpReqType> &req,
+                                 const std::vector<NDArray> &outputs,
+                                 bool fuse_relu) {
   if (fuse_relu) {
     CHECK_EQ(inputs.size(), 9U);
   } else {
@@ -492,6 +501,15 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs& attrs,
   } else {
     LOG(FATAL) << "MKLDNN batch normalization backward: should not reach here ...";
   }
+}
+
+template <typename DType, bool fuse_relu>
+void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                             const std::vector<NDArray> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<NDArray> &outputs) {
+  MKLDNNBatchNormBackwardImpl<DType>(attrs, ctx, inputs, req, outputs,
+                                     fuse_relu);
 }
 }  // namespace op
 }  // namespace mxnet
