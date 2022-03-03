@@ -83,10 +83,10 @@ DNNLWhereFwd DNNLWhereFwd::GetCached(const Tensors& tensors) {
 
 /*!
  * \brief Align number of input dimensions to output. It is done by prepending shape with ones.
- *        oneDNN requires shapes to have same number of dimension even if they are broadcastable.
+ *        oneDNN requires shapes to have same number of dimensions even if they are broadcastable.
  * \param in_shape input shape which should be broadcastable with output
  * \param out_shape output shape to which number of dimensions of input should be aligned
- * \return input shape with extended number of dimensions by one
+ * \return input shape extended with ones to match number of dimensions of output
  */
 static mxnet::TShape GetBroadcastableShape(const mxnet::TShape& in_shape,
                                            const mxnet::TShape& out_shape) {
