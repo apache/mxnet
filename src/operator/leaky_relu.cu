@@ -28,9 +28,14 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(LeakyReLU).set_attr<FCompute>("FCompute<gpu>", LeakyReLUCompute<gpu>);
+NNVM_REGISTER_OP(LeakyReLU)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", LeakyReLUCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_LeakyReLU)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", LeakyReLUGradCompute<gpu>);
 
 }  // namespace op
