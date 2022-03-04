@@ -27,6 +27,7 @@
 #endif
 
 #include <mxnet/operator_util.h>
+#include <numeric>
 #include <algorithm>
 #include <random>
 #include <vector>
