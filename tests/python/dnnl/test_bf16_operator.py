@@ -222,6 +222,37 @@ def test_bf16_binary_broadcast_elemwise_funcs():
         dshapes = {"data": dshape_0, "data_1": dshape_1}
         check_operator_accuracy(sym_fp32, sym_bf16, dshapes, num_input_data=2, bf16_use_fp32_params=False)
 
+@pytest.mark.parametrize('function', [mx.np.add, mx.np.subtract, mx.np.multiply, mx.np.divide])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+@pytest.mark.parametrize('ndim', [1,2,3,4,5,6])
+def test_bf16_binary_broadcast_elemwise_mixed_input(function, dtype, ndim):
+    dshape_0 = rand_shape_nd(ndim)
+    dshape_1 = tuple()
+    for i in range(ndim):
+        if(randint(0,1)):
+            dshape_1 += (dshape_0[i], )
+        else:
+            dshape_1 += (1, )
+
+    a = mx.np.random.uniform(-1, 1, dshape_0, dtype=np.float32)
+    a_fp32 = mx.np.array(a, dtype=dtype)
+    a_bf16 = (mx.nd.amp_cast(a.as_nd_ndarray(), dtype=bfloat16)).as_np_ndarray()
+
+    b = mx.np.random.uniform(-1, 1, dshape_1, dtype=np.float32)
+    b_fp32 = mx.np.array(b, dtype=dtype)
+    b_bf16 = (mx.nd.amp_cast(b.as_nd_ndarray(), dtype=bfloat16)).as_np_ndarray()
+
+    rtol=1e-1
+    atol=5e-1
+    etol=0
+
+    out_bf_16_1 = function(a_bf16, b_fp32)
+    out_fp_32 = function(a_fp32, b_fp32)
+    assert_almost_equal_with_err(out_bf_16_1, out_fp_32, rtol=rtol, atol=atol, etol=etol)
+
+    out_bf_16_2 = function(a_fp32, b_bf16)
+    assert_almost_equal_with_err(out_bf_16_2, out_fp_32, rtol=rtol, atol=atol, etol=etol)
+
 @pytest.mark.skip(reason="env dependent, need check further.")
 def test_bf16_concat():
     dshape = rand_shape_nd(4)
