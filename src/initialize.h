@@ -104,7 +104,7 @@ class LibraryInitializer {
 
   void close_open_libs();
 
-  loaded_libs_t loaded_libs;
+  loaded_libs_t loaded_libs_;
 };
 
 /*!
