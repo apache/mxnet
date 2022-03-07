@@ -713,6 +713,33 @@ def test_quantized_fc():
         check_quantized_fc((256, 2048, 2, 2), 800, False, qdtype)
         check_quantized_fc((256, 111, 2, 2), 800, False, qdtype)
 
+@use_np
+def test_quantized_transpose():
+    def check_quantized_transpose(shape, qdtype, axes):
+        if qdtype == 'uint8':
+            data_low = 0.0
+            data_high = 255.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+        data = mx.np.random.uniform(low=data_low, high=data_high, size=shape).astype(qdtype).astype('float32')
+        min_data = mx.np.array([mx.np.min(data).astype('float32').item()])
+        max_data = mx.np.array([mx.np.max(data).astype('float32').item()])
+        qdata = data.astype(qdtype)
+        output = mx.np.transpose(data, axes=axes)
+        qoutput, min_output, max_output = npx.quantized_transpose(qdata, min_data, max_data, axes=axes)
+        assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
+        assert_almost_equal(min_output.item(), min_data.item())
+        assert_almost_equal(max_output.item(), max_data.item())
+
+    for qtype in ['int8', 'uint8']:
+        check_quantized_transpose((), qtype, ())
+        check_quantized_transpose((2,3), qtype, (1,0))
+        check_quantized_transpose((8,21), qtype, (1,0))
+        check_quantized_transpose((7,3,9), qtype, (2,1,0))
+        check_quantized_transpose((5,3,6,8), qtype, (2,3,0,1))
+
+        
 
 @use_np
 def test_quantized_embedding():
