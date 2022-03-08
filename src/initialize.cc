@@ -150,7 +150,7 @@ void* LibraryInitializer::lib_load(const char* path) {
  * \brief Closes the loaded dynamic shared library file
  * \param handle library file handle
  */
-void LibraryInitializer::lib_close(void* handle, const std::string &libpath) {
+void LibraryInitializer::lib_close(void* handle, const std::string& libpath) {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   FreeLibrary((HMODULE)handle);
 #else
