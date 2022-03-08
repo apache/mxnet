@@ -235,15 +235,15 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     const mxnet::TShape oshape = output.shape();
     dnnl::memory::dims out_dims(2);
     if (oshape.ndim() == 2) {
-      out_dims[0] = static_cast<int>(oshape[0]);
-      out_dims[1] = static_cast<int>(oshape[1]);
+      out_dims[0] = static_cast<index_t>(oshape[0]);
+      out_dims[1] = static_cast<index_t>(oshape[1]);
     } else {
       if (!default_param.flatten) {
-        out_dims[0] = static_cast<int>(oshape.ProdShape(0, oshape.ndim() - 1));
-        out_dims[1] = static_cast<int>(oshape[oshape.ndim() - 1]);
+        out_dims[0] = static_cast<index_t>(oshape.ProdShape(0, oshape.ndim() - 1));
+        out_dims[1] = static_cast<index_t>(oshape[oshape.ndim() - 1]);
       } else {
-        out_dims[0] = static_cast<int>(static_cast<int>(oshape[0]));
-        out_dims[1] = static_cast<int>(oshape.ProdShape(1, oshape.ndim()));
+        out_dims[0] = static_cast<index_t>(oshape[0]);
+        out_dims[1] = static_cast<index_t>(oshape.ProdShape(1, oshape.ndim()));
       }
     }
     dnnl::memory::desc out_md =
