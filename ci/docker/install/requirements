@@ -34,3 +34,4 @@ requests<2.19.0,>=2.18.4
 scipy==1.2.1
 setuptools
 coverage
+packaging

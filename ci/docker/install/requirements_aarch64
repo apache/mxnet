@@ -31,3 +31,4 @@ requests<2.19.0,>=2.18.4
 setuptools
 coverage
 wheel
+packaging
