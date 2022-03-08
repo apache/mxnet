@@ -103,7 +103,7 @@ LibraryInitializer::LibraryInitializer()
 LibraryInitializer::~LibraryInitializer() = default;
 
 bool LibraryInitializer::lib_is_loaded(const std::string& path) const {
-  return loaded_libs.count(path) > 0;
+  return loaded_libs_.count(path) > 0;
 }
 
 /*!
@@ -139,9 +139,9 @@ void* LibraryInitializer::lib_load(const char* path) {
     }
 #endif  // _WIN32 or _WIN64 or __WINDOWS__
     // then store the pointer to the library
-    loaded_libs[path] = handle;
+    loaded_libs_[path] = handle;
   } else {
-    handle = loaded_libs.at(path);
+    handle = loaded_libs_.at(path);
   }
   return handle;
 }
@@ -150,15 +150,7 @@ void* LibraryInitializer::lib_load(const char* path) {
  * \brief Closes the loaded dynamic shared library file
  * \param handle library file handle
  */
-void LibraryInitializer::lib_close(void* handle) {
-  std::string libpath;
-  for (const auto& l : loaded_libs) {
-    if (l.second == handle) {
-      libpath = l.first;
-      break;
-    }
-  }
-  CHECK(!libpath.empty());
+void LibraryInitializer::lib_close(void* handle, const std::string& libpath) {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   FreeLibrary((HMODULE)handle);
 #else
@@ -167,7 +159,6 @@ void LibraryInitializer::lib_close(void* handle) {
                  << " loaded from: '" << libpath << "': " << dlerror();
   }
 #endif  // _WIN32 or _WIN64 or __WINDOWS__
-  loaded_libs.erase(libpath);
 }
 
 /*!
@@ -393,9 +384,10 @@ SIGNAL_HANDLER(SIGBUS, SIGBUSHandler, false);
 #endif
 
 void LibraryInitializer::close_open_libs() {
-  for (const auto& l : loaded_libs) {
-    lib_close(l.second);
+  for (const auto& l : loaded_libs_) {
+    lib_close(l.second, l.first);
   }
+  loaded_libs_.clear();
 }
 
 /**
