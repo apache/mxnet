@@ -22,6 +22,6 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install opencv
-    # Restrict numpy version to >= 1.19.1 due to CVE's.  Temp: effectively pin numpy to 1.19.1 during PR development
-    python -m pip install --user nose 'numpy>=1.19.1,<1.19.2' cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml
+    # Allow default numpy version to advance to 1.19.1 due to CVE's.
+    python -m pip install --user nose 'numpy>=1.16.0,<1.19.2' cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml
 fi
