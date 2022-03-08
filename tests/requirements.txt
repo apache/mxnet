@@ -4,6 +4,7 @@ mock
 nose
 nose-timer
 ipython
-numpy>1.16.0,<1.19.0  # Restrict numpy version to < 1.19.0 due to https://github.com/apache/incubator-mxnet/issues/18600
+numpy>=1.16.0,<1.19.2  # Allow default numpy version to advance to 1.19.1 due to CVE's.
 scipy<1.7.0 # Restrict scipy version due to https://github.com/apache/incubator-mxnet/issues/20389
 onnxruntime
+packaging
