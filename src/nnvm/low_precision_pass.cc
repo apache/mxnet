@@ -74,6 +74,7 @@ class MappedNodeEntry {
   }
 
   bool can_be_cast_offline_to(const int target_dtype) const {
+    CHECK(entry.node->is_variable());
     return casts.count(target_dtype) > 0;
   }
 
@@ -139,6 +140,7 @@ static bool try_low_precision(const int target_dtype,
 
   if (infertype.count(old_node->op()) == 0 ||
       infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == false) {
+    // LOG warning
     return false;
   }
 

@@ -669,7 +669,7 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
     from ..numpy import ndarray as NP_NDArray
 
     assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
-    if not isinstance(data_example, list):
+    if not isinstance(data_example, (list, tuple)):
         assert isinstance(data_example, (ND_NDArray, NP_NDArray))
         data_example = [data_example]
 
