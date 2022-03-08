@@ -30,4 +30,4 @@ yum -y install python36u
 curl "https://bootstrap.pypa.io/pip/3.6/get-pip.py" -o "get-pip.py"
 python3.6 get-pip.py
 # Allow default numpy version to advance to 1.19.1 due to CVE's.
-python3.6 -m pip install nose pylint 'numpy>=1.16.0,<1.19.2' nose-timer requests 'h5py<3' scipy==1.2.3
+python3.6 -m pip install nose pylint 'numpy>=1.16.0,<1.19.2' nose-timer requests 'h5py<3' scipy==1.2.3 packaging
