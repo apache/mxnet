@@ -139,12 +139,13 @@ void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs &attrs,
                                    const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-  bool fuse_relu = true;
+
   if (SupportMKLDNNBNReLU(inputs[0], param)) {
     CHECK_GT(outputs.size(), 3U);
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-      MKLDNNBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
+      MKLDNNRun(MKLDNNBatchNormForward<DTYPE, /*fuse_relu*/ true>, attrs, ctx,
+                inputs, req, outputs);
     });
     return;
   }
@@ -157,11 +158,12 @@ void BatchNormWithReLUGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<NDArray> &outputs) {
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-  bool fuse_relu = true;
+
   if (SupportMKLDNNBNReLU(inputs[0], param)) {
       CHECK_EQ(inputs.size(), 9U);
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
+      MKLDNNRun(MKLDNNBatchNormBackward<float, /*fuse_relu*/ true>, attrs, ctx,
+                inputs, req, outputs);
       return;
   }
   LOG(FATAL) << "BatchNormWithReLU operator only supports MKL-DNN Backend.";
