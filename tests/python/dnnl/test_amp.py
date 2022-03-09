@@ -25,6 +25,7 @@ import ctypes
 from mxnet import amp
 from mxnet.amp.amp import bfloat16
 from mxnet.gluon import nn
+from mxnet.operator import get_all_registered_operators_grouped
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 
@@ -52,42 +53,38 @@ def test_amp_coverage():
     assert ret == [], "Elements " + str(ret) + " exist in more than 1 AMP list."
 
     # Check the coverage
-    py_str = lambda x: x.decode('utf-8')
+    covered = set(t)
+    ops = get_all_registered_operators_grouped()
+    required = set(k for k in ops
+                   if not k.startswith(("_backward", "_contrib_backward", "_npi_backward")) and
+                   not k.endswith("_backward"))
 
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
+    extra = covered - required
+    assert not extra, f"{len(extra)} operators are not needed in the AMP lists: {sorted(extra)}"
 
-    mx.base._LIB.MXListAllOpNames(ctypes.byref(size),
-                                  ctypes.byref(plist))
-    op_names = []
-    for i in range(size.value):
-        s = py_str(plist[i])
-        if not s.startswith("_backward") \
-           and not s.startswith("_contrib_backward_"):
-            op_names.append(s)
+    guidelines = """Please follow these guidelines for choosing a proper list:
+    - if your operator is not to be used in a computational graph
+      (e.g. image manipulation operators, optimizers) or does not have
+      inputs, put it in BF16_FP32_FUNCS list,
+    - if your operator requires FP32 inputs or is not safe to use with lower
+      precision, put it in FP32_FUNCS list,
+    - if your operator supports both FP32 and lower precision, has
+      multiple inputs and expects all inputs to be of the same
+      type, put it in WIDEST_TYPE_CASTS list,
+    - if your operator supports both FP32 and lower precision and has
+      either a single input or supports inputs of different type,
+      put it in BF16_FP32_FUNCS list,
+    - if your operator is both safe to use in lower precision and
+      it is highly beneficial to use it in lower precision, then
+      put it in BF16_FUNCS (this is unlikely for new operators)
+    - If you are not sure which list to choose, FP32_FUNCS is the
+      safest option"""
+    diff = required - covered
 
-    ret1 = set(op_names) - set(t)
-
-    if ret1 != set():
-        warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                      "python/mxnet/amp/lists/symbol_bf16.py) - please add them. "
-                      """Please follow these guidelines for choosing a proper list:
-                       - if your operator is not to be used in a computational graph
-                         (e.g. image manipulation operators, optimizers) or does not have
-                         inputs, put it in BF16_FP32_FUNCS list,
-                       - if your operator requires FP32 inputs or is not safe to use with lower
-                         precision, put it in FP32_FUNCS list,
-                       - if your operator supports both FP32 and lower precision, has
-                         multiple inputs and expects all inputs to be of the same
-                         type, put it in WIDEST_TYPE_CASTS list,
-                       - if your operator supports both FP32 and lower precision and has
-                         either a single input or supports inputs of different type,
-                         put it in BF16_FP32_FUNCS list,
-                       - if your operator is both safe to use in lower precision and
-                         it is highly beneficial to use it in lower precision, then
-                         put it in BF16_FUNCS (this is unlikely for new operators)
-                       - If you are not sure which list to choose, FP32_FUNCS is the
-                         safest option""")
+    if len(diff) > 0:
+      warnings.warn(f"{len(diff)} operators {sorted(diff)} do not exist in AMP lists (in "
+                    f"python/mxnet/amp/lists/symbol_bf16.py) - please add them. "
+                    f"\n{guidelines}")
 
 
 @mx.util.use_np

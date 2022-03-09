@@ -62,7 +62,7 @@ def check_amp_fuse(net, data_example, expected_sym=None, quantized_nodes=[], rto
   net.hybridize()
   out_ref = net(*data_example)
 
-  net.optimize_for(data_example, backend=SG_PASS_NAME)  # amp pass works only on onednn nodes
+  net.optimize_for(data_example, backend=SG_PASS_NAME)  # amp pass works only on oneDNN nodes
   lp_net = amp.convert_hybrid_block(net, data_example, target_dtype=AMP_DTYPE,
                                     excluded_sym_names=quantized_nodes, cast_params_offline=True,
                                     device=mx.current_context())

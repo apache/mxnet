@@ -69,8 +69,8 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     if (status == SelectStatus::kFail || new_node.is_variable())
       return false;
-    // If n isn't the last matched node, then we encoutered a internal
-    // branch, we should pop out the node behind n and stop fusion.
+    // If 'n' is not the last matched node, then we have encountered an internal branch, we should
+    // pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
       status = SelectStatus::kFail;
       return false;

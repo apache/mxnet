@@ -37,7 +37,7 @@ from ..device import gpu
 from ..symbol import Symbol
 from ..symbol import contrib as symbol_contrib
 from .. import ndarray
-from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, get_dtype_name, get_dtype_type, bfloat16
+from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, get_dtype_name, bfloat16
 from . import lists
 from ..gluon import Block, trainer
 from .. import base
@@ -438,6 +438,10 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
     ----------
     sym : Symbol
         FP32 neural network symbol
+    input_dtypes: dict
+        Dictionary mapping names of model inputs to their dtypes
+    param_dtypes: dict
+        Dictionary mapping names of model parameters to their dtypes
     target_dtype : str or numpy, optional defaults to float16
         currently only supports float16 and bfloat16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
@@ -464,7 +468,7 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
     """
     import json
 
-    assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
+    assert isinstance(sym, Symbol), "First argument to convert_symbol should be a Symbol"
     assert target_dtype_ops is None or isinstance(target_dtype_ops, list), \
         "target_dtype_ops should be a list of strs"
     assert fp32_ops is None or isinstance(fp32_ops, list), \
@@ -574,6 +578,8 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
         Dictionary of name to `NDArray`.
     aux_params : dict
         Dictionary of name to `NDArray`.
+    input_dtypes: dict
+        Dictionary mapping names of model inputs to their dtypes
     target_dtype : str
         Currently only supports float16 and bfloat 16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
@@ -600,7 +606,7 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
-    assert isinstance(sym, Symbol), "First argument to convert_model should be Symbol"
+    assert isinstance(sym, Symbol), "First argument to convert_model should be a Symbol"
     assert isinstance(
         arg_params, dict), "Second argument to convert_model should be a dict of name to ndarray"
     assert isinstance(
@@ -643,6 +649,8 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
     ----------
     block : HybridBlock or SymbolBlock object
         FP32 HybridBlock or SymbolBlock object
+    data_example: tuple or list of NDArrays
+        Data example, representing the data that this model will work with during the inference.
     target_dtype : str or numpy
         currently only supports float16 and bfloat16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
@@ -675,7 +683,7 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
 
     if not block._cached_graph:
         block.hybridize()
-        block(*data_example)
+    block(*data_example)
 
     sym, params = block.export(None, remove_amp_cast=False)
     args, auxs = {}, {}
@@ -690,7 +698,7 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
 
     input_names = set(sym.list_arguments()) - (set(args.keys()) | set(auxs.keys()))
     input_names_ordered = HybridBlock.generate_arg_names(len(data_example))
-    assert input_names == set(input_names_ordered)  # TODO: message
+    assert input_names == set(input_names_ordered)
 
     input_dtypes = {name: data.dtype for name, data in zip(input_names_ordered, data_example)}
     lp_sym, lp_args, lp_auxs = convert_model(sym, args, auxs, input_dtypes, target_dtype,
@@ -704,6 +712,7 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
     ret = SymbolBlock(lp_sym, inputs)
     ret.load_dict(param_dict, device=device, cast_dtype=True, dtype_source='saved')
     return ret
+
 
 def list_lp16_ops(target_dtype):
     """Get the default list of LP16 ops for AMP
