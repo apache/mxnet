@@ -26,6 +26,7 @@ import platform
 import mxnet as mx
 import scipy.stats as ss
 import scipy.special as scipy_special
+from packaging.version import parse
 from nose.tools import assert_raises
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
@@ -3624,7 +3625,6 @@ def test_np_delete():
                 obj_onp = _np.array(obj, dtype=objtype)
                 # To match mxnet.numpy's behavior of ignoring out-of-bounds indices,
                 # we may need to filter out indices that this numpy would not ignore.
-                from packaging.version import parse
                 onp_ignores_oob_indices = parse(_np.version.version) < parse('1.19')
                 if not onp_ignores_oob_indices:
                     dim_size = GetDimSize(arr_shape,axis)

@@ -30,5 +30,5 @@ echo "Installing libprotobuf-dev and protobuf-compiler ..."
 apt-get update || true
 apt-get install -y libprotobuf-dev protobuf-compiler
 
-# Allow default numpy version to advance to 1.19.1 due to CVE's.
-pip3 install pytest==6.2.2 pytest-cov==2.11.1 pytest-xdist==2.2.1 protobuf==3.13.0 onnx==1.8.1 Pillow==5.0.0 tabulate==0.7.5 onnxruntime==1.7.0 'numpy>=1.16.0,<1.19.2' gluonnlp==0.10.0 gluoncv==0.8.0 packaging
+# Allow numpy version as advanced as 1.19.5 to avoid CVE-2021-41495 and CVE-2021-41496 affecting <1.19.1.
+pip3 install pytest==6.2.2 pytest-cov==2.11.1 pytest-xdist==2.2.1 protobuf==3.13.0 onnx==1.8.1 Pillow==5.0.0 tabulate==0.7.5 onnxruntime==1.7.0 'numpy>=1.16.0,<1.20.0' gluonnlp==0.10.0 gluoncv==0.8.0 packaging
