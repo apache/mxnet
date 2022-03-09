@@ -68,7 +68,7 @@ class LibraryInitializer {
   // Library loading
   bool lib_is_loaded(const std::string& path) const;
   void* lib_load(const char* path);
-  void lib_close(void* handle);
+  void lib_close(void* handle, const std::string& libpath);
   static void get_sym(void* handle, void** func, char* name);
 
   /**
@@ -103,7 +103,7 @@ class LibraryInitializer {
 
   void close_open_libs();
 
-  loaded_libs_t loaded_libs;
+  loaded_libs_t loaded_libs_;
 };
 
 /*!
