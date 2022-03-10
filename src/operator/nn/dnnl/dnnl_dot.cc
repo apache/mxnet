@@ -33,7 +33,8 @@ bool SupportDNNLDot(const std::vector<NDArray>& inputs, const NDArray& output) {
   return false;
 #endif
   return inputs[DotIn::lhs].shape().Size() > 1 && inputs[DotIn::rhs].shape().Size() > 1 &&
-         output.shape().Size() != 0 && output.shape().ndim() <= 12 &&
+         inputs[DotIn::lhs].shape().ndim() > 0 && inputs[DotIn::rhs].shape().ndim() > 0 &&
+         output.shape().Size() != 0 && output.shape().ndim() > 0 && output.shape().ndim() <= 12 &&
          (inputs[DotIn::lhs].dtype() == mshadow::kFloat32 ||
           inputs[DotIn::lhs].dtype() == mshadow::kBfloat16);
 }
