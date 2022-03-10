@@ -63,7 +63,7 @@ class DNNLQuantizedRnnOp {
   // Used to store the intermediate results of multi-layer
   std::vector<dnnl::memory*> dst_;
   // According to
-  // https://intel.github.io/mkl-dnn/dev_guide_int8_computations.html, the
+  // https://oneapi-src.github.io/oneDNN/dev_guide_int8_computations.html, the
   // non-symmetric quantization is assumed by LSTM primitive. Namely, the
   // formula is:
   //                    data_f32 = (data_u8 - shift) / scale
