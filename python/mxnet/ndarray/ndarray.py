@@ -34,7 +34,7 @@ import operator
 from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
-from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
+from ..base import c_array, c_array_buf, c_handle_array, mx_real_t, c_str_array
 from ..base import mx_uint, NDArrayHandle, check_call, mx_int, mx_int64
 from ..base import ctypes2buffer
 from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
@@ -2924,7 +2924,7 @@ fixed-size items.
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return _ndarray_cls(hdl)
 
-    def backward(self, out_grad=None, retain_graph=False, train_mode=True):
+    def backward(self, out_grad=None, retain_graph=False, train_mode=True, backward_option = {}):
         """Compute the gradients of this NDArray w.r.t variables.
 
         Parameters
@@ -2942,7 +2942,11 @@ fixed-size items.
             ograd_handles = [NDArrayHandle(0)]
         else:
             ograd_handles = [out_grad.handle]
-
+        key_list = []
+        val_list = []
+        for key, val in backward_option.items():
+            key_list.append(key)
+            val_list.append(str(val))
         check_call(_LIB.MXAutogradBackwardEx(
             1, c_handle_array([self]),
             c_array(NDArrayHandle, ograd_handles),
@@ -2952,7 +2956,10 @@ fixed-size items.
             ctypes.c_int(0),
             ctypes.c_int(train_mode),
             ctypes.c_void_p(0),
-            ctypes.c_void_p(0)))
+            ctypes.c_void_p(0),
+            mx_uint(len(key_list)),
+            c_str_array(key_list),
+            c_str_array(val_list)))
 
     def tostype(self, stype):
         """Return a copy of the array with chosen storage type.

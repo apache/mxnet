@@ -83,6 +83,12 @@ void AttachOpResources(const Graph& g,
             break;
           }
 #endif  // MXNET_USE_CUDNN == 1
+#if MXNET_USE_CUDA == 1
+          case ResourceRequest::kMultiGPUComm: {
+            requested.push_back(ResourceManager::Get()->Request(ctx, req));
+            break;
+          }
+#endif  // MXNET_USE_NCCL == 1
           default:
             LOG(FATAL) << "resource type " << req.type << " is not yet supported";
         }

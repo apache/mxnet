@@ -48,7 +48,8 @@ class NaiveCachedOp : public CachedOp {
                 const OpStatePtr& state,
                 const std::vector<NDArray*>& inputs,
                 const std::vector<OpReqType>& reqs,
-                const std::vector<NDArray*>& outputs) override {
+                const std::vector<NDArray*>& outputs,
+                const std::unordered_map<std::string, std::string> backward_options_map) override {
     LOG(FATAL) << "Backward is not supported in NaiveCachedOp.";
   }
   // backward storage type inference

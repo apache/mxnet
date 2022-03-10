@@ -15,11 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-"""Contrib neural network module."""
+all: pass_lib
 
-from . import data
+pass_lib:
+	g++ -shared -fPIC -std=c++11 add_reduce_op.cc ../../../src/lib_api.cc -o add_reduce_op_lib.so -I ../../../include
 
-from . import estimator
-
-from . import nn
+clean:
+	rm -rf libpass_lib.so
