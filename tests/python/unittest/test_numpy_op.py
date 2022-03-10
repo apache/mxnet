@@ -30,6 +30,7 @@ import scipy.special as scipy_special
 import pytest
 import mxnet.ndarray.numpy._internal as _npi
 from functools import reduce
+from packaging.version import parse
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -4536,6 +4537,12 @@ def test_np_delete():
             if type(obj) == list:
                 obj_mxnp = np.array(obj, dtype=objtype)
                 obj_onp = onp.array(obj, dtype=objtype)
+                # To match mxnet.numpy's behavior of ignoring out-of-bounds indices,
+                # we may need to filter out indices that this numpy would not ignore.
+                onp_ignores_oob_indices = parse(onp.version.version) < parse('1.19')
+                if not onp_ignores_oob_indices:
+                    dim_size = GetDimSize(arr_shape,axis)
+                    obj_onp = obj_onp[((obj_onp>=0) & (obj_onp<dim_size))]
             elif type(obj) == slice:
                 obj_mxnp = obj
                 obj_onp = obj
