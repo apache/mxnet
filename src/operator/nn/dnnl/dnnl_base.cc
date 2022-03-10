@@ -329,6 +329,18 @@ dnnl_format_tag_t GetDefaultFormat(int num_dims) {
       return dnnl_abcde;
     case 6:
       return dnnl_abcdef;
+    case 7:
+      return dnnl_abcdefg;
+    case 8:
+      return dnnl_abcdefgh;
+    case 9:
+      return dnnl_abcdefghi;
+    case 10:
+      return dnnl_abcdefghij;
+    case 11:
+      return dnnl_abcdefghijk;
+    case 12:
+      return dnnl_abcdefghijkl;
     default:
       LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for oneDNN";
       return dnnl_format_tag_undef;
