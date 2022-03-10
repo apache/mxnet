@@ -84,8 +84,8 @@ apt-get install -y python python-pip python3 python3-pip
 # Restrict pip version to <19 due to use of Python 3.4 on Ubuntu 14.04
 python3 -m pip install --upgrade 'pip<19'
 
-# Restrict numpy version to <1.18 due to use of Python 3.4 on Ubuntu 14.04
-python3 -m pip install --upgrade --ignore-installed nose cpplint==1.3.0 pylint==2.3.1 'numpy>1.16.0,<1.18' nose-timer 'requests<2.19.0,>=2.18.4' 'h5py<3' scipy==1.0.1 boto3
+# Allow numpy version as advanced as 1.19.5 to avoid CVE-2021-41495 and CVE-2021-41496 affecting <1.19.1.
+python3 -m pip install --upgrade --ignore-installed nose cpplint==1.3.0 pylint==2.3.1 'numpy>=1.16.0,<1.20.0' nose-timer 'requests<2.19.0,>=2.18.4' 'h5py<3' scipy==1.0.1 boto3 packaging
 
 # CMake 3.13.2+ is required
 mkdir /opt/cmake && cd /opt/cmake

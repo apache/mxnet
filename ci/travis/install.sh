@@ -22,6 +22,6 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install opencv
-    # Restrict numpy version to < 1.19.0 due to https://github.com/apache/incubator-mxnet/issues/18600
-    python -m pip install --user nose 'numpy>1.16.0,<1.19.0' cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml
+    # Allow numpy version as advanced as 1.19.5 to avoid CVE-2021-41495 and CVE-2021-41496 affecting <1.19.1.
+    python -m pip install --user nose 'numpy>=1.16.0,<1.20.0' cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml packaging
 fi
