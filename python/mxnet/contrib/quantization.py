@@ -996,14 +996,20 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
                           for k, v in aux_params.items()})
         nd_save(param_name, save_dict)
+        for _, v in net.collect_params().items():
+            v.grad_req = 'null'
         net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
         net.collect_params().reset_ctx(ctx)
+
         if quantized_dtype == 'auto':
             mx.nd.waitall()
             net.optimize_for(x=data_nd, backend="MKLDNNShiftedQuantization")
             tmp_file = os.path.join(tmpdirname, 'model')
             net.export(tmp_file)
-            net = SymbolBlock.imports(tmp_file + '-symbol.json', data_names, tmp_file + '-0000.params')
+            net = SymbolBlock.imports(tmp_file + '-symbol.json', data_names)
+            for _, v in net.collect_params().items():
+                v.grad_req = 'null'
+            net.collect_params().load(tmp_file + '-0000.params', cast_dtype=True, dtype_source='saved')
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
