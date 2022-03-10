@@ -233,10 +233,9 @@ RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
   auto dst_state_desc = layer_param.state_outputs ?
                             memory::desc(layer_param.state_dims, iter_dtype, tag::ldnc) :
                             memory::desc();
-  auto dst_cell_desc =
-      layer_param.state_outputs ?
-          memory::desc(layer_param.cell_dims, iter_dtype, tag::ldnc) :  // no cell in 1.x
-          memory::desc();
+  auto dst_cell_desc = layer_param.state_outputs ?
+                           memory::desc(layer_param.cell_dims, iter_dtype, tag::ldnc) :
+                           memory::desc();
 
   auto fwd = RnnPrimitive();
   switch (mode) {
@@ -249,8 +248,8 @@ RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
                                                src_cell_desc,
                                                weight_layer_desc,
                                                weight_iter_desc,
-                                               weight_peep_desc,  // peep new
-                                               weight_proj_desc,  // proj new
+                                               weight_peep_desc,
+                                               weight_proj_desc,
                                                bias_desc,
                                                dst_layer_desc,
                                                dst_state_desc,
@@ -508,6 +507,28 @@ void DNNLRnnForward::SetNewDataMem(void* x,
       RNN_FWD_SET(DST_ITER_C, param_.cell_dims, format_tag::ldnc, cy, dtype);
     }
   }
+}
+
+inline void DNNLMemoryReorder(const dnnl::memory& src, const dnnl::memory& dst) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
+#endif
+  OpSignature key{};
+  key.AddSign(src);
+  key.AddSign(dst);
+
+  auto it = reorderPrimitives.find(key);
+  if (it == reorderPrimitives.end()) {
+    auto reorder = dnnl::reorder(src, dst);
+    it           = AddToCache(&reorderPrimitives, key, reorder);
+  }
+
+  dnnl_args_map_t net_args;
+  net_args.emplace(DNNL_ARG_SRC, src);
+  net_args.emplace(DNNL_ARG_DST, dst);
+  DNNLStream::Get()->RegisterPrimArgs(it->second, net_args);
 }
 
 /*

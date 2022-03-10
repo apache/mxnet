@@ -1467,9 +1467,8 @@ def test_rnn_quantization():
             mse = onp.mean((ref_out[i].asnumpy() - qout[i].asnumpy())**2)
             assert mse < 0.001
 
-    for qdtype in ['int8', 'uint8']:
-        check_rnn_quantization(1, False, 5, 2, 16, 16)
-        check_rnn_quantization(1, True, 5, 2, 16, 16)
+    check_rnn_quantization(1, False, 5, 2, 16, 16)
+    check_rnn_quantization(1, True, 5, 2, 16, 16)
 
 
 
@@ -1516,6 +1515,5 @@ def test_quantized_rnn():
         mse = onp.mean((out.asnumpy() - qout.asnumpy())**2)
         assert mse < 0.001
 
-    for qdtype in ['int8', 'uint8']:
-        check_quantized_rnn(1, False, 5, 2, 16, 16)
-        check_quantized_rnn(1, True, 5, 2, 16, 16)
+    check_quantized_rnn(1, False, 5, 2, 16, 16)
+    check_quantized_rnn(1, True, 5, 2, 16, 16)

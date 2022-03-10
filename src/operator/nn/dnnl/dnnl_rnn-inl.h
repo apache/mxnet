@@ -46,28 +46,6 @@ struct DNNLRnnParam : public dmlc::Parameter<DNNLRnnParam> {
   }
 };
 
-inline void DNNLMemoryReorder(const dnnl::memory& src, const dnnl::memory& dst) {
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
-#else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, dnnl::reorder, OpHash> reorderPrimitives;
-#endif
-  OpSignature key{};
-  key.AddSign(src);
-  key.AddSign(dst);
-
-  auto it = reorderPrimitives.find(key);
-  if (it == reorderPrimitives.end()) {
-    auto reorder = dnnl::reorder(src, dst);
-    it           = AddToCache(&reorderPrimitives, key, reorder);
-  }
-
-  dnnl_args_map_t net_args;
-  net_args.emplace(DNNL_ARG_SRC, src);
-  net_args.emplace(DNNL_ARG_DST, dst);
-  DNNLStream::Get()->RegisterPrimArgs(it->second, net_args);
-}
-
 struct DNNLRnnLayerParam {
   using memory = dnnl::memory;
   using dims   = dnnl::memory::dims;
