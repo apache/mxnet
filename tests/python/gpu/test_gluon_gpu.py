@@ -597,8 +597,7 @@ def test_cudnn_dropout_reproducibility():
     assert_almost_equal(a.grad, b.grad)
 
 @mx.util.use_np
-@pytest.mark.serial
-def test_cuda_graphs(capsys):
+def test_cuda_graphs():
     class GraphTester(gluon.HybridBlock):
         def __init__(self, function_to_test, **kwargs):
             super(GraphTester, self).__init__(**kwargs)
@@ -654,56 +653,54 @@ def test_cuda_graphs(capsys):
 
     N = 10
 
-    with capsys.disabled():
-        with environment({'MXNET_ENABLE_CUDA_GRAPHS': '1',
-                          'MXNET_CUDA_GRAPHS_VERBOSE': '1',
-                          'MXNET_USE_FUSION': '0'}):
-            device = mx.gpu(0)
-            for test_desc in tested_ops:
-                sys.stdout.write('Testing {}\n'.format( test_desc.name))
-                inputs = test_desc.generate_inputs()
-                inputsg = [i.copy() for i in inputs]
-                for i in inputsg:
-                    i.attach_grad()
-                seed = random.randint(0, 10000)
-                net = GraphTester(test_desc.f)
-                netg = GraphTester(test_desc.f)
+    with environment({'MXNET_ENABLE_CUDA_GRAPHS': '1',
+                      'MXNET_USE_FUSION': '0'}):
+        device = mx.gpu(0)
+        for test_desc in tested_ops:
+            print("Testing ", test_desc.name)
+            inputs = test_desc.generate_inputs()
+            inputsg = [i.copy() for i in inputs]
+            for i in inputsg:
+                i.attach_grad()
+            seed = random.randint(0, 10000)
+            net = GraphTester(test_desc.f)
+            netg = GraphTester(test_desc.f)
 
-                # initialize parameters
-                net.initialize(device=device)
-                netg.initialize(device=device)
+            # initialize parameters
+            net.initialize(device=device)
+            netg.initialize(device=device)
 
-                net(*inputs)
+            net(*inputs)
+
+            for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+                p2.set_data(p1.data())
+
+            netg.hybridize(static_alloc=True, static_shape=True)
+
+            print("Testing inference mode")
+            with random_seed(seed):
+                for _ in range(N):
+                    assert_almost_equal(net(*inputs), netg(*inputsg))
+
+            mx.npx.waitall()
+            print("Testing training mode")
+            for _ in range(N):
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        out = net(*inputs)
+                    out.backward()
+
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        outg = netg(*inputsg)
+                    outg.backward()
+
+                assert_almost_equal(out, outg)
+                for i, ig in zip(inputs, inputsg):
+                    assert_almost_equal(i.grad, ig.grad)
 
                 for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
-                    p2.set_data(p1.data())
-
-                netg.hybridize(static_alloc=True, static_shape=True)
-
-                print("    Testing inference mode")
-                with random_seed(seed):
-                    for _ in range(N):
-                        assert_almost_equal(net(*inputs), netg(*inputsg))
-
-                mx.npx.waitall()
-                print("    Testing training mode")
-                for _ in range(N):
-                    with random_seed(seed):
-                        with mx.autograd.record():
-                            out = net(*inputs)
-                        out.backward()
-
-                    with random_seed(seed):
-                        with mx.autograd.record():
-                            outg = netg(*inputsg)
-                        outg.backward()
-
-                    assert_almost_equal(out, outg)
-                    for i, ig in zip(inputs, inputsg):
-                        assert_almost_equal(i.grad, ig.grad)
-
-                    for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
-                        assert_almost_equal(p1.data(), p2.data())
-                        if p1.grad_req != 'null':
-                            assert_almost_equal(p1.grad(), p2.grad())
+                    assert_almost_equal(p1.data(), p2.data())
+                    if p1.grad_req != 'null':
+                        assert_almost_equal(p1.grad(), p2.grad())
             mx.npx.waitall()
