@@ -304,7 +304,7 @@ class CudaGraphsSubSegExec {
                << ".dot";
       CUDA_CALL(cudaGraphDebugDotPrint(graph_.get(), filename.str().c_str(), dotfile_flags));
 #else
-      static bool dot_file_unsupported = []() {
+      [[maybe_unused]] static bool dot_file_unsupported = []() {  // NOLINT
         LOG(INFO) << "MXNET_CUDA_GRAPHS_DBG_FILE setting ignored- requires CUDA version >= 11.3";
         return true;
       }();
