@@ -1994,37 +1994,40 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
  * \param ret_sym_handle mixed precision symbol result
  * \param target_dtype target_dtype for mixed precision symbol
  * \param cast_params_offline whether to cast parameters offline to target_dtype
+ * \param offline_param_cast_attr_p attibute that will hold the dtype a parameter should be offline
+ *                                  cast to (when cast_params_offline is true)
  * \param num_inputs number of model inputs
- * \param num_all_args number of all model arguments
- * \param num_target_dtype_ops number of ops to be casted to target_dtype
- * \param num_fp32_ops number of ops to be casted to FP32
- * \param num_widest_dtype_ops number of ops to be casted to widest dtype
- * \param num_excluded_symbols number of symbols to be excluded from casting
  * \param input_names_p names of model inputs
+ * \param num_all_args number of all model arguments
  * \param all_arg_names_p names of all model arguments
  * \param all_arg_types_p dtypes of all model arguments
+ * \param num_target_dtype_ops number of ops to be casted to target_dtype
  * \param target_dtype_ops_p op names to be casted to target_dtype
+ * \param num_fp32_ops number of ops to be casted to FP32
  * \param fp32_ops_p op names to be casted to fp32
+ * \param num_widest_dtype_ops number of ops to be casted to widest dtype
  * \param widest_dtype_ops_p op names to be casted to widest dtype
+ * \param num_excluded_symbols number of symbols to be excluded from casting
  * \param excluded_syms_p symbol names to be excluded from casting
  */
 MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                                       SymbolHandle* ret_sym_handle,
                                       const int target_dtype,
                                       const int cast_params_offline,
+                                      const char* const offline_param_cast_attr_p,
                                       const uint32_t num_inputs,
+                                      const char** const input_names_p,
                                       const uint32_t num_all_args,
-                                      const uint32_t num_target_dtype_ops,
-                                      const uint32_t num_fp32_ops,
-                                      const uint32_t num_widest_dtype_ops,
-                                      const uint32_t num_excluded_symbols,
-                                      const char** input_names_p,
-                                      const char** all_arg_names_p,
+                                      const char** const all_arg_names_p,
                                       const int* all_arg_types_p,
-                                      const char** target_dtype_ops_p,
-                                      const char** fp32_ops_p,
-                                      const char** widest_dtype_ops_p,
-                                      const char** excluded_syms_p);
+                                      const uint32_t num_target_dtype_ops,
+                                      const char** const target_dtype_ops_p,
+                                      const uint32_t num_fp32_ops,
+                                      const char** const fp32_ops_p,
+                                      const uint32_t num_widest_dtype_ops,
+                                      const char** const widest_dtype_ops_p,
+                                      const uint32_t num_excluded_symbols,
+                                      const char** const excluded_syms_p);
 
 /*!
  * \brief Set calibration table to node attributes in the sym

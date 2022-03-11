@@ -975,23 +975,25 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             SymbolHandle* ret_sym_handle,
                             const int target_dtype,
                             const int cast_params_offline,
+                            const char* const offline_param_cast_attr_p,
                             const uint32_t num_inputs,
+                            const char** const input_names_p,
                             const uint32_t num_all_args,
-                            const uint32_t num_target_dtype_ops,
-                            const uint32_t num_fp32_ops,
-                            const uint32_t num_widest_dtype_ops,
-                            const uint32_t num_excluded_symbols,
-                            const char** input_names_p,
-                            const char** all_arg_names_p,
+                            const char** const all_arg_names_p,
                             const int* all_arg_types_p,
-                            const char** target_dtype_ops_p,
-                            const char** fp32_ops_p,
-                            const char** widest_dtype_ops_p,
-                            const char** excluded_syms_p) {
+                            const uint32_t num_target_dtype_ops,
+                            const char** const target_dtype_ops_p,
+                            const uint32_t num_fp32_ops,
+                            const char** const fp32_ops_p,
+                            const uint32_t num_widest_dtype_ops,
+                            const char** const widest_dtype_ops_p,
+                            const uint32_t num_excluded_symbols,
+                            const char** const excluded_syms_p) {
   nnvm::Symbol* result_sym = new nnvm::Symbol();
   API_BEGIN();
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
-  nnvm::Graph g     = Symbol2Graph(*sym);
+  nnvm::Symbol* sym                   = static_cast<nnvm::Symbol*>(sym_handle);
+  nnvm::Graph g                       = Symbol2Graph(*sym);
+  std::string offline_param_cast_attr = offline_param_cast_attr_p;
   CHECK_EQ(num_all_args, g.indexed_graph().input_nodes().size());
 
   std::unordered_set<std::string> input_names(input_names_p, input_names_p + num_inputs);
@@ -1014,12 +1016,14 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   // InferType sets the "dtype" attribute with all infered types
   g.attrs["target_dtype"]        = std::make_shared<nnvm::any>(target_dtype);
   g.attrs["cast_params_offline"] = std::make_shared<nnvm::any>(cast_params_offline);
-  g.attrs["input_names"]         = std::make_shared<nnvm::any>(std::move(input_names));
-  g.attrs["target_dtype_ops"]    = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
-  g.attrs["fp32_ops"]            = std::make_shared<nnvm::any>(std::move(fp32_ops));
-  g.attrs["widest_dtype_ops"]    = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
-  g.attrs["excluded_syms"]       = std::make_shared<nnvm::any>(std::move(excluded_syms));
-  g                              = ApplyPass(std::move(g), "ReducePrecision");
+  g.attrs["offline_param_cast_attr"] =
+      std::make_shared<nnvm::any>(std::move(offline_param_cast_attr));
+  g.attrs["input_names"]      = std::make_shared<nnvm::any>(std::move(input_names));
+  g.attrs["target_dtype_ops"] = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
+  g.attrs["fp32_ops"]         = std::make_shared<nnvm::any>(std::move(fp32_ops));
+  g.attrs["widest_dtype_ops"] = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
+  g.attrs["excluded_syms"]    = std::make_shared<nnvm::any>(std::move(excluded_syms));
+  g                           = ApplyPass(std::move(g), "ReducePrecision");
 
   result_sym->outputs                      = g.outputs;
   *ret_sym_handle                          = result_sym;

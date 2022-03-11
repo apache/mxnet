@@ -29,7 +29,7 @@
 #include <mxnet/base.h>
 #include <algorithm>
 #include <functional>
-#include "../operator/operator_common.h"
+#include "operator/operator_common.h"
 
 namespace mxnet {
 using nnvm::Graph;
@@ -41,6 +41,11 @@ bool IsCastOp(const nnvm::Op* const op) {
   return op && (op == Op::Get("amp_cast") || op == Op::Get("Cast"));
 }
 
+// Before the model conversion, node entries of the original graph are mapped to the equivalent node
+// entries in the new graph that will be then converted to a mixed precision graph. This class wraps
+// a mapped NodeEntry from the new graph, providing a transparent interface for acquiring versions
+// of the wrapped entry with a specific dtype, adding a casting nodes to the graph when needed (one
+// for each unique dtype that was requested).
 class MappedNodeEntry {
  public:
   MappedNodeEntry(NodeEntry node_entry, const int original_dtype)
@@ -50,7 +55,7 @@ class MappedNodeEntry {
 
   // Converts the dtype of this NodeEntry. This should be called after a node has been converted and
   // dtypes of its outputs may have changed
-  void UpdateDTtypeAfterConversion(const int new_dtype) {
+  void UpdateDTypeAfterConversion(const int new_dtype) {
     CHECK_EQ(dtype, original_dtype);  // dtype should be changed only once
     CHECK(entry.node->op());
     dtype = new_dtype;
@@ -173,7 +178,7 @@ static bool TryLowPrecision(const int target_dtype,
   }
 
   for (const NodeEntry& old_ne : nodes_entries.at(old_node.get())) {
-    entry_map->at(old_ne).UpdateDTtypeAfterConversion(out_types[old_ne.index]);
+    entry_map->at(old_ne).UpdateDTypeAfterConversion(out_types[old_ne.index]);
   }
 
   return true;
@@ -222,9 +227,10 @@ void HandleDTypeNeutralNode(const int target_dtype,
 }
 
 // Decides which prameters can be cast offline and removes redundant cast nodes from the graph
-static void RemoveParamCasts(const NodeMap_t& node_map,
+static void RemoveParamCasts(const int target_dtype,
+                             const std::string& offline_param_cast_attr,
+                             const NodeMap_t& node_map,
                              const DstNodes_t& old_param_dst_nodes,
-                             const int target_dtype,
                              EntryMap_t* entry_map) {
   for (const auto& [old_param, old_param_dsts] : old_param_dst_nodes) {
     const ObjectPtr& new_param      = node_map.at(old_param);
@@ -255,20 +261,21 @@ static void RemoveParamCasts(const NodeMap_t& node_map,
         }
         CHECK(skipped_amp_cast);
       }
-      new_param->attrs.dict["__dtype__"] = std::to_string(target_dtype);
+      new_param->attrs.dict[offline_param_cast_attr] = mxnet::op::type_string(target_dtype);
     }
   }
 }
 
 Graph ReducePrecision(Graph&& src) {
-  const auto target_dtype        = src.GetAttr<int>("target_dtype");
-  const auto cast_params_offline = src.GetAttr<int>("cast_params_offline");
-  const auto& input_names        = src.GetAttr<std::unordered_set<std::string>>("input_names");
-  const auto& target_dtype_ops   = src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
-  const auto& fp32_ops           = src.GetAttr<std::unordered_set<std::string>>("fp32_ops");
-  const auto& widest_dtype_ops   = src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
-  const auto& excluded_syms      = src.GetAttr<std::unordered_set<std::string>>("excluded_syms");
-  auto src_dtypes                = src.GetAttr<nnvm::DTypeVector>("dtype");  // copy, not reference
+  const auto target_dtype             = src.GetAttr<int>("target_dtype");
+  const auto cast_params_offline      = src.GetAttr<int>("cast_params_offline");
+  const auto& offline_param_cast_attr = src.GetAttr<std::string>("offline_param_cast_attr");
+  const auto& input_names             = src.GetAttr<std::unordered_set<std::string>>("input_names");
+  const auto& target_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
+  const auto& fp32_ops         = src.GetAttr<std::unordered_set<std::string>>("fp32_ops");
+  const auto& widest_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
+  const auto& excluded_syms    = src.GetAttr<std::unordered_set<std::string>>("excluded_syms");
+  auto src_dtypes              = src.GetAttr<nnvm::DTypeVector>("dtype");  // copy, not reference
 
   CHECK(target_dtype == mshadow::kFloat16 || target_dtype == mshadow::kBfloat16)
       << "Only float16 and bfloat16 target_dtype is supported yet," << target_dtype;
@@ -350,7 +357,8 @@ Graph ReducePrecision(Graph&& src) {
   }
 
   if (cast_params_offline) {
-    RemoveParamCasts(node_map, old_param_dst_nodes, target_dtype, &entry_map);
+    RemoveParamCasts(
+        target_dtype, offline_param_cast_attr, node_map, old_param_dst_nodes, &entry_map);
   }
 
   Graph ret;

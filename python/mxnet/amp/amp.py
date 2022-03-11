@@ -37,17 +37,19 @@ from ..device import gpu
 from ..symbol import Symbol
 from ..symbol import contrib as symbol_contrib
 from .. import ndarray
-from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, get_dtype_name, bfloat16
+from ..ndarray import NDArray, dtype_np_to_mx, get_dtype_type, get_dtype_name, bfloat16
 from . import lists
 from ..gluon import Block, trainer
 from .. import base
 from ..base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
                     _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
-                    c_str_array, SymbolHandle, check_call, _LIB, c_array_buf)
+                    c_str_array, c_str, c_array_buf, SymbolHandle, check_call, _LIB)
 from .. import optimizer as opt
 from .loss_scaler import LossScaler
 from ..operator import get_all_registered_operators_grouped
 from ..util import wrap_ctx_to_device_func
+
+OFFLINE_CAST_DTYPE_ATTR = '__amp_dtype__'
 
 float_types_gpu = (np.float16, np.float32)
 float_types_cpu = (bfloat16, np.float32)
@@ -470,11 +472,11 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
 
     assert isinstance(sym, Symbol), "First argument to convert_symbol should be a Symbol"
     assert target_dtype_ops is None or isinstance(target_dtype_ops, list), \
-        "target_dtype_ops should be a list of strs"
+        "target_dtype_ops should be a list of strings"
     assert fp32_ops is None or isinstance(fp32_ops, list), \
-        "fp32_ops should be a list of strs"
+        "fp32_ops should be a list of strings"
     assert conditional_fp32_ops is None or isinstance(conditional_fp32_ops, list), \
-        "conditional_fp32_ops should be a list"
+        "conditional_fp32_ops should be a list of strings"
 
     target_dtype = get_dtype_name(target_dtype)
     assert target_dtype in ['float16', *bfloat16.names], \
@@ -497,9 +499,9 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
 
     nodes_attr = sym.attr_dict()
     nodes_op = {n['name']: n['op'] for n in json.loads(sym.tojson())['nodes']}
-    assert set(excluded_sym_names).issubset(set(nodes_op.keys())), \
-        "excluded_sym_names are not present in the network. Missing layers: {}".format(
-            set(excluded_sym_names) - set(nodes_op.keys()))
+    if not set(excluded_sym_names).issubset(set(nodes_op.keys())):
+        logging.warning("excluded_sym_names are not present in the network. Missing layers: {}".format(
+            set(excluded_sym_names) - set(nodes_op.keys())))
 
     for node_name, node_op in nodes_op.items():
         if node_op not in cond_ops:
@@ -548,18 +550,19 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
                                             ctypes.byref(out),
                                             ctypes.c_int(dtype_np_to_mx(target_dtype)),
                                             ctypes.c_int(cast_params_offline),
+                                            c_str(OFFLINE_CAST_DTYPE_ATTR),
                                             ctypes.c_uint(len(input_names)),
-                                            ctypes.c_uint(len(all_arg_names)),
-                                            ctypes.c_uint(len(target_dtype_ops)),
-                                            ctypes.c_uint(len(fp32_ops)),
-                                            ctypes.c_uint(len(widest_dtype_ops)),
-                                            ctypes.c_uint(len(excluded_sym_names)),
                                             c_str_array(input_names),
+                                            ctypes.c_uint(len(all_arg_names)),
                                             c_str_array(all_arg_names),
                                             c_array_buf(ctypes.c_int, array('i', all_arg_types)),
+                                            ctypes.c_uint(len(target_dtype_ops)),
                                             c_str_array(target_dtype_ops),
+                                            ctypes.c_uint(len(fp32_ops)),
                                             c_str_array(fp32_ops),
+                                            ctypes.c_uint(len(widest_dtype_ops)),
                                             c_str_array(widest_dtype_ops),
+                                            ctypes.c_uint(len(excluded_sym_names)),
                                             c_str_array(excluded_sym_names)))
     return type(sym)(out)
 
@@ -622,14 +625,14 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
     # If dtype is set for params, cast the param to that dtype
     attr_dict = sym.attr_dict()
     for sym_name in sym.list_arguments():
-        if attr_dict.get(sym_name, {}).get("__dtype__", "-1") != "-1" and sym_name in arg_params:
-            typ = dtype_mx_to_np(int(attr_dict[sym_name]["__dtype__"]))
+        if attr_dict.get(sym_name, {}).get(OFFLINE_CAST_DTYPE_ATTR, '') != '' and sym_name in arg_params:
+            typ = get_dtype_type(attr_dict[sym_name][OFFLINE_CAST_DTYPE_ATTR])
             if arg_params[sym_name].dtype != typ:
                 arg_params[sym_name] = arg_params[sym_name].astype(typ)
 
     for sym_name in sym.list_auxiliary_states():
-        if attr_dict.get(sym_name, {}).get("__dtype__", "-1") != "-1" and sym_name in aux_params:
-            typ = dtype_mx_to_np(int(attr_dict[sym_name]["__dtype__"]))
+        if attr_dict.get(sym_name, {}).get(OFFLINE_CAST_DTYPE_ATTR, '') != '' and sym_name in aux_params:
+            typ = get_dtype_type(attr_dict[sym_name][OFFLINE_CAST_DTYPE_ATTR])
             if aux_params[sym_name].dtype != typ:
                 aux_params[sym_name] = aux_params[sym_name].astype(typ)
 
