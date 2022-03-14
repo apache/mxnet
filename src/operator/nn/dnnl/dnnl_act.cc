@@ -70,9 +70,17 @@ bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input) {
 }
 
 bool SupportQuantizedDNNLAct(const ActivationParam& param) {
-  // TODO(zhennan): Add more activation type when dnnl supports.
-  //                Remove this when it's identity to SupportDNNLAct.
-  return param.act_type == activation::kReLU;
+  // Although it is similiar to SupportDNNLAct i left it here, so when new activations 
+  // will be introduced it will be easier to handle.
+  return param.act_type == activation::kReLU || param.act_type == activation::kSigmoid ||
+         param.act_type == activation::kLogSigmoid || param.act_type == activation::kMish ||
+         param.act_type == activation::kSoftReLU || param.act_type == activation::kTanh;
+}
+
+bool SupportQuantizedDNNLLeakyRelu(const LeakyReLUParam& param) {
+  // Same as above.
+  return param.act_type == leakyrelu::kLeakyReLU || param.act_type == leakyrelu::kELU ||
+         param.act_type == leakyrelu::kGELU;
 }
 
 dnnl::algorithm GetDNNLActAlgo(const ActivationParam& param) {

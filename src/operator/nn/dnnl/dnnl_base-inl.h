@@ -193,6 +193,7 @@ bool SupportDNNLAct(const ActivationParam& param, const NDArray& input);
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param);
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input);
 bool SupportQuantizedDNNLAct(const ActivationParam& param);
+bool SupportQuantizedDNNLLeakyRelu(const LeakyReLUParam& param);
 bool SupportDNNLConv(const ConvolutionParam& params, const NDArray& input);
 bool SupportDNNLDeconv(const DeconvolutionParam& params, const NDArray& input);
 bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& input, const NDArray& output);
