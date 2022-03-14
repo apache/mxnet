@@ -103,21 +103,20 @@ class SgDNNLFCSelector : public SubgraphSelector {
         }
         if (new_node.op() == Op::Get("LeakyReLU")) {
           const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
-          if ((quantized_ && SupportQuantizedDNNLLeakyRelu(param))||
-               (!quantized_ && SupportDNNLLeakyRelu(param))) {
+          if (SupportDNNLLeakyRelu(param)) {
             matched_list_.push_back(&new_node);
             status_ = kSuccess;
             return true;
           }
         }
         if (new_node.op() == Op::Get("square") || new_node.op() == Op::Get("_npi_square") ||
-             new_node.op() == Op::Get("sqrt") || new_node.op() == Op::Get("_npi_sqrt") ||
-             new_node.op() == Op::Get("exp") || new_node.op() == Op::Get("_npi_exp")) {
+            new_node.op() == Op::Get("sqrt") || new_node.op() == Op::Get("_npi_sqrt") ||
+            new_node.op() == Op::Get("abs") || new_node.op() == Op::Get("_npi_absolute")) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
         }
-        if (new_node.op() == Op::Get("abs") || new_node.op() == Op::Get("_npi_absolute")) {
+        if (!quantized_ && (new_node.op() == Op::Get("exp") || new_node.op() == Op::Get("_npi_exp"))) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
