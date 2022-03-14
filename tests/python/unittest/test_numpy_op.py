@@ -5117,7 +5117,8 @@ def test_np_random_beta():
         smaller_than_one = onp.all(output < 1)
         return bigger_than_zero and smaller_than_one
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0, output shape of () is no longer supported
+    shape_list = [(0,), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     # since fp16 might incur precision issue, the corresponding test is skipped
     dtype_list = [np.float32, np.float64]
     hybridize_list = [False, True]
@@ -5133,8 +5134,8 @@ def test_np_random_beta():
         mx_out = test_random_beta(mx_data, mx_data)
         mx_out_imperative = mx.np.random.beta(mx_data, mx_data, size=param_shape, dtype=out_dtype)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
         assert _test_random_beta_range(mx_out.asnumpy()) == True
         assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
 
@@ -5153,7 +5154,8 @@ def test_np_random_f():
         def forward(self, dfnum, dfden):
             return np.random.f(dfnum, dfden, size=self._size)
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0, output shape of () is no longer supported
+    shape_list = [(0,), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     hybridize_list = [False, True]
     df = np.array([1])
     for [param_shape, hybridize] in itertools.product(shape_list,
@@ -5169,8 +5171,8 @@ def test_np_random_f():
         mx_out = test_random_f(mx_df, mx_df)
         mx_out_imperative = mx.np.random.f(mx_df, mx_df, size=param_shape)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
 
 
 @use_np
@@ -5185,7 +5187,8 @@ def test_np_random_chisquare():
         def forward(self, df):
             return np.random.chisquare(df, size=self._size, dtype=self._dtype, device=self._device)
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0, output shape of () is no longer supported
+    shape_list = [(0,), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
 
     dtype_list = [np.float16, np.float32, np.float64]
     hybridize_list = [False, True]
@@ -5203,8 +5206,8 @@ def test_np_random_chisquare():
         mx_out = test_random_chisquare(mx_df)
         mx_out_imperative = mx.np.random.chisquare(mx_df, size=param_shape, dtype=out_dtype)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
 
 
 @use_np
