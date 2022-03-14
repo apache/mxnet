@@ -4488,7 +4488,6 @@ def test_np_swapaxes():
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_delete():
     class TestDelete(HybridBlock):
         def __init__(self, obj, axis=None):
@@ -5095,7 +5094,6 @@ def test_gamma_grad(shape, a, b):
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_beta():
     class TestRandomBeta(HybridBlock):
         def __init__(self, size=None, dtype=None, device=None):
@@ -5139,7 +5137,6 @@ def test_np_random_beta():
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_f():
     class TestRandomF(HybridBlock):
         def __init__(self, size=None):
