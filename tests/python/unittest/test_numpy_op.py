@@ -5167,7 +5167,6 @@ def test_np_random_f():
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_chisquare():
     class TestRandomChisquare(HybridBlock):
         def __init__(self, size=None, dtype=None, device=None):
