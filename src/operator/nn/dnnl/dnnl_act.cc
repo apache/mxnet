@@ -70,7 +70,7 @@ bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input) {
 }
 
 bool SupportQuantizedDNNLAct(const ActivationParam& param) {
-  // Although it is similiar to SupportDNNLAct i left it here, so when new activations 
+  // Although it is the same as SupportDNNLAct i left it here, so when new activations 
   // will be introduced it will be easier to handle.
   return SupportDNNLAct(param);
 }
