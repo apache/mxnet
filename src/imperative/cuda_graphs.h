@@ -511,7 +511,6 @@ class CudaGraphsExec {
   // Is the Op OK to make part of a CUDA Graph?
   bool OpOK(const std::shared_ptr<exec::OpExecutor>& exec) {
     static auto& fgraphcompatible = Op::GetAttr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible");
-    static auto& fstateful        = Op::GetAttr<FCreateOpState>("FCreateOpState");
     static auto& fcompute_ex      = Op::GetAttr<FComputeEx>("FComputeEx<gpu>");
     static auto& fstatefulcompute = Op::GetAttr<FStatefulCompute>("FStatefulCompute<gpu>");
     static auto& fstatefulcompute_ex = Op::GetAttr<FStatefulComputeEx>("FStatefulComputeEx<gpu>");
@@ -521,8 +520,7 @@ class CudaGraphsExec {
       if (f != nullptr) {
         return f(attrs, exec->op_ctx.is_train);
       }
-      if (fstateful.get(attrs.op, nullptr) != nullptr ||
-          fstatefulcompute.get(attrs.op, nullptr) != nullptr ||
+      if (fstatefulcompute.get(attrs.op, nullptr) != nullptr ||
           fstatefulcompute_ex.get(attrs.op, nullptr) != nullptr) {
         if (verbose_) {
           LOG(INFO) << "Omitting stateful operator " << attrs.op->name << " from CUDA graph.";
