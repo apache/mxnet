@@ -442,7 +442,7 @@ def test_adaptive_pooling():
     num_filters = [4, 8, 16]
     output_sizes = [4, 5, 8, 16]
     stypes = ['row_sparse', 'default']
-    shapes = [(3, 3, 8, 8), (3, 3, 20, 20), (3, 3, 32, 32)]
+    shapes = [(3, 3, 8, 8), (3, 4, 20, 20), (3, 6, 20, 20), (3, 3, 32, 32)]
 
     for num_filter in num_filters:
         for output_size in output_sizes:

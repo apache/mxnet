@@ -33,7 +33,7 @@
 #include "../pooling-inl.h"
 #include "./mkldnn_base-inl.h"
 
-#define DIV_ROUND_UP(a, b) ((a + (b - 1)) / b)
+#define DIV_ROUND_UP(a, b) (((a) + (b - 1)) / (b))
 
 namespace mxnet {
 namespace op {
@@ -91,6 +91,19 @@ class MKLDNNPoolingBwd {
   const mkldnn::pooling_backward::primitive_desc& GetPd();
 };
 
+inline int ComputeStrides(const int inner, const int outer) {
+  return ((inner << 1) / outer) - (inner / outer);
+}
+
+inline int ComputeKernel(const int inner, const int outer) {
+  return DIV_ROUND_UP((inner << 1) / outer, 1) - (inner / outer);
+}
+
+inline int ComputePadding(const int inner, const int outer, const int strides,
+                          const int kernel) {
+  return (strides * (outer - 1) + kernel - inner) / 2;
+}
+
 template <typename T = mkldnn::memory::dims>
 void UseAdaptivePaddingKernel(T* kernel,
                               T* strides,
@@ -103,12 +116,12 @@ void UseAdaptivePaddingKernel(T* kernel,
   const int OH = output_shape[2];
   const int OW = output_shape[3];
 
-  strides->at(0) = ((IH << 1) / OH) - (IH / OH);
-  strides->at(1) = ((IW << 1) / OW) - (IW / OW);
-  kernel->at(0)  = DIV_ROUND_UP((IH << 1) / OH, 1) - (IH / OH);
-  kernel->at(1)  = DIV_ROUND_UP((IW << 1) / OW, 1) - (IW / OW);
-  pad_l->at(0)   = (strides->at(0) * (OH - 1) + kernel->at(0) - IH) / 2;
-  pad_l->at(1)   = (strides->at(1) * (OW - 1) + kernel->at(1) - IW) / 2;
+  strides->at(0) = ComputeStrides(IH, OH);
+  strides->at(1) = ComputeStrides(IW, OW);
+  kernel->at(0) = ComputeKernel(IH, OH);
+  kernel->at(1) = ComputeKernel(IW, OW);
+  pad_l->at(0) = ComputePadding(IH, OH, strides->at(0), kernel->at(0));
+  pad_l->at(1) = ComputePadding(IW, OW, strides->at(1), kernel->at(1));
 }
 
 inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {

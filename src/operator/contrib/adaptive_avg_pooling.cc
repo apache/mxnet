@@ -33,7 +33,6 @@
 
 #define START_IND(a, b, c) static_cast<int>(std::floor(static_cast<float>(a * c) / b))
 #define END_IND(a, b, c) static_cast<int>(std::ceil(static_cast<float>((a + 1) * c) / b))
-#define DIV_ROUND_UP(a, b) ((a + (b - 1)) / b)
 
 namespace mxnet {
 namespace op {
@@ -221,12 +220,12 @@ bool SupportMKLDNNAveragePooling(const NDArray &in_data,
   const int OH = out_data.shape()[2];
   const int OW = out_data.shape()[3];
 
-  const int strides_H = ((IH << 1) / OH) - (IH / OH);
-  const int strides_W = ((IW << 1) / OW) - (IW / OW);
-  const int kernel_H = DIV_ROUND_UP((IH << 1) / OH, 1) - (IH / OH);
-  const int kernel_W = DIV_ROUND_UP((IW << 1) / OW, 1) - (IW / OW);
-  const int pad_l_top = (strides_H * (OH - 1) + kernel_H - IH) / 2;
-  const int pad_l_left = (strides_W * (OW - 1) + kernel_W - IW) / 2;
+  const int strides_H = ComputeStrides(IH, OH);
+  const int strides_W = ComputeStrides(IW, OW);
+  const int kernel_H = ComputeKernel(IH, OH);
+  const int kernel_W = ComputeKernel(IW, OW);
+  const int pad_l_top = ComputePadding(IH, OH, strides_H, kernel_H);
+  const int pad_l_left = ComputePadding(IW, OW, strides_W, kernel_W);
 
   return pad_l_top == 0 && pad_l_left == 0;
 }
