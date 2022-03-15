@@ -59,11 +59,11 @@ static void UpdateConvWeightBias(NDArray* weight,
   const float* var_ptr     = variance.data().dptr<float>();
   DType* update_weight_ptr = update_weight.data().dptr<DType>();
   DType* update_bias_ptr   = update_bias.data().dptr<DType>();
-  size_t channel           = gamma.shape()[0];
+  index_t channel          = static_cast<index_t>(gamma.shape()[0]);
   const auto wshape        = weight->shape();
   size_t offset            = wshape.ProdShape(1, wshape.ndim());
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (int c = 0; c < static_cast<int>(channel); ++c) {
+  for (index_t c = 0; c < channel; ++c) {
     const DType* p1 = weight_ptr + c * offset;
     DType* p2       = update_weight_ptr + c * offset;
     float alpha     = (param->fix_gamma ? 1.0f : gamma_ptr[c]) / sqrt(var_ptr[c] + param->eps);

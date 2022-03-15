@@ -71,7 +71,7 @@ DNNLTransposeFwd::DNNLTransposeFwd(const NumpyTransposeParam& param, const NDArr
   }
 
   dnnl_memory_desc_t dst_fmt;
-  dnnl_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, dnnl_f32, strides);
+  dnnl_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, get_dnnl_type_t(data.dtype()), strides);
 
   dst_md_ = std::make_shared<dnnl::memory::desc>(dst_fmt);
   out_    = std::make_shared<dnnl::memory>(*dst_md_, engine, nullptr);

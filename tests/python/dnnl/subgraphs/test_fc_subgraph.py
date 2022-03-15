@@ -80,6 +80,27 @@ def test_fc_reshape(data_shape, use_bias, out_type, flatten, module):
   net = FC_Reshape(use_bias, flatten)
   check_quantize(net, data_shape, out_type, name='fc')
 
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('use_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('module', [mx.np, mx.nd])
+def test_fc_transpose(data_shape, use_bias, out_type, module):
+
+  class FC_Transpose(nn.HybridBlock):
+    def __init__(self, use_bias, **kwargs):
+      super(FC_Transpose, self).__init__(**kwargs)
+      self.fc = nn.Dense(units=64, use_bias=use_bias)
+
+    def forward(self, x):
+      out = self.fc(x)
+      if module == mx.nd:
+        out = out.as_nd_ndarray()
+      out = module.transpose(out)
+      return out.as_np_ndarray()
+
+  net = FC_Transpose(use_bias)
+  check_quantize(net, data_shape, out_type, name='fc')
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)

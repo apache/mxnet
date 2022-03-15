@@ -22,8 +22,11 @@
 
 set -ex
 
-CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-CI_CMAKE_CUDA_ARCH="5.2 7.0"
+# compute capabilities for CI instances supported by CUDA 10.x (i.e. p3, g4)
+CI_CMAKE_CUDA10_ARCH="5.2 7.5"
+
+# compute capabilities for CI instances supported by CUDA >= 11.1 (i.e. p3, g4, g5)
+CI_CMAKE_CUDA_ARCH="5.2 7.5 8.6"
 
 clean_repo() {
     set -ex
@@ -298,7 +301,7 @@ build_centos7_gpu() {
         -DUSE_BLAS=Open \
         -DUSE_ONEDNN=ON \
         -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA10_ARCH" \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -DUSE_INT64_TENSOR_SIZE=OFF \

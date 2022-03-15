@@ -71,18 +71,18 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
     const auto n = seed_node.node;
-    if (n->op() == Op::Get("_sg_onednn_fully_connected") && SupportDNNLAttr(node_attr) &&
-        (seed_node.outputs.size() == 1)) {
-      auto const& fc_param = nnvm::get<DNNLFCFullParam>(n->attrs.parsed);
-      if ((!quantized_ && !fc_param.dnnl_param.first_quantization_pass) ||
-          (fc_param.dnnl_param.quantized && !fc_param.dnnl_param.with_eltwise)) {
-        // Start subgraph when fusing for floats (quantized_ is false for DNNL backend) or
-        // when FC is already quantized (second pass for DNNL_QUANTIZE) but not already fuzed
-        // with elemwise operator.
-        status_ = kStart;
-        matched_list_.clear();
-        matched_list_.push_back(&seed_node);
-        return true;
+    if (n->op() == Op::Get("_sg_onednn_fully_connected")) {
+      if (SupportDNNLAttr(node_attr) && (seed_node.outputs.size() == 1)) {
+        auto const& fc_param = nnvm::get<DNNLFCFullParam>(n->attrs.parsed);
+        if ((!quantized_) || (fc_param.dnnl_param.quantized && !fc_param.dnnl_param.with_eltwise)) {
+          // Start subgraph when fusing for floats (quantized_ is false for ONEDNN backend) or
+          // when FC is already quantized (second pass for ONEDNN_QUANTIZE) but not already fuzed
+          // with elemwise operator.
+          status_ = kStart;
+          matched_list_.clear();
+          matched_list_.push_back(&seed_node);
+          return true;
+        }
       }
     }
     return false;
@@ -203,7 +203,6 @@ class SgDNNLFCSumFuseProperty : public SubgraphProperty {
       fc_node->attrs.subgraphs.clear();
       fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
       fc_node->attrs.dict["with_sum"] = "True";
-      fc_node->attrs.dict.erase("first_quantization_pass");  // Removed as not needed any longer
       fc_node->op()->attr_parser(&(fc_node->attrs));
     }
     return fc_node;
