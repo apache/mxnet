@@ -116,7 +116,8 @@ class SgDNNLFCSelector : public SubgraphSelector {
           status_ = kSuccess;
           return true;
         }
-        if (!quantized_ && (new_node.op() == Op::Get("exp") || new_node.op() == Op::Get("_npi_exp"))) {
+        if (!quantized_ &&
+            (new_node.op() == Op::Get("exp") || new_node.op() == Op::Get("_npi_exp"))) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
