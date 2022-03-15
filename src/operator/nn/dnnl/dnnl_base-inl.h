@@ -204,6 +204,7 @@ bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
 bool SupportDNNLSplit(const NDArray& input);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs);
+bool SupportDNNLLinearScalar(const NDArray& input, const NDArray& output);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

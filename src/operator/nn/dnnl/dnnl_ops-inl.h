@@ -217,6 +217,13 @@ void DNNLWhereForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs);
 
+template <typename OP>
+void DNNLLinearScalarForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const NDArray& input,
+                             const OpReqType& req,
+                             const NDArray& output);
+
 }  // namespace op
 }  // namespace mxnet
 

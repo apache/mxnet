@@ -29,8 +29,12 @@
 #include <vector>
 #include <string>
 
-#include "../tensor/elemwise_binary_broadcast_op.h"
-#include "../tensor/elemwise_binary_scalar_op.h"
+#include "operator/tensor/elemwise_binary_broadcast_op.h"
+#include "operator/tensor/elemwise_binary_scalar_op.h"
+#if MXNET_USE_ONEDNN == 1
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_linear_scalar-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -894,6 +898,32 @@ void NumpyBinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
         attrs, ctx, in_data, req, out_data);
   } else if (std::is_same<OP, div>::value) {
     NumpyDivideBroadcastComputeCPU(attrs, ctx, in_data, req, out_data);
+  }
+}
+
+inline bool LinearScalarStorageType(const nnvm::NodeAttrs& attrs,
+                                    const int dev_mask,
+                                    DispatchMode* dispatch_mode,
+                                    std::vector<int>* in_attrs,
+                                    std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
+template <typename OP>
+inline void LinearScalarComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<mxnet::NDArray>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<mxnet::NDArray>& outputs) {
+  if (SupportDNNLLinearScalar(inputs[0], outputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLLinearScalarForward<OP>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNL_OPCHECK_RUN((BinaryScalarOp::Compute<cpu, OP>), attrs, ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(BinaryScalarOp::Compute<cpu, OP>, attrs, ctx, inputs, req, outputs);
   }
 }
 #endif  // MXNET_USE_ONEDNN

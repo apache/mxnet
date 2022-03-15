@@ -22,7 +22,7 @@
  * \brief CPU Implementation of basic functions for elementwise numpy binary broadcast operator.
  */
 
-#include "./np_elemwise_broadcast_op.h"
+#include "np_elemwise_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
@@ -31,18 +31,34 @@ DMLC_REGISTER_PARAMETER(NumpyBinaryScalarParam);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", LinearScalarComputeExCPU<op::mshadow_op::plus>)
+    .set_attr<FInferStorageType>("FInferStorageType", LinearScalarStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_subtract_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::minus>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", LinearScalarComputeExCPU<op::mshadow_op::minus>)
+    .set_attr<FInferStorageType>("FInferStorageType", LinearScalarStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rsubtract_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rminus>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", LinearScalarComputeExCPU<mshadow_op::rminus>)
+    .set_attr<FInferStorageType>("FInferStorageType", LinearScalarStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_multiply_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::mul>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", LinearScalarComputeExCPU<op::mshadow_op::mul>)
+    .set_attr<FInferStorageType>("FInferStorageType", LinearScalarStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mul_scalar"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_mod_scalar)
