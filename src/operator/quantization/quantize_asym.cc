@@ -22,6 +22,8 @@
  * \brief implementation of asymmetric quantize operation
  */
 
+#include <string>
+
 #include "operator/quantization/quantize_asym-inl.h"
 #if MXNET_USE_ONEDNN == 1
 #include "operator/quantization/dnnl/dnnl_quantize_asym-inl.h"

@@ -24,6 +24,7 @@
  */
 
 #include <dmlc/logging.h>
+#include <string>
 #include <utility>
 #include <vector>
 
