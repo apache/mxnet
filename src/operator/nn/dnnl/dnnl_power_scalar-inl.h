@@ -18,19 +18,18 @@
  */
 
 /*!
- * \file dnnl_power-inl.h
+ * \file dnnl_power_scalar-inl.h
  * \author: Adam Grabowski, adam.grabowski@intel.com
  */
 
-#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_POWER_INL_H_
-#define MXNET_OPERATOR_NN_DNNL_DNNL_POWER_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_POWER_SCALAR_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_POWER_SCALAR_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
 #include "dnnl_base-inl.h"
 #include "dnnl_ops-inl.h"
 #include "operator/tensor/elemwise_binary_scalar_op.h"
-#include "operator/tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
@@ -55,14 +54,8 @@ class DNNLPowerFwd {
 
 typedef OpSignature DNNLPowerSignature;
 
-void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const NDArray& input,
-                      const OpReqType& req,
-                      const NDArray& output);
-
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_POWER_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_POWER_SCALAR_INL_H_

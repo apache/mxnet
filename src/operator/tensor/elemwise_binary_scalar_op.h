@@ -34,7 +34,7 @@
 #include "../../common/alm.h"
 #include "elemwise_unary_op.h"
 #if MXNET_USE_ONEDNN == 1
-#include "operator/nn/dnnl/dnnl_power-inl.h"
+#include "operator/nn/dnnl/dnnl_power_scalar-inl.h"
 #endif
 
 namespace mxnet {

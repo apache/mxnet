@@ -18,13 +18,13 @@
  */
 
 /*!
- * \file dnnl_power.cc
+ * \file dnnl_power_scalar.cc
  * \author: Adam Grabowski, adam.grabowski@intel.com
  */
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "dnnl_power-inl.h"
+#include "dnnl_power_scalar-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -81,6 +81,11 @@ void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
                       const NDArray& output) {
   DNNLPowerFwd& fwd = DNNLPowerFwd::GetPowerForward(attrs, input, output);
   fwd.Execute(input, req, output);
+}
+
+bool SupportDNNLPower(const NDArray& input) {
+  return input.shape().Size() != 0 && input.shape().ndim() > 0 && input.shape().ndim() <= 6 &&
+         IsDNNLType(input.dtype());
 }
 
 }  // namespace op

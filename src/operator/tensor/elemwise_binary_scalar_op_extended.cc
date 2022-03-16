@@ -66,8 +66,11 @@ void PowerComputeExCPU(const nnvm::NodeAttrs& attrs,
                        const std::vector<mxnet::NDArray>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<mxnet::NDArray>& outputs) {
-  if (SupportDNNL(inputs[0])) {
+  if (SupportDNNLPower(inputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLPowerForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNL_OPCHECK_RUN(
+        (BinaryScalarOp::Compute<cpu, mshadow_op::power>), attrs, ctx, inputs, req, outputs);
   } else {
     FallBackCompute(
         BinaryScalarOp::Compute<cpu, mshadow_op::power>, attrs, ctx, inputs, req, outputs);
