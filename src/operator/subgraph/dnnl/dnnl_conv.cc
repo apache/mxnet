@@ -595,6 +595,10 @@ static bool SgDNNLConvInferType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int>* out_types) {
   auto const& param = nnvm::get<DNNLConvFusionParam>(attrs.parsed);
   if (param.full_conv_param.dnnl_param.quantized) {
+    if (in_types->at(0) == mshadow::kBfloat16) {
+      return false;
+    }
+
     std::unordered_set<size_t> minmax_indice;
     std::vector<int> base_in_types;
     std::vector<int> base_out_types;

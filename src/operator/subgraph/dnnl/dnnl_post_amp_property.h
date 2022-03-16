@@ -24,18 +24,19 @@
 #include <string>
 #include <vector>
 
-#include "../../tensor/amp_cast.h"
-#include "../common.h"
+#include "operator/tensor/amp_cast.h"
+#include "operator/subgraph/common.h"
 #include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
 inline bool IsSupportedAMPFuseOp(const nnvm::Node& node) {
-  const auto& op = node.op();
-  return (op != nullptr &&
-          (op == Op::Get("_sg_onednn_conv") || op == Op::Get("_sg_onednn_fully_connected") ||
-           op == Op::Get("_sg_onednn_selfatt_qk") || op == Op::Get("_sg_onednn_selfatt_valatt")));
+  static const std::set<const Op*> supported_ops = {Op::Get("_sg_onednn_conv"),
+                                                    Op::Get("_sg_onednn_fully_connected"),
+                                                    Op::Get("_sg_onednn_selfatt_qk"),
+                                                    Op::Get("_sg_onednn_selfatt_valatt")};
+  return supported_ops.count(node.op()) > 0;
 }
 
 class SgDNNLPostAMPSelector : public SubgraphSelector {
@@ -69,8 +70,8 @@ class SgDNNLPostAMPSelector : public SubgraphSelector {
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     if (status == SelectStatus::kFail || new_node.is_variable())
       return false;
-    // If 'n' is not the last matched node, then we have encountered an internal branch, we should
-    // pop out the node behind n and stop fusion.
+    // If 'n' is not the last matched node, then we have encountered an internal branch and we
+    // should pop out the node behind 'n' and stop fusion.
     if (matched_list.back() != &n) {
       status = SelectStatus::kFail;
       return false;

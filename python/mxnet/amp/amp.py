@@ -681,11 +681,12 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
 
     assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
     if not isinstance(data_example, (list, tuple)):
-        assert isinstance(data_example, (ND_NDArray, NP_NDArray))
         data_example = [data_example]
+    for data in data_example:
+        assert isinstance(data, (ND_NDArray, NP_NDArray)), "Data example must be composed of " \
+            "mxnet.numpy.ndarray or mxnet.ndarray.NDArray instances"
 
-    if not block._cached_graph:
-        block.hybridize()
+    block.hybridize(static_alloc=False, static_shape=False)
     block(*data_example)
 
     sym, params = block.export(None, remove_amp_cast=False)

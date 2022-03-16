@@ -78,6 +78,10 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
   if (params.quantized) {
     CHECK_EQ(in_types->size(), 3U);
 
+    if (in_types->at(0) == mshadow::kBfloat16) {
+      return false;
+    }
+
     CHECK(in_types->at(0) == mshadow::kInt8)
         << "QuantizedSelfAttentionQK only supports int8 input, while " << in_types->at(0)
         << " is given.";
@@ -433,6 +437,10 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
   const auto& params = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
 
   if (params.quantized) {
+    if (in_types->at(0) == mshadow::kBfloat16 || in_types->at(1) == mshadow::kBfloat16) {
+      return false;
+    }
+
     CHECK_EQ(in_types->size(), 6U) << "Input:[attention, queries_keys_values, min_att, max_att, "
                                       "min_qkv, max_qkv] - currently have "
                                    << in_types->size() << " inputs";

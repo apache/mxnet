@@ -32,7 +32,7 @@ struct DNNLSelfAttParam : public dmlc::Parameter<DNNLSelfAttParam> {
   bool enable_float_output;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  dmlc::optional<int> amp_out_dtype;
+  dmlc::optional<int> amp_out_dtype;      // mshadow dtype of a fused amp_cast node
 
   DMLC_DECLARE_PARAMETER(DNNLSelfAttParam) {
     DMLC_DECLARE_FIELD(heads).describe("Set number of heads.");

@@ -48,7 +48,7 @@ struct DNNLConvParam : public dmlc::Parameter<DNNLConvParam> {
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  dmlc::optional<int> amp_out_dtype;
+  dmlc::optional<int> amp_out_dtype;      // mshadow dtype of a fused amp_cast node
 
   DMLC_DECLARE_PARAMETER(DNNLConvParam) {
     DMLC_DECLARE_FIELD(with_bn).set_default(false).describe("Add post batchnorm.");

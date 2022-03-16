@@ -40,12 +40,13 @@ using nnvm::ObjectPtr;
 bool IsCastOp(const nnvm::Op* const op) {
   return op && (op == Op::Get("amp_cast") || op == Op::Get("Cast"));
 }
-
-// Before the model conversion, node entries of the original graph are mapped to the equivalent node
-// entries in the new graph that will be then converted to a mixed precision graph. This class wraps
-// a mapped NodeEntry from the new graph, providing a transparent interface for acquiring versions
-// of the wrapped entry with a specific dtype, adding a casting nodes to the graph when needed (one
-// for each unique dtype that was requested).
+/*!
+ * \brief Before the model conversion, node entries of the original graph are mapped to the
+ * equivalent node entries in the new graph that will be then converted to a mixed precision graph.
+ * This class wraps a mapped NodeEntry from the new graph, providing a transparent interface for
+ * acquiring versions of the wrapped entry with a specific dtype, adding a casting nodes to the
+ * graph when needed (one for each unique dtype that was requested).
+ */
 class MappedNodeEntry {
  public:
   MappedNodeEntry(NodeEntry node_entry, const int original_dtype)
@@ -53,24 +54,30 @@ class MappedNodeEntry {
     dtype = original_dtype;
   }
 
-  // Converts the dtype of this NodeEntry. This should be called after a node has been converted and
-  // dtypes of its outputs may have changed
+  /*!
+   * \brief Converts the dtype of this NodeEntry. This should be called after a node has been
+   * converted and dtypes of its outputs may have changed
+   */
   void UpdateDTypeAfterConversion(const int new_dtype) {
     CHECK_EQ(dtype, original_dtype);  // dtype should be changed only once
     CHECK(entry.node->op());
     dtype = new_dtype;
   }
 
-  // If dtype of this NodeEntry was not changed, returns the mapped entry. Otherwise returns a
-  // NodeEntry to the node which casts to the original dtype of this NodeEntry.
+  /*!
+   * \brief If dtype of this NodeEntry was not changed, returns the mapped entry. Otherwise returns
+   * a NodeEntry to the node which casts to the original dtype of this NodeEntry.
+   */
   const NodeEntry& AsOriginal() {
     return AsType(original_dtype);
   }
 
-  // If dtype of this NodeEntry matches the specified dtype, returns the mapped entry. Otherwise
-  // returns a NodeEntry to the node which casts to that type.
+  /*!
+   * \brief If dtype of this NodeEntry matches the specified dtype, returns the mapped entry.
+   * Otherwise returns a NodeEntry to the node which casts to that type.
+   */
   const NodeEntry& AsType(const int target_dtype, const bool can_add_cast = true) {
-    if (dtype == target_dtype) {
+    if (dtype == target_dtype || target_dtype == -1) {
       return entry;
     }
     NodeEntry& cast_entry = casts[target_dtype];
@@ -82,12 +89,28 @@ class MappedNodeEntry {
     return cast_entry;
   }
 
-  // Returns whether this NodeEntry has the specified dtype or an existing cast to that dtype
+  /*! \brief Returns whether this entry has the specified dtype or an existing cast to that dtype */
   bool HasDTypeEntry(const int target_dtype) const {
     return dtype == target_dtype || casts.count(target_dtype) > 0;
   }
 
-  // Returns whether this NodeEntry (of a parameter) can be cast offline
+  /*!
+   * \brief Returns whether this entry can be cast to a specific dtype. This should be called on
+   * input entires of a node before its conversion.
+   */
+  bool CanBeCastTo(const int target_dtype) {
+    static const auto& amp_cast_op = Op::Get("amp_cast");
+    static const auto& infertype   = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType")[amp_cast_op];
+    nnvm::NodeAttrs dummy_atts;
+    dummy_atts.dict["dtype"] = mxnet::op::type_string(target_dtype);
+    amp_cast_op->attr_parser(&dummy_atts);
+
+    std::vector<int> in_types  = {dtype};
+    std::vector<int> out_types = {-1};
+    return infertype(dummy_atts, &in_types, &out_types);
+  }
+
+  /*! \brief Returns whether this NodeEntry (of a parameter) can be cast offline */
   bool CanBeCastOfflineTo(const int target_dtype) const {
     CHECK(entry.node->is_variable());
     return casts.count(target_dtype) > 0;
@@ -104,11 +127,10 @@ class MappedNodeEntry {
     return node;
   }
 
-  NodeEntry Cast(const int new_dtype) {
-    CHECK(new_dtype == nnvm::kBfloat16 || new_dtype == nnvm::kFloat16 ||
-          new_dtype == nnvm::kFloat32);
+  NodeEntry Cast(const int target_dtype) {
+    CHECK(CanBeCastTo(target_dtype));
 
-    const std::string dt_name        = mxnet::op::type_string(new_dtype);
+    const std::string dt_name        = mxnet::op::type_string(target_dtype);
     const std::string suffix         = "_" + std::to_string(entry.index);
     const std::string cast_node_name = entry.node->attrs.name + suffix + "_amp_cast_" + dt_name;
     ObjectPtr cast_node              = CreateCastNode("amp_cast", cast_node_name);
@@ -132,7 +154,8 @@ using NodeEntrySet_t = std::unordered_set<NodeEntry, nnvm::NodeEntryHash, nnvm::
 using NodesEntries_t = std::unordered_map<Node*, NodeEntrySet_t>;
 using DstNodes_t     = std::unordered_map<Node*, std::unordered_map<Node*, NodeEntry>>;
 
-// Makes sure the node in the new graph will work with the same precision as in the original graph
+/*! \brief Makes sure the node in the new graph will work with the same precision as in the original
+ * graph */
 static void KeepOriginalNode(const ObjectPtr& old_node,
                              const NodeMap_t& node_map,
                              EntryMap_t* const entry_map) {
@@ -142,20 +165,20 @@ static void KeepOriginalNode(const ObjectPtr& old_node,
   }
 }
 
-// Tries to convert the node to low precision. Returns whether the node has been successfully
-// converted
+/*! \brief Tries to convert the node to low precision. Returns whether the node has been
+ * successfully converted
+ */
 static bool TryLowPrecision(const int target_dtype,
                             const ObjectPtr& old_node,
                             const NodeMap_t& node_map,
                             const NodesEntries_t& nodes_entries,
                             EntryMap_t* const entry_map) {
-  static auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
-  static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
+  static const auto& infertype      = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static const auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
 
   std::vector<int> in_types(old_node->inputs.size(), -1);
   std::vector<int> out_types(old_node->num_outputs(), -1);
   in_types[0] = target_dtype;
-
   if (infertype.count(old_node->op()) == 0 ||
       infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == false) {
     return false;
@@ -172,6 +195,15 @@ static bool TryLowPrecision(const int target_dtype,
     }
   }
 
+  for (size_t i = 0; i < old_node->inputs.size(); ++i) {
+    MappedNodeEntry& mapped_ne = entry_map->at(old_node->inputs[i]);
+    // if this tensor needs a cast, check whether MappedNodeEntry can actually cast it
+    if (in_types[i] != -1 && !mapped_ne.HasDTypeEntry(in_types[i]) &&
+        !mapped_ne.CanBeCastTo(in_types[i])) {
+      return false;
+    }
+  }
+
   const ObjectPtr& new_node = node_map.at(old_node.get());
   for (size_t i = 0; i < old_node->inputs.size(); ++i) {
     new_node->inputs.push_back(entry_map->at(old_node->inputs[i]).AsType(in_types[i]));
@@ -184,14 +216,15 @@ static bool TryLowPrecision(const int target_dtype,
   return true;
 }
 
-// Tries to convert the node to low precision if all of its inputs already have the correct dtype.
-// Otherwise keeps the node unchanged.
+/*! \brief Tries to convert the node to low precision if all of its inputs already have the correct
+ * dtype. Otherwise keeps the node unchanged.
+ */
 static void HandleWidestDtypeNode(const int target_dtype,
                                   const ObjectPtr& old_node,
                                   const NodeMap_t& node_map,
                                   const NodesEntries_t& nodes_entries,
                                   EntryMap_t* const entry_map) {
-  static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static const auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
 
   std::vector<int> in_types(old_node->inputs.size(), target_dtype);
   std::vector<int> out_types(old_node->num_outputs(), -1);
@@ -209,9 +242,10 @@ static void HandleWidestDtypeNode(const int target_dtype,
     KeepOriginalNode(old_node, node_map, entry_map);
   }
 }
-
-// Tries to convert the node to low precision if some of its inputs already are converted.
-// Otherwise keeps the node unchanged.
+/*!
+ * \brief Tries to convert the node to low precision if some of its inputs already are converted.
+ * Otherwise keeps the node unchanged.
+ */
 void HandleDTypeNeutralNode(const int target_dtype,
                             const ObjectPtr& old_node,
                             const NodeMap_t& node_map,
@@ -226,7 +260,8 @@ void HandleDTypeNeutralNode(const int target_dtype,
   }
 }
 
-// Decides which prameters can be cast offline and removes redundant cast nodes from the graph
+/* \brief Decides which prameters can be cast offline and removes redundant cast nodes from the
+ * graph */
 static void RemoveParamCasts(const int target_dtype,
                              const std::string& offline_param_cast_attr,
                              const NodeMap_t& node_map,
