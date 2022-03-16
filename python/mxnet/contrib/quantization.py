@@ -382,7 +382,7 @@ def _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_
 
 
 def _generate_list_of_data_desc(data_shapes, data_types):
-    """"Convert list of tuples to list of DataDesc."""
+    """Convert list of tuples to list of DataDesc."""
     def flatten_list(arg):
         ret = []
         for el in arg:
@@ -394,6 +394,10 @@ def _generate_list_of_data_desc(data_shapes, data_types):
 
     flattened_data_types = flatten_list(data_types)
     flattened_data_shapes = flatten_list(data_shapes)
+
+    if all(isinstance(x, DataDesc) for x in flattened_data_shapes):
+        return data_shapes
+
     assert len(flattened_data_types) == len(flattened_data_shapes)
 
     # pass integral type as reference
