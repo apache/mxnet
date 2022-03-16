@@ -37,7 +37,7 @@ from ..util import is_np_array
 from ..ndarray import array
 from ..ndarray import concat, tile
 
-from .utils import _init_data, _has_instance, _getdata_by_idx, _slice_along_batch_axis
+from .utils import _init_data, _has_instance, _getdata_by_idx
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -602,12 +602,10 @@ class NDArrayIter(DataIter):
         The data name.
     label_name : str, optional
         The label name.
-    layout : str, optional
-        The data layout.
     """
     def __init__(self, data, label=None, batch_size=1, shuffle=False,
                  last_batch_handle='pad', data_name='data',
-                 label_name='softmax_label', layout='NCHW'):
+                 label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
@@ -633,16 +631,12 @@ class NDArrayIter(DataIter):
         # used for 'roll_over'
         self._cache_data = None
         self._cache_label = None
-        self.layout = layout
 
     @property
     def provide_data(self):
         """The name and shape of data provided by this iterator."""
-        batch_axis = self.layout.find('N')
         return [
-            DataDesc(k, tuple(list(v.shape[:batch_axis]) + \
-                              [self.batch_size] + list(v.shape[batch_axis + 1:])),
-                     v.dtype, layout=self.layout)
+            DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
             for k, v in self.data
         ]
 
@@ -690,7 +684,7 @@ class NDArrayIter(DataIter):
         data = self.getdata()
         label = self.getlabel()
         # iter should stop when last batch is not complete
-        if data[0].shape[self.layout.find('N')] != self.batch_size:
+        if data[0].shape[0] != self.batch_size:
         # in this case, cache it for next epoch
             self._cache_data = data
             self._cache_label = label
@@ -706,7 +700,7 @@ class NDArrayIter(DataIter):
             end = data_source[0][1].shape[0] if data_source else 0
         s = slice(start, end)
         return [
-            _slice_along_batch_axis(x[1], s, self.layout.find('N'))
+            x[1][s]
             if isinstance(x[1], (np.ndarray, NDArray)) else
             # h5py (only supports indices in increasing order)
             array(x[1][sorted(self.idx[s])][[
@@ -725,7 +719,7 @@ class NDArrayIter(DataIter):
             concat(
                 first_data[i],
                 second_data[i],
-                dim=self.layout.find('N')
+                dim=0
             ) for i in range(len(first_data))
         ]
 
