@@ -103,7 +103,7 @@ DNNLSoftmaxFwd::DNNLSoftmaxFwd(const SoftmaxParam& param,
                                const bool is_train) {
   const float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
   const int axis          = CheckAxis(param.axis, tensors.data.shape().ndim());
-  const auto input_mem    = static_cast<const dnnl::memory*>(tensors.data.GetDNNLData());
+  const auto input_mem    = tensors.data.GetDNNLData();
 
   softmax_pd  = std::make_shared<softmax_fwd_pd_t>(GetSoftmaxFwdPd(*input_mem, axis, is_train));
   softmax_fwd = std::make_shared<softmax_fwd_t>(*softmax_pd);
@@ -139,10 +139,8 @@ linear_pd_t DNNLSoftmaxFwd::GetTemperaturePd(const dnnl::memory& input_mem,
 void DNNLSoftmaxFwd::Execute(const Tensors& tensors) const {
   DNNLStream* stream = DNNLStream::Get();
 
-  auto original_input_mem  = static_cast<const dnnl::memory*>(tensors.data.GetDNNLData());
-  auto softmax_pd_dst_desc = softmax_pd->dst_desc();
-  const auto out_mem =
-      static_cast<const dnnl::memory*>(tensors.out.GetDNNLData(&softmax_pd_dst_desc));
+  auto original_input_mem = tensors.data.GetDNNLData();
+  const auto out_mem      = tensors.out.GetDNNLData(softmax_pd->dst_desc());
 
   dnnl::memory* softmax_input_mem;
   if (temperature_pd) {
@@ -223,8 +221,8 @@ DNNLSoftmaxBwd& DNNLSoftmaxBwd::GetCached(const SoftmaxParam& param, const Tenso
 DNNLSoftmaxBwd::DNNLSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors) {
   const float temperature   = param.temperature.has_value() ? param.temperature.value() : 1.0f;
   const int axis            = CheckAxis(param.axis, tensors.out.shape().ndim());
-  const auto out_grad_mem   = static_cast<const dnnl::memory*>(tensors.out_grad.GetDNNLData());
-  const auto out_mem        = static_cast<const dnnl::memory*>(tensors.out.GetDNNLData());
+  const auto out_grad_mem   = tensors.out_grad.GetDNNLData();
+  const auto out_mem        = tensors.out.GetDNNLData();
   const auto softmax_fwd_pd = DNNLSoftmaxFwd::GetSoftmaxFwdPd(*out_mem, axis, /*is_train*/ true);
 
   softmax_bwd_pd = std::make_shared<softmax_bwd_pd_t>(
@@ -241,9 +239,8 @@ DNNLSoftmaxBwd::DNNLSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors
 void DNNLSoftmaxBwd::Execute(const Tensors& tensors, const std::vector<OpReqType>& req) const {
   DNNLStream* stream = DNNLStream::Get();
 
-  const auto original_out_grad_mem =
-      static_cast<const dnnl::memory*>(tensors.out_grad.GetDNNLData());
-  const auto out_mem = static_cast<const dnnl::memory*>(tensors.out.GetDNNLData());
+  const auto original_out_grad_mem = tensors.out_grad.GetDNNLData();
+  const auto out_mem               = tensors.out.GetDNNLData();
   const auto data_grad_mem =
       CreateDNNLMem(tensors.data_grad, softmax_bwd_pd->diff_src_desc(), req[0]);
 

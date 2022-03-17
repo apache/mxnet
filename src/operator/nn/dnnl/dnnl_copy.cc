@@ -38,21 +38,18 @@ void DNNLCopy(const nnvm::NodeAttrs& attrs,
   if (req == kNullOp || req == kWriteInplace)
     return;
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  auto in_mem = static_cast<const dnnl::memory*>(in_data.GetDNNLData());
+  auto in_mem = in_data.GetDNNLData();
   if (req == kAddTo) {
     TmpMemMgr::Get()->Init(ctx.requested[0]);
     // We should try and force the input memory has the same format
     // as the input output. If not, we'll have to reorder memory.
-    auto out_mem      = static_cast<const dnnl::memory*>(out_data.GetDNNLData());
-    auto out_mem_desc = out_mem->get_desc();
-    in_mem            = static_cast<const dnnl::memory*>(in_data.GetDNNLData(&out_mem_desc));
-    if (in_mem == nullptr) {
-      auto out_mem_desc = out_mem->get_desc();
-      in_mem = static_cast<const dnnl::memory*>(in_data.GetDNNLDataReorder(&out_mem_desc));
-    }
+    auto out_mem = out_data.GetDNNLData();
+    in_mem       = in_data.GetDNNLData(out_mem->get_desc());
+    if (in_mem == nullptr)
+      in_mem = in_data.GetDNNLDataReorder(out_mem->get_desc());
     DNNLSum(*out_mem, *in_mem, *out_mem);
   } else {
-    const_cast<NDArray&>(out_data).CopyFrom(in_mem);
+    const_cast<NDArray&>(out_data).CopyFrom(*in_mem);
   }
   DNNLStream::Get()->Submit();
 }

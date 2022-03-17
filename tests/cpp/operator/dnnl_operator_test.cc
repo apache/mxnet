@@ -1208,8 +1208,7 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
       continue;
     // cannot pool if ndarray and dnnl memory have different ndim
     if (in_arr.arr.IsView() ||
-        static_cast<const dnnl::memory*>(in_arr.arr.GetDNNLData())->get_desc().data.ndims !=
-            in_arr.arr.shape().ndim())
+        in_arr.arr.GetDNNLData()->get_desc().data.ndims != in_arr.arr.shape().ndim())
       continue;
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {

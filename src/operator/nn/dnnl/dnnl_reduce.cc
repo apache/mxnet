@@ -171,7 +171,7 @@ DNNLReduceFwd::DNNLReduceFwd(const NumpyReduceAxesParam& param,
                              const Tensors& tensors,
                              const bool is_train,
                              const dnnl::algorithm reduction_alg) {
-  auto input_mem        = static_cast<const dnnl::memory*>(tensors.data.GetDNNLData());
+  auto input_mem        = tensors.data.GetDNNLData();
   auto input_md         = input_mem->get_desc();
   const auto in_shape   = tensors.data.shape();
   const size_t in_ndim  = in_shape.ndim();
@@ -180,7 +180,7 @@ DNNLReduceFwd::DNNLReduceFwd(const NumpyReduceAxesParam& param,
   dnnl::memory::desc out_md;
 
   if (in_ndim == out_ndim) {
-    auto out_mem = static_cast<const dnnl::memory*>(tensors.out.GetDNNLData());
+    auto out_mem = tensors.out.GetDNNLData();
     out_md       = out_mem->get_desc();
   } else {
     if (param.axis.has_value()) {
@@ -219,14 +219,13 @@ reduce_fwd_pd_t DNNLReduceFwd::GetReduceFwdPd(const dnnl::memory::desc& input_md
 void DNNLReduceFwd::Execute(const Tensors& tensors) const {
   auto stream    = DNNLStream::Get();
   auto engine    = CpuEngine::Get()->get_engine();
-  auto input_mem = static_cast<const dnnl::memory*>(tensors.data.GetDNNLData());
+  auto input_mem = tensors.data.GetDNNLData();
   if (tensors.out.shape().Size() == 1) {
     // scalar result
     auto out_mem = dnnl::memory(reduce_pd->dst_desc(), engine, tensors.out.data().dptr<float>());
     stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, out_mem}});
   } else {
-    auto desc    = reduce_pd->dst_desc();
-    auto out_mem = static_cast<const dnnl::memory*>(tensors.out.GetDNNLData(&desc));
+    auto out_mem = tensors.out.GetDNNLData(reduce_pd->dst_desc());
     stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, *out_mem}});
   }
   stream->Submit();

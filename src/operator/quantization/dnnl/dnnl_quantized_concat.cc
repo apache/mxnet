@@ -71,11 +71,11 @@ static void DNNLQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
     auto i_scale = GetScale(in_data[i], data_min[i], data_max[i]);
     if (i_scale == out_scale) {
       CHECK(in_data[i].dtype() == out_dtype);
-      auto mem = static_cast<const dnnl::memory*>(in_data[i].GetDNNLData());
+      auto mem = in_data[i].GetDNNLData();
       data_mem.push_back(mem);
       data_md.push_back(mem->get_desc());
     } else {
-      auto mem      = static_cast<const dnnl::memory*>(in_data[i].GetDNNLData());
+      auto mem      = in_data[i].GetDNNLData();
       auto mem_desc = mem->get_desc();
       if (in_data[i].dtype() != out_dtype) {
         mem_desc.data.data_type = static_cast<dnnl_data_type_t>(get_dnnl_type(out_dtype));

@@ -49,8 +49,8 @@ DNNLSliceFwd::DNNLSliceFwd(const SliceParam& param, const NDArray& in, const NDA
     offsets[i] = s;
   }
 
-  auto in_md  = static_cast<const dnnl::memory*>(in.GetDNNLData())->get_desc();
-  auto out_md = static_cast<const dnnl::memory*>(out.GetDNNLData())->get_desc();
+  auto in_md  = in.GetDNNLData()->get_desc();
+  auto out_md = out.GetDNNLData()->get_desc();
   auto sub_md = in_md.submemory_desc(dims, offsets);
 
   auto engine = CpuEngine::Get()->get_engine();
@@ -98,8 +98,8 @@ void DNNLSlice(const nnvm::NodeAttrs& attrs,
                const NDArray& out) {
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   DNNLSliceFwd& fwd       = GetSliceForward(param, ctx.is_train, in, out);
-  auto in_mem             = static_cast<const dnnl::memory*>(in.GetDNNLData());
-  auto out_md             = static_cast<const dnnl::memory*>(out.GetDNNLData())->get_desc();
+  auto in_mem             = in.GetDNNLData();
+  auto out_md             = out.GetDNNLData()->get_desc();
   auto out_mem            = CreateDNNLMem(out, out_md, req);
   fwd.SetNewMem(*in_mem, *out_mem.second);
   fwd.Register();

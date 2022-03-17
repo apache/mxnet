@@ -112,7 +112,7 @@ void DNNLSumForward(const nnvm::NodeAttrs& attrs,
   data_mem.reserve(num_inputs);
 
   for (int i = 0; i < num_inputs; ++i) {
-    const dnnl::memory* in_mem = static_cast<const dnnl::memory*>(inputs[i].GetDNNLData());
+    const dnnl::memory* in_mem = inputs[i].GetDNNLData();
     dnnl::memory::desc tmp_md  = in_mem->get_desc();
     data_md.push_back(tmp_md);
     data_mem.push_back(in_mem);

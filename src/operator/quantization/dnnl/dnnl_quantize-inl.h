@@ -70,7 +70,7 @@ static void DNNLQuantizeComputeKer(const std::vector<NDArray>& inputs,
   if (inputs[0].IsView() && inputs[0].IsDNNLData())
     in_buffer = inputs[0].Reorder2Default();
 
-  auto i_mem    = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
+  auto i_mem    = in_buffer.GetDNNLData();
   auto i_desc   = i_mem->get_desc();
   size_t i_ndim = in_buffer.shape().ndim();
   dnnl::memory::desc o_desc;

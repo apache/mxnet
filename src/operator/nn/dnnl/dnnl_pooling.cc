@@ -42,7 +42,7 @@ void DNNLPoolingFwd::Init(const mxnet::NDArray& input,
                           const dnnl::memory::dims& pad_r,
                           const bool is_train,
                           const dnnl::algorithm alg_kind) {
-  const auto src_md         = static_cast<const dnnl::memory*>(input.GetDNNLData())->get_desc();
+  const auto src_md         = input.GetDNNLData()->get_desc();
   const auto dst_md         = GetMemDesc(output);
   const dnnl::engine engine = CpuEngine::Get()->get_engine();
   if (alg_kind != dnnl::algorithm::pooling_max && alg_kind != dnnl::algorithm::pooling_avg &&
@@ -76,7 +76,7 @@ void DNNLPoolingFwd::Execute(const NDArray& in_data,
   if (in_data.IsView() && in_data.IsDNNLData())
     in_buffer = in_data.Reorder2Default();
 
-  auto input_mem     = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
+  auto input_mem     = in_buffer.GetDNNLData();
   auto output_mem_t_ = CreateDNNLMem(out_data, this->fwd_pd_->dst_desc(), req);
 
   dnnl_args_map_t args = {
@@ -92,9 +92,7 @@ void DNNLPoolingFwd::Execute(const NDArray& in_data,
     }
 
     auto ws = std::make_shared<dnnl::memory>(
-        (*(this->fwd_pd_)).workspace_desc(),
-        engine,
-        static_cast<const dnnl::memory*>(workspace->GetDNNLData())->get_data_handle());
+        (*(this->fwd_pd_)).workspace_desc(), engine, workspace->GetDNNLData()->get_data_handle());
     args[DNNL_ARG_WORKSPACE] = *ws;
   }
   if (this->fwd_) {
@@ -299,7 +297,7 @@ DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
   if (it == pooling_fwds.end()) {
     CHECK(use_adaptive_pooling || (param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3))
         << "Not Implemented";
-    auto data_md = static_cast<const dnnl::memory*>(data.GetDNNLData())->get_desc();
+    auto data_md = data.GetDNNLData()->get_desc();
 
     const auto kernel_ndims = use_adaptive_pooling ? data.shape().ndim() : param.kernel.ndim();
     dnnl::memory::dims kernel(kernel_ndims);
@@ -358,7 +356,7 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    auto input_mem = static_cast<const dnnl::memory*>(in_data.GetDNNLData());
+    auto input_mem = in_data.GetDNNLData();
     auto data_md   = input_mem->get_desc();
 
     auto dst_dims = dnnl::memory::dims(out_grad.shape().begin(), out_grad.shape().end());
@@ -433,17 +431,15 @@ void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
 
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
-  auto& bwd = GetPoolingBwd(param, *in_data, in_grad, out_grad, param.IsAdaptivePooling());
-  auto bwd_diff_dst_desc = bwd.pd.diff_dst_desc();
-  auto diff_dst_mem =
-      static_cast<const dnnl::memory*>(out_grad.GetDNNLDataReorder(&bwd_diff_dst_desc));
-  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
+  auto& bwd         = GetPoolingBwd(param, *in_data, in_grad, out_grad, param.IsAdaptivePooling());
+  auto diff_dst_mem = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
+  auto diff_src_mem = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
   dnnl_args_map_t args = {
       {DNNL_ARG_DIFF_DST, *diff_dst_mem},
       {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
   };
   if (DNNLRequireWorkspace(param) && workspace != nullptr) {
-    args[DNNL_ARG_WORKSPACE] = *(static_cast<const dnnl::memory*>(workspace->GetDNNLData()));
+    args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
   }
 
   DNNLStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);

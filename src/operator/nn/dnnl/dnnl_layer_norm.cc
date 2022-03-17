@@ -81,10 +81,9 @@ DNNLLayerNormFwd& DNNLLayerNormFwd::GetCached(const LayerNormParam& param,
 }
 
 DNNLLayerNormFwd::DNNLLayerNormFwd(const LayerNormParam& param, const NDArray& data) {
-  const dnnl::memory::desc data_md =
-      static_cast<const dnnl::memory*>(data.GetDNNLData())->get_desc();
-  fwd_pd = CreatePrimitiveDesc(param, data_md);
-  fwd    = std::make_shared<layernorm_fwd_t>(*fwd_pd);
+  const dnnl::memory::desc data_md = data.GetDNNLData()->get_desc();
+  fwd_pd                           = CreatePrimitiveDesc(param, data_md);
+  fwd                              = std::make_shared<layernorm_fwd_t>(*fwd_pd);
 }
 
 std::shared_ptr<layernorm_fwd_pd_t> DNNLLayerNormFwd::CreatePrimitiveDesc(
@@ -136,23 +135,18 @@ void DNNLLayerNormFwd::Execute(const LayerNormParam& param,
   auto mean_var_md = GetMeanVarDesc(get_dnnl_type(outputs[layernorm::kMean].dtype()),
                                     outputs[layernorm::kMean].shape());
   auto mean_mem    = dnnl_output_t(
-      OutDataOp::Noop,
-      static_cast<dnnl::memory*>(
-          const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(&mean_var_md)));
+      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(mean_var_md));
   auto variance_mem = dnnl_output_t(
-      OutDataOp::Noop,
-      static_cast<dnnl::memory*>(
-          const_cast<NDArray&>(outputs[layernorm::kStd]).CreateDNNLData(&mean_var_md)));
+      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kStd]).CreateDNNLData(mean_var_md));
 
   auto output_mem      = CreateDNNLMem(outputs[layernorm::kOut], fwd_pd->dst_desc(), req);
   auto scale_shift_mem = GetScaleShiftMem(inputs[layernorm::kGamma], inputs[layernorm::kBeta]);
 
-  dnnl_args_map_t args = {
-      {DNNL_ARG_SRC, *static_cast<const dnnl::memory*>(inputs[layernorm::kData].GetDNNLData())},
-      {DNNL_ARG_DST, *output_mem.second},
-      {DNNL_ARG_MEAN, *mean_mem.second},
-      {DNNL_ARG_VARIANCE, *variance_mem.second},
-      {DNNL_ARG_SCALE_SHIFT, scale_shift_mem}};
+  dnnl_args_map_t args = {{DNNL_ARG_SRC, *inputs[layernorm::kData].GetDNNLData()},
+                          {DNNL_ARG_DST, *output_mem.second},
+                          {DNNL_ARG_MEAN, *mean_mem.second},
+                          {DNNL_ARG_VARIANCE, *variance_mem.second},
+                          {DNNL_ARG_SCALE_SHIFT, scale_shift_mem}};
 
   DNNLStream::Get()->RegisterPrimArgs(*fwd, args);
   CommitOutput(outputs[layernorm::kOut], output_mem);
@@ -189,8 +183,7 @@ void DNNLLayerNormBwd::Execute(const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req) const {
   auto scale_shift_mem =
       GetScaleShiftMem(inputs[layernorm::kBwdGamma], inputs[layernorm::kBwdBeta]);
-  auto scale_shift_mem_desc = scale_shift_mem.get_desc();
-  auto diff_weights_ndarray = NDArray(&scale_shift_mem_desc);
+  auto diff_weights_ndarray = NDArray(scale_shift_mem.get_desc());
   const auto bytes          = inputs[layernorm::kBwdGamma].shape()[0] *
                      mshadow::mshadow_sizeof(inputs[layernorm::kBwdGamma].dtype());
   const auto diff_weights_ndaray_data_ptr_plus_bytes = reinterpret_cast<void*>(
@@ -206,16 +199,13 @@ void DNNLLayerNormBwd::Execute(const std::vector<NDArray>& inputs,
       outputs[layernorm::kBwdDataGrad], bwd_pd->diff_src_desc(), req[layernorm::kBwdDataGrad]);
   dnnl_output_t diff_weights_mem = CreateDNNLMem(
       diff_weights_ndarray, bwd_pd->diff_weights_desc(), req[layernorm::kBwdGammaGrad]);
-  dnnl_args_map_t args = {
-      {DNNL_ARG_DIFF_DST,
-       *static_cast<const dnnl::memory*>(inputs[layernorm::kBwdOutGrad].GetDNNLData())},
-      {DNNL_ARG_SRC, *static_cast<const dnnl::memory*>(inputs[layernorm::kBwdData].GetDNNLData())},
-      {DNNL_ARG_SCALE_SHIFT, scale_shift_mem},
-      {DNNL_ARG_MEAN, *static_cast<const dnnl::memory*>(inputs[layernorm::kBwdMean].GetDNNLData())},
-      {DNNL_ARG_VARIANCE,
-       *static_cast<const dnnl::memory*>(inputs[layernorm::kBwdStd].GetDNNLData())},
-      {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
-      {DNNL_ARG_DIFF_SCALE_SHIFT, *diff_weights_mem.second}};
+  dnnl_args_map_t args = {{DNNL_ARG_DIFF_DST, *inputs[layernorm::kBwdOutGrad].GetDNNLData()},
+                          {DNNL_ARG_SRC, *inputs[layernorm::kBwdData].GetDNNLData()},
+                          {DNNL_ARG_SCALE_SHIFT, scale_shift_mem},
+                          {DNNL_ARG_MEAN, *inputs[layernorm::kBwdMean].GetDNNLData()},
+                          {DNNL_ARG_VARIANCE, *inputs[layernorm::kBwdStd].GetDNNLData()},
+                          {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
+                          {DNNL_ARG_DIFF_SCALE_SHIFT, *diff_weights_mem.second}};
   DNNLStream::Get()->RegisterPrimArgs(*bwd, args);
   CommitOutput(outputs[layernorm::kBwdDataGrad], diff_src_mem);
   CommitOutput(diff_weights_ndarray, diff_weights_mem);
@@ -245,10 +235,8 @@ DNNLLayerNormBwd& DNNLLayerNormBwd::GetCached(const LayerNormParam& param,
 
   auto it = layer_norm_bwds.find(key);
   if (it == layer_norm_bwds.end()) {
-    const dnnl::memory::desc data_md =
-        static_cast<const dnnl::memory*>(inputs[layernorm::kBwdData].GetDNNLData())->get_desc();
-    const dnnl::memory::desc diff_md =
-        static_cast<const dnnl::memory*>(inputs[layernorm::kBwdOutGrad].GetDNNLData())->get_desc();
+    const dnnl::memory::desc data_md = inputs[layernorm::kBwdData].GetDNNLData()->get_desc();
+    const dnnl::memory::desc diff_md = inputs[layernorm::kBwdOutGrad].GetDNNLData()->get_desc();
     DNNLLayerNormBwd bwd(param, inputs, data_md, diff_md);
     it = AddToCache(&layer_norm_bwds, key, bwd);
   }

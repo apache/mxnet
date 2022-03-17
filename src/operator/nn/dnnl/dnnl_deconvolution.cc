@@ -112,10 +112,9 @@ void DNNLDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
     if (weights.IsDefaultData()) {
       // We also need to modify the layout on the original weights array.
       // The data conversion happens after the weights array is used.
-      auto logical_swap_desc = IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group);
-      weights.DNNLDataReorderAsync(&logical_swap_desc);
+      weights.DNNLDataReorderAsync(IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group));
     } else {
-      CHECK(static_cast<const dnnl::memory*>(weights.GetDNNLData())->get_desc() ==
+      CHECK(weights.GetDNNLData()->get_desc() ==
             IOLogicalSwapDesc(fwd_pd->weights_desc(), num_group));
     }
   }

@@ -157,7 +157,7 @@ void DNNLActivationForward(const nnvm::NodeAttrs& attrs,
   param_.alg               = GetDNNLActAlgo(param);
   const NDArray& in_buffer = in_data;
   DNNLStream* stream       = DNNLStream::Get();
-  auto input_mem           = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
+  auto input_mem           = in_buffer.GetDNNLData();
   DNNLActForward& fwd      = GetActForward(param_, ctx, in_buffer, *input_mem);
   auto out_mem_t           = CreateDNNLMem(out_data, fwd.fwd_pd.dst_desc(), req, &in_buffer);
   stream->RegisterPrimArgs(fwd.GetFwd(),
@@ -182,7 +182,7 @@ void DNNLLeakyReluForward(const nnvm::NodeAttrs& attrs,
   if (in_data.IsView() && in_data.IsDNNLData())
     in_buffer = in_data.Reorder2Default();
 
-  auto input_mem      = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
+  auto input_mem      = in_buffer.GetDNNLData();
   DNNLActForward& fwd = GetActForward(param_, ctx, in_buffer, *input_mem);
   auto out_mem_t      = CreateDNNLMem(out_data, fwd.fwd_pd.dst_desc(), req, &in_buffer);
   stream->RegisterPrimArgs(fwd.GetFwd(),
@@ -226,8 +226,7 @@ static inline DNNLActBackward& GetActBackward(const DNNLActParam& param,
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
-    DNNLActBackward bwd(
-        param, in_data, in_mem, *static_cast<const dnnl::memory*>(out_grad.GetDNNLData()));
+    DNNLActBackward bwd(param, in_data, in_mem, *out_grad.GetDNNLData());
     it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
@@ -252,13 +251,12 @@ void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
   DNNLActParam param_;
   param_.alg = GetDNNLActAlgo(param);
   TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
-  auto diff_dst_memory = static_cast<const dnnl::memory*>(out_buffer.GetDNNLData());
-  auto input_mem       = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
+  auto diff_dst_memory = out_buffer.GetDNNLData();
+  auto input_mem       = in_buffer.GetDNNLData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
   if (input_mem->get_desc() != diff_dst_memory->get_desc()) {
-    auto diff_dst_desc = diff_dst_memory->get_desc();
-    input_mem = static_cast<const dnnl::memory*>(in_buffer.GetDNNLDataReorder(&diff_dst_desc));
+    input_mem = in_buffer.GetDNNLDataReorder(diff_dst_memory->get_desc());
   }
 
   DNNLActBackward& bwd = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
@@ -266,9 +264,7 @@ void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
   dnnl_args_map_t args = {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DIFF_DST, *diff_dst_memory}};
   if (req[0] != kAddTo) {
     // req[0] is kWriteTo or kWriteInplace
-    auto bwd_pd_diff_src_desc = bwd.bwd_pd.diff_src_desc();
-    auto diff_src_memory      = static_cast<const dnnl::memory*>(
-        const_cast<NDArray&>(in_grad).CreateDNNLData(&bwd_pd_diff_src_desc));
+    auto diff_src_memory = const_cast<NDArray&>(in_grad).CreateDNNLData(bwd.bwd_pd.diff_src_desc());
     args.insert({DNNL_ARG_DIFF_SRC, *diff_src_memory});
     stream->RegisterPrimArgs(bwd.GetBwd(), args);
     stream->Submit();
@@ -301,14 +297,12 @@ void DNNLLeakyReluBackward(const nnvm::NodeAttrs& attrs,
   param_.slope = param.slope;
 
   TmpMemMgr::Get()->Init(ctx.requested[leakyrelu::kRandom]);
-  auto diff_dst_memory = static_cast<const dnnl::memory*>(out_buffer.GetDNNLData());
-  auto input_mem       = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
+  auto diff_dst_memory = out_buffer.GetDNNLData();
+  auto input_mem       = in_buffer.GetDNNLData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
-  auto diff_dst_desc = diff_dst_memory->get_desc();
   if (input_mem->get_desc() != diff_dst_memory->get_desc())
-    input_mem = static_cast<const dnnl::memory*>(
-        static_cast<const dnnl::memory*>(in_buffer.GetDNNLDataReorder(&diff_dst_desc)));
+    input_mem = in_buffer.GetDNNLDataReorder(diff_dst_memory->get_desc());
   DNNLActBackward& bwd          = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   DNNLStream* stream            = DNNLStream::Get();
   dnnl_output_t diff_src_memory = CreateDNNLMem(output, bwd.bwd_pd.diff_src_desc(), req[0]);

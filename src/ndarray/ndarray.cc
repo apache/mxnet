@@ -222,7 +222,7 @@ NDArray::NDArray(const void* md_desc) : storage_type_(kDefaultStorage), autograd
   ptr_->dnnl_mem_ = std::make_shared<DNNLMemory>(md, ptr_->shandle.dptr);
 }
 
-NDArray::NDArray(const std::shared_ptr<void>& dnnl_mem_ptr)
+NDArray::NDArray(const std::shared_ptr<dnnl::memor>& dnnl_mem_ptr)
     : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
   std::shared_ptr<dnnl::memory> dnnl_mem = std::static_pointer_cast<dnnl::memory>(dnnl_mem_ptr);
   auto mem_desc                          = dnnl_mem->get_desc();
@@ -648,7 +648,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
   dnnl_mem_.reset(new DNNLMemory(data_md, shandle.dptr));
 }
 
-const void* NDArray::GetDNNLData(const void* mem_desc) const {
+const dnnl::memory* NDArray::GetDNNLData(const void* mem_desc) const {
   const dnnl::memory::desc desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc";
@@ -665,7 +665,7 @@ const void* NDArray::GetDNNLData(const void* mem_desc) const {
   }
 }
 
-const void* NDArray::GetDNNLDataReorder(const void* mem_desc) const {
+const dnnl::memory* NDArray::GetDNNLDataReorder(const void* mem_desc) const {
   dnnl::memory::desc new_desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   CHECK(storage_type() == kDefaultStorage);
 
@@ -827,7 +827,7 @@ void NDArray::DNNLDataReorderAsync(const void* mem_desc) const {
       "Reorder");
 }
 
-const void* NDArray::GetDNNLData() const {
+const dnnl::memory* NDArray::GetDNNLData() const {
   CHECK(storage_type() == kDefaultStorage);
   const auto is_view = IsView();
   if (IsDNNLData()) {
@@ -889,7 +889,7 @@ void NDArray::CopyFrom(const void* memory) {
   DNNLMemoryCopy(mem, this_mem);
 }
 
-void* NDArray::CreateDNNLData(const void* mem_desc) {
+dnnl::memory* NDArray::CreateDNNLData(const void* mem_desc) {
   dnnl::memory::desc desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc. "

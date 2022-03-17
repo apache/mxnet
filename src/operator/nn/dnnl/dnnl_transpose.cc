@@ -57,7 +57,7 @@ DNNLTransposeFwd::DNNLTransposeFwd(const NumpyTransposeParam& param, const NDArr
   }
 
   auto engine = CpuEngine::Get()->get_engine();
-  auto in_mem = static_cast<const dnnl::memory*>(data.GetDNNLData());
+  auto in_mem = data.GetDNNLData();
   auto src_md = in_mem->get_desc();
   data_       = std::make_shared<dnnl::memory>(src_md, engine, nullptr);
 
@@ -71,7 +71,7 @@ DNNLTransposeFwd::DNNLTransposeFwd(const NumpyTransposeParam& param, const NDArr
   }
 
   dnnl_memory_desc_t dst_fmt;
-  dnnl_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, dnnl_f32, strides);
+  dnnl_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, get_dnnl_type_t(data.dtype()), strides);
 
   dst_md_ = std::make_shared<dnnl::memory::desc>(dst_fmt);
   out_    = std::make_shared<dnnl::memory>(*dst_md_, engine, nullptr);
@@ -81,8 +81,7 @@ DNNLTransposeFwd::DNNLTransposeFwd(const NumpyTransposeParam& param, const NDArr
 
 void DNNLTransposeFwd::SetNewMem(const NDArray& data, const NDArray& output) {
   if (data.IsDNNLData()) {
-    this->data_->set_data_handle(
-        static_cast<const dnnl::memory*>(data.GetDNNLData())->get_data_handle());
+    this->data_->set_data_handle(data.GetDNNLData()->get_data_handle());
   } else {
     MSHADOW_TYPE_SWITCH(
         data.dtype(), DTYPE, { this->data_->set_data_handle(data.data().dptr<DTYPE>()); });

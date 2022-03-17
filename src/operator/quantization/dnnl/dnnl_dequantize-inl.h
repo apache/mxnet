@@ -62,7 +62,7 @@ void SgDNNLDequantizeOperator::Forward(const OpContext& ctx,
   NDArray in_buffer = inputs[0];
   if (inputs[0].IsView() && inputs[0].IsDNNLData())
     in_buffer = inputs[0].Reorder2Default();
-  auto i_mem     = static_cast<const dnnl::memory*>(in_buffer.GetDNNLData());
+  auto i_mem     = in_buffer.GetDNNLData();
   float data_min = *inputs[1].data().dptr<float>();
   float data_max = *inputs[2].data().dptr<float>();
 

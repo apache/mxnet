@@ -106,9 +106,8 @@ class DNNLLRNFwd {
 };  // End of LRN Forword Class
 
 void DNNLLRNFwd::_Init(const LRNParam& param, bool is_train, const NDArray& in_data) {
-  dnnl::memory::desc in_data_md =
-      static_cast<const dnnl::memory*>(in_data.GetDNNLData())->get_desc();
-  this->fwd_pd = GetLRNFwdDesc(param, is_train, in_data_md);
+  dnnl::memory::desc in_data_md = in_data.GetDNNLData()->get_desc();
+  this->fwd_pd                  = GetLRNFwdDesc(param, is_train, in_data_md);
 
   this->fwd = std::shared_ptr<dnnl::lrn_forward>(new dnnl::lrn_forward(this->fwd_pd));
 }
@@ -120,7 +119,7 @@ void DNNLLRNFwd::Execute(const OpContext& ctx,
   auto output_mem_t = CreateDNNLMem(out_data, (this->fwd_pd).dst_desc(), req);
 
   dnnl_args_map_t args = {
-      {DNNL_ARG_SRC, *static_cast<const dnnl::memory*>(in_data.GetDNNLData())},
+      {DNNL_ARG_SRC, *in_data.GetDNNLData()},
       {DNNL_ARG_DST, *output_mem_t.second},
   };
   std::shared_ptr<dnnl::memory> workspace;
@@ -204,11 +203,10 @@ class DNNLLRNBwd {
                const dnnl_output_t& diff_src_mem) {
     auto engine          = CpuEngine::Get()->get_engine();
     auto workspace       = std::make_shared<dnnl::memory>((this->fwd_pd).workspace_desc(), engine);
-    dnnl_args_map_t args = {
-        {DNNL_ARG_SRC, *static_cast<const dnnl::memory*>(in_data.GetDNNLData())},
-        {DNNL_ARG_DIFF_DST, *static_cast<const dnnl::memory*>(out_grad.GetDNNLData())},
-        {DNNL_ARG_WORKSPACE, *workspace},
-        {DNNL_ARG_DIFF_SRC, *diff_src_mem.second}};
+    dnnl_args_map_t args = {{DNNL_ARG_SRC, *in_data.GetDNNLData()},
+                            {DNNL_ARG_DIFF_DST, *out_grad.GetDNNLData()},
+                            {DNNL_ARG_WORKSPACE, *workspace},
+                            {DNNL_ARG_DIFF_SRC, *diff_src_mem.second}};
     DNNLStream::Get()->RegisterPrimArgs(*(this->bwd), args);
     CommitOutput(in_grad, diff_src_mem);
     DNNLStream::Get()->Submit();
@@ -231,10 +229,8 @@ static DNNLLRNBwd& GetLRNBwd(const LRNParam& param,
 
   auto it = lrn_bwds.find(key);
   if (it == lrn_bwds.end()) {
-    const dnnl::memory::desc in_data_md =
-        static_cast<const dnnl::memory*>(in_data.GetDNNLData())->get_desc();
-    const dnnl::memory::desc diff_md =
-        static_cast<const dnnl::memory*>(out_grad.GetDNNLData())->get_desc();
+    const dnnl::memory::desc in_data_md = in_data.GetDNNLData()->get_desc();
+    const dnnl::memory::desc diff_md    = out_grad.GetDNNLData()->get_desc();
     DNNLLRNBwd bwd(param, in_data_md, diff_md);
     it = AddToCache(&lrn_bwds, key, bwd);
   }

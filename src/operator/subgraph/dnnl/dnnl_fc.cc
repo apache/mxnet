@@ -235,15 +235,15 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     const mxnet::TShape oshape = output.shape();
     dnnl::memory::dims out_dims(2);
     if (oshape.ndim() == 2) {
-      out_dims[0] = static_cast<int>(oshape[0]);
-      out_dims[1] = static_cast<int>(oshape[1]);
+      out_dims[0] = static_cast<index_t>(oshape[0]);
+      out_dims[1] = static_cast<index_t>(oshape[1]);
     } else {
       if (!default_param.flatten) {
-        out_dims[0] = static_cast<int>(oshape.ProdShape(0, oshape.ndim() - 1));
-        out_dims[1] = static_cast<int>(oshape[oshape.ndim() - 1]);
+        out_dims[0] = static_cast<index_t>(oshape.ProdShape(0, oshape.ndim() - 1));
+        out_dims[1] = static_cast<index_t>(oshape[oshape.ndim() - 1]);
       } else {
-        out_dims[0] = static_cast<int>(static_cast<int>(oshape[0]));
-        out_dims[1] = static_cast<int>(oshape.ProdShape(1, oshape.ndim()));
+        out_dims[0] = static_cast<index_t>(oshape[0]);
+        out_dims[1] = static_cast<index_t>(oshape.ProdShape(1, oshape.ndim()));
       }
     }
     dnnl::memory::desc out_md =
@@ -416,9 +416,9 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     } else {
       const auto def_weight_mem = static_cast<const dnnl::memory*>(weight.GetDNNLData());
       if (def_weight_mem->get_desc() != fwd_->fwd_pd.weights_desc()) {
-        auto fwd_pd_weights_desc = fwd_->fwd_pd.weights_desc();
-        cached_weight_           = NDArray(&fwd_pd_weights_desc);
-        auto cached_weight_mem   = static_cast<const dnnl::memory*>(cached_weight_.GetDNNLData());
+        auto weight_desc       = fwd_->fwd_pd.weights_desc();
+        cached_weight_         = NDArray(weight_desc);
+        auto cached_weight_mem = static_cast<const dnnl::memory*>(cached_weight_.GetDNNLData());
         std::unordered_map<int, dnnl::memory> args(
             {{DNNL_ARG_FROM, *def_weight_mem}, {DNNL_ARG_TO, *cached_weight_mem}});
         DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(*def_weight_mem, *cached_weight_mem),
@@ -438,11 +438,11 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   }
 
   if (dnnl_param.with_sum) {
-    const auto& output_mem   = static_cast<const dnnl::memory*>(output.GetDNNLData());
+    const auto& output_mem   = output.GetDNNLData();
     const auto& out_mem_desc = output_mem->get_desc();
     auto dst_mem_desc        = fwd_->fwd_pd.dst_desc();
     if (out_mem_desc != dst_mem_desc) {
-      auto tmp_out_mem = static_cast<const dnnl::memory*>(output.GetDNNLDataReorder(&dst_mem_desc));
+      auto tmp_out_mem            = output.GetDNNLDataReorder(dst_mem_desc);
       dst_mem_desc.data.data_type = out_mem_desc.data.data_type;
       dnnl_mem_ptr new_out_mem(new dnnl::memory(
           dst_mem_desc, CpuEngine::Get()->get_engine(), output_mem->get_data_handle()));
