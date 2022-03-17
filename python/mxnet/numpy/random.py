@@ -267,7 +267,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, device=None, out=None)
     .. [1] Limpert, E., Stahel, W. A., and Abbt, M., "Log-normal
            Distributions across the Sciences: Keys and Clues,"
            BioScience, Vol. 51, No. 5, May, 2001.
-           https://stat.ethz.ch/~stahel/lognormal/bioscience.pdf
+           http://www.statlit.org/pdf/2001-Limpert-Bioscience2.pdf
     .. [2] Reiss, R.D. and Thomas, M., "Statistical Analysis of Extreme
            Values," Basel: Birkhauser Verlag, 2001, pp. 31-32.
 
