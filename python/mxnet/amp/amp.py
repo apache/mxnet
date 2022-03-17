@@ -676,7 +676,7 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
         overhead of the model if casted.
     """
     from ..gluon import HybridBlock, SymbolBlock
-    from ..ndarray import NDArray as ND_NDArray
+    from ..ndarray import NDArray as ND_NDArray, waitall
     from ..numpy import ndarray as NP_NDArray
 
     assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
@@ -685,9 +685,10 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
     for data in data_example:
         assert isinstance(data, (ND_NDArray, NP_NDArray)), "Data example must be composed of " \
             "mxnet.numpy.ndarray or mxnet.ndarray.NDArray instances"
-
-    block.hybridize(static_alloc=False, static_shape=False)
+    if not block._active:
+        block.hybridize(static_alloc=False, static_shape=False)
     block(*data_example)
+    waitall()
 
     sym, params = block.export(None, remove_amp_cast=False)
     args, auxs = {}, {}

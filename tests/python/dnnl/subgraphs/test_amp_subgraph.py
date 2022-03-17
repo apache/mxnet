@@ -48,12 +48,12 @@ def check_amp_with_quantization(net, data_example, quantized_nodes):
   assert calib_tensors1 == calib_tensors2
 
 
-def same_graph_structure(symnet1, symnet2, expected):
-  nodes1 = json.loads(symnet1.tojson(remove_amp_cast=False))['nodes']
-  nodes2 = json.loads(symnet2.tojson(remove_amp_cast=False))['nodes']
-  assert (len(nodes1) == len(nodes2)) == expected
-  for node1, node2 in zip(nodes1, nodes2):
-    if node1['op'] != node2['op'] or node1['inputs'] != node2['inputs']:
+def same_graph_structure(symnet_observed, symnet_expected, expected):
+  nodes_obs = json.loads(symnet_observed.tojson(remove_amp_cast=False))['nodes']
+  nodes_exp = json.loads(symnet_expected.tojson(remove_amp_cast=False))['nodes']
+  assert (len(nodes_obs) == len(nodes_exp)) == expected
+  for node_obs, node_exp in zip(nodes_obs, nodes_exp):
+    if node_obs['op'] != node_exp['op'] or node_obs['inputs'] != node_exp['inputs']:
       assert expected == False
       break
 
