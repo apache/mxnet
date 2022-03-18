@@ -290,11 +290,12 @@ static std::vector<ResourceRequest> QuantizedRnnResourceEx(const NodeAttrs& attr
 
 NNVM_REGISTER_OP(_contrib_quantized_rnn)
     .add_alias("_npx_contrib_quantized_rnn")
-    .describe(R"code(RNN operator for input data type of uint8. The weight of each gates is converted
-to int8, while bias is accumulated in type float32. The hidden state and cell state are in type
-float32. For the input data, two more arguments of type float32 must be provided representing the
-thresholds of quantizing argument from data type float32 to uint8. The final outputs contain the
-recurrent result in float32. It only supports quantization for Vanilla LSTM network.
+    .describe(R"code(RNN operator for input data type of uint8. The weight of each
+gates is converted to int8, while bias is accumulated in type float32.
+The hidden state and cell state are in type float32. For the input data, two more arguments
+of type float32 must be provided representing the thresholds of quantizing argument from
+data type float32 to uint8. The final outputs contain the recurrent result in float32.
+It only supports quantization for Vanilla LSTM network.
 
 .. Note::
     This operator only supports forward propagation. DO NOT use it in training.)code" ADD_FILELINE)
