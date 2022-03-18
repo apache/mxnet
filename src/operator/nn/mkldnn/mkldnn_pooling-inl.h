@@ -28,9 +28,12 @@
 
 #include <mkldnn.hpp>
 #include <utility>
+#include <vector>
 
 #include "../pooling-inl.h"
 #include "./mkldnn_base-inl.h"
+
+#define DIV_ROUND_UP(a, b) (((a) + (b - 1)) / (b))
 
 namespace mxnet {
 namespace op {
@@ -54,7 +57,8 @@ class MKLDNNPoolingFwd {
   void Execute(const NDArray& in_data,
                const OpReqType req,
                const NDArray& out_data,
-               const NDArray* workspace);
+               const NDArray* workspace,
+               const bool use_adaptive_pooling);
 
  private:
   bool with_workspace_;
@@ -87,24 +91,37 @@ class MKLDNNPoolingBwd {
   const mkldnn::pooling_backward::primitive_desc& GetPd();
 };
 
+inline int ComputeStrides(const int inner, const int outer) {
+  return ((inner << 1) / outer) - (inner / outer);
+}
+
+inline int ComputeKernel(const int inner, const int outer) {
+  return DIV_ROUND_UP((inner << 1) / outer, 1) - (inner / outer);
+}
+
+inline int ComputePadding(const int inner, const int outer, const int strides,
+                          const int kernel) {
+  return (strides * (outer - 1) + kernel - inner) / 2;
+}
+
 template <typename T = mkldnn::memory::dims>
 void UseAdaptivePaddingKernel(T* kernel,
                               T* strides,
                               T* pad_l,
                               T* pad_r,
-                              const NDArray& in_data,
-                              const NDArray& out_data) {
-  const int IH = in_data.shape()[2];
-  const int IW = in_data.shape()[3];
-  const int OH = out_data.shape()[2];
-  const int OW = out_data.shape()[3];
+                              const mxnet::TShape& input_shape,
+                              const mxnet::TShape& output_shape) {
+  const int IH = input_shape[2];
+  const int IW = input_shape[3];
+  const int OH = output_shape[2];
+  const int OW = output_shape[3];
 
-  strides->at(0) = floor((IH << 1) / OH) - floor(IH / OH);
-  strides->at(1) = floor((IW << 1) / OW) - floor(IW / OW);
-  kernel->at(0)  = ceil((IH << 1) / OH) - floor(IH / OH);
-  kernel->at(1)  = ceil((IW << 1) / OW) - floor(IW / OW);
-  pad_l->at(0)   = (strides->at(0) * (OH - 1) + kernel->at(0) - IH) >> 1;
-  pad_l->at(1)   = (strides->at(1) * (OW - 1) + kernel->at(1) - IW) >> 1;
+  strides->at(0) = ComputeStrides(IH, OH);
+  strides->at(1) = ComputeStrides(IW, OW);
+  kernel->at(0) = ComputeKernel(IH, OH);
+  kernel->at(1) = ComputeKernel(IW, OW);
+  pad_l->at(0) = ComputePadding(IH, OH, strides->at(0), kernel->at(0));
+  pad_l->at(1) = ComputePadding(IW, OW, strides->at(1), kernel->at(1));
 }
 
 inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
@@ -169,30 +186,34 @@ inline bool SupportMKLDNNPooling(const PoolingParam& param, const NDArray& input
 }
 
 inline bool MKLDNNRequireWorkspace(const PoolingParam& param) {
-  return param.pool_type != pool_enum::kAvgPooling;
+  return param.pool_type != pool_enum::kAvgPooling && !param.IsAdaptivePooling();
 }
 
 typedef ParamOpSign<PoolingParam> MKLDNNPoolingSignature;
-void MKLDNNPoolingCompute(const OpContext& ctx,
-                          const PoolingParam& param,
-                          const NDArray& in_data,
-                          const OpReqType req,
-                          const NDArray& out_data,
-                          const NDArray* workspace,
-                          const bool use_adaptive_pooling);
 
-void MKLDNNPoolingGradCompute(const OpContext& ctx,
-                              const PoolingParam& param,
-                              const NDArray& out_grad,
-                              const NDArray& in_data,
-                              const NDArray* workspace,
-                              const OpReqType req,
-                              const NDArray& in_grad);
 MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                                 const bool is_train,
                                 const NDArray& data,
                                 const NDArray& output,
                                 const bool use_adaptive_pooling);
+
+MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param,
+                                const NDArray& in_data,
+                                const NDArray& in_grad,
+                                const NDArray& out_grad,
+                                const bool use_adaptive_pooling);
+
+void MKLDNNPoolingCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<NDArray>& in_data,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& out_data);
+
+void MKLDNNPoolingGradCompute(const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const std::vector<NDArray> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<NDArray> &outputs);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1

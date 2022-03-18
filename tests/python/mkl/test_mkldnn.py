@@ -422,6 +422,35 @@ def test_pooling():
         check_pooling_training(stype)
 
 
+def test_adaptive_pooling():
+    def test_case(num_filter, output_size, stype, shape):
+        data_tmp = mx.nd.random.uniform(shape=shape)
+        data = mx.sym.var('data', stype=stype)
+        in_channels = shape[1]
+
+        data = mx.sym.Convolution(data=data, kernel=(3, 3), pad=(1,1), num_filter=num_filter)
+        data = mx.sym.contrib.AdaptiveAvgPooling2D(data=data, output_size=output_size)
+
+        weight_tmp = np.random.normal(-0.1, 0.1, size=(num_filter, in_channels, 3, 3))
+        bias_tmp = np.random.normal(0.1, 0.1, size=(num_filter,))
+
+        in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
+                        mx.nd.array(bias_tmp).tostype(stype)]
+
+        check_numeric_gradient(data, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    num_filters = [4, 8, 16]
+    output_sizes = [4, 5, 8, 16]
+    stypes = ['row_sparse', 'default']
+    shapes = [(3, 3, 8, 8), (3, 4, 20, 20), (3, 6, 20, 20), (3, 3, 32, 32)]
+
+    for num_filter in num_filters:
+        for output_size in output_sizes:
+            for stype in stypes:
+                for shape in shapes:
+                    test_case(num_filter, output_size, stype, shape)
+
+
 @with_seed()
 def test_activation():
     def check_activation_training(stype):
