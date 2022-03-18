@@ -477,8 +477,9 @@ void DNNLConvolutionForwardFullFeature(const DNNLConvFullParam& param,
   auto& data   = in_data[conv::kData];
   auto& weight = in_data[conv::kWeight];
   bool no_bias = param.conv_param.no_bias && !param.dnnl_param.with_bn;
-
-  auto data_mem = data.GetDNNLDataReorder(fwd->GetPd().src_desc());
+  
+  auto fwd_src_desc = fwd->GetPd().src_desc();
+  auto data_mem = data.GetDNNLDataReorder(&fwd_src_desc);
   const dnnl::memory* weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle DNNL correctly. Let's reorder it to the default format
@@ -493,10 +494,12 @@ void DNNLConvolutionForwardFullFeature(const DNNLConvFullParam& param,
     if (weight.IsDefaultData()) {
       // We also need to modify the layout on the original weight array. The data conversion happens
       // after the weight array is used.
-      weight.DNNLDataReorderAsync(fwd->GetPd().weights_desc());
+      auto fwd_weight_desc = fwd->GetPd().weights_desc();
+      weight.DNNLDataReorderAsync(&fwd_weight_desc);
       weight_mem = GetWeights(weight, fwd->GetPd().weights_desc(), param.conv_param.num_group);
     } else {
-      weight_mem = weight.GetDNNLDataReorder(fwd->GetPd().weights_desc());
+      auto fwd_weight_desc = fwd->GetPd().weights_desc();
+      weight_mem = weight.GetDNNLDataReorder(&fwd_weight_desc);
     }
   }
   dnnl_output_t out_mem;
@@ -600,7 +603,8 @@ void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
   DNNLConvBackward& convBwd = GetConvBwd(full_param, data, weight, bias, out_grad);
-  auto out_grad_mem         = out_grad.GetDNNLDataReorder(convBwd.GetDataPd().diff_dst_desc());
+  auto convBwd_data_diff_desc = convBwd.GetDataPd().diff_dst_desc();
+  auto out_grad_mem         = out_grad.GetDNNLDataReorder(&convBwd_data_diff_desc);
   if (req[conv::kData]) {
     auto weight_mem = GetWeights(weight, convBwd.GetDataPd().weights_desc(), param.num_group);
     auto in_grad_mem =
@@ -615,9 +619,12 @@ void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
   auto req_weight = req.size() > conv::kWeight ? req.at(conv::kWeight) : kNullOp;
   auto req_bias   = req.size() > conv::kBias ? req.at(conv::kBias) : kNullOp;
   if (req_weight || req_bias) {
-    if (convBwd.GetDataPd().diff_dst_desc() != convBwd.GetWeightsPd().diff_dst_desc())
-      out_grad_mem = out_grad.GetDNNLDataReorder(convBwd.GetWeightsPd().diff_dst_desc());
-    auto data_mem       = data.GetDNNLDataReorder(convBwd.GetWeightsPd().src_desc());
+    if (convBwd.GetDataPd().diff_dst_desc() != convBwd.GetWeightsPd().diff_dst_desc()) {
+      auto convBwd_weight_diff_desc = convBwd.GetWeightsPd().diff_dst_desc();
+      out_grad_mem = out_grad.GetDNNLDataReorder(&convBwd_weight_diff_desc);
+    }
+    auto convBwd_weight_src_desc = convBwd.GetWeightsPd().src_desc();
+    auto data_mem       = data.GetDNNLDataReorder(&convBwd_weight_src_desc);
     auto in_grad_weight = CreateDNNLWeightGrad(
         in_grad[conv::kWeight], convBwd.GetWeightsPd().diff_weights_desc(), req[conv::kWeight]);
 

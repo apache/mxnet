@@ -405,7 +405,7 @@ void CastStorageComputeImpl(const OpContext& ctx, const NDArray& input, const ND
       if (input.IsDNNLData() && input.IsView())
         tmp_input = input.Reorder2Default();
       const dnnl::memory* in_mem = tmp_input.GetDNNLData();
-      const_cast<NDArray&>(output).CopyFrom(*in_mem);
+      const_cast<NDArray&>(output).CopyFrom(in_mem);
       DNNLStream::Get()->Submit();
     } else {
       mxnet_op::copy(ctx.get_stream<xpu>(), output.data(), input.data());

@@ -51,7 +51,8 @@ static void DNNLQuantizedConvForward(const nnvm::NodeAttrs& attrs,
                          in_data[conv::kWeight],
                          param.no_bias ? nullptr : &in_data[conv::kBias],
                          out_data[conv::kOut]);
-  auto data_mem = in_data[conv::kData].GetDNNLDataReorder(fwd.GetPd().src_desc());
+  auto fwd_src_desc = fwd.GetPd().src_desc();
+  auto data_mem = in_data[conv::kData].GetDNNLDataReorder(&fwd_src_desc);
   const dnnl::memory* weight_mem;
   // For inference, we want to reorder the weight array so we don't need to
   // reorder data every time.
@@ -59,15 +60,17 @@ static void DNNLQuantizedConvForward(const nnvm::NodeAttrs& attrs,
     // We also need to modify the layout on the original weight array.
     // Don't switch below sequence because naive engine will executes
     // pushAsync synchronously.
-    weight.DNNLDataReorderAsync(fwd.GetPd().weights_desc());
-    weight_mem = GetWeights(weight, fwd.GetPd().weights_desc(), param.num_group);
+    auto fwd_weight_desc = fwd.GetPd().weights_desc();
+    weight.DNNLDataReorderAsync(&fwd_weight_desc);
+    weight_mem = GetWeights(weight, fwd_weight_desc, param.num_group);
   } else {
     weight_mem = weight.GetDNNLData();
   }
   auto out_mem = CreateDNNLMem(out_data[conv::kOut], fwd.GetPd().dst_desc(), req[conv::kOut]);
   dnnl_args_map_t net_args;
   if (!param.no_bias) {
-    const dnnl::memory* bias_mem = in_data[conv::kBias].GetDNNLDataReorder(fwd.GetPd().bias_desc());
+    auto fwd_bias_desc = fwd.GetPd().bias_desc();
+    const dnnl::memory* bias_mem = in_data[conv::kBias].GetDNNLDataReorder(&fwd_bias_desc);
     net_args.insert({DNNL_ARG_BIAS, *bias_mem});
   }
   net_args.insert({DNNL_ARG_SRC, *data_mem});

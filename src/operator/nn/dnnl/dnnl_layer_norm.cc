@@ -135,9 +135,9 @@ void DNNLLayerNormFwd::Execute(const LayerNormParam& param,
   auto mean_var_md = GetMeanVarDesc(get_dnnl_type(outputs[layernorm::kMean].dtype()),
                                     outputs[layernorm::kMean].shape());
   auto mean_mem    = dnnl_output_t(
-      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(mean_var_md));
+      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(&mean_var_md));
   auto variance_mem = dnnl_output_t(
-      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kStd]).CreateDNNLData(mean_var_md));
+      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kStd]).CreateDNNLData(&mean_var_md));
 
   auto output_mem      = CreateDNNLMem(outputs[layernorm::kOut], fwd_pd->dst_desc(), req);
   auto scale_shift_mem = GetScaleShiftMem(inputs[layernorm::kGamma], inputs[layernorm::kBeta]);
@@ -183,7 +183,8 @@ void DNNLLayerNormBwd::Execute(const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req) const {
   auto scale_shift_mem =
       GetScaleShiftMem(inputs[layernorm::kBwdGamma], inputs[layernorm::kBwdBeta]);
-  auto diff_weights_ndarray = NDArray(scale_shift_mem.get_desc());
+  auto scale_shift_mem_desc = scale_shift_mem.get_desc();
+  auto diff_weights_ndarray = NDArray(&scale_shift_mem_desc);
   const auto bytes          = inputs[layernorm::kBwdGamma].shape()[0] *
                      mshadow::mshadow_sizeof(inputs[layernorm::kBwdGamma].dtype());
   const auto diff_weights_ndaray_data_ptr_plus_bytes = reinterpret_cast<void*>(

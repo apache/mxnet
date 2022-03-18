@@ -358,7 +358,7 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
     const auto& out_mem_desc = output_mem->get_desc();
     const auto& dst_mem_desc = fwd_->GetPd().dst_desc();
     if (out_mem_desc != dst_mem_desc) {
-      auto tmp_out_mem       = output.GetDNNLDataReorder(fwd_->GetPd().dst_desc());
+      auto tmp_out_mem       = output.GetDNNLDataReorder(&dst_mem_desc);
       auto data_md           = dst_mem_desc;
       data_md.data.data_type = static_cast<dnnl_data_type_t>(out_mem_desc.data.data_type);
       dnnl_mem_ptr new_out_mem(
@@ -370,8 +370,10 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   }
 
   if (dnnl_param.quantized) {
-    auto data_mem       = data.GetDNNLDataReorder(fwd_->GetPd().src_desc());
-    dnnl::memory* mem   = output.CreateDNNLData(fwd_->GetPd().dst_desc());
+    auto fwd_src_desc    = fwd_->GetPd().src_desc();
+    auto data_mem       = data.GetDNNLDataReorder(&fwd_src_desc);
+    auto fwd_pd_dst_desc = fwd_->GetPd().dst_desc();
+    dnnl::memory* mem   = output.CreateDNNLData(&fwd_pd_dst_desc);
     args_[DNNL_ARG_SRC] = *data_mem;
     args_[DNNL_ARG_DST] = *mem;
     DNNLStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
@@ -392,7 +394,8 @@ void SgDNNLConvOperator::Forward(const OpContext& ctx,
   }
   if (dnnl_param.with_sum) {
     auto out = const_cast<NDArray&>(outputs[kOut]);
-    out.UpdateDNNLMemDesc(fwd_->GetPd().dst_desc());
+    auto fwd_dst_desc = fwd_->GetPd().dst_desc();
+    out.UpdateDNNLMemDesc(&fwd_dst_desc);
   }
 }
 

@@ -114,7 +114,8 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   }
 
   const NDArray& out = outputs[batchnorm::kOut];
-  auto out_mem       = const_cast<NDArray&>(out).CreateDNNLData(fwd.GetPd().dst_desc());
+  auto fwd_dst_desc  = fwd.GetPd().dst_desc();
+  auto out_mem       = const_cast<NDArray&>(out).CreateDNNLData(&fwd_dst_desc);
   dnnl_args_map_t net_args;
   net_args[DNNL_ARG_SRC]         = *data_mem;
   net_args[DNNL_ARG_SCALE_SHIFT] = weight_mem;

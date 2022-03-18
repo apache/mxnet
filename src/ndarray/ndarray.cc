@@ -222,7 +222,7 @@ NDArray::NDArray(const void* md_desc) : storage_type_(kDefaultStorage), autograd
   ptr_->dnnl_mem_ = std::make_shared<DNNLMemory>(md, ptr_->shandle.dptr);
 }
 
-NDArray::NDArray(const std::shared_ptr<dnnl::memor>& dnnl_mem_ptr)
+NDArray::NDArray(const std::shared_ptr<dnnl::memory>& dnnl_mem_ptr)
     : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
   std::shared_ptr<dnnl::memory> dnnl_mem = std::static_pointer_cast<dnnl::memory>(dnnl_mem_ptr);
   auto mem_desc                          = dnnl_mem->get_desc();
@@ -1359,7 +1359,7 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
       size_t size = std::min(from_mem->get_desc().get_size(), to_mem->get_desc().get_size());
       memcpy(to_mem->get_data_handle(), from_mem->get_data_handle(), size);
     } else {
-      const_cast<NDArray&>(to).CopyFrom(from_mem);
+      const_cast<NDArray&>(to).CopyFrom(&from_mem);
       DNNLStream::Get()->Submit();
     }
   } else {
@@ -1371,7 +1371,7 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
       // TODO(zhengda) tmp_from should be cached.
       tmp_from     = NDArray(from.shape(), from.ctx(), false, from.dtype());
       auto tmp_mem = static_cast<const dnnl::memory*>(from.GetDNNLData());
-      tmp_from.CopyFrom(tmp_mem);
+      tmp_from.CopyFrom(&tmp_mem);
       DNNLStream::Get()->Submit();
     }
     CHECK(tmp_from.IsDefaultData());

@@ -128,7 +128,8 @@ void DNNLLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
   auto fwd                  = GetLogSoftmaxFwd(param, axis, ctx.is_train, in_data, out_data);
 
   auto in_mem        = in_data.GetDNNLData();
-  auto out_mem       = out_data.GetDNNLData(fwd.pd.dst_desc());
+  auto fwd_pd_dst_desc = fwd.pd.dst_desc();
+  auto out_mem       = out_data.GetDNNLData(&fwd_pd_dst_desc);
   DNNLStream* stream = DNNLStream::Get();
   stream->RegisterPrimArgs(fwd.GetFwd(), {{DNNL_ARG_SRC, *in_mem}, {DNNL_ARG_DST, *out_mem}});
   stream->Submit();

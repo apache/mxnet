@@ -44,6 +44,11 @@
 #error "cxx11 was required for ndarray module"
 #endif
 
+namespace dnnl{
+  struct memory;
+  struct engine;
+}
+
 namespace mxnet {
 // enum for storage types
 namespace csr {
@@ -70,11 +75,8 @@ enum NDArrayFormatErr {
   kRSPIdxErr,     // indices error for row sparse
 };
 
-class DNNLMemory;
 
-namespace dnnl{
-  struct memory;
-}
+class DNNLMemory;
 
 /*!
  * \brief ndarray interface
@@ -783,7 +785,7 @@ class NDArray {
   /*
    * This function copies data from dnnl memory.
    */
-  void CopyFrom(const dnnl::memory& mem);
+  void CopyFrom(const void* mem);
   /*
    * This function allocates memory for array and creates dnnl memory
    * with the specified format.

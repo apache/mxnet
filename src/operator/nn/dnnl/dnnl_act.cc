@@ -255,8 +255,9 @@ void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
   auto input_mem       = in_buffer.GetDNNLData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
-  if (input_mem->get_desc() != diff_dst_memory->get_desc()) {
-    input_mem = in_buffer.GetDNNLDataReorder(diff_dst_memory->get_desc());
+  auto diff_dst_desc = diff_dst_memory->get_desc();
+  if (input_mem->get_desc() != diff_dst_desc) {
+    input_mem = in_buffer.GetDNNLDataReorder(&diff_dst_desc);
   }
 
   DNNLActBackward& bwd = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
@@ -264,7 +265,8 @@ void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
   dnnl_args_map_t args = {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DIFF_DST, *diff_dst_memory}};
   if (req[0] != kAddTo) {
     // req[0] is kWriteTo or kWriteInplace
-    auto diff_src_memory = const_cast<NDArray&>(in_grad).CreateDNNLData(bwd.bwd_pd.diff_src_desc());
+    auto bwd_pd_diff_src_desc = bwd.bwd_pd.diff_src_desc();
+    auto diff_src_memory = const_cast<NDArray&>(in_grad).CreateDNNLData(&bwd_pd_diff_src_desc);
     args.insert({DNNL_ARG_DIFF_SRC, *diff_src_memory});
     stream->RegisterPrimArgs(bwd.GetBwd(), args);
     stream->Submit();
@@ -301,8 +303,9 @@ void DNNLLeakyReluBackward(const nnvm::NodeAttrs& attrs,
   auto input_mem       = in_buffer.GetDNNLData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
-  if (input_mem->get_desc() != diff_dst_memory->get_desc())
-    input_mem = in_buffer.GetDNNLDataReorder(diff_dst_memory->get_desc());
+  auto diff_dst_desc = diff_dst_memory->get_desc();
+  if (input_mem->get_desc() != diff_dst_desc)
+    input_mem = in_buffer.GetDNNLDataReorder(&diff_dst_desc);
   DNNLActBackward& bwd          = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   DNNLStream* stream            = DNNLStream::Get();
   dnnl_output_t diff_src_memory = CreateDNNLMem(output, bwd.bwd_pd.diff_src_desc(), req[0]);
