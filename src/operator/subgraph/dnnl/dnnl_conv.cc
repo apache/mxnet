@@ -471,7 +471,7 @@ static void SgDNNLConvParamParser(nnvm::NodeAttrs* attrs) {
       auto& post_act_param = (param_.full_conv_param.dnnl_param.with_act && !with_act) ?
                                  param_.full_conv_param.act_param :
                                  param_.full_conv_param.postsum_act_param;
-      with_act             = true;
+      with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
         post_act_param.alg   = GetDNNLActAlgo(act_param);
