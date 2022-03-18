@@ -134,8 +134,9 @@ void DNNLLayerNormFwd::Execute(const LayerNormParam& param,
                                const std::vector<NDArray>& outputs) const {
   auto mean_var_md = GetMeanVarDesc(get_dnnl_type(outputs[layernorm::kMean].dtype()),
                                     outputs[layernorm::kMean].shape());
-  auto mean_mem    = dnnl_output_t(
-      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(&mean_var_md));
+  auto mean_mem =
+      dnnl_output_t(OutDataOp::Noop,
+                    const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(&mean_var_md));
   auto variance_mem = dnnl_output_t(
       OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kStd]).CreateDNNLData(&mean_var_md));
 

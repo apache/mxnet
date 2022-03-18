@@ -277,7 +277,7 @@ inline void DNNLDeconvBwd::IOSwapWeightsTensors(const uint32_t num_group,
 }
 
 inline const dnnl::memory* DNNLDeconvBwd::DataMem(const NDArray& data) const {
-   auto bwd_weight_src_desc = bwd_weights_pd->src_desc();
+  auto bwd_weight_src_desc = bwd_weights_pd->src_desc();
   return data.GetDNNLDataReorder(&bwd_weight_src_desc);
 }
 

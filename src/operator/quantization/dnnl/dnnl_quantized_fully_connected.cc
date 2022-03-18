@@ -89,8 +89,8 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   DNNLFCFlattenData(param, out_data[fullc::kOut], &data, &out_md);
   auto& fwd =
       GetFCFwd(param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);
-  
-  auto fwd_src_desc = fwd.fwd_pd.src_desc();
+
+  auto fwd_src_desc              = fwd.fwd_pd.src_desc();
   auto data_mem                  = in_data[fullc::kData].GetDNNLDataReorder(&fwd_src_desc);
   const dnnl::memory* weight_mem = nullptr;
 
@@ -115,7 +115,7 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
 
   const dnnl::memory* bias_mem = nullptr;
   if (!param.no_bias) {
-    auto fwd_bias_desc = fwd.fwd_pd.bias_desc();
+    auto fwd_bias_desc  = fwd.fwd_pd.bias_desc();
     bias_mem            = quantized_bias.GetDNNLDataReorder(&fwd_bias_desc);
     args[DNNL_ARG_BIAS] = *bias_mem;
   }

@@ -108,42 +108,42 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
     int mask = (param.requantize_scales.size() > 1) ? 2 : 0;
     attr.set_output_scales(mask, param.requantize_scales);
   }
-  auto GetConvFwdPd =
-      [&param, &data, &weights, &output, &attr](const dnnl::convolution_forward::desc& desc) {
-        auto engine = CpuEngine::Get()->get_engine();
-        try {
-          // DNNL introduced padded formats since 0.15 which require more memory
-          // compared to the actual size of the tensor. Currently, DNNL operators
-          // still reuse memory from memory planning, so here we need to select a
-          // suboptimal kernel for computation that has the expected memory size requirements
-          auto conv_pd =
-              std::make_shared<dnnl::convolution_forward::primitive_desc>(desc, attr, engine);
-          while (
-              conv_pd->dst_desc().get_size() != GetArraySize(output) ||
-              conv_pd->src_desc().get_size() != GetArraySize(data) ||
-              (!param.dnnl_param.quantized &&
-               conv_pd->weights_desc().get_size() != GetArraySize(weights)) ||
-              // With the upgrade of oneDNN to version 2.4+
-              // tests/python/dnnl/subgraphs/test_conv_subgraph.py::test_pos_conv_add[True-data_shape1]
-              // started failing. Switching away from primitive with weight dnnl::format_tag
-              // ABcd4b16a4b in order to temporarily fix the issue until full fix arrives.
-              // Tracking issue: https://github.com/apache/incubator-mxnet/issues/20826.
-              (param.dnnl_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
-               conv_pd->weights_desc().data.padded_dims[1] == 16)) {
-            // next_impl() will visit desc and engine, please make sure they are still alive here.
-            CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
-          }
-          return conv_pd;
-        } catch (dnnl::error& e) {
-          if (e.status == dnnl_unimplemented && param.dnnl_param.quantized) {
-            LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
-                          "required for int8 convolution";
-          } else {
-            LOG(ERROR) << e.message;
-          }
-          throw;
-        }
-      };
+  auto GetConvFwdPd = [&param, &data, &weights, &output, &attr](
+                          const dnnl::convolution_forward::desc& desc) {
+    auto engine = CpuEngine::Get()->get_engine();
+    try {
+      // DNNL introduced padded formats since 0.15 which require more memory
+      // compared to the actual size of the tensor. Currently, DNNL operators
+      // still reuse memory from memory planning, so here we need to select a
+      // suboptimal kernel for computation that has the expected memory size requirements
+      auto conv_pd =
+          std::make_shared<dnnl::convolution_forward::primitive_desc>(desc, attr, engine);
+      while (
+          conv_pd->dst_desc().get_size() != GetArraySize(output) ||
+          conv_pd->src_desc().get_size() != GetArraySize(data) ||
+          (!param.dnnl_param.quantized &&
+           conv_pd->weights_desc().get_size() != GetArraySize(weights)) ||
+          // With the upgrade of oneDNN to version 2.4+
+          // tests/python/dnnl/subgraphs/test_conv_subgraph.py::test_pos_conv_add[True-data_shape1]
+          // started failing. Switching away from primitive with weight dnnl::format_tag
+          // ABcd4b16a4b in order to temporarily fix the issue until full fix arrives.
+          // Tracking issue: https://github.com/apache/incubator-mxnet/issues/20826.
+          (param.dnnl_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
+           conv_pd->weights_desc().data.padded_dims[1] == 16)) {
+        // next_impl() will visit desc and engine, please make sure they are still alive here.
+        CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
+      }
+      return conv_pd;
+    } catch (dnnl::error& e) {
+      if (e.status == dnnl_unimplemented && param.dnnl_param.quantized) {
+        LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
+                      "required for int8 convolution";
+      } else {
+        LOG(ERROR) << e.message;
+      }
+      throw;
+    }
+  };
 
   if (param.conv_param.dilate.ndim() == 0 && bias_md_ptr == nullptr) {
     dnnl::convolution_forward::desc desc(prop,
@@ -477,9 +477,9 @@ void DNNLConvolutionForwardFullFeature(const DNNLConvFullParam& param,
   auto& data   = in_data[conv::kData];
   auto& weight = in_data[conv::kWeight];
   bool no_bias = param.conv_param.no_bias && !param.dnnl_param.with_bn;
-  
+
   auto fwd_src_desc = fwd->GetPd().src_desc();
-  auto data_mem = data.GetDNNLDataReorder(&fwd_src_desc);
+  auto data_mem     = data.GetDNNLDataReorder(&fwd_src_desc);
   const dnnl::memory* weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle DNNL correctly. Let's reorder it to the default format
@@ -499,7 +499,7 @@ void DNNLConvolutionForwardFullFeature(const DNNLConvFullParam& param,
       weight_mem = GetWeights(weight, fwd->GetPd().weights_desc(), param.conv_param.num_group);
     } else {
       auto fwd_weight_desc = fwd->GetPd().weights_desc();
-      weight_mem = weight.GetDNNLDataReorder(&fwd_weight_desc);
+      weight_mem           = weight.GetDNNLDataReorder(&fwd_weight_desc);
     }
   }
   dnnl_output_t out_mem;
@@ -602,9 +602,9 @@ void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param = full_param.conv_param;
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
-  DNNLConvBackward& convBwd = GetConvBwd(full_param, data, weight, bias, out_grad);
+  DNNLConvBackward& convBwd   = GetConvBwd(full_param, data, weight, bias, out_grad);
   auto convBwd_data_diff_desc = convBwd.GetDataPd().diff_dst_desc();
-  auto out_grad_mem         = out_grad.GetDNNLDataReorder(&convBwd_data_diff_desc);
+  auto out_grad_mem           = out_grad.GetDNNLDataReorder(&convBwd_data_diff_desc);
   if (req[conv::kData]) {
     auto weight_mem = GetWeights(weight, convBwd.GetDataPd().weights_desc(), param.num_group);
     auto in_grad_mem =
@@ -621,11 +621,11 @@ void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
   if (req_weight || req_bias) {
     if (convBwd.GetDataPd().diff_dst_desc() != convBwd.GetWeightsPd().diff_dst_desc()) {
       auto convBwd_weight_diff_desc = convBwd.GetWeightsPd().diff_dst_desc();
-      out_grad_mem = out_grad.GetDNNLDataReorder(&convBwd_weight_diff_desc);
+      out_grad_mem                  = out_grad.GetDNNLDataReorder(&convBwd_weight_diff_desc);
     }
     auto convBwd_weight_src_desc = convBwd.GetWeightsPd().src_desc();
-    auto data_mem       = data.GetDNNLDataReorder(&convBwd_weight_src_desc);
-    auto in_grad_weight = CreateDNNLWeightGrad(
+    auto data_mem                = data.GetDNNLDataReorder(&convBwd_weight_src_desc);
+    auto in_grad_weight          = CreateDNNLWeightGrad(
         in_grad[conv::kWeight], convBwd.GetWeightsPd().diff_weights_desc(), req[conv::kWeight]);
 
     dnnl_args_map_t net_args = {{DNNL_ARG_DIFF_DST, *out_grad_mem},

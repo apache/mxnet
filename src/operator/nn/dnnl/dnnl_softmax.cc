@@ -139,9 +139,9 @@ linear_pd_t DNNLSoftmaxFwd::GetTemperaturePd(const dnnl::memory& input_mem,
 void DNNLSoftmaxFwd::Execute(const Tensors& tensors) const {
   DNNLStream* stream = DNNLStream::Get();
 
-  auto original_input_mem = tensors.data.GetDNNLData();
+  auto original_input_mem  = tensors.data.GetDNNLData();
   auto softmax_pd_dst_desc = softmax_pd->dst_desc();
-  const auto out_mem      = tensors.out.GetDNNLData(&softmax_pd_dst_desc);
+  const auto out_mem       = tensors.out.GetDNNLData(&softmax_pd_dst_desc);
 
   dnnl::memory* softmax_input_mem;
   if (temperature_pd) {

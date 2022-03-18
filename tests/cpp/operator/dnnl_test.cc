@@ -232,7 +232,7 @@ TEST(DNNL_BASE, DNNLSum) {
     orig_arr.arr.WaitToRead();
     PrintVerifyMsg(orig_arr, in_arr);
     InitDNNLArray(&orig_arr.arr, input_mem->get_desc());
-    orig_arr.arr.CopyFrom(*input_mem);
+    orig_arr.arr.CopyFrom(input_mem);
     op::DNNLSum(*input_mem, *input_mem2, *input_mem);
     DNNLStream::Get()->Submit();
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
@@ -286,7 +286,7 @@ TEST(DNNL_BASE, CreateDNNLMem) {
     orig_arr.arr.WaitToRead();
     PrintVerifyMsg(orig_arr, in_arr);
     InitDNNLArray(&orig_arr.arr, input_mem->get_desc());
-    orig_arr.arr.CopyFrom(*input_mem);
+    orig_arr.arr.CopyFrom(input_mem);
     auto output_mem_t =
         CreateDNNLMem(in_arr.arr, input_mem->get_desc(), kWriteInplace, &in_arr.arr);
     op::DNNLSum(*input_mem, *input_mem2, *output_mem_t.second);
@@ -336,7 +336,7 @@ TEST(DNNL_BASE, CreateDNNLMem) {
     orig_arr.arr.WaitToRead();
     PrintVerifyMsg(orig_arr, in_arr);
     InitDNNLArray(&orig_arr.arr, input_mem->get_desc());
-    orig_arr.arr.CopyFrom(*input_mem);
+    orig_arr.arr.CopyFrom(input_mem);
     auto output_mem_t = CreateDNNLMem(in_arr.arr, input_mem->get_desc(), kNullOp);
     op::DNNLSum(*input_mem, *input_mem2, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
@@ -407,7 +407,7 @@ TEST(DNNL_NDArray, CopyFrom) {
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), mds);
     for (auto& out_arr : out_arrs) {
       const dnnl::memory* mem = in_arr.arr.GetDNNLData();
-      out_arr.arr.CopyFrom(*mem);
+      out_arr.arr.CopyFrom(mem);
       DNNLStream::Get()->Submit();
       std::vector<NDArray*> inputs(1);
       inputs[0] = &in_arr.arr;

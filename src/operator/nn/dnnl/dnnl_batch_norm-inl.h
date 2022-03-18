@@ -181,7 +181,7 @@ void DNNLBatchNormForwardImpl(const nnvm::NodeAttrs& attrs,
 
   // for output memory
   auto fwd_dst_desc = fwd.GetPd().dst_desc();
-  auto out_mem = const_cast<NDArray&>(out).CreateDNNLData(&fwd_dst_desc);
+  auto out_mem      = const_cast<NDArray&>(out).CreateDNNLData(&fwd_dst_desc);
 
   // mxnet will always use scale shift.
   // But if fix_gamma is true, then all scale elements will be set to 1.0f
@@ -390,10 +390,10 @@ void DNNLBatchNormBackwardImpl(const nnvm::NodeAttrs& attrs,
   // should reorder them.
   if (data.IsDefaultData()) {
     auto diff_desc = diff_mem->get_desc();
-    data_mem = data.GetDNNLDataReorder(&diff_desc);
+    data_mem       = data.GetDNNLDataReorder(&diff_desc);
   } else if (diff.IsDefaultData()) {
     auto data_desc = data_mem->get_desc();
-    diff_mem = diff.GetDNNLDataReorder(&data_desc);
+    diff_mem       = diff.GetDNNLDataReorder(&data_desc);
   }
   auto& bwd = GetBNBackward<DType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
   auto gradi_mem =

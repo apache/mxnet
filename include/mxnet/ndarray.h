@@ -44,10 +44,10 @@
 #error "cxx11 was required for ndarray module"
 #endif
 
-namespace dnnl{
-  struct memory;
-  struct engine;
-}
+namespace dnnl {
+struct memory;
+struct engine;
+}  // namespace dnnl
 
 namespace mxnet {
 // enum for storage types
@@ -74,7 +74,6 @@ enum NDArrayFormatErr {
   kRSPShapeErr,   // shape mismatch for row sparse
   kRSPIdxErr,     // indices error for row sparse
 };
-
 
 class DNNLMemory;
 

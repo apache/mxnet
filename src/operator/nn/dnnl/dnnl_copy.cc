@@ -43,9 +43,9 @@ void DNNLCopy(const nnvm::NodeAttrs& attrs,
     TmpMemMgr::Get()->Init(ctx.requested[0]);
     // We should try and force the input memory has the same format
     // as the input output. If not, we'll have to reorder memory.
-    auto out_mem = out_data.GetDNNLData();
+    auto out_mem      = out_data.GetDNNLData();
     auto out_mem_desc = out_mem->get_desc();
-    in_mem       = in_data.GetDNNLData(&out_mem_desc);
+    in_mem            = in_data.GetDNNLData(&out_mem_desc);
     if (in_mem == nullptr)
       in_mem = in_data.GetDNNLDataReorder(&out_mem_desc);
     DNNLSum(*out_mem, *in_mem, *out_mem);

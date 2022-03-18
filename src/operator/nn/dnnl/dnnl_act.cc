@@ -266,7 +266,7 @@ void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
   if (req[0] != kAddTo) {
     // req[0] is kWriteTo or kWriteInplace
     auto bwd_pd_diff_src_desc = bwd.bwd_pd.diff_src_desc();
-    auto diff_src_memory = const_cast<NDArray&>(in_grad).CreateDNNLData(&bwd_pd_diff_src_desc);
+    auto diff_src_memory      = const_cast<NDArray&>(in_grad).CreateDNNLData(&bwd_pd_diff_src_desc);
     args.insert({DNNL_ARG_DIFF_SRC, *diff_src_memory});
     stream->RegisterPrimArgs(bwd.GetBwd(), args);
     stream->Submit();
