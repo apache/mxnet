@@ -27,7 +27,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_pareto).set_attr<FCompute>("FCompute<gpu>", NumpyParetoForward<gpu>);
+NNVM_REGISTER_OP(_npi_pareto)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyParetoForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_broadcast_pareto)
     .set_attr<FCompute>("FCompute<gpu>", ParetoReparamBackward<gpu>);

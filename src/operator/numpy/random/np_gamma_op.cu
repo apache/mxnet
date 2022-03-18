@@ -28,7 +28,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_gamma).set_attr<FCompute>("FCompute<gpu>", NumpyGammaForward<gpu, double>);
+NNVM_REGISTER_OP(_npi_gamma)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyGammaForward<gpu, double>);
 
 NNVM_REGISTER_OP(_backward_gamma_sample).set_attr<FCompute>("FCompute<gpu>", NumpyGammaGrad<gpu>);
 

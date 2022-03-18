@@ -357,6 +357,19 @@ using FNeedCalibrateInput = std::function<std::vector<int>(const NodeAttrs& attr
  */
 using FNeedCalibrateOutput = std::function<std::vector<int>(const NodeAttrs& attrs)>;
 
+#if MXNET_USE_CUDA
+
+/*!
+ * \brief Register a function to determine if
+ * the operator implementation is compatible
+ * with CUDA graphs. This requires the execution
+ * to stay the same as long as the shape and type
+ * of input stays the same.
+ */
+using FIsCUDAGraphsCompatible = std::function<bool(const NodeAttrs& attrs, const bool is_train)>;
+
+#endif
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

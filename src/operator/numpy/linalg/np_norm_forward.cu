@@ -25,7 +25,14 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_norm).set_attr<FCompute>("FCompute<gpu>", NumpyNormComputeForward<gpu>);
+NNVM_REGISTER_OP(_npi_norm)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) {
+                                         const NumpyNormParam& param =
+                                             nnvm::get<NumpyNormParam>(attrs.parsed);
+                                         return param.axis.value().ndim() == 2;
+                                       })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyNormComputeForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

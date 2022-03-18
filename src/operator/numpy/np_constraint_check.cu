@@ -38,6 +38,8 @@ void GetReduceOutput<gpu>(mshadow::Stream<gpu>* s, const TBlob& output_blob, boo
 }
 
 NNVM_REGISTER_OP(_npx_constraint_check)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", ConstraintCheckForward<gpu>);
 
 }  // namespace op

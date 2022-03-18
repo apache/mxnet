@@ -82,7 +82,10 @@ void IndexArrayForwardGPU(const nnvm::NodeAttrs& attrs,
   }
 }
 
-NNVM_REGISTER_OP(_contrib_index_array).set_attr<FCompute>("FCompute<gpu>", IndexArrayForwardGPU);
+NNVM_REGISTER_OP(_contrib_index_array)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", IndexArrayForwardGPU);
 
 }  // namespace op
 }  // namespace mxnet
