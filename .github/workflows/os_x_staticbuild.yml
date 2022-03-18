@@ -49,7 +49,7 @@ jobs:
 
       - name: Test project
         env:
-          MXNET_ENFORCE_CYTHON: 1
+          MXNET_ENABLE_CYTHON: 1
         run: |
           python3 -m pytest -n 4 --durations=50 --verbose tests/python/unittest/ -k 'not test_operator and not (test_subgraph or test_custom_op or test_external_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'not serial'
           MXNET_ENGINE_TYPE=NaiveEngine python3 -m pytest -n 4 --durations=50 --verbose tests/python/unittest/ -k 'test_operator and not (test_subgraph or test_custom_op or test_external_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'not serial'
@@ -57,7 +57,7 @@ jobs:
 
       - name: Test Array API
         env:
-          MXNET_ENFORCE_CYTHON: 0
+          MXNET_ENABLE_CYTHON: 1
         run: |
           cd ..
           git clone https://github.com/data-apis/array-api-tests.git

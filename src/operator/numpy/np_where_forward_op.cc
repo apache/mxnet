@@ -23,6 +23,7 @@
  */
 
 #include "np_where_op-inl.h"
+#include "../nn/dnnl/dnnl_where-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -89,6 +90,39 @@ inline bool NumpyWhereScalarOpType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(NumpyWhereScalarParam);
 DMLC_REGISTER_PARAMETER(NumpyWhereScalar2Param);
 
+#if MXNET_USE_ONEDNN == 1
+static void WhereForwardEx(const nnvm::NodeAttrs& attrs,
+                           const OpContext& op_ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs) {
+  CHECK(!inputs.empty());
+  if (req[0] == kNullOp) {
+    return;
+  }
+  if (SupportDNNLWhere(inputs)) {
+    DNNL_OPCHECK_INIT(/*is backward*/ false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLWhereForward, attrs, op_ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(NumpyWhereOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(NumpyWhereOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  }
+}
+
+inline static bool WhereInferStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  return DNNLStorageType(attrs,
+                         dev_mask,
+                         /*support onednn*/ true,
+                         dispatch_mode,
+                         in_attrs,
+                         out_attrs);
+}
+#endif  // MXNET_USE_ONEDNN == 1
+
 NNVM_REGISTER_OP(_npi_where)
     .set_num_inputs(3)
     .set_num_outputs(1)
@@ -103,11 +137,19 @@ NNVM_REGISTER_OP(_npi_where)
                                       return std::vector<std::pair<int, int> >{{1, 0}, {2, 0}};
                                     })
     .set_attr<FCompute>("FCompute<cpu>", NumpyWhereOpForward<cpu>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FComputeEx>("FComputeEx<cpu>", WhereForwardEx)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FInferStorageType>("FInferStorageType", WhereInferStorageType)
+#endif
     .set_attr<nnvm::FGradient>(
         "FGradient",
-        // Use the following lambda function instead of ElemwiseGradUseIn
-        // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
-        // we need only condition from input.
+        // Use the following lambda function instead of ElemwiseGradUseIn for best efficiency.
+        // grad[condition] = 0; to calculate grad[x] and grad[y] we need only condition from input.
         [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
           std::vector<nnvm::NodeEntry> ret;
           // make zero grad node for grad[condition]

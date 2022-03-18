@@ -41,7 +41,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y wget software-properties-common && \
     wget -qO - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB -O - | apt-key add -; \
     add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"; \
-    INTEL_MKL="-2021.3.0"; \
+    INTEL_MKL="-2022.0.2"; \
     apt-get update && \
     apt-get install -y \
         ## Utilities
