@@ -107,12 +107,14 @@ OpStatePtr CreateQuantizeAsymState(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_contrib_quantize_asym)
     .describe(R"code(Quantize a input tensor from float to uint8_t.
-Output `scale` and `shift` are scalar floats that specify the quantization parameters for the input
-data.
-The output is calculated using the following equation:
+Output `scale` and `shift` are scalar floats that specify the quantization
+parameters for the input data. The output is calculated using the following equation:
+
 `out[i] = in[i] * scale + shift + 0.5`,
+
 where `scale = uint8_range / (max_range - min_range)` and
 `shift = numeric_limits<T>::max - max_range * scale`.
+
 .. Note::
     This operator only supports forward propagation. DO NOT use it in training.)code" ADD_FILELINE)
     .set_attr_parser(ParamParser<QuantizeAsymParam>)
