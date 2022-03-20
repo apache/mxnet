@@ -91,7 +91,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
     const nnvm::Node* raw_node     = n.node;
     const nnvm::Node* raw_new_node = new_node.node;
 
-    static const std::set<const Op*> no_dequantize_fusion_supported_ops = {
+    static const std::set<const Op*> dequantize_fusion_unsupported_ops = {
         Op::Get("_contrib_quantized_elemwise_add")};
 
     if (status == SelectStatus::kFail || status == SelectStatus::kSuccess ||
@@ -118,7 +118,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
             status = SelectStatus::kRequantize;
             // For now there is no support for dequantize fusion for some operators
             // so then we finish after finding requantize node:
-            if (no_dequantize_fusion_supported_ops.count(raw_node->op()) != 0) {
+            if (dequantize_fusion_unsupported_ops.count(raw_node->op()) != 0) {
               status = SelectStatus::kSuccess;
             }
             return true;
