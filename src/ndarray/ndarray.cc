@@ -222,10 +222,9 @@ NDArray::NDArray(const void* md_desc) : storage_type_(kDefaultStorage), autograd
   ptr_->dnnl_mem_ = std::make_shared<DNNLMemory>(md, ptr_->shandle.dptr);
 }
 
-NDArray::NDArray(const std::shared_ptr<dnnl::memory>& dnnl_mem_ptr)
+NDArray::NDArray(const std::shared_ptr<dnnl::memory>& dnnl_mem)
     : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
-  std::shared_ptr<dnnl::memory> dnnl_mem = std::static_pointer_cast<dnnl::memory>(dnnl_mem_ptr);
-  auto mem_desc                          = dnnl_mem->get_desc();
+  auto mem_desc      = dnnl_mem->get_desc();
   shape_             = mxnet::TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
   dtype_             = get_mxnet_type(mem_desc.data.data_type);
   ptr_               = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
