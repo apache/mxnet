@@ -45,65 +45,6 @@ DMLC_REGISTER_PARAMETER(NumpyDiagParam);
 DMLC_REGISTER_PARAMETER(NumpyDiagonalParam);
 DMLC_REGISTER_PARAMETER(NumpyDiagflatParam);
 
-bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
-                         mxnet::ShapeVector* in_attrs,
-                         mxnet::ShapeVector* out_attrs) {
-  const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  mxnet::TShape& shp     = (*in_attrs)[0];
-  mxnet::TShape& out_shp = (*out_attrs)[0];
-
-  int ndim = -1;
-  if (ndim_is_known(shp)) {
-    ndim = shp.ndim();
-  } else if (ndim_is_known(out_shp)) {
-    ndim = out_shp.ndim();
-  }
-  if (ndim < 0) {
-    return false;
-  }
-  if (out_shp.ndim() >= 0 && shp.ndim() >= 0) {
-    CHECK_EQ(out_shp.ndim(), shp.ndim());
-  }
-
-  mxnet::TShape get(ndim, -1);
-  mxnet::TShape ret(ndim, -1);
-
-  if (ndim_is_known(param.axes)) {
-    CHECK_EQ(ndim, param.axes.ndim())
-        << "The number of axes does not match the dimension of the tensor. axes = " << param.axes
-        << ", input tensor shape = " << shp;
-    mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
-    std::set<dim_t> axes_set(axes.begin(), axes.end());
-    CHECK_EQ(axes_set.size(), axes.ndim()) << "ValueError: Repeated axis in transpose."
-                                           << " param.axes = " << param.axes;
-    if (ndim_is_known(shp)) {
-      for (int i = 0; i < ndim; ++i) {
-        ret[i] = shp[axes[i]];
-      }
-    }
-    if (ndim_is_known(out_shp)) {
-      for (int i = 0; i < ndim; ++i) {
-        get[axes[i]] = out_shp[i];
-      }
-    }
-  } else {
-    if (ndim_is_known(shp)) {
-      for (int i = 0; i < ndim; ++i) {
-        ret[i] = shp[ndim - 1 - i];
-      }
-    }
-    if (ndim_is_known(out_shp)) {
-      for (int i = 0; i < ndim; ++i) {
-        get[ndim - 1 - i] = out_shp[i];
-      }
-    }
-  }
-  SHAPE_ASSIGN_CHECK(*in_attrs, 0, get);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
-  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
-}
 #if MXNET_USE_ONEDNN == 1
 
 static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,

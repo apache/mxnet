@@ -115,7 +115,10 @@ void ShapeComputeGPU(const nnvm::NodeAttrs& attrs,
                   mshadow::Stream<gpu>::GetStream(s));
 }
 
-NNVM_REGISTER_OP(shape_array).set_attr<FCompute>("FCompute<gpu>", ShapeComputeGPU);
+NNVM_REGISTER_OP(shape_array)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", ShapeComputeGPU);
 
 void SizeComputeGPU(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,

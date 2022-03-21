@@ -27,7 +27,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_bernoulli).set_attr<FCompute>("FCompute<gpu>", NumpyBernoulliForward<gpu>);
+NNVM_REGISTER_OP(_npi_bernoulli)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyBernoulliForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

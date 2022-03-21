@@ -1932,7 +1932,11 @@ def eye(N, M=None, k=0, dtype=float, **kwargs):
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if dtype is not None and not isinstance(dtype, str):
         dtype = get_dtype_name(dtype)
-    k = minimum(k, N) if M is None else minimum(k, M)
+
+    # To avoid overflow errors, map large positive k values to the just-out-of-range "num_columns" value
+    k = minimum(k, M if M is not None else N)
+    # Similarly, map large negative k values to the just-out-of-range "-num_rows" value
+    k = maximum(k, -N)
     return _api_internal.eye(N, M, int(k), device, dtype)
 
 

@@ -481,11 +481,10 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs,
                            const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
-  bool fuse_relu              = false;
   if (SupportDNNLBN(inputs[0], param)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNL_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-      DNNLBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
+      DNNLRun(DNNLBatchNormForward<DTYPE, /*fuse_relu*/ false>, attrs, ctx, inputs, req, outputs);
     });
     DNNL_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
@@ -499,10 +498,9 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
-  bool fuse_relu              = false;
   if (SupportDNNLBN(inputs[0], param)) {
     DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    DNNLBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
+    DNNLRun(DNNLBatchNormBackward<float, /*fuse_relu*/ false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

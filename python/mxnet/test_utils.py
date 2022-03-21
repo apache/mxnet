@@ -112,15 +112,15 @@ def effective_dtype(dat):
     ----------
     dat : np.ndarray or mx.nd.array or mx.np.ndarray
     """
-    # On arch 80 gpus, a float32-io gemm or conv op will trim the mantissa of data
-    # inputs to be of comparable precision to a float16, so float16 becomes the
+    # On arch 80 gpus or later, a float32-io gemm or conv op will trim the mantissa of
+    # data inputs to be of comparable precision to a float16, so float16 becomes the
     # 'effective dtype' for tolerance tests involving such op outputs.
 
     # Is TF32 enabled in the device (the default on arch 80 GPUs)
     def is_TF32_enabled(device):
         try:
             return (device.device_type == 'gpu' and
-                    get_cuda_compute_capability(device) == 80 and
+                    get_cuda_compute_capability(device) >= 80 and
                     os.environ.get('NVIDIA_TF32_OVERRIDE') != '0')
         except:  # pylint: disable=bare-except
             return False

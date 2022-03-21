@@ -1724,6 +1724,7 @@ def test_groupnorm():
                                 atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)
 
 
+@pytest.mark.serial
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
         num_filter = 4
@@ -1745,7 +1746,7 @@ def test_convolution_grouping():
             exe1 = y1._simple_bind(default_device(), x=shape)
             exe2 = y2._simple_bind(default_device(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
             for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-                arr1[:] = np.float32(np.random.normal(size=arr1.shape))
+                arr1[:] = np.random.normal(size=arr1.shape).astype(effective_dtype(mx.nd.array([1.,])))
                 arr2[:] = arr1
             exe1.forward(is_train=True)
             exe1.backward(exe1.outputs[0])
@@ -1753,7 +1754,7 @@ def test_convolution_grouping():
             exe2.backward(exe2.outputs[0])
 
             for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-                np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
+                assert_almost_equal(arr1, arr2)
 
 
 @pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/14052")
@@ -2216,7 +2217,8 @@ def test_broadcast_binary_op():
     test_bor(a, b)
     test_bxor(a, b)
 
-def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
+
+def run_convolution_dilated_impulse_response(dil, kernel_shape, tol):
     dim = len(dil)
     assert(len(kernel_shape) == dim)
     # Input for spike response
@@ -2259,7 +2261,7 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     out_o = be.outputs[0].asnumpy()
     assert_allclose(out_o[center],np.prod(kernel_shape),atol=1e-5)
 
-    rnd_kernel_s = np.random.uniform(low=0.0, high=1.0, size=tuple([1,1]+list(kernel_shape))).astype(np.float32)
+    rnd_kernel_s = np.random.uniform(low=-0.5, high=0.5, size=tuple([1,1]+list(kernel_shape))).astype(np.float32)
     impulse_error = mx.nd.array(out_o/np.sum(out_o)) # This should be 1.0 at [0,0,16,16]
     rnd_kernel = mx.nd.array(rnd_kernel_s)
 
@@ -2282,22 +2284,27 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     be.forward(True)
     out = be.outputs[0].asnumpy()
     # Now do a simple check of the kernel gradient
-    assert(out[center] - np.sum(kernel_gradient) - out_orig[center] < 0.001)
+    d = np.abs(out[center] - np.sum(kernel_gradient) - out_orig[center])
+    assert d < tol, f'd: {d}'
 
-
+@pytest.mark.serial
 def test_convolution_dilated_impulse_response():
+    tol = 1e-3
     # 1D
     for dil in [ (1,), (2,), (3,) ]:
         for ks in [ (1,), (2,), (3,), (4,)]:
-            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+            run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks, tol=tol)
     # 2D
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
-            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+            run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks, tol=tol)
     # 3D
+    # On Ampere, autotuning might select a TensorCore conv engine, which effectively
+    # does a cast to fp16 of the weights and data.  Expand tol in these 3D cases.
+    tol3D = 1e-2 if effective_dtype(mx.nd.array([1.,])) == np.float16 else tol
     for dil in [ (1,1,1), (2,2,2), (3,3,3) ]:
         for ks in [ (3,3,3), (4,4,4), (2,3,4), (3,2,4), (1,1,1) ]:
-            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+            run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks, tol=tol3D)
 
 
 @pytest.mark.serial

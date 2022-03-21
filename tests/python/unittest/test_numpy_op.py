@@ -30,6 +30,7 @@ import scipy.special as scipy_special
 import pytest
 import mxnet.ndarray.numpy._internal as _npi
 from functools import reduce
+from packaging.version import parse
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -4488,7 +4489,6 @@ def test_np_swapaxes():
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_delete():
     class TestDelete(HybridBlock):
         def __init__(self, obj, axis=None):
@@ -4537,6 +4537,12 @@ def test_np_delete():
             if type(obj) == list:
                 obj_mxnp = np.array(obj, dtype=objtype)
                 obj_onp = onp.array(obj, dtype=objtype)
+                # To match mxnet.numpy's behavior of ignoring out-of-bounds indices,
+                # we may need to filter out indices that this numpy would not ignore.
+                onp_ignores_oob_indices = parse(onp.version.version) < parse('1.19')
+                if not onp_ignores_oob_indices:
+                    dim_size = GetDimSize(arr_shape,axis)
+                    obj_onp = obj_onp[((obj_onp>=0) & (obj_onp<dim_size))]
             elif type(obj) == slice:
                 obj_mxnp = obj
                 obj_onp = obj
@@ -5095,7 +5101,6 @@ def test_gamma_grad(shape, a, b):
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_beta():
     class TestRandomBeta(HybridBlock):
         def __init__(self, size=None, dtype=None, device=None):
@@ -5112,7 +5117,8 @@ def test_np_random_beta():
         smaller_than_one = onp.all(output < 1)
         return bigger_than_zero and smaller_than_one
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0, output shape of () is no longer supported
+    shape_list = [(0,), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     # since fp16 might incur precision issue, the corresponding test is skipped
     dtype_list = [np.float32, np.float64]
     hybridize_list = [False, True]
@@ -5128,8 +5134,8 @@ def test_np_random_beta():
         mx_out = test_random_beta(mx_data, mx_data)
         mx_out_imperative = mx.np.random.beta(mx_data, mx_data, size=param_shape, dtype=out_dtype)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
         assert _test_random_beta_range(mx_out.asnumpy()) == True
         assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
 
@@ -5139,7 +5145,6 @@ def test_np_random_beta():
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_f():
     class TestRandomF(HybridBlock):
         def __init__(self, size=None):
@@ -5149,7 +5154,8 @@ def test_np_random_f():
         def forward(self, dfnum, dfden):
             return np.random.f(dfnum, dfden, size=self._size)
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0, output shape of () is no longer supported
+    shape_list = [(0,), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     hybridize_list = [False, True]
     df = np.array([1])
     for [param_shape, hybridize] in itertools.product(shape_list,
@@ -5165,12 +5171,11 @@ def test_np_random_f():
         mx_out = test_random_f(mx_df, mx_df)
         mx_out_imperative = mx.np.random.f(mx_df, mx_df, size=param_shape)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
 
 
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_chisquare():
     class TestRandomChisquare(HybridBlock):
         def __init__(self, size=None, dtype=None, device=None):
@@ -5182,7 +5187,8 @@ def test_np_random_chisquare():
         def forward(self, df):
             return np.random.chisquare(df, size=self._size, dtype=self._dtype, device=self._device)
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0, output shape of () is no longer supported
+    shape_list = [(0,), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
 
     dtype_list = [np.float16, np.float32, np.float64]
     hybridize_list = [False, True]
@@ -5200,8 +5206,8 @@ def test_np_random_chisquare():
         mx_out = test_random_chisquare(mx_df)
         mx_out_imperative = mx.np.random.chisquare(mx_df, size=param_shape, dtype=out_dtype)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
 
 
 @use_np
@@ -6477,6 +6483,9 @@ def test_np_linalg_qr():
 
         data_np = onp.array(data_np, dtype=dtype)
         data = np.array(data_np, dtype=dtype)
+        if effective_dtype(data) == onp.dtype(np.float16):
+            print('Skipping test on this platform: {} has a float16 effective dtype'.format(dtype))
+            pytest.skip()
 
         data.attach_grad()
         with mx.autograd.record():
@@ -11712,8 +11721,12 @@ def test_np_standard_unary_funcs(func, func2, dtypes, ref_grad, low, high, ndim)
     ((3, 1), (3, 0)),
     ((0, 2), (1, 2)),
     ((2, 3, 4), (3, 1)),
-    ((2, 3), ()),
-    ((), (2, 3))
+# MXNet numpy does not match original numpy behavior when broadcasting 0-dim arrays.
+# See https://github.com/apache/incubator-mxnet/issues/20898.
+#    ((2, 3), ()),
+#    ((), (2, 3))
+    ((2, 3), (1,)),
+    ((1,), (2, 3))
 ])
 def test_np_standard_binary_funcs(func, func2, promoted, dtypes, ref_grad_a, ref_grad_b, low, high, lshape, rshape):
     class TestStandardBinary(HybridBlock):

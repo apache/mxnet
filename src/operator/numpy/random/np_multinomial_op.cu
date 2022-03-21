@@ -41,6 +41,8 @@ void CheckPvalGPU(const OpContext& ctx, DType* input, int prob_length) {
 }
 
 NNVM_REGISTER_OP(_npi_multinomial)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
 
 }  // namespace op

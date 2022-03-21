@@ -250,6 +250,7 @@ def assign_node_labels(args) {
   NODE_LINUX_CPU = args.linux_cpu
   NODE_LINUX_GPU = args.linux_gpu
   NODE_LINUX_GPU_G4 = args.linux_gpu_g4
+  NODE_LINUX_GPU_G5 = args.linux_gpu_g5
   NODE_LINUX_GPU_P3 = args.linux_gpu_p3
   NODE_WINDOWS_CPU = args.windows_cpu
   NODE_WINDOWS_GPU = args.windows_gpu
