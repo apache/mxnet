@@ -50,7 +50,7 @@ void DNNLCopy(const nnvm::NodeAttrs& attrs,
       in_mem = in_data.GetDNNLDataReorder(&out_mem_desc);
     DNNLSum(*out_mem, *in_mem, *out_mem);
   } else {
-    const_cast<NDArray&>(out_data).CopyFrom(in_mem);
+    const_cast<NDArray&>(out_data).CopyFrom(*in_mem);
   }
   DNNLStream::Get()->Submit();
 }

@@ -210,7 +210,7 @@ dnnl_output_t CreateDNNLWeightGrad(const NDArray& out_arr,
 
 void CommitOutput(const NDArray& arr, const dnnl_output_t& res) {
   if (res.first == CopyBack) {
-    const_cast<NDArray&>(arr).CopyFrom(res.second);
+    const_cast<NDArray&>(arr).CopyFrom(*res.second);
   } else if (res.first == AddBack) {
     auto res_memory = res.second;
     auto target_pd  = arr.GetDNNLData()->get_desc();
@@ -477,12 +477,12 @@ static bool SimilarArray(const mxnet::NDArray& arr1,
   if (arr1.IsDNNLData()) {
     buf1     = NDArray(arr1.shape(), arr1.ctx(), false, arr1.dtype());
     auto mem = arr1.GetDNNLData();
-    buf1.CopyFrom(mem);
+    buf1.CopyFrom(*mem);
   }
   if (arr2.IsDNNLData()) {
     buf2     = NDArray(arr2.shape(), arr2.ctx(), false, arr2.dtype());
     auto mem = arr2.GetDNNLData();
-    buf2.CopyFrom(mem);
+    buf2.CopyFrom(*mem);
   }
   DNNLStream::Get()->Submit();
 
@@ -539,13 +539,13 @@ void OpCheck::Init(const std::vector<mxnet::NDArray>& inputs_,
     if (data.IsDNNLData() && data.IsView())
       data = data.Reorder2Default();
     auto mem = data.GetDNNLData();
-    inputs[i].CopyFrom(mem);
+    inputs[i].CopyFrom(*mem);
   }
   for (size_t i = 0; i < outputs_.size(); i++) {
     outputs.emplace_back(outputs_[i].shape(), ctx, false, outputs_[i].dtype());
     if (backward) {
       auto mem = outputs_[i].GetDNNLData();
-      outputs[i].CopyFrom(mem);
+      outputs[i].CopyFrom(*mem);
     }
   }
   DNNLStream::Get()->Submit();
@@ -594,7 +594,7 @@ void OpCheck::CopyResult(const std::vector<mxnet::NDArray>& outputs_,
   auto non_const_outputs_ = const_cast<std::vector<mxnet::NDArray>&>(outputs_);
   for (auto i = indice.begin(); i != indice.end(); ++i) {
     auto mem = outputs[*i].GetDNNLData();
-    non_const_outputs_[*i].CopyFrom(mem);
+    non_const_outputs_[*i].CopyFrom(*mem);
   }
   DNNLStream::Get()->Submit();
 }

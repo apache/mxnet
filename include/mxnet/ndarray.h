@@ -46,7 +46,6 @@
 
 namespace dnnl {
 struct memory;
-struct engine;
 }  // namespace dnnl
 
 namespace mxnet {
@@ -784,7 +783,7 @@ class NDArray {
   /*
    * This function copies data from dnnl memory.
    */
-  void CopyFrom(const void* mem);
+  void CopyFrom(const dnnl::memory& mem);
   /*
    * This function allocates memory for array and creates dnnl memory
    * with the specified format.

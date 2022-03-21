@@ -79,7 +79,7 @@ void SgDNNLQuantizeOperator::Forward(const OpContext& ctx,
       }
     }
     if (req[0] != kWriteInplace) {
-      const_cast<NDArray&>(outputs[0]).CopyFrom(inputs[0].GetDNNLData());
+      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetDNNLData());
       DNNLStream::Get()->Submit();
     }
   } else {
