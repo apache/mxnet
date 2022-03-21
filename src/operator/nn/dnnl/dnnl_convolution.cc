@@ -108,42 +108,41 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
     int mask = (param.requantize_scales.size() > 1) ? 2 : 0;
     attr.set_output_scales(mask, param.requantize_scales);
   }
-  auto GetConvFwdPd =
-      [&param, &data, &weights, &output, &attr](const dnnl::convolution_forward::desc& desc) {
-        auto engine = CpuEngine::Get()->get_engine();
-        try {
-          // DNNL introduced padded formats since 0.15 which require more memory
-          // compared to the actual size of the tensor. Currently, DNNL operators
-          // still reuse memory from memory planning, so here we need to select a
-          // suboptimal kernel for computation that has the expected memory size requirements
-          auto conv_pd =
-              std::make_shared<dnnl::convolution_forward::primitive_desc>(desc, attr, engine);
-          while (
-              conv_pd->dst_desc().get_size() != GetArraySize(output) ||
-              conv_pd->src_desc().get_size() != GetArraySize(data) ||
-              (!param.dnnl_param.quantized &&
-               conv_pd->weights_desc().get_size() != GetArraySize(weights)) ||
-              // With the upgrade of oneDNN to version 2.4+
-              // tests/python/dnnl/subgraphs/test_conv_subgraph.py::test_pos_conv_add[True-data_shape1]
-              // started failing. Switching away from primitive with weight dnnl::format_tag
-              // ABcd4b16a4b in order to temporarily fix the issue until full fix arrives.
-              // Tracking issue: https://github.com/apache/incubator-mxnet/issues/20826.
-              (param.dnnl_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
-               conv_pd->weights_desc().data.padded_dims[1] == 16)) {
-            // next_impl() will visit desc and engine, please make sure they are still alive here.
-            CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
-          }
-          return conv_pd;
-        } catch (dnnl::error& e) {
-          if (e.status == dnnl_unimplemented && param.dnnl_param.quantized) {
-            LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
-                          "required for int8 convolution";
-          } else {
-            LOG(ERROR) << e.message;
-          }
-          throw;
-        }
-      };
+  auto GetConvFwdPd = [&param, &data, &weights, &output, &attr](
+                          const dnnl::convolution_forward::desc& desc) {
+    auto engine = CpuEngine::Get()->get_engine();
+    try {
+      // DNNL introduced padded formats since 0.15 which require more memory
+      // compared to the actual size of the tensor. Currently, DNNL operators
+      // still reuse memory from memory planning, so here we need to select a
+      // suboptimal kernel for computation that has the expected memory size requirements
+      auto conv_pd =
+          std::make_shared<dnnl::convolution_forward::primitive_desc>(desc, attr, engine);
+      while (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
+             conv_pd->src_desc().get_size() != GetArraySize(data) ||
+             (!param.dnnl_param.quantized &&
+              conv_pd->weights_desc().get_size() != GetArraySize(weights)) ||
+             // With the upgrade of oneDNN to version 2.4+
+             // tests/python/dnnl/subgraphs/test_conv_subgraph.py::test_pos_conv_add[True-data_shape1]
+             // started failing. Switching away from blocking weights in order to temporarily fix
+             // the issue until full fix arrives. Tracking issue:
+             // https://github.com/apache/incubator-mxnet/issues/20826.
+             (param.dnnl_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
+              conv_pd->weights_desc().data.padded_dims[1] != conv_pd->weights_desc().dims()[1])) {
+        // next_impl() will visit desc and engine, please make sure they are still alive here.
+        CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
+      }
+      return conv_pd;
+    } catch (dnnl::error& e) {
+      if (e.status == dnnl_unimplemented && param.dnnl_param.quantized) {
+        LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
+                      "required for int8 convolution";
+      } else {
+        LOG(ERROR) << e.message;
+      }
+      throw;
+    }
+  };
 
   if (param.conv_param.dilate.ndim() == 0 && bias_md_ptr == nullptr) {
     dnnl::convolution_forward::desc desc(prop,
