@@ -24,8 +24,6 @@
 
 #include "np_dot-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "operator/nn/dnnl/dnnl_ops-inl.h"
-#include "operator/nn/dnnl/dnnl_base-inl.h"
 #include "operator/nn/dnnl/dnnl_dot-inl.h"
 #endif
 

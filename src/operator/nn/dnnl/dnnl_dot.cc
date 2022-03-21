@@ -23,6 +23,9 @@
 
 #if MXNET_USE_ONEDNN == 1
 
+#include <memory>
+#include <unordered_map>
+
 #include "dnnl_dot-inl.h"
 
 namespace mxnet {
@@ -80,7 +83,7 @@ DNNLDotFwd::DNNLDotFwd(const DotParam& param,
   dnnl::memory::desc lhs_md, rhs_md, out_md;
   // NumPy expects more than 2 dimensional rhs tensor as Ax...xKxN which is different than NDArray's
   // KxAx...xN format. For NumPy shape in rhs memory descriptor is going to be Kx(A*...*N),
-  // similarly to NDArray, but for it to match the actual data there will be an additional reorder
+  // similarly to NDArray, but for it to match the actual data there is an additional reorder
   // needed, permuting the last two axes Ax...xKxN -> Ax...xNxK. For this data to match Kx(A*...*N)
   // shape format_tag needs to be set to ba. Reorder described above is implemented in Execute
   // function.

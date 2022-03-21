@@ -26,10 +26,10 @@
 
 #if MXNET_USE_ONEDNN == 1
 
+#include <memory>
 #include <vector>
 
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 #include "operator/tensor/dot-inl.h"
 
 namespace mxnet {
