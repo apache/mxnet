@@ -29,14 +29,12 @@ namespace mxnet {
 namespace op {
 
 bool SupportDNNLTanh(const NDArray& input, const NDArray& output) {
-  auto commonChecks = [](const NDArray& tensor) {
-    return tensor.shape().ndim() > 0 && tensor.shape().ndim() <= 12 && tensor.shape().Size() > 0 &&
+  auto checkTensor = [](const NDArray& tensor) {
+    return (IsDNNLType(tensor.dtype()) || tensor.dtype() == mshadow::kInt32) &&
+           tensor.shape().ndim() > 0 && tensor.shape().ndim() <= 12 && tensor.shape().Size() > 0 &&
            SupportStorageDNNL(tensor.storage_type());
   };
-  const bool inputIsOK = IsDNNLType(input.dtype()) && commonChecks(input);
-  const bool outputIsOK =
-      (IsDNNLType(output.dtype()) || output.dtype() == mshadow::kInt32) && commonChecks(output);
-  return inputIsOK && outputIsOK;
+  return checkTensor(input) && checkTensor(output);
 }
 
 DNNLTanhFwd& DNNLTanhFwd::GetTanhForward(const NDArray& input, const NDArray& output) {
