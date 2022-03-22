@@ -605,36 +605,15 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
 
   dnnl::memory::dims dims;
   // These are shapes supprted by DNNL.
-  if (shape.ndim() >= 1 && shape.ndim() <= 6) {
+  const int MAX_ONEDNN_DIMS = 12;
+  if (shape.ndim() >= 1 && shape.ndim() <= MAX_ONEDNN_DIMS) {
     dims.resize(shape.ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
   } else {
     LOG(FATAL) << "oneDNN doesn't support " << shape.ndim() << " dimensions";
   }
-  dnnl::memory::format_tag layout = dnnl::memory::format_tag::undef;
-  switch (dims.size()) {
-    case 1:
-      layout = dnnl::memory::format_tag::a;
-      break;
-    case 2:
-      layout = dnnl::memory::format_tag::ab;
-      break;
-    case 3:
-      layout = dnnl::memory::format_tag::abc;
-      break;
-    case 4:
-      layout = dnnl::memory::format_tag::abcd;
-      break;
-    case 5:
-      layout = dnnl::memory::format_tag::abcde;
-      break;
-    case 6:
-      layout = dnnl::memory::format_tag::abcdef;
-      break;
-    default:
-      LOG(FATAL) << "Not implemented dimension (" << dims.size() << ") for oneDNN";
-  }
+  auto layout = static_cast<dnnl::memory::format_tag>(GetDefaultFormat(dims.size()));
   dnnl::memory::desc data_md{dims, get_dnnl_type(dtype), layout};
   if (shandle.dptr == nullptr) {
     CHECK(delay_alloc);
