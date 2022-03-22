@@ -1104,9 +1104,9 @@ class NDArray {
     void CheckAndAllocData(const mxnet::TShape& shape, int dtype);
 
 #if MXNET_USE_ONEDNN == 1
-    // Have MKL memory reference to the data in the default storage
+    // Have DNNL memory reference to the data in the default storage
     // or create memory for DNNL.
-    void SetMKLMem(const mxnet::TShape& shape, int dtype);
+    void SetDNNLMem(const mxnet::TShape& shape, int dtype);
     // If the data is stored in DNNL layout, we reorder data in dnnl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
