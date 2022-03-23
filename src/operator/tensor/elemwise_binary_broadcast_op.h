@@ -38,11 +38,9 @@
 
 namespace mxnet {
 namespace op {
-inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
-                                 mxnet::ShapeVector* in_attrs,
-                                 mxnet::ShapeVector* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
+static inline bool BinaryBroadcastShapeCommon(const nnvm::NodeAttrs& attrs,
+                                              mxnet::ShapeVector* in_attrs,
+                                              mxnet::ShapeVector* out_attrs) {
   mxnet::TShape& lhs = (*in_attrs)[0];
   mxnet::TShape& rhs = (*in_attrs)[1];
 
@@ -77,6 +75,14 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
   return shape_is_known(lhs) && shape_is_known(rhs) && shape_is_known(out);
+}
+
+inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
+                                 mxnet::ShapeVector* in_attrs,
+                                 mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return BinaryBroadcastShapeCommon(attrs, in_attrs, out_attrs);
 }
 
 inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,

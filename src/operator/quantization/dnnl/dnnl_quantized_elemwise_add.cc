@@ -38,13 +38,13 @@ static inline float GetScale(const NDArray& data, float min, float max) {
   return data_range / MaxAbs(min, max);
 }
 
-class DNNLQuantizedElemwiseSumFwd {
+class DNNLQuantizedSumFwd {
  public:
   dnnl::sum::primitive_desc fwd_pd;
 
-  DNNLQuantizedElemwiseSumFwd(const dnnl::memory::desc& output_md,
-                              const std::vector<float>& scales,
-                              const std::vector<dnnl::memory::desc>& inputs_md)
+  DNNLQuantizedSumFwd(const dnnl::memory::desc& output_md,
+                      const std::vector<float>& scales,
+                      const std::vector<dnnl::memory::desc>& inputs_md)
       : fwd_pd(output_md, scales, inputs_md, CpuEngine::Get()->get_engine()) {
     fwd_ = std::make_shared<dnnl::sum>(fwd_pd);
   }
@@ -53,19 +53,23 @@ class DNNLQuantizedElemwiseSumFwd {
     return *fwd_;
   }
 
+  static DNNLQuantizedSumFwd& GetCached(const dnnl::memory::desc& output_md,
+                                        const std::vector<float>& scales,
+                                        const std::vector<dnnl::memory::desc>& inputs_md);
+
  private:
   std::shared_ptr<dnnl::sum> fwd_;
   std::shared_ptr<dnnl::memory> out_;
 };
 
-static DNNLQuantizedElemwiseSumFwd& GetQuantizedElemwiseSumForward(
+DNNLQuantizedSumFwd& DNNLQuantizedSumFwd::GetCached(
     const dnnl::memory::desc& output_md,
     const std::vector<float>& scales,
     const std::vector<dnnl::memory::desc>& inputs_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, DNNLQuantizedElemwiseSumFwd, OpHash> fwds;
+  static thread_local std::unordered_map<OpSignature, DNNLQuantizedSumFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLQuantizedElemwiseSumFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLQuantizedSumFwd, OpHash> fwds;
 #endif
   OpSignature key;
   key.AddSign(output_md);
@@ -73,7 +77,56 @@ static DNNLQuantizedElemwiseSumFwd& GetQuantizedElemwiseSumForward(
   key.AddSign(inputs_md);
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    DNNLQuantizedElemwiseSumFwd fwd(output_md, scales, inputs_md);
+    DNNLQuantizedSumFwd fwd(output_md, scales, inputs_md);
+    it = AddToCache(&fwds, key, fwd);
+  }
+  return it->second;
+}
+
+class DNNLQuantizedBinAddFwd {
+ public:
+  dnnl::binary::primitive_desc fwd_pd;
+
+  DNNLQuantizedBinAddFwd(const dnnl::memory::desc& output_md,
+                         const std::vector<float>& scales,
+                         const std::vector<dnnl::memory::desc>& inputs_md) {
+    dnnl::binary::desc fwd_desc(dnnl::algorithm::binary_add, inputs_md[0], inputs_md[1], output_md);
+    dnnl::primitive_attr input_scales;
+    input_scales.set_scales(DNNL_ARG_SRC_0, 0, {scales[0]});
+    input_scales.set_scales(DNNL_ARG_SRC_1, 0, {scales[1]});
+    fwd_pd = dnnl::binary::primitive_desc(fwd_desc, input_scales, CpuEngine::Get()->get_engine());
+    fwd_   = std::make_shared<dnnl::binary>(fwd_pd);
+  }
+
+  const dnnl::binary& GetFwd() const {
+    return *fwd_;
+  }
+
+  static DNNLQuantizedBinAddFwd& GetCached(const dnnl::memory::desc& output_md,
+                                           const std::vector<float>& scales,
+                                           const std::vector<dnnl::memory::desc>& inputs_md);
+
+ private:
+  std::shared_ptr<dnnl::binary> fwd_;
+  std::shared_ptr<dnnl::memory> out_;
+};
+
+DNNLQuantizedBinAddFwd& DNNLQuantizedBinAddFwd::GetCached(
+    const dnnl::memory::desc& output_md,
+    const std::vector<float>& scales,
+    const std::vector<dnnl::memory::desc>& inputs_md) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<OpSignature, DNNLQuantizedBinAddFwd, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLQuantizedBinAddFwd, OpHash> fwds;
+#endif
+  OpSignature key;
+  key.AddSign(output_md);
+  key.AddSign(scales);
+  key.AddSign(inputs_md);
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    DNNLQuantizedBinAddFwd fwd(output_md, scales, inputs_md);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
@@ -101,9 +154,12 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   const float B_scale  = GetScale(inputs[q_elemwise_add::kDataB], B_min, B_max);
   auto A_mem           = inputs[q_elemwise_add::kDataA].GetDNNLData();
   auto B_mem           = inputs[q_elemwise_add::kDataB].GetDNNLData();
-  float in_range;
+  bool diff_in_types =
+      (inputs[q_elemwise_add::kDataA].dtype() != inputs[q_elemwise_add::kDataB].dtype());
+  const float in_range = (diff_in_types || is_A_int8) ? kInt8Range : kUint8Range;
   dnnl::memory* rescaled_mem;              // rescaled_mem is for reorder dnnl memory
   double output_data_range = kInt32Range;  // output default set as int32
+
   if (outputs[q_elemwise_add::kOut].dtype() == mshadow::kInt8) {
     output_data_range = kInt8Range;
   } else if (outputs[q_elemwise_add::kOut].dtype() == mshadow::kUint8) {
@@ -113,65 +169,91 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   float output_min     = 0;
   float output_max     = 0;
   float output_scale   = 0;
+  const int scales_num = 2;  // 2: scale 0 for input A, scale 1 for input B
+  std::vector<float> scales(scales_num, 1);
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     output_min     = params.min_calib_range.value();
     output_max     = params.max_calib_range.value();
     output_scale   = output_data_range / MaxAbs(output_min, output_max);
+    scales[0]      = output_scale / A_scale;
+    scales[1]      = output_scale / B_scale;
   } else {
     output_max = A_absmax + B_absmax;
     output_min = -output_max;
+    scales[0]  = A_absmax * output_data_range / (output_max * in_range);
+    scales[1]  = B_absmax * output_data_range / (output_max * in_range);
   }
-  // 2: scale 0 for input A, scale 1 for input B
-  const int scales_num = 2;
-  std::vector<float> scales(scales_num, 1);
-  auto engine = CpuEngine::Get()->get_engine();
-  if (inputs[q_elemwise_add::kDataA].dtype() != inputs[q_elemwise_add::kDataB].dtype()) {
-    auto s8_desc                     = is_A_int8 ? A_mem->get_desc() : B_mem->get_desc();
-    rescaled_mem = TmpMemMgr::Get()->Alloc(s8_desc);
-    const float u8_reorder_scale     = 0.5;
-    std::vector<float> reorder_scale = {u8_reorder_scale};
-    dnnl::primitive_attr reorder_attr;
-    reorder_attr.set_output_scales(0, reorder_scale);
-    auto u8_mem = (is_A_int8 == true) ? B_mem : A_mem;
-    const auto reorder_pd =
-        dnnl::reorder::primitive_desc(engine, u8_mem->get_desc(), engine, s8_desc, reorder_attr);
-    dnnl_args_map_t args({{DNNL_ARG_FROM, *u8_mem}, {DNNL_ARG_TO, *rescaled_mem}});
-    DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd), args);
 
-    if (is_A_int8) {
-      B_mem = rescaled_mem;
+  // We can use more efficient sum kernel when there is no broadcast - when shapes are the same
+  const bool sum_kernel =
+      (inputs[q_elemwise_add::kDataA].shape() == inputs[q_elemwise_add::kDataB].shape());
+
+  if (diff_in_types) {
+    if (sum_kernel) {
+      // rescale uint8 to int8 by reorder to temporary memory
+      auto s8_desc                     = is_A_int8 ? A_mem->get_desc() : B_mem->get_desc();
+      rescaled_mem                     = TmpMemMgr::Get()->Alloc(s8_desc);
+      const float u8_reorder_scale     = 0.5;
+      std::vector<float> reorder_scale = {u8_reorder_scale};
+      auto engine                      = CpuEngine::Get()->get_engine();
+      dnnl::primitive_attr reorder_attr;
+      reorder_attr.set_output_scales(0, reorder_scale);
+      auto u8_mem = (is_A_int8 == true) ? B_mem : A_mem;
+      const auto reorder_pd =
+          dnnl::reorder::primitive_desc(engine, u8_mem->get_desc(), engine, s8_desc, reorder_attr);
+      dnnl_args_map_t args({{DNNL_ARG_FROM, *u8_mem}, {DNNL_ARG_TO, *rescaled_mem}});
+      DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd), args);
+      if (is_A_int8) {
+        B_mem = rescaled_mem;
+      } else {
+        A_mem = rescaled_mem;
+      }
     } else {
-      A_mem = rescaled_mem;
+      // take into account conversion from uint8 to int8 in binary operator input scales
+      if (is_A_int8) {
+        scales[1] *= 0.5;  // convert B from uint8
+      } else {
+        scales[0] *= 0.5;  // convert A from uint8
+      }
     }
-    in_range = kInt8Range;  // range after conversion uint8 to common int8
-  } else {
-    // both inputs has the same type
-    in_range = is_A_int8 ? kInt8Range : kUint8Range;
-  }
-
-  if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
-    scales[0] = output_scale / A_scale;
-    scales[1] = output_scale / B_scale;
-  } else {
-    scales[0] = A_absmax * output_data_range / (output_max * in_range);
-    scales[1] = B_absmax * output_data_range / (output_max * in_range);
   }
 
   std::vector<dnnl::memory::desc> in_desc;
   in_desc.push_back(A_mem->get_desc());
   in_desc.push_back(B_mem->get_desc());
 
-  auto output_md                   = outputs[q_elemwise_add::kOut].GetDNNLData()->get_desc();
-  DNNLStream* stream               = DNNLStream::Get();
-  DNNLQuantizedElemwiseSumFwd& fwd = GetQuantizedElemwiseSumForward(output_md, scales, in_desc);
-  auto out_mem                     = CreateDNNLMem(outputs[q_elemwise_add::kOut],
-                               fwd.fwd_pd.dst_desc(),
-                               req[q_elemwise_add::kOut],
-                               &inputs[q_elemwise_add::kDataA]);
-  dnnl_args_map_t args({{DNNL_ARG_MULTIPLE_SRC, *A_mem},
-                        {DNNL_ARG_MULTIPLE_SRC + 1, *B_mem},
-                        {DNNL_ARG_DST, *out_mem.second}});
-  stream->RegisterPrimArgs(fwd.GetFwd(), args);
+  dnnl_output_t out_mem;
+  auto output_md     = outputs[q_elemwise_add::kOut].GetDNNLData()->get_desc();
+  DNNLStream* stream = DNNLStream::Get();
+
+  if (sum_kernel) {
+    const auto& fwd = DNNLQuantizedSumFwd::GetCached(output_md, scales, in_desc);
+    out_mem         = CreateDNNLMem(outputs[q_elemwise_add::kOut],
+                            fwd.fwd_pd.dst_desc(),
+                            req[q_elemwise_add::kOut],
+                            &inputs[q_elemwise_add::kDataA]);
+    const dnnl_args_map_t args({{DNNL_ARG_MULTIPLE_SRC, *A_mem},
+                                {DNNL_ARG_MULTIPLE_SRC + 1, *B_mem},
+                                {DNNL_ARG_DST, *out_mem.second}});
+    stream->RegisterPrimArgs(fwd.GetFwd(), args);
+  } else {
+    const auto& fwd = DNNLQuantizedBinAddFwd::GetCached(output_md, scales, in_desc);
+    if (outputs[q_elemwise_add::kOut].GetDNNLData()->get_data_handle() ==
+        inputs[q_elemwise_add::kDataB].GetDNNLData()->get_data_handle()) {
+      out_mem = CreateDNNLMem(outputs[q_elemwise_add::kOut],
+                              fwd.fwd_pd.dst_desc(),
+                              req[q_elemwise_add::kOut],
+                              &inputs[q_elemwise_add::kDataB]);
+    } else {
+      out_mem = CreateDNNLMem(outputs[q_elemwise_add::kOut],
+                              fwd.fwd_pd.dst_desc(),
+                              req[q_elemwise_add::kOut],
+                              &inputs[q_elemwise_add::kDataA]);
+    }
+    const dnnl_args_map_t args(
+        {{DNNL_ARG_SRC_0, *A_mem}, {DNNL_ARG_SRC_1, *B_mem}, {DNNL_ARG_DST, *out_mem.second}});
+    stream->RegisterPrimArgs(fwd.GetFwd(), args);
+  }
   CommitOutput(outputs[q_elemwise_add::kOut], out_mem);
   stream->Submit();
 
@@ -193,6 +275,13 @@ inline static bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
+    .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedElemwiseAddForward)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr_parser(ParamParser<QuantizeElemwiseAddParam>)
+    .add_arguments(QuantizeElemwiseAddParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_contrib_quantized_npi_add)
     .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
     .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedElemwiseAddForward)
     .set_attr<bool>("TIsDNNL", true)

@@ -974,6 +974,9 @@ inline bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
                                        [](const NodeAttrs& attrs) {                               \
                                          return std::vector<std::string>{"lhs", "rhs"};           \
                                        })                                                         \
+      .set_attr<nnvm::FListOutputNames>(                                                          \
+          "FListOutputNames",                                                                     \
+          [](const NodeAttrs& attrs) { return std::vector<std::string>{"output"}; })              \
       .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)                          \
       .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedPrecisionType)                    \
       .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                           \
