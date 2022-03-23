@@ -798,7 +798,6 @@ cd_unittest_ubuntu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export CD_JOB=1 # signal this is a CD run so any unecessary tests can be skipped
     export DMLC_LOG_STACK_TRACE_DEPTH=100
 
