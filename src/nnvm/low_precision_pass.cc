@@ -375,8 +375,8 @@ Graph ReducePrecision(Graph&& src) {
       KeepOriginalNode(old_node, node_map, &entry_map);
     } else if (target_dtype_ops.count(old_node->op()->name) > 0) {
       if (!TryLowPrecision(target_dtype, old_node, node_map, nodes_entries, &entry_map)) {
-        LOG(WARNING) << "Conversion to low precision of a node: " + old_node->attrs.name +
-                            " has failed. It will remain unchanged.";
+        LOG(WARNING) << "Low precision conversion failure. Node '" + old_node->attrs.name +
+                            "' will not be converted.";
         KeepOriginalNode(old_node, node_map, &entry_map);
       }
     } else if (widest_dtype_ops.count(old_node->op()->name) > 0) {
