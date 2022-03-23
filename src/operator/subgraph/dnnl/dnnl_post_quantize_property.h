@@ -55,7 +55,7 @@ bool SupportsRequantizeFusion(const Op* op) {
 class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
  private:
   /*! \brief pattern match status */
-  enum class SelectStatus {
+  enum class SelectStatusPostQuantize {
     kFail = 0,
     kStart,
     kRequantize,
@@ -64,7 +64,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
 
   bool fuse_all;
   bool float_output;
-  SelectStatus status;
+  SelectStatusPostQuantize status;
   std::vector<const BiDirectedNode*> matched_list;
 
  public:
@@ -75,7 +75,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
     const nnvm::Node* raw_node = n.node;
 
     if (fuse_all && raw_node->op() && SupportsRequantizeFusion(raw_node->op())) {
-      status = SelectStatus::kStart;
+      status = SelectStatusPostQuantize::kStart;
       matched_list.clear();
       matched_list.emplace_back(&n);
       return true;
@@ -94,7 +94,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
     static const std::set<const Op*> dequantize_fusion_unsupported_ops = {
         Op::Get("_contrib_quantized_elemwise_add"), Op::Get("_contrib_quantized_npi_add")};
 
-    if (status == SelectStatus::kFail || status == SelectStatus::kSuccess ||
+    if (status == SelectStatusPostQuantize::kFail || status == SelectStatusPostQuantize::kSuccess ||
         raw_new_node->is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
@@ -105,26 +105,26 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
           matched_list.pop_back();
         }
       }
-      status = SelectStatus::kSuccess;
+      status = SelectStatusPostQuantize::kSuccess;
       return false;
     }
 
     switch (status) {
-      case SelectStatus::kStart:
+      case SelectStatusPostQuantize::kStart:
         if (raw_new_node->op() == Op::Get("_contrib_requantize")) {
           auto const& param = nnvm::get<RequantizeParam>(raw_new_node->attrs.parsed);
           if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
             matched_list.emplace_back(&new_node);
-            status = SelectStatus::kRequantize;
+            status = SelectStatusPostQuantize::kRequantize;
             // For now there is no support for dequantize fusion for some operators
             // so then we finish after finding requantize node:
             if (dequantize_fusion_unsupported_ops.count(raw_node->op()) != 0) {
-              status = SelectStatus::kSuccess;
+              status = SelectStatusPostQuantize::kSuccess;
             }
             return true;
           }
         }
-      case SelectStatus::kRequantize:
+      case SelectStatusPostQuantize::kRequantize:
         if (float_output && raw_new_node->op() == Op::Get("_contrib_dequantize")) {
           CHECK(raw_node->op() == Op::Get("_contrib_requantize"));
           if (n.outputs.size() > 1) {
@@ -133,23 +133,23 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
             for (const auto& kv : n.outputs) {
               const auto& node = kv.first;
               if (node->op() != Op::Get("_contrib_dequantize")) {
-                status = SelectStatus::kSuccess;
+                status = SelectStatusPostQuantize::kSuccess;
                 return false;
               }
             }
           }
           matched_list.emplace_back(&new_node);
-          status = SelectStatus::kSuccess;
+          status = SelectStatusPostQuantize::kSuccess;
           return true;
         }
       default:
-        status = SelectStatus::kSuccess;
+        status = SelectStatusPostQuantize::kSuccess;
         return false;
     }
   }
 
   std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
-    if (status != SelectStatus::kSuccess || (matched_list.size() <= 1)) {
+    if (status != SelectStatusPostQuantize::kSuccess || (matched_list.size() <= 1)) {
       return std::vector<BiDirectedNode*>(0);
     } else {
       std::vector<BiDirectedNode*> ret;

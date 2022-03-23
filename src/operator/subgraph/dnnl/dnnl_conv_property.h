@@ -37,7 +37,7 @@ namespace op {
 class SgDNNLConvSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status_ */
-  enum SelectStatus {
+  enum SelectStatusConv {
     kFail = 0,
     kStart,
     kBN,
@@ -51,7 +51,7 @@ class SgDNNLConvSelector : public SubgraphSelector {
   bool disable_conv_act_;
   bool disable_conv_sum_;
   bool quantize_;
-  SelectStatus status_;
+  SelectStatusConv status_;
   std::vector<const nnvm::Node*> matched_list_;
 
  public:

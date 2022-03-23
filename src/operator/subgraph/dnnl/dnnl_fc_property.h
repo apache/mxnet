@@ -40,14 +40,6 @@ namespace mxnet {
 namespace op {
 
 class SgDNNLFCSelector : public SubgraphSelector {
- public:
-  /* pattern match status */
-  enum SelectStatus {
-    kFail = 0,
-    kStart,
-    kSuccess,
-  };
-
  private:
   bool disable_fc_eltwise_;
   bool quantized_;

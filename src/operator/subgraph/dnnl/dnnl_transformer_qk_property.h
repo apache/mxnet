@@ -52,7 +52,7 @@ namespace mxnet {
 namespace op {
 
 class SgDNNLTransformerQKSelector : public SubgraphSelectorV2 {
-  enum SelectStatus {
+  enum SelectStatusTransformerQK {
     kFail = 0,
     kStart,
     kFirstSwapAx,
@@ -68,7 +68,7 @@ class SgDNNLTransformerQKSelector : public SubgraphSelectorV2 {
   */
 
  private:
-  SelectStatus status_;
+  SelectStatusTransformerQK status_;
   std::vector<const BiDirectedNode*> matched_list_;
 
   bool CheckSplitConditions(const BiDirectedNode& node) {

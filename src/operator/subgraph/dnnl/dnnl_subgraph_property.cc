@@ -27,6 +27,7 @@
 #include "dnnl_post_amp_property.h"
 #include "dnnl_post_quantize_align_scale_property.h"
 #include "dnnl_post_quantize_property.h"
+#include "dnnl_pow_mul_scalar_property.h"
 #include "dnnl_transformer_qk_property.h"
 #include "dnnl_transformer_valatt_property.h"
 #include "dnnl_fc_sum_fuse.h"
@@ -48,6 +49,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLTransformerQKProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLTransformerValAttProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLBatchDotProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLFCSumFuseProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(ONEDNN, SgDNNLPowMulScalarProperty);
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(ONEDNN_QUANTIZE).set_attr("context", Context::CPU());
 
