@@ -38,16 +38,15 @@ static inline float GetScale(const NDArray& data, float min, float max) {
   return data_range / MaxAbs(min, max);
 }
 
-class DNNLQuantizedElemwiseAddFwd {
+class DNNLQuantizedElemwiseSumFwd {
  public:
   dnnl::sum::primitive_desc fwd_pd;
 
-  DNNLQuantizedElemwiseAddFwd(const dnnl::memory::desc& output_desc,
+  DNNLQuantizedElemwiseSumFwd(const dnnl::memory::desc& output_desc,
                               const std::vector<float>& scales,
                               const std::vector<dnnl::memory::desc>& data_md)
       : fwd_pd(output_desc, scales, data_md, CpuEngine::Get()->get_engine()) {
     fwd_ = std::make_shared<dnnl::sum>(fwd_pd);
-    data_.resize(data_md.size());
   }
 
   const dnnl::sum& GetFwd() const {
@@ -56,34 +55,25 @@ class DNNLQuantizedElemwiseAddFwd {
 
  private:
   std::shared_ptr<dnnl::sum> fwd_;
-  std::vector<std::shared_ptr<dnnl::memory>> data_;
   std::shared_ptr<dnnl::memory> out_;
 };
 
-static DNNLQuantizedElemwiseAddFwd& GetQuantizedElemwiseAddForward(
+static DNNLQuantizedElemwiseSumFwd& GetQuantizedElemwiseSumForward(
     const dnnl::memory::desc& output_desc,
     const std::vector<float>& scales,
-    const std::vector<NDArray>& in_data,
-    const std::vector<NDArray>& out_data,
     const std::vector<dnnl::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, DNNLQuantizedElemwiseAddFwd, OpHash> fwds;
+  static thread_local std::unordered_map<OpSignature, DNNLQuantizedElemwiseSumFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLQuantizedElemwiseAddFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLQuantizedElemwiseSumFwd, OpHash> fwds;
 #endif
   OpSignature key;
-  key.AddSign(in_data);
-  key.AddSign(in_data[quantized_elemwise_add_enum::kAMin].data().dptr<float>()[0]);
-  key.AddSign(in_data[quantized_elemwise_add_enum::kAMax].data().dptr<float>()[0]);
-  key.AddSign(in_data[quantized_elemwise_add_enum::kBMin].data().dptr<float>()[0]);
-  key.AddSign(in_data[quantized_elemwise_add_enum::kBMax].data().dptr<float>()[0]);
-  key.AddSign(out_data);
-  key.AddSign(out_data[quantized_elemwise_add_enum::kMin].data().dptr<float>()[0]);
-  key.AddSign(out_data[quantized_elemwise_add_enum::kMax].data().dptr<float>()[0]);
-
+  key.AddSign(output_desc);
+  key.AddSign(scales);
+  key.AddSign(data_md);
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    DNNLQuantizedElemwiseAddFwd fwd(output_desc, scales, data_md);
+    DNNLQuantizedElemwiseSumFwd fwd(output_desc, scales, data_md);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
@@ -122,17 +112,11 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
 
   // output default set as int32
   double output_data_range = kInt32Range;
-  auto output_data_type    = dnnl::memory::data_type::s32;
   // dataA && dataB are uint8
   if (out_data[quantized_elemwise_add_enum::kOut].dtype() == mshadow::kInt8) {
     output_data_range = kInt8Range;
-    output_data_type  = dnnl::memory::data_type::s8;
   } else if (out_data[quantized_elemwise_add_enum::kOut].dtype() == mshadow::kUint8) {
     output_data_range = kUint8Range;
-    output_data_type  = dnnl::memory::data_type::u8;
-  } else {
-    output_data_range = kInt32Range;
-    output_data_type  = dnnl::memory::data_type::s32;
   }
 
   float output_min     = 0;
@@ -166,14 +150,11 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
     } else {
       // x*dataA_absmax/dataA_range = y*(dataA_absmax+dataB_absmax)/output_range
       if (is_dataA_int8 == true) {
-        u8_reorder_scale =
-            dataB_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * kUint8Range);
-        scales[0] =
-            dataA_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * dataA_range);
+        u8_reorder_scale = dataB_absmax * output_data_range / (output_max * kUint8Range);
+        scales[0]        = dataA_absmax * output_data_range / (output_max * dataA_range);
       } else {
-        u8_reorder_scale =
-            dataA_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * dataA_range);
-        scales[1] = dataB_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * kInt8Range);
+        u8_reorder_scale = dataA_absmax * output_data_range / (output_max * dataA_range);
+        scales[1]        = dataB_absmax * output_data_range / (output_max * kInt8Range);
       }
     }
     std::vector<float> reorder_scale = {u8_reorder_scale};
@@ -196,25 +177,23 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
       scales[0] = out_data_scale / A_scale;
       scales[1] = out_data_scale / B_scale;
     } else {
-      scales[0] = dataA_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * dataA_range);
-      scales[1] = dataB_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * dataA_range);
+      scales[0] = dataA_absmax * output_data_range / (output_max * dataA_range);
+      scales[1] = dataB_absmax * output_data_range / (output_max * dataA_range);
     }
   }
 
   std::vector<dnnl::memory::desc> in_desc;
   in_desc.push_back(dataA_mem->get_desc());
   in_desc.push_back(dataB_mem->get_desc());
-  const auto in_shape = in_data[quantized_elemwise_add_enum::kDataA].shape();
-  dnnl::memory::dims i_dims(in_shape.begin(), in_shape.end());
-  auto output_desc = dnnl::memory::desc(i_dims, output_data_type, dnnl::memory::format_tag::any);
-  DNNLQuantizedElemwiseAddFwd& fwd =
-      GetQuantizedElemwiseAddForward(output_desc, scales, in_data, out_data, in_desc);
+
+  auto output_desc                 = out_data[0].GetDNNLData()->get_desc();
+  DNNLStream* stream               = DNNLStream::Get();
+  DNNLQuantizedElemwiseSumFwd& fwd = GetQuantizedElemwiseSumForward(output_desc, scales, in_desc);
   auto mem = CreateDNNLMem(
       out_data[quantized_elemwise_add_enum::kOut], fwd.fwd_pd.dst_desc(), req[0], &in_data[0]);
   dnnl_args_map_t args({{DNNL_ARG_MULTIPLE_SRC, *dataA_mem},
                         {DNNL_ARG_MULTIPLE_SRC + 1, *dataB_mem},
                         {DNNL_ARG_DST, *mem.second}});
-  DNNLStream* stream = DNNLStream::Get();
   stream->RegisterPrimArgs(fwd.GetFwd(), args);
   CommitOutput(out_data[quantized_elemwise_add_enum::kOut], mem);
   stream->Submit();
