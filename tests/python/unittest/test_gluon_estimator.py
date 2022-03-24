@@ -251,6 +251,7 @@ def test_loss():
 
 
 @mx.util.use_np
+@pytest.mark.skip(reason="skipping for now due to severe flakiness")
 def test_device():
     ''' test with no device, list of device, invalid device '''
     net = _get_test_network()
