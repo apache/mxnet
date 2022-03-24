@@ -347,6 +347,38 @@ dnnl_format_tag_t GetDefaultFormat(int num_dims) {
   }
 }
 
+dnnl_format_tag_t GetPermutedFormat(int num_dims) {
+  switch (num_dims) {
+    case 1:
+      return dnnl_a;
+    case 2:
+      return dnnl_ba;
+    case 3:
+      return dnnl_acb;
+    case 4:
+      return dnnl_abdc;
+    case 5:
+      return dnnl_abced;
+    case 6:
+      return dnnl_abcdfe;
+    case 7:
+      return dnnl_abcdegf;
+    case 8:
+      return dnnl_abcdefhg;
+    case 9:
+      return dnnl_abcdefgih;
+    case 10:
+      return dnnl_abcdefghji;
+    case 11:
+      return dnnl_abcdefghikj;
+    case 12:
+      return dnnl_abcdefghijlk;
+    default:
+      LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for oneDNN";
+      return dnnl_format_tag_undef;
+  }
+}
+
 dnnl_format_tag_t GetDefaultFormat(const dnnl::memory::desc& desc) {
   return GetDefaultFormat(desc.data.ndims);
 }
