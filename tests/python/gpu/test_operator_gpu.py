@@ -662,6 +662,7 @@ def test_convolution_multiple_streams():
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
 # Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
 @pytest.mark.serial
+@pytest.mark.skip(reason="skipping for now due to severe flakiness")
 def test_convolution_large_c():
     problematic_c = 64 * 1024
     # The convolution accumulates many values, so scale the input magnitude.
