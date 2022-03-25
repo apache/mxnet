@@ -28,7 +28,6 @@
 
 #include "operator/nn/dnnl/dnnl_base-inl.h"
 #include "operator/operator_common.h"
-#include "operator/mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -36,54 +35,13 @@ namespace op {
 using eltwise_fwd_t    = dnnl::eltwise_forward;
 using eltwise_fwd_pd_t = dnnl::eltwise_forward::primitive_desc;
 
-template <typename OP>
-static dnnl::algorithm GetAlgorithm();
-template <>
-dnnl::algorithm GetAlgorithm<mshadow_op::tanh>() {
-  return dnnl::algorithm::eltwise_tanh;
-}
-template <>
-dnnl::algorithm GetAlgorithm<mshadow_op::exp>() {
-  return dnnl::algorithm::eltwise_exp;
-}
-template <>
-dnnl::algorithm GetAlgorithm<mshadow_op::log>() {
-  return dnnl::algorithm::eltwise_log;
-}
-template <>
-dnnl::algorithm GetAlgorithm<mshadow_op::square>() {
-  return dnnl::algorithm::eltwise_square;
-}
-template <>
-dnnl::algorithm GetAlgorithm<mshadow_op::square_root>() {
-  return dnnl::algorithm::eltwise_sqrt;
-}
-
 class DNNLEltwiseFwd {
  public:
   typedef OpSignature DNNLEltwiseSignature;
 
-  template <typename OP>
-  static DNNLEltwiseFwd& GetCached(const NDArray& input, const NDArray& output) {
-#if DMLC_CXX11_THREAD_LOCAL
-    static thread_local std::unordered_map<DNNLEltwiseSignature, DNNLEltwiseFwd, OpHash> fwds;
-#else
-    static MX_THREAD_LOCAL std::unordered_map<DNNLEltwiseSignature, DNNLEltwiseFwd, OpHash> fwds;
-#endif
-
-    const dnnl::algorithm algorithm = GetAlgorithm<OP>();
-    DNNLEltwiseSignature key;
-    key.AddSign(static_cast<int>(algorithm));
-    key.AddSign(input);
-    key.AddSign(output);
-
-    auto it = fwds.find(key);
-    if (it == fwds.end()) {
-      const DNNLEltwiseFwd fwd(input, algorithm);
-      it = AddToCache(&fwds, key, fwd);
-    }
-    return it->second;
-  }
+  static DNNLEltwiseFwd& GetCached(const NDArray& input,
+                                   const NDArray& output,
+                                   const dnnl::algorithm algorithm);
 
   explicit DNNLEltwiseFwd(const NDArray& input, const dnnl::algorithm algorithm);
 
@@ -94,13 +52,13 @@ class DNNLEltwiseFwd {
   std::shared_ptr<eltwise_fwd_pd_t> fwd_pd;
 };
 
-template <typename OP>
+template <dnnl::algorithm algorithm>
 inline void DNNLEltwiseForward(const nnvm::NodeAttrs& attrs,
                                const OpContext& ctx,
                                const NDArray& input,
                                const OpReqType& req,
                                const NDArray& output) {
-  DNNLEltwiseFwd& fwd = DNNLEltwiseFwd::GetCached<OP>(input, output);
+  DNNLEltwiseFwd& fwd = DNNLEltwiseFwd::GetCached(input, output, algorithm);
   fwd.Execute(input, req, output);
 }
 

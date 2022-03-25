@@ -469,6 +469,45 @@ inline bool EltwiseStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 template <typename OP>
+struct DNNLAlgorithm {};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::plus> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_add;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::minus> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_sub;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::mul> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_mul;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::div> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_div;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::tanh> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_tanh;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::exp> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_exp;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::log> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_log;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::square> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_square;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::square_root> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_sqrt;
+};
+
+template <typename OP>
 inline void EltwiseComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<mxnet::NDArray>& inputs,
@@ -476,12 +515,11 @@ inline void EltwiseComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<mxnet::NDArray>& outputs) {
   if (SupportDNNLEltwise(inputs[0], outputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLEltwiseForward<OP>, attrs, ctx, inputs[0], req[0], outputs[0]);
-    DNNL_OPCHECK_RUN(
-        (UnaryOp::ComputeMixedType<cpu, mshadow_op::tanh>), attrs, ctx, inputs, req, outputs);
+    DNNLRun(
+        DNNLEltwiseForward<DNNLAlgorithm<OP>::value>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNL_OPCHECK_RUN((UnaryOp::ComputeMixedType<cpu, OP>), attrs, ctx, inputs, req, outputs);
   } else {
-    FallBackCompute(
-        UnaryOp::ComputeMixedType<cpu, mshadow_op::tanh>, attrs, ctx, inputs, req, outputs);
+    FallBackCompute(UnaryOp::ComputeMixedType<cpu, OP>, attrs, ctx, inputs, req, outputs);
   }
 }
 #endif  // MXNET_USE_ONEDNN

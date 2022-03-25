@@ -807,26 +807,6 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs);
-
-// template struct converting op::mshadow_op to dnnl::algorithm
-template <typename OP>
-struct DNNLAlgorithm {};
-template <>
-struct DNNLAlgorithm<op::mshadow_op::plus> {
-  static const dnnl::algorithm value = dnnl::algorithm::binary_add;
-};
-template <>
-struct DNNLAlgorithm<op::mshadow_op::minus> {
-  static const dnnl::algorithm value = dnnl::algorithm::binary_sub;
-};
-template <>
-struct DNNLAlgorithm<op::mshadow_op::mul> {
-  static const dnnl::algorithm value = dnnl::algorithm::binary_mul;
-};
-template <>
-struct DNNLAlgorithm<op::mshadow_op::div> {
-  static const dnnl::algorithm value = dnnl::algorithm::binary_div;
-};
 #endif  // MXNET_USE_ONEDNN == 1
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                                            \

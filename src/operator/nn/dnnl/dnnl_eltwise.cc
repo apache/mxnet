@@ -37,6 +37,28 @@ bool SupportDNNLEltwise(const NDArray& input, const NDArray& output) {
   return checkTensor(input) && checkTensor(output);
 }
 
+DNNLEltwiseFwd& DNNLEltwiseFwd::GetCached(const NDArray& input,
+                                          const NDArray& output,
+                                          const dnnl::algorithm algorithm) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<DNNLEltwiseSignature, DNNLEltwiseFwd, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<DNNLEltwiseSignature, DNNLEltwiseFwd, OpHash> fwds;
+#endif
+
+  DNNLEltwiseSignature key;
+  key.AddSign(static_cast<int>(algorithm));
+  key.AddSign(input);
+  key.AddSign(output);
+
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    const DNNLEltwiseFwd fwd(input, algorithm);
+    it = AddToCache(&fwds, key, fwd);
+  }
+  return it->second;
+}
+
 DNNLEltwiseFwd::DNNLEltwiseFwd(const NDArray& input, const dnnl::algorithm algorithm) {
   auto src_desc = input.GetDNNLData()->get_desc();
   dnnl::eltwise_forward::desc fwd_desc(dnnl::prop_kind::forward_scoring, algorithm, src_desc);
