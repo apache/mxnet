@@ -45,7 +45,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 #include "operator/nn/dnnl/dnnl_base-inl.h"
-#include "operator/nn/dnnl/dnnl_tanh-inl.h"
+#include "operator/nn/dnnl/dnnl_eltwise-inl.h"
 #endif
 
 namespace mxnet {
@@ -457,25 +457,26 @@ class UnaryOp : public OpBase {
 };
 
 #if MXNET_USE_ONEDNN == 1
-inline bool TanhStorageType(const nnvm::NodeAttrs& attrs,
-                            const int dev_mask,
-                            DispatchMode* dispatch_mode,
-                            std::vector<int>* in_attrs,
-                            std::vector<int>* out_attrs) {
+inline bool EltwiseStorageType(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               DispatchMode* dispatch_mode,
+                               std::vector<int>* in_attrs,
+                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-inline void TanhComputeExCPU(const nnvm::NodeAttrs& attrs,
-                             const OpContext& ctx,
-                             const std::vector<mxnet::NDArray>& inputs,
-                             const std::vector<OpReqType>& req,
-                             const std::vector<mxnet::NDArray>& outputs) {
-  if (SupportDNNLTanh(inputs[0], outputs[0])) {
+template <typename OP>
+inline void EltwiseComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<mxnet::NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<mxnet::NDArray>& outputs) {
+  if (SupportDNNLEltwise(inputs[0], outputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLTanhForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNLRun(DNNLEltwiseForward<OP>, attrs, ctx, inputs[0], req[0], outputs[0]);
     DNNL_OPCHECK_RUN(
         (UnaryOp::ComputeMixedType<cpu, mshadow_op::tanh>), attrs, ctx, inputs, req, outputs);
   } else {

@@ -297,6 +297,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_square, "x", mshadow_op::square)
 Example::
    square([2, 3, 4]) = [4, 9, 16]
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::square>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
 
 // sqrt
@@ -305,6 +309,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_sqrt, "x", mshadow_op::squar
 Example::
    sqrt([4, 9, 16]) = [2, 3, 4]
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::square_root>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_sqrt"});
 
 // cbrt
@@ -321,6 +329,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_exp, "x", mshadow_op::exp)
 Example::
    exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::exp>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_exp"});
 
 // log
@@ -341,6 +353,10 @@ The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
                                        return std::vector<std::string>{"x"};
                                      })
     .set_attr<FCompute>("FCompute<cpu>", UnaryOp::ComputeMixedType<cpu, mshadow_op::log>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::log>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .add_argument("x", "NDArray-or-Symbol", "The input array.")
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_log"});
 
@@ -484,8 +500,8 @@ MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_tanh, "x", mshadow_op::tanh)
    tanh(x) = sinh(x) / cosh(x)
 )code" ADD_FILELINE)
 #if MXNET_USE_ONEDNN == 1
-    .set_attr<FComputeEx>("FComputeEx<cpu>", TanhComputeExCPU)
-    .set_attr<FInferStorageType>("FInferStorageType", TanhStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::tanh>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
 #endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_tanh"});
 

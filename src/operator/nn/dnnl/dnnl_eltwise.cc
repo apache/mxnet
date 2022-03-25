@@ -18,17 +18,17 @@
  */
 
 /*!
- * \file dnnl_tanh.cc
+ * \file dnnl_eltwise.cc
  */
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "dnnl_tanh-inl.h"
+#include "dnnl_eltwise-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLTanh(const NDArray& input, const NDArray& output) {
+bool SupportDNNLEltwise(const NDArray& input, const NDArray& output) {
   auto checkTensor = [](const NDArray& tensor) {
     return (IsDNNLType(tensor.dtype()) || tensor.dtype() == mshadow::kInt32) &&
            tensor.shape().ndim() > 0 && tensor.shape().ndim() <= 12 && tensor.shape().Size() > 0 &&
@@ -37,34 +37,14 @@ bool SupportDNNLTanh(const NDArray& input, const NDArray& output) {
   return checkTensor(input) && checkTensor(output);
 }
 
-DNNLTanhFwd& DNNLTanhFwd::GetTanhForward(const NDArray& input, const NDArray& output) {
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLTanhSignature, DNNLTanhFwd, OpHash> fwds;
-#else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLTanhSignature, DNNLTanhFwd, OpHash> fwds;
-#endif
-  DNNLTanhSignature key;
-  key.AddSign(static_cast<int>(dnnl::algorithm::eltwise_tanh));
-  key.AddSign(input);
-  key.AddSign(output);
-
-  auto it = fwds.find(key);
-  if (it == fwds.end()) {
-    const DNNLTanhFwd fwd(input);
-    it = AddToCache(&fwds, key, fwd);
-  }
-  return it->second;
-}
-
-DNNLTanhFwd::DNNLTanhFwd(const NDArray& input) {
+DNNLEltwiseFwd::DNNLEltwiseFwd(const NDArray& input, const dnnl::algorithm algorithm) {
   auto src_desc = input.GetDNNLData()->get_desc();
-  dnnl::eltwise_forward::desc fwd_desc(
-      dnnl::prop_kind::forward_scoring, dnnl::algorithm::eltwise_tanh, src_desc);
+  dnnl::eltwise_forward::desc fwd_desc(dnnl::prop_kind::forward_scoring, algorithm, src_desc);
   fwd_pd = std::make_shared<eltwise_fwd_pd_t>(fwd_desc, mxnet::CpuEngine::Get()->get_engine());
   fwd    = std::make_shared<eltwise_fwd_t>(*fwd_pd);
 }
 
-void DNNLTanhFwd::Execute(const NDArray& input, const OpReqType& req, const NDArray& output) {
+void DNNLEltwiseFwd::Execute(const NDArray& input, const OpReqType& req, const NDArray& output) {
   auto engine           = mxnet::CpuEngine::Get()->get_engine();
   auto src              = input.GetDNNLData();
   dnnl_output_t out_mem = CreateDNNLMem(output, fwd_pd->dst_desc(), req, &input);
