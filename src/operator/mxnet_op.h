@@ -933,6 +933,7 @@ struct op_with_req {
   /*! \brief inputs are two tensors with a float output tensor */
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, float* out, const DType* lhs, const float* rhs) {
@@ -942,6 +943,7 @@ struct op_with_req {
   /*! \brief inputs are two tensors with a double output tensor */
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_same<DType, float>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
