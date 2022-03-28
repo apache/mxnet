@@ -30,7 +30,7 @@ namespace op {
 
 bool SupportDNNLEltwise(const NDArray& input, const NDArray& output) {
   auto checkTensor = [](const NDArray& tensor) {
-    return (IsDNNLType(tensor.dtype()) || tensor.dtype() == mshadow::kInt32) &&
+    return (tensor.dtype() == mshadow::kFloat32 || tensor.dtype() == mshadow::kBfloat16) &&
            tensor.shape().ndim() > 0 && tensor.shape().ndim() <= 12 && tensor.shape().Size() > 0 &&
            SupportStorageDNNL(tensor.storage_type());
   };

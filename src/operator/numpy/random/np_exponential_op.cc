@@ -71,10 +71,6 @@ NNVM_REGISTER_OP(_npi_exponential)
                                                                       ResourceRequest::kTempSpace};
                                 })
     .set_attr<FCompute>("FCompute<cpu>", NumpyExponentialForward<cpu>)
-#if MXNET_USE_ONEDNN == 1
-    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::exp>)
-    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
-#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_exponential"})
     .add_argument("input1", "NDArray-or-Symbol", "Source input")
     .add_arguments(NumpyExponentialParam::__FIELDS__());
