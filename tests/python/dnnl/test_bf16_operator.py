@@ -20,15 +20,8 @@ import sys
 import mxnet as mx
 import numpy as np
 from random import randint
-import warnings
-import collections
-import ctypes
 import itertools
-from mxnet import amp
-from mxnet.amp.amp import bfloat16
-from mxnet.test_utils import set_default_device, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
-from mxnet.gluon.model_zoo.vision import get_model
-from mxnet.gluon import SymbolBlock, nn, rnn
+from mxnet.test_utils import assert_almost_equal_with_err, rand_shape_nd
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 import pytest
@@ -62,7 +55,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
     data_list_bf16 = list()
     for i, (_, shape) in enumerate(data_shape.items()):
         data_list_fp32.append(mx.nd.random.uniform(low=data_range[0], high=data_range[1], shape=shape))
-        data_list_bf16.append(mx.nd.amp_cast(data_list_fp32[i], dtype=bfloat16))
+        data_list_bf16.append(data_list_fp32[i].astype('bfloat16'))
 
     # Functions such as broadcast_add require shapes for both inputs in order to infer shape
     arg_shapes, _, aux_shapes = sym_fp32.infer_shape(**data_shape)
@@ -82,7 +75,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
         exe_fp32.arg_dict[arg_name][:] = arg_params_fp32[arg_name]
         # specify the dtype of arguments
         if not bf16_use_fp32_params:
-            type_dict.update({arg_name: bfloat16})
+            type_dict.update({arg_name: 'bfloat16'})
 
     for i, aux_name in enumerate(aux_names):
         aux_params_fp32[aux_name] = mx.nd.random.uniform(low=data_range[0], high=data_range[1], shape=aux_shapes[i])
@@ -102,22 +95,22 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
         if bf16_use_fp32_params:
             exe_bf16.arg_dict[arg_name][:] = arg_params_fp32[arg_name]
         else:
-            exe_bf16.arg_dict[arg_name][:] = mx.nd.amp_cast(arg_params_fp32[arg_name], dtype=bfloat16)
+            exe_bf16.arg_dict[arg_name][:] = arg_params_fp32[arg_name].astype('bfloat16')
 
     for aux_name in aux_names:
         if bf16_use_fp32_params:
             exe_bf16.aux_dict[aux_name][:] = aux_params_fp32[aux_name]
         else:
-            exe_bf16.aux_dict[aux_name][:] = mx.nd.amp_cast(aux_params_fp32[aux_name], dtype=bfloat16)
+            exe_bf16.aux_dict[aux_name][:] = aux_params_fp32[aux_name].astype('bfloat16')
 
     output_bf16 = exe_bf16.forward()[0]
     output_bf16.wait_to_read()
-    output_bf16_2_fp32 = mx.nd.amp_cast(output_bf16, dtype="float32")
+    output_bf16_2_fp32 = output_bf16.astype("float32")
     assert_almost_equal_with_err(output_bf16_2_fp32, output_fp32, rtol=rtol, atol=atol, etol=etol)
 
 def test_bf16_bn():
     data_sym_fp32 = mx.sym.Variable(name='data')
-    data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+    data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
 
     bn_params = {"eps": 2e-05, "fix_gamma": False, "use_global_stats": True, "name": "bn"}
     bn_fp32 = mx.sym.BatchNorm(data_sym_fp32, **bn_params)
@@ -128,7 +121,7 @@ def test_bf16_bn():
 
 def test_bf16_conv():
     data_sym_fp32 = mx.sym.Variable(name='data')
-    data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+    data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
 
     conv_params = {"kernel": (3, 3), "num_filter": 128, "pad": (1, 1), "stride": (1, 1), "no_bias": True, "name": "conv"}
     conv_fp32 = mx.sym.Convolution(data_sym_fp32, **conv_params)
@@ -144,7 +137,7 @@ def test_bf16_conv():
 
 def test_bf16_fc():
     data_sym_fp32 = mx.sym.Variable(name='data')
-    data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+    data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
 
     fc_params = {"num_hidden": 10, "no_bias": True, "flatten": True, "name": "fc"}
     fc_fp32 = mx.sym.FullyConnected(data_sym_fp32, **fc_params)
@@ -165,14 +158,14 @@ def test_bf16_pooling():
         pool_params.update({"pool_type": new_params[1], "pooling_convention": new_params[2]})
 
         data_sym_fp32 = mx.sym.Variable(name='data')
-        data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+        data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
         pool_fp32 = mx.sym.Pooling(data_sym_fp32, **pool_params)
         pool_bf16 = mx.sym.Pooling(data_sym_bf16, **pool_params)
         check_operator_accuracy(pool_fp32, pool_bf16, data_shape=new_params[0], bf16_use_fp32_params=False)
 
 def test_bf16_activation():
     data_sym_fp32 = mx.sym.Variable(name='data')
-    data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+    data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
 
     dshapes = [(3, 16), (3, 16, 16), (3, 3, 16, 16)]
     act_types = ['relu', 'sigmoid', 'tanh']
@@ -189,8 +182,8 @@ def test_bf16_elemwiseadd():
     b_sym_fp32 = mx.sym.Variable("data_1")
     sym_fp32 = mx.sym.elemwise_add(a_sym_fp32, b_sym_fp32)
 
-    a_sym_bf16 = mx.sym.Variable("data", dtype=bfloat16)
-    b_sym_bf16 = mx.sym.Variable("data_1", dtype=bfloat16)
+    a_sym_bf16 = mx.sym.Variable("data", dtype='bfloat16')
+    b_sym_bf16 = mx.sym.Variable("data_1", dtype='bfloat16')
     sym_bf16 = mx.sym.elemwise_add(a_sym_bf16, b_sym_bf16)
 
     dshapes = {"data": dshape, "data_1": dshape}
@@ -213,8 +206,8 @@ def test_bf16_binary_broadcast_elemwise_funcs():
     a_sym_fp32 = mx.sym.Variable(name='data')
     b_sym_fp32 = mx.sym.Variable(name='data_1')
 
-    a_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
-    b_sym_bf16 = mx.sym.Variable(name='data_1', dtype=bfloat16)
+    a_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
+    b_sym_bf16 = mx.sym.Variable(name='data_1', dtype='bfloat16')
 
     for func in functions:
         sym_fp32 = func(a_sym_fp32, b_sym_fp32)
@@ -222,6 +215,38 @@ def test_bf16_binary_broadcast_elemwise_funcs():
         dshapes = {"data": dshape_0, "data_1": dshape_1}
         check_operator_accuracy(sym_fp32, sym_bf16, dshapes, num_input_data=2, bf16_use_fp32_params=False)
 
+@pytest.mark.parametrize('function', [mx.np.add, mx.np.subtract, mx.np.multiply, mx.np.divide])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+@pytest.mark.parametrize('ndim', [1,2,3,4,5,6])
+def test_bf16_binary_broadcast_elemwise_mixed_input(function, dtype, ndim):
+    dshape_0 = rand_shape_nd(ndim)
+    dshape_1 = tuple()
+    for i in range(ndim):
+        if(randint(0,1)):
+            dshape_1 += (dshape_0[i], )
+        else:
+            dshape_1 += (1, )
+
+    a = mx.np.random.uniform(-1, 1, dshape_0, dtype=np.float32)
+    a_fp32 = mx.np.array(a, dtype=dtype)
+    a_bf16 = a.astype('bfloat16')
+
+    b = mx.np.random.uniform(-1, 1, dshape_1, dtype=np.float32)
+    b_fp32 = mx.np.array(b, dtype=dtype)
+    b_bf16 = b.astype('bfloat16')
+
+    rtol=1e-1
+    atol=5e-1
+    etol=0
+
+    out_bf_16_1 = function(a_bf16, b_fp32)
+    out_fp_32 = function(a_fp32, b_fp32)
+    assert_almost_equal_with_err(out_bf_16_1, out_fp_32, rtol=rtol, atol=atol, etol=etol)
+
+    out_bf_16_2 = function(a_fp32, b_bf16)
+    assert_almost_equal_with_err(out_bf_16_2, out_fp_32, rtol=rtol, atol=atol, etol=etol)
+
+@pytest.mark.skip(reason="env dependent, need check further.")
 def test_bf16_concat():
     dshape = rand_shape_nd(4)
     a_shape = tuple(dshape)
@@ -230,8 +255,8 @@ def test_bf16_concat():
     a_sym_fp32 = mx.sym.Variable("data")
     b_sym_fp32 = mx.sym.Variable("data_1")
 
-    a_sym_bf16 = mx.sym.Variable("data", dtype=bfloat16)
-    b_sym_bf16 = mx.sym.Variable("data_1", dtype=bfloat16)
+    a_sym_bf16 = mx.sym.Variable("data", dtype='bfloat16')
+    b_sym_bf16 = mx.sym.Variable("data_1", dtype='bfloat16')
     for axis in range(0, 4):
         concat_sym_fp32 = mx.sym.concat(a_sym_fp32, b_sym_fp32, dim=axis)
         concat_sym_bf16 = mx.sym.concat(a_sym_bf16, b_sym_bf16, dim=axis)
@@ -244,7 +269,7 @@ def test_bf16_abs():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
         data_sym_fp32 = mx.sym.Variable(name='data')
-        data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+        data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
         sym_fp32 = mx.sym.abs(data_sym_fp32)
         sym_bf16 = mx.sym.abs(data_sym_bf16)
 
@@ -254,7 +279,7 @@ def test_bf16_sqrt():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
         data_sym_fp32 = mx.sym.Variable(name='data')
-        data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+        data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
         sym_bf16 = mx.sym.sqrt(data_sym_bf16)
         sym_fp32 = mx.sym.sqrt(data_sym_fp32)
 
@@ -264,7 +289,7 @@ def test_bf16_square():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
         data_sym_fp32 = mx.sym.Variable(name='data')
-        data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+        data_sym_bf16 = mx.sym.Variable(name='data', dtype='bfloat16')
         sym_bf16 = mx.sym.square(data_sym_bf16)
         sym_fp32 = mx.sym.square(data_sym_fp32)
 
@@ -272,7 +297,7 @@ def test_bf16_square():
 
 def test_bf16_flatten_slice_after_conv():
     data_fp32 = mx.symbol.Variable('data')
-    data_bf16 = mx.symbol.Variable('data', dtype=bfloat16)
+    data_bf16 = mx.symbol.Variable('data', dtype='bfloat16')
 
     conv_fp32= mx.symbol.Convolution(data=data_fp32, name='conv', num_filter=64, kernel=(3,3), stride=(1,1))
     flatten_fp32 = mx.symbol.flatten(data=conv_fp32)
@@ -287,7 +312,7 @@ def test_bf16_flatten_slice_after_conv():
 
 def test_bf16_fallback():
     data_sym_fp32 = mx.sym.Variable(name='data')
-    data_sym_bf16=mx.sym.Variable(name='data', dtype=bfloat16)
+    data_sym_bf16=mx.sym.Variable(name='data', dtype='bfloat16')
 
     bn_params = {"eps": 2e-05, "fix_gamma": False, "use_global_stats": True, "name": "bn"}
     bn_fp32 = mx.sym.BatchNorm(data_sym_fp32, **bn_params)

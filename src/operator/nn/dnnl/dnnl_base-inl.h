@@ -198,12 +198,14 @@ bool SupportDNNLMaskedSoftmax(const MaskedSoftmaxParam& param,
                               const NDArray& output);
 bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param);
 bool SupportDNNLTranspose(const NDArray& data);
+bool SupportDNNLDot(const std::vector<NDArray>& inputs, const NDArray& output);
 bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs);
 bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
 bool SupportDNNLSplit(const NDArray& input);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs);
+bool SupportDNNLTanh(const NDArray& input, const NDArray& output);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
@@ -539,6 +541,7 @@ bool IsDNNL(const dnnl::memory::desc& desc);
 
 dnnl_format_tag_t GetDefaultFormat(const dnnl::memory::desc& md);
 dnnl_format_tag_t GetDefaultFormat(int num_dims);
+dnnl_format_tag_t GetPermutedFormat(int num_dims);
 dnnl::memory::desc GetDesc(const dnnl::memory::desc& md, const dnnl_format_tag_t& format);
 
 inline bool same_shape(const mxnet::TShape& shape, const dnnl_dims_t dims, int ndims) {

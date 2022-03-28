@@ -115,7 +115,8 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
     }
   } else {
     // Case when types of the 2 input tensors are different
-    if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+    if ((common::is_float(lhs.type_flag_) || common::is_bfloat(lhs.type_flag_)) &&
+        (common::is_float(rhs.type_flag_) || common::is_bfloat(rhs.type_flag_))) {
       // both lhs and rhs are float types, output type is the more precise one
       TBlob temp_tblob;
       if (lhs.type_flag_ == out.type_flag_) {
@@ -238,7 +239,8 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
           });
         }
       } else {
-        if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+        if ((common::is_float(lhs.type_flag_) || common::is_bfloat(lhs.type_flag_)) &&
+            (common::is_float(rhs.type_flag_) || common::is_bfloat(rhs.type_flag_))) {
           // lhs and rhs have different float types, the output is the more precise one
           TBlob temp_tblob;
           if (lhs.type_flag_ == out.type_flag_) {

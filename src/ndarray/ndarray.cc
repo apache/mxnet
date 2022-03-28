@@ -594,9 +594,9 @@ void NDArray::Chunk::DNNLDataReorder(const dnnl::memory::desc& md) {
   dnnl_mem_.reset(new DNNLMemory(md, shandle.dptr));
 }
 
-void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
-  // The shape of the array and the one of the MKL memory may mismatch.
-  // For example, if the array stores parameters, the MKL memory may store data
+void NDArray::Chunk::SetDNNLMem(const mxnet::TShape& shape, int dtype) {
+  // The shape of the array and the one of the DNNL memory may mismatch.
+  // For example, if the array stores parameters, the DNNL memory may store data
   // in 5 dimensions while the NDArray stores data in 4 dimensions.
   if (dnnl_mem_ && dnnl_mem_->GetDataHandle() == shandle.dptr &&
       dnnl_mem_->SameFormat(shape, dtype)) {
@@ -605,36 +605,15 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape& shape, int dtype) {
 
   dnnl::memory::dims dims;
   // These are shapes supprted by DNNL.
-  if (shape.ndim() >= 1 && shape.ndim() <= 6) {
+  const int MAX_ONEDNN_DIMS = 12;
+  if (shape.ndim() >= 1 && shape.ndim() <= MAX_ONEDNN_DIMS) {
     dims.resize(shape.ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
   } else {
     LOG(FATAL) << "oneDNN doesn't support " << shape.ndim() << " dimensions";
   }
-  dnnl::memory::format_tag layout = dnnl::memory::format_tag::undef;
-  switch (dims.size()) {
-    case 1:
-      layout = dnnl::memory::format_tag::a;
-      break;
-    case 2:
-      layout = dnnl::memory::format_tag::ab;
-      break;
-    case 3:
-      layout = dnnl::memory::format_tag::abc;
-      break;
-    case 4:
-      layout = dnnl::memory::format_tag::abcd;
-      break;
-    case 5:
-      layout = dnnl::memory::format_tag::abcde;
-      break;
-    case 6:
-      layout = dnnl::memory::format_tag::abcdef;
-      break;
-    default:
-      LOG(FATAL) << "Not implemented dimension (" << dims.size() << ") for oneDNN";
-  }
+  auto layout = static_cast<dnnl::memory::format_tag>(GetDefaultFormat(dims.size()));
   dnnl::memory::desc data_md{dims, get_dnnl_type(dtype), layout};
   if (shandle.dptr == nullptr) {
     CHECK(delay_alloc);
@@ -651,8 +630,8 @@ const dnnl::memory* NDArray::GetDNNLData(const dnnl::memory::desc& desc) const {
   }
   const dnnl::memory* mem  = GetDNNLData();
   dnnl::memory::desc desc1 = mem->get_desc();
-  // The MKL memory has the same format and shape as required,
-  // or both use the default format, we can return the MKL memory.
+  // The DNNL memory has the same format and shape as required,
+  // or both use the default format, we can return the DNNL memory.
   if (desc1 == desc || ((!mxnet::IsDNNL(desc1)) && (!mxnet::IsDNNL(desc)))) {
     return GetDNNLExact(mem, desc);
   } else {
@@ -829,7 +808,7 @@ const dnnl::memory* NDArray::GetDNNLData() const {
     CHECK(!is_view);
     DNNLStream::Get()->RegisterMem(ptr_->dnnl_mem_->GetMem());
     // If this array uses DNNL format, we should return now. Otherwise,
-    // SetMKLMem may mess up dnnl_mem_.
+    // SetDNNLMem may mess up dnnl_mem_.
     return ptr_->dnnl_mem_->GetRaw();
   }
 
@@ -853,7 +832,7 @@ const dnnl::memory* NDArray::GetDNNLData() const {
   }
 
   // If this isn't a view, we can create a DNNL memory and store it in the chunk
-  ptr_->SetMKLMem(shape_, dtype_);
+  ptr_->SetDNNLMem(shape_, dtype_);
   DNNLStream::Get()->RegisterMem(ptr_->dnnl_mem_->GetMem());
   return ptr_->dnnl_mem_->GetRaw();
 }
@@ -890,7 +869,7 @@ dnnl::memory* NDArray::CreateDNNLData(const dnnl::memory::desc& desc) {
   }
   bool isDefaultFormat = IsDefaultFormat(desc);
   if (isDefaultFormat && !IsView()) {
-    ptr_->SetMKLMem(shape_, dtype_);
+    ptr_->SetDNNLMem(shape_, dtype_);
     DNNLStream::Get()->RegisterMem(ptr_->dnnl_mem_->GetMem());
     return GetDNNLExact(ptr_->dnnl_mem_->GetRaw(), desc);
   } else if (isDefaultFormat) {

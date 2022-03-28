@@ -22,8 +22,8 @@
  * \brief CPU Implementation of numpy elementwise unary function.
  */
 #include <mxnet/base.h>
-#include "../tensor/elemwise_unary_op.h"
-#include "../tensor/elemwise_binary_op.h"
+#include "operator/tensor/elemwise_unary_op.h"
+#include "operator/tensor/elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -483,6 +483,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_tanh, "x", mshadow_op::tanh)
 .. math::
    tanh(x) = sinh(x) / cosh(x)
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", TanhComputeExCPU)
+    .set_attr<FInferStorageType>("FInferStorageType", TanhStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_tanh"});
 
 // arcsinh

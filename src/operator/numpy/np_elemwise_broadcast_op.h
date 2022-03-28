@@ -68,6 +68,11 @@ void MixedAllRealBinaryElemwiseCompute(const std::string& op_name,
             Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
                 s, size, out.dptr<float>(), rhs.dptr<mshadow::half::half_t>(), lhs.dptr<float>());
           });
+        } else if (rhs.type_flag_ == mshadow::kBfloat16) {
+          MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+            Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+                s, size, out.dptr<float>(), rhs.dptr<mshadow::bfloat::bf16_t>(), lhs.dptr<float>());
+          });
         } else {
           PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         }
@@ -83,6 +88,14 @@ void MixedAllRealBinaryElemwiseCompute(const std::string& op_name,
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
             Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
                 s, size, out.dptr<double>(), rhs.dptr<float>(), lhs.dptr<double>());
+          });
+        } else if (rhs.type_flag_ == mshadow::kBfloat16) {
+          MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+            Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s,
+                                                                size,
+                                                                out.dptr<double>(),
+                                                                rhs.dptr<mshadow::bfloat::bf16_t>(),
+                                                                lhs.dptr<double>());
           });
         } else {
           PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
@@ -220,7 +233,8 @@ void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& lhs = inputs[0];
   const TBlob& rhs = inputs[1];
   const TBlob& out = outputs[0];
-  if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+  if ((common::is_float(lhs.type_flag_) || common::is_bfloat(lhs.type_flag_)) &&
+      (common::is_float(rhs.type_flag_) || common::is_bfloat(rhs.type_flag_))) {
     if (lhs.type_flag_ == out.type_flag_) {
       MixedAllRealBinaryElemwiseCompute<xpu, ROP>(attrs.op->name, ctx, lhs, rhs, out, req[0]);
     } else {
@@ -271,6 +285,17 @@ void MixedAllRealBinaryBroadcastCompute(const std::string& op_name,
               rhs.dptr<mshadow::half::half_t>(),
               lhs.dptr<float>(),
               out.dptr<float>());
+        } else if (rhs.type_flag_ == mshadow::kBfloat16) {
+          mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::template LaunchEx(
+              s,
+              new_oshape.Size(),
+              req,
+              rstride,
+              lstride,
+              oshape,
+              rhs.dptr<mshadow::bfloat::bf16_t>(),
+              lhs.dptr<float>(),
+              out.dptr<float>());
         } else {
           PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         }
@@ -286,6 +311,17 @@ void MixedAllRealBinaryBroadcastCompute(const std::string& op_name,
               lstride,
               oshape,
               rhs.dptr<mshadow::half::half_t>(),
+              lhs.dptr<double>(),
+              out.dptr<double>());
+        } else if (rhs.type_flag_ == mshadow::kBfloat16) {
+          mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::template LaunchEx(
+              s,
+              new_oshape.Size(),
+              req,
+              rstride,
+              lstride,
+              oshape,
+              rhs.dptr<mshadow::bfloat::bf16_t>(),
               lhs.dptr<double>(),
               out.dptr<double>());
         } else if (rhs.type_flag_ == mshadow::kFloat32) {
@@ -334,7 +370,8 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     MixedBinaryElemwiseCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-    if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+    if ((common::is_float(lhs.type_flag_) || common::is_bfloat(lhs.type_flag_)) &&
+        (common::is_float(rhs.type_flag_) || common::is_bfloat(rhs.type_flag_))) {
       if (lhs.type_flag_ == out.type_flag_) {
         MixedAllRealBinaryBroadcastCompute<xpu, ROP>(
             attrs.op->name, ctx, lhs, rhs, out, req[0], ndim, new_oshape, new_lshape, new_rshape);
