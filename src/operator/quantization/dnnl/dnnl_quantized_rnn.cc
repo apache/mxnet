@@ -33,13 +33,14 @@ namespace op {
 
 std::vector<float> GetDNNLRnnWeightsQParams(const DNNLRnnFullParam& full_param, float* w_ptr) {
   const int nthreads            = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int num_gates           = 4;
   const RNNParam& default_param = full_param.default_param;
   const LayerParamVector& layer_params = full_param.layer_params;
 
   const DNNLRnnLayerParam& layer_param0 = layer_params.at(0);
   const size_t w_size0                  = layer_param0.single_w_size;
-  const size_t wx_size0                 = 4 * layer_param0.state_size * layer_param0.input_size;
-  const size_t wh_size0                 = 4 * layer_param0.state_size * layer_param0.state_size;
+  const size_t wx_size0 = num_gates * layer_param0.state_size * layer_param0.input_size;
+  const size_t wh_size0 = num_gates * layer_param0.state_size * layer_param0.state_size;
 
   int directions = 1;
   float* wx      = w_ptr;
@@ -64,10 +65,10 @@ std::vector<float> GetDNNLRnnWeightsQParams(const DNNLRnnFullParam& full_param, 
       fake_wh[i] = MaxAbs(wh[i], wh[i + w_size0]);
     }
   }
-  std::vector<float> w_max(4 * layer_param0.state_size, 0.0);
-  const index_t input_size  = layer_param0.input_size;      // input
-  const index_t state_size  = layer_param0.state_size;      // state
-  const index_t gates_nblks = 4 * layer_param0.state_size;  // gates * state
+  std::vector<float> w_max(num_gates * layer_param0.state_size, 0.0);
+  const index_t input_size  = layer_param0.input_size;              // input
+  const index_t state_size  = layer_param0.state_size;              // state
+  const index_t gates_nblks = num_gates * layer_param0.state_size;  // gates * state
   for (index_t go = 0; go < gates_nblks; ++go) {
     float tmp_max = w_max[go];
     for (index_t i = 0; i < input_size; ++i) {
