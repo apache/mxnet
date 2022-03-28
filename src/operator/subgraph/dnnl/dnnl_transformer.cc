@@ -582,7 +582,7 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
                                      const std::vector<NDArray>& outputs) {
   using namespace dnnl;
 
-  const auto attn_tensor = inputs[0];
+  const auto attn_tensor = inputs[0].Reorder2Default();
   const auto qkv_tensor  = inputs[1].Reorder2Default();
   const auto out_tensor  = outputs[0];
 

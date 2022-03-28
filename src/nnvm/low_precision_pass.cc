@@ -269,15 +269,15 @@ static void RemoveParamCasts(const int target_dtype,
                              EntryMap_t* entry_map) {
   for (const auto& [old_param, old_param_dsts] : old_param_dst_nodes) {
     const ObjectPtr& new_param      = node_map.at(old_param);
-    const auto& can_be_cast_offline = [&](const auto& old_node_x_ne_pair) {
-      const ObjectPtr& new_node        = node_map.at(old_node_x_ne_pair.first);
-      const MappedNodeEntry& mapped_ne = entry_map->at(old_node_x_ne_pair.second);
-      for (const NodeEntry& node_entry : new_node->inputs) {
+    const auto& can_be_cast_offline = [&](const std::pair<Node*, NodeEntry>& old_param_dst) {
+      const ObjectPtr& param_dst_node        = node_map.at(old_param_dst.first);
+      const MappedNodeEntry& param_mapped_ne = entry_map->at(old_param_dst.second);
+      for (const NodeEntry& node_entry : param_dst_node->inputs) {
         if (node_entry.node == new_param) {
           return false;
         }
       }
-      return mapped_ne.CanBeCastOfflineTo(target_dtype);
+      return param_mapped_ne.CanBeCastOfflineTo(target_dtype);
     };
 
     if (std::all_of(old_param_dsts.begin(), old_param_dsts.end(), can_be_cast_offline)) {

@@ -132,7 +132,7 @@ def test_bf16_offline_casting_shared_params():
       x1 = self.lp16_op2(x)
       x2 = mx.np.expand_dims(x, 1)
       x2 = self.fp32_op(x2)
-      x2 = nn.Flatten()(x2)
+      x2 = mx.npx.batch_flatten(x2)
       x = mx.np.concat((x1, x2), axis=1)
       return x
 

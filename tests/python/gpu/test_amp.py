@@ -112,7 +112,7 @@ def test_amp_conversion_rnn(amp_tests):
 
 
 @mx.util.use_np
-def test_bf16_offline_casting():
+def test_fp16_offline_casting():
   class TestNet(nn.HybridBlock):
     def __init__(self):
       super().__init__()
@@ -139,7 +139,7 @@ def test_bf16_offline_casting():
 
 
 @mx.util.use_np
-def test_bf16_offline_casting_shared_params():
+def test_fp16_offline_casting_shared_params():
   COMMON_SIZE = 4
 
   class TestNet(nn.HybridBlock):
