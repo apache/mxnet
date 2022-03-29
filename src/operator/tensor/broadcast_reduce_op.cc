@@ -207,17 +207,11 @@ void BroadcastMy(const OpContext& ctx,
   Tensor<cpu, ndim, float> data =
       inputs[0].get_with_shape<cpu, ndim, float>(src_shape.get<ndim>(), s);
 
-  mxnet::TShape msrc_shape(src_shape.begin(), src_shape.end());
-  Tensor<cpu, ndim, float> tmp_space_res =
-      ctx.requested[0].get_space_typed<cpu, ndim, float>(
-          dst_shape.get<ndim>(), s);
 
   float* original_src = data.dptr_;
-  float* tmp_dst      = tmp_space_res.dptr_;
   float* original_dst = out.dptr_;
 
-  bool tmp_as_dst = aux_data.num_broadcast_axes % 2 == 0;
-  float* dst = tmp_as_dst ? tmp_dst : original_dst;
+  float* dst = original_dst;
   float* src = original_src;
 
   for (int i = 0; i < aux_data.num_broadcast_axes; i++) {
@@ -234,24 +228,19 @@ void BroadcastMy(const OpContext& ctx,
       }
 
 
-    int start = (src == dst) ? 1 : 0;
-
+    // start from end!
+    dst = dst + (how_many_copies*bcast_copies)*el_to_copy;
+    src = src + (how_many_copies)*el_to_copy;
     for (int j = 0; j < how_many_copies; j++) {
-      for (int z = start; z < bcast_copies; z++) {
+      src -= (el_to_copy);
+      LOG(INFO) << *src;
+      for (int z = 0; z < bcast_copies; z++) {
+        dst -= (el_to_copy);
         memcpy(dst, src, el_to_copy * sizeof(float));
-        dst += (el_to_copy);
       }
-      src += (el_to_copy);
     }
-
-    if (tmp_as_dst) {
-      src = tmp_dst;
       dst = original_dst;
-    } else {
-      dst = tmp_dst;
       src = original_dst;
-    }
-    tmp_as_dst = !tmp_as_dst;
   }
 }
 
