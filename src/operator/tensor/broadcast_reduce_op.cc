@@ -190,5 +190,70 @@ template struct ReduceAxesRTCCompute<NumpyReduceAxesBoolParam, 1>;
 
 #endif
 
+void BroadcastMy(const OpContext& ctx,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const mxnet::TShape& src_shape,
+                 const mxnet::TShape& dst_shape,
+                 ShapeAndStride aux_data) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+
+  Stream<cpu>* s = ctx.get_stream<cpu>();
+  const int ndim = MXNET_SPECIAL_MAX_NDIM;
+  Tensor<cpu, ndim, float> out =
+      outputs[0].get_with_shape<cpu, ndim, float>(dst_shape.get<ndim>(), s);
+  Tensor<cpu, ndim, float> data =
+      inputs[0].get_with_shape<cpu, ndim, float>(src_shape.get<ndim>(), s);
+
+  mxnet::TShape msrc_shape(src_shape.begin(), src_shape.end());
+  Tensor<cpu, ndim, float> tmp_space_res =
+      ctx.requested[0].get_space_typed<cpu, ndim, float>(
+          dst_shape.get<ndim>(), s);
+
+  float* original_src = data.dptr_;
+  float* tmp_dst      = tmp_space_res.dptr_;
+  float* original_dst = out.dptr_;
+
+  bool tmp_as_dst = aux_data.num_broadcast_axes % 2 == 0;
+  float* dst = tmp_as_dst ? tmp_dst : original_dst;
+  float* src = original_src;
+
+  for (int i = 0; i < aux_data.num_broadcast_axes; i++) {
+    index_t axis = aux_data.axes[i];
+    size_t el_to_copy = 1;
+    for (int z = axis + 1; z < dst_shape.ndim(); z++) {
+      el_to_copy *= dst_shape[z];
+    }
+    size_t bcast_copies = dst_shape[axis];
+    size_t how_many_copies = 1;
+
+      for (int z = axis - 1; z >= 0; z--) {
+        how_many_copies *= src_shape[z];
+      }
+
+
+    int start = (src == dst) ? 1 : 0;
+
+    for (int j = 0; j < how_many_copies; j++) {
+      for (int z = start; z < bcast_copies; z++) {
+        memcpy(dst, src, el_to_copy * sizeof(float));
+        dst += (el_to_copy);
+      }
+      src += (el_to_copy);
+    }
+
+    if (tmp_as_dst) {
+      src = tmp_dst;
+      dst = original_dst;
+    } else {
+      dst = tmp_dst;
+      src = original_dst;
+    }
+    tmp_as_dst = !tmp_as_dst;
+  }
+}
+
 }  // namespace op
 }  // namespace mxnet
