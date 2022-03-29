@@ -18,11 +18,11 @@
  */
 
 /*!
- * \file dnnl_tanh-inl.h
+ * \file dnnl_eltwise-inl.h
  */
 
-#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_TANH_INL_H_
-#define MXNET_OPERATOR_NN_DNNL_DNNL_TANH_INL_H_
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_ELTWISE_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_ELTWISE_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
 
@@ -35,13 +35,15 @@ namespace op {
 using eltwise_fwd_t    = dnnl::eltwise_forward;
 using eltwise_fwd_pd_t = dnnl::eltwise_forward::primitive_desc;
 
-class DNNLTanhFwd {
+class DNNLEltwiseFwd {
  public:
-  typedef OpSignature DNNLTanhSignature;
+  typedef OpSignature DNNLEltwiseSignature;
 
-  static DNNLTanhFwd& GetTanhForward(const NDArray& input, const NDArray& output);
+  static DNNLEltwiseFwd& GetCached(const NDArray& input,
+                                   const NDArray& output,
+                                   const dnnl::algorithm algorithm);
 
-  explicit DNNLTanhFwd(const NDArray& input);
+  explicit DNNLEltwiseFwd(const NDArray& input, const dnnl::algorithm algorithm);
 
   void Execute(const NDArray& input, const OpReqType& req, const NDArray& output);
 
@@ -50,12 +52,13 @@ class DNNLTanhFwd {
   std::shared_ptr<eltwise_fwd_pd_t> fwd_pd;
 };
 
-inline void DNNLTanhForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const NDArray& input,
-                            const OpReqType& req,
-                            const NDArray& output) {
-  DNNLTanhFwd& fwd = DNNLTanhFwd::GetTanhForward(input, output);
+template <dnnl::algorithm algorithm>
+inline void DNNLEltwiseForward(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const NDArray& input,
+                               const OpReqType& req,
+                               const NDArray& output) {
+  DNNLEltwiseFwd& fwd = DNNLEltwiseFwd::GetCached(input, output, algorithm);
   fwd.Execute(input, req, output);
 }
 
@@ -63,4 +66,4 @@ inline void DNNLTanhForward(const nnvm::NodeAttrs& attrs,
 }  // namespace mxnet
 
 #endif  // MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_TANH_INL_H_
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_ELTWISE_INL_H_
