@@ -154,6 +154,10 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   for output in outputs:
       output.wait_to_read()
   ref_out = outputs
+  one_output = not isinstance(ref_out, list)
+  if one_output:
+      # make a list to have a common path for one and multiple outputs
+      ref_out = [ref_out]
 
   dataArray= mx.gluon.data.ArrayDataset(*data)
 
@@ -177,11 +181,13 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
       check_qsym_scale_align(qsym)
 
     quantized_out = qnet(*data)
+    if one_output:
+      quantized_out = [quantized_out]
     for i in range(len(ref_out)):
       min_range = mx.np.min(ref_out[i]).item()
       max_range = mx.np.max(ref_out[i]).item()
       atol = 0.1 * max(abs(min_range), abs(max_range))
-      assert_almost_equal_with_err(quantized_out.asnumpy(), ref_out.asnumpy(),
+      assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(),
                                    rtol=0.1, atol=atol, etol=0.2)
 
 

@@ -38,9 +38,6 @@
 namespace mxnet {
 namespace op {
 
-enum DotIn { lhs = 0, rhs, lhs_min, lhs_max, rhs_min, rhs_max };
-enum DotOut { out = 0, out_min, out_max };
-
 struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
   bool transpose_a;
   bool transpose_b;

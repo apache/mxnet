@@ -18,6 +18,7 @@
 import sys
 import os
 import time
+import random
 import mxnet as mx
 import multiprocessing as mp
 from mxnet.test_utils import check_consistency, set_default_device, assert_almost_equal, rand_ndarray, environment
@@ -28,7 +29,7 @@ import pytest
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assert_raises_cudnn_not_satisfied, run_in_spawned_process
+from common import assert_raises_cudnn_not_satisfied, run_in_spawned_process, random_seed
 from test_gluon import *
 from test_loss import *
 from test_numpy_loss import *
@@ -595,3 +596,111 @@ def test_cudnn_dropout_reproducibility():
 
     assert_almost_equal(a.grad, b.grad)
 
+@mx.util.use_np
+def test_cuda_graphs():
+    class GraphTester(gluon.HybridBlock):
+        def __init__(self, function_to_test, **kwargs):
+            super(GraphTester, self).__init__(**kwargs)
+            self.f = function_to_test()
+
+        def forward(self, *args):
+            # We need to isolate the operation to be fully inside the graph
+            # in order for graphs usage to be possible
+            copied_args = [mx.np.copy(a) for a in args]
+            outputs = self.f(*copied_args)
+            if isinstance(outputs, (list, tuple)):
+                return [mx.np.copy(o) for o in outputs]
+            else:
+                return mx.np.copy(outputs)
+
+    class TestDesc:
+        def __init__(self, name, f, num_inputs=1, input_dim=4):
+            self.name = name
+            self.f = f
+            self.num_inputs = num_inputs
+            self.input_dim = input_dim
+
+        def generate_inputs(self):
+            shape = tuple(_np.random.randint(4, 11, size=self.input_dim))
+            ret = [mx.np.random.uniform(size=shape) for _ in range(self.num_inputs)]
+            for r in ret:
+                r.attach_grad()
+            return ret
+
+    tested_ops = [
+            TestDesc('add', lambda: (lambda x, y: x + y), num_inputs = 2),
+            TestDesc('add_scalar', lambda: (lambda x: x + 0.5)),
+            TestDesc('Conv', lambda: mx.gluon.nn.Conv2D(channels=32, kernel_size=(1,1))),
+            TestDesc('ConvTranspose', lambda: mx.gluon.nn.Conv2DTranspose(channels=32, kernel_size=(1,1))),
+            TestDesc('Dense', lambda: mx.gluon.nn.Dense(units=128)),
+            TestDesc('Activation', lambda: mx.gluon.nn.Activation('tanh')),
+            TestDesc('Dropout', lambda: mx.gluon.nn.Dropout(0.5)),
+            TestDesc('Flatten', lambda: mx.gluon.nn.Flatten()),
+            TestDesc('MaxPool', lambda: mx.gluon.nn.MaxPool2D()),
+            TestDesc('AvgPool', lambda: mx.gluon.nn.AvgPool2D()),
+            TestDesc('GlobalMaxPool', lambda: mx.gluon.nn.GlobalMaxPool2D()),
+            TestDesc('GlobalAvgPool', lambda: mx.gluon.nn.GlobalAvgPool2D()),
+            TestDesc('ReflectionPad2D', lambda: mx.gluon.nn.ReflectionPad2D()),
+            TestDesc('BatchNorm', lambda: mx.gluon.nn.BatchNorm()),
+            TestDesc('InstanceNorm', lambda: mx.gluon.nn.InstanceNorm()),
+            TestDesc('LayerNorm', lambda: mx.gluon.nn.LayerNorm()),
+            TestDesc('LeakyReLU', lambda: mx.gluon.nn.LeakyReLU(0.1)),
+            TestDesc('PReLU', lambda: mx.gluon.nn.PReLU()),
+            TestDesc('ELU', lambda: mx.gluon.nn.ELU()),
+            TestDesc('SELU', lambda: mx.gluon.nn.SELU()),
+            TestDesc('Swish', lambda: mx.gluon.nn.Swish()),
+        ]
+
+    N = 10
+
+    with environment({'MXNET_ENABLE_CUDA_GRAPHS': '1',
+                      'MXNET_USE_FUSION': '0'}):
+        device = mx.gpu(0)
+        for test_desc in tested_ops:
+            print("Testing ", test_desc.name)
+            inputs = test_desc.generate_inputs()
+            inputsg = [i.copy() for i in inputs]
+            for i in inputsg:
+                i.attach_grad()
+            seed = random.randint(0, 10000)
+            net = GraphTester(test_desc.f)
+            netg = GraphTester(test_desc.f)
+
+            # initialize parameters
+            net.initialize(device=device)
+            netg.initialize(device=device)
+
+            net(*inputs)
+
+            for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+                p2.set_data(p1.data())
+
+            netg.hybridize(static_alloc=True, static_shape=True)
+
+            print("Testing inference mode")
+            with random_seed(seed):
+                for _ in range(N):
+                    assert_almost_equal(net(*inputs), netg(*inputsg))
+
+            mx.npx.waitall()
+            print("Testing training mode")
+            for _ in range(N):
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        out = net(*inputs)
+                    out.backward()
+
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        outg = netg(*inputsg)
+                    outg.backward()
+
+                assert_almost_equal(out, outg)
+                for i, ig in zip(inputs, inputsg):
+                    assert_almost_equal(i.grad, ig.grad)
+
+                for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+                    assert_almost_equal(p1.data(), p2.data())
+                    if p1.grad_req != 'null':
+                        assert_almost_equal(p1.grad(), p2.grad())
+            mx.npx.waitall()

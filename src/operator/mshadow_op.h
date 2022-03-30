@@ -293,17 +293,19 @@ struct mixed_floor_divide {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return ::floorf(a / static_cast<float>(b));
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return ::floor(a / static_cast<double>(b));
   }
@@ -317,17 +319,19 @@ struct mixed_rfloor_divide {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return ::floorf(b / static_cast<float>(a));
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return ::floor(b / static_cast<double>(a));
   }
@@ -345,17 +349,19 @@ struct mixed_plus {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return static_cast<float>(a) + b;
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return static_cast<double>(a) + b;
   }
@@ -369,17 +375,19 @@ struct mixed_minus {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return static_cast<float>(a) - b;
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return static_cast<double>(a) - b;
   }
@@ -393,17 +401,19 @@ struct mixed_rminus {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return b - static_cast<float>(a);
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return b - static_cast<double>(a);
   }
@@ -417,17 +427,19 @@ struct mixed_mul {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return static_cast<float>(a) * b;
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return static_cast<double>(a) * b;
   }
@@ -441,17 +453,19 @@ struct mixed_power {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return static_cast<float>(math::pow(a, b));
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return static_cast<double>(math::pow(a, b));
   }
@@ -465,17 +479,19 @@ struct mixed_rpower {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return static_cast<float>(math::pow(b, a));
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return static_cast<double>(math::pow(b, a));
   }
@@ -1045,17 +1061,19 @@ struct mixed_mod {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return mod::Map(static_cast<float>(a), b);
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return mod::Map(static_cast<double>(a), b);
   }
@@ -1069,17 +1087,19 @@ struct mixed_rmod {
 
   template <typename DType,
             typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                        std::is_same<DType, mshadow::bfloat::bf16_t>::value ||
                                         std::is_integral<DType>::value,
                                     int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, float b) {
     return mod::Map(b, static_cast<float>(a));
   }
 
-  template <typename DType,
-            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
-                                        std::is_same<DType, float>::value ||
-                                        std::is_integral<DType>::value,
-                                    int>::type = 0>
+  template <
+      typename DType,
+      typename std::enable_if<
+          std::is_same<DType, mshadow::half::half_t>::value || std::is_same<DType, float>::value ||
+              std::is_same<DType, mshadow::bfloat::bf16_t>::value || std::is_integral<DType>::value,
+          int>::type = 0>
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return mod::Map(b, static_cast<double>(a));
   }

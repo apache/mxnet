@@ -45,6 +45,7 @@ pytest-rerunfailures==10.2
 flaky==3.7.0
 setuptools==49.6.0  # https://github.com/pypa/setuptools/issues/2352
 wheel
+packaging
 
 # TVM dependencies
 decorator==4.4.0

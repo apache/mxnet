@@ -28,9 +28,14 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(InstanceNorm).set_attr<FCompute>("FCompute<gpu>", InstanceNormForward<gpu>);
+NNVM_REGISTER_OP(InstanceNorm)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", InstanceNormForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_instance_norm)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", InstanceNormBackward<gpu>);
 
 }  // namespace op

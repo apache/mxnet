@@ -125,11 +125,11 @@ std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(
            conv_pd->weights_desc().get_size() != GetArraySize(weights)) ||
           // With the upgrade of oneDNN to version 2.4+
           // tests/python/dnnl/subgraphs/test_conv_subgraph.py::test_pos_conv_add[True-data_shape1]
-          // started failing. Switching away from primitive with weight dnnl::format_tag
-          // ABcd4b16a4b in order to temporarily fix the issue until full fix arrives.
-          // Tracking issue: https://github.com/apache/incubator-mxnet/issues/20826.
+          // started failing. Switching away from blocking weights in order to temporarily fix
+          // the issue until full fix arrives. Tracking issue:
+          // https://github.com/apache/incubator-mxnet/issues/20826.
           (param.dnnl_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
-           conv_pd->weights_desc().data.padded_dims[1] == 16)) {
+           conv_pd->weights_desc().data.padded_dims[1] != conv_pd->weights_desc().dims()[1])) {
         // next_impl() will visit desc and engine, please make sure they are still alive here.
         CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
       }

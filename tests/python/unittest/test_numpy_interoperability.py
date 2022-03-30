@@ -1299,10 +1299,12 @@ def _add_workload_delete():
                 s = slice(start, stop, step)
                 OpArgMngr.add_workload('delete', a, s)
                 OpArgMngr.add_workload('delete', nd_a, s, axis=1)
-    OpArgMngr.add_workload('delete', a, np.array([]), axis=0)
+    # mxnet.numpy arrays, even 0-sized, have a float32 dtype.  Starting with numpy 1.19, the
+    # index array's of delete() must be of integer or boolean type, so we force that below.
+    OpArgMngr.add_workload('delete', a, np.array([], dtype='int32'), axis=0)
     OpArgMngr.add_workload('delete', a, 0)
-    OpArgMngr.add_workload('delete', a, np.array([]))
-    OpArgMngr.add_workload('delete', a, np.array([0, 1]))
+    OpArgMngr.add_workload('delete', a, np.array([], dtype='int32'))
+    OpArgMngr.add_workload('delete', a, np.array([0, 1], dtype='int32'))
     OpArgMngr.add_workload('delete', a, slice(1, 2))
     OpArgMngr.add_workload('delete', a, slice(1, -2))
     k = np.arange(10).reshape(2, 5)
@@ -3344,8 +3346,6 @@ def check_interoperability(op_list):
             continue
         if name in ['shares_memory', 'may_share_memory', 'empty_like',
                     '__version__', 'dtype', '_NoValue']:  # skip list
-            continue
-        if name in ['delete']: # https://github.com/apache/incubator-mxnet/issues/18600
             continue
         if name in ['full_like', 'zeros_like', 'ones_like'] and \
                 StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):

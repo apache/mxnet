@@ -52,9 +52,15 @@ NNVM_REGISTER_OP(_npi_column_stack)
 NNVM_REGISTER_OP(_backward_np_column_stack)
     .set_attr<FCompute>("FCompute<gpu>", NumpyColumnStackBackward<gpu>);
 
-NNVM_REGISTER_OP(_npi_tril_indices).set_attr<FCompute>("FCompute<gpu>", TrilindicesOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_tril_indices)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", TrilindicesOpForward<gpu>);
 
-NNVM_REGISTER_OP(_npi_roll).set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
+NNVM_REGISTER_OP(_npi_roll)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
 
 template <>
 void NumpyFlipForwardImpl<gpu>(const OpContext& ctx,
@@ -92,9 +98,15 @@ void NumpyFlipForwardImpl<gpu>(const OpContext& ctx,
   });
 }
 
-NNVM_REGISTER_OP(_npi_flip).set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
+NNVM_REGISTER_OP(_npi_flip)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_flip).set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_flip)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
 
 NNVM_REGISTER_OP(_npi_moveaxis).set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
 
@@ -103,7 +115,22 @@ NNVM_REGISTER_OP(_npi_rollaxis).set_attr<FCompute>("FCompute<gpu>", NumpyRollaxi
 NNVM_REGISTER_OP(_npi_rollaxis_backward)
     .set_attr<FCompute>("FCompute<gpu>", NumpyRollaxisBackward<gpu>);
 
-NNVM_REGISTER_OP(_npi_rot90).set_attr<FCompute>("FCompute<gpu>", NumpyRot90Compute<gpu>);
+NNVM_REGISTER_OP(_npi_rot90)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) {
+                                         const auto& param =
+                                             nnvm::get<NumpyRot90Param>(attrs.parsed);
+                                         // Should track code in NumpyRot90Compute()
+                                         int real_k(param.k);
+                                         real_k = real_k % 4;
+                                         if (real_k < 0) {
+                                           real_k += 4;
+                                         }
+                                         // Avoid NumpyRot90ComputeFlipIml(),
+                                         // which uses mshadow::Copy()
+                                         return real_k != 2;
+                                       })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyRot90Compute<gpu>);
 
 NNVM_REGISTER_OP(_npi_hsplit).set_attr<FCompute>("FCompute<gpu>", HSplitOpForward<gpu>);
 
