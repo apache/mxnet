@@ -190,57 +190,52 @@ template struct ReduceAxesRTCCompute<NumpyReduceAxesBoolParam, 1>;
 
 #endif
 
-void BroadcastMy(const OpContext& ctx,
-                 const std::vector<TBlob>& inputs,
-                 const std::vector<TBlob>& outputs,
-                 const mxnet::TShape& src_shape,
-                 const mxnet::TShape& dst_shape,
-                 ShapeAndStride aux_data) {
+void BroadcastCPU(const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<TBlob>& outputs,
+                  const mxnet::TShape& src_shape,
+                  const mxnet::TShape& dst_shape,
+                  ShapeAndStride aux_data) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mxnet_op;
 
   Stream<cpu>* s = ctx.get_stream<cpu>();
-  const int ndim = MXNET_SPECIAL_MAX_NDIM;
-  Tensor<cpu, ndim, float> out =
-      outputs[0].get_with_shape<cpu, ndim, float>(dst_shape.get<ndim>(), s);
-  Tensor<cpu, ndim, float> data =
-      inputs[0].get_with_shape<cpu, ndim, float>(src_shape.get<ndim>(), s);
 
+  float* src = static_cast<float*>(inputs[0].dptr_);
+  float* dst = static_cast<float*>(outputs[0].dptr_);
 
-  float* original_src = data.dptr_;
-  float* original_dst = out.dptr_;
+  // broadcast axis independently with result reusage
+  for (int ax = 0; ax < aux_data.num_broadcast_axes; ax++) {
+    index_t axis = aux_data.axes[ax];
 
-  float* dst = original_dst;
-  float* src = original_src;
-
-  for (int i = 0; i < aux_data.num_broadcast_axes; i++) {
-    index_t axis = aux_data.axes[i];
-    size_t el_to_copy = 1;
-    for (int z = axis + 1; z < dst_shape.ndim(); z++) {
-      el_to_copy *= dst_shape[z];
+    size_t elements_to_copy = 1;
+    for (int i = axis + 1; i < dst_shape.ndim(); i++) {
+      elements_to_copy *= dst_shape[i];
     }
-    size_t bcast_copies = dst_shape[axis];
-    size_t how_many_copies = 1;
+    size_t preaxis_dims = 1;
+    for (int i = axis - 1; i >= 0; i--) {
+      preaxis_dims *= src_shape[i];
+    }
 
-      for (int z = axis - 1; z >= 0; z--) {
-        how_many_copies *= src_shape[z];
-      }
+    size_t bcast_dim = dst_shape[axis];
 
-
-    // start from end!
-    dst = dst + (how_many_copies*bcast_copies)*el_to_copy;
-    src = src + (how_many_copies)*el_to_copy;
-    for (int j = 0; j < how_many_copies; j++) {
-      src -= (el_to_copy);
-      LOG(INFO) << *src;
-      for (int z = 0; z < bcast_copies; z++) {
-        dst -= (el_to_copy);
-        memcpy(dst, src, el_to_copy * sizeof(float));
+#pragma omp parallel
+    {
+      // start from the end to avoid overwriting values when src == dst
+      for (int i = preaxis_dims - 1; i >= 0; i--) {
+#pragma omp for
+        for (int j = bcast_dim - 1; j >= 0; j--) {
+          memcpy(dst + (elements_to_copy * (j + i * bcast_dim)),
+                 src + (elements_to_copy * i),
+                 elements_to_copy * sizeof(float));
+        }
       }
     }
-      dst = original_dst;
-      src = original_dst;
+    // when first of broadcastable axis is broadcasted,
+    // run same algorithm for next brodcast axis with 'new' input
+    // this is why loops are iterating from the end
+    src = dst;
   }
 }
 

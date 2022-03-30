@@ -1354,12 +1354,12 @@ struct direct_copy {
   }
 };
 
-void BroadcastMy(const OpContext& ctx,
-                 const std::vector<TBlob>& inputs,
-                 const std::vector<TBlob>& outputs,
-                 const mxnet::TShape& src_shape,
-                 const mxnet::TShape& dst_shape,
-                 ShapeAndStride aux_data);
+void BroadcastCPU(const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<TBlob>& outputs,
+                  const mxnet::TShape& src_shape,
+                  const mxnet::TShape& dst_shape,
+                  ShapeAndStride aux_data);
 
 /**
  * When CPU context is used the no. of kernel launches are equal to
@@ -1384,35 +1384,17 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
   //      -> (12,1,5,1,42) (1,3) (50, 9)
   //      and this is the new input for broadcast_kernel whose total
   //      num of dimensions cannot be greater than 5(throws an error otherwise).
-  std::ostringstream os;
-  os << "old dst: ";
-  for(auto k : outputs[0].shape_) {
-     os << k << ", ";
-  }
-  os << "\n old src: ";
-  for(auto k : small) {
-     os << k << ", ";
-  }
 
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &dst_shape, &src_shape);
-  os << "\nnew dst: ";
-  for(auto k : dst_shape) {
-     os << k << ", ";
-  }
-  os << "\n new src: ";
-  for(auto k : src_shape) {
-     os << k << ", ";
-  }
-  // LOG(INFO) << os.str();
-  // LOG(INFO)  <<"1";
+
   Stream<xpu>* s = ctx.get_stream<xpu>();
   bool isCPU     = std::is_same<xpu, cpu>::value;
-  // LOG(INFO)  << "2";
-   MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, IType, {
+
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, IType, {
     MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, OType, {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
-  // LOG(INFO)  <<"3";
+
       for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
         if (i < dst_shape.ndim()) {
           in_shape[i]  = src_shape[i];
@@ -1424,26 +1406,33 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
       }
       struct ShapeAndStride aux_data;
       PrepareAUXData(&aux_data, in_shape, out_shape, dst_shape.ndim());
-  // LOG(INFO)  <<"4";
+
       if (!aux_data.shape_changed) {
         // If no broadcast is required (i.e. input_shape == output_shape)
         // then simply copy input to outout.
         Kernel<direct_copy<mshadow_op::identity>, xpu>::Launch(
             s, outputs[0].Size(), inputs[0].dptr<IType>(), outputs[0].dptr<OType>(), req[0]);
-      } else if (dst_shape.ndim() == 2) {
-        Tensor<xpu, 2, OType> out = outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
-        Tensor<xpu, 2, IType> data = inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
-          if (isCPU) {
-            Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
-                s, data.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
-          } else {
-            Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
-                s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
-          }
+        // } else if (dst_shape.ndim() == 2) {
+
+      } else if (isCPU) {
+        BroadcastCPU(ctx, inputs, outputs, src_shape, dst_shape, aux_data);
       } else {
-  // LOG(INFO)  <<"7";
-        BroadcastMy(ctx, inputs, outputs, src_shape, dst_shape, aux_data);
-  // LOG(INFO)  <<"8";
+        if (dst_shape.ndim() == 2) {
+          Tensor<xpu, 2, OType> out =
+              outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
+          Tensor<xpu, 2, IType> data =
+              inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
+              s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+        } else {
+          const int ndim = MXNET_SPECIAL_MAX_NDIM;
+          Tensor<xpu, ndim, OType> out =
+              outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
+          Tensor<xpu, ndim, IType> data =
+              inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
+              s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
+        }
       }
     });
   });
@@ -1661,7 +1650,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   }
 #else
   const std::string& red = param.ord == 1 ? "red::sum{}" : "red::nrm2{}";
-  const std::string& op  = param.ord == 1 ? "abs" : "identity";
+  const std::string& op = param.ord == 1 ? "abs" : "identity";
   ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, red, nullptr, false, op);
 #endif
 }
