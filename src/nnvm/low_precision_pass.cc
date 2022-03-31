@@ -59,8 +59,9 @@ class MappedNodeEntry {
    * converted and dtypes of its outputs may have changed
    */
   void UpdateDTypeAfterConversion(const int new_dtype) {
-    CHECK_EQ(dtype, original_dtype);  // dtype should be changed only once
+    CHECK(dtype == original_dtype || dtype == new_dtype);  // dtype should be changed only once
     CHECK(entry.node->op());
+    CHECK_NE(new_dtype, -1);
     dtype = new_dtype;
   }
 
@@ -91,6 +92,8 @@ class MappedNodeEntry {
 
   /*! \brief Returns whether this entry has the specified dtype or an existing cast to that dtype */
   bool HasDTypeEntry(const int target_dtype) const {
+    CHECK_NE(target_dtype, -1);
+
     return dtype == target_dtype || casts.count(target_dtype) > 0;
   }
 
@@ -99,6 +102,8 @@ class MappedNodeEntry {
    * input entires of a node before its conversion.
    */
   bool CanBeCastTo(const int target_dtype) {
+    CHECK_NE(target_dtype, -1);
+
     static const auto& amp_cast_op = Op::Get("amp_cast");
     static const auto& infertype   = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType")[amp_cast_op];
     nnvm::NodeAttrs dummy_atts;
@@ -113,6 +118,8 @@ class MappedNodeEntry {
   /*! \brief Returns whether this NodeEntry (of a parameter) can be cast offline */
   bool CanBeCastOfflineTo(const int target_dtype) const {
     CHECK(entry.node->is_variable());
+    CHECK_NE(target_dtype, -1);
+
     return casts.count(target_dtype) > 0;
   }
 
@@ -177,8 +184,21 @@ static bool TryLowPrecision(const int target_dtype,
   static const auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
 
   std::vector<int> in_types(old_node->inputs.size(), -1);
+  bool has_lp_input = false;
+  for (int i = 0; i < old_node->inputs.size(); ++i) {
+    if (entry_map->at(old_node->inputs[i]).HasDTypeEntry(target_dtype)) {
+      in_types[i]  = target_dtype;
+      has_lp_input = true;
+    }
+  }
+  if (!has_lp_input) {
+    // when inputs are not already in low precision, assume the first input should be in low
+    // precision in order to convert this op
+    in_types[0] = target_dtype;
+  }
+
+  // infer types of other inputs
   std::vector<int> out_types(old_node->num_outputs(), -1);
-  in_types[0] = target_dtype;
   if (infertype.count(old_node->op()) == 0 ||
       infertype[old_node->op()](old_node->attrs, &in_types, &out_types) == false) {
     return false;
@@ -226,21 +246,38 @@ static void HandleWidestDtypeNode(const int target_dtype,
                                   EntryMap_t* const entry_map) {
   static const auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
 
-  std::vector<int> in_types(old_node->inputs.size(), target_dtype);
-  std::vector<int> out_types(old_node->num_outputs(), -1);
-  const bool inferred = (infertype.count(old_node->op()) > 0 &&
-                         infertype[old_node->op()](old_node->attrs, &in_types, &out_types));
-
-  bool has_lp_inputs = inferred;
-  for (int i = 0; has_lp_inputs && i < old_node->inputs.size(); ++i) {
-    const NodeEntry& input = old_node->inputs[i];
-    has_lp_inputs &= entry_map->at(input).HasDTypeEntry(in_types[i]);
+  // gather info about current dtypes of inputs
+  // if there is already at least one input with target dtype, we try converting to low precision
+  bool try_lp = false;
+  std::vector<int> in_types(old_node->inputs.size(), -1);
+  for (int i = 0; i < old_node->inputs.size(); ++i) {
+    if (entry_map->at(old_node->inputs[i]).HasDTypeEntry(target_dtype)) {
+      in_types[i] = target_dtype;  // set only lp inputs
+      try_lp      = true;
+    }
   }
 
-  if (!has_lp_inputs ||
-      !TryLowPrecision(target_dtype, old_node, node_map, nodes_entries, entry_map)) {
-    KeepOriginalNode(old_node, node_map, entry_map);
+  if (try_lp) {
+    // run infertype, to see what other input types this op needs with the current lp inputs
+    std::vector<int> out_types(old_node->num_outputs(), -1);
+    try_lp = (infertype.count(old_node->op()) > 0 &&
+              infertype[old_node->op()](old_node->attrs, &in_types, &out_types));
+
+    if (try_lp) {
+      // if we have to add casts to inputs, this op shouldn't run in low precision
+      for (int i = 0; i < old_node->inputs.size(); ++i) {
+        const NodeEntry& old_input_ne = old_node->inputs[i];
+        if (in_types[i] != -1 && !entry_map->at(old_input_ne).HasDTypeEntry(in_types[i])) {
+          try_lp = false;
+          break;
+        }
+      }
+      if (try_lp && TryLowPrecision(target_dtype, old_node, node_map, nodes_entries, entry_map)) {
+        return;
+      }
+    }
   }
+  KeepOriginalNode(old_node, node_map, entry_map);
 }
 /*!
  * \brief Tries to convert the node to low precision if some of its inputs already are converted.
@@ -360,7 +397,7 @@ Graph ReducePrecision(Graph&& src) {
   }
 
   // convert the model
-  DFSVisit(src.outputs, [&](const ObjectPtr& old_node) {
+  const auto convert_node_fn = [&](const ObjectPtr& old_node) {
     if (old_node->is_variable() || old_node->op() == Op::Get("amp_multicast") ||
         IsCastOp(old_node->op())) {
       const ObjectPtr& new_node = node_map.at(old_node.get());
@@ -370,7 +407,6 @@ Graph ReducePrecision(Graph&& src) {
       }
       return;
     }
-
     if (fp32_ops.count(old_node->op()->name) > 0 || excluded_syms.count(old_node->attrs.name) > 0) {
       KeepOriginalNode(old_node, node_map, &entry_map);
     } else if (target_dtype_ops.count(old_node->op()->name) > 0) {
@@ -384,7 +420,20 @@ Graph ReducePrecision(Graph&& src) {
     } else {
       HandleDTypeNeutralNode(target_dtype, old_node, node_map, nodes_entries, &entry_map);
     }
+  };
+
+  // Because some nodes depend on casts present in the graph, the order of visited nodes will
+  // determine whether some nodes are converted or not. To avoid this, first we make a virtual
+  // conversion pass in order to have all the necessary casts already present (in the
+  // MappedNodeEntry instances) during the second (true) conversion pass
+
+  // virtual conversion pass
+  DFSVisit(src.outputs, [&](const ObjectPtr& old_node) {
+    convert_node_fn(old_node);
+    node_map[old_node.get()]->inputs.clear();  // make this pass "virtual" by removing edges
   });
+  // true conversion pass
+  DFSVisit(src.outputs, [&](const ObjectPtr& old_node) { convert_node_fn(old_node); });
 
   std::vector<NodeEntry> outputs;
   for (const auto& out_ne : src.outputs) {

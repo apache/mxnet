@@ -2653,6 +2653,8 @@ fixed-size items.
         array([[1, 1, 1],
                [1, 1, 1]], dtype=int32)
         """
+        if self.dtype == bfloat16:
+            return self.astype(np.float32).asnumpy()
         data = np.empty(self.shape, dtype=self.dtype)
         check_call(_LIB.MXNDArraySyncCopyToCPU(
             self.handle,

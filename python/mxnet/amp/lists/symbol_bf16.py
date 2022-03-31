@@ -45,6 +45,7 @@ BF16_FP32_FUNCS = [
     'sqrt',
     'square',
     'tanh',
+    '_contrib_quantize_v2',
 ]
 
 # Functions that when running with Bfloat16, the params that still need float32.
@@ -97,7 +98,6 @@ FP32_FUNCS = [
     '_contrib_index_copy',
     '_contrib_quadratic',
     '_contrib_quantize',
-    '_contrib_quantize_v2',
     '_contrib_quantized_concat',
     '_contrib_quantized_conv',
     '_contrib_quantized_flatten',
