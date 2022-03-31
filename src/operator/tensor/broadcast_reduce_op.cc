@@ -204,31 +204,63 @@ void BroadcastCPU(const OpContext& ctx,
 
   float* src = static_cast<float*>(inputs[0].dptr_);
   float* dst = static_cast<float*>(outputs[0].dptr_);
-
+  
   // broadcast axis independently with result reusage
+  std::vector<size_t> elements_to_copy(aux_data.num_broadcast_axes);
+  std::vector<size_t> preaxis_dims(aux_data.num_broadcast_axes);
   for (int ax = 0; ax < aux_data.num_broadcast_axes; ax++) {
     index_t axis = aux_data.axes[ax];
 
-    size_t elements_to_copy = 1;
+    elements_to_copy[ax] = 1;
     for (int i = axis + 1; i < dst_shape.ndim(); i++) {
-      elements_to_copy *= dst_shape[i];
+      elements_to_copy[ax] *= dst_shape[i];
     }
-    size_t preaxis_dims = 1;
+    preaxis_dims[ax] = 1;
     for (int i = axis - 1; i >= 0; i--) {
-      preaxis_dims *= src_shape[i];
+      preaxis_dims[ax] *= src_shape[i];
     }
+  }
 
+
+  if (elements_to_copy[0] < 64) {
+    // LOG(INFO) << "aux_data.axes[0] " << aux_data.axes[0] << " dst_shape.ndim() " << dst_shape.ndim(); 
+    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
+    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
+    for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
+      if (i < dst_shape.ndim()) {
+        in_shape[i]  = src_shape[i];
+        out_shape[i] = src_shape[i];
+      } else {
+        in_shape[i]  = 1;
+        out_shape[i] = 1;
+      }
+    }
+    if (dst_shape.ndim() == 2) {
+      Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
+          s, out_shape.Size(), src, dst, aux_data, OpReqType::kWriteTo, 2);
+    } else {
+      const int ndim = MXNET_SPECIAL_MAX_NDIM;
+      Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
+          s, out_shape.Size(), src, dst, aux_data, OpReqType::kWriteTo, ndim);
+    }
+      return;
+  }
+  // LOG(INFO) << "aux_data.axes[0] " << aux_data.axes[0] << " dst_shape.ndim() " << dst_shape.ndim();
+
+
+  for (int ax = 0; ax < aux_data.num_broadcast_axes; ax++) {
+    index_t axis = aux_data.axes[ax];
     size_t bcast_dim = dst_shape[axis];
 
 #pragma omp parallel
     {
       // start from the end to avoid overwriting values when src == dst
-      for (int i = preaxis_dims - 1; i >= 0; i--) {
+      for (int i = preaxis_dims[ax] - 1; i >= 0; i--) {
 #pragma omp for
         for (int j = bcast_dim - 1; j >= 0; j--) {
-          memcpy(dst + (elements_to_copy * (j + i * bcast_dim)),
-                 src + (elements_to_copy * i),
-                 elements_to_copy * sizeof(float));
+          memcpy(dst + (elements_to_copy[ax] * (j + i * bcast_dim)),
+                 src + (elements_to_copy[ax] * i),
+                 elements_to_copy[ax] * sizeof(float));
         }
       }
     }
@@ -237,7 +269,7 @@ void BroadcastCPU(const OpContext& ctx,
     // this is why loops are iterating from the end
     src = dst;
   }
-}
+  }
 
 }  // namespace op
 }  // namespace mxnet
