@@ -304,6 +304,10 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
   of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
 
+* MXNET_MKLDNN_FORCE_FC_AB_FORMAT
+  - Values: 0, 1 ```(default=0)```
+  - If set to true, FullyConnected will use only AB format for weights, thus MXNet won't use BRGEMM implementation of FC on machines with AVX512-VNNI support which requires special weights format.
+
 * MXNET_CPU_PARALLEL_SIZE
   - Values: Int ```(default=200000)```
   - The minimum size to call parallel operations by OpenMP for CPU context.
