@@ -109,7 +109,7 @@ std::string dtype_descr(const TBlob& blob) {
     case mshadow::kUint64:
       return "'" MXNET_BYTEORDER "u8'";
     case mshadow::kBfloat16:
-      return "[('bfloat16', '" MXNET_BYTEORDER "u2')]";
+      return "'" MXNET_BYTEORDER "b2'";
     default: {
       LOG(FATAL) << "Unknown dtype type " << blob.type_flag_ << "encountered.";
       return "";
@@ -142,7 +142,7 @@ int dtype_descr(const std::string& dtype_descr) {
     return mshadow::kUint32;
   else if (dtype_descr.find("u8'") != std::string::npos)
     return mshadow::kUint64;
-  else if (dtype_descr.find("bfloat16'") != std::string::npos)
+  else if (dtype_descr.find("b2'") != std::string::npos)
     return mshadow::kBfloat16;
   else
     LOG(FATAL) << "Unknown dtype descriptor " << dtype_descr << "encountered.";

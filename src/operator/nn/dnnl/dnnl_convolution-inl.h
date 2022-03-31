@@ -48,6 +48,7 @@ struct DNNLConvParam : public dmlc::Parameter<DNNLConvParam> {
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  dmlc::optional<int> amp_out_dtype;      // mshadow dtype of a fused amp_cast node
 
   DMLC_DECLARE_PARAMETER(DNNLConvParam) {
     DMLC_DECLARE_FIELD(with_bn).set_default(false).describe("Add post batchnorm.");
@@ -73,6 +74,9 @@ struct DNNLConvParam : public dmlc::Parameter<DNNLConvParam> {
             "The maximum scalar value in the form of float32 obtained "
             "through calibration. If present, it will be used to by "
             "quantized convolution op to calculate primitive scale");
+    DMLC_DECLARE_FIELD(amp_out_dtype)
+        .set_default(dmlc::optional<int>())
+            MXNET_ADD_ALL_TYPES.describe("The output type deduced from the fused amp_cast.");
   }
 };
 

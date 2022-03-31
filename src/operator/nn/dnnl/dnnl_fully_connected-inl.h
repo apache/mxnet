@@ -47,6 +47,7 @@ struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   dmlc::optional<bool> channel_wise_quantize;
+  dmlc::optional<int> amp_out_dtype;  // mshadow dtype of a fused amp_cast node
 
   DMLC_DECLARE_PARAMETER(DNNLFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false).describe(
@@ -73,6 +74,9 @@ struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
     DMLC_DECLARE_FIELD(channel_wise_quantize)
         .set_default(dmlc::optional<bool>())
         .describe("Whether support channel-wise-quantize for weight.");
+    DMLC_DECLARE_FIELD(amp_out_dtype)
+        .set_default(dmlc::optional<int>())
+            MXNET_ADD_ALL_TYPES.describe("The output type deduced from the fused amp_cast.");
   }
 };
 

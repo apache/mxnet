@@ -36,7 +36,7 @@ from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, 
     profiler as _profiler, device as _device
 from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol, fromjson
-from ..ndarray import NDArray
+from ..ndarray import NDArray, get_dtype_name
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays, _check_block_input_np_ndarrays
@@ -1074,6 +1074,10 @@ class HybridBlock(Block):
                 self._active = False
             self._clear_cached_op()
 
+    @staticmethod
+    def generate_arg_names(arg_num):
+        return ['data'] if arg_num == 1 else ['data{}'.format(i) for i in range(arg_num)]
+
     def _get_graph(self, *args):
         if not self._cached_graph:
             flatten_args, self._in_format = _flatten(args, "input")
@@ -1082,10 +1086,7 @@ class HybridBlock(Block):
             if len(real_args) == 0:
                 raise ValueError('All args are None and we do not support such a case.'
                                  ' Received args={}'.format(args))
-            if len(real_args) == 1:
-                arg_names = ['data']
-            else:
-                arg_names = ['data{}'.format(i) for i, ele in enumerate(real_args)]
+            arg_names = HybridBlock.generate_arg_names(len(real_args))
             symbol_inputs = [
                 symbol.var(name).as_np_ndarray()
                 if isinstance(arg, _mx_np.ndarray) else symbol.var(name)
@@ -1854,7 +1855,7 @@ class SymbolBlock(HybridBlock):
     def cast(self, dtype):
         self._clear_cached_op()
         super(SymbolBlock, self).cast(dtype)
-        if np.dtype(dtype).name == 'float16':
+        if get_dtype_name(dtype) == 'float16':
             # correct BatchNorm types back to float32 due to its special requirement
             out = self._cached_graph[1]
             params_list = out.get_internals().list_inputs()

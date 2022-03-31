@@ -27,7 +27,7 @@ from ...util import is_np_default_dtype, dtype_from_number
 from ...device import current_device
 from . import _internal as _npi
 from . import _api_internal
-from ..ndarray import NDArray
+from ..ndarray import NDArray, get_dtype_name
 
 
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
@@ -126,7 +126,7 @@ def zeros(shape, dtype=None, order='C', device=None):  # pylint: disable=redefin
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.zeros(shape, dtype, device)
 
 
@@ -165,7 +165,7 @@ def ones(shape, dtype=None, order='C', device=None):  # pylint: disable=redefine
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.ones(shape, dtype, device)
 
 
@@ -396,7 +396,7 @@ def full(shape, fill_value, dtype=None, order='C', device=None, out=None):  # py
         if dtype is None or dtype is float:
             dtype = dtype_from_number(fill_value)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.full(shape, dtype, fill_value, device, out)
 # pylint: enable=too-many-arguments, redefined-outer-name
 
@@ -463,7 +463,7 @@ def full_like(a, fill_value, dtype=None, order='C', device=None, out=None): # py
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.full_like(a, fill_value, dtype, device, out)
 
 
@@ -580,7 +580,7 @@ def arange(start, stop=None, step=1, dtype=None, device=None):
         than `stop`.
     """
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if device is None:
         device = str(current_device())
     else:
@@ -640,7 +640,7 @@ def identity(n, dtype=None, device=None):
         device = str(device)
     shape = (n, n)  # pylint: disable=redefined-outer-name
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.identity(shape, dtype, device)
 
 
@@ -1931,7 +1931,8 @@ def eye(N, M=None, k=0, dtype=float, **kwargs):
     if dtype is None or dtype is float:
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
+
     # To avoid overflow errors, map large positive k values to the just-out-of-range "num_columns" value
     k = minimum(k, M if M is not None else N)
     # Similarly, map large negative k values to the just-out-of-range "-num_rows" value
@@ -2032,7 +2033,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if dtype is None:
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if retstep:
@@ -2126,7 +2127,7 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.logspace(start, stop, num, endpoint, base, device, dtype)
 
 
@@ -5755,7 +5756,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     array(0.55)
     """
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.mean(a, axis, dtype, keepdims, out)
 
 
@@ -5963,7 +5964,7 @@ def indices(dimensions, dtype=None, device=None):
         else:
             device = str(device)
         if dtype is not None and not isinstance(dtype, str):
-            dtype = _np.dtype(dtype).name
+            dtype = get_dtype_name(dtype)
         return _api_internal.indices(dimensions, dtype, device)
     else:
         raise ValueError("The dimensions must be sequence of ints")
@@ -6274,7 +6275,7 @@ def hanning(M, dtype=None, device=None):
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.hanning(M, dtype, device)
 
 
@@ -6359,7 +6360,7 @@ def hamming(M, dtype=None, device=None):
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.hamming(M, dtype, device)
 
 
@@ -6442,7 +6443,7 @@ def blackman(M, dtype=None, device=None):
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.blackman(M, dtype, device)
 
 

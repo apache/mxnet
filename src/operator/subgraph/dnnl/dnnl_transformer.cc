@@ -78,6 +78,10 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
   if (params.quantized) {
     CHECK_EQ(in_types->size(), 3U);
 
+    if (in_types->at(0) == mshadow::kBfloat16) {
+      return false;
+    }
+
     CHECK(in_types->at(0) == mshadow::kInt8)
         << "QuantizedSelfAttentionQK only supports int8 input, while " << in_types->at(0)
         << " is given.";
@@ -101,8 +105,19 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
   } else {
     CHECK_EQ(in_types->size(), 1U);
     CHECK_EQ(out_types->size(), 1U);
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
+    if (in_types->at(0) == mshadow::kFloat32) {
+      TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
+    } else if (in_types->at(0) == mshadow::kBfloat16) {
+      if (params.amp_out_dtype.has_value()) {
+        TYPE_ASSIGN_CHECK(*out_types, 0, params.amp_out_dtype.value());
+      } else {
+        TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kBfloat16);
+      }
+    } else {
+      CHECK_EQ(in_types->at(0), -1);
+      return false;
+    }
   }
 
   return true;
@@ -206,15 +221,12 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
 
   memory::dims query_dims = {sequences, heads, qkv_seq_len, head_dim};
   memory::dims key_dims   = {sequences, heads, head_dim, qkv_seq_len};
-  memory::dims out_dims   = {sequences, heads, qkv_seq_len, qkv_seq_len};
 
   memory::dims query_strides = {batch_stride, head_dim, output_lin_dim, 1};
   memory::dims key_strides   = {batch_stride, head_dim, 1, output_lin_dim};
 
   auto query_md = memory::desc(query_dims, qkv_dtype, query_strides);
   auto key_md   = memory::desc(key_dims, qkv_dtype, key_strides);
-
-  memory::desc out_md;
 
   float oscale = 1.0f;
   if (param_.quantized) {
@@ -227,23 +239,18 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
       max_output_ = param_.max_calib_range.value();
       oscale      = GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
                (data_scale_ * data_scale_);
-      out_md = memory::desc(out_dims, memory::data_type::s8, memory::format_tag::abcd);
     } else if (param_.enable_float_output) {
       oscale = 1.0f / (data_scale_ * data_scale_);
-      out_md = dnnl::memory::desc(out_dims, memory::data_type::f32, memory::format_tag::abcd);
     } else {
       mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
       mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
           s, 1, &min_output_, &max_output_, &min_data, &max_data, &min_data, &max_data);
-      out_md = dnnl::memory::desc(out_dims, memory::data_type::s32, memory::format_tag::abcd);
     }
-  } else {
-    out_md = dnnl::memory::desc(out_dims, memory::data_type::f32, memory::format_tag::abcd);
   }
 
   dnnl::primitive_attr attr;
   attr.set_output_scales(0, {oscale});
-  auto matmul_d  = matmul::desc(query_md, key_md, out_md);
+  auto matmul_d  = matmul::desc(query_md, key_md, GetMemDesc(out_tensor));
   auto matmul_pd = matmul::primitive_desc(matmul_d, attr, engine);
   fwd_           = std::make_shared<matmul>(matmul_pd);
 
@@ -254,8 +261,9 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
     cached_key_mem_      = std::make_shared<memory>(key_md, engine, key_mem_ptr);
   });
 
-  MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-    cached_out_mem_ = std::make_shared<memory>(out_md, engine, outputs[0].data().dptr<DType>());
+  MSHADOW_TYPE_SWITCH(out_tensor.dtype(), DType, {
+    cached_out_mem_ =
+        std::make_shared<memory>(matmul_pd.dst_desc(), engine, out_tensor.data().dptr<DType>());
   });
 
   args_[DNNL_ARG_SRC]     = *cached_query_mem_;
@@ -429,6 +437,10 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
   const auto& params = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
 
   if (params.quantized) {
+    if (in_types->at(0) == mshadow::kBfloat16 || in_types->at(1) == mshadow::kBfloat16) {
+      return false;
+    }
+
     CHECK_EQ(in_types->size(), 6U) << "Input:[attention, queries_keys_values, min_att, max_att, "
                                       "min_qkv, max_qkv] - currently have "
                                    << in_types->size() << " inputs";
@@ -459,9 +471,21 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
   } else {
     CHECK_EQ(in_types->size(), 2U);
     CHECK_EQ(out_types->size(), 1U);
-    TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
+    if (in_types->at(0) == mshadow::kFloat32 || in_types->at(1) == mshadow::kFloat32) {
+      TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
+    } else if (in_types->at(0) == mshadow::kBfloat16 || in_types->at(1) == mshadow::kBfloat16) {
+      TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kBfloat16);
+      TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kBfloat16);
+      if (params.amp_out_dtype.has_value()) {
+        TYPE_ASSIGN_CHECK(*out_types, 0, params.amp_out_dtype.value());
+      } else {
+        TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kBfloat16);
+      }
+    } else {
+      return false;
+    }
   }
 
   return true;
@@ -558,8 +582,8 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
                                      const std::vector<NDArray>& outputs) {
   using namespace dnnl;
 
-  const auto attn_tensor = inputs[0];
-  const auto qkv_tensor  = inputs[1];
+  const auto attn_tensor = inputs[0].Reorder2Default();
+  const auto qkv_tensor  = inputs[1].Reorder2Default();
   const auto out_tensor  = outputs[0];
 
   const auto qkv_dtype  = get_dnnl_type(qkv_tensor.dtype());
@@ -594,8 +618,7 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
   // transpose = transposed tmp - output
   memory::desc result_md, tmp_md, transpose_md;
 
-  float oscale           = 1.0f;
-  auto result_dnnl_dtype = memory::data_type::f32;
+  float oscale = 1.0f;
   if (param_.quantized) {
     min_att_ = inputs[2].data().dptr<float>()[0];
     max_att_ = inputs[3].data().dptr<float>()[0];
@@ -610,19 +633,15 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
       max_output_ = param_.max_calib_range.value();
       oscale      = GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
                (att_scale_ * qkv_scale_);
-      result_dnnl_dtype = memory::data_type::s8;
     } else if (param_.enable_float_output) {
-      oscale            = 1.0f / (att_scale_ * qkv_scale_);
-      result_dnnl_dtype = memory::data_type::f32;
+      oscale = 1.0f / (att_scale_ * qkv_scale_);
     } else {
       mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
       mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
           s, 1, &min_output_, &max_output_, &min_att_, &max_att_, &min_qkv_, &max_qkv_);
-      result_dnnl_dtype = memory::data_type::s32;
     }
-  } else {
-    result_dnnl_dtype = memory::data_type::f32;
   }
+  memory::data_type result_dnnl_dtype = get_dnnl_type(out_tensor.dtype());
 
   result_md    = memory::desc(out_dims, result_dnnl_dtype, memory::format_tag::abcd);
   tmp_md       = memory::desc(transpose_dims, result_dnnl_dtype, memory::format_tag::abcde);

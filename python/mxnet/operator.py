@@ -32,7 +32,7 @@ from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf, mx_int, OpHandle
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
-from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR
 from .ndarray.ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray.ndarray import _STORAGE_TYPE_CSR, _STORAGE_TYPE_ROW_SPARSE
@@ -888,7 +888,7 @@ def register(reg_name):
                     n_aux = len(op_prop.list_auxiliary_states())
                     assert num_tensor == n_in + n_out + n_aux
 
-                    types = [_DTYPE_MX_TO_NP[tensor_types[i]] for i in range(n_in)]
+                    types = [dtype_mx_to_np(tensor_types[i]) for i in range(n_in)]
                     ret = op_prop.infer_type(types)
                     if len(ret) == 2:
                         itype, otype = ret
@@ -908,7 +908,7 @@ def register(reg_name):
                         "types, got %d."%(n_aux, len(atype))
                     rtype = list(itype) + list(otype) + list(atype)
                     for i, dtype in enumerate(rtype):
-                        tensor_types[i] = _DTYPE_NP_TO_MX[dtype]
+                        tensor_types[i] = dtype_np_to_mx(dtype)
 
                     infer_type_entry._ref_holder = [tensor_types]
                 except Exception:

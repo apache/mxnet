@@ -111,84 +111,61 @@ def test_amp_conversion_rnn(amp_tests):
         mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
 
 
-def test_fp16_casting(amp_tests):
-    data = mx.sym.var("data")
-    out1 = mx.sym.amp_cast(data, dtype="float16")
-    out2 = mx.sym.amp_cast(data, dtype="float32")
-    out3 = mx.sym.amp_cast(data, dtype="float16")
-    # When two ops from data, with different dtypes,
-    # data should be float32
-    res = mx.sym.Group([out1, out2])
-    final_res = amp.convert_symbol(res, data_names=[], cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2))
-    assert exe.arg_arrays[0].dtype == np.float32
+@mx.util.use_np
+def test_fp16_offline_casting():
+  class TestNet(nn.HybridBlock):
+    def __init__(self):
+      super().__init__()
+      self.lp16_op1 = nn.Conv2D(4, 3)
+      self.lp16_op2 = nn.Conv2DTranspose(4, 3)
+      self.fp32_op = nn.Dense(4)
 
-    # When two ops from data, both casted to float16,
-    # data should be float16
-    res = mx.sym.Group([out1, out3])
-    final_res = amp.convert_symbol(res, data_names=[], cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2))
-    assert exe.arg_arrays[0].dtype == np.float16
+    def forward(self, x):
+      x = self.lp16_op1(x)
+      x = self.lp16_op2(x)
+      x = x.reshape(x.shape[0], -1)
+      x = self.fp32_op(x)
+      return x
 
-    # AMP Multicast test where one node is float32, another is float16
-    data = mx.sym.var("data", dtype=np.float32)
-    data2 = mx.sym.var("data2", dtype=np.float16)
-    out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
-    final_res = amp.convert_symbol(out4, cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.gpu(), data2=(1, 2), data=(1, 2))
-    assert exe.arg_arrays[0].dtype == np.float16
+  net = TestNet()
+  net.initialize()
+  data_example = mx.np.random.uniform(-1, 1, (4, 3, 16, 16))
+  lp_net = amp.convert_hybrid_block(net, data_example, target_dtype='float16',
+                                    target_dtype_ops=['Convolution'], fp32_ops=['FullyConnected'],
+                                    cast_params_offline=True, device=mx.current_context())
+  lp_net(data_example)
+  for name, data in lp_net.collect_params().items():
+    assert data.dtype == (np.float32 if 'fp32_op' in name else 'float16')
 
-    # AMP Multicast test where two non input nodes are float16,
-    # and one input node is float32
-    data = mx.sym.var("data", dtype=np.float32)
-    data2 = mx.sym.var("data2", dtype=np.float16)
-    data3 = mx.sym.var("data3", dtype=np.float16)
-    out5 = mx.sym.amp_multicast(data,
-                                mx.sym.elemwise_add(data2, data3),
-                                num_outputs=2)
-    final_res = amp.convert_symbol(out5, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2), data3=(1, 2))
-    assert exe.arg_arrays[0].dtype == np.float32
 
-    # AMP Multicast test where three input nodes one fp16, one fp32
-    # one unknown
-    data = mx.sym.var("data", dtype=np.float16)
-    data2 = mx.sym.var("data2", dtype=np.float32)
-    data3 = mx.sym.var("data3")
-    out6 = mx.sym.amp_multicast(data, data2, data3, num_outputs=3)
-    final_res = amp.convert_symbol(out6, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2),
-                                data3=(1, 2))
-    assert exe.arg_arrays[2].dtype == np.float32
+@mx.util.use_np
+def test_fp16_offline_casting_shared_params():
+  COMMON_SIZE = 4
 
-    # Input node to amp_multicast and amp_cast, if dtypes conflict
-    # and input node is already fp16, it should still be fp16
-    data = mx.sym.var("data", dtype=np.float16)
-    data2 = mx.sym.var("data2", dtype=np.float32)
-    out7 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
-    final_res = amp.convert_symbol(out7, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
-    assert exe.arg_arrays[0].dtype == np.float16
+  class TestNet(nn.HybridBlock):
+    def __init__(self):
+      super().__init__()
+      self.lp16_op1 = nn.Dense(COMMON_SIZE)
+      self.lp16_op2 = nn.Dense(COMMON_SIZE)
+      self.lp16_op2.share_parameters({'weight': self.lp16_op1.weight})
+      self.fp32_op = nn.Conv1D(COMMON_SIZE, 3)
+      self.fp32_op.share_parameters({'bias': self.lp16_op2.bias})
 
-    # Input node to amp_multicast and amp_cast, if dtypes conflict
-    # and input node is already fp32, it should be changed to fp16
-    data = mx.sym.var("data", dtype=np.float32)
-    data2 = mx.sym.var("data2", dtype=np.float16)
-    out8 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
-    final_res = amp.convert_symbol(out8, target_dtype_ops=[],
-                                   fp32_ops=[], cast_optional_params=True)
-    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
-    assert exe.arg_arrays[0].dtype == np.float16
+    def forward(self, x):
+      x = self.lp16_op1(x)
+      x1 = self.lp16_op2(x)
+      x2 = mx.np.expand_dims(x, 1)
+      x2 = self.fp32_op(x2)
+      x2 = nn.Flatten()(x2)
+      x = mx.np.concat((x1, x2), axis=1)
+      return x
 
-    # Check for symbol which has slice channel
-    data = mx.sym.var("data")
-    data2 = mx.sym.var("data2")
-    data._set_attr(__dtype__="-1")
-    data2._set_attr(__dtype__="-1")
-    concat_res = mx.sym.concat(data, data2)
-    out = mx.sym.split(concat_res, axis=1, num_outputs=2)
-    final_res = amp.convert_symbol(out)
-
+  net = TestNet()
+  net.initialize()
+  data_example = mx.np.random.uniform(-1, 1, (4, COMMON_SIZE))
+  lp_net = amp.convert_hybrid_block(net, data_example, target_dtype='float16',
+                                    target_dtype_ops=['FullyConnected'], fp32_ops=['Convolution'],
+                                    cast_params_offline=True, device=mx.current_context())
+  lp_net(data_example)
+  for name, data in lp_net.collect_params().items():
+    assert data.dtype == (np.float32 if 'fp32_op' in name else 'float16')

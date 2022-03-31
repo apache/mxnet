@@ -36,7 +36,7 @@ from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int6
 from ..base import NDArrayHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..device import Device, current_device
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, is_mx_dtype
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
 from ..executor import Executor
 from . import _internal
@@ -1023,19 +1023,16 @@ class Symbol(SymbolBase):
             keys = c_array(ctypes.c_char_p, [])
             for s in args:
                 if s is not None:
-                    s = _numpy.dtype(s).type
-                    if s not in _DTYPE_NP_TO_MX:
-                        raise TypeError('Argument need to be one of ' + str(_DTYPE_NP_TO_MX))
-                    sdata.append(_DTYPE_NP_TO_MX[s])
+                    sdata.append(dtype_np_to_mx(s))
                 else:
                     sdata.append(-1)
         else:
             str_keys = []
             for k, v in kwargs.items():
-                v = _numpy.dtype(v).type
-                if v in _DTYPE_NP_TO_MX:
+                if is_mx_dtype(v):
+                    v = dtype_np_to_mx(v)
                     str_keys.append(k)
-                    sdata.append(_DTYPE_NP_TO_MX[v])
+                    sdata.append(v)
             keys = c_str_array(str_keys)
         arg_type_size = mx_uint()
         arg_type_data = ctypes.POINTER(ctypes.c_int)()
@@ -1061,12 +1058,9 @@ class Symbol(SymbolBase):
             ctypes.byref(aux_type_data),
             ctypes.byref(complete)))
         if complete.value != 0:
-            arg_types = [
-                _DTYPE_MX_TO_NP[arg_type_data[i]] for i in range(arg_type_size.value)]
-            out_types = [
-                _DTYPE_MX_TO_NP[out_type_data[i]] for i in range(out_type_size.value)]
-            aux_types = [
-                _DTYPE_MX_TO_NP[aux_type_data[i]] for i in range(aux_type_size.value)]
+            arg_types = [dtype_mx_to_np(arg_type_data[i]) for i in range(arg_type_size.value)]
+            out_types = [dtype_mx_to_np(out_type_data[i]) for i in range(out_type_size.value)]
+            aux_types = [dtype_mx_to_np(aux_type_data[i]) for i in range(aux_type_size.value)]
             return (arg_types, out_types, aux_types)
         else:
             return (None, None, None)
@@ -1570,12 +1564,9 @@ class Symbol(SymbolBase):
             input_type_names = []
             input_type_data = []
             for k, v in type_dict.items():
-                v = _numpy.dtype(v).type
-                if v in _DTYPE_NP_TO_MX:
-                    input_type_names.append(k)
-                    input_type_data.append(_DTYPE_NP_TO_MX[v])
-                else:
-                    raise ValueError(str(v) + " is not a MXNet type.")
+                v = dtype_np_to_mx(v)
+                input_type_names.append(k)
+                input_type_data.append(v)
 
             num_input_types = mx_uint(len(input_type_names))
             input_type_names = c_str_array(input_type_names)
@@ -2741,11 +2732,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
-        np_dtype = _numpy.dtype(dtype)
-        if np_dtype == _numpy.dtype([('bfloat16', _numpy.uint16)]):
-            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[np_dtype])
-        else:
-            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+        attr['__dtype__'] = str(dtype_np_to_mx(dtype))
     if init is not None:
         if not isinstance(init, string_types):
             init = init.dumps()

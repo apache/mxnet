@@ -25,39 +25,38 @@ from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 from mxnet.util import use_np
 import math
 
+
+class MultiHeadAttention(nn.HybridBlock):
+  def __init__(self, units, num_heads, dtype='float32', **kwargs):
+      super(MultiHeadAttention, self).__init__(**kwargs)
+      self._units = units
+      self._num_heads = num_heads
+      self._fc = nn.Dense(in_units=self._units, units=3*self._units, flatten=False, dtype=dtype)
+      self._scale = math.sqrt(self._units // self._num_heads)
+
+  def forward(self, x, mask):
+      out = self._fc(x)
+      query, key, value = mx.np.split(out, 3, axis=-1)
+      query = mx.npx.reshape(query, (-2, -2, self._num_heads, -1))
+      key = mx.npx.reshape(key, (-2, -2, self._num_heads, -1))
+      value = mx.npx.reshape(value, (-2, -2, self._num_heads, -1))
+      scores = mx.npx.batch_dot(mx.np.swapaxes(query, 1, 2), mx.np.swapaxes(key, 1, 2),
+                                transpose_b=True)
+      mask = mx.np.expand_dims(mask, axis=1).astype(np.bool)
+      attn_weights = mx.npx.masked_softmax(scores, mask=mask, axis=-1, temperature=self._scale)
+      attn_weights = mx.npx.dropout(attn_weights, p=0.1)
+      context_vec = mx.npx.batch_dot(attn_weights,
+                                     mx.np.swapaxes(value, 1, 2)).transpose((0, 2, 1, 3))
+      context_vec = mx.npx.reshape(context_vec, (-2, -2, -1))
+      
+      return context_vec
+
 @use_np
 @pytest.mark.parametrize('batch_size', [1, 32])
 @pytest.mark.parametrize('seq_length', [124, 384])
 @pytest.mark.parametrize('units', [256, 768])
 @pytest.mark.parametrize('num_heads', [4, 8])
 def test_self_attention(batch_size, seq_length, units, num_heads):
-  class MultiHeadAttention(nn.HybridBlock):
-    def __init__(self, units, num_heads, dtype='float32', **kwargs):
-        super(MultiHeadAttention, self).__init__(**kwargs)
-        self._units = units
-        self._num_heads = num_heads
-        self._fc = nn.Dense(in_units=self._units, units=3*self._units, flatten=False, dtype=dtype)
-        self._scale = math.sqrt(self._units // self._num_heads)
-
-    def forward(self, x, mask):
-        x = mx.np.copy(x)
-        out = self._fc(x)
-        query, key, value = mx.np.split(out, 3, axis=-1)
-        query = mx.npx.reshape(query, (-2, -2, self._num_heads, -1))
-        key = mx.npx.reshape(key, (-2, -2, self._num_heads, -1))
-        value = mx.npx.reshape(value, (-2, -2, self._num_heads, -1))
-        scores = mx.npx.batch_dot(mx.np.swapaxes(query, 1, 2), mx.np.swapaxes(key, 1, 2),
-                               transpose_b=True)
-        mask = mx.np.expand_dims(mask, axis=1).astype(np.bool)
-        attn_weights = mx.npx.masked_softmax(scores, mask=mask.astype(np.bool),
-                                            axis=-1, temperature=self._scale)
-        attn_weights = mx.npx.dropout(attn_weights, p=0.1)
-        context_vec = mx.npx.batch_dot(attn_weights,
-                                     mx.np.swapaxes(value, 1, 2)).transpose((0, 2, 1, 3))
-        context_vec = mx.npx.reshape(context_vec, (-2, -2, -1))
-
-        return context_vec
-
   net = MultiHeadAttention(units, num_heads)
   in_data = mx.np.random.uniform(size=[batch_size, seq_length, units], dtype='float32')
   mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
