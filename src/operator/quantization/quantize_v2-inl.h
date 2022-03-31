@@ -156,12 +156,14 @@ static inline bool QuantizeV2Type(const nnvm::NodeAttrs& attrs,
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
     CHECK(in_attrs->at(0) == mshadow::kFloat32 || in_attrs->at(0) == mshadow::kBfloat16 ||
           in_attrs->at(0) == mshadow::kUint8 || in_attrs->at(0) == mshadow::kInt8);
-  } else
-#endif
-  {
+  } else {
     CHECK(in_attrs->at(0) == mshadow::kFloat32 || in_attrs->at(0) == mshadow::kUint8 ||
           in_attrs->at(0) == mshadow::kInt8);
   }
+#else
+  CHECK(in_attrs->at(0) == mshadow::kFloat32 || in_attrs->at(0) == mshadow::kUint8 ||
+        in_attrs->at(0) == mshadow::kInt8);
+#endif
 
   auto out_type = GetQuantizeOutputType(param);
   if (out_type == mshadow::kUint8) {
