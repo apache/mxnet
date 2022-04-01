@@ -16,21 +16,14 @@
 # under the License.
 
 import mxnet as mx
-import pytest
-from mxnet import amp
-from mxnet.test_utils import set_default_device
-from mxnet.gluon import nn, rnn
-
 import amp.common as amp_common_tests
-from common import assert_raises_cudnn_not_satisfied
 
-AMP_DTYPE = 'float16'
 
-set_default_device(mx.gpu(0))
+AMP_DTYPE = 'bfloat16'
 
 
 def test_amp_coverage():
-    amp_common_tests.test_amp_coverage(AMP_DTYPE, 'FP16')
+    amp_common_tests.test_amp_coverage(AMP_DTYPE, 'BF16')
 
 
 @mx.util.use_np
@@ -51,18 +44,3 @@ def test_amp_offline_casting_shared_params():
 @mx.util.use_np
 def test_lp16_fp32_ops_order_independence():
     amp_common_tests.test_lp16_fp32_ops_order_independence(AMP_DTYPE)
-
-
-@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_amp_conversion_rnn(amp_tests):
-    with mx.Device(mx.gpu(0)):
-        model = nn.HybridSequential()
-        model.add(rnn.LSTM(hidden_size=10, num_layers=2, bidirectional=True))
-        model.add(nn.Dense(2))
-        model.initialize()
-        model.hybridize()
-        out = model(mx.nd.ones((2, 3, 4)))
-        new_model = amp.convert_hybrid_block(model)
-        out2 = new_model(mx.nd.ones((2, 3, 4)))
-        mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)

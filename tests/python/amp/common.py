@@ -22,22 +22,13 @@ from mxnet import amp
 from mxnet.gluon import nn
 from mxnet.operator import get_all_registered_operators_grouped
 
-if 'cpu' in mx.current_device().device_type:
-  AMP_DTYPE = 'bfloat16'
-  LP_NAME = 'BF16'
-elif 'gpu' in mx.current_device().device_type:
-  AMP_DTYPE = 'float16'
-  LP_NAME = 'FP16'
-else:
-  raise mx.MXNetError('Unsupported device')
 
-
-def test_amp_coverage():
-    conditional = [item[0] for item in amp.list_conditional_fp32_ops(AMP_DTYPE)]
-    lp16_ops = amp.list_lp16_ops(AMP_DTYPE)
-    lp16_fp32_ops = amp.list_lp16_fp32_ops(AMP_DTYPE)
-    fp32_ops = amp.list_fp32_ops(AMP_DTYPE)
-    widest_ops = amp.list_widest_type_cast(AMP_DTYPE)
+def test_amp_coverage(lp_dtype, lp_name):
+    conditional = [item[0] for item in amp.list_conditional_fp32_ops(lp_dtype)]
+    lp16_ops = amp.list_lp16_ops(lp_dtype)
+    lp16_fp32_ops = amp.list_lp16_fp32_ops(lp_dtype)
+    fp32_ops = amp.list_fp32_ops(lp_dtype)
+    widest_ops = amp.list_widest_type_cast(lp_dtype)
     all_lp_lists = [lp16_ops, lp16_fp32_ops, fp32_ops, widest_ops, conditional]
 
     # Check for duplicates
@@ -60,7 +51,7 @@ def test_amp_coverage():
     guidelines = f"""Please follow these guidelines for choosing a proper list:
     - if your operator is not to be used in a computational graph
       (e.g. image manipulation operators, optimizers) or does not have
-      inputs, put it in {LP_NAME}_FP32_FUNCS list,
+      inputs, put it in {lp_name.upper()}_FP32_FUNCS list,
     - if your operator requires FP32 inputs or is not safe to use with lower
       precision, put it in FP32_FUNCS list,
     - if your operator supports both FP32 and lower precision, has
@@ -68,41 +59,20 @@ def test_amp_coverage():
       type, put it in WIDEST_TYPE_CASTS list,
     - if your operator supports both FP32 and lower precision and has
       either a single input or supports inputs of different type,
-      put it in {LP_NAME}_FP32_FUNCS list,
+      put it in {lp_name.upper()}_FP32_FUNCS list,
     - if your operator is both safe to use in lower precision and
       it is highly beneficial to use it in lower precision, then
-      put it in {LP_NAME}_FUNCS (this is unlikely for new operators)
+      put it in {lp_name.upper()}_FUNCS (this is unlikely for new operators)
     - If you are not sure which list to choose, FP32_FUNCS is the
       safest option"""
     missing_ops = required_ops - covered_ops
 
     if len(missing_ops) > 0:
       warnings.warn(f"{len(missing_ops)} operators {sorted(missing_ops)} do not exist in AMP lists "
-                    f"(in python/mxnet/amp/lists/symbol_{LP_NAME.lower()}.py) - please add them. \n{guidelines}")
+                    f"(in python/mxnet/amp/lists/symbol_{lp_name.lower()}.py) - please add them. \n{guidelines}")
 
 
-def check_amp_net_stats(net, data_example, lp16_tensors_num, lp16_casts_num, other_casts_num):
-  def inspect_output(tensor_name, op_name, tensor):
-    nonlocal lp16_tensors_num, lp16_casts_num, other_casts_num
-
-    dtype = mx.nd.get_dtype_name(tensor.dtype)
-    if op_name == 'amp_cast':
-      if dtype == AMP_DTYPE:
-        lp16_casts_num -= 1
-      else:
-        other_casts_num -= 1
-    if dtype == AMP_DTYPE:
-      lp16_tensors_num -= 1
-
-  net.register_op_hook(inspect_output)
-  net(data_example)
-
-  assert lp16_tensors_num == 0
-  assert lp16_casts_num == 0
-  assert other_casts_num == 0
-
-
-def test_amp_basic_use():
+def test_amp_basic_use(lp_dtype):
   class TestNet(nn.HybridBlock):
     def __init__(self):
       super().__init__()
@@ -118,7 +88,7 @@ def test_amp_basic_use():
 
   net = TestNet()
   net.initialize()
-  net = amp.convert_hybrid_block(net, data_example, AMP_DTYPE)
+  net = amp.convert_hybrid_block(net, data_example, lp_dtype)
 
   lp16_casts = 1  # net_data_cast
   lp16_casts += 2  # fc1_weights_cast, fc1_bias_cast
@@ -130,12 +100,11 @@ def test_amp_basic_use():
   lp16_tensors += 3  # fc1_weights_cast_output, fc1_bias_cast_output, fc1_output
   lp16_tensors += 3  # fc2_weights_cast_output, fc2_bias_cast_output, fc2_output
   lp16_tensors += 1  # reshape_output
-  check_amp_net_stats(net, data_example, lp16_tensors_num=lp16_tensors, lp16_casts_num=lp16_casts,
+  check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num=lp16_tensors, lp16_casts_num=lp16_casts,
                       other_casts_num=other_casts)
 
 
-@mx.util.use_np
-def test_amp_offline_casting():
+def test_amp_offline_casting(lp_dtype):
   class TestNet(nn.HybridBlock):
     def __init__(self):
       super().__init__()
@@ -153,16 +122,16 @@ def test_amp_offline_casting():
   net = TestNet()
   net.initialize()
   data_example = mx.np.random.uniform(-1, 1, (4, 3, 16, 16))
-  lp_net = amp.convert_hybrid_block(net, data_example, AMP_DTYPE, target_dtype_ops=['Convolution'],
+  lp_net = amp.convert_hybrid_block(net, data_example, lp_dtype, target_dtype_ops=['Convolution'],
                                     fp32_ops=['FullyConnected'], cast_params_offline=True)
 
-  check_amp_net_stats(lp_net, data_example, lp16_tensors_num=4, lp16_casts_num=1, other_casts_num=1)
+  check_amp_net_stats(lp_dtype, lp_net, data_example, lp16_tensors_num=4,
+                      lp16_casts_num=1, other_casts_num=1)
   for name, data in lp_net.collect_params().items():
-    assert mx.nd.get_dtype_name(data.dtype) == ('float32' if 'fp32_op' in name else AMP_DTYPE)
+    assert mx.nd.get_dtype_name(data.dtype) == ('float32' if 'fp32_op' in name else lp_dtype)
 
 
-@mx.util.use_np
-def test_amp_offline_casting_shared_params():
+def test_amp_offline_casting_shared_params(lp_dtype):
   COMMON_SIZE = 4
 
   class TestNet(nn.HybridBlock):
@@ -186,16 +155,16 @@ def test_amp_offline_casting_shared_params():
   net = TestNet()
   net.initialize()
   data_example = mx.np.random.uniform(-1, 1, (4, COMMON_SIZE))
-  lp_net = amp.convert_hybrid_block(net, data_example, AMP_DTYPE, target_dtype_ops=['FullyConnected'],
+  lp_net = amp.convert_hybrid_block(net, data_example, lp_dtype, target_dtype_ops=['FullyConnected'],
                                     fp32_ops=['Convolution'], cast_params_offline=True)
 
-  check_amp_net_stats(lp_net, data_example, lp16_tensors_num=5, lp16_casts_num=2, other_casts_num=2)
+  check_amp_net_stats(lp_dtype, lp_net, data_example, lp16_tensors_num=5,
+                      lp16_casts_num=2, other_casts_num=2)
   for name, data in lp_net.collect_params().items():
-    assert mx.nd.get_dtype_name(data.dtype) == ('float32' if 'fp32_op' in name else AMP_DTYPE)
+    assert mx.nd.get_dtype_name(data.dtype) == ('float32' if 'fp32_op' in name else lp_dtype)
 
 
-@mx.util.use_np
-def test_lp16_fp32_ops_order_independence():
+def test_lp16_fp32_ops_order_independence(lp_dtype):
   class TestNet(nn.HybridBlock):
     def __init__(self, lp16_fp32_is_first):
       super().__init__()
@@ -217,5 +186,27 @@ def test_lp16_fp32_ops_order_independence():
   for lp16_fp32_is_second in [False, True]:
     net = TestNet(lp16_fp32_is_second)
     net.initialize()
-    net = amp.convert_hybrid_block(net, data_example, AMP_DTYPE, cast_params_offline=True)
-    check_amp_net_stats(net, data_example, lp16_tensors_num=3, lp16_casts_num=1, other_casts_num=2)
+    net = amp.convert_hybrid_block(net, data_example, lp_dtype, cast_params_offline=True)
+    check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num=3,
+                        lp16_casts_num=1, other_casts_num=2)
+
+
+def check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num, lp16_casts_num, other_casts_num):
+  def inspect_output(tensor_name, op_name, tensor):
+    nonlocal lp16_tensors_num, lp16_casts_num, other_casts_num
+
+    dtype = mx.nd.get_dtype_name(tensor.dtype)
+    if op_name == 'amp_cast':
+      if dtype == lp_dtype:
+        lp16_casts_num -= 1
+      else:
+        other_casts_num -= 1
+    if dtype == lp_dtype:
+      lp16_tensors_num -= 1
+
+  net.register_op_hook(inspect_output)
+  net(data_example)
+
+  assert lp16_tensors_num == 0
+  assert lp16_casts_num == 0
+  assert other_casts_num == 0

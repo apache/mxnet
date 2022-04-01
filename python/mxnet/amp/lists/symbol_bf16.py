@@ -18,16 +18,22 @@
 # coding: utf-8
 """Lists of functions whitelisted/blacklisted for automatic mixed precision in symbol API."""
 
+from ...runtime import Features
+
 # Functions that should be cast to lower precision
 BF16_FUNCS = [
     'Convolution',
     'Deconvolution',
-    'FullyConnected',
-    '_sg_onednn_conv',
-    '_sg_onednn_fully_connected',
-    '_sg_onednn_selfatt_qk',
-    '_sg_onednn_selfatt_valatt'
+    'FullyConnected'
 ]
+if Features.instance.is_enabled('ONEDNN'):
+    BF16_FUNCS.extend([
+        '_sg_onednn_conv',
+        '_sg_onednn_fully_connected',
+        '_sg_onednn_selfatt_qk',
+        '_sg_onednn_selfatt_valatt'
+    ])
+
 
 # Functions that should not be casted, either because
 # they are irrelevant (not used in the network itself
