@@ -225,7 +225,8 @@ void DNNLReduceFwd::Execute(const Tensors& tensors) const {
     auto out_mem = dnnl::memory(reduce_pd->dst_desc(), engine, tensors.out.data().dptr<float>());
     stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, out_mem}});
   } else {
-    auto out_mem = tensors.out.GetDNNLData(reduce_pd->dst_desc());
+    auto desc    = reduce_pd->dst_desc();
+    auto out_mem = tensors.out.GetDNNLData(&desc);
     stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, *out_mem}});
   }
   stream->Submit();

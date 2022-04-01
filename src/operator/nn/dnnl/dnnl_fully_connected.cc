@@ -186,10 +186,10 @@ void DNNLFCForwardFullFeature(const DNNLFCFullParam& full_param,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
-  NDArray weight = in_data[fullc::kWeight];
-  NDArray data   = in_data[fullc::kData];
-
-  auto data_mem = data.GetDNNLDataReorder(fwd->fwd_pd.src_desc());
+  NDArray weight    = in_data[fullc::kWeight];
+  NDArray data      = in_data[fullc::kData];
+  auto fwd_src_desc = fwd->fwd_pd.src_desc();
+  auto data_mem     = data.GetDNNLDataReorder(&fwd_src_desc);
   const dnnl::memory* weight_mem;
   if (ctx.is_train) {
     if (weight.IsDNNLData()) {
@@ -199,7 +199,8 @@ void DNNLFCForwardFullFeature(const DNNLFCFullParam& full_param,
   } else {
     weight_mem = weight.GetDNNLData();
     if (weight_mem->get_desc() != fwd->fwd_pd.weights_desc()) {
-      weight.DNNLDataReorderAsync(fwd->fwd_pd.weights_desc());
+      auto fwd_weight_desc = fwd->fwd_pd.weights_desc();
+      weight.DNNLDataReorderAsync(&fwd_weight_desc);
       weight_mem = GetWeights(weight, fwd->fwd_pd.weights_desc(), 1);
     }
   }
@@ -212,7 +213,8 @@ void DNNLFCForwardFullFeature(const DNNLFCFullParam& full_param,
       {DNNL_ARG_DST, *out_mem.second},
   };
   if (!full_param.default_param.no_bias) {
-    auto bias_mem       = in_data[fullc::kBias].GetDNNLDataReorder(fwd->fwd_pd.bias_desc());
+    auto fwd_bias_desc  = fwd->fwd_pd.bias_desc();
+    auto bias_mem       = in_data[fullc::kBias].GetDNNLDataReorder(&fwd_bias_desc);
     args[DNNL_ARG_BIAS] = *bias_mem;
   }
   DNNLStream::Get()->RegisterPrimArgs(fwd->GetFwd(), args);
@@ -286,9 +288,11 @@ void DNNLFCBackward(const nnvm::NodeAttrs& attrs,
   if (req[fullc::kWeight]) {
     dnnl::inner_product_backward_weights::primitive_desc ipBwdWeights_pd = GetFCBwdWeights(
         data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias], out_grad, fwd_pd);
-    auto out_grad_mem   = out_grad.GetDNNLDataReorder(ipBwdWeights_pd.diff_dst_desc());
-    auto data_mem       = data.GetDNNLDataReorder(ipBwdWeights_pd.src_desc());
-    auto in_grad_weight = CreateDNNLWeightGrad(
+    auto ipBwdWeights_diff_dst_desc = ipBwdWeights_pd.diff_dst_desc();
+    auto ipBwdWeights_src_desc      = ipBwdWeights_pd.src_desc();
+    auto out_grad_mem               = out_grad.GetDNNLDataReorder(&ipBwdWeights_diff_dst_desc);
+    auto data_mem                   = data.GetDNNLDataReorder(&ipBwdWeights_src_desc);
+    auto in_grad_weight             = CreateDNNLWeightGrad(
         in_grad[fullc::kWeight], ipBwdWeights_pd.diff_weights_desc(), req[fullc::kWeight]);
     dnnl_args_map_t args = {
         {DNNL_ARG_DIFF_DST, *out_grad_mem},
@@ -312,8 +316,10 @@ void DNNLFCBackward(const nnvm::NodeAttrs& attrs,
   if (req[fullc::kData]) {
     dnnl::inner_product_backward_data::primitive_desc ipBwdData_pd =
         GetFCBwdData(data, weight, out_grad, fwd_pd);
-    auto out_grad_mem = out_grad.GetDNNLDataReorder(ipBwdData_pd.diff_dst_desc());
-    auto weight_mem   = weight.GetDNNLDataReorder(ipBwdData_pd.weights_desc());
+    auto ipBwdData_diff_dst_desc = ipBwdData_pd.diff_dst_desc();
+    auto ipBwdData_weight_desc   = ipBwdData_pd.weights_desc();
+    auto out_grad_mem            = out_grad.GetDNNLDataReorder(&ipBwdData_diff_dst_desc);
+    auto weight_mem              = weight.GetDNNLDataReorder(&ipBwdData_weight_desc);
     auto in_grad_mem =
         CreateDNNLMem(in_grad[fullc::kData], ipBwdData_pd.diff_src_desc(), req[fullc::kData]);
     dnnl_args_map_t args = {{DNNL_ARG_DIFF_DST, *out_grad_mem},

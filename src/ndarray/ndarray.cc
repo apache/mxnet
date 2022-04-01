@@ -37,7 +37,9 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../profiler/storage_profiler.h"
 #include "./ndarray_function.h"
-
+#if MXNET_USE_ONEDNN == 1
+#include <dnnl.hpp>
+#endif
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
@@ -211,11 +213,11 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 #if MXNET_USE_ONEDNN == 1
 
-NDArray::NDArray(const dnnl::memory::desc& md)
-    : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
-  shape_ = mxnet::TShape(md.data.dims, md.data.dims + md.data.ndims);
-  dtype_ = get_mxnet_type(md.data.data_type);
-  ptr_   = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
+NDArray::NDArray(const void* md_desc) : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
+  dnnl::memory::desc md = *static_cast<const dnnl::memory::desc*>(md_desc);
+  shape_                = mxnet::TShape(md.data.dims, md.data.dims + md.data.ndims);
+  dtype_                = get_mxnet_type(md.data.data_type);
+  ptr_                  = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
   ptr_->CheckAndAlloc(md.get_size());
   ptr_->dnnl_mem_ = std::make_shared<DNNLMemory>(md, ptr_->shandle.dptr);
 }
@@ -557,7 +559,8 @@ void NDArray::Chunk::Reorder2Default() {
   dnnl_mem_ = nullptr;
 }
 
-void NDArray::Chunk::DNNLDataReorder(const dnnl::memory::desc& md) {
+void NDArray::Chunk::DNNLDataReorder(const void* mem_desc) {
+  const dnnl::memory::desc md = *static_cast<const dnnl::memory::desc*>(mem_desc);
   // If the memory already uses the specified layout, don't do anything.
   if (dnnl_mem_ != nullptr && dnnl_mem_->SameFormat(md))
     return;
@@ -623,7 +626,8 @@ void NDArray::Chunk::SetDNNLMem(const mxnet::TShape& shape, int dtype) {
   dnnl_mem_.reset(new DNNLMemory(data_md, shandle.dptr));
 }
 
-const dnnl::memory* NDArray::GetDNNLData(const dnnl::memory::desc& desc) const {
+const dnnl::memory* NDArray::GetDNNLData(const void* mem_desc) const {
+  const dnnl::memory::desc desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc";
     return nullptr;
@@ -639,7 +643,8 @@ const dnnl::memory* NDArray::GetDNNLData(const dnnl::memory::desc& desc) const {
   }
 }
 
-const dnnl::memory* NDArray::GetDNNLDataReorder(const dnnl::memory::desc& new_desc) const {
+const dnnl::memory* NDArray::GetDNNLDataReorder(const void* mem_desc) const {
+  dnnl::memory::desc new_desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   CHECK(storage_type() == kDefaultStorage);
 
   const dnnl::memory* mem = GetDNNLData();
@@ -774,7 +779,8 @@ NDArray NDArray::Reorder2DefaultFloatFormat() const {
   return ret;
 }
 
-void NDArray::DNNLDataReorderAsync(const dnnl::memory::desc& desc) const {
+void NDArray::DNNLDataReorderAsync(const void* mem_desc) const {
+  dnnl::memory::desc desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp        = *this;
@@ -787,7 +793,7 @@ void NDArray::DNNLDataReorderAsync(const dnnl::memory::desc& desc) const {
         // MXNet will try to reuse NDArray from memory planning, so we need to ensure
         // the NDArray is still holding the original trunk data.
         if (tmp.version() == version) {
-          tmp.ptr_->DNNLDataReorder(desc);
+          tmp.ptr_->DNNLDataReorder(&desc);
         }
         on_complete();
       },
@@ -860,7 +866,8 @@ void NDArray::CopyFrom(const dnnl::memory& mem) {
   DNNLMemoryCopy(mem, this_mem);
 }
 
-dnnl::memory* NDArray::CreateDNNLData(const dnnl::memory::desc& desc) {
+dnnl::memory* NDArray::CreateDNNLData(const void* mem_desc) {
+  dnnl::memory::desc desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested oneDNN memory desc. "
                << "oneDNN memory requests for " << desc.get_size() << " bytes, but got "
@@ -906,7 +913,8 @@ dnnl::memory* NDArray::CreateDNNLData(const dnnl::memory::desc& desc) {
   return ptr_->dnnl_mem_->GetRaw();
 }
 
-void NDArray::UpdateDNNLMemDesc(const dnnl::memory::desc& desc) {
+void NDArray::UpdateDNNLMemDesc(const void* mem_desc) {
+  dnnl::memory::desc desc = *static_cast<const dnnl::memory::desc*>(mem_desc);
   auto new_desc           = desc;
   auto this_dtype         = get_dnnl_type(dtype());
   new_desc.data.data_type = static_cast<dnnl_data_type_t>(this_dtype);
