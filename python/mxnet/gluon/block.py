@@ -1820,12 +1820,12 @@ class SymbolBlock(HybridBlock):
     def __call__(self, x, *args):
         """Calls forward. Only accepts positional arguments."""
         for hook in self._forward_pre_hooks.values():
-            hook(self, [x] + args)
+            hook(self, [x, *args])
 
         out = self.forward(x, *args)
 
         for hook in self._forward_hooks.values():
-            hook(self, [x] + args, out)
+            hook(self, [x, *args], out)
 
         return out
 

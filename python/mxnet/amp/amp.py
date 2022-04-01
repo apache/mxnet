@@ -428,7 +428,7 @@ def unscale(optimizer_or_trainer):
                         "an optimizer, instead is %s" % type(optimizer_or_trainer))
 
 
-def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", target_dtype_ops=None,
+def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_ops=None,
                    fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=[],
                    cast_params_offline=False):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
@@ -464,9 +464,7 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
     data_names : list of strs, optional
         A list of strings that represent input data tensor names to the model
     cast_params_offline : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in LP16
-        because of a cast layer following it, but will reduce the computation and memory
-        overhead of the model if casted.
+        Whether to cast arg_params and aux_params now, instead of doing it every time at runtime.
     """
     import json
 
@@ -567,7 +565,7 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
     return type(sym)(out)
 
 
-def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float16",
+def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype,
                   target_dtype_ops=None, fp32_ops=None, conditional_fp32_ops=None,
                   excluded_sym_names=[], cast_params_offline=False):
     """API for converting a model from FP32 model to a mixed precision model.
@@ -605,9 +603,7 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
         A list of strings that represent the names of symbols that users want to exclude
         from being executed in lower precision.
     cast_params_offline : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in LP16
-        because of a cast layer following it, but will reduce the computation and memory
-        overhead of the model if casted.
+        Whether to cast arg_params and aux_params now, instead of doing it every time at runtime.
     """
     assert isinstance(sym, Symbol), "First argument to convert_model should be a Symbol"
     assert isinstance(
@@ -641,9 +637,9 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
 
 
 @wrap_ctx_to_device_func
-def convert_hybrid_block(block, data_example, target_dtype="float16", target_dtype_ops=None,
+def convert_hybrid_block(block, data_example, target_dtype, target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
-                         excluded_sym_names=[], device=gpu(0),
+                         excluded_sym_names=[], device=None,
                          cast_params_offline=False):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
     return a block with mixed precision support which can be used for inference use cases.
@@ -668,12 +664,10 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
         from being quantized
-    device : Context
-        Context on which model parameters should live
+    device : Device
+        Device on which model parameters should live. Default value: current device.
     cast_params_offline : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in LP16
-        because of a cast layer following it, but will reduce the computation and memory
-        overhead of the model if casted.
+        Whether to cast arg_params and aux_params now, instead of doing it every time at runtime.
     """
     from ..gluon import HybridBlock, SymbolBlock
     from ..ndarray import NDArray as ND_NDArray, waitall
