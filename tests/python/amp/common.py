@@ -169,11 +169,11 @@ def test_lp16_fp32_ops_order_independence(lp_dtype):
     def __init__(self, lp16_fp32_is_first):
       super().__init__()
       if lp16_fp32_is_first:
-        self.first = nn.Activation('relu')  # lp16_fp32_op
+        self.first = mx.npx.batch_flatten  # lp16_fp32_op
         self.second = nn.Dense(4)
       else:
         self.first = nn.Dense(4)
-        self.second = nn.Activation('relu')  # lp16_fp32_op
+        self.second = mx.npx.batch_flatten  # lp16_fp32_op
 
     def forward(self, x):
       x = 2**x
