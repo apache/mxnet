@@ -15,6 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import sys
+from pathlib import Path
+curr_path = Path(__file__).resolve().parent
+sys.path.insert(0, str(curr_path.parent))
+
 import mxnet as mx
 import amp.common as amp_common_tests
 
