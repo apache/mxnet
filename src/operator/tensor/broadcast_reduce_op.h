@@ -1189,7 +1189,7 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
   ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
-// namespace {  // unnamed namespace to keep scope of the struct within the file
+namespace {  // unnamed namespace to keep scope of the struct within the file
 struct ShapeAndStride {
   index_t in_stride[MXNET_SPECIAL_MAX_NDIM];
   index_t out_stride[MXNET_SPECIAL_MAX_NDIM];
@@ -1200,7 +1200,7 @@ struct ShapeAndStride {
   int num_broadcast_axes = -1;
   bool shape_changed     = false;
 };
-// }  // unnamed namespace
+}  // unnamed namespace
 
 /*!
  * \brief Calculates Stride of input and output tensor dimesnions
@@ -1385,7 +1385,7 @@ void BroadcastCPU(const OpContext& ctx,
     }
   }
 
-  // there is no need to check further axis elements_to_copy as it for sure will be larger
+  // there is no need to check further axis's elements to copy as it for sure will be larger
   if (elements_to_copy[0] < ELEMENTS_THRESHOLD) {
     mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
     mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
@@ -1486,14 +1486,11 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
     }
     struct ShapeAndStride aux_data;
     PrepareAUXData(&aux_data, in_shape, out_shape, dst_shape.ndim());
-
     if (!aux_data.shape_changed) {
       // If no broadcast is required (i.e. input_shape == output_shape)
       // then simply copy input to outout.
       Kernel<direct_copy<mshadow_op::identity>, xpu>::Launch(
           s, outputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>(), req[0]);
-      // } else if (dst_shape.ndim() == 2) {
-
     } else if (isCPU) {
       BroadcastCPU<DType>(ctx, inputs, outputs, src_shape, dst_shape, aux_data);
     } else {

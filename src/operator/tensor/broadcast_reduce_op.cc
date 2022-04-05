@@ -190,6 +190,5 @@ template struct ReduceAxesRTCCompute<NumpyReduceAxesBoolParam, 1>;
 
 #endif
 
-
 }  // namespace op
 }  // namespace mxnet

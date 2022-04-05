@@ -30,6 +30,7 @@ DMLC_REGISTER_PARAMETER(ReduceAxisParam);
 DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
 DMLC_REGISTER_PARAMETER(BroadcastLikeParam);
+
 template <typename DType>
 void BroadcastAxisKer(DType* src, DType* dst, index_t outer, index_t inner, index_t size) {
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
@@ -123,61 +124,6 @@ NNVM_REGISTER_OP(_broadcast_backward)
       return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
     });
 
-#if MXNET_USE_ONEDNN == 1
-
-void DNNLBroadcastForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray>& outputs) {
-  auto smaller = inputs[0].shape().Size() > inputs[1].shape().Size() ? inputs[1] : inputs[0];
-
-  auto out_mem = outputs[0].GetDNNLData();
-  std::memset(out_mem->get_data_handle(), 0, outputs[0].shape().Size() * mshadow::mshadow_sizeof(smaller.dtype()));
-  std::vector<NDArray> new_inputs = {smaller, outputs[0]};
-  DNNLRun(DNNLBinaryOpForward<dnnl::algorithm::binary_add>, attrs, ctx, new_inputs, req, outputs);
-}
-
-bool SupportDNNLBroadcast(const std::vector<NDArray>& inputs, const NDArray& output) {
-  static const std::set<int> supported_dtypes = {
-      mshadow::kInt8, mshadow::kFloat32, mshadow::kBfloat16, mshadow::kUint8};
-  bool sup = true;
-
-  for (const auto& v : inputs) {
-    sup = sup & supported_dtypes.count(v.dtype());
-  }
-  sup = sup & supported_dtypes.count(output.dtype());
-  return sup;
-}
-
-static void BroadcastComputeEx(const nnvm::NodeAttrs& attrs,
-                               const OpContext& ctx,
-                               const std::vector<NDArray>& inputs,
-                               const std::vector<OpReqType>& req,
-                               const std::vector<NDArray>& outputs) {
-  if (SupportDNNLBroadcast(inputs, outputs[0])) {
-    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLBroadcastForward, attrs, ctx, inputs, req, outputs);
-    auto fn = BroadcastCompute<cpu>;
-    DNNL_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
-    // LOG(INFO) << "END BCAST";
-    return;
-  }
-  FallBackCompute(BroadcastCompute<cpu>, attrs, ctx, inputs, req, outputs);
-}
-
-inline static bool BroadcastComputeStorageType(const nnvm::NodeAttrs& attrs,
-                                               const int dev_mask,
-                                               DispatchMode* dispatch_mode,
-                                               std::vector<int>* in_attrs,
-                                               std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
-}
-#endif
-
 NNVM_REGISTER_OP(broadcast_like)
     .add_alias("_npx_broadcast_like")
     .set_num_inputs(2)
@@ -229,11 +175,6 @@ For example::
     .set_attr_parser(ParamParser<BroadcastLikeParam>)
     .add_arguments(BroadcastLikeParam::__FIELDS__())
     .set_attr<mxnet::FInferShape>("FInferShape", BroadcastLikeShape)
-// #if MXNET_USE_ONEDNN == 1
-//     .set_attr<FComputeEx>("FComputeEx<cpu>", BroadcastComputeEx)
-//     .set_attr<bool>("TIsDNNL", true)
-//     .set_attr<FInferStorageType>("FInferStorageType", BroadcastComputeStorageType)
-// #endif
     .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>)
     .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
       return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
