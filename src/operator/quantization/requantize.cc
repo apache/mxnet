@@ -37,7 +37,7 @@ void RequantizeForwardExCPU(const nnvm::NodeAttrs& attrs,
                             const std::vector<OpReqType>& req,
                             const std::vector<NDArray>& outputs) {
   const RequantizeParam& param = nnvm::get<RequantizeParam>(attrs.parsed);
-  auto out_type = GetQuantizeOutputType(param);
+  auto out_type                = GetQuantizeOutputType(param);
 
   if (out_type == mshadow::kUint8 || out_type == mshadow::kInt8) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
