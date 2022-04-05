@@ -175,11 +175,7 @@ For example::
     .set_attr_parser(ParamParser<BroadcastLikeParam>)
     .add_arguments(BroadcastLikeParam::__FIELDS__())
     .set_attr<mxnet::FInferShape>("FInferShape", BroadcastLikeShape)
-    .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>)
-    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-    });
-
+    .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
