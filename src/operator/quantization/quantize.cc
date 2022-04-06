@@ -55,7 +55,7 @@ static void QuantizeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& outputs) {
   const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
 
-  if (param.out_type == mshadow::kUint8 || param.out_type == mshadow::kInt8) {
+  if (SupportDNNLQuantize(param.out_type)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLQuantizeCompute, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(QuantizeCompute<cpu>, attrs, ctx, inputs, req, outputs);
