@@ -495,7 +495,7 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_o
             "conditional_fp32_ops should be a list of (str, str, list of str)"
         cond_ops[op_name].setdefault(attr_name, []).extend(attr_vals)
 
-    nodes_attr = sym.attr_dict()
+    nodes_attrs = sym.attr_dict()
     nodes_op = {n['name']: n['op'] for n in json.loads(sym.tojson())['nodes']}
     if not set(excluded_sym_names).issubset(set(nodes_op.keys())):
         logging.warning("excluded_sym_names are not present in the network. Missing layers: {}".format(
@@ -504,12 +504,18 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_o
     for node_name, node_op in nodes_op.items():
         if node_op not in cond_ops:
             continue
-        node_attrs = nodes_attr[node_name]
+        node_attrs = nodes_attrs[node_name]
         for attr_name, attr_vals in cond_ops[node_op].items():
             assert attr_name in node_attrs
             if node_attrs[attr_name] in attr_vals:
-                excluded_sym_names += node_name
+                excluded_sym_names.append(node_name)
                 break
+
+    # handle ops executed in the amp.disable_amp() scope
+    for node_name, node_attrs in nodes_attrs.items():
+        if node_attrs.get('__amp_excluded__', 'false').lower() == 'true':
+            excluded_sym_names.append(node_name)
+
     excluded_sym_names = list(set(excluded_sym_names))
 
     # Op lists should not intersect

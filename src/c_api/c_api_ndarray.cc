@@ -291,6 +291,18 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
+int MXSetIsAMPDisabled(int is_amp_disabled, int* prev) {
+  API_BEGIN();
+  *prev = Imperative::Get()->set_is_amp_disabled(static_cast<bool>(is_amp_disabled));
+  API_END();
+}
+
+int MXIsAMPDisabled(int* curr) {
+  API_BEGIN();
+  *curr = Imperative::Get()->is_amp_disabled();
+  API_END();
+}
+
 int MXIsNumpyShape(int* curr) {
   API_BEGIN();
   *curr = Imperative::Get()->is_np_shape();

@@ -1226,6 +1226,18 @@ MXNET_DLL int MXAutogradIsRecording(bool* curr);
  */
 MXNET_DLL int MXAutogradIsTraining(bool* curr);
 /*!
+ * \brief set whether to disable AMP
+ * \param curr returns the current status
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSetIsAMPDisabled(int is_amp_disabled, int* prev);
+/*!
+ * \brief get whether amp is currently disabled
+ * \param curr returns the current status
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXIsAMPDisabled(int* curr);
+/*!
  * \brief get whether numpy compatibility is on
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens

@@ -237,6 +237,16 @@ class Imperative {
     }
     return old;
   }
+  /*! \brief whether amp is disabled. */
+  bool is_amp_disabled() const {
+    return is_amp_disabled_;
+  }
+  /*! \brief turn on or turn off amp. */
+  bool set_is_amp_disabled(bool is_amp_disabled) {
+    bool old         = is_amp_disabled_;
+    is_amp_disabled_ = is_amp_disabled;
+    return old;
+  }
   /*! \brief to record operator, return corresponding node. */
   void RecordOp(nnvm::NodeAttrs&& attrs,
                 const std::vector<NDArray*>& inputs,
@@ -321,6 +331,7 @@ class Imperative {
   static thread_local bool is_train_;
   static thread_local bool is_recording_;
   static thread_local bool is_deferred_compute_;
+  static thread_local bool is_amp_disabled_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static thread_local bool is_np_shape_thread_local_;
@@ -328,6 +339,7 @@ class Imperative {
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
   static MX_THREAD_LOCAL bool is_deferred_compute_;
+  static MX_THREAD_LOCAL bool is_amp_disabled_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;

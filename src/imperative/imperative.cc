@@ -33,11 +33,13 @@ namespace mxnet {
 thread_local bool Imperative::is_train_                 = false;
 thread_local bool Imperative::is_recording_             = false;
 thread_local bool Imperative::is_deferred_compute_      = false;
+thread_local bool Imperative::is_amp_disabled_          = false;
 thread_local bool Imperative::is_np_shape_thread_local_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_                 = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_             = false;
 MX_THREAD_LOCAL bool Imperative::is_deferred_compute_      = false;
+MX_THREAD_LOCAL bool Imperative::is_amp_disabled_          = false;
 MX_THREAD_LOCAL bool Imperative::is_np_shape_thread_local_ = false;
 #endif
 
@@ -365,6 +367,10 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs&& attrs,
     node->attrs.name = "node_" + std::to_string(node_count_++);
   } else {
     node_count_++;
+  }
+
+  if (is_amp_disabled()) {
+    node->attrs.dict["__amp_excluded__"] = "true";
   }
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {

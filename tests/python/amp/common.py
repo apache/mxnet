@@ -116,14 +116,14 @@ def test_amp_offline_casting(lp_dtype):
       x = self.lp16_op1(x)
       x = self.lp16_op2(x)
       x = x.reshape(x.shape[0], -1)
-      x = self.fp32_op(x)
+      with amp.disable_amp():
+        x = self.fp32_op(x)
       return x
 
   net = TestNet()
   net.initialize()
   data_example = mx.np.random.uniform(-1, 1, (4, 3, 16, 16))
-  lp_net = amp.convert_hybrid_block(net, data_example, lp_dtype, target_dtype_ops=['Convolution'],
-                                    fp32_ops=['FullyConnected'], cast_params_offline=True)
+  lp_net = amp.convert_hybrid_block(net, data_example, lp_dtype, cast_params_offline=True)
 
   check_amp_net_stats(lp_dtype, lp_net, data_example, lp16_tensors_num=4,
                       lp16_casts_num=1, other_casts_num=1)
@@ -140,25 +140,23 @@ def test_amp_offline_casting_shared_params(lp_dtype):
       self.lp16_op1 = nn.Dense(COMMON_SIZE)
       self.lp16_op2 = nn.Dense(COMMON_SIZE)
       self.lp16_op2.share_parameters({'weight': self.lp16_op1.weight})
-      self.fp32_op = nn.Conv1D(COMMON_SIZE, 3)
+      self.fp32_op = nn.Dense(COMMON_SIZE)
       self.fp32_op.share_parameters({'bias': self.lp16_op2.bias})
 
     def forward(self, x):
       x = self.lp16_op1(x)
       x1 = self.lp16_op2(x)
-      x2 = mx.np.expand_dims(x, 1)
-      x2 = self.fp32_op(x2)
-      x2 = mx.npx.batch_flatten(x2)
+      with amp.disable_amp():
+        x2 = self.fp32_op(x)
       x = mx.np.concat((x1, x2), axis=1)
       return x
 
   net = TestNet()
   net.initialize()
   data_example = mx.np.random.uniform(-1, 1, (4, COMMON_SIZE))
-  lp_net = amp.convert_hybrid_block(net, data_example, lp_dtype, target_dtype_ops=['FullyConnected'],
-                                    fp32_ops=['Convolution'], cast_params_offline=True)
+  lp_net = amp.convert_hybrid_block(net, data_example, lp_dtype, cast_params_offline=True)
 
-  check_amp_net_stats(lp_dtype, lp_net, data_example, lp16_tensors_num=5,
+  check_amp_net_stats(lp_dtype, lp_net, data_example, lp16_tensors_num=4,
                       lp16_casts_num=2, other_casts_num=2)
   for name, data in lp_net.collect_params().items():
     assert mx.nd.get_dtype_name(data.dtype) == ('float32' if 'fp32_op' in name else lp_dtype)
@@ -192,21 +190,23 @@ def test_lp16_fp32_ops_order_independence(lp_dtype):
 
 
 def check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num, lp16_casts_num, other_casts_num):
-  def inspect_output(tensor_name, op_name, tensor):
-    nonlocal lp16_tensors_num, lp16_casts_num, other_casts_num
+  lp16_tensors = set()
+  lp16_casts = set()
+  other_casts = set()
 
+  def inspect_output(tensor_name, op_name, tensor):
     dtype = mx.nd.get_dtype_name(tensor.dtype)
     if op_name == 'amp_cast':
       if dtype == lp_dtype:
-        lp16_casts_num -= 1
+        lp16_casts.add(tensor_name)
       else:
-        other_casts_num -= 1
+        other_casts.add(tensor_name)
     if dtype == lp_dtype:
-      lp16_tensors_num -= 1
+      lp16_tensors.add(tensor_name)
 
   net.register_op_hook(inspect_output)
   net(data_example)
 
-  assert lp16_tensors_num == 0
-  assert lp16_casts_num == 0
-  assert other_casts_num == 0
+  assert len(lp16_tensors) == lp16_tensors_num, f'Missing lp16 tensors! Present tensors: {sorted(lp16_tensors)}'
+  assert len(lp16_casts) == lp16_casts_num, f'Missing lp16 casts! Present casts: {sorted(lp16_casts)}'
+  assert len(other_casts) == other_casts_num, f'Missing casts! Present casts: {sorted(other_casts)}'
