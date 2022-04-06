@@ -288,6 +288,10 @@ Graph QuantizeGraph(Graph&& src) {
   static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
   static const auto& flist_inputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListInputNames");
+  static const auto& avoid_dequantize_map =
+      Op::GetAttr<mxnet::FAvoidDequantizeOutput>("FAvoidDequantizeOutput");
+  static const auto& need_asym_quantize_map =
+      Op::GetAttr<mxnet::FNeedAsymQuantizeInput>("FNeedAsymQuantizeInput");
   const auto offline_params       = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   const auto quantized_dtype      = src.GetAttr<std::string>("quantized_dtype");
   const auto quantize_granularity = src.GetAttr<std::string>("quantize_granularity");
@@ -331,7 +335,14 @@ Graph QuantizeGraph(Graph&& src) {
         if (avoid_quantize_input_map.count(node->op()) &&
             avoid_quantize_input_map[node->op()](node->attrs, i, quantize_granularity)) {
           new_node->inputs.emplace_back(mirror_entry);
-        } else if (!quantized_node_map.count(e.node)) {
+        } else if (!quantized_node_map.count(e.node) ||
+                   (avoid_dequantize_map.count(e.node->op()) &&
+                    avoid_dequantize_map[e.node->op()](e.node->attrs, e.index))) {
+          // If the input of current quantized node has non-support of quantization, a quantize op
+          // is supposed to insert into the position after the input node to quantize the float
+          // input to int8/uint8 type. Also, a quantized operator with avoid-dequantize attribute
+          // can produce float outputs directly. A quantize op is necessary to convert them into
+          // int8/uint8 type as the input of current quantized node.
           if (mirror_entry_map.count(e)) {
             new_node->inputs.emplace_back(mirror_entry_map[e]);
           } else {
@@ -354,10 +365,20 @@ Graph QuantizeGraph(Graph&& src) {
                 new_name = node->attrs.name + "_" + e.node->attrs.name;
               }
             }
-
-            ObjectPtr quantize_node = InsertNode(
-                "_contrib_quantize_v2", new_name + suffix + "_quantize", new_node, mirror_entry);
-            quantize_node->attrs.dict["out_type"] = quantized_dtype;
+            ObjectPtr quantize_node;
+            if (need_asym_quantize_map.count(node->op()) &&
+                need_asym_quantize_map[node->op()](node->attrs, i)) {
+              quantize_node = InsertNode("_contrib_quantize_asym",
+                                         new_name + suffix + "_quantize",
+                                         new_node,
+                                         mirror_entry);
+            } else {
+              quantize_node = InsertNode(
+                  "_contrib_quantize_v2", new_name + suffix + "_quantize", new_node, mirror_entry);
+              // If current node is rnn op, the quantize op is supposed to quantize the result of
+              // pre-node to uint8, as quantized rnn op requires uint8 input.
+              quantize_node->attrs.dict["out_type"] = quantized_dtype;
+            }
             quantize_node->op()->attr_parser(&(quantize_node->attrs));
             mirror_entry_map[e] = NodeEntry{quantize_node, 0, e.version};
           }
@@ -439,9 +460,13 @@ Graph QuantizeGraph(Graph&& src) {
       for (const auto& e : node->inputs) {
         ObjectPtr mirror_node  = mirror_map.at(e.node.get());
         NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
-        // if input node is quantized operator, add dequantize node
+        // If input node is quantized operator, add dequantize node. But if input node is a
+        // quantized operator with avoid-dequantize attribute, its output may be already in float
+        // type, which dosen't need a dequantize op.
         if (quantized_node_map.count(e.node) &&
-            (mirror_node->op() != Op::Get("_contrib_dequantize"))) {
+            mirror_node->op() != Op::Get("_contrib_dequantize") &&
+            !(avoid_dequantize_map.count(e.node->op()) &&
+              avoid_dequantize_map[e.node->op()](e.node->attrs, e.index))) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
           // there is only 1 min and 1 max output from mirror node (which is
@@ -473,7 +498,9 @@ Graph QuantizeGraph(Graph&& src) {
 
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
-    if (quantized_node_map.count(e.node)) {
+    if (quantized_node_map.count(e.node) &&
+        !(avoid_dequantize_map.count(e.node->op()) &&
+          avoid_dequantize_map[e.node->op()](e.node->attrs, e.index))) {
       // Only insert dequantize for those Ops supports quantize and not excluded.
       ObjectPtr mirror_node  = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
