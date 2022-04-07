@@ -643,8 +643,11 @@ class NDArrayIter(DataIter):
     @property
     def provide_label(self):
         """The name and shape of label provided by this iterator."""
+        batch_axis = self.layout.find('N')
         return [
-            DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
+            DataDesc(k, tuple(list(v.shape[:batch_axis]) + \
+                              [self.batch_size] + list(v.shape[batch_axis + 1:])),
+                     v.dtype, layout=self.layout)
             for k, v in self.label
         ]
 

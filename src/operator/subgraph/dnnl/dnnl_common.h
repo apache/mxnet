@@ -103,7 +103,7 @@ static inline void ConvertWeightBias2DNNL(NDArray* weight,
                                           const std::vector<float>& weight_scales,
                                           const bool submit = true) {
   DNNLStream* stream             = DNNLStream::Get();
-  const auto new_weight          = NDArray(weight_md);
+  const auto new_weight          = NDArray(&weight_md);
   const auto conv_weights_memory = new_weight.GetDNNLData();
   dnnl::primitive_attr weight_attr;
   if (weight_scales.size()) {
@@ -124,7 +124,7 @@ static inline void ConvertWeightBias2DNNL(NDArray* weight,
     for (size_t c = 0; c < weight_scales.size(); ++c) {
       bias_scales[c] = weight_scales[c] * data_scale;
     }
-    new_bias                    = NDArray(*bias_md);
+    new_bias                    = NDArray(bias_md);
     const auto conv_bias_memory = new_bias.GetDNNLData();
     const int bias_mask         = (bias_scales.size()) == 1 ? 0 : 1;
     dnnl::primitive_attr bias_attr;

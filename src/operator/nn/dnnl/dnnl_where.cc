@@ -171,9 +171,13 @@ void DNNLWhereFwd::Execute(const Tensors& tensors,
   const auto& cpu_engine = CpuEngine::Get()->get_engine();
   const auto& cpu_stream = ctx.get_stream<cpu>();
 
-  const auto& cnd_tensor = tensors.condition.GetDNNLDataReorder(binary_eq_zero_pd.src0_desc());
-  const auto& lhs_tensor = tensors.left.GetDNNLDataReorder(binary_mul_l_pd.src0_desc());
-  const auto& rhs_tensor = tensors.right.GetDNNLDataReorder(binary_mul_r_pd.src0_desc());
+  auto binary_eq_zero_pd_desc = binary_eq_zero_pd.src0_desc();
+  auto binary_mul_l_pd_desc   = binary_mul_l_pd.src0_desc();
+  auto binary_mul_r_pd_desc   = binary_mul_r_pd.src0_desc();
+
+  const auto& cnd_tensor = tensors.condition.GetDNNLDataReorder(&binary_eq_zero_pd_desc);
+  const auto& lhs_tensor = tensors.left.GetDNNLDataReorder(&binary_mul_l_pd_desc);
+  const auto& rhs_tensor = tensors.right.GetDNNLDataReorder(&binary_mul_r_pd_desc);
 
   mxnet::dnnl_output_t out_mem = CreateDNNLMem(tensors.output, binary_sum_pd.dst_desc(), req[0]);
 

@@ -1414,3 +1414,106 @@ def test_get_optimal_thresholds():
         assert 'layer1' in min_max_dict
         assert_almost_equal(onp.array([min_max_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
+
+@use_np
+def test_rnn_quantization():
+    data_low = -1
+    data_high = 1
+    def check_rnn_quantization(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size):
+        data_shape = (seq_len, batch_size, input_dim)
+
+        rnn_fp32 = mx.gluon.rnn.LSTM(hidden_size=state_size,
+                                     num_layers = num_layers,
+                                     bidirectional=bidirectional)
+
+        data = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape)
+        states_shape = (num_layers * 2 if bidirectional else num_layers, batch_size, state_size)
+        states = [mx.np.zeros((states_shape)) for _ in range(batch_size)]
+
+        rnn_fp32.initialize()
+        rnn_fp32.hybridize()
+        ref_out = rnn_fp32(data, states)
+
+        class RNNDataLoader(mx.gluon.data.DataLoader):
+            def __init__(self, data, states):
+                super().__init__(mx.gluon.data.SimpleDataset([]), 1)
+                self.data = data
+                self.states = states
+
+            def __iter__(self):
+                return self
+            
+            def __next__(self):
+                return [self.data, self.states]
+
+            def __bool__(self):
+                return bool(self.dataiter.iter_next())
+
+        calib_data = RNNDataLoader(data, states)
+        quant_rnn = mx.contrib.quant.quantize_net(rnn_fp32,
+                                                  quantized_dtype='auto',
+                                                  quantize_mode='full',
+                                                  calib_data=calib_data,
+                                                  calib_mode='naive',
+                                                  num_calib_batches=1,
+                                                  device=mx.current_device())
+        qout = quant_rnn(data, states)
+
+        qsym, _ = quant_rnn.export(None)
+        assert qsym.tojson().find("quantized_rnn") != -1
+
+        ref_out = [ref_out[0], ref_out[1][0], ref_out[1][1]]
+        for i in range(len(qout)):
+            mse = onp.mean((ref_out[i].asnumpy() - qout[i].asnumpy())**2)
+            assert mse < 0.001
+
+    check_rnn_quantization(1, False, 5, 2, 16, 16)
+    check_rnn_quantization(1, True, 5, 2, 16, 16)
+
+
+
+@use_np
+def test_quantized_rnn():
+    def check_quantized_rnn(num_layers, bidirectional, seq_len, batch_size, input_dim, state_size):
+        ndir = 2 if bidirectional else 1
+        size = ndir*state_size*4
+        first_lyr_param_size = (input_dim + state_size + 2) * size
+        other_lyr_param_size = (state_size * ndir + state_size + 2) * size
+        full_param_size = first_lyr_param_size + (num_layers - 1) * other_lyr_param_size
+
+        data = mx.np.random.uniform(-1, 1, (seq_len, batch_size, input_dim))
+        state = mx.np.random.uniform(-1, 1, (num_layers*ndir, batch_size, state_size))
+        state_cell = mx.np.random.uniform(0, 1, (num_layers*ndir, batch_size, state_size))
+        params = mx.np.random.normal(0, 1, (full_param_size,))
+
+        out = npx.rnn(data=data,
+                      parameters=params,
+                      mode='lstm',
+                      state=state,
+                      state_size=state_size,
+                      state_cell=state_cell,
+                      num_layers=num_layers,
+                      bidirectional=bidirectional)
+
+        data_min = mx.np.min(data)
+        data_max = mx.np.max(data)
+        data_scale = mx.np.array(128.0 / (data_max - data_min)).reshape((1,))
+        data_shift = mx.np.array(128.0 - data_max * data_scale).reshape((1,))
+
+        qdata = (data * data_scale + data_shift + 0.5).astype('uint8')
+        qout = npx.contrib_quantized_rnn(data=qdata,
+                                         parameters=params,
+                                         mode='lstm',
+                                         state=state,
+                                         state_size=state_size,
+                                         state_cell=state_cell,
+                                         num_layers=num_layers,
+                                         bidirectional=bidirectional,
+                                         data_scale=data_scale,
+                                         data_shift=data_shift)
+
+        mse = onp.mean((out.asnumpy() - qout.asnumpy())**2)
+        assert mse < 0.001
+
+    check_quantized_rnn(1, False, 5, 2, 16, 16)
+    check_quantized_rnn(1, True, 5, 2, 16, 16)
