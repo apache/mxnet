@@ -40,7 +40,6 @@ MX_THREAD_LOCAL bool Imperative::is_train_                 = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_             = false;
 MX_THREAD_LOCAL bool Imperative::is_deferred_compute_      = false;
 MX_THREAD_LOCAL OptConstraint Imperative::opt_constraints_ = OptConstraint::None;
-;
 MX_THREAD_LOCAL bool Imperative::is_np_shape_thread_local_ = false;
 #endif
 
