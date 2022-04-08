@@ -291,15 +291,15 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
-int MXSetIsAMPDisabled(int is_amp_disabled, int* prev) {
+int MXSetOptimizationConstraints(int constraints, int* prev) {
   API_BEGIN();
-  *prev = Imperative::Get()->set_is_amp_disabled(static_cast<bool>(is_amp_disabled));
+  *prev = static_cast<int>(Imperative::Get()->set_opt_constraints(OptConstraint(constraints)));
   API_END();
 }
 
-int MXIsAMPDisabled(int* curr) {
+int MXGetOptimizationConstraints(int* curr) {
   API_BEGIN();
-  *curr = Imperative::Get()->is_amp_disabled();
+  *curr = static_cast<int>(Imperative::Get()->get_opt_constraints());
   API_END();
 }
 

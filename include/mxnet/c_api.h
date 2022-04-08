@@ -1227,10 +1227,11 @@ MXNET_DLL int MXAutogradIsRecording(bool* curr);
 MXNET_DLL int MXAutogradIsTraining(bool* curr);
 /*!
  * \brief set what optimization constraints to apply
- * \param curr returns the current status
+ * \param constraints state composed of OptConstraint flags.
+ * \param prev returns the previous status before this set.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSetOptimizationConstraints(int get_optimization_constraints, int* prev);
+MXNET_DLL int MXSetOptimizationConstraints(int constraints, int* prev);
 /*!
  * \brief get current optimization constraints
  * \param curr returns the current status

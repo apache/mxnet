@@ -38,9 +38,9 @@ namespace mxnet {
 
 constexpr char OPT_CONSTRAINT_ATTR[] = "__opt_constraint__";
 enum class OptConstraint : int {
-  None       = 0b00,
-  DisableAMP = 0b01
-  // DisableQuantization = 0b10
+  None       = 0,
+  DisableAMP = 1 << 0
+  // DisableQuantization = 1 << 1
 };
 
 /*! \brief there are three numpy shape flags based on priority.
