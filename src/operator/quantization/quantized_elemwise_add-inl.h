@@ -49,10 +49,10 @@ struct QuantizeElemwiseAddParam : public dmlc::Parameter<QuantizeElemwiseAddPara
   }
 };
 
-namespace quantized_elemwise_add_enum {
+namespace q_elemwise_add {
 enum QuantizedElemwiseAddOutputs { kOut, kMin, kMax };
 enum QuantizedElemwiseAddInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax };
-}  // namespace quantized_elemwise_add_enum
+}  // namespace q_elemwise_add
 
 }  // namespace op
 }  // namespace mxnet
