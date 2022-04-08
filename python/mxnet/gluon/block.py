@@ -20,6 +20,8 @@
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
+import enum
+import ctypes
 import copy
 import warnings
 import weakref
@@ -1045,6 +1047,32 @@ class HybridBlock(Block):
         `Hybridize - A Hybrid of Imperative and Symbolic Programming
         <https://mxnet.apache.org/versions/master/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html>`_
     """
+    class OptConstraint:
+        class Flag(enum.Flag):
+            DisableAMP = enum.auto()
+
+        def __init__(self, flag) -> None:
+            self.flag = flag
+            self.enter_state = None
+
+        def __enter__(self):
+            self.enter_state = HybridBlock.OptConstraint.Flag(get_optimization_constraints())
+            target_state = self.enter_state | self.flag
+            set_optimization_constraints(target_state)
+
+        def __exit__(self, ptype, value, trace):
+            set_optimization_constraints(self.enter_state)
+
+        @staticmethod
+        def disable_all():
+            opt_flag = HybridBlock.OptConstraint.Flag()
+            for flag in HybridBlock.OptConstraint.Flag:
+                opt_flag |= flag
+
+        @staticmethod
+        def disable_amp():
+            return HybridBlock.OptConstraint(HybridBlock.OptConstraint.Flag.DisableAMP)
+
     def __init__(self):
         super(HybridBlock, self).__init__()
         assert hasattr(self, "hybrid_forward") is False, (
@@ -1550,7 +1578,6 @@ class HybridBlock(Block):
 
         if remove_amp_cast:
             handle = SymbolHandle()
-            import ctypes
             check_call(_LIB.MXSymbolRemoveAmpCast(sym.handle, ctypes.byref(handle)))
             sym = type(sym)(handle)
         return sym, arg_dict
@@ -1571,7 +1598,6 @@ class HybridBlock(Block):
         """
         def c_callback(name, op_name, array):
             """wrapper for user callback"""
-            import ctypes
             array = ctypes.cast(array, NDArrayHandle)
             array = NDArray(array, writable=False)
             name = py_str(name)
@@ -1943,3 +1969,15 @@ def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dt
             aux_types.append(default_dtype)
 
     return (arg_types, aux_types)
+
+
+def set_optimization_constraints(state):
+    prev_state = ctypes.c_int()
+    check_call(_LIB.MXSetOptimizationConstraints(ctypes.c_int(state.value), ctypes.byref(prev_state)))
+    return HybridBlock.OptConstraint.Flag(prev_state.value)
+
+
+def get_optimization_constraints():
+    curr = ctypes.c_int()
+    check_call(_LIB.MXGetOptimizationConstraints(ctypes.byref(curr)))
+    return HybridBlock.OptConstraint.Flag(curr.value)

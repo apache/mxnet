@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <functional>
 #include "operator/operator_common.h"
+#include "common/utils.h"
 
 namespace mxnet {
 using nnvm::Graph;
@@ -346,7 +347,6 @@ Graph ReducePrecision(Graph&& src) {
   const auto& target_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
   const auto& fp32_ops         = src.GetAttr<std::unordered_set<std::string>>("fp32_ops");
   const auto& widest_dtype_ops = src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
-  const auto& excluded_syms    = src.GetAttr<std::unordered_set<std::string>>("excluded_syms");
   auto src_dtypes              = src.GetAttr<nnvm::DTypeVector>("dtype");  // copy, not reference
 
   CHECK(target_dtype == mshadow::kFloat16 || target_dtype == mshadow::kBfloat16)
@@ -407,7 +407,10 @@ Graph ReducePrecision(Graph&& src) {
       }
       return;
     }
-    if (fp32_ops.count(old_node->op()->name) > 0 || excluded_syms.count(old_node->attrs.name) > 0) {
+    auto opt_constraints = common::flag_attr_accumulate<std::underlying_type_t<OptConstraint>>(
+        old_node->attrs, OPT_CONSTRAINT_ATTR);
+    if (fp32_ops.count(old_node->op()->name) > 0 ||
+        (opt_constraints & static_cast<int>(OptConstraint::DisableAMP))) {
       KeepOriginalNode(old_node, node_map, &entry_map);
     } else if (target_dtype_ops.count(old_node->op()->name) > 0) {
       if (!TryLowPrecision(target_dtype, old_node, node_map, nodes_entries, &entry_map)) {

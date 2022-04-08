@@ -20,33 +20,3 @@
 """Automatic mixed precision module."""
 
 from .amp import *
-
-import ctypes
-from ..base import (_LIB, check_call)
-
-
-def set_is_amp_disabled(value):
-    prev = ctypes.c_int()
-    check_call(_LIB.MXSetIsAMPDisabled(ctypes.c_int(value), ctypes.byref(prev)))
-    return bool(prev.value)
-
-
-def is_amp_disabled():
-    curr = ctypes.c_int()
-    check_call(_LIB.MXIsAMPDisabled(ctypes.byref(curr)))
-    return bool(curr.value)
-
-
-def disable_amp():
-    return _DisableAMPScope()
-
-
-class _DisableAMPScope(object):
-    def __init__(self):  # pylint: disable=redefined-outer-name
-        self._enter_value = None
-
-    def __enter__(self):
-        self._enter_value = set_is_amp_disabled(True)
-
-    def __exit__(self, ptype, value, trace):
-        set_is_amp_disabled(self._enter_value)

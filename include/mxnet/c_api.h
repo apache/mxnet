@@ -1226,17 +1226,17 @@ MXNET_DLL int MXAutogradIsRecording(bool* curr);
  */
 MXNET_DLL int MXAutogradIsTraining(bool* curr);
 /*!
- * \brief set whether to disable AMP
+ * \brief set what optimization constraints to apply
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSetIsAMPDisabled(int is_amp_disabled, int* prev);
+MXNET_DLL int MXSetOptimizationConstraints(int get_optimization_constraints, int* prev);
 /*!
- * \brief get whether amp is currently disabled
+ * \brief get current optimization constraints
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIsAMPDisabled(int* curr);
+MXNET_DLL int MXGetOptimizationConstraints(int* curr);
 /*!
  * \brief get whether numpy compatibility is on
  * \param curr returns the current status
@@ -2037,9 +2037,7 @@ MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                                       const uint32_t num_fp32_ops,
                                       const char** const fp32_ops_p,
                                       const uint32_t num_widest_dtype_ops,
-                                      const char** const widest_dtype_ops_p,
-                                      const uint32_t num_excluded_symbols,
-                                      const char** const excluded_syms_p);
+                                      const char** const widest_dtype_ops_p);
 
 /*!
  * \brief Set calibration table to node attributes in the sym

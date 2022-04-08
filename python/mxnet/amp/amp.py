@@ -39,7 +39,7 @@ from ..symbol import contrib as symbol_contrib
 from .. import ndarray
 from ..ndarray import NDArray, dtype_np_to_mx, get_dtype_type, get_dtype_name, bfloat16
 from . import lists
-from ..gluon import Block, trainer
+from ..gluon import Block, HybridBlock, trainer
 from .. import base
 from ..base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
                     _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
@@ -497,10 +497,6 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_o
 
     nodes_attrs = sym.attr_dict()
     nodes_op = {n['name']: n['op'] for n in json.loads(sym.tojson())['nodes']}
-    if not set(excluded_sym_names).issubset(set(nodes_op.keys())):
-        logging.warning("excluded_sym_names are not present in the network. Missing layers: {}".format(
-            set(excluded_sym_names) - set(nodes_op.keys())))
-
     for node_name, node_op in nodes_op.items():
         if node_op not in cond_ops:
             continue
@@ -511,12 +507,18 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_o
                 excluded_sym_names.append(node_name)
                 break
 
-    # handle ops executed in the amp.disable_amp() scope
-    for node_name, node_attrs in nodes_attrs.items():
-        if node_attrs.get('__amp_excluded__', 'false').lower() == 'true':
-            excluded_sym_names.append(node_name)
+    excluded_sym_names = set(excluded_sym_names)
+    for node in sym.get_internals():
+        if node.name in excluded_sym_names:
+            excluded_sym_names.remove(node.name)
+            opt_constraints = node.attr('__opt_constraint__')
+            opt_constraints = 0 if opt_constraints is None else opt_constraints
+            opt_constraints |= HybridBlock.OptConstraint.Flag.DisableAMP.value
+            node._set_attr(__opt_constraint__=str(opt_constraints))
 
-    excluded_sym_names = list(set(excluded_sym_names))
+    if len(excluded_sym_names) > 0:
+        logging.warning("excluded_sym_names are not present in the network. Missing nodes: {}".format(
+            excluded_sym_names))
 
     # Op lists should not intersect
     common_ops = set(target_dtype_ops) & set(fp32_ops)
@@ -565,9 +567,7 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_o
                                             ctypes.c_uint(len(fp32_ops)),
                                             c_str_array(fp32_ops),
                                             ctypes.c_uint(len(widest_dtype_ops)),
-                                            c_str_array(widest_dtype_ops),
-                                            ctypes.c_uint(len(excluded_sym_names)),
-                                            c_str_array(excluded_sym_names)))
+                                            c_str_array(widest_dtype_ops)))
     return type(sym)(out)
 
 
@@ -675,7 +675,7 @@ def convert_hybrid_block(block, data_example, target_dtype, target_dtype_ops=Non
     cast_params_offline : bool, default False
         Whether to cast arg_params and aux_params now, instead of doing it every time at runtime.
     """
-    from ..gluon import HybridBlock, SymbolBlock
+    from ..gluon import SymbolBlock
     from ..ndarray import NDArray as ND_NDArray, waitall
     from ..numpy import ndarray as NP_NDArray
 

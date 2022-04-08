@@ -116,7 +116,7 @@ def test_amp_offline_casting(lp_dtype):
       x = self.lp16_op1(x)
       x = self.lp16_op2(x)
       x = x.reshape(x.shape[0], -1)
-      with amp.disable_amp():
+      with nn.HybridBlock.OptConstraint.disable_amp():
         x = self.fp32_op(x)
       return x
 
@@ -146,7 +146,7 @@ def test_amp_offline_casting_shared_params(lp_dtype):
     def forward(self, x):
       x = self.lp16_op1(x)
       x1 = self.lp16_op2(x)
-      with amp.disable_amp():
+      with nn.HybridBlock.OptConstraint.disable_amp():
         x2 = self.fp32_op(x)
       x = mx.np.concat((x1, x2), axis=1)
       return x
@@ -207,6 +207,6 @@ def check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num, lp16_cast
   net.register_op_hook(inspect_output)
   net(data_example)
 
-  assert len(lp16_tensors) == lp16_tensors_num, f'Missing lp16 tensors! Present tensors: {sorted(lp16_tensors)}'
-  assert len(lp16_casts) == lp16_casts_num, f'Missing lp16 casts! Present casts: {sorted(lp16_casts)}'
-  assert len(other_casts) == other_casts_num, f'Missing casts! Present casts: {sorted(other_casts)}'
+  assert len(lp16_tensors) == lp16_tensors_num, f'Bad lp16 tensors! Present tensors: {sorted(lp16_tensors)}'
+  assert len(lp16_casts) == lp16_casts_num, f'Bad lp16 casts! Present casts: {sorted(lp16_casts)}'
+  assert len(other_casts) == other_casts_num, f'Bad casts! Present casts: {sorted(other_casts)}'
