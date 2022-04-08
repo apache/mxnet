@@ -20,8 +20,9 @@ all:
 	  'using Pkg; \
 	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(pwd(), "..")))'
 	julia --color=yes --project=./ ./make.jl
-	pip install --user Markdown==3.1 \
-          mkdocs==1.0.4 \
+	pip install --user "jinja2>=2.7.1,<3.1.0" \
+	  Markdown==3.1 \
+	  mkdocs==1.0.4 \
 	  mkdocs-material==4.6.0 \
 	  pygments==2.5.2 \
 	  pymdown-extensions==6.2.1 \
