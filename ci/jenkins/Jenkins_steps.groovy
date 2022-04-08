@@ -1398,7 +1398,7 @@ def docs_website() {
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
 
             master_url = utils.get_jenkins_master_url()
-            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
+            if ( master_url == 'jenkins.mxnet-ci.com') {
                 // TODO: Make sure this scripts publish the website from the right folder
                 sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
             } else {
