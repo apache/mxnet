@@ -452,7 +452,7 @@ inline void attr_foreach(const nnvm::NodeAttrs& attrs, const std::string& attr_n
 
 template <typename ValueType>
 inline ValueType flag_attr_accumulate(const nnvm::NodeAttrs& attrs, const std::string& attr_name) {
-  static_assert(std::is_integral_v<ValueType>);
+  static_assert(std::is_integral<ValueType>::value);
 
   ValueType result = 0;
   attr_foreach(attrs, attr_name, [&result](const std::string& attr_value) {
