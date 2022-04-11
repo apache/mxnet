@@ -20,6 +20,7 @@
 /*!
  * \file dnnl_stack.cc
  */
+#include <vector>
 
 #include "dnnl_base-inl.h"
 #include "dnnl_concat-inl.h"

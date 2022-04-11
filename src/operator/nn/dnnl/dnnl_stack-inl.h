@@ -28,6 +28,8 @@
 
 #if MXNET_USE_ONEDNN == 1
 
+#include <vector>
+
 #include <dnnl.hpp>
 
 namespace mxnet {

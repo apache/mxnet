@@ -23,6 +23,7 @@
  * \author Da Zheng
  */
 #include <iostream>
+#include <vector>
 
 #include "operator/operator_common.h"
 #include "dnnl_base-inl.h"
