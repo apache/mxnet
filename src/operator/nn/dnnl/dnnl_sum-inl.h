@@ -35,6 +35,23 @@
 namespace mxnet {
 namespace op {
 
+class DNNLSumFwd {
+ public:
+  dnnl::sum::primitive_desc fwd_pd;
+
+  DNNLSumFwd(const std::vector<float>& scales, const std::vector<dnnl::memory::desc>& data_md)
+      : fwd_pd(scales, data_md, CpuEngine::Get()->get_engine()) {
+    fwd_ = std::make_shared<dnnl::sum>(fwd_pd);
+  }
+
+  const dnnl::sum& GetFwd() const {
+    return *fwd_;
+  }
+
+ private:
+  std::shared_ptr<dnnl::sum> fwd_;
+};
+
 void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
 
 void DNNLSumForward(const nnvm::NodeAttrs& attrs,

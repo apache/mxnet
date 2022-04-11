@@ -23,8 +23,8 @@
  */
 #if MXNET_USE_ONEDNN == 1
 
-#include "operator/quantization/quantization_utils.h"
 #include "operator/nn/activation-inl.h"
+#include "operator/quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {
