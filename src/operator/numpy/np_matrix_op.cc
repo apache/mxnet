@@ -27,7 +27,6 @@
 #include "./np_matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/dnnl/dnnl_ops-inl.h"
 #include "../nn/dnnl/dnnl_base-inl.h"
 #include "../nn/dnnl/dnnl_transpose-inl.h"
 #endif

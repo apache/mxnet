@@ -598,6 +598,18 @@ void ConvolutionGradCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+void DNNLConvolutionForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& in_data,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& out_data);
+
+void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<NDArray>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_CONVOLUTION_INL_H_

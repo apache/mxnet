@@ -26,11 +26,11 @@
 #include "./elemwise_unary_op.h"
 #if MXNET_USE_ONEDNN == 1
 #include "../nn/dnnl/dnnl_base-inl.h"
-#include "../nn/dnnl/dnnl_ops-inl.h"
 #include "../nn/dnnl/dnnl_reshape-inl.h"
 #include "../nn/dnnl/dnnl_slice-inl.h"
 #include "../nn/dnnl/dnnl_transpose-inl.h"
 #include "../nn/dnnl/dnnl_split-inl.h"
+#include "../nn/dnnl/dnnl_stack-inl.h"
 #endif
 
 namespace mxnet {

@@ -24,7 +24,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 #include "operator/quantization/quantized_reshape-inl.h"
-#include "operator/nn/dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_reshape-inl.h"
 
 namespace mxnet {
 namespace op {

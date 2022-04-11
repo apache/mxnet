@@ -269,6 +269,18 @@ void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
   ActivationGradComputeImpl<xpu>(attrs, ctx, inputs, req, outputs);
 }
 
+void DNNLActivationForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const NDArray& in_data,
+                           const OpReqType& req,
+                           const NDArray& out_data);
+
+void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_ACTIVATION_INL_H_

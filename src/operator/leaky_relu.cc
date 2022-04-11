@@ -27,7 +27,6 @@
 #include "../common/alm.h"
 #if MXNET_USE_ONEDNN == 1
 #include "./nn/dnnl/dnnl_base-inl.h"
-#include "./nn/dnnl/dnnl_ops-inl.h"
 #endif  // MXNET_USE_ONEDNN == 1
 
 #include <nnvm/op_attr_types.h>

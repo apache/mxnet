@@ -42,180 +42,25 @@
 namespace mxnet {
 namespace op {
 
-/* For fully connected. */
-void DNNLFCForward(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<NDArray>& in_data,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<NDArray>& out_data);
-void DNNLFCBackward(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<NDArray>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<NDArray>& outputs);
+// void DNNLSumForward(const nnvm::NodeAttrs& attrs,
+//                     const OpContext& ctx,
+//                     const std::vector<NDArray>& inputs,
+//                     const std::vector<OpReqType>& req,
+//                     const std::vector<NDArray>& outputs);
 
-/* For convolution. */
-void DNNLConvolutionForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<NDArray>& in_data,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<NDArray>& out_data);
-void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
-                             const OpContext& ctx,
-                             const std::vector<NDArray>& inputs,
-                             const std::vector<OpReqType>& req,
-                             const std::vector<NDArray>& outputs);
+// void DNNLCopy(const nnvm::NodeAttrs& attrs,
+//               const OpContext& ctx,
+//               const NDArray& in_data,
+//               const OpReqType& req,
+//               const NDArray& out_data);
 
-/* For deconvolution */
-void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& in_data,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& out_data);
-void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
-                               const OpContext& ctx,
-                               const std::vector<NDArray>& inputs,
-                               const std::vector<OpReqType>& req,
-                               const std::vector<NDArray>& outputs);
+// void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
 
-/* For activation */
-void DNNLActivationForward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const NDArray& in_data,
-                           const OpReqType& req,
-                           const NDArray& out_data);
-void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<NDArray>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<NDArray>& outputs);
-
-void DNNLLeakyReluForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const NDArray& in_data,
-                          const OpReqType& req,
-                          const NDArray& out_data);
-void DNNLLeakyReluBackward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<NDArray>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<NDArray>& outputs);
-
-/* For softmax */
-void DNNLSoftmaxForward(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const NDArray& in_data,
-                        const OpReqType& req,
-                        const NDArray& out_data);
-void DNNLSoftmaxBackward(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<NDArray>& in_data,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<NDArray>& out_data);
-
-/* For log_softmax */
-void DNNLLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const NDArray& in_data,
-                           const OpReqType& req,
-                           const NDArray& out_data);
-void DNNLLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<NDArray>& in_data,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<NDArray>& out_data);
-
-void DNNLMaskedSoftmaxForward(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs);
-
-/* For softmax_output */
-void DNNLSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& in_data,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& out_data);
-
-void DNNLSplitForward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<NDArray>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<NDArray>& outputs);
-
-/* For sum */
-void DNNLSumForward(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<NDArray>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<NDArray>& outputs);
-
-/* For copy */
-void DNNLCopy(const nnvm::NodeAttrs& attrs,
-              const OpContext& ctx,
-              const NDArray& in_data,
-              const OpReqType& req,
-              const NDArray& out_data);
-
-/* For concat */
-void DNNLConcatForward(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<NDArray>& in_data,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<NDArray>& out_data);
-void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<NDArray>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<NDArray>& outputs);
-
-/* For batch dot */
-template <bool subgraph>
-void DNNLBatchDotForward(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<NDArray>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<NDArray>& outputs);
-
-/* For layer normalization */
-void DNNLLayerNormForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray>& outputs);
-void DNNLLayerNormBackward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<NDArray>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<NDArray>& outputs);
-
-void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
-
-void DNNLStackForward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<NDArray>& in_data,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<NDArray>& out_data);
-
-template <class ParamType>
-void DNNLTransposeForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const NDArray& data,
-                          const OpReqType& req,
-                          const NDArray& output);
-
-void DNNLReshapeForward(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const NDArray& input,
-                        const OpReqType& req,
-                        const NDArray& output);
-
-void DNNLWhereForward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<NDArray>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<NDArray>& outputs);
+// void DNNLStackForward(const nnvm::NodeAttrs& attrs,
+//                       const OpContext& ctx,
+//                       const std::vector<NDArray>& in_data,
+//                       const std::vector<OpReqType>& req,
+//                       const std::vector<NDArray>& out_data);
 
 void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,

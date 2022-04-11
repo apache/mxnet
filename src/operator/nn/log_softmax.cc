@@ -27,7 +27,6 @@
 #include "../operator_common.h"
 #if MXNET_USE_ONEDNN == 1
 #include "dnnl/dnnl_base-inl.h"
-#include "dnnl/dnnl_ops-inl.h"
 #endif
 
 namespace mxnet {

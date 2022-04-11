@@ -26,7 +26,6 @@
 #include "../../common/utils.h"
 #include "./concat-inl.h"
 #include "./dnnl/dnnl_base-inl.h"
-#include "./dnnl/dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -26,7 +26,7 @@
 #include "../../common/utils.h"
 #include "../../ndarray/ndarray_function.h"
 #include "../nn/dnnl/dnnl_base-inl.h"
-#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "../nn/dnnl/dnnl_sum-inl.h"
 
 namespace mxnet {
 namespace op {

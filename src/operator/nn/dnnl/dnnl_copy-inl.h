@@ -18,15 +18,18 @@
  */
 
 /*!
- * \file dnnl_copy.cc
+ * \file dnnl_copy-inl.h
  * \brief
- * \author
+ * \author Wolinski Piotr piotr.wolinski@intel.com
  */
 
-#include "dnnl_base-inl.h"
-#include "dnnl_sum-inl.h"
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_COPY_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_COPY_INL_H_
 
 #if MXNET_USE_ONEDNN == 1
+
+#include <dnnl.hpp>
+
 namespace mxnet {
 namespace op {
 
@@ -34,27 +37,10 @@ void DNNLCopy(const nnvm::NodeAttrs& attrs,
               const OpContext& ctx,
               const NDArray& in_data,
               const OpReqType& req,
-              const NDArray& out_data) {
-  if (req == kNullOp || req == kWriteInplace)
-    return;
-  TmpMemMgr::Get()->Init(ctx.requested[0]);
-  auto in_mem = in_data.GetDNNLData();
-  if (req == kAddTo) {
-    TmpMemMgr::Get()->Init(ctx.requested[0]);
-    // We should try and force the input memory has the same format
-    // as the input output. If not, we'll have to reorder memory.
-    auto out_mem      = out_data.GetDNNLData();
-    auto out_mem_desc = out_mem->get_desc();
-    in_mem            = in_data.GetDNNLData(&out_mem_desc);
-    if (in_mem == nullptr)
-      in_mem = in_data.GetDNNLDataReorder(&out_mem_desc);
-    DNNLSum(*out_mem, *in_mem, *out_mem);
-  } else {
-    const_cast<NDArray&>(out_data).CopyFrom(*in_mem);
-  }
-  DNNLStream::Get()->Submit();
-}
+              const NDArray& out_data);
 
 }  // namespace op
 }  // namespace mxnet
-#endif
+
+#endif  // MXNET_USE_ONEDNN == 1
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_COPY_INL_H_

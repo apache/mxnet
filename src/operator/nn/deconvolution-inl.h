@@ -429,6 +429,18 @@ void DeconvolutionGradCompute(const nnvm::NodeAttrs& attrs,
   _DeconvolutionGradCompute<xpu>(param, ctx, inputs, req, outputs);
 }
 
+void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& in_data,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& out_data);
+
+void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_DECONVOLUTION_INL_H_

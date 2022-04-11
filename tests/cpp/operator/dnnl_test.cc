@@ -32,7 +32,7 @@
 #include <set>
 
 #include "../../src/operator/nn/dnnl/dnnl_base-inl.h"
-#include "../../src/operator/nn/dnnl/dnnl_ops-inl.h"
+#include "../../src/operator/nn/dnnl/dnnl_sum-inl.h"
 #include "../include/test_dnnl.h"
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
