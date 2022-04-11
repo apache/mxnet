@@ -62,8 +62,8 @@ void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::mem
 }
 
 DNNLSumFwd& GetSumForward(const std::vector<float>& scales,
-                                 const std::vector<NDArray>& in_data,
-                                 const std::vector<dnnl::memory::desc>& data_md) {
+                          const std::vector<NDArray>& in_data,
+                          const std::vector<dnnl::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, DNNLSumFwd, OpHash> fwds;
 #else
