@@ -112,41 +112,35 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
     int mask = (param.requantize_scales.size() > 1) ? 2 : 0;
     attr.set_output_scales(mask, param.requantize_scales);
   }
-  auto GetConvFwdPd =
-      [&param, &data, &weights, &output, &attr](const mkldnn::convolution_forward::desc& desc) {
-        auto engine = CpuEngine::Get()->get_engine();
-        try {
-          // MKLDNN introduced padded formats since 0.15 which require more memory compared to the
-          // actual size of the tensor. Currently, MKLDNN operators still reuse memory from memory
-          // planning, so here we need to select a suboptimal kernel for computation that has the
-          // expected memory size requirements
-          auto conv_pd =
-              std::make_shared<mkldnn::convolution_forward::primitive_desc>(desc, attr, engine);
-          while (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
-                 conv_pd->src_desc().get_size() != GetArraySize(data) ||
-                 (!param.mkldnn_param.quantized &&
-                  conv_pd->weights_desc().get_size() != GetArraySize(weights)) ||
-                 // With the upgrade of MKLDNN to version 2.4+
-                 // tests/python/mkl/test_subgraph.py::test_pos_conv_add started failing. Switching
-                 // away from primitive with weight mkldnn::format_tag ABcd4b16a4b in order to
-                 // temporarily fix the issue until full fix arrives. Tracking issue:
-                 // https://github.com/apache/incubator-mxnet/issues/20826.
-                 (param.mkldnn_param.quantized && conv_pd->weights_desc().dims()[1] < 4 &&
-                  conv_pd->weights_desc().data.padded_dims[1] == 16)) {
-            // next_impl() will visit desc and engine, please make sure they are still alive here.
-            CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
-          }
-          return conv_pd;
-        } catch (mkldnn::error& e) {
-          if (e.status == mkldnn_unimplemented && param.mkldnn_param.quantized) {
-            LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
-                          "required for int8 convolution";
-          } else {
-            LOG(ERROR) << e.message;
-          }
-          throw;
-        }
-      };
+  auto GetConvFwdPd = [&param, &data, &weights, &output, &attr](
+                          const mkldnn::convolution_forward::desc& desc) {
+    auto engine = CpuEngine::Get()->get_engine();
+    try {
+      // MKLDNN introduced padded formats since 0.15 which require more memory compared to the
+      // actual size of the tensor. Currently, MKLDNN operators still reuse memory from memory
+      // planning, so here we need to select a suboptimal kernel for computation that has the
+      // expected memory size requirements
+      auto conv_pd =
+          std::make_shared<mkldnn::convolution_forward::primitive_desc>(desc, attr, engine);
+      while (
+          conv_pd->dst_desc().get_size() != GetArraySize(output) ||
+          conv_pd->src_desc().get_size() != GetArraySize(data) ||
+          (!param.mkldnn_param.quantized &&
+           conv_pd->weights_desc().get_size() != GetArraySize(weights))) {
+        // next_impl() will visit desc and engine, please make sure they are still alive here.
+        CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
+      }
+      return conv_pd;
+    } catch (mkldnn::error& e) {
+      if (e.status == mkldnn_unimplemented && param.mkldnn_param.quantized) {
+        LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
+                      "required for int8 convolution";
+      } else {
+        LOG(ERROR) << e.message;
+      }
+      throw;
+    }
+  };
 
   if (param.conv_param.dilate.ndim() == 0 && bias_md_ptr == nullptr) {
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
