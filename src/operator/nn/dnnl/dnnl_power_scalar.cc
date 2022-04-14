@@ -85,7 +85,7 @@ void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
 
 bool SupportDNNLPower(const NDArray& input) {
   return input.shape().Size() != 0 && input.shape().ndim() > 0 && input.shape().ndim() <= 6 &&
-         IsDNNLType(input.dtype());
+         input.dtype() == mshadow::kFloat32;
 }
 
 }  // namespace op
