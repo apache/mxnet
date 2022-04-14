@@ -1809,7 +1809,7 @@ def check_layer_forward_withinput(net, x):
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @use_np
-@pytest.mark.skipif(mx.device.num_gpus(), reason="Temporairly disabled on gpu due to failing centos-gpu CI" +
+@pytest.mark.skipif(mx.device.num_gpus(), reason="Temporairly disabled on gpu due to failing centos-gpu CI " +
                                           "tracked at https://github.com/apache/incubator-mxnet/issues/20978")
 @pytest.mark.parametrize('chn_num', [16, 256])
 @pytest.mark.parametrize('kernel', [1, 3, 224])
