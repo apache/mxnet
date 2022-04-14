@@ -1231,13 +1231,13 @@ MXNET_DLL int MXAutogradIsTraining(bool* curr);
  * \param prev returns the previous status before this set.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSetOptimizationConstraints(int constraints, int* prev);
+MXNET_DLL int MXSetOptimizationConstraints(unsigned int constraints, unsigned int* prev);
 /*!
  * \brief get current optimization constraints
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXGetOptimizationConstraints(int* curr);
+MXNET_DLL int MXGetOptimizationConstraints(unsigned int* curr);
 /*!
  * \brief get whether numpy compatibility is on
  * \param curr returns the current status

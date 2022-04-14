@@ -37,7 +37,7 @@
 namespace mxnet {
 
 constexpr char OPT_CONSTRAINT_ATTR[] = "__opt_constraint__";
-enum class OptConstraint : int {
+enum class OptConstraint : unsigned int {
   None       = 0,
   DisableAMP = 1 << 0
   // DisableQuantization = 1 << 1

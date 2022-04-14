@@ -438,6 +438,7 @@ inline std::string attr_value_string(const nnvm::NodeAttrs& attrs,
   return attrs.dict.at(attr_name);
 }
 
+/*! \brief Seeks an attribute in a node and its subgraphs and invokes a function on each. */
 template <typename Fn>
 inline void attr_foreach(const nnvm::NodeAttrs& attrs, const std::string& attr_name, const Fn& fn) {
   const auto& found_it = attrs.dict.find(attr_name);
@@ -455,11 +456,16 @@ inline ValueType flag_attr_accumulate(const nnvm::NodeAttrs& attrs, const std::s
   static_assert(std::is_integral<ValueType>::value);
 
   ValueType result = 0;
-  attr_foreach(attrs, attr_name, [&result](const std::string& attr_value) {
+  attr_foreach(attrs, attr_name, [&](const std::string& attr_value) {
     std::istringstream ss(attr_value);
     ValueType temp;
     ss >> temp;
     result |= temp;
+
+    if (ss.fail() || !ss.eof()) {
+      LOG(WARNING) << "Incorrect value of an attribute: " << attr_name
+                   << ". Expected an integer, while got: " << attr_value;
+    }
   });
   return result;
 }

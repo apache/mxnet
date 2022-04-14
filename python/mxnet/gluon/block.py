@@ -1972,12 +1972,12 @@ def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dt
 
 
 def set_optimization_constraints(state):
-    prev_state = ctypes.c_int()
-    check_call(_LIB.MXSetOptimizationConstraints(ctypes.c_int(state.value), ctypes.byref(prev_state)))
+    prev_state = ctypes.c_uint()
+    check_call(_LIB.MXSetOptimizationConstraints(ctypes.c_uint(state.value), ctypes.byref(prev_state)))
     return HybridBlock.OptConstraint.Flag(prev_state.value)
 
 
 def get_optimization_constraints():
-    curr = ctypes.c_int()
+    curr = ctypes.c_uint()
     check_call(_LIB.MXGetOptimizationConstraints(ctypes.byref(curr)))
     return HybridBlock.OptConstraint.Flag(curr.value)
