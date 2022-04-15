@@ -106,7 +106,7 @@ if not os.path.isdir(os.path.join(model_folder, current_model)):
 
 ## Downloading the Caltech101 dataset
 
-The [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datasets/Caltech101/) is made of pictures of objects belonging to 101 categories. About 40 to 800 images per category. Most categories have about 50 images.
+The [Caltech101 dataset](https://data.caltech.edu/records/20086) is made of pictures of objects belonging to 101 categories. About 40 to 800 images per category. Most categories have about 50 images.
 
 *L. Fei-Fei, R. Fergus and P. Perona. Learning generative visual models from few training examples: an incremental Bayesian approach tested on 101 object categories. IEEE. CVPR 2004, Workshop on Generative-Model
 Based Vision. 2004*
