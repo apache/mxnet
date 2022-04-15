@@ -330,7 +330,7 @@ REGISTER_PASS(addInputPass)
 .setBody(addInputPass);
 
 MXReturnValue initialize(int version) {
-  if (version >= 10900) {
+  if (version >= 10901) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {

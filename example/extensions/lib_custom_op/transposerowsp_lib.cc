@@ -197,7 +197,7 @@ REGISTER_OP(my_state_transposerowsp)
 .setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
-  if (version >= 10900) {
+  if (version >= 10901) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
