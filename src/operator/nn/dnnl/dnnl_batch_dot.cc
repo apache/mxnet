@@ -80,7 +80,7 @@ dnnl::primitive_attr GetQuantizationAttributes(const DNNLDotParam& param,
                                   param.max_calib_range.value()) /
                  lhs_scale_ / rhs_scale_;
     attr.set_output_scales(0, {out_scale_});
-  } else if (param.enable_float_output) {
+  } else if (param.enabled_float_output.has_value()) {
     out_scale_ = 1.0 / lhs_scale_ / rhs_scale_;
     attr.set_output_scales(0, {out_scale_});
   }
@@ -160,7 +160,7 @@ void DNNLBatchDotFwd::Execute(const OpContext& ctx,
   CommitOutput(outputs[0], out_mem);
   DNNLStream::Get()->Submit();
 
-  if (param.quantized && !param.enable_float_output) {
+  if (param.quantized && !param.enabled_float_output.has_value()) {
     mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
     float min_output;
     float max_output;
