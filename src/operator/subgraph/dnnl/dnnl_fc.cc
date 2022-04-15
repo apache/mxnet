@@ -99,7 +99,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   auto& default_param      = full_param_.default_param;
   const bool has_bias      = !default_param.no_bias;
   const bool quantized     = dnnl_param.quantized;
-  const bool out_quantized = dnnl_param.quantized && !dnnl_param.enable_float_output;
+  const bool out_quantized = dnnl_param.quantized && !dnnl_param.enabled_float_output.has_value();
   const bool channel_wise  = quantized && dnnl_param.channel_wise_quantize.has_value() &&
                             dnnl_param.channel_wise_quantize.value();
 
@@ -265,7 +265,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
         support_channelwise_scale = true;
         fuse_requantize           = true;
       }
-      if (dnnl_param.enable_float_output) {
+      if (dnnl_param.enabled_float_output.has_value()) {
         support_channelwise_scale = true;
       }
       // channel_wise  support_channelwise_scale  result
@@ -333,7 +333,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
 
       size_t num_channel = cached_weight_.shape()[0];
       float out_scale    = 1.0f;
-      if (fuse_requantize || dnnl_param.enable_float_output) {
+      if (fuse_requantize || dnnl_param.enabled_float_output.has_value()) {
         float tmp_scale_ = 1.0f;
         if (fuse_requantize) {
           if (dnnl_param.with_eltwise) {
@@ -385,7 +385,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
         out_scale = data_scale_ * weight_scales_[0];
       }
 
-      if (dnnl_param.with_sum && !dnnl_param.enable_float_output) {
+      if (dnnl_param.with_sum && !dnnl_param.enabled_float_output.has_value()) {
         float sum_in_scale =
             GetQuantizeScale(in_data[idx.sum].dtype(), cached_sum_min_, cached_sum_max_);
         full_param_.sum_scale = out_scale / sum_in_scale;
@@ -464,7 +464,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   DNNLStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
   DNNLStream::Get()->Submit();
 
-  if (dnnl_param.quantized && !dnnl_param.enable_float_output) {
+  if (dnnl_param.quantized && !dnnl_param.enabled_float_output.has_value()) {
     float* output_min_ptr = out_data[out_min_index].data().dptr<float>();
     float* output_max_ptr = out_data[out_max_index].data().dptr<float>();
 
@@ -539,7 +539,7 @@ static std::vector<std::string> SgDNNLFCListInputNames(const NodeAttrs& attrs) {
         input_names.emplace_back("bias_max");
       }
     }
-    if (dnnl_param.with_sum && !dnnl_param.enable_float_output) {
+    if (dnnl_param.with_sum && !dnnl_param.enabled_float_output.has_value()) {
       input_names.emplace_back("sum_min");
       input_names.emplace_back("sum_max");
     }
@@ -550,7 +550,7 @@ static std::vector<std::string> SgDNNLFCListInputNames(const NodeAttrs& attrs) {
 static std::vector<std::string> SgDNNLFCListOutputNames(const NodeAttrs& attrs) {
   auto const& full_param = nnvm::get<DNNLFCFullParam>(attrs.parsed);
   if (full_param.dnnl_param.quantized) {
-    if (full_param.dnnl_param.enable_float_output)
+    if (full_param.dnnl_param.enabled_float_output.has_value())
       return std::vector<std::string>{"output"};
     else
       return std::vector<std::string>{"output", "output_min", "output_max"};
@@ -591,7 +591,7 @@ static bool SgDNNLFCInferShape(const nnvm::NodeAttrs& attrs,
     }
 
     out_shapes->at(0) = base_out_shapes[0];
-    if (!full_param.dnnl_param.enable_float_output) {
+    if (!full_param.dnnl_param.enabled_float_output.has_value()) {
       SHAPE_ASSIGN_CHECK(*out_shapes, 1, Shape1(1));
       SHAPE_ASSIGN_CHECK(*out_shapes, 2, Shape1(1));
     }
@@ -636,8 +636,8 @@ static bool SgDNNLFCInferType(const nnvm::NodeAttrs& attrs,
       }
     }
     if (idx.IsSumExist()) {
-      if (full_param.dnnl_param.enable_float_output) {
-        TYPE_ASSIGN_CHECK(*in_types, idx.sum, mshadow::kFloat32);
+      if (full_param.dnnl_param.enabled_float_output.has_value()) {
+        TYPE_ASSIGN_CHECK(*in_types, idx.sum, full_param.dnnl_param.enabled_float_output.value());
       } else {
         CHECK(in_types->at(idx.sum) == mshadow::kInt8 || in_types->at(idx.sum) == mshadow::kUint8)
             << "QuantizedFullyConnected sum input only supports int8/uint8, while "
@@ -648,8 +648,8 @@ static bool SgDNNLFCInferType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
     }
 
-    if (full_param.dnnl_param.enable_float_output) {
-      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
+    if (full_param.dnnl_param.enabled_float_output.has_value()) {
+      TYPE_ASSIGN_CHECK(*out_types, 0, full_param.dnnl_param.enabled_float_output.value());
     } else {
       if (full_param.dnnl_param.min_calib_range.has_value() &&
           full_param.dnnl_param.max_calib_range.has_value()) {
@@ -667,8 +667,8 @@ static bool SgDNNLFCInferType(const nnvm::NodeAttrs& attrs,
     return true;
   } else {
     bool result = DefaultSubgraphOpType(attrs, in_types, out_types);
-    if (full_param.dnnl_param.amp_out_dtype.has_value()) {
-      (*out_types)[0] = full_param.dnnl_param.amp_out_dtype.value();
+    if (full_param.dnnl_param.enabled_float_output.has_value()) {
+      (*out_types)[0] = full_param.dnnl_param.enabled_float_output.value();
     }
     return result;
   }
@@ -695,7 +695,7 @@ static bool SgDNNLFCStorageType(const nnvm::NodeAttrs& attrs,
     }
 
     out_attrs->at(0) = base_out_attrs[0];
-    if (!full_param.dnnl_param.enable_float_output) {
+    if (!full_param.dnnl_param.enabled_float_output.has_value()) {
       type_assign(&out_attrs->at(1), mxnet::kDefaultStorage);
       type_assign(&out_attrs->at(2), mxnet::kDefaultStorage);
     }
@@ -771,8 +771,11 @@ NNVM_REGISTER_OP(_sg_onednn_fully_connected)
     })
     .set_num_outputs([](const NodeAttrs& attrs) {
       auto const& full_param = nnvm::get<DNNLFCFullParam>(attrs.parsed);
-      return (full_param.dnnl_param.quantized && !full_param.dnnl_param.enable_float_output) ? 3 :
-                                                                                               1;
+      if (full_param.dnnl_param.quantized &&
+          !full_param.dnnl_param.enabled_float_output.has_value()) {
+        return 3;
+      }
+      return 1;
     })
     .set_attr_parser(SgDNNLFCParamParser)
     .set_attr<nnvm::FListInputNames>("FListInputNames", SgDNNLFCListInputNames)

@@ -91,7 +91,7 @@ def check_qsym_calibrated(qsym, out_type, name='conv'):
       assert v['out_type'] == out_type
     if k.find(quantized_op_name) != -1:
       if (quantized_op_name.startswith("quantized_sg_onednn_fully_connected") 
-          or quantized_op_name.startswith("quantized_sg_onednn_conv")) and 'enable_float_output' in v:
+          or quantized_op_name.startswith("quantized_sg_onednn_conv")) and 'enabled_float_output' in v:
         continue
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v

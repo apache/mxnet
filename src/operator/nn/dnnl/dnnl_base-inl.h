@@ -56,6 +56,15 @@
       LOG(FATAL) << "Unknown type enum " << type; \
   }
 
+// TODO(PawelGlomski-Intel): add bfloat16 for quantized ops
+#define DNNL_DECLARE_ENABLED_FLOAT_OUTPUT_PARAMETER()                                            \
+  DMLC_DECLARE_FIELD(enabled_float_output)                                                       \
+      .set_default(dmlc::optional<int>())                                                        \
+      .add_enum("float32", mshadow::kFloat32)                                                    \
+      .describe(                                                                                 \
+          "Imposed float output. Used to change the output dtype when the operator operates on " \
+          "low precision data (int8 or lp16).")
+
 namespace mxnet {
 
 // =====  CpuEngine =======================================

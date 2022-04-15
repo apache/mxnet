@@ -116,7 +116,7 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
         if (EndsWith(output_n->op()->name, "elemwise_add")) {
           if (quantized_) {
             auto const& fc_param = nnvm::get<DNNLFCFullParam>(cur_n->attrs.parsed);
-            if (!fc_param.dnnl_param.enable_float_output) {
+            if (!fc_param.dnnl_param.enabled_float_output.has_value()) {
               // For quantized graph, when FC floating point output is not enabled
               // elementwise add must also be quantized (min and max value have to be already stored
               // in elementwise add).
@@ -267,8 +267,10 @@ class SgDNNLFCSumFuseProperty : public SubgraphProperty {
           // sum_tensor.data    -->   fc_out.max
           // sum_tensor.min     -->   sum_tensor.min
           // sum_tensor.max     -->   sum_tensor.max
-          const int not_rotated_end =
-              (fc_param.dnnl_param.quantized && !fc_param.dnnl_param.enable_float_output) ? 2 : 0;
+          const int not_rotated_end = (fc_param.dnnl_param.quantized &&
+                                       !fc_param.dnnl_param.enabled_float_output.has_value()) ?
+                                          2 :
+                                          0;
 
           std::rotate(input_entries->begin() + base_inputs - 1,
                       input_entries->end() - 1 - not_rotated_end,

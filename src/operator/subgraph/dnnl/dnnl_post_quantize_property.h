@@ -217,7 +217,7 @@ class SgDNNLPostQuantizeProperty : public SubgraphProperty {
     // When only fused quantized operator and requantize, set min/max_cablib_range,
     // When fused quantized operator + requantize + dequantize, set dequantize flag to true.
     if (dequantize_node != nullptr) {
-      fuse_node->attrs.dict["enable_float_output"] = "True";
+      fuse_node->attrs.dict["enabled_float_output"] = type_string(mshadow::kFloat32);
     } else {
       fuse_node->attrs.dict["min_calib_range"] =
           std::to_string(requantize_param.min_calib_range.value());
