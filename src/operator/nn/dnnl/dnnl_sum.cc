@@ -61,36 +61,43 @@ void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::mem
   DNNLStream::Get()->RegisterPrimArgs(dnnl::sum(sum_pd), args);
 }
 
-DNNLSumFwd& GetSumForward(const std::vector<float>& scales,
-                          const std::vector<NDArray>& in_data,
-                          const std::vector<dnnl::memory::desc>& data_md) {
+DNNLSumFwd& DNNLSumFwd::GetCached(const std::vector<NDArray>& inputs,
+                                  const std::vector<NDArray>& outputs) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, DNNLSumFwd, OpHash> fwds;
+  static thread_local std::unordered_map<DNNLSumSignature, DNNLSumFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLSumFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL std::unordered_map<DNNLSumSignature, DNNLSumFwd, OpHash> fwds;
 #endif
-  OpSignature key;
-  key.AddSign(in_data);
+  DNNLSumSignature key;
+  key.AddSign(inputs);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    DNNLSumFwd fwd(scales, data_md);
+    const DNNLSumFwd fwd(inputs, outputs);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
 
-void DNNLSumForward(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<NDArray>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<NDArray>& outputs) {
-  TmpMemMgr::Get()->Init(ctx.requested[0]);
+DNNLSumFwd::DNNLSumFwd(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs) {
   const int num_inputs    = inputs.size();
   const NDArray& out_data = outputs[0];
   std::vector<dnnl::memory::desc> data_md;
-  std::vector<const dnnl::memory*> data_mem;
   std::vector<float> scales(num_inputs, 1);
+
+  fwd_pd = std::make_shared<sum_pd_t>(scales, data_md, CpuEngine::Get()->get_engine());
+  fwd    = std::make_shared<sum_t>(*fwd_pd);
+}
+
+void DNNLSumFwd::Execute(const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs) {
+  const NDArray& out_data = outputs[0];
+  const int num_inputs    = inputs.size();
+
+  std::vector<dnnl::memory::desc> data_md;
+  std::vector<const dnnl::memory*> data_mem;
 
   data_md.reserve(num_inputs);
   data_mem.reserve(num_inputs);
@@ -102,16 +109,24 @@ void DNNLSumForward(const nnvm::NodeAttrs& attrs,
     data_mem.push_back(in_mem);
   }
 
-  DNNLSumFwd& fwd              = GetSumForward(scales, inputs, data_md);
-  mxnet::dnnl_output_t out_mem = CreateDNNLMem(out_data, fwd.fwd_pd.dst_desc(), req[0], &inputs[0]);
+  mxnet::dnnl_output_t out_mem = CreateDNNLMem(out_data, fwd_pd->dst_desc(), req[0], &inputs[0]);
   dnnl_args_map_t net_args;
   net_args.insert({DNNL_ARG_DST, *out_mem.second});
   for (int i = 0; i < num_inputs; ++i) {
     net_args.insert({DNNL_ARG_MULTIPLE_SRC + i, *data_mem[i]});
   }
-  DNNLStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
+  DNNLStream::Get()->RegisterPrimArgs(*fwd, net_args);
   CommitOutput(out_data, out_mem);
   DNNLStream::Get()->Submit();
+}
+
+void DNNLSumForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<NDArray>& outputs) {
+  DNNLSumFwd& fwd = DNNLSumFwd::GetCached(inputs, outputs);
+  fwd.Execute(ctx, inputs, req, outputs);
 }
 #endif
 

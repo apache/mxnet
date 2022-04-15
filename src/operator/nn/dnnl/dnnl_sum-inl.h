@@ -31,25 +31,33 @@
 #include <vector>
 
 #include <dnnl.hpp>
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/operator_common.h"
 
 namespace mxnet {
 namespace op {
 
+using sum_t    = dnnl::sum;
+using sum_pd_t = dnnl::sum::primitive_desc;
+
 class DNNLSumFwd {
  public:
-  dnnl::sum::primitive_desc fwd_pd;
+  typedef OpSignature DNNLSumSignature;
 
-  DNNLSumFwd(const std::vector<float>& scales, const std::vector<dnnl::memory::desc>& data_md)
-      : fwd_pd(scales, data_md, CpuEngine::Get()->get_engine()) {
-    fwd_ = std::make_shared<dnnl::sum>(fwd_pd);
-  }
+  static DNNLSumFwd& GetCached(const std::vector<NDArray>& inputs,
+                               const std::vector<NDArray>& outputs);
 
-  const dnnl::sum& GetFwd() const {
-    return *fwd_;
-  }
+  explicit DNNLSumFwd(const std::vector<NDArray>& inputs,
+                      const std::vector<NDArray>& outputs);
+
+  void Execute(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
  private:
-  std::shared_ptr<dnnl::sum> fwd_;
+  std::shared_ptr<sum_t> fwd;
+  std::shared_ptr<sum_pd_t> fwd_pd;
 };
 
 void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
