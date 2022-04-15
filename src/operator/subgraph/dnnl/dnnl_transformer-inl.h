@@ -29,9 +29,9 @@ namespace op {
 struct DNNLSelfAttParam : public dmlc::Parameter<DNNLSelfAttParam> {
   int heads;
   bool quantized;
-  dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
-  dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  dmlc::optional<int> enabled_float_output;      // mshadow dtype of a fused amp_cast node
+  dmlc::optional<float> min_calib_range;     // min float value calculated from calibration dataset
+  dmlc::optional<float> max_calib_range;     // max float value calculated from calibration dataset
+  dmlc::optional<int> enabled_float_output;  // mshadow dtype of a fused amp_cast node
 
   DMLC_DECLARE_PARAMETER(DNNLSelfAttParam) {
     DMLC_DECLARE_FIELD(heads).describe("Set number of heads.");
