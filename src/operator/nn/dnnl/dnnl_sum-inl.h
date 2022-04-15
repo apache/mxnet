@@ -47,8 +47,7 @@ class DNNLSumFwd {
   static DNNLSumFwd& GetCached(const std::vector<NDArray>& inputs,
                                const std::vector<NDArray>& outputs);
 
-  explicit DNNLSumFwd(const std::vector<NDArray>& inputs,
-                      const std::vector<NDArray>& outputs);
+  explicit DNNLSumFwd(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs);
 
   void Execute(const OpContext& ctx,
                const std::vector<NDArray>& inputs,
