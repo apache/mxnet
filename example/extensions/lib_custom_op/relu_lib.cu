@@ -266,7 +266,7 @@ REGISTER_OP(my_noisy_relu)
 .setBackward(backwardGPU, "gpu");
 
 MXReturnValue initialize(int version) {
-  if (version >= 10901) {
+  if (version >= 10900) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {

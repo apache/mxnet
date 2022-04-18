@@ -28,7 +28,7 @@
 using namespace mxnet::ext;
 
 MXReturnValue initialize(int version) {
-  if (version >= 10901) {
+  if (version >= 10900) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
