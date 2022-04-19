@@ -27,25 +27,30 @@ import amp.common as amp_common_tests
 AMP_DTYPE = 'bfloat16'
 
 
-def test_amp_coverage():
+def test_bf16_coverage():
     amp_common_tests.test_amp_coverage(AMP_DTYPE, 'BF16')
 
 
 @mx.util.use_np
-def test_amp_basic_use():
+def test_bf16_basic_use():
     amp_common_tests.test_amp_basic_use(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_amp_offline_casting():
+def test_bf16_offline_casting():
     amp_common_tests.test_amp_offline_casting(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_amp_offline_casting_shared_params():
+def test_bf16_offline_casting_shared_params():
     amp_common_tests.test_amp_offline_casting_shared_params(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_lp16_fp32_ops_order_independence():
+def test_bf16_fp32_ops_order_independence():
     amp_common_tests.test_lp16_fp32_ops_order_independence(AMP_DTYPE)
+
+
+@mx.util.use_np
+def test_bf16_test_node_excluding():
+    amp_common_tests.test_amp_node_excluding(AMP_DTYPE)
