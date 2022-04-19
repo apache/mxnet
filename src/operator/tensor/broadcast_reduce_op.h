@@ -1468,7 +1468,7 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
 
   Stream<xpu>* s = ctx.get_stream<xpu>();
   bool isCPU     = std::is_same<xpu, cpu>::value;
-  
+
   CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
 
   MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, DType, {
