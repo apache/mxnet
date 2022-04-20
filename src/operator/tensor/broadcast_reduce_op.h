@@ -1354,9 +1354,10 @@ struct direct_copy {
   }
 };
 
-template <typename DType>
+template <typename IType, typename OType>
 void BroadcastCPU(const OpContext& ctx,
                   const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs,
                   const mxnet::TShape& src_shape,
                   const mxnet::TShape& dst_shape,
@@ -1366,9 +1367,6 @@ void BroadcastCPU(const OpContext& ctx,
   using namespace mxnet_op;
   constexpr size_t ELEMENTS_THRESHOLD = 256;
   Stream<cpu>* s                      = ctx.get_stream<cpu>();
-
-  DType* src = static_cast<DType*>(inputs[0].dptr_);
-  DType* dst = static_cast<DType*>(outputs[0].dptr_);
 
   std::vector<size_t> elements_to_copy(aux_data.num_broadcast_axes);
   std::vector<size_t> preaxis_dims(aux_data.num_broadcast_axes);
@@ -1386,7 +1384,9 @@ void BroadcastCPU(const OpContext& ctx,
   }
 
   // there is no need to check further axis's elements to copy as it for sure will be larger
-  if (elements_to_copy[0] < ELEMENTS_THRESHOLD) {
+  if (elements_to_copy[0] < ELEMENTS_THRESHOLD || !std::is_same<IType, OType>::value) {
+    IType* src = static_cast<IType*>(inputs[0].dptr_);
+    OType* dst = static_cast<OType*>(outputs[0].dptr_);
     mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
     mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
     for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
@@ -1401,14 +1401,16 @@ void BroadcastCPU(const OpContext& ctx,
 
     if (dst_shape.ndim() == 2) {
       Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
-          s, out_shape.Size(), src, dst, aux_data, OpReqType::kWriteTo, 2);
+          s, out_shape.Size(), src, dst, aux_data, req[0], 2);
     } else {
       const int ndim = MXNET_SPECIAL_MAX_NDIM;
       Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
-          s, out_shape.Size(), src, dst, aux_data, OpReqType::kWriteTo, ndim);
+          s, out_shape.Size(), src, dst, aux_data, req[0], ndim);
     }
 
   } else {
+    IType* src = static_cast<IType*>(inputs[0].dptr_);
+    IType* dst = static_cast<IType*>(outputs[0].dptr_);
     // broadcast axis independently with result reusage
     const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     for (int ax = 0; ax < aux_data.num_broadcast_axes; ax++) {
@@ -1427,7 +1429,7 @@ void BroadcastCPU(const OpContext& ctx,
 #endif
             std::memcpy(dst + (elements_to_copy[ax] * (j + i * bcast_dim)),
                         src + (elements_to_copy[ax] * i),
-                        elements_to_copy[ax] * sizeof(DType));
+                        elements_to_copy[ax] * sizeof(IType));
 #pragma GCC diagnostic pop
           }
         }
@@ -1469,46 +1471,48 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   bool isCPU     = std::is_same<xpu, cpu>::value;
 
-  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, IType, {
+    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, OType, {
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
 
-  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, DType, {
-    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
-    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
-
-    for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
-      if (i < dst_shape.ndim()) {
-        in_shape[i]  = src_shape[i];
-        out_shape[i] = dst_shape[i];
-      } else {
-        in_shape[i]  = 1;
-        out_shape[i] = 1;
+      for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
+        if (i < dst_shape.ndim()) {
+          in_shape[i]  = src_shape[i];
+          out_shape[i] = dst_shape[i];
+        } else {
+          in_shape[i]  = 1;
+          out_shape[i] = 1;
+        }
       }
-    }
-    struct ShapeAndStride aux_data;
-    PrepareAUXData(&aux_data, in_shape, out_shape, dst_shape.ndim());
-    if (!aux_data.shape_changed) {
-      // If no broadcast is required (i.e. input_shape == output_shape)
-      // then simply copy input to outout.
-      Kernel<direct_copy<mshadow_op::identity>, xpu>::Launch(
-          s, outputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>(), req[0]);
-    } else if (isCPU) {
-      BroadcastCPU<DType>(ctx, inputs, outputs, src_shape, dst_shape, aux_data);
-    } else {
-      if (dst_shape.ndim() == 2) {
-        Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
-        Tensor<xpu, 2, DType> data = inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-        Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+      struct ShapeAndStride aux_data;
+      PrepareAUXData(&aux_data, in_shape, out_shape, dst_shape.ndim());
+      if (!aux_data.shape_changed) {
+        // If no broadcast is required (i.e. input_shape == output_shape)
+        // then simply copy input to outout.
+        Kernel<direct_copy<mshadow_op::identity>, xpu>::Launch(
+            s, outputs[0].Size(), inputs[0].dptr<IType>(), outputs[0].dptr<OType>(), req[0]);
+      } else if (isCPU) {
+        BroadcastCPU<IType, OType>(ctx, inputs, req, outputs, src_shape, dst_shape, aux_data);
       } else {
-        const int ndim = MXNET_SPECIAL_MAX_NDIM;
-        Tensor<xpu, ndim, DType> out =
-            outputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-        Tensor<xpu, ndim, DType> data =
-            inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-        Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
+        if (dst_shape.ndim() == 2) {
+          Tensor<xpu, 2, OType> out =
+              outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
+          Tensor<xpu, 2, IType> data =
+              inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
+              s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+        } else {
+          const int ndim = MXNET_SPECIAL_MAX_NDIM;
+          Tensor<xpu, ndim, OType> out =
+              outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
+          Tensor<xpu, ndim, IType> data =
+              inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
+              s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
+        }
       }
-    }
+    });
   });
 }
 
