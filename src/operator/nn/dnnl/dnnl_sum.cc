@@ -81,7 +81,6 @@ DNNLSumFwd& DNNLSumFwd::GetCached(const std::vector<NDArray>& inputs,
 
 DNNLSumFwd::DNNLSumFwd(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs) {
   const int num_inputs    = inputs.size();
-  const NDArray& out_data = outputs[0];
 
   std::vector<dnnl::memory::desc> data_md;
 
@@ -111,7 +110,6 @@ void DNNLSumFwd::Execute(const OpContext& ctx,
 
   for (int i = 0; i < num_inputs; ++i) {
     const dnnl::memory* in_mem = inputs[i].GetDNNLData();
-    dnnl::memory::desc tmp_md  = in_mem->get_desc();
     data_mem.push_back(in_mem);
   }
 
