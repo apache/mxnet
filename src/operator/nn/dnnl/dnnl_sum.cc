@@ -82,8 +82,18 @@ DNNLSumFwd& DNNLSumFwd::GetCached(const std::vector<NDArray>& inputs,
 DNNLSumFwd::DNNLSumFwd(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs) {
   const int num_inputs    = inputs.size();
   const NDArray& out_data = outputs[0];
+
   std::vector<dnnl::memory::desc> data_md;
+
   std::vector<float> scales(num_inputs, 1);
+
+  data_md.reserve(num_inputs);
+
+  for (int i = 0; i < num_inputs; ++i) {
+    const dnnl::memory* in_mem = inputs[i].GetDNNLData();
+    dnnl::memory::desc tmp_md  = in_mem->get_desc();
+    data_md.push_back(tmp_md);
+  }
 
   fwd_pd = std::make_shared<sum_pd_t>(scales, data_md, CpuEngine::Get()->get_engine());
   fwd    = std::make_shared<sum_t>(*fwd_pd);
@@ -95,17 +105,13 @@ void DNNLSumFwd::Execute(const OpContext& ctx,
                          const std::vector<NDArray>& outputs) {
   const NDArray& out_data = outputs[0];
   const int num_inputs    = inputs.size();
-
-  std::vector<dnnl::memory::desc> data_md;
   std::vector<const dnnl::memory*> data_mem;
 
-  data_md.reserve(num_inputs);
   data_mem.reserve(num_inputs);
 
   for (int i = 0; i < num_inputs; ++i) {
     const dnnl::memory* in_mem = inputs[i].GetDNNLData();
     dnnl::memory::desc tmp_md  = in_mem->get_desc();
-    data_md.push_back(tmp_md);
     data_mem.push_back(in_mem);
   }
 
