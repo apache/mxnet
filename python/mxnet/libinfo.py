@@ -141,4 +141,4 @@ def find_conf_path(prefix='tvmop'):
 
 
 # current version
-__version__ = "1.9.0"
+__version__ = "1.9.1"
