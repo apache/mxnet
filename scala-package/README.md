@@ -128,7 +128,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 </dependency>
 ```
 
-**Note:** ```<version>[1.9.1-SNAPSHOT,)</version>``` indicates that we will fetch packages with version 1.9.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
+**Note:** ```<version>[1.9.1-SNAPSHOT,)</version>``` indicates that we will fetch packages with version 1.9.1 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
 
 Build From Source
 -----------------
@@ -186,7 +186,7 @@ Adding the following configuration in `pom.xml`
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-INTERNAL</artifactId>
-  <version>1.9.0</version>
+  <version>1.9.1</version>
   <scope>system</scope>
   <systemPath>path_to_jar/mxnet-full_2.11-INTERNAL.jar</systemPath>
 </dependency>
