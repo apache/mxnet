@@ -135,7 +135,8 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
       // which make check (req[out_index] == kWriteInplace) useless.
       auto in_mkl_mem  = static_cast<const mkldnn::memory*>(in_data[idx.sum].GetMKLDNNData());
       auto out_mkl_mem = static_cast<const mkldnn::memory*>(out_data[out_index].GetMKLDNNData());
-      if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
+      if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()
+          && in_data[idx.sum].dtype() == out_data[out_index].dtype()) {
         inplace_ = true;
       }
     }
@@ -145,9 +146,10 @@ void SgMKLDNNFCOp::Forward(const OpContext& ctx,
       // Not in place: copy in_data[idx.sum] into outputs[out_index].
       auto in_mkl_mem  = static_cast<const mkldnn::memory*>(in_data[idx.sum].GetMKLDNNData());
       auto out_mkl_mem = static_cast<const mkldnn::memory*>(out_data[out_index].GetMKLDNNData());
-      if (out_data[out_index].dtype() == mshadow::kInt32) {
+      if (out_data[out_index].dtype() == mshadow::kInt32
+          || in_data[idx.sum].dtype() == mshadow::kUint8) {
         auto mem_desc           = in_mkl_mem->get_desc();
-        auto this_dtype         = get_mkldnn_type(mshadow::kInt32);
+        auto this_dtype         = get_mkldnn_type(out_data[out_index].dtype());
         mem_desc.data.data_type = static_cast<mkldnn_data_type_t>(this_dtype);
         mkldnn_mem_ptr tmp_mem(new mkldnn::memory(
             mem_desc, CpuEngine::Get()->get_engine(), out_mkl_mem->get_data_handle()));
