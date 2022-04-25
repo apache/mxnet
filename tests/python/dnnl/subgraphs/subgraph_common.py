@@ -162,9 +162,10 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   dataArray= mx.gluon.data.ArrayDataset(*data)
 
   calib_data = mx.gluon.data.DataLoader(dataArray, batch_size=1)
-  # if test fails with only one batch used for calibration, it will be re-run with all batches:
-  for num_calib_batches in [1, None]:
-    for quantize_granularity in quantize_granularity_list:
+  for quantize_granularity in quantize_granularity_list:
+    # if test fails with only one batch used for calibration, it will be re-run with all batches
+    # to achieve better representatation of the whole data range:
+    for num_calib_batches in [1, None]:
       qnet = quantization.quantize_net(net_original,
                                        device=mx.cpu(),
                                        exclude_layers=None,
@@ -195,13 +196,13 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
       except AssertionError as err:
         if num_calib_batches==1:
           print("\nRerunning test with all batches used for calibration for more precise quantization scales!")
-          break
         else:
           raise err
       else:
         if num_calib_batches==None:
-          print("Test passed when all batches were used for calibration.")
-        return
+          print("Finally the test passed when all batches were used for calibration.")
+        else:
+          break # for num_calib_batches in [1, None]:
 
 
 
