@@ -105,6 +105,36 @@ class DNNLSoftmaxBwd {
   std::shared_ptr<linear_t> temperature_fwd;
 };
 
+void DNNLSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const NDArray& in_data,
+                        const OpReqType& req,
+                        const NDArray& out_data);
+
+void DNNLSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& in_data,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& out_data);
+
+void DNNLLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const NDArray& in_data,
+                           const OpReqType& req,
+                           const NDArray& out_data);
+
+void DNNLLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& in_data,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& out_data);
+
+void DNNLMaskedSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 #endif

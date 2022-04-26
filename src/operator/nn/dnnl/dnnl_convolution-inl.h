@@ -171,6 +171,18 @@ class DNNLConvBackward {
   std::shared_ptr<dnnl::convolution_backward_weights> bwd_weight_;
 };
 
+void DNNLConvolutionForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& in_data,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& out_data);
+
+void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<NDArray>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 

@@ -357,18 +357,6 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
                                   channel_size);
 }
 
-void DNNLLayerNormForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray>& outputs);
-
-void DNNLLayerNormBackward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<NDArray>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<NDArray>& outputs);
-
 }  // namespace op
 }  // namespace mxnet
 

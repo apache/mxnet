@@ -599,17 +599,6 @@ void FullyConnectedGradGradDTypeDispatch(const nnvm::NodeAttrs& attrs,
   });
 }
 
-void DNNLFCForward(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<NDArray>& in_data,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<NDArray>& out_data);
-void DNNLFCBackward(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<NDArray>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<NDArray>& outputs);
-
 }  // namespace op
 }  // namespace mxnet
 namespace std {

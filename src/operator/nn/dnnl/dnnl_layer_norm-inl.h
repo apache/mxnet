@@ -95,6 +95,18 @@ class DNNLLayerNormBwd {
   std::shared_ptr<layernorm_bwd_pd_t> bwd_pd;
 };
 
+void DNNLLayerNormForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs);
+
+void DNNLLayerNormBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1

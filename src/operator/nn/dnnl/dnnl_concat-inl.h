@@ -72,6 +72,18 @@ static DNNLConcatFwd& GetConcatForward(int concat_dim,
   return it->second;
 }
 
+void DNNLConcatForward(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<NDArray>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& out_data);
+
+void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 
