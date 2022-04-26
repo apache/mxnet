@@ -206,6 +206,7 @@ bool SupportDNNLSplit(const NDArray& input);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs);
 bool SupportDNNLEltwise(const NDArray& input, const NDArray& output);
+bool SupportDNNLPower(const NDArray& input);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

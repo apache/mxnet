@@ -33,6 +33,9 @@
 #include "../elemwise_op_common.h"
 #include "../../common/alm.h"
 #include "elemwise_unary_op.h"
+#if MXNET_USE_ONEDNN == 1
+#include "operator/nn/dnnl/dnnl_power_scalar-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -440,6 +443,20 @@ class BinaryScalarOp : public UnaryOp {
     Backward_<OP>(attrs, s, inputs, req, outputs);
   }
 };
+
+#if MXNET_USE_ONEDNN == 1
+bool PowerStorageType(const nnvm::NodeAttrs& attrs,
+                      const int dev_mask,
+                      DispatchMode* dispatch_mode,
+                      std::vector<int>* inputs,
+                      std::vector<int>* outputs);
+
+void PowerComputeExCPU(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<mxnet::NDArray>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<mxnet::NDArray>& outputs);
+#endif
 
 #define MXNET_OPERATOR_REGISTER_BINARY_SCALAR(name)                                       \
   NNVM_REGISTER_OP(name)                                                                  \
