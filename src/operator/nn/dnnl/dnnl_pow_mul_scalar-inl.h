@@ -67,13 +67,20 @@ class DNNLPowMulScalarFwd {
   std::shared_ptr<eltwise_fwd_pd_t> fwd_pd;
 };
 
+template <bool subgraph = true>
 inline void DNNLPowMulScalarForward(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  const DNNLPowMulScalarParam& param = nnvm::get<DNNLPowMulScalarParam>(attrs.parsed);
-  DNNLPowMulScalarFwd& fwd           = DNNLPowMulScalarFwd::GetCached(param, inputs[0], outputs[0]);
+  DNNLPowMulScalarParam param;
+  if (subgraph) {
+    param = nnvm::get<DNNLPowMulScalarParam>(attrs.parsed);
+  } else {
+    param.multiplier = 1;
+    param.exponent   = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed).scalar;
+  }
+  DNNLPowMulScalarFwd& fwd = DNNLPowMulScalarFwd::GetCached(param, inputs[0], outputs[0]);
   fwd.Execute(inputs[0], req[0], outputs[0]);
 }
 

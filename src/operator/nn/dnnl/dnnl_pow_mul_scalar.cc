@@ -28,6 +28,11 @@
 namespace mxnet {
 namespace op {
 
+bool SupportDNNLPower(const NDArray& input) {
+  return input.shape().Size() != 0 && input.shape().ndim() > 0 && input.shape().ndim() <= 6 &&
+         input.dtype() == mshadow::kFloat32;
+}
+
 DMLC_REGISTER_PARAMETER(DNNLPowMulScalarParam);
 
 DNNLPowMulScalarFwd& DNNLPowMulScalarFwd::GetCached(const DNNLPowMulScalarParam& param,
@@ -81,7 +86,6 @@ void DNNLPowMulScalarFwd::Execute(const NDArray& input,
   CommitOutput(output, out_mem);
   DNNLStream::Get()->Submit();
 }
-
 }  // namespace op
 }  // namespace mxnet
 
