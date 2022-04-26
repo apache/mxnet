@@ -78,7 +78,7 @@ NNVM_REGISTER_OP(_sg_onednn_pow_mul_scalar)
     .set_attr<mxnet::FInferShape>("FInferShape", DNNLPowMulScalarShape)
     .set_attr<nnvm::FInferType>("FInferType", DNNLPowMulScalarType)
     .set_attr<FInferStorageType>("FInferStorageType", DNNLPowMulScalarStorageType)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLPowMulScalarForward)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLPowMulScalarForward<true>)
     .set_attr<bool>("TIsDNNL", true)
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 

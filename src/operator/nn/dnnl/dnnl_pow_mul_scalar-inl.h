@@ -67,7 +67,7 @@ class DNNLPowMulScalarFwd {
   std::shared_ptr<eltwise_fwd_pd_t> fwd_pd;
 };
 
-template <bool subgraph = true>
+template <bool subgraph>
 inline void DNNLPowMulScalarForward(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
                                     const std::vector<NDArray>& inputs,
