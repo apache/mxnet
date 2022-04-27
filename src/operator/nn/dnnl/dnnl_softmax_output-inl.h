@@ -29,6 +29,7 @@
 #if MXNET_USE_ONEDNN == 1
 
 #include <dnnl.hpp>
+#include <vector>
 
 namespace mxnet {
 namespace op {
