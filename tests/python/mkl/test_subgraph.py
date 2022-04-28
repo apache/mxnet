@@ -178,34 +178,48 @@ def check_quantize(sym, data_shape, out_type, name='conv',
   calib_data = CalibIter(batch, data_shape, 1)
 
   for quantize_granularity in quantize_granularity_list:
-    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
-                                                                    arg_params=arg_params,
-                                                                    aux_params=aux_params,
-                                                                    ctx=mx.current_context(),
-                                                                    excluded_sym_names=excluded_sym_names,
-                                                                    excluded_op_names=excluded_op_names,
-                                                                    quantized_dtype=out_type,
-                                                                    calib_mode='naive',
-                                                                    calib_data=calib_data,
-                                                                    label_names=None,
-                                                                    num_calib_examples=1,
-                                                                    quantize_mode='full',
-                                                                    quantize_granularity=quantize_granularity)
-    qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-    if check_calibration:
-      check_qsym_calibrated(qsym, out_type, name=name)
-    if check_scale_align:
-      check_qsym_scale_align(qsym)
-    if gluon_forward == True:
-      check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape)
-    else:
-      quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape)
-      for i in range(len(ref_out)):
-        min_range = mx.nd.min(ref_out[i]).asscalar()
-        max_range = mx.nd.max(ref_out[i]).asscalar()
-        atol = 0.1 * max(abs(min_range), abs(max_range))
-        assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
-      check_qsym_dummy_forward(qsym, batch, data_shape)
+    # if test fails with only one batch used for calibration, it will be re-run with all batches
+    # to achieve better representatation of the whole data range:
+    for num_calib_examples in [1, None]:
+      qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                      arg_params=arg_params,
+                                                                      aux_params=aux_params,
+                                                                      ctx=mx.current_context(),
+                                                                      excluded_sym_names=excluded_sym_names,
+                                                                      excluded_op_names=excluded_op_names,
+                                                                      quantized_dtype=out_type,
+                                                                      calib_mode='naive',
+                                                                      calib_data=calib_data,
+                                                                      label_names=None,
+                                                                      num_calib_examples=num_calib_examples,
+                                                                      quantize_mode='full',
+                                                                      quantize_granularity=quantize_granularity)
+      qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+      if check_calibration:
+        check_qsym_calibrated(qsym, out_type, name=name)
+      if check_scale_align:
+        check_qsym_scale_align(qsym)
+      if gluon_forward == True:
+        check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape)
+      else:
+        quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape)
+        try:
+          for i in range(len(ref_out)):
+            min_range = mx.nd.min(ref_out[i]).asscalar()
+            max_range = mx.nd.max(ref_out[i]).asscalar()
+            atol = 0.1 * max(abs(min_range), abs(max_range))
+            assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+          check_qsym_dummy_forward(qsym, batch, data_shape)
+        except AssertionError as err:
+          if num_calib_examples == 1:
+            print("\nRerunning test with all batches used for calibration for more precise quantization scales!")
+          else:
+            raise err
+        else:
+          if num_calib_examples == None:
+            print("Finally the test passed when all batches were used for calibration.")
+          else:
+            break # for num_calib_examples in [1, None]:
 
 @with_seed()
 def check_quantize_whole_model_with_forward():
@@ -900,29 +914,43 @@ def test_pos_fc_sum():
     calib_data = CalibIter(batch, data_shapes, 1)
 
     for quantize_granularity in quantize_granularity_list:
-      qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
-                                                                      arg_params=arg_params,
-                                                                      aux_params=aux_params,
-                                                                      ctx=mx.current_context(),
-                                                                      excluded_sym_names=excluded_sym_names,
-                                                                      excluded_op_names=excluded_op_names,
-                                                                      quantized_dtype=out_type,
-                                                                      data_names=data_names,
-                                                                      calib_mode='naive',
-                                                                      calib_data=calib_data,
-                                                                      label_names=None,
-                                                                      num_calib_examples=1,
-                                                                      quantize_mode=quantize_mode,
-                                                                      quantize_granularity=quantize_granularity)
-      qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-      check_fusion_parameter(qsym, atrs)
-      quantized_out = check_qsym_forward_fc_sum(qsym, qarg_params, qaux_params, batch, data_shapes)
-      for i in range(len(ref_out)):
-        min_range = mx.nd.min(ref_out[i]).asscalar()
-        max_range = mx.nd.max(ref_out[i]).asscalar()
-        atol = 0.1 * max(abs(min_range), abs(max_range))
-        assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
-      check_qsym_dummy_forward_fc_sum(qsym, batch, data_shapes)
+      # if test fails with only one batch used for calibration, it will be re-run with all batches
+      # to achieve better representatation of the whole data range:
+      for num_calib_examples in [1, None]:
+        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                        arg_params=arg_params,
+                                                                        aux_params=aux_params,
+                                                                        ctx=mx.current_context(),
+                                                                        excluded_sym_names=excluded_sym_names,
+                                                                        excluded_op_names=excluded_op_names,
+                                                                        quantized_dtype=out_type,
+                                                                        data_names=data_names,
+                                                                        calib_mode='naive',
+                                                                        calib_data=calib_data,
+                                                                        label_names=None,
+                                                                        num_calib_examples=num_calib_examples,
+                                                                        quantize_mode=quantize_mode,
+                                                                        quantize_granularity=quantize_granularity)
+        qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+        check_fusion_parameter(qsym, atrs)
+        quantized_out = check_qsym_forward_fc_sum(qsym, qarg_params, qaux_params, batch, data_shapes)
+        try:
+          for i in range(len(ref_out)):
+            min_range = mx.nd.min(ref_out[i]).asscalar()
+            max_range = mx.nd.max(ref_out[i]).asscalar()
+            atol = 0.1 * max(abs(min_range), abs(max_range))
+            assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+          check_qsym_dummy_forward_fc_sum(qsym, batch, data_shapes)
+        except AssertionError as err:
+          if num_calib_examples == 1:
+            print("\nRerunning test with all batches used for calibration for more precise quantization scales!")
+          else:
+            raise err
+        else:
+          if num_calib_examples == None:
+            print("Finally the test passed when all batches were used for calibration.")
+          else:
+            break # for num_calib_examples in [1, None]:
 
   for data_shape in DATA_SHAPE:
     net, attrs, inputs = fc_sum(False, data_shape)
@@ -1086,31 +1114,46 @@ def test_selfatt_valatt():
 
       batch = mx.io.DataBatch([qkv_nd, weight_nd], [])
       calib_data = CalibIter(batch, [('qkv', qkv_shape), ('attention', att_shape)], bs)
-      qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
-                                                                       arg_params=arg_params,
-                                                                       aux_params={},
-                                                                       ctx=mx.cpu(),
-                                                                       excluded_sym_names=None,
-                                                                       excluded_op_names=None,
-                                                                       quantize_granularity='tensor-wise',
-                                                                       quantized_dtype='auto',
-                                                                       calib_mode='naive',
-                                                                       calib_data=calib_data,
-                                                                       data_names=('qkv', 'attention'),
-                                                                       label_names=None,
-                                                                       num_calib_examples=1,
-                                                                       quantize_mode='full')
-      qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
 
-      qex = qsym.bind(mx.cpu(), arg_params, args_grad=None)
-      qex.forward()
-      quantized_out = qex.outputs
+      # if test fails with only one batch used for calibration, it will be re-run with all batches
+      # to achieve better representatation of the whole data range:
+      for num_calib_examples in [1, None]:
+        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                        arg_params=arg_params,
+                                                                        aux_params={},
+                                                                        ctx=mx.cpu(),
+                                                                        excluded_sym_names=None,
+                                                                        excluded_op_names=None,
+                                                                        quantize_granularity='tensor-wise',
+                                                                        quantized_dtype='auto',
+                                                                        calib_mode='naive',
+                                                                        calib_data=calib_data,
+                                                                        data_names=('qkv', 'attention'),
+                                                                        label_names=None,
+                                                                        num_calib_examples=num_calib_examples,
+                                                                        quantize_mode='full')
+        qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
 
-      for i in range(len(ref_out)):
-        min_range = mx.nd.min(ref_out[i]).asscalar()
-        max_range = mx.nd.max(ref_out[i]).asscalar()
-        atol = 0.1 * max(abs(min_range), abs(max_range))
-        assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+        qex = qsym.bind(mx.cpu(), arg_params, args_grad=None)
+        qex.forward()
+        quantized_out = qex.outputs
+
+        try:
+          for i in range(len(ref_out)):
+            min_range = mx.nd.min(ref_out[i]).asscalar()
+            max_range = mx.nd.max(ref_out[i]).asscalar()
+            atol = 0.1 * max(abs(min_range), abs(max_range))
+            assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+        except AssertionError as err:
+          if num_calib_examples == 1:
+            print("\nRerunning test with all batches used for calibration for more precise quantization scales!")
+          else:
+            raise err
+        else:
+          if num_calib_examples == None:
+            print("Finally the test passed when all batches were used for calibration.")
+          else:
+            break # for num_calib_examples in [1, None]:
 
   for bs, seqlen, nhidden, nheads in itertools.product(batchsizes, seq_lengths, num_hidden, num_heads):
     qkv_shape = (bs, seqlen, 3*nhidden)
@@ -1171,28 +1214,44 @@ def helper_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_m
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   batch = mx.io.DataBatch([data_nd], [])
   calib_data = CalibIter(batch, data_shape, 1)
-  qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
-                                                                   arg_params={
-                                                                       'weight': weight_nd,
-                                                                       'bias': bias_nd
-                                                                   },
-                                                                   aux_params={},
-                                                                   ctx=mx.cpu(),
-                                                                   excluded_sym_names=None,
-                                                                   excluded_op_names=None,
-                                                                   quantized_dtype='int8',
-                                                                   calib_mode='naive',
-                                                                   calib_data=calib_data,
-                                                                   label_names=None,
-                                                                   num_calib_examples=1,
-                                                                   quantize_mode='full')
-  qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-  qarg_params['data'] = data_nd
-  qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
-  qex.forward()
-  qex.outputs[0].wait_to_read()
-  assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
-                               rtol=1e-2, atol=1e-2, etol=0.01)
+
+  # if test fails with only one batch used for calibration, it will be re-run with all batches
+  # to achieve better representatation of the whole data range:
+  for num_calib_examples in [1, None]:
+    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                    arg_params={
+                                                                        'weight': weight_nd,
+                                                                        'bias': bias_nd
+                                                                    },
+                                                                    aux_params={},
+                                                                    ctx=mx.cpu(),
+                                                                    excluded_sym_names=None,
+                                                                    excluded_op_names=None,
+                                                                    quantized_dtype='int8',
+                                                                    calib_mode='naive',
+                                                                    calib_data=calib_data,
+                                                                    label_names=None,
+                                                                    num_calib_examples=num_calib_examples,
+                                                                    quantize_mode='full')
+    qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+    qarg_params['data'] = data_nd
+    qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
+    qex.forward()
+    qex.outputs[0].wait_to_read()
+
+    try:
+      assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
+                                  rtol=1e-2, atol=1e-2, etol=0.01)
+    except AssertionError as err:
+      if num_calib_examples == 1:
+        print("\nRerunning test with all batches used for calibration for more precise quantization scales!")
+      else:
+        raise err
+    else:
+      if num_calib_examples == None:
+        print("Finally the test passed when all batches were used for calibration.")
+      else:
+        break # for num_calib_examples in [1, None]:
 
 def helper_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32)
@@ -1215,28 +1274,43 @@ def helper_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   batch = mx.io.DataBatch([data_nd], [])
   calib_data = CalibIter(batch, data_shape, 1)
-  qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
-                                                                   arg_params={
-                                                                       'weight': weight_nd,
-                                                                       'bias': bias_nd
-                                                                   },
-                                                                   aux_params={},
-                                                                   ctx=mx.cpu(),
-                                                                   excluded_sym_names=None,
-                                                                   excluded_op_names=None,
-                                                                   quantized_dtype='int8',
-                                                                   calib_mode='naive',
-                                                                   calib_data=calib_data,
-                                                                   label_names=None,
-                                                                   num_calib_examples=1,
-                                                                   quantize_mode='full')
-  qarg_params['data'] = data_nd
-  qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-  qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
-  qex.forward()
-  qex.outputs[0].wait_to_read()
-  assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
-                               rtol=1e-2, atol=1e-2, etol=0.01)
+
+  # if test fails with only one batch used for calibration, it will be re-run with all batches
+  # to achieve better representatation of the whole data range:
+  for num_calib_examples in [1, None]:
+    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                    arg_params={
+                                                                        'weight': weight_nd,
+                                                                        'bias': bias_nd
+                                                                    },
+                                                                    aux_params={},
+                                                                    ctx=mx.cpu(),
+                                                                    excluded_sym_names=None,
+                                                                    excluded_op_names=None,
+                                                                    quantized_dtype='int8',
+                                                                    calib_mode='naive',
+                                                                    calib_data=calib_data,
+                                                                    label_names=None,
+                                                                    num_calib_examples=num_calib_examples,
+                                                                    quantize_mode='full')
+    qarg_params['data'] = data_nd
+    qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+    qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
+    qex.forward()
+    qex.outputs[0].wait_to_read()
+    try:
+      assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
+                                  rtol=1e-2, atol=1e-2, etol=0.01)
+    except AssertionError as err:
+      if num_calib_examples == 1:
+        print("\nRerunning test with all batches used for calibration for more precise quantization scales!")
+      else:
+        raise err
+    else:
+      if num_calib_examples == None:
+        print("Finally the test passed when all batches were used for calibration.")
+      else:
+        break # for num_calib_examples in [1, None]:
 
 @with_seed()
 def test_quantized_conv_bias_overflow():
