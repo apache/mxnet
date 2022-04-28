@@ -858,7 +858,10 @@ struct bitwise_right_shift : public mxnet_op::tunable {
         return DType(0);
       }
     }
-    return static_cast<int64_t>(a) >> static_cast<int64_t>(b);
+    if constexpr (std::is_integral<DType>::value)
+      return a >> b;
+    else
+      return static_cast<int64_t>(a) >> static_cast<int64_t>(b);
   }
 };
 
