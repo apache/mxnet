@@ -61,7 +61,8 @@ bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& data, const
   // now. Need update this once they start to support it.
   // Currently, DNNL shows bad performance when log_softmax is not performed on the last dimension
   if (data.shape().Size() == 0 || data.shape().ndim() == 0 || param.temperature.has_value() ||
-      in_dtype != mshadow::kFloat32 || in_dtype != out_dtype || axis != (ndim - 1)) {
+      (in_dtype != mshadow::kFloat32 && in_dtype != mshadow::kBfloat16) || in_dtype != out_dtype ||
+      axis != (ndim - 1)) {
     return false;
   }
 

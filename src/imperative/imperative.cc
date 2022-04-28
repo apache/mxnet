@@ -370,7 +370,8 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs&& attrs,
   }
 
   if (get_opt_constraints() != OptConstraint::None) {
-    node->attrs.dict[OPT_CONSTRAINT_ATTR] = std::to_string(static_cast<int>(get_opt_constraints()));
+    node->attrs.dict[OPT_CONSTRAINT_ATTR] =
+        std::to_string(static_cast<OptConstraint_int_t>(get_opt_constraints()));
   }
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {

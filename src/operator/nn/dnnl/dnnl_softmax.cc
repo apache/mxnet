@@ -40,7 +40,8 @@ bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& data, const ND
     return false;
   }
 
-  if (in_dtype != mshadow::kFloat32 || in_dtype != out_dtype || axis != (ndim - 1)) {
+  if ((in_dtype != mshadow::kFloat32 && in_dtype != mshadow::kBfloat16) || in_dtype != out_dtype ||
+      axis != (ndim - 1)) {
     return false;
   }
 
