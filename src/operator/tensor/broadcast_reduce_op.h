@@ -1377,36 +1377,22 @@ void BroadcastCPU(const OpContext& ctx,
     for (int i = axis + 1; i < dst_shape.ndim(); i++) {
       elements_to_copy[ax] *= dst_shape[i];
     }
-    preaxis_dims[ax] = 1;
-    for (int i = axis - 1; i >= 0; i--) {
+
+    preaxis_dims[ax] = src_shape[0];
+    for (int i = 1; i < axis; i++) {
       preaxis_dims[ax] *= src_shape[i];
     }
   }
 
-  // there is no need to check further axis's elements to copy as it for sure will be larger
+  // there is no need to check further axis' elements to copy as it for sure will be larger
   if (elements_to_copy[0] < ELEMENTS_THRESHOLD || !std::is_same<IType, OType>::value) {
     IType* src = static_cast<IType*>(inputs[0].dptr_);
     OType* dst = static_cast<OType*>(outputs[0].dptr_);
-    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
-    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
-    for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
-      if (i < dst_shape.ndim()) {
-        in_shape[i]  = src_shape[i];
-        out_shape[i] = src_shape[i];
-      } else {
-        in_shape[i]  = 1;
-        out_shape[i] = 1;
-      }
-    }
 
-    if (dst_shape.ndim() == 2) {
-      Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
-          s, out_shape.Size(), src, dst, aux_data, req[0], 2);
-    } else {
-      const int ndim = MXNET_SPECIAL_MAX_NDIM;
-      Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
-          s, out_shape.Size(), src, dst, aux_data, req[0], ndim);
-    }
+
+    const int ndim = dst_shape.ndim() == 2 ? 2 : MXNET_SPECIAL_MAX_NDIM;
+    Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
+        s, src_shape.Size(), src, dst, aux_data, req[0], ndim);
 
   } else {
     IType* src = static_cast<IType*>(inputs[0].dptr_);
