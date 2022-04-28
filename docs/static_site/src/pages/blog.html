@@ -34,24 +34,18 @@ action_url: https://medium.com/apache-mxnet
     </div>
 </div>
 
-<div id="medium-widget"></div>
-<script>
-
-    MediumWidget.Init({renderTo: '#medium-widget',
-        params: {
-            "resource": "https://medium.com/apache-mxnet",
-            "postsPerLine": 3,
-            "limit": 9,
-            "picture": "big",
-            "fields": ["description", "claps", "publishAt"],
-            "ratio": "landscape"
-        }
-    })
-
-
-</script>
-
+<div class="row">
+        <div class="col-12" id="retainable-rss-embed" data-rss="https://medium.com/feed/apache-mxnet"
+            data-maxcols="3" data-layout="grid" data-poststyle="external" data-readmore="Read more..">
+	</div>
+</div>
 <div class="blog-more">
 <a style="margin-top:20px" href="https://medium.com/apache-mxnet" class="btn btn-action">See All Blog Posts<span class="span-accented">›</span></a>
 
 </div>
+{%- if jekyll.environment == 'production' -%}
+  <script src="{{ "/assets/js/retainable.js" | relative_url }}"></script>
+{%- else -%}
+  <script src="https://www.twilik.com/assets/retainable/rss-embed/retainable.js"></script>
+{%- endif -%}
+
