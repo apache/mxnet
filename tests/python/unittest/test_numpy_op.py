@@ -9427,7 +9427,18 @@ def test_np_median():
 
 
 @use_np
-def test_np_quantile():
+@pytest.mark.parametrize('a_shape,q_shape,axis', [
+    ((2, 3), (), None),
+    ((2, 3, 4, 5), (), 3),
+    ((2, 3, 4), (3,), (0, 2)),
+    ((2, 3, 4), (3,), 1)
+])
+@pytest.mark.parametrize('interpolation', ['linear', 'lower', 'higher', 'nearest', 'midpoint'])
+@pytest.mark.parametrize('dtype', [np.int32, np.int64, np.float16, np.float32, np.float64])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('keepdims', [True, False])
+@pytest.mark.parametrize('q_scalar', [True, False])
+def test_np_quantile(a_shape, q_shape, axis, interpolation, dtype, hybridize, keepdims, q_scalar):
     class TestQuantile(HybridBlock):
         def __init__(self, axis=None, interpolation='linear', keepdims=False):
             super(TestQuantile, self).__init__()
@@ -9449,45 +9460,48 @@ def test_np_quantile():
         def forward(self, a):
             return np.quantile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
-    flags = [True, False]
-    interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
-    dtypes = [np.int32, np.int64, np.float16, np.float32, np.float64]
-    qtypes = [np.float32, np.float64]
-    tensor_shapes = [
-        ((2, 3), (), None),
-        ((2, 3, 4, 5), (), 3),
-        ((2, 3, 4), (3,), (0, 2)),
-        ((2, 3, 4), (3,), 1)
-    ]
-    for hybridize, keepdims, q_scalar, (a_shape, q_shape, axis), interpolation, dtype in \
-        itertools.product(flags, flags, flags, tensor_shapes, interpolation_options, dtypes):
-        if dtype == np.float16 and interpolation == 'linear': continue
-        atol = 3e-4 if dtype == np.float16 else 1e-4
-        rtol = 3e-2 if dtype == np.float16 else 1e-2
-        a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
-        qtype = random.choice(qtypes)
-        q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype)
-        np_q = q.asnumpy()
-        if q_scalar and q_shape == ():
-            q = q.item()
-            np_q = q
-            test_quantile = TestQuantileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        else:
-            test_quantile = TestQuantile(axis=axis, interpolation=interpolation, keepdims=keepdims)
-        if hybridize:
-            test_quantile.hybridize()
-        mx_out = test_quantile(a) if (q_scalar and q_shape == ()) else test_quantile(a, q)
-        np_out = onp.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        assert mx_out.shape == np_out.shape
-        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
-        mx_out = np.quantile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        np_out = onp.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+    if dtype == np.float16 and interpolation in ('linear', 'midpoint'):
+        return
+    atol = 3e-4 if dtype == np.float16 else 1e-4
+    rtol = 3e-2 if dtype == np.float16 else 1e-2
+    a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
+    qtype = random.choice([np.float32, np.float64])
+    q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype)
+    np_q = q.asnumpy()
+    if q_scalar and q_shape == ():
+        q = q.item()
+        np_q = q
+        test_quantile = TestQuantileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    else:
+        test_quantile = TestQuantile(axis=axis, interpolation=interpolation, keepdims=keepdims)
+    if hybridize:
+        test_quantile.hybridize()
+    mx_out = test_quantile(a) if (q_scalar and q_shape == ()) else test_quantile(a, q)
+    np_out = onp.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+    mx_out = np.quantile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    np_out = onp.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
 @use_np
-def test_np_percentile():
+@pytest.mark.parametrize('a_shape,q_shape,axis', [
+    ((2, 3), (), None),
+    ((2, 3, 4, 5), (), 3),
+    ((2, 3, 4, 5), (), (0, 1, 2)),
+    ((2, 3, 4, 5), (), (-1, -2)),
+    ((2, 3, 4), (3,), (0, 2)),
+    ((2, 3, 4), (3,), 1)
+])
+@pytest.mark.parametrize('interpolation', ['linear', 'lower', 'higher', 'nearest', 'midpoint'])
+@pytest.mark.parametrize('dtype', [np.int32, np.int64, np.float16, np.float32, np.float64])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('keepdims', [True, False])
+@pytest.mark.parametrize('q_scalar', [True, False])
+def test_np_percentile(a_shape, q_shape, axis, interpolation, dtype, hybridize, keepdims, q_scalar):
     class TestPercentile(HybridBlock):
         def __init__(self, axis=None, interpolation='linear', keepdims=False):
             super(TestPercentile, self).__init__()
@@ -9509,43 +9523,30 @@ def test_np_percentile():
         def forward(self, a):
             return np.percentile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
-    flags = [True, False]
-    interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
-    dtypes = [np.int32, np.int64, np.float16, np.float32, np.float64]
-    qtypes = [np.float32, np.float64]
-    tensor_shapes = [
-        ((2, 3), (), None),
-        ((2, 3, 4, 5), (), 3),
-        ((2, 3, 4, 5), (), (0, 1, 2)),
-        ((2, 3, 4, 5), (), (-1, -2)),
-        ((2, 3, 4), (3,), (0, 2)),
-        ((2, 3, 4), (3,), 1)
-    ]
-    for hybridize, keepdims, q_scalar, (a_shape, q_shape, axis), interpolation, dtype in \
-        itertools.product(flags, flags, flags, tensor_shapes, interpolation_options, dtypes):
-        if dtype == np.float16 and interpolation == 'linear': continue
-        atol = 3e-4 if dtype == np.float16 else 1e-4
-        rtol = 3e-2 if dtype == np.float16 else 1e-2
-        a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
-        qtype = random.choice(qtypes)
-        q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype)
-        np_q = q.asnumpy()
-        if q_scalar and q_shape == ():
-            q = q.item()
-            np_q = q
-            test_percentile = TestPercentileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        else:
-            test_percentile = TestPercentile(axis=axis, interpolation=interpolation, keepdims=keepdims)
-        if hybridize:
-            test_percentile.hybridize()
-        mx_out = test_percentile(a) if (q_scalar and q_shape == ()) else test_percentile(a, q)
-        np_out = onp.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        assert mx_out.shape == np_out.shape
-        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+    if dtype == np.float16 and interpolation in ('linear', 'midpoint'):
+        return
+    atol = 3e-4 if dtype == np.float16 else 1e-4
+    rtol = 3e-2 if dtype == np.float16 else 1e-2
+    a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
+    qtype = random.choice([np.float32, np.float64])
+    q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype)
+    np_q = q.asnumpy()
+    if q_scalar and q_shape == ():
+        q = q.item()
+        np_q = q
+        test_percentile = TestPercentileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    else:
+        test_percentile = TestPercentile(axis=axis, interpolation=interpolation, keepdims=keepdims)
+    if hybridize:
+        test_percentile.hybridize()
+    mx_out = test_percentile(a) if (q_scalar and q_shape == ()) else test_percentile(a, q)
+    np_out = onp.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
-        mx_out = np.percentile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        np_out = onp.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+    mx_out = np.percentile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    np_out = onp.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+    assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
 @use_np

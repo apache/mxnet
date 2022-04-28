@@ -556,7 +556,8 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    export DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")
+    cmake -DCMAKE_CXX_FLAGS=-I${DPYTHON_INCLUDE_DIR} -DBUILD_SHARED_LIBS=ON -DPYTHON_EXECUTABLE=/usr/bin/python3 ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
@@ -571,7 +572,7 @@ build_ubuntu_gpu_tensorrt() {
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
+    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE -DPYTHON_EXECUTABLE=/usr/bin/python3 ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
