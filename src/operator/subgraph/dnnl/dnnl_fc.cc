@@ -65,16 +65,29 @@ class SgDNNLFCOp {
   }
 
  private:
+  enum min_max {
+    kDataMin = 0,
+    kDataMax,
+    kWeightMin,
+    kWeightMax,
+    kBiasMin,
+    kBiasMax,
+    kSumMin,
+    kSumMax
+  };
   void GetCachedWeightsAndBias(const NDArray& weight,
                                bool support_channelwise_scale,
                                bool has_bias);
   NDArray PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output);
+  bool CheckInitializationConditions(const std::vector<NDArray>& inputs,
+                                     bool is_channel_wise,
+                                     const std::vector<float>& minmaxvec);
+  nnvm::Symbol subgraph_sym_;
   nnvm::NodeAttrs attrs;
+  DNNLFCFullParam full_param_;
   bool initialized_{false};
   bool reorder_data_{false};
   bool inplace_{false};
-  nnvm::Symbol subgraph_sym_;
-  DNNLFCFullParam full_param_;
   dnnl_args_map_t args_;
   std::shared_ptr<DNNLFullyConnectedForward> fwd_;
   std::shared_ptr<dnnl::memory> cached_data_mem_;
@@ -97,7 +110,9 @@ class SgDNNLFCOp {
   std::vector<float> weight_scales_;
 };
 
-void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight, bool support_channelwise_scale, bool has_bias) {
+void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight,
+                                         bool support_channelwise_scale,
+                                         bool has_bias) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLFullyconSignature, std::pair<NDArray, NDArray>, OpHash>
       fcWeightsAndBias;
@@ -158,41 +173,72 @@ void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight, bool support_cha
 
 NDArray SgDNNLFCOp::PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output) {
   if (!initialized_) {
-      // TODO(zhennan): Currently, dnnl fallback mechanism will break inplace option,
-      // which make check (req[out_index] == kWriteInplace) useless.
-      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(sum_input.GetDNNLData());
-      auto out_dnnl_mem = static_cast<const dnnl::memory*>(output.GetDNNLData());
-      if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle()) {
-        inplace_ = true;
-      }
+    // TODO(zhennan): Currently, dnnl fallback mechanism will break inplace option,
+    // which make check (req[out_index] == kWriteInplace) useless.
+    auto in_dnnl_mem  = static_cast<const dnnl::memory*>(sum_input.GetDNNLData());
+    auto out_dnnl_mem = static_cast<const dnnl::memory*>(output.GetDNNLData());
+    if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle()) {
+      inplace_ = true;
     }
-    if (inplace_) {
-      return sum_input;
+  }
+  if (inplace_) {
+    return sum_input;
+  } else {
+    // Not in place: copy sum_input into output.
+    auto in_dnnl_mem  = static_cast<const dnnl::memory*>(sum_input.GetDNNLData());
+    auto out_dnnl_mem = static_cast<const dnnl::memory*>(output.GetDNNLData());
+    if (output.dtype() == mshadow::kInt32) {
+      auto mem_desc           = in_dnnl_mem->get_desc();
+      auto this_dtype         = get_dnnl_type(mshadow::kInt32);
+      mem_desc.data.data_type = static_cast<dnnl_data_type_t>(this_dtype);
+      dnnl_mem_ptr tmp_mem(new dnnl::memory(
+          mem_desc, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
+      DNNLStream::Get()->RegisterMem(tmp_mem);
+      DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(*in_dnnl_mem, *tmp_mem),
+                                          {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
+      return NDArray(tmp_mem);
     } else {
-      // Not in place: copy sum_input into output.
-      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(sum_input.GetDNNLData());
-      auto out_dnnl_mem = static_cast<const dnnl::memory*>(output.GetDNNLData());
-      if (output.dtype() == mshadow::kInt32) {
-        auto mem_desc           = in_dnnl_mem->get_desc();
-        auto this_dtype         = get_dnnl_type(mshadow::kInt32);
-        mem_desc.data.data_type = static_cast<dnnl_data_type_t>(this_dtype);
-        dnnl_mem_ptr tmp_mem(new dnnl::memory(
-            mem_desc, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
-        DNNLStream::Get()->RegisterMem(tmp_mem);
-        DNNLStream::Get()->RegisterPrimArgs(
-            dnnl::reorder(*in_dnnl_mem, *tmp_mem),
-            {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
-        return NDArray(tmp_mem);
-      } else {
-        dnnl_mem_ptr tmp_mem(new dnnl::memory(in_dnnl_mem->get_desc(),
-                                              CpuEngine::Get()->get_engine(),
-                                              out_dnnl_mem->get_data_handle()));
-        DNNLStream::Get()->RegisterMem(tmp_mem);
-        DNNLMemoryCopy(*in_dnnl_mem, tmp_mem.get());
-        return NDArray(tmp_mem);
+      dnnl_mem_ptr tmp_mem(new dnnl::memory(in_dnnl_mem->get_desc(),
+                                            CpuEngine::Get()->get_engine(),
+                                            out_dnnl_mem->get_data_handle()));
+      DNNLStream::Get()->RegisterMem(tmp_mem);
+      DNNLMemoryCopy(*in_dnnl_mem, tmp_mem.get());
+      return NDArray(tmp_mem);
+    }
+  }
+}
+
+bool SgDNNLFCOp::CheckInitializationConditions(const std::vector<NDArray>& inputs,
+                                               bool is_channel_wise,
+                                               const std::vector<float>& minmaxvec) {
+  if (initialized_ && full_param_.dnnl_param.quantized &&
+      dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
+    bool has_bias = !full_param_.default_param.no_bias;
+    if (cached_data_min_ != minmaxvec[min_max::kDataMin] ||
+        cached_data_max_ != minmaxvec[min_max::kDataMax] ||
+        cached_sum_min_ != minmaxvec[min_max::kSumMin] ||
+        cached_sum_max_ != minmaxvec[min_max::kSumMax]) {
+      return false;
+    }
+
+    if (is_channel_wise) {
+      if (weight_ver_ != inputs[fullc::kWeight].version() ||
+          (has_bias && (bias_ver_ != inputs[fullc::kBias].version()))) {
+        return false;
+      }
+    } else {
+      if (cached_weight_min_ != minmaxvec[min_max::kWeightMin] ||
+          cached_weight_max_ != minmaxvec[min_max::kWeightMax] ||
+          (has_bias && (cached_bias_min_ != minmaxvec[min_max::kBiasMin] ||
+                        cached_bias_max_ != minmaxvec[min_max::kBiasMax]))) {
+        return false;
       }
     }
+    return true;
+  }
+  return false;
 }
+
 void SgDNNLFCOp::Forward(const OpContext& ctx,
                          const std::vector<NDArray>& in_data,
                          const std::vector<OpReqType>& req,
@@ -215,17 +261,18 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   const int out_max_index = out_quantized ? index++ : 0;
   CHECK_EQ(out_data.size(), index);  // index is equal to total number of outputs
 
-  float data_min   = 0.0f;
-  float data_max   = 0.0f;
-  float weight_min = 0.0f;
-  float weight_max = 0.0f;
-  float bias_min   = 0.0f;
-  float bias_max   = 0.0f;
+  std::vector<float> minmaxvec(8);
+  minmaxvec[min_max::kDataMin]   = 0.0f;
+  minmaxvec[min_max::kDataMax]   = 0.0f;
+  minmaxvec[min_max::kWeightMin] = 0.0f;
+  minmaxvec[min_max::kWeightMax] = 0.0f;
+  minmaxvec[min_max::kBiasMin]   = 0.0f;
+  minmaxvec[min_max::kBiasMax]   = 0.0f;
 
-  const float sum_min   = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
-  const float sum_max   = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
-  NDArray data          = in_data[idx.data];
-  const NDArray& weight = in_data[idx.weight];
+  minmaxvec[min_max::kSumMin] = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
+  minmaxvec[min_max::kSumMax] = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
+  NDArray data                = in_data[idx.data];
+  const NDArray& weight       = in_data[idx.weight];
   NDArray output;
 
   if (dnnl_param.with_sum) {
@@ -236,49 +283,33 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
 
   if (dnnl_param.quantized) {
     if (!channel_wise) {
-      weight_min = in_data[idx.weight_min].data().dptr<float>()[0];
-      weight_max = in_data[idx.weight_max].data().dptr<float>()[0];
+      minmaxvec[min_max::kWeightMin] = in_data[idx.weight_min].data().dptr<float>()[0];
+      minmaxvec[min_max::kWeightMax] = in_data[idx.weight_max].data().dptr<float>()[0];
       if (has_bias) {
-        bias_min = in_data[idx.bias_min].data().dptr<float>()[0];
-        bias_max = in_data[idx.bias_max].data().dptr<float>()[0];
+        minmaxvec[min_max::kBiasMin] = in_data[idx.bias_min].data().dptr<float>()[0];
+        minmaxvec[min_max::kBiasMax] = in_data[idx.bias_max].data().dptr<float>()[0];
       }
     }
-    data_min = in_data[idx.data_min].data().dptr<float>()[0];
-    data_max = in_data[idx.data_max].data().dptr<float>()[0];
+    minmaxvec[min_max::kDataMin] = in_data[idx.data_min].data().dptr<float>()[0];
+    minmaxvec[min_max::kDataMax] = in_data[idx.data_max].data().dptr<float>()[0];
   }
 
-  if (initialized_ && dnnl_param.quantized && dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
-    if (channel_wise) {
-      if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
-          cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
-          weight_ver_ != weight.version() ||
-          (has_bias && (bias_ver_ != in_data[idx.bias].version()))) {
-        initialized_ = false;
-      }
-    } else {
-      if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
-          cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
-          cached_weight_min_ != weight_min || cached_weight_max_ != weight_max ||
-          (has_bias && (cached_bias_min_ != bias_min || cached_bias_max_ != bias_max))) {
-        initialized_ = false;
-      }
-    }
-  }
+  initialized_ = CheckInitializationConditions(in_data, channel_wise, minmaxvec);
 
   if (!initialized_) {
     const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     const auto engine   = CpuEngine::Get()->get_engine();
-    cached_data_min_    = data_min;
-    cached_data_max_    = data_max;
-    cached_weight_min_  = weight_min;
-    cached_weight_max_  = weight_max;
+    cached_data_min_    = minmaxvec[min_max::kDataMin];
+    cached_data_max_    = minmaxvec[min_max::kDataMax];
+    cached_weight_min_  = minmaxvec[min_max::kWeightMin];
+    cached_weight_max_  = minmaxvec[min_max::kWeightMax];
     weight_ver_         = weight.version();
     cached_weight_      = weight;
-    cached_sum_min_     = sum_min;
-    cached_sum_max_     = sum_max;
+    cached_sum_min_     = minmaxvec[min_max::kSumMin];
+    cached_sum_max_     = minmaxvec[min_max::kSumMax];
     if (has_bias) {
-      cached_bias_min_ = bias_min;
-      cached_bias_max_ = bias_max;
+      cached_bias_min_ = minmaxvec[min_max::kBiasMin];
+      cached_bias_max_ = minmaxvec[min_max::kBiasMax];
       bias_ver_        = in_data[idx.bias].version();
       cached_bias_     = in_data[idx.bias];
     } else {
@@ -434,20 +465,20 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
               1,
               &cached_output_min_,
               &cached_output_max_,
-              &data_min,
-              &data_max,
-              &weight_min,
-              &weight_max);
+              &(minmaxvec[min_max::kDataMin]),
+              &(minmaxvec[min_max::kDataMax]),
+              &(minmaxvec[min_max::kWeightMin]),
+              &(minmaxvec[min_max::kWeightMax]));
         } else {
           mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
               s,
               1,
               &cached_output_min_,
               &cached_output_max_,
-              &data_min,
-              &data_max,
-              &weight_min,
-              &weight_max);
+              &(minmaxvec[min_max::kDataMin]),
+              &(minmaxvec[min_max::kDataMax]),
+              &(minmaxvec[min_max::kWeightMin]),
+              &(minmaxvec[min_max::kWeightMax]));
         }
         full_param_.output_scales.resize(0);
         out_scale = data_scale_ * weight_scales_[0];
