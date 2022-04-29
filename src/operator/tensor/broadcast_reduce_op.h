@@ -1389,7 +1389,6 @@ void BroadcastCPU(const OpContext& ctx,
     IType* src = static_cast<IType*>(inputs[0].dptr_);
     OType* dst = static_cast<OType*>(outputs[0].dptr_);
 
-
     const int ndim = dst_shape.ndim() == 2 ? 2 : MXNET_SPECIAL_MAX_NDIM;
     Kernel<broadcast_kernel_cpu<mshadow_op::identity>, cpu>::Launch(
         s, src_shape.Size(), src, dst, aux_data, req[0], ndim);
