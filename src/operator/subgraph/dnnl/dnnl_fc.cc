@@ -47,7 +47,9 @@ namespace op {
 class SgDNNLFCOp {
  public:
   explicit SgDNNLFCOp(const nnvm::NodeAttrs& attrs)
-      : subgraph_sym_(*attrs.subgraphs[0]), full_param_(nnvm::get<DNNLFCFullParam>(attrs.parsed)) {}
+      : subgraph_sym_(*attrs.subgraphs[0]),
+        attrs(attrs),
+        full_param_(nnvm::get<DNNLFCFullParam>(attrs.parsed)) {}
 
   void Forward(const OpContext& ctx,
                const std::vector<NDArray>& inputs,
@@ -63,6 +65,9 @@ class SgDNNLFCOp {
   }
 
  private:
+  void GetCachedWeightsAndBias(const NDArray& weight, bool support_channelwise_scale, bool has_bias);
+
+  nnvm::NodeAttrs attrs;
   bool initialized_{false};
   bool reorder_data_{false};
   bool inplace_{false};
@@ -89,6 +94,65 @@ class SgDNNLFCOp {
   float data_scale_{0.0f};
   std::vector<float> weight_scales_;
 };
+
+void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight, bool support_channelwise_scale, bool has_bias) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<DNNLFullyconSignature, std::pair<NDArray, NDArray>, OpHash>
+      fcWeightsAndBias;
+#else
+  static MX_THREAD_LOCAL
+      std::unordered_map<DNNLFullyconSignature, std::pair<NDArray, NDArray>, OpHash>
+          fcWeightsAndBias;
+#endif
+
+  bool has_id = attrs.dict.count("__identifier__");
+  bool read_from_cache = false;
+
+  DNNLFullyconSignature key(full_param_.default_param);
+  if (has_id) {
+    key.AddSign(fwd_->fwd_pd.weights_desc());
+    key.AddSign(attrs.dict["__identifier__"]);
+    key.AddSign(attrs.name);
+
+    auto it = fcWeightsAndBias.find(key);
+    if (it != fcWeightsAndBias.end()) {
+      cached_weight_  = it->second.first;
+      cached_bias_    = it->second.second;
+      read_from_cache = true;
+    }
+  }
+
+  if (!read_from_cache) {
+    // convert weight and bias to the format that oneDNN requires
+    if (!full_param_.dnnl_param.quantized || support_channelwise_scale) {
+      dnnl::memory::desc bias_md;
+      if (has_bias)
+        bias_md = fwd_->fwd_pd.bias_desc();
+      ConvertWeightBias2DNNL(&cached_weight_,
+                             &cached_bias_,
+                             has_bias,
+                             fwd_->fwd_pd.weights_desc(),
+                             has_bias ? &bias_md : nullptr,
+                             1,
+                             data_scale_,
+                             weight_scales_,
+                             false);
+    } else {
+      const auto def_weight_mem = weight.GetDNNLData();
+      if (def_weight_mem->get_desc() != fwd_->fwd_pd.weights_desc()) {
+        auto weight_desc       = fwd_->fwd_pd.weights_desc();
+        cached_weight_         = NDArray(&weight_desc);
+        auto cached_weight_mem = cached_weight_.GetDNNLData();
+        std::unordered_map<int, dnnl::memory> args(
+            {{DNNL_ARG_FROM, *def_weight_mem}, {DNNL_ARG_TO, *cached_weight_mem}});
+        DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(*def_weight_mem, *cached_weight_mem),
+                                            args);
+      }
+    }
+    if (has_id)
+      AddToCache(&fcWeightsAndBias, key, {cached_weight_, cached_bias_});
+  }
+}
 
 void SgDNNLFCOp::Forward(const OpContext& ctx,
                          const std::vector<NDArray>& in_data,
@@ -397,33 +461,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
                                              cached_weight_,
                                              (has_bias ? &cached_bias_ : nullptr),
                                              out_md));
-
-    // convert weight and bias to the format that DNNL requires
-    if (!dnnl_param.quantized || support_channelwise_scale) {
-      dnnl::memory::desc bias_md;
-      if (has_bias)
-        bias_md = fwd_->fwd_pd.bias_desc();
-      ConvertWeightBias2DNNL(&cached_weight_,
-                             &cached_bias_,
-                             has_bias,
-                             fwd_->fwd_pd.weights_desc(),
-                             has_bias ? &bias_md : nullptr,
-                             1,
-                             data_scale_,
-                             weight_scales_,
-                             false);
-    } else {
-      const auto def_weight_mem = static_cast<const dnnl::memory*>(weight.GetDNNLData());
-      if (def_weight_mem->get_desc() != fwd_->fwd_pd.weights_desc()) {
-        auto weight_desc       = fwd_->fwd_pd.weights_desc();
-        cached_weight_         = NDArray(&weight_desc);
-        auto cached_weight_mem = static_cast<const dnnl::memory*>(cached_weight_.GetDNNLData());
-        std::unordered_map<int, dnnl::memory> args(
-            {{DNNL_ARG_FROM, *def_weight_mem}, {DNNL_ARG_TO, *cached_weight_mem}});
-        DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(*def_weight_mem, *cached_weight_mem),
-                                            args);
-      }
-    }
+    GetCachedWeightsAndBias(weight, support_channelwise_scale, has_bias);
 
     const auto data_mem = static_cast<const dnnl::memory*>(data.GetDNNLData());
     cached_data_mem_    = std::make_shared<dnnl::memory>(data_mem->get_desc(), engine);

@@ -547,7 +547,7 @@ class OpSignature {
 
 #if MXNET_USE_ONEDNN == 1
   void AddSign(const dnnl::memory::desc& desc) {
-    hash      = hash * 2 + desc.data.format_kind;
+    hash = hash * 2 + desc.data.format_kind;
     eles.push_back(desc.data.format_kind);
     hash = hash * 2 + desc.data.data_type;
     eles.push_back(desc.data.data_type);
@@ -616,6 +616,11 @@ class OpSignature {
   }
 
 #endif
+
+  void AddSign(std::string& s) {
+    uint64_t key = static_cast<uint64_t>(std::hash<std::string>{}(s));
+    eles.push_back(key);
+  }
 
   void AddSign(const std::vector<NDArray>& arrs) {
     for (auto& arr : arrs) {
