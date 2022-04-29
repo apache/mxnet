@@ -65,8 +65,10 @@ class SgDNNLFCOp {
   }
 
  private:
-  void GetCachedWeightsAndBias(const NDArray& weight, bool support_channelwise_scale, bool has_bias);
-
+  void GetCachedWeightsAndBias(const NDArray& weight,
+                               bool support_channelwise_scale,
+                               bool has_bias);
+  NDArray PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output);
   nnvm::NodeAttrs attrs;
   bool initialized_{false};
   bool reorder_data_{false};
@@ -154,6 +156,43 @@ void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight, bool support_cha
   }
 }
 
+NDArray SgDNNLFCOp::PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output) {
+  if (!initialized_) {
+      // TODO(zhennan): Currently, dnnl fallback mechanism will break inplace option,
+      // which make check (req[out_index] == kWriteInplace) useless.
+      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(sum_input.GetDNNLData());
+      auto out_dnnl_mem = static_cast<const dnnl::memory*>(output.GetDNNLData());
+      if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle()) {
+        inplace_ = true;
+      }
+    }
+    if (inplace_) {
+      return sum_input;
+    } else {
+      // Not in place: copy sum_input into output.
+      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(sum_input.GetDNNLData());
+      auto out_dnnl_mem = static_cast<const dnnl::memory*>(output.GetDNNLData());
+      if (output.dtype() == mshadow::kInt32) {
+        auto mem_desc           = in_dnnl_mem->get_desc();
+        auto this_dtype         = get_dnnl_type(mshadow::kInt32);
+        mem_desc.data.data_type = static_cast<dnnl_data_type_t>(this_dtype);
+        dnnl_mem_ptr tmp_mem(new dnnl::memory(
+            mem_desc, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
+        DNNLStream::Get()->RegisterMem(tmp_mem);
+        DNNLStream::Get()->RegisterPrimArgs(
+            dnnl::reorder(*in_dnnl_mem, *tmp_mem),
+            {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
+        return NDArray(tmp_mem);
+      } else {
+        dnnl_mem_ptr tmp_mem(new dnnl::memory(in_dnnl_mem->get_desc(),
+                                              CpuEngine::Get()->get_engine(),
+                                              out_dnnl_mem->get_data_handle()));
+        DNNLStream::Get()->RegisterMem(tmp_mem);
+        DNNLMemoryCopy(*in_dnnl_mem, tmp_mem.get());
+        return NDArray(tmp_mem);
+      }
+    }
+}
 void SgDNNLFCOp::Forward(const OpContext& ctx,
                          const std::vector<NDArray>& in_data,
                          const std::vector<OpReqType>& req,
@@ -190,41 +229,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   NDArray output;
 
   if (dnnl_param.with_sum) {
-    if (!initialized_) {
-      // TODO(zhennan): Currently, dnnl fallback mechanism will break inplace option,
-      // which make check (req[out_index] == kWriteInplace) useless.
-      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(in_data[idx.sum].GetDNNLData());
-      auto out_dnnl_mem = static_cast<const dnnl::memory*>(out_data[out_index].GetDNNLData());
-      if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle()) {
-        inplace_ = true;
-      }
-    }
-    if (inplace_) {
-      output = in_data[idx.sum];
-    } else {
-      // Not in place: copy in_data[idx.sum] into outputs[out_index].
-      auto in_dnnl_mem  = static_cast<const dnnl::memory*>(in_data[idx.sum].GetDNNLData());
-      auto out_dnnl_mem = static_cast<const dnnl::memory*>(out_data[out_index].GetDNNLData());
-      if (out_data[out_index].dtype() == mshadow::kInt32) {
-        auto mem_desc           = in_dnnl_mem->get_desc();
-        auto this_dtype         = get_dnnl_type(mshadow::kInt32);
-        mem_desc.data.data_type = static_cast<dnnl_data_type_t>(this_dtype);
-        dnnl_mem_ptr tmp_mem(new dnnl::memory(
-            mem_desc, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
-        DNNLStream::Get()->RegisterMem(tmp_mem);
-        DNNLStream::Get()->RegisterPrimArgs(
-            dnnl::reorder(*in_dnnl_mem, *tmp_mem),
-            {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
-        output = NDArray(tmp_mem);
-      } else {
-        dnnl_mem_ptr tmp_mem(new dnnl::memory(in_dnnl_mem->get_desc(),
-                                              CpuEngine::Get()->get_engine(),
-                                              out_dnnl_mem->get_data_handle()));
-        DNNLStream::Get()->RegisterMem(tmp_mem);
-        DNNLMemoryCopy(*in_dnnl_mem, tmp_mem.get());
-        output = NDArray(tmp_mem);
-      }
-    }
+    output = PrepareOutputWithSum(in_data[idx.sum], out_data[out_index]);
   } else {
     output = out_data[out_index];
   }
