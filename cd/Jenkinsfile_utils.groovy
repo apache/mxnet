@@ -182,7 +182,7 @@ def restore_dynamic_libmxnet(variant) {
 // we *have* to.
 // However, if it is only packaging libmxnet and that doesn't take long. Then, the pipeline can
 // just run on a single node. As is done bellow.
-// For examples of multi-node CD pipelines, see the the binary_release/static and binary_release/dynamic
+// For examples of multi-node CD pipelines, see the binary_release/static and binary_release/dynamic
 // pipeline.
 def generic_pipeline(mxnet_variant, custom_steps, node_type = "restricted-mxnetlinux-cpu") {
   return {

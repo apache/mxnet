@@ -1496,32 +1496,32 @@ def test_basic():
         x = create_input_for_rounding_ops()
         def check_ceil():
             y = nd.ceil(x)
-            # expected ouput for middle 5 values after applying ceil()
+            # expected output for middle 5 values after applying ceil()
             expected_output = [-1, 0, 0, 1, 1]
             assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
         def check_fix():
             y = nd.fix(x)
-            # expected ouput for middle 5 values after applying fix()
+            # expected output for middle 5 values after applying fix()
             expected_output = [-1, 0, 0, 0, 1]
             assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
         def check_floor():
             y = nd.floor(x)
-            # expected ouput for middle 5 values after applying floor()
+            # expected output for middle 5 values after applying floor()
             expected_output = [-1, -1, 0, 0, 1]
             assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
         def check_rint():
             y = nd.rint(x)
-            # expected ouput for middle 5 values after applying rint()
+            # expected output for middle 5 values after applying rint()
             expected_output = [-1, -1, 0, 0, 1]
             assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
         def check_round():
             y = nd.round(x)
-            # expected ouput for middle 5 values after applying round()
+            # expected output for middle 5 values after applying round()
             expected_output = [-1, -1, 0, 1, 1]
             assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
         def check_trunc():
             y = nd.trunc(x)
-            # expected ouput for middle 5 values after applying trunc()
+            # expected output for middle 5 values after applying trunc()
             expected_output = [-1, 0, 0, 0, 1]
             assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
         check_ceil()
@@ -1547,98 +1547,98 @@ def test_basic():
         def check_arcsin():
             x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
             y = nd.arcsin(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsin()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying arcsin()
             expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_arccos():
             x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
             y = nd.arccos(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccos()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying arccos()
             expected_output = [np.pi, 3*np.pi/4, np.pi/2, np.pi/4, 0]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_arctan():
             x = create_input_for_trigonometric_ops([-np.Inf, -1, 0, 1, np.Inf])
             y = nd.arctan(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctan()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying arctan()
             expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_sin():
             x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
             y = nd.sin(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying sin()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying sin()
             expected_output = [-1, -.707, 0, .707, 1]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_cos():
             x = create_input_for_trigonometric_ops([0, np.pi/4, np.pi/2, 3*np.pi/4, np.pi])
             y = nd.cos(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying cos()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying cos()
             expected_output = [1, .707, 0, -.707, -1]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_tan():
             x = create_input_for_trigonometric_ops([-np.pi/6, -np.pi/4, 0, np.pi/4, np.pi/6])
             y = nd.tan(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying tan()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying tan()
             expected_output = [-.577, -1, 0, 1, .577]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_arcsinh():
             x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
             y = nd.arcsinh(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsinh()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying arcsinh()
             expected_output = [np.arcsinh(-np.pi/2), np.arcsinh(-np.pi/4), 0, np.arcsinh(np.pi/4), np.arcsinh(np.pi/2)]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_arccosh():
             x = create_input_for_trigonometric_ops([1, np.pi/2, 3*np.pi/4, np.pi, 5*np.pi/4])
             y = nd.arccosh(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccosh()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying arccosh()
             expected_output = [0, np.arccosh(np.pi/2), np.arccosh(3*np.pi/4), np.arccosh(np.pi), np.arccosh(5*np.pi/4)]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_arctanh():
             x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
             y = nd.arctanh(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctanh()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying arctanh()
             expected_output = [np.arctanh(-1/4), np.arctanh(-1/2), 0, np.arctanh(1/4), np.arctanh(1/2)]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_sinh():
             x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
             y = nd.sinh(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying sinh()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying sinh()
             expected_output = [np.sinh(-np.pi/2), np.sinh(-np.pi/4), 0, np.sinh(np.pi/4), np.sinh(np.pi/2)]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_cosh():
             x = create_input_for_trigonometric_ops([0, 1, np.pi/2, 3*np.pi/4, np.pi])
             y = nd.cosh(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying cosh()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying cosh()
             expected_output = [1, np.cosh(1), np.cosh(np.pi/2), np.cosh(3*np.pi/4), np.cosh(np.pi)]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_tanh():
             x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
             y = nd.tanh(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying tanh()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying tanh()
             expected_output = [np.tanh(-1/4), np.tanh(-1/2), 0, np.tanh(1/4), np.tanh(1/2)]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_radians():
             x = create_input_for_trigonometric_ops([0, 90, 180, 270, 360])
             y = nd.radians(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying radians()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying radians()
             expected_output = [0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 
         def check_degrees():
             x = create_input_for_trigonometric_ops([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
             y = nd.degrees(x)
-            # expected ouput for indices=(0, 1, -3, -2, -1) after applying degrees()
+            # expected output for indices=(0, 1, -3, -2, -1) after applying degrees()
             expected_output = [0, 90, 180, 270, 360]
             assert_correctness_of_trigonometric_ops(y, expected_output)
 

@@ -60,7 +60,7 @@ struct Input0 : GradFunctionArgument {};
 /*! \brief Second input to the function */
 struct Input1 : GradFunctionArgument {};
 
-/*! \brief Ouput value of the function to the function */
+/*! \brief Output value of the function to the function */
 struct OutputValue : GradFunctionArgument {};
 /*! \brief Gradient of output value */
 struct OutputGrad : GradFunctionArgument {};
@@ -255,7 +255,7 @@ class SimpleOpRegEntry {
   /*! \brief name of the operator */
   std::string name;
   /*!
-   * \brief set a seperate name for symbol
+   * \brief set a separate name for symbol
    *  This must be called before set_function.
    *  Default: this is set to be same as the name of operator.
    * \param symbol_name the name of symbolic operator.
