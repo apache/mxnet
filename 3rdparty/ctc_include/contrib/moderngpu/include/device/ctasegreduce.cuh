@@ -141,7 +141,7 @@ MGPU_DEVICE SegReduceTerms DeviceSegReducePrepare(int* csr_shared, int numRows,
 	int endFlags = DeviceExpandCsrRows<NT, VT>(gid + VT * tid, csr_shared,
 		numRows, flushLast ? (gid + NT * VT) : INT_MAX, rows, rowStarts);
 
-	// Find the distance to to scan to compute carry-in for each thread. Use the
+	// Find the distance to scan to compute carry-in for each thread. Use the
 	// existance of an end flag anywhere in the thread to determine if carry-out
 	// values from the left should propagate through to the right.
 	int tidDelta = DeviceFindSegScanDelta<NT>(tid, rows[0] != rows[VT],

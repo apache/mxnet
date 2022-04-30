@@ -1,7 +1,7 @@
 # disable sudo to use container based build
 sudo: false
 
-# Use Build Matrix to do lint and build seperately
+# Use Build Matrix to do lint and build separately
 env:
   matrix:
     - TASK=lint LINT_LANG=cpp

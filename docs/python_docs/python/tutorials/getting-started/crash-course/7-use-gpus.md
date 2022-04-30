@@ -131,7 +131,7 @@ net(x)
 
 ## Training with multiple GPUs
 
-Finally, you will see how you can use multiple GPUs to jointly train a neural network through data parallelism. To elaborate on what data parallelism is, assume there are *n* GPUs, then you can split each data batch into *n* parts, and use a GPU on each of these parts to run the forward and backward passes on the seperate chunks of the data.
+Finally, you will see how you can use multiple GPUs to jointly train a neural network through data parallelism. To elaborate on what data parallelism is, assume there are *n* GPUs, then you can split each data batch into *n* parts, and use a GPU on each of these parts to run the forward and backward passes on the separate chunks of the data.
 
 First copy the data definitions with the following commands, and the transform functions from the tutorial [Training Neural Networks](6-train-nn.md).
 

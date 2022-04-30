@@ -309,7 +309,7 @@ ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_xyz_backward",
 ```
 
 Or create the node, modify and then move into NodeEntry's constructor if this node is not to be used
-again. This avoids uneccessary copies of the shared_ptr.
+again. This avoids unnecessary copies of the shared_ptr.
 
 ```c++
 for (size_t i = 0; i < n->inputs.size(); ++i) {

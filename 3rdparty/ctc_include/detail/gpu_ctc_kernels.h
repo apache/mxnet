@@ -176,7 +176,7 @@ void compute_alpha_kernel (const ProbT* log_probs, const int *label_sizes,
         const int start_cur_row = t * S;
         const int start_prev_row = (t - 1) * S;
 
-        // The prob is a 2D column major array, with probabilites for each t strided
+        // The prob is a 2D column major array, with probabilities for each t strided
         // by (out_dim * stride), where stride is the minibatch size
         const int start_prob_col = t * (out_dim * stride);
 
@@ -363,7 +363,7 @@ void compute_betas_and_grad_kernel (const ProbT* log_probs, const int *label_siz
 
         if (t < T-1) {
 
-            // Filling up one row at at time but going back in time from the last row
+            // Filling up one row at a time but going back in time from the last row
             // to the first. As in the forward pass, there is no loop dependence and we
             // do a variable length filter of maximum filter size of 3
             #pragma unroll

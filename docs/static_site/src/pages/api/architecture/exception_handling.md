@@ -101,7 +101,7 @@ For the operator case, the dependency engine spawns a number of threads if it is
 If an operator throws an exception during execution, this exception is propagated
 down the dependency chain. Once there is a synchronizing call i.e. WaitToRead for a variable in the dependency chain, the propagated exception is rethrown.
 
-In the below example, I illustrate how an exception that occured in the first line is propagated down the dependency chain, and finally is rethrown when we make a synchronizing call to WaitToRead.
+In the below example, I illustrate how an exception that occurred in the first line is propagated down the dependency chain, and finally is rethrown when we make a synchronizing call to WaitToRead.
 
 ```python
 import mxnet as mx
