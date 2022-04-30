@@ -487,7 +487,7 @@ inline bool _can_cutensor(const std::vector<std::string>& inputs,
   }
   // maps each mode/index to its extent/dimension
   std::unordered_map<char, dim_t> extents;
-  // occurences of each index
+  // occurrences of each index
   std::unordered_map<char, int> count_all;
   std::unordered_map<char, int> count_input_0;
   std::unordered_map<char, int> count_input_1;

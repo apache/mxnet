@@ -136,7 +136,7 @@ Examples::
   pick(x, y=[0,1,0], 1) = [ 1.,  4.,  5.]
 
   // picks elements with specified indices along axis 1 using 'wrap' mode
-  // to place indicies that would normally be out of bounds
+  // to place indices that would normally be out of bounds
   pick(x, y=[2,-1,-2], 1, mode='wrap') = [ 1.,  4.,  5.]
 
   y = [[ 1.],

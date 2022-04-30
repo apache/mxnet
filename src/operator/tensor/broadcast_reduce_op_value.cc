@@ -77,10 +77,10 @@ Example::
    x = [[[ 1.],
          [ 2.]]]
 
-   // broadcast x on on axis 2
+   // broadcast x on axis 2
    broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
                                          [ 2.,  2.,  2.]]]
-   // broadcast x on on axes 0 and 2
+   // broadcast x on axes 0 and 2
    broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
                                                  [ 2.,  2.,  2.]],
                                                 [[ 1.,  1.,  1.],

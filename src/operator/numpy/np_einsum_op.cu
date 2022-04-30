@@ -530,7 +530,7 @@ class EinsumOpGPU {
         if (i != paths_len - 1) {
           size_t new_aligned_mem_required =
               RoundToMultiple(mypaths[i].oshape.Size(), dptr_alignment, sizeof(DType));
-          temp_ouputs_size_aligned += new_aligned_mem_required;
+          temp_outputs_size_aligned += new_aligned_mem_required;
         }
         if (!handle_out) {
           operands_shape.push_back(mypaths[i].oshape);
@@ -779,7 +779,7 @@ class EinsumOpGPU {
   std::vector<std::vector<int>> bwd_op_idx;
 
   const size_t dptr_alignment     = 128;
-  size_t temp_ouputs_size_aligned = 0;  // temporal outputs saved in FWD
+  size_t temp_outputs_size_aligned = 0;  // temporal outputs saved in FWD
   size_t temp_grads_size_aligned  = 0;
   std::vector<size_t> temp_grads_offsets;
   size_t max_workspace_cutensor = 0;
@@ -879,7 +879,7 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   } else {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType>& op = GetEinsumOpGPU<DType>(state, inputs, outputs, req, ctx, false);
-      state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_ouputs_size_aligned)),
+      state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_outputs_size_aligned)),
                                                  ctx.run_ctx.ctx,
                                                  false,
                                                  outputs[0].type_flag_));

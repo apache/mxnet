@@ -90,7 +90,7 @@ inline __device__ bool __is_supported_cuda_architecture() {
 
 /*!
  * \brief Check CUDA error.
- * \param msg Message to print if an error occured.
+ * \param msg Message to print if an error occurred.
  */
 #define CHECK_CUDA_ERROR(msg)                                                \
   {                                                                          \

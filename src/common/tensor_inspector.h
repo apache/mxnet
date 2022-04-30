@@ -321,7 +321,7 @@ class TensorInspector {
       }
       tensor_info_to_string<DType>(&std::cout);
       std::cout << "To print a part of the tensor, "
-                << "please specify a position, seperated by \",\"" << std::endl;
+                << "please specify a position, separated by \",\"" << std::endl;
       std::cout << "\"e\" for the entire tensor, "
                 << "\"d\" to dump value to file, "
                 << "\"b\" to break, "
@@ -515,7 +515,7 @@ class TensorInspector {
         }
         std::cout << count << " value(s) found." << std::endl;
         std::cout << "To print a part of the tensor,"
-                  << " please specify a position, seperated by \",\"" << std::endl;
+                  << " please specify a position, separated by \",\"" << std::endl;
         std::cout << "\"e\" for the entire tensor, "
                   << "\"p\" to print the coordinates of the values found, "
                   << "\"b\" to break, "

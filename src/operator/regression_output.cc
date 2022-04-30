@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file regression_ouput.cc
+ * \file regression_output.cc
  * \brief Regression output operator.
  */
 

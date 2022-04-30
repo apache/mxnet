@@ -39,7 +39,7 @@ DMLC_REGISTER_PARAMETER(SampleUniqueZifpianParam);
       .add_arguments(ParamType::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(_sample_unique_zipfian, SampleUniqueZifpianParam)
-    .describe(R"code(Draw random samples from an an approximately log-uniform
+    .describe(R"code(Draw random samples from an approximately log-uniform
 or Zipfian distribution without replacement.
 
 This operation takes a 2-D shape `(batch_size, num_sampled)`,

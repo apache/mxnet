@@ -110,7 +110,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   std::string path_imgrec;
   /*! \brief path to index file */
   std::string path_imgidx;
-  /*! \brief a sequence of names of image augmenters, seperated by , */
+  /*! \brief a sequence of names of image augmenters, separated by , */
   std::string aug_seq;
   /*! \brief label-width */
   int label_width;
@@ -155,7 +155,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .set_default("aug_default")
         .describe(
             "The augmenter names to represent"
-            " sequence of augmenters to be applied, seperated by comma."
+            " sequence of augmenters to be applied, separated by comma."
             " Additional keyword parameters will be seen by these augmenters.");
     DMLC_DECLARE_FIELD(label_width)
         .set_lower_bound(1)

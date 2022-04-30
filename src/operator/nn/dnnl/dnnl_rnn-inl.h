@@ -136,7 +136,7 @@ class DNNLRnnMemMgr {
   /*!
    * \brief Initializer for RNN memory manager
    * \param size byte number
-   * \param ctx Context of device enviroment
+   * \param ctx Context of device environment
    */
   void Init(const dim_t size, const Context& ctx);
 

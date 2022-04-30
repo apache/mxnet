@@ -55,7 +55,7 @@
 
 using namespace mxnet;
 
-/*! \brief entry to to easily hold returning information */
+/*! \brief entry to easily hold returning information */
 template <typename dtype = int>
 struct MXAPIThreadLocalEntry {
   /*! \brief result holder for returning string */

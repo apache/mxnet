@@ -91,7 +91,7 @@ int MXNetFuncCall(MXNetFunctionHandle func,
 // {message1}
 // {message2}
 // {Stack trace:}    // stack traces follow by this line
-//   {trace 0}       // two spaces in the begining.
+//   {trace 0}       // two spaces in the beginning.
 //   {trace 1}
 //   {trace 2}
 //--------------------------------------------------------
@@ -202,7 +202,7 @@ std::string NormalizeError(std::string err_msg) {
       error_type = "MXNetError";
     }
   }
-  // Seperate out stack trace.
+  // Separate out stack trace.
   std::ostringstream os;
   os << error_type << ": " << check_msg << line << '\n';
 

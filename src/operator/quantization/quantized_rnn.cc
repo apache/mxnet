@@ -70,7 +70,7 @@ std::vector<std::string> QuantizedRnnOutputNames(const NodeAttrs& attrs) {
       << "Quantized recurrent neural network only supports LSTM operator on "
          "CPU.";
   if (param.state_outputs) {
-    return std::vector<std::string>{"output", "state_output", "statecell_ouput"};
+    return std::vector<std::string>{"output", "state_output", "statecell_output"};
   } else {
     return std::vector<std::string>{"output"};
   }

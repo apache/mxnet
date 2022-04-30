@@ -301,8 +301,8 @@ struct concat_csr_first_dim {
    * \param in_idx         input csr ndarray column indices
    * \param in_data        input csr ndarray data
    * \param in_indptr      input csr ndarray row index pointer
-   * \param indptr_offset  offset for ouput ndarray row index pointer
-   * \param idx_offset     offset for ouput ndarray column indices
+   * \param indptr_offset  offset for output ndarray row index pointer
+   * \param idx_offset     offset for output ndarray column indices
    */
   template <typename DType, typename RType, typename IType>
   MSHADOW_XINLINE static void Map(int i,

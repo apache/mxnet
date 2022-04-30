@@ -140,7 +140,7 @@ inline void CountSketchForward(const Tensor<gpu, 2, DType>& out,
                                                                        in_dim,
                                                                        out_dim);
     cudaError_t err = cudaDeviceSynchronize();
-    CHECK_EQ(err, cudaSuccess) << "Error occured! CUDA: " << cudaGetErrorString(err);
+    CHECK_EQ(err, cudaSuccess) << "Error occurred! CUDA: " << cudaGetErrorString(err);
     bstart = (i + 1) * batchlen;
   }
 }
@@ -181,7 +181,7 @@ inline void CountSketchBackward(const Tensor<gpu, 2, DType>& in_grad,
                                          in_dim,
                                          out_dim);
     cudaError_t err = cudaDeviceSynchronize();
-    CHECK_EQ(err, cudaSuccess) << "Error occured! CUDA: " << cudaGetErrorString(err);
+    CHECK_EQ(err, cudaSuccess) << "Error occurred! CUDA: " << cudaGetErrorString(err);
     bstart = (i + 1) * batchlen;
   }
 }
