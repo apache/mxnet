@@ -492,7 +492,7 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
     data_shape : tuple of int
         Shape for output data
     resize : int
-        Resize shorter edge if larger than 0 at the begining
+        Resize shorter edge if larger than 0 at the beginning
     rand_crop : float
         [0, 1], probability to apply random cropping
     rand_pad : float
@@ -662,7 +662,7 @@ class ImageDetIter(ImageIter):
     last_batch_handle : str, optional
         How to handle the last batch.
         This parameter can be 'pad'(default), 'discard' or 'roll_over'.
-        If 'pad', the last batch will be padded with data starting from the begining
+        If 'pad', the last batch will be padded with data starting from the beginning
         If 'discard', the last batch will be discarded
         If 'roll_over', the remaining elements will be rolled over to the next iteration
     kwargs : ...

@@ -41,7 +41,7 @@ def create_image_augment(data_shape, resize=0, rand_crop=False, rand_resize=Fals
     data_shape : tuple of int
         Shape for output data
     resize : int
-        Resize shorter edge if larger than 0 at the begining
+        Resize shorter edge if larger than 0 at the beginning
     rand_crop : bool
         Whether to enable random cropping other than center crop
     rand_resize : bool

@@ -195,7 +195,7 @@ class CalibrationCollector(object):
             Node name from which collected data comes from.
         op_name : str
             Operator name from which collected data comes from. Single operator
-            can have multiple input/ouput nodes - each should have different name.
+            can have multiple input/output nodes - each should have different name.
         arr : NDArray
             NDArray containing data of monitored node.
         """

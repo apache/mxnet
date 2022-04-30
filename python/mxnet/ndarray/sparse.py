@@ -892,7 +892,7 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
 
     - csr_matrix((data, (row, col)))
         to construct a CSRNDArray based on the COOrdinate format \
-        using three seperate arrays, \
+        using three separate arrays, \
         where ``row[i]`` is the row index of the element, \
         ``col[i]`` is the column index of the element \
         and ``data[i]`` is the data corresponding to the element. All the missing \

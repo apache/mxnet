@@ -1178,7 +1178,7 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     data_shape : tuple of int
         Shape for output data
     resize : int
-        Resize shorter edge if larger than 0 at the begining
+        Resize shorter edge if larger than 0 at the beginning
     rand_crop : bool
         Whether to enable random cropping other than center crop
     rand_resize : bool
@@ -1330,7 +1330,7 @@ class ImageIter(io.DataIter):
     last_batch_handle : str, optional
         How to handle the last batch.
         This parameter can be 'pad'(default), 'discard' or 'roll_over'.
-        If 'pad', the last batch will be padded with data starting from the begining
+        If 'pad', the last batch will be padded with data starting from the beginning
         If 'discard', the last batch will be discarded
         If 'roll_over', the remaining elements will be rolled over to the next iteration
     kwargs : ...
@@ -1347,7 +1347,7 @@ class ImageIter(io.DataIter):
         assert dtype in ['int32', 'float32', 'int64', 'float64'], dtype + ' label not supported'
         num_threads = os.environ.get('MXNET_CPU_WORKER_NTHREADS', 1)
         logging.info('Using %s threads for decoding...', str(num_threads))
-        logging.info('Set enviroment variable MXNET_CPU_WORKER_NTHREADS to a'
+        logging.info('Set environment variable MXNET_CPU_WORKER_NTHREADS to a'
                      ' larger number to use more threads.')
         class_name = self.__class__.__name__
         if path_imgrec:

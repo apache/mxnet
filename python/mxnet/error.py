@@ -17,7 +17,7 @@
 """Structured error classes in MXNet.
 
 Each error class takes an error message as its input.
-See the example sections for for suggested message conventions.
+See the example sections for suggested message conventions.
 To make the code more readable, we recommended developers to
 copy the examples and raise errors with the same message convention.
 """

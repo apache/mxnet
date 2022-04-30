@@ -894,7 +894,7 @@ fixed-size items.
         integer types and ``None``.
         ``adv_axes`` is the sequence of indices of advanced axes.
         ``bcast_adv_ndim`` is the number of dimensions of advanced indexing subspace.
-        ``adv_are_adjacent`` is a boolean value. Value being True means all advanced indicies are adjacent.
+        ``adv_are_adjacent`` is a boolean value. Value being True means all advanced indices are adjacent.
 
         Note: integer indices are also considered advanced indices here.
         """
