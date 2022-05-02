@@ -300,13 +300,6 @@ inline static dnnl::memory::desc GetMemDesc(const NDArray& arr, int dtype = -1) 
   return dnnl::memory::desc{dims, get_dnnl_type(dtype), dnnl::memory::format_tag::any};
 }
 
-inline static bool ChooseBRGEMMImpl(const dnnl::memory::dims& weight_dims, size_t batch_size) {
-  // Conditions based on measurement results done on CLX8280
-  // https://github.com/apache/incubator-mxnet/pull/20533
-  return weight_dims[0] >= 1024 && weight_dims[1] >= 1024 && batch_size >= 16384 &&
-         weight_dims[0] % 64 == 0 && weight_dims[1] % 64 == 0;
-}
-
 inline static dnnl::memory::desc GetFCWeightDesc(const NDArray& arr,
                                                  size_t batch_size,
                                                  int dtype = -1) {
@@ -319,7 +312,7 @@ inline static dnnl::memory::desc GetFCWeightDesc(const NDArray& arr,
   // for batch 256 alexnet benchmark test
   const bool force_fc_ab_format = dmlc::GetEnv("MXNET_ONEDNN_FORCE_FC_AB_FORMAT", false);
   if (dims.size() == 2) {
-    if (force_fc_ab_format || !ChooseBRGEMMImpl(dims, batch_size)) {
+    if (force_fc_ab_format || dtype != mshadow::kInt8) {
       format = dnnl::memory::format_tag::ab;
     }
   }
