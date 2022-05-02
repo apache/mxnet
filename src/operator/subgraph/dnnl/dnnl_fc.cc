@@ -82,8 +82,8 @@ class SgDNNLFCOp {
                                bool has_bias);
   NDArray PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output);
   bool CheckInitializationConditions(const std::vector<NDArray>& inputs,
-                                     bool is_channel_wise,
-                                     const std::vector<float>& minmaxvec);
+                                     const std::vector<float>& minmaxvec,
+                                     bool is_channel_wise);
   bool PrepareQuantization(const OpContext& ctx,
                            const std::vector<NDArray>& in_data,
                            const NDArray& output,
@@ -143,16 +143,15 @@ bool SgDNNLFCOp::PrepareQuantization(const OpContext& ctx,
                                      const NDArray& output,
                                      const std::vector<float>& minmaxvec) {
   const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  auto dnnl_param     = full_param_.dnnl_param;
-  bool has_bias       = !full_param_.default_param.no_bias;
   const FCInputIndex idx(full_param_);
   bool support_channelwise_scale = false;
-
-  const NDArray& data   = in_data[fullc::kData];
-  const NDArray& weight = in_data[fullc::kWeight];
-
+  auto dnnl_param                = full_param_.dnnl_param;
+  bool has_bias                  = !full_param_.default_param.no_bias;
+  const NDArray& data            = in_data[fullc::kData];
+  const NDArray& weight          = in_data[fullc::kWeight];
   const bool channel_wise = dnnl_param.quantized && dnnl_param.channel_wise_quantize.has_value() &&
                             dnnl_param.channel_wise_quantize.value();
+
   CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
   data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
 
@@ -389,8 +388,8 @@ NDArray SgDNNLFCOp::PrepareOutputWithSum(const NDArray& sum_input, const NDArray
 }
 
 bool SgDNNLFCOp::CheckInitializationConditions(const std::vector<NDArray>& inputs,
-                                               bool is_channel_wise,
-                                               const std::vector<float>& minmaxvec) {
+                                               const std::vector<float>& minmaxvec,
+                                               bool is_channel_wise) {
   if (initialized_ && full_param_.dnnl_param.quantized &&
       dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
     bool has_bias = !full_param_.default_param.no_bias;
@@ -423,16 +422,15 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
                          const std::vector<NDArray>& in_data,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& out_data) {
-  auto& dnnl_param         = full_param_.dnnl_param;
-  auto& default_param      = full_param_.default_param;
-  const bool has_bias      = !default_param.no_bias;
-  const bool quantized     = dnnl_param.quantized;
-  const bool out_quantized = dnnl_param.quantized && !dnnl_param.enable_float_output;
-  const bool channel_wise  = quantized && dnnl_param.channel_wise_quantize.has_value() &&
+  const auto& default_param = full_param_.default_param;
+  const auto& dnnl_param    = full_param_.dnnl_param;
+  const bool has_bias       = !default_param.no_bias;
+  const bool quantized      = dnnl_param.quantized;
+  const bool out_quantized  = dnnl_param.quantized && !dnnl_param.enable_float_output;
+  const bool channel_wise   = quantized && dnnl_param.channel_wise_quantize.has_value() &&
                             dnnl_param.channel_wise_quantize.value();
 
   const FCInputIndex idx(full_param_);
-
   CHECK_EQ(in_data.size(), idx.GetTotal());
 
   int index               = 0;
@@ -474,7 +472,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     minmaxvec[min_max::kDataMax] = in_data[idx.data_max].data().dptr<float>()[0];
   }
 
-  initialized_ = CheckInitializationConditions(in_data, channel_wise, minmaxvec);
+  initialized_ = CheckInitializationConditions(in_data, minmaxvec, channel_wise);
 
   if (!initialized_) {
     const auto engine   = CpuEngine::Get()->get_engine();
@@ -517,7 +515,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
 
     if (dnnl_param.quantized) {
       support_channelwise_scale = PrepareQuantization(ctx, in_data, output, minmaxvec);
-    }  // if (dnnl_param.quantized)
+    }
 
     fwd_.reset(new DNNLFullyConnectedForward(full_param_,
                                              ctx.is_train,
