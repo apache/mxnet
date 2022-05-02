@@ -75,6 +75,7 @@ class SgDNNLFCOp {
     kSumMin,
     kSumMax
   };
+
   dnnl::memory::desc CreateOutputMemoryDesc(const mxnet::TShape& oshape, int out_dtype);
   void GetCachedWeightsAndBias(const NDArray& weight,
                                bool support_channelwise_scale,
@@ -83,6 +84,10 @@ class SgDNNLFCOp {
   bool CheckInitializationConditions(const std::vector<NDArray>& inputs,
                                      bool is_channel_wise,
                                      const std::vector<float>& minmaxvec);
+  bool PrepareQuantization(const OpContext& ctx,
+                           const std::vector<NDArray>& in_data,
+                           const NDArray& output,
+                           const std::vector<float>& minmaxvec);
   nnvm::Symbol subgraph_sym_;
   nnvm::NodeAttrs attrs;
   DNNLFCFullParam full_param_;
@@ -132,6 +137,160 @@ dnnl::memory::desc SgDNNLFCOp::CreateOutputMemoryDesc(const mxnet::TShape& oshap
                          static_cast<dnnl::memory::format_tag>(GetDefaultFormat(2)));
   return out_md;
 }
+
+bool SgDNNLFCOp::PrepareQuantization(const OpContext& ctx,
+                                     const std::vector<NDArray>& in_data,
+                                     const NDArray& output,
+                                     const std::vector<float>& minmaxvec) {
+  const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  auto dnnl_param     = full_param_.dnnl_param;
+  auto default_param  = full_param_.default_param;
+  bool has_bias       = !full_param_.default_param.no_bias;
+  const FCInputIndex idx(full_param_);
+  bool support_channelwise_scale = false;
+
+  const NDArray& data   = in_data[fullc::kData];
+  const NDArray& weight = in_data[fullc::kWeight];
+
+  const bool channel_wise = dnnl_param.quantized && dnnl_param.channel_wise_quantize.has_value() &&
+                            dnnl_param.channel_wise_quantize.value();
+  CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
+  data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
+
+  bool fuse_requantize = false;
+  // Channelwise scaling is only supported when fusion is enabled (requantize or dequantize).
+  if (dnnl_param.min_calib_range.has_value() && dnnl_param.max_calib_range.has_value()) {
+    cached_output_min_        = dnnl_param.min_calib_range.value();
+    cached_output_max_        = dnnl_param.max_calib_range.value();
+    support_channelwise_scale = true;
+    fuse_requantize           = true;
+  }
+  if (dnnl_param.enable_float_output) {
+    support_channelwise_scale = true;
+  }
+  // channel_wise  support_channelwise_scale  result
+  // True          True                       True
+  // True          False                      Error
+  // False         True/False                 False
+  if (channel_wise && !support_channelwise_scale) {
+    LOG(FATAL) << "Currently, channel-wise quantization requires fuse requantize or dequantize."
+               << " Please make sure the `min_calib_range` and `max_calib_range` are set when only"
+               << " fuse requantize (outputs of FullyConnected are collected during calibration "
+                  "phase),"
+               << " or the env var of `MXNET_DISABLE_ONEDNN_QFC_FLOAT_OUTPUT` and "
+               << " `MXNET_DISABLE_ONEDNN_QFC_FUSE_ALL` are not set to true (default is false)";
+  }
+  support_channelwise_scale = support_channelwise_scale && channel_wise;
+
+  if (support_channelwise_scale) {
+    MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
+      weight_scales_ = GetWeightScales<DType>(cached_weight_,
+                                              has_bias ? &cached_bias_ : nullptr,
+                                              data_scale_,
+                                              support_channelwise_scale);
+    });
+  } else {
+    weight_scales_.resize(1);
+    weight_scales_[0] =
+        GetQuantizeScale(cached_weight_.dtype(), cached_weight_min_, cached_weight_max_);
+    if (has_bias) {
+      if (cached_bias_.dtype() == mshadow::kInt8) {
+        float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_bias_min_, cached_bias_max_);
+
+        float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
+        // TODO(zhennan): dnnl has bug to handle INT_MAX in bias, so set
+        // the maximum value of bias to INT_MAX / 2.
+        float bias_max_rescale =
+            MaxValue<int32_t>() / 2 / MaxAbs(cached_bias_min_, cached_bias_max_) / bias_scale;
+        if (bias_int32_rescale > bias_max_rescale) {
+          // avoid overflow on bias
+          bias_int32_rescale   = bias_max_rescale;
+          float weight_rescale = bias_int32_rescale * bias_scale / data_scale_ / weight_scales_[0];
+          int8_t* weight_ptr   = weight.data().dptr<int8_t>();
+          size_t weight_size   = weight.shape().Size();
+#pragma omp parallel for num_threads(nthreads)
+          for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
+            weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
+          }
+          weight_scales_[0] *= weight_rescale;
+        }
+        NDArray bias = in_data[fullc::kBias];
+        cached_bias_ =
+            NDArray(bias.storage_type(), bias.shape(), bias.ctx(), true, mshadow::kInt32);
+        int8_t* bias_ptr            = bias.data().dptr<int8_t>();
+        int32_t* quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
+        size_t bias_size            = bias.shape().Size();
+
+#pragma omp parallel for num_threads(nthreads)
+        for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
+          quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
+        }
+      }
+    }
+  }
+
+  size_t num_channel = cached_weight_.shape()[0];
+  float out_scale    = 1.0f;
+  if (fuse_requantize || dnnl_param.enable_float_output) {
+    float tmp_scale_ = 1.0f;
+    if (fuse_requantize) {
+      if (dnnl_param.with_eltwise) {
+        tmp_scale_ = 1.0 / data_scale_;
+        full_param_.eltwise_param.scale =
+            GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_);
+      } else {
+        out_scale  = GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_);
+        tmp_scale_ = out_scale / data_scale_;
+      }
+    } else {
+      tmp_scale_ = 1.0 / data_scale_;
+    }
+
+    if (support_channelwise_scale) {
+      full_param_.output_scales.resize(num_channel);
+#pragma omp parallel for num_threads(nthreads)
+      for (index_t i = 0; i < static_cast<index_t>(num_channel); ++i) {
+        full_param_.output_scales[i] = tmp_scale_ / weight_scales_[i];
+      }
+    } else {
+      full_param_.output_scales.resize(1);
+      full_param_.output_scales[0] = tmp_scale_ / weight_scales_[0];
+    }
+  } else {
+    Stream<cpu>* s = ctx.get_stream<cpu>();
+    if (data.dtype() == mshadow::kInt8) {
+      mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
+          s,
+          1,
+          &cached_output_min_,
+          &cached_output_max_,
+          &(minmaxvec[min_max::kDataMin]),
+          &(minmaxvec[min_max::kDataMax]),
+          &(minmaxvec[min_max::kWeightMin]),
+          &(minmaxvec[min_max::kWeightMax]));
+    } else {
+      mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
+          s,
+          1,
+          &cached_output_min_,
+          &cached_output_max_,
+          &(minmaxvec[min_max::kDataMin]),
+          &(minmaxvec[min_max::kDataMax]),
+          &(minmaxvec[min_max::kWeightMin]),
+          &(minmaxvec[min_max::kWeightMax]));
+    }
+    full_param_.output_scales.resize(0);
+    out_scale = data_scale_ * weight_scales_[0];
+  }
+
+  if (dnnl_param.with_sum && !dnnl_param.enable_float_output) {
+    float sum_in_scale =
+        GetQuantizeScale(in_data[idx.sum].dtype(), cached_sum_min_, cached_sum_max_);
+    full_param_.sum_scale = out_scale / sum_in_scale;
+  }
+  return support_channelwise_scale;
+}
+
 void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight,
                                          bool support_channelwise_scale,
                                          bool has_bias) {
@@ -357,143 +516,9 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     cached_out_mem_           = std::make_shared<dnnl::memory>(out_md, engine);
 
     bool support_channelwise_scale = false;
+
     if (dnnl_param.quantized) {
-      CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
-      data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
-
-      bool fuse_requantize = false;
-      // Channelwise scaling is only supported when fusion is enabled (requantize or dequantize).
-      if (dnnl_param.min_calib_range.has_value() && dnnl_param.max_calib_range.has_value()) {
-        cached_output_min_        = dnnl_param.min_calib_range.value();
-        cached_output_max_        = dnnl_param.max_calib_range.value();
-        support_channelwise_scale = true;
-        fuse_requantize           = true;
-      }
-      if (dnnl_param.enable_float_output) {
-        support_channelwise_scale = true;
-      }
-      // channel_wise  support_channelwise_scale  result
-      // True          True                       True
-      // True          False                      Error
-      // False         True/False                 False
-      if (channel_wise && !support_channelwise_scale) {
-        LOG(FATAL)
-            << "Currently, channel-wise quantization requires fuse requantize or dequantize."
-            << " Please make sure the `min_calib_range` and `max_calib_range` are set when only"
-            << " fuse requantize (outputs of FullyConnected are collected during calibration "
-               "phase),"
-            << " or the env var of `MXNET_DISABLE_ONEDNN_QFC_FLOAT_OUTPUT` and "
-            << " `MXNET_DISABLE_ONEDNN_QFC_FUSE_ALL` are not set to true (default is false)";
-      }
-      support_channelwise_scale = support_channelwise_scale && channel_wise;
-
-      if (support_channelwise_scale) {
-        MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
-          weight_scales_ = GetWeightScales<DType>(cached_weight_,
-                                                  has_bias ? &cached_bias_ : nullptr,
-                                                  data_scale_,
-                                                  support_channelwise_scale);
-        });
-      } else {
-        weight_scales_.resize(1);
-        weight_scales_[0] =
-            GetQuantizeScale(cached_weight_.dtype(), cached_weight_min_, cached_weight_max_);
-        if (has_bias) {
-          if (cached_bias_.dtype() == mshadow::kInt8) {
-            float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_bias_min_, cached_bias_max_);
-
-            float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
-            // TODO(zhennan): dnnl has bug to handle INT_MAX in bias, so set
-            // the maximum value of bias to INT_MAX / 2.
-            float bias_max_rescale =
-                MaxValue<int32_t>() / 2 / MaxAbs(cached_bias_min_, cached_bias_max_) / bias_scale;
-            if (bias_int32_rescale > bias_max_rescale) {
-              // avoid overflow on bias
-              bias_int32_rescale = bias_max_rescale;
-              float weight_rescale =
-                  bias_int32_rescale * bias_scale / data_scale_ / weight_scales_[0];
-              int8_t* weight_ptr = weight.data().dptr<int8_t>();
-              size_t weight_size = weight.shape().Size();
-#pragma omp parallel for num_threads(nthreads)
-              for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
-                weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
-              }
-              weight_scales_[0] *= weight_rescale;
-            }
-            NDArray bias = in_data[fullc::kBias];
-            cached_bias_ =
-                NDArray(bias.storage_type(), bias.shape(), bias.ctx(), true, mshadow::kInt32);
-            int8_t* bias_ptr            = bias.data().dptr<int8_t>();
-            int32_t* quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
-            size_t bias_size            = bias.shape().Size();
-
-#pragma omp parallel for num_threads(nthreads)
-            for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
-              quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
-            }
-          }
-        }
-      }
-
-      size_t num_channel = cached_weight_.shape()[0];
-      float out_scale    = 1.0f;
-      if (fuse_requantize || dnnl_param.enable_float_output) {
-        float tmp_scale_ = 1.0f;
-        if (fuse_requantize) {
-          if (dnnl_param.with_eltwise) {
-            tmp_scale_ = 1.0 / data_scale_;
-            full_param_.eltwise_param.scale =
-                GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_);
-          } else {
-            out_scale  = GetQuantizeScale(output.dtype(), cached_output_min_, cached_output_max_);
-            tmp_scale_ = out_scale / data_scale_;
-          }
-        } else {
-          tmp_scale_ = 1.0 / data_scale_;
-        }
-
-        if (support_channelwise_scale) {
-          full_param_.output_scales.resize(num_channel);
-#pragma omp parallel for num_threads(nthreads)
-          for (index_t i = 0; i < static_cast<index_t>(num_channel); ++i) {
-            full_param_.output_scales[i] = tmp_scale_ / weight_scales_[i];
-          }
-        } else {
-          full_param_.output_scales.resize(1);
-          full_param_.output_scales[0] = tmp_scale_ / weight_scales_[0];
-        }
-      } else {
-        Stream<cpu>* s = ctx.get_stream<cpu>();
-        if (data.dtype() == mshadow::kInt8) {
-          mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-              s,
-              1,
-              &cached_output_min_,
-              &cached_output_max_,
-              &(minmaxvec[min_max::kDataMin]),
-              &(minmaxvec[min_max::kDataMax]),
-              &(minmaxvec[min_max::kWeightMin]),
-              &(minmaxvec[min_max::kWeightMax]));
-        } else {
-          mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
-              s,
-              1,
-              &cached_output_min_,
-              &cached_output_max_,
-              &(minmaxvec[min_max::kDataMin]),
-              &(minmaxvec[min_max::kDataMax]),
-              &(minmaxvec[min_max::kWeightMin]),
-              &(minmaxvec[min_max::kWeightMax]));
-        }
-        full_param_.output_scales.resize(0);
-        out_scale = data_scale_ * weight_scales_[0];
-      }
-
-      if (dnnl_param.with_sum && !dnnl_param.enable_float_output) {
-        float sum_in_scale =
-            GetQuantizeScale(in_data[idx.sum].dtype(), cached_sum_min_, cached_sum_max_);
-        full_param_.sum_scale = out_scale / sum_in_scale;
-      }
+      support_channelwise_scale = PrepareQuantization(ctx, in_data, output, minmaxvec);
     }  // if (dnnl_param.quantized)
 
     fwd_.reset(new DNNLFullyConnectedForward(full_param_,
