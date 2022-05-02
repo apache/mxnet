@@ -144,7 +144,6 @@ bool SgDNNLFCOp::PrepareQuantization(const OpContext& ctx,
                                      const std::vector<float>& minmaxvec) {
   const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   auto dnnl_param     = full_param_.dnnl_param;
-  auto default_param  = full_param_.default_param;
   bool has_bias       = !full_param_.default_param.no_bias;
   const FCInputIndex idx(full_param_);
   bool support_channelwise_scale = false;
@@ -478,7 +477,6 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   initialized_ = CheckInitializationConditions(in_data, channel_wise, minmaxvec);
 
   if (!initialized_) {
-    const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     const auto engine   = CpuEngine::Get()->get_engine();
     cached_data_min_    = minmaxvec[min_max::kDataMin];
     cached_data_max_    = minmaxvec[min_max::kDataMax];
