@@ -75,6 +75,7 @@ class SgDNNLFCOp {
     kSumMin,
     kSumMax
   };
+  dnnl::memory::desc CreateOutputMemoryDesc(const mxnet::TShape& oshape, int out_dtype);
   void GetCachedWeightsAndBias(const NDArray& weight,
                                bool support_channelwise_scale,
                                bool has_bias);
@@ -110,6 +111,27 @@ class SgDNNLFCOp {
   std::vector<float> weight_scales_;
 };
 
+dnnl::memory::desc SgDNNLFCOp::CreateOutputMemoryDesc(const mxnet::TShape& oshape, int out_dtype) {
+  auto default_param = full_param_.default_param;
+  dnnl::memory::dims out_dims(2);
+  if (oshape.ndim() == 2) {
+    out_dims[0] = static_cast<index_t>(oshape[0]);
+    out_dims[1] = static_cast<index_t>(oshape[1]);
+  } else {
+    if (!default_param.flatten) {
+      out_dims[0] = static_cast<index_t>(oshape.ProdShape(0, oshape.ndim() - 1));
+      out_dims[1] = static_cast<index_t>(oshape[oshape.ndim() - 1]);
+    } else {
+      out_dims[0] = static_cast<index_t>(oshape[0]);
+      out_dims[1] = static_cast<index_t>(oshape.ProdShape(1, oshape.ndim()));
+    }
+  }
+  dnnl::memory::desc out_md =
+      dnnl::memory::desc(out_dims,
+                         get_dnnl_type(out_dtype),
+                         static_cast<dnnl::memory::format_tag>(GetDefaultFormat(2)));
+  return out_md;
+}
 void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight,
                                          bool support_channelwise_scale,
                                          bool has_bias) {
@@ -331,25 +353,8 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     }
 
     // create cached out_md
-    const mxnet::TShape oshape = output.shape();
-    dnnl::memory::dims out_dims(2);
-    if (oshape.ndim() == 2) {
-      out_dims[0] = static_cast<index_t>(oshape[0]);
-      out_dims[1] = static_cast<index_t>(oshape[1]);
-    } else {
-      if (!default_param.flatten) {
-        out_dims[0] = static_cast<index_t>(oshape.ProdShape(0, oshape.ndim() - 1));
-        out_dims[1] = static_cast<index_t>(oshape[oshape.ndim() - 1]);
-      } else {
-        out_dims[0] = static_cast<index_t>(oshape[0]);
-        out_dims[1] = static_cast<index_t>(oshape.ProdShape(1, oshape.ndim()));
-      }
-    }
-    dnnl::memory::desc out_md =
-        dnnl::memory::desc(out_dims,
-                           get_dnnl_type(output.dtype()),
-                           static_cast<dnnl::memory::format_tag>(GetDefaultFormat(2)));
-    cached_out_mem_ = std::make_shared<dnnl::memory>(out_md, engine);
+    dnnl::memory::desc out_md = CreateOutputMemoryDesc(output.shape(), output.dtype());
+    cached_out_mem_           = std::make_shared<dnnl::memory>(out_md, engine);
 
     bool support_channelwise_scale = false;
     if (dnnl_param.quantized) {
