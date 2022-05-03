@@ -68,7 +68,7 @@ services:
       dockerfile: Dockerfile.build.centos7
       target: base
       args:
-        BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-centos7
+        BASE_IMAGE: nvidia/cuda:11.0.3-cudnn8-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
   centos7_gpu_cu112:
@@ -105,7 +105,7 @@ services:
       dockerfile: Dockerfile.build.ubuntu
       target: gpu
       args:
-        BASE_IMAGE: nvidia/cuda:11.1-cudnn8-devel-ubuntu18.04
+        BASE_IMAGE: nvidia/cuda:11.1.1-cudnn8-devel-ubuntu18.04
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu111:latest
   ubuntu_gpu_cu111:
@@ -115,7 +115,7 @@ services:
       dockerfile: Dockerfile.build.ubuntu
       target: gpu
       args:
-        BASE_IMAGE: nvidia/cuda:11.1-cudnn8-devel-ubuntu20.04
+        BASE_IMAGE: nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu111:latest
   ###################################################################################################
