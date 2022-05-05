@@ -65,7 +65,7 @@ class SgDNNLFCOp {
   }
 
  private:
-  enum min_max {
+  enum {
     kDataMin = 0,
     kDataMax,
     kWeightMin,
@@ -138,15 +138,15 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   CHECK_EQ(out_data.size(), index);  // index is equal to total number of outputs
 
   std::vector<float> minmaxvec(8);
-  minmaxvec[min_max::kDataMin]   = 0.0f;
-  minmaxvec[min_max::kDataMax]   = 0.0f;
-  minmaxvec[min_max::kWeightMin] = 0.0f;
-  minmaxvec[min_max::kWeightMax] = 0.0f;
-  minmaxvec[min_max::kBiasMin]   = 0.0f;
-  minmaxvec[min_max::kBiasMax]   = 0.0f;
+  minmaxvec[kDataMin]   = 0.0f;
+  minmaxvec[kDataMax]   = 0.0f;
+  minmaxvec[kWeightMin] = 0.0f;
+  minmaxvec[kWeightMax] = 0.0f;
+  minmaxvec[kBiasMin]   = 0.0f;
+  minmaxvec[kBiasMax]   = 0.0f;
 
-  minmaxvec[min_max::kSumMin] = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
-  minmaxvec[min_max::kSumMax] = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
+  minmaxvec[kSumMin] = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
+  minmaxvec[kSumMax] = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
   NDArray data                = in_data[idx.data];
   const NDArray& weight       = in_data[idx.weight];
   NDArray output;
@@ -159,32 +159,32 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
 
   if (dnnl_param.quantized) {
     if (!channel_wise) {
-      minmaxvec[min_max::kWeightMin] = in_data[idx.weight_min].data().dptr<float>()[0];
-      minmaxvec[min_max::kWeightMax] = in_data[idx.weight_max].data().dptr<float>()[0];
+      minmaxvec[kWeightMin] = in_data[idx.weight_min].data().dptr<float>()[0];
+      minmaxvec[kWeightMax] = in_data[idx.weight_max].data().dptr<float>()[0];
       if (has_bias) {
-        minmaxvec[min_max::kBiasMin] = in_data[idx.bias_min].data().dptr<float>()[0];
-        minmaxvec[min_max::kBiasMax] = in_data[idx.bias_max].data().dptr<float>()[0];
+        minmaxvec[kBiasMin] = in_data[idx.bias_min].data().dptr<float>()[0];
+        minmaxvec[kBiasMax] = in_data[idx.bias_max].data().dptr<float>()[0];
       }
     }
-    minmaxvec[min_max::kDataMin] = in_data[idx.data_min].data().dptr<float>()[0];
-    minmaxvec[min_max::kDataMax] = in_data[idx.data_max].data().dptr<float>()[0];
+    minmaxvec[kDataMin] = in_data[idx.data_min].data().dptr<float>()[0];
+    minmaxvec[kDataMax] = in_data[idx.data_max].data().dptr<float>()[0];
   }
 
   initialized_ = CheckInitializationConditions(in_data, minmaxvec, channel_wise);
 
   if (!initialized_) {
     const auto engine  = CpuEngine::Get()->get_engine();
-    cached_data_min_   = minmaxvec[min_max::kDataMin];
-    cached_data_max_   = minmaxvec[min_max::kDataMax];
-    cached_weight_min_ = minmaxvec[min_max::kWeightMin];
-    cached_weight_max_ = minmaxvec[min_max::kWeightMax];
+    cached_data_min_   = minmaxvec[kDataMin];
+    cached_data_max_   = minmaxvec[kDataMax];
+    cached_weight_min_ = minmaxvec[kWeightMin];
+    cached_weight_max_ = minmaxvec[kWeightMax];
     weight_ver_        = weight.version();
     cached_weight_     = weight;
-    cached_sum_min_    = minmaxvec[min_max::kSumMin];
-    cached_sum_max_    = minmaxvec[min_max::kSumMax];
+    cached_sum_min_    = minmaxvec[kSumMin];
+    cached_sum_max_    = minmaxvec[kSumMax];
     if (has_bias) {
-      cached_bias_min_ = minmaxvec[min_max::kBiasMin];
-      cached_bias_max_ = minmaxvec[min_max::kBiasMax];
+      cached_bias_min_ = minmaxvec[kBiasMin];
+      cached_bias_max_ = minmaxvec[kBiasMax];
       bias_ver_        = in_data[idx.bias].version();
       cached_bias_     = in_data[idx.bias];
     } else {
@@ -313,10 +313,10 @@ bool SgDNNLFCOp::CheckInitializationConditions(const std::vector<NDArray>& input
   if (initialized_ && full_param_.dnnl_param.quantized &&
       dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
     bool has_bias = !full_param_.default_param.no_bias;
-    if (cached_data_min_ != minmaxvec[min_max::kDataMin] ||
-        cached_data_max_ != minmaxvec[min_max::kDataMax] ||
-        cached_sum_min_ != minmaxvec[min_max::kSumMin] ||
-        cached_sum_max_ != minmaxvec[min_max::kSumMax]) {
+    if (cached_data_min_ != minmaxvec[kDataMin] ||
+        cached_data_max_ != minmaxvec[kDataMax] ||
+        cached_sum_min_ != minmaxvec[kSumMin] ||
+        cached_sum_max_ != minmaxvec[kSumMax]) {
       return false;
     }
 
@@ -326,10 +326,10 @@ bool SgDNNLFCOp::CheckInitializationConditions(const std::vector<NDArray>& input
         return false;
       }
     } else {
-      if (cached_weight_min_ != minmaxvec[min_max::kWeightMin] ||
-          cached_weight_max_ != minmaxvec[min_max::kWeightMax] ||
-          (has_bias && (cached_bias_min_ != minmaxvec[min_max::kBiasMin] ||
-                        cached_bias_max_ != minmaxvec[min_max::kBiasMax]))) {
+      if (cached_weight_min_ != minmaxvec[kWeightMin] ||
+          cached_weight_max_ != minmaxvec[kWeightMax] ||
+          (has_bias && (cached_bias_min_ != minmaxvec[kBiasMin] ||
+                        cached_bias_max_ != minmaxvec[kBiasMax]))) {
         return false;
       }
     }
@@ -484,20 +484,20 @@ bool SgDNNLFCOp::PrepareQuantization(const OpContext& ctx,
           1,
           &cached_output_min_,
           &cached_output_max_,
-          &(minmaxvec[min_max::kDataMin]),
-          &(minmaxvec[min_max::kDataMax]),
-          &(minmaxvec[min_max::kWeightMin]),
-          &(minmaxvec[min_max::kWeightMax]));
+          &(minmaxvec[kDataMin]),
+          &(minmaxvec[kDataMax]),
+          &(minmaxvec[kWeightMin]),
+          &(minmaxvec[kWeightMax]));
     } else {
       mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
           s,
           1,
           &cached_output_min_,
           &cached_output_max_,
-          &(minmaxvec[min_max::kDataMin]),
-          &(minmaxvec[min_max::kDataMax]),
-          &(minmaxvec[min_max::kWeightMin]),
-          &(minmaxvec[min_max::kWeightMax]));
+          &(minmaxvec[kDataMin]),
+          &(minmaxvec[kDataMax]),
+          &(minmaxvec[kWeightMin]),
+          &(minmaxvec[kWeightMax]));
     }
     full_param_.output_scales.resize(0);
     out_scale = data_scale_ * weight_scales_[0];
