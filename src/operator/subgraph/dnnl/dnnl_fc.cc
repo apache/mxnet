@@ -522,12 +522,12 @@ void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight,
       std::unordered_map<DNNLFullyconSignature, std::pair<NDArray, NDArray>, OpHash>
           fcWeightsAndBias;
 #endif
-
-  bool has_id          = attrs.dict.count("__identifier__");
-  bool read_from_cache = false;
+  const static bool use_cache = !(dmlc::GetEnv("MXNET_ONEDNN_DISABLE_FC_CACHE", 0));
+  const bool has_id           = attrs.dict.count("__identifier__");
+  bool read_from_cache        = false;
 
   DNNLFullyconSignature key(full_param_.default_param);
-  if (has_id) {
+  if (use_cache && has_id) {
     key.AddSign(fwd_->fwd_pd.weights_desc());
     key.AddSign(attrs.dict["__identifier__"]);
     key.AddSign(attrs.name);
@@ -537,6 +537,10 @@ void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight,
       cached_weight_  = it->second.first;
       cached_bias_    = it->second.second;
       read_from_cache = true;
+      common::LogOnce(
+          "oneDNN optimized version of FullyConnected for inference is being used. Weights and "
+          "bias are cached and can not be dynamically changed during runtime. To disable caching "
+          "mechanism use MXNET_ONEDNN_DISABLE_FC_CACHE=1.");
     }
   }
 
@@ -567,7 +571,7 @@ void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight,
                                             args);
       }
     }
-    if (has_id)
+    if (use_cache && has_id)
       AddToCache(&fcWeightsAndBias, key, {cached_weight_, cached_bias_});
   }
 }

@@ -157,20 +157,6 @@ class SgDNNLFCSelector : public SubgraphSelector {
   }
 };
 
-std::string GetRandomIdentifier() {
-    constexpr int id_length = 12;
-    const std::string letters("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789_");
-    std::mt19937 generator{std::random_device{}()};
-    std::uniform_int_distribution<int> distribution(0, letters.length() - 1);
-
-    std::string random_id(id_length, '\0');
-    for(auto& l: random_id) {
-        l = letters[distribution(generator)];
-    }
-
-    return random_id;
-}
-
 class SgDNNLFCProperty : public SubgraphProperty {
  public:
   SgDNNLFCProperty() {
@@ -190,7 +176,9 @@ class SgDNNLFCProperty : public SubgraphProperty {
 
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
-    nnvm::ObjectPtr n = nnvm::Node::Create();
+    // distingush between exactly same node in different networks - for caching weights
+    static unsigned int node_identifier = 0;
+    nnvm::ObjectPtr n                   = nnvm::Node::Create();
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
     nnvm::Symbol new_sym;
@@ -212,7 +200,7 @@ class SgDNNLFCProperty : public SubgraphProperty {
     n->attrs.name = node_name.str();
     n->attrs.op   = Op::Get("_sg_onednn_fully_connected");
     CHECK(n->attrs.op);
-    n->attrs.dict["__identifier__"] = GetRandomIdentifier();
+    n->attrs.dict["__identifier__"] = std::to_string(node_identifier++);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));
     return n;
