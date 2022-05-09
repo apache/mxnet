@@ -71,11 +71,8 @@ DNNLPowMulScalarFwd::DNNLPowMulScalarFwd(const DNNLPowMulScalarParam& param, con
 void DNNLPowMulScalarFwd::Execute(const NDArray& input,
                                   const OpReqType& req,
                                   const NDArray& output) {
-  auto input_ = input;
-  if (input_.IsDNNLData())
-    input_ = input_.Reorder2Default();
-  auto src              = input_.GetDNNLData();
-  dnnl_output_t out_mem = CreateDNNLMem(output, fwd_pd->dst_desc(), req, &input_);
+  auto src              = input.GetDNNLData();
+  dnnl_output_t out_mem = CreateDNNLMem(output, fwd_pd->dst_desc(), req, &input);
 
   dnnl_args_map_t args = {
       {DNNL_ARG_SRC, *src},

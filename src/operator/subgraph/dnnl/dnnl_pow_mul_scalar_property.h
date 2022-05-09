@@ -39,15 +39,12 @@ namespace op {
 
 class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
  private:
-  std::vector<const BiDirectedNode*> matched_list_;
   SelectStatus status_;
 
  public:
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
     if (seed_node.node->op() == Op::Get("_npi_power_scalar")) {
-      matched_list_.clear();
-      matched_list_.emplace_back(&seed_node);
       status_ = kStart;
       return true;
     }
@@ -59,37 +56,17 @@ class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& output_node) override {
-    const nnvm::Node* raw_power_scalar_node = n.node;
-    const nnvm::Node* raw_next_node         = output_node.node;
-    if (raw_power_scalar_node->op() && raw_power_scalar_node->op()->name == "_npi_power_scalar") {
-      if (raw_next_node->op() && status_ == kStart &&
-          raw_next_node->op()->name == "_npi_multiply_scalar") {
-        status_ = kSuccess;
-        return true;
-      } else {
-        status_ = kFail;
-        return false;
-      }
-    }
-
-    if (matched_list_.back() != &n) {
-      if (std::find(matched_list_.begin(), matched_list_.end(), &n) != matched_list_.end()) {
-        while (matched_list_.back() != &n) {
-          matched_list_.pop_back();
-        }
-      }
+    if (output_node.node->op() == Op::Get("_npi_multiply_scalar") && status_ == kStart) {
       status_ = kSuccess;
-      return false;
+      return true;
     }
-
+    status_ = kFail;
     return false;
   }
 
   void Reset() override {
-    CHECK_GE(matched_list_.size(), 1);
     auto new_selector = SgDNNLPowMulScalarSelector();
-    new_selector.Select(*matched_list_[0], nullptr);
-    *this = new_selector;
+    *this             = new_selector;
   }
 };
 
@@ -112,23 +89,19 @@ class SgDNNLPowMulScalarProperty : public SubgraphProperty {
                                      const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
 
-    std::ostringstream node_name;
-    node_name << "sg_dnnl_pow_mul_scalar_" << std::to_string(subgraph_id);
-
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable())
         return;
-      auto& sub_name = node->op()->name;
-      if (sub_name == "_npi_power_scalar") {
+      if (node->op() == Op::Get("_npi_power_scalar")) {
         n->attrs.dict["exponent"] =
             std::to_string(nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed).scalar);
-      } else if (sub_name == "_npi_multiply_scalar") {
+      } else if (node->op() == Op::Get("_npi_multiply_scalar")) {
         n->attrs.dict["multiplier"] =
             std::to_string(nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed).scalar);
       }
     });
 
-    n->attrs.name = node_name.str();
+    n->attrs.name = "sg_dnnl_pow_mul_scalar_" + std::to_string(subgraph_id);
     n->attrs.op   = Op::Get("_sg_onednn_pow_mul_scalar");
     CHECK(n->attrs.op);
     n->op()->attr_parser(&(n->attrs));
