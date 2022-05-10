@@ -58,7 +58,7 @@ class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
 
   bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& output_node) override {
     if (output_node.node->op() == Op::Get("_npi_multiply_scalar") &&
-        seed_node.node->num_inputs() == 1 && status_ == kStart) {
+        output_node.node->num_inputs() == 1 && status_ == kStart) {
       status_ = kSuccess;
       return true;
     }
