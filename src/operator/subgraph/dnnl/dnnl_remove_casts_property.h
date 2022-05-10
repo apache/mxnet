@@ -20,7 +20,7 @@
 /*!
  * \file dnnl_remove_casts_property.h
  * \brief Graph property for removing two unnecessary Cast operations
- * 
+ *
  * ... -> Cast(bool) -> expand_dims -> Cast(bool) -> Cast(bool) -> ...
  *                                  ||
  *                                  \/
