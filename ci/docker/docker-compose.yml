@@ -105,7 +105,8 @@ services:
       dockerfile: Dockerfile.build.ubuntu
       target: gpu
       args:
-        BASE_IMAGE: nvidia/cuda:11.4.0-cudnn8-devel-ubuntu18.04
+        BASE_IMAGE: nvidia/cuda:11.4.0-cudnn8-devel-ubuntu20.04
+        TRT_VERSION: 8.2.4-1+cuda11.4
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu114:latest
   ubuntu_gpu_cu111:
