@@ -44,7 +44,8 @@ class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
  public:
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
-    if (seed_node.node->op() == Op::Get("_npi_power_scalar")) {
+    if (seed_node.node->op() == Op::Get("_npi_power_scalar") &&
+        seed_node.node->num_outputs() == 1) {
       status_ = kStart;
       return true;
     }
@@ -56,17 +57,13 @@ class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& output_node) override {
-    if (output_node.node->op() == Op::Get("_npi_multiply_scalar") && status_ == kStart) {
+    if (output_node.node->op() == Op::Get("_npi_multiply_scalar") &&
+        seed_node.node->num_inputs() == 1 && status_ == kStart) {
       status_ = kSuccess;
       return true;
     }
     status_ = kFail;
     return false;
-  }
-
-  void Reset() override {
-    auto new_selector = SgDNNLPowMulScalarSelector();
-    *this             = new_selector;
   }
 };
 
