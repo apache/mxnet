@@ -51,7 +51,8 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
  public:
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
-    if (seed_node.node->op() == Op::Get("expand_dims")) {
+    if (seed_node.node->op() == Op::Get("expand_dims") && seed_node.node->num_inputs() == 1 &&
+        seed_node.node->num_outputs() == 1) {
       status_ = kExpand;
       return true;
     }
@@ -73,8 +74,15 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
     }
     if (output_node.node->op() == Op::Get("Cast")) {
       if (output_node.node->attrs.dict["dtype"] == boolStr) {
-        status_ = status_ == kExpand ? kCast : kSuccess;
-        return true;
+        if (status_ == kExpand) {
+          if (output_node.node->num_outputs() == 1) {
+            status_ = kCast;
+            return true;
+          }
+        } else if (status_ == kCast) {
+          status_ = kSuccess;
+          return true;
+        }
       }
     }
     status_ = kFail;
