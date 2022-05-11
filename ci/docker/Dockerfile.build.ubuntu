@@ -161,7 +161,6 @@ SHELL ["/bin/bash", "-c"]
 ARG BASE_IMAGE
 ARG TRT_VERSION
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
-    export OS_RELEASE="$(cat /etc/os-release)" && \
     apt-get update && \
     apt-get install -y --allow-change-held-packages libcudnn8 libcudnn8-dev && \
     if [ ! -z "${TRT_VERSION}" ]; then \
