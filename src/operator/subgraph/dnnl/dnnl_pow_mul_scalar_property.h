@@ -39,14 +39,13 @@ namespace op {
 
 class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
  private:
-  SelectStatus status_;
+  SelectStatus status_ = kStart;
 
  public:
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
     if (seed_node.node->op() == Op::Get("_npi_power_scalar") &&
         seed_node.node->num_outputs() == 1) {
-      status_ = kStart;
       return true;
     }
     return false;
@@ -64,6 +63,10 @@ class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
     }
     status_ = kFail;
     return false;
+  }
+
+  void Reset() override {
+    status_ = kStart;
   }
 };
 
