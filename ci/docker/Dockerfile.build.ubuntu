@@ -160,15 +160,14 @@ SHELL ["/bin/bash", "-c"]
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG BASE_IMAGE
 ARG TRT_VERSION
-RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
-    apt-get update && \
-    apt-get install -y --allow-change-held-packages libcudnn8 libcudnn8-dev && \
-    if [ ! -z "${TRT_VERSION}" ]; then \
+RUN if [ ! -z "${TRT_VERSION}" ]; then \
+        apt-get update && \
         TRT_MAJOR_VERSION=$(echo $TRT_VERSION | cut -d. -f 1) && \
         apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
                            libnvinfer-dev=${TRT_VERSION} \
                            libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
                            libnvinfer-plugin-dev=${TRT_VERSION}; \
-    fi && \
-    rm -rf /var/lib/apt/lists/*
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
 
