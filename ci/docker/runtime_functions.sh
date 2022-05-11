@@ -551,7 +551,6 @@ build_ubuntu_gpu_tensorrt() {
     export PYBIN=$(which python3)
     PYVERFULL=$($PYBIN -V | awk '{print $2}')
     export PYVER=${PYVERFULL%.*}
-    echo "PYBIN=$PYBIN, PYVER=$PYVER"
 
     # Build ONNX
     pushd .
