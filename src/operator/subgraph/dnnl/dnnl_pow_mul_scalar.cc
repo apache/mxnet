@@ -44,7 +44,19 @@ bool DNNLPowMulScalarShape(const nnvm::NodeAttrs& attrs,
 bool DNNLPowMulScalarType(const nnvm::NodeAttrs& attrs,
                           std::vector<int>* in_types,
                           std::vector<int>* out_types) {
-  return NumpyBinaryScalarType(attrs, in_types, out_types);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+  bool scalar_is_int                  = param.is_int;
+  if (common::is_int(in_attrs->at(0)) && !scalar_is_int) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
+  } else if (in_attrs->at(0) == mshadow::kBool) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, scalar_is_int ? mshadow::kInt32 : mshadow::kFloat32);
+  } else {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  }
+  return out_attrs->at(0) != -1;
 }
 
 inline static bool DNNLPowMulScalarStorageType(const nnvm::NodeAttrs& attrs,
