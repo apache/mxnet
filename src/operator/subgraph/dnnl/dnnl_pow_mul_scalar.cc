@@ -38,20 +38,13 @@ namespace op {
 bool DNNLPowMulScalarShape(const nnvm::NodeAttrs& attrs,
                            mxnet::ShapeVector* in_attrs,
                            mxnet::ShapeVector* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
-
-  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
+  return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
 }
 
 bool DNNLPowMulScalarType(const nnvm::NodeAttrs& attrs,
                           std::vector<int>* in_types,
                           std::vector<int>* out_types) {
-  TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
-  TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
-
-  return true;
+  return NumpyBinaryScalarType(attrs, in_types, out_types);
 }
 
 inline static bool DNNLPowMulScalarStorageType(const nnvm::NodeAttrs& attrs,
