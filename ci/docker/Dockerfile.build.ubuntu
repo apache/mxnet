@@ -159,6 +159,10 @@ SHELL ["/bin/bash", "-c"]
 # We need to redeclare ARG due to
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG BASE_IMAGE
+RUN apt-get update && \
+        apt-get install -y --allow-change-held-packages libcudnn8 libcudnn8-dev && \
+        rm -rf /var/lib/apt/lists/*
+
 ARG TRT_VERSION
 RUN if [ ! -z "${TRT_VERSION}" ]; then \
         apt-get update && \
