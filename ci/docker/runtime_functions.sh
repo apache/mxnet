@@ -28,6 +28,14 @@ CI_CMAKE_CUDA10_ARCH="5.2 7.5"
 # compute capabilities for CI instances supported by CUDA >= 11.1 (i.e. p3, g4, g5)
 CI_CMAKE_CUDA_ARCH="5.2 7.5 8.6"
 
+# On newer nvidia cuda containers, these environment variables
+#  are prefixed with NV_, so provide compatibility
+if [ ! -z "$NV_CUDNN_VERSION" ]; then
+    if [ -z "$CUDNN_VERSION" ]; then
+        export CUDNN_VERSION=$NV_CUDNN_VERSION
+    fi
+fi
+
 clean_repo() {
     set -ex
     git clean -xfd
