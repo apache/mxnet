@@ -345,7 +345,7 @@ __global__ void CalculateGreedyNMSResultsKernel(const DType* data, uint32_t* res
   constexpr int index_stride = NMS<DType>::n_threads / n_index;
   // Ensure that we only need 1 loop iteration to get all the data
   static_assert(index_stride >= num_other_boxes,
-		"Kernel is launched with too small number of threads");
+                "Kernel is launched with too small number of threads");
   if (threadIdx.x == 0) {
     indices[local_coord_index + 0] = coord_index + 0;
     indices[local_coord_index + 1] = coord_index + 1;
