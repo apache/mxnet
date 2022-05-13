@@ -159,51 +159,53 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
       # make a list to have a common path for one and multiple outputs
       ref_out = [ref_out]
 
-  dataArray= mx.gluon.data.ArrayDataset(*data)
+  class TestDataLoader(mx.gluon.data.DataLoader):
+    def __init__(self, data):
+      self.data = data
+      self.finish = False
 
-  calib_data = mx.gluon.data.DataLoader(dataArray, batch_size=1)
+    def __iter__(self):
+      self.finish = False
+      return self
+
+    def __next__(self):
+      if self.finish:
+        raise StopIteration
+      self.finish = True
+      return self.data
+
+    def __del__(self):
+      pass
+
+  calib_data = TestDataLoader(data)
+
   for quantize_granularity in quantize_granularity_list:
-    # if test fails with only one batch used for calibration, it will be re-run with all batches
-    # to achieve better representatation of the whole data range:
-    for num_calib_batches in [1, None]:
-      qnet = quantization.quantize_net(net_original,
-                                       device=mx.cpu(),
-                                       exclude_layers=None,
-                                       exclude_operators=None,
-                                       quantized_dtype=out_type,
-                                       calib_mode='naive',
-                                       calib_data=calib_data,
-                                       num_calib_batches=num_calib_batches,
-                                       quantize_mode=quantize_mode,
-                                       quantize_granularity=quantize_granularity)
-      qsym, _ = qnet.export(None)
-      check_fusion_parameter(qsym, attrs_dict)
-      if check_calibration:
-        check_qsym_calibrated(qsym, out_type, name=name)
-      if check_scale_align:
-        check_qsym_scale_align(qsym)
+    qnet = quantization.quantize_net(net_original,
+                                     device=mx.cpu(),
+                                     exclude_layers=None,
+                                     exclude_operators=None,
+                                     quantized_dtype=out_type,
+                                     calib_mode='naive',
+                                     calib_data=calib_data,
+                                     num_calib_batches=1,
+                                     quantize_mode=quantize_mode,
+                                     quantize_granularity=quantize_granularity)
+    qsym, _ = qnet.export(None)
+    check_fusion_parameter(qsym, attrs_dict)
+    if check_calibration:
+      check_qsym_calibrated(qsym, out_type, name=name)
+    if check_scale_align:
+      check_qsym_scale_align(qsym)
 
-      quantized_out = qnet(*data)
-      if one_output:
-        quantized_out = [quantized_out]
-      try:
-        for i in range(len(ref_out)):
-          min_range = mx.np.min(ref_out[i]).item()
-          max_range = mx.np.max(ref_out[i]).item()
-          atol = 0.1 * max(abs(min_range), abs(max_range))
-          assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(),
-                                      rtol=0.1, atol=atol, etol=0.2)
-      except AssertionError as err:
-        if num_calib_batches==1:
-          print("\nRerunning test with all batches used for calibration for more precise quantization scales!")
-        else:
-          raise err
-      else:
-        if num_calib_batches==None:
-          print("Finally the test passed when all batches were used for calibration.")
-        else:
-          break # for num_calib_batches in [1, None]:
-
+    quantized_out = qnet(*data)
+    if one_output:
+      quantized_out = [quantized_out]
+    for i in range(len(ref_out)):
+      min_range = mx.np.min(ref_out[i]).item()
+      max_range = mx.np.max(ref_out[i]).item()
+      atol = 0.1 * max(abs(min_range), abs(max_range))
+      assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(),
+                                   rtol=0.1, atol=atol, etol=0.2)
 
 
 def check_fusion(net_original, data_shapes, attrs_dict, check_fp32_fusion=True,
