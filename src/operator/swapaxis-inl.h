@@ -98,7 +98,7 @@ void SwapAxis(const nnvm::NodeAttrs& attrs,
 
   TBlob data_in              = in_data[swapaxisenum::kData];
   TBlob data_out             = out_data[swapaxisenum::kOut];
-  OpReqType out_req          = req[swapaxisenum::kData];
+  OpReqType out_req          = req[swapaxisenum::kOut];
   Stream<xpu>* s             = ctx.get_stream<xpu>();
   const SwapAxisParam& param = nnvm::get<SwapAxisParam>(attrs.parsed);
 
