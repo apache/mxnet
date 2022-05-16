@@ -23,8 +23,12 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
+ARG MXNET_VARIANT
+
 # update cuda repo key: https://developer.nvidia.com/blog/updating-the-cuda-linux-gpg-repository-key/
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+RUN if [[ $MXNET_VARIANT = cu* ]] ; then \
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub; \
+    fi
 
 RUN apt-get update && \
     apt-get install -y software-properties-common && \
@@ -37,7 +41,6 @@ RUN apt-get update && \
 
 RUN apt-get install -y libgomp1
 
-ARG MXNET_VARIANT
 RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; then echo "not installing libquadmath0 on aarch64" ; else apt-get install -y libquadmath0 ; fi
 RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; then \
     wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/Ubuntu18.04/arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2.tar && \
