@@ -39,7 +39,7 @@ from ..symbol import contrib as symbol_contrib
 from .. import ndarray
 from ..ndarray import NDArray, dtype_np_to_mx, get_dtype_type, get_dtype_name, bfloat16
 from . import lists
-from ..gluon import Block, trainer
+from ..gluon import Block, HybridBlock, trainer
 from .. import base
 from ..base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
                     _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
@@ -428,7 +428,7 @@ def unscale(optimizer_or_trainer):
                         "an optimizer, instead is %s" % type(optimizer_or_trainer))
 
 
-def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", target_dtype_ops=None,
+def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_ops=None,
                    fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=[],
                    cast_params_offline=False):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
@@ -464,9 +464,7 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
     data_names : list of strs, optional
         A list of strings that represent input data tensor names to the model
     cast_params_offline : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in LP16
-        because of a cast layer following it, but will reduce the computation and memory
-        overhead of the model if casted.
+        Whether to cast arg_params and aux_params now, instead of doing it every time at runtime.
     """
     import json
 
@@ -497,22 +495,30 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
             "conditional_fp32_ops should be a list of (str, str, list of str)"
         cond_ops[op_name].setdefault(attr_name, []).extend(attr_vals)
 
-    nodes_attr = sym.attr_dict()
+    nodes_attrs = sym.attr_dict()
     nodes_op = {n['name']: n['op'] for n in json.loads(sym.tojson())['nodes']}
-    if not set(excluded_sym_names).issubset(set(nodes_op.keys())):
-        logging.warning("excluded_sym_names are not present in the network. Missing layers: {}".format(
-            set(excluded_sym_names) - set(nodes_op.keys())))
-
     for node_name, node_op in nodes_op.items():
         if node_op not in cond_ops:
             continue
-        node_attrs = nodes_attr[node_name]
+        node_attrs = nodes_attrs[node_name]
         for attr_name, attr_vals in cond_ops[node_op].items():
             assert attr_name in node_attrs
             if node_attrs[attr_name] in attr_vals:
-                excluded_sym_names += node_name
+                excluded_sym_names.append(node_name)
                 break
-    excluded_sym_names = list(set(excluded_sym_names))
+
+    excluded_sym_names = set(excluded_sym_names)
+    for node in sym.get_internals():
+        if node.name in excluded_sym_names:
+            excluded_sym_names.remove(node.name)
+            opt_constraints = node.attr('__opt_constraint__')
+            opt_constraints = 0 if opt_constraints is None else int(opt_constraints)
+            opt_constraints |= HybridBlock.OptConstraint.Flag.DisableAMP.value
+            node._set_attr(__opt_constraint__=str(opt_constraints))
+
+    if len(excluded_sym_names) > 0:
+        logging.warning("excluded_sym_names are not present in the network. Missing nodes: {}".format(
+            excluded_sym_names))
 
     # Op lists should not intersect
     common_ops = set(target_dtype_ops) & set(fp32_ops)
@@ -561,13 +567,11 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype="float16", targ
                                             ctypes.c_uint(len(fp32_ops)),
                                             c_str_array(fp32_ops),
                                             ctypes.c_uint(len(widest_dtype_ops)),
-                                            c_str_array(widest_dtype_ops),
-                                            ctypes.c_uint(len(excluded_sym_names)),
-                                            c_str_array(excluded_sym_names)))
+                                            c_str_array(widest_dtype_ops)))
     return type(sym)(out)
 
 
-def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float16",
+def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype,
                   target_dtype_ops=None, fp32_ops=None, conditional_fp32_ops=None,
                   excluded_sym_names=[], cast_params_offline=False):
     """API for converting a model from FP32 model to a mixed precision model.
@@ -605,9 +609,7 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
         A list of strings that represent the names of symbols that users want to exclude
         from being executed in lower precision.
     cast_params_offline : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in LP16
-        because of a cast layer following it, but will reduce the computation and memory
-        overhead of the model if casted.
+        Whether to cast arg_params and aux_params now, instead of doing it every time at runtime.
     """
     assert isinstance(sym, Symbol), "First argument to convert_model should be a Symbol"
     assert isinstance(
@@ -641,9 +643,9 @@ def convert_model(sym, arg_params, aux_params, input_dtypes, target_dtype="float
 
 
 @wrap_ctx_to_device_func
-def convert_hybrid_block(block, data_example, target_dtype="float16", target_dtype_ops=None,
+def convert_hybrid_block(block, data_example, target_dtype, target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
-                         excluded_sym_names=[], device=gpu(0),
+                         excluded_sym_names=[], device=None,
                          cast_params_offline=False):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
     return a block with mixed precision support which can be used for inference use cases.
@@ -668,14 +670,12 @@ def convert_hybrid_block(block, data_example, target_dtype="float16", target_dty
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
         from being quantized
-    device : Context
-        Context on which model parameters should live
+    device : Device
+        Device on which model parameters should live. Default value: current device.
     cast_params_offline : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in LP16
-        because of a cast layer following it, but will reduce the computation and memory
-        overhead of the model if casted.
+        Whether to cast arg_params and aux_params now, instead of doing it every time at runtime.
     """
-    from ..gluon import HybridBlock, SymbolBlock
+    from ..gluon import SymbolBlock
     from ..ndarray import NDArray as ND_NDArray, waitall
     from ..numpy import ndarray as NP_NDArray
 

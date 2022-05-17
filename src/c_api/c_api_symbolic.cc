@@ -986,9 +986,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             const uint32_t num_fp32_ops,
                             const char** const fp32_ops_p,
                             const uint32_t num_widest_dtype_ops,
-                            const char** const widest_dtype_ops_p,
-                            const uint32_t num_excluded_symbols,
-                            const char** const excluded_syms_p) {
+                            const char** const widest_dtype_ops_p) {
   nnvm::Symbol* result_sym = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol* sym                   = static_cast<nnvm::Symbol*>(sym_handle);
@@ -1002,8 +1000,6 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   std::unordered_set<std::string> fp32_ops(fp32_ops_p, fp32_ops_p + num_fp32_ops);
   std::unordered_set<std::string> widest_dtype_ops(widest_dtype_ops_p,
                                                    widest_dtype_ops_p + num_widest_dtype_ops);
-  std::unordered_set<std::string> excluded_syms(excluded_syms_p,
-                                                excluded_syms_p + num_excluded_symbols);
 
   nnvm::DTypeVector arg_types(num_all_args);
   std::unordered_map<std::string, int> node_name_to_type_map;
@@ -1022,7 +1018,6 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["target_dtype_ops"] = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
   g.attrs["fp32_ops"]         = std::make_shared<nnvm::any>(std::move(fp32_ops));
   g.attrs["widest_dtype_ops"] = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
-  g.attrs["excluded_syms"]    = std::make_shared<nnvm::any>(std::move(excluded_syms));
   g                           = ApplyPass(std::move(g), "ReducePrecision");
 
   result_sym->outputs                      = g.outputs;
