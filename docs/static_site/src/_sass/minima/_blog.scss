@@ -15,37 +15,13 @@
  * specific language governing permissions and limitations
  * under the License. */
 
-.medium-widget-article__item {
-  transition: box-shadow 0.3s linear;
-
-  &:hover {
-    box-shadow: inset 0 -2px 0 0 $color-mxnet;
-    filter: none;
-    border-bottom: 1px white solid;
-
-    a.medium-widget-article__title {
-      color: orangered;
-    }
-  }
-
-  margin: 20px;
-  background-color: $grey-color-light;
-  padding: 0px;
-  border: 1px solid $grey-color-light
+.page-content-home div#rtb h2 {
+  font-size: 0.6em;
 }
 
-.medium-widget-article__title {
-  font-weight: 300;
-}
-
-.medium-widget-article__content {
-  padding: 15px;
-}
-
-@include media-query($on-palm) {
-  .medium-widget-article__row {
-    flex-direction: column;
-  }
+#rtb div.col-sm-4.rtb-col {
+	border: 1px solid $grey-color-light;
+	margin: 20px;
 }
 
 .blog-more {
