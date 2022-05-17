@@ -75,6 +75,23 @@ def test_quantize_float32_to_int8():
     qdata_np = (onp.sign(data_np) * onp.minimum(onp.abs(data_np) * scale + 0.5, quantized_range)).astype(onp.int8)
     assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
 
+def test_calibrated_quantize_v2_bfloat16_to_int8():
+    shape = rand_shape_nd(4)
+    data = mx.nd.random.normal(0, 1, shape).astype('bfloat16')
+    min_range = mx.nd.min(data).asscalar()
+    max_range = mx.nd.max(data).asscalar()
+    qdata, min_val, max_val = mx.nd.contrib.quantize_v2(data, 'int8', min_range, max_range)
+    data_np = data.asnumpy()
+    real_range = onp.maximum(onp.abs(min_range), onp.abs(max_range))
+    quantized_range = 127.0
+    scale = quantized_range / real_range
+    assert qdata.dtype == onp.int8
+    assert min_val.dtype == onp.float32
+    assert max_val.dtype == onp.float32
+    assert same(min_val.asscalar(), -real_range)
+    assert same(max_val.asscalar(), real_range)
+    qdata_np = (onp.sign(data_np) * onp.minimum(onp.abs(data_np) * scale + 0.5, quantized_range)).astype(onp.int8)
+    assert_almost_equal(qdata.asnumpy(), qdata_np, atol=1)
 
 def test_dequantize_int8_to_float32():
 
@@ -1267,7 +1284,7 @@ def test_quantize_gluon_with_forward():
 
         for mode in ['naive', 'entropy']:
             for quantize_granularity in ['tensor-wise', 'channel-wise']:
-                qdtype = qdtype if mode is 'naive' else 'auto'
+                qdtype = qdtype if mode == 'naive' else 'auto'
                 quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
                                                                     exclude_layers=None,
                                                                     exclude_layers_match=excluded_names_match,

@@ -291,6 +291,19 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
+int MXSetOptimizationConstraints(unsigned int constraints, unsigned int* prev) {
+  API_BEGIN();
+  *prev =
+      static_cast<unsigned int>(Imperative::Get()->set_opt_constraints(OptConstraint(constraints)));
+  API_END();
+}
+
+int MXGetOptimizationConstraints(unsigned int* curr) {
+  API_BEGIN();
+  *curr = static_cast<unsigned int>(Imperative::Get()->get_opt_constraints());
+  API_END();
+}
+
 int MXIsNumpyShape(int* curr) {
   API_BEGIN();
   *curr = Imperative::Get()->is_np_shape();

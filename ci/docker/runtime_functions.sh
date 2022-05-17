@@ -28,6 +28,14 @@ CI_CMAKE_CUDA10_ARCH="5.2 7.5"
 # compute capabilities for CI instances supported by CUDA >= 11.1 (i.e. p3, g4, g5)
 CI_CMAKE_CUDA_ARCH="5.2 7.5 8.6"
 
+# On newer nvidia cuda containers, these environment variables
+#  are prefixed with NV_, so provide compatibility
+if [ ! -z "$NV_CUDNN_VERSION" ]; then
+    if [ -z "$CUDNN_VERSION" ]; then
+        export CUDNN_VERSION=$NV_CUDNN_VERSION
+    fi
+fi
+
 clean_repo() {
     set -ex
     git clean -xfd
@@ -548,6 +556,9 @@ build_ubuntu_gpu_tensorrt() {
     export CC=gcc-7
     export CXX=g++-7
     export ONNX_NAMESPACE=onnx
+    export PYBIN=$(which python3)
+    PYVERFULL=$($PYBIN -V | awk '{print $2}')
+    export PYVER=${PYVERFULL%.*}
 
     # Build ONNX
     pushd .
@@ -556,7 +567,7 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    cmake -DPYTHON_EXECUTABLE=$PYBIN -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
@@ -566,12 +577,12 @@ build_ubuntu_gpu_tensorrt() {
 
     # Build ONNX-TensorRT
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.2/targets/x86_64-linux/include/
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
+    cmake -DPYTHON_EXECUTABLE=$PYBIN -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
@@ -585,6 +596,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_CUDNN=1                           \
           -DUSE_OPENCV=1                          \
           -DUSE_TENSORRT=1                        \
+          -DUSE_INT64_TENSOR_SIZE=1               \
           -DUSE_OPENMP=0                          \
           -DUSE_BLAS=Open                         \
           -DUSE_ONEDNN=0                          \

@@ -17,15 +17,21 @@
 
 import json
 import mxnet as mx
-import mxnet.gluon.nn as nn
 from mxnet import amp
-from mxnet.amp.amp import bfloat16
+from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from subgraph_common import SG_PASS_NAME, QUANTIZE_SG_PASS_NAME
 from test_matmul_subgraph import MultiHeadAttention
 
+import sys
+from pathlib import Path
+curr_path = Path(__file__).resolve().parent
+sys.path.insert(0, str(curr_path.parent.parent))
+
+from amp.common import check_amp_net_stats
+
 AMP_SG_PASS_NAME = 'ONEDNN_AMP'
-AMP_DTYPE = bfloat16
+AMP_DTYPE = 'bfloat16'
 
 
 # Checks if amp (after the AMP_SG_PASS_NAME fuse) changes the name of tensors for calibration
@@ -86,7 +92,7 @@ def check_amp_fuse(net, data_example, expected_sym=None, quantized_nodes=[], rto
 
 @mx.util.use_np
 def test_amp_fc():
-  class TestNet(mx.gluon.HybridBlock):
+  class TestNet(nn.HybridBlock):
     def __init__(self):
       super(TestNet, self).__init__()
       self.fc1 = nn.Dense(16)
@@ -115,7 +121,7 @@ def test_amp_fc():
 
 @mx.util.use_np
 def test_amp_conv():
-  class TestNet(mx.gluon.HybridBlock):
+  class TestNet(nn.HybridBlock):
     def __init__(self):
       super(TestNet, self).__init__()
       self.conv1 = nn.Conv2D(16, (3, 3))
@@ -166,7 +172,7 @@ def test_amp_transformers():
 
 @mx.util.use_np
 def test_amp_concat():
-  class TestNet(mx.gluon.HybridBlock):
+  class TestNet(nn.HybridBlock):
     def __init__(self):
       super(TestNet, self).__init__()
       self.fc1 = nn.Dense(16)
@@ -241,3 +247,30 @@ def test_amp_fuse_with_branch():
   exp_sym = mx.sym.Group([lp16_op_2, f32_op])
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(net, [data_example], exp_sym)
+
+
+def test_amp_excluding_after_graph_pass():
+  class TestNet(nn.HybridBlock):
+    def __init__(self):
+      super(TestNet, self).__init__()
+      self.fc1 = nn.Dense(16)
+      self.fc2 = nn.Dense(16)
+
+    def forward(self, x):
+      x = self.fc1(x)
+      with nn.HybridBlock.OptConstraint.disable_amp():
+        x = self.fc2(x)
+      return x
+
+  data_example = mx.np.random.uniform(-1, 1, (1, 8))
+  net = TestNet()
+  net.initialize()
+
+  net_before = amp.convert_hybrid_block(net, data_example, AMP_DTYPE, cast_params_offline=True)
+  check_amp_net_stats(AMP_DTYPE, net_before, data_example, lp16_tensors_num=2,
+                      lp16_casts_num=1, other_casts_num=1)
+
+  net.optimize_for(data_example, backend=SG_PASS_NAME)  # introduces new nodes
+  net_after = amp.convert_hybrid_block(net, data_example, AMP_DTYPE, cast_params_offline=True)
+  check_amp_net_stats(AMP_DTYPE, net_after, data_example, lp16_tensors_num=2,
+                      lp16_casts_num=1, other_casts_num=1)
