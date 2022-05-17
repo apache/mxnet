@@ -512,7 +512,7 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_o
         if node.name in excluded_sym_names:
             excluded_sym_names.remove(node.name)
             opt_constraints = node.attr('__opt_constraint__')
-            opt_constraints = 0 if opt_constraints is None else opt_constraints
+            opt_constraints = 0 if opt_constraints is None else int(opt_constraints)
             opt_constraints |= HybridBlock.OptConstraint.Flag.DisableAMP.value
             node._set_attr(__opt_constraint__=str(opt_constraints))
 

@@ -217,6 +217,12 @@ void DNNLWhereForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs);
 
+void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const NDArray& input,
+                      const OpReqType& req,
+                      const NDArray& output);
+
 }  // namespace op
 }  // namespace mxnet
 

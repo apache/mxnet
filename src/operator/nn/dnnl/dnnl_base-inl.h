@@ -155,6 +155,10 @@ static inline bool SupportDNNL(const NDArray& input) {
   return SupportDNNL(input.dtype(), input.shape()) && SupportStorageDNNL(input.storage_type());
 }
 
+static inline bool SupportDNNLQuantize(const int out_type) {
+  return out_type == mshadow::kUint8 || out_type == mshadow::kInt8;
+}
+
 static inline bool DNNLEnvSet() {
   static bool is_dnnl_enabled = dmlc::GetEnv("MXNET_ONEDNN_ENABLED", true);
   return is_dnnl_enabled;
@@ -215,6 +219,7 @@ bool SupportDNNLSplit(const NDArray& input);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs);
 bool SupportDNNLEltwise(const NDArray& input, const NDArray& output);
+bool SupportDNNLPower(const NDArray& input);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

@@ -35,28 +35,33 @@ AMP_DTYPE = 'float16'
 set_default_device(mx.gpu(0))
 
 
-def test_amp_coverage():
+def test_fp16_coverage():
     amp_common_tests.test_amp_coverage(AMP_DTYPE, 'FP16')
 
 
 @mx.util.use_np
-def test_amp_basic_use():
+def test_fp16_basic_use():
     amp_common_tests.test_amp_basic_use(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_amp_offline_casting():
+def test_fp16_offline_casting():
     amp_common_tests.test_amp_offline_casting(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_amp_offline_casting_shared_params():
+def test_fp16_offline_casting_shared_params():
     amp_common_tests.test_amp_offline_casting_shared_params(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_lp16_fp32_ops_order_independence():
+def test_fp16_fp32_ops_order_independence():
     amp_common_tests.test_lp16_fp32_ops_order_independence(AMP_DTYPE)
+
+
+@mx.util.use_np
+def test_fp16_test_node_excluding():
+    amp_common_tests.test_amp_node_excluding(AMP_DTYPE)
 
 
 @pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')

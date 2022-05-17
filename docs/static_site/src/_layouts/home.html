@@ -131,19 +131,11 @@
                 </div>
             </div>
 
-            <div id="medium-widget"></div>
-            <script>
-                MediumWidget.Init({renderTo: '#medium-widget',
-                    params: {
-                        "resource": "https://medium.com/apache-mxnet",
-                        "postsPerLine": 3,
-                        "limit": 3,
-                        "picture": "big",
-                        "fields": ["description", "claps", "publishAt"],
-                        "ratio": "landscape"
-                    }
-                })
-            </script>
+            <div class="row" id="retainable-rss-embed" data-rss="https://medium.com/feed/apache-mxnet"
+                data-maxcols="3" data-layout="slider" data-poststyle="external"
+                data-readmore="Read more.." data-buttonclass="btn btn-primary">
+            </div>
+
         </div>
     </div>
 
@@ -181,6 +173,12 @@
 </main>
 
 {%- include footer.html -%}
+
+{%- if jekyll.environment == 'production' -%}
+  <script src="{{ "/assets/js/retainable.js" | relative_url }}"></script>
+{%- else -%}
+  <script src="https://www.twilik.com/assets/retainable/rss-embed/retainable.js"></script>
+{%- endif -%}
 
 </body>
 

@@ -1284,7 +1284,7 @@ def test_quantize_gluon_with_forward():
 
         for mode in ['naive', 'entropy']:
             for quantize_granularity in ['tensor-wise', 'channel-wise']:
-                qdtype = qdtype if mode is 'naive' else 'auto'
+                qdtype = qdtype if mode == 'naive' else 'auto'
                 quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
                                                                     exclude_layers=None,
                                                                     exclude_layers_match=excluded_names_match,

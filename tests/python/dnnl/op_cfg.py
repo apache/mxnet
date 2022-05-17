@@ -295,10 +295,6 @@ def product_dict(dict_of_lists):
         yield dict(zip(keys, scenario))
 
 
-def random_tensor(tcfg: TensorArg):
-    return mx.nd.random.uniform(tcfg.val_range[0], tcfg.val_range[1], tcfg.shape).astype(tcfg.dtype)
-
-
 def resolve_cfg_references(args_cfg, all_ops_cfgs):
     if len(args_cfg) == 0:
         return {}

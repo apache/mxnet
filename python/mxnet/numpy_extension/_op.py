@@ -872,7 +872,7 @@ def rnn(data=None, parameters=None, state=None, state_cell=None, sequence_length
         h_t = \tanh(W_{ih} * x_t + b_{ih}  +  W_{hh} * h_{(t-1)} + b_{hh})
 
     Reference paper: Finding structure in time - Elman, 1988.
-    https://crl.ucsd.edu/~elman/Papers/fsit.pdf
+    https://axon.cs.byu.edu/~martinez/classes/678/Papers/Elman_time.pdf
 
     **LSTM**
 

@@ -90,16 +90,16 @@ def test_amp_basic_use(lp_dtype):
   net.initialize()
   net = amp.convert_hybrid_block(net, data_example, lp_dtype)
 
-  lp16_casts = 1  # net_data_cast
-  lp16_casts += 2  # fc1_weights_cast, fc1_bias_cast
-  lp16_casts += 2  # fc2_weights_cast, fc2_bias_cast
+  lp16_casts = 1  # cast for network input
+  lp16_casts += 2  # cast for weights and bias of `fc1`
+  lp16_casts += 2  # cast for weights and bias of `fc2`
 
-  other_casts = 1  # net_output_cast
+  other_casts = 1  # cast for the network output (from lp16 to f32)
 
-  lp16_tensors = 1  # net_data_cast_output
-  lp16_tensors += 3  # fc1_weights_cast_output, fc1_bias_cast_output, fc1_output
-  lp16_tensors += 3  # fc2_weights_cast_output, fc2_bias_cast_output, fc2_output
-  lp16_tensors += 1  # reshape_output
+  lp16_tensors = 1  # cast network input
+  lp16_tensors += 3  # cast weights and bias of `fc1`, `fc1` output
+  lp16_tensors += 3  # cast weights and bias of `fc2`, `fc2` output
+  lp16_tensors += 1  # reshape output
   check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num=lp16_tensors, lp16_casts_num=lp16_casts,
                       other_casts_num=other_casts)
 
@@ -187,6 +187,39 @@ def test_lp16_fp32_ops_order_independence(lp_dtype):
     net = amp.convert_hybrid_block(net, data_example, lp_dtype, cast_params_offline=True)
     check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num=3,
                         lp16_casts_num=1, other_casts_num=2)
+
+
+def test_amp_node_excluding(lp_dtype):
+  DISABLE_AMP_ATTR_DICT = {'__opt_constraint__': str(
+      mx.gluon.HybridBlock.OptConstraint.Flag.DisableAMP.value)}
+
+  data = mx.sym.var('data')
+  wei = mx.sym.var('weights')
+  bias = mx.sym.var('bias')
+  # manually excluded
+  fc1 = mx.sym.FullyConnected(data, wei, bias, num_hidden=4, name='fc1', attr=DISABLE_AMP_ATTR_DICT)
+  # to be excluded using the conversion API
+  fc2 = mx.sym.FullyConnected(data, wei, bias, num_hidden=4, name='fc2')
+  symnet = mx.sym.Group([fc1, fc2])
+
+  net = mx.gluon.SymbolBlock(symnet, [data])
+  net.initialize()
+
+  # exclude only nodes with set attribute (only 1 node - `fc1`)
+  data_example = mx.np.random.uniform(-1, 1, (4, 16))
+  net_1_excluded = amp.convert_hybrid_block(net, data_example, lp_dtype)
+
+  lp16_tensors = 4  # cast `data`, weights and bias of `fc1`, `fc1` output
+  lp16_casts = 3  # `data` cast, casts for weights and bias of `fc1`
+  other_casts = 1  # cast for the network output (from lp16 to f32)
+  check_amp_net_stats(lp_dtype, net_1_excluded, data_example, lp16_tensors_num=lp16_tensors,
+                      lp16_casts_num=lp16_casts, other_casts_num=other_casts)
+
+  # exclude using the `excluded_sym_names` argument (both nodes)
+  net_2_excluded = amp.convert_hybrid_block(net, data_example, lp_dtype,
+                                            excluded_sym_names=['fc1', 'fc2'])
+  check_amp_net_stats(lp_dtype, net_2_excluded, data_example, lp16_tensors_num=0,
+                      lp16_casts_num=0, other_casts_num=0)
 
 
 def check_amp_net_stats(lp_dtype, net, data_example, lp16_tensors_num, lp16_casts_num, other_casts_num):

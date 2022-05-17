@@ -243,7 +243,7 @@ plot_predictions(caltech101_images, result[3:7], categories, TOP_P)
 
 **Hmm, not so good...**  Even though predictions are close, they are not accurate, which is due to the fact that the ImageNet dataset does not contain `wrench`, `dolphin`, or `lotus` categories and our network has been trained on ImageNet.
 
-Lucky for us, the [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datasets/Caltech101/) has them, let's see how we can fine-tune our network to classify these categories correctly.
+Lucky for us, the [Caltech101 dataset](https://data.caltech.edu/records/20086) has them, let's see how we can fine-tune our network to classify these categories correctly.
 
 We show that in our next tutorial:
 

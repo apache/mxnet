@@ -22,10 +22,10 @@ sys.path.insert(0, str(curr_path.parent))
 
 import pytest
 import mxnet as mx
+import amp.common as amp_common_tests
 from mxnet.amp.lists.symbol_bf16 import (BF16_FUNCS, BF16_FP32_FUNCS, WIDEST_TYPE_CASTS,
                                          CONDITIONAL_FP32_FUNCS)
 
-import amp.common as amp_common_tests
 from op_cfg import get_op_cfg_generator, get_symblock_from_args_scenario
 
 
@@ -35,28 +35,33 @@ ALL_BF16_OPS += [op_name for op_name, attr_name, attr_vals in CONDITIONAL_FP32_F
 AMP_DTYPE = 'bfloat16'
 
 
-def test_amp_coverage():
+def test_bf16_coverage():
     amp_common_tests.test_amp_coverage(AMP_DTYPE, 'BF16')
 
 
 @mx.util.use_np
-def test_amp_basic_use():
+def test_bf16_basic_use():
     amp_common_tests.test_amp_basic_use(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_amp_offline_casting():
+def test_bf16_offline_casting():
     amp_common_tests.test_amp_offline_casting(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_amp_offline_casting_shared_params():
+def test_bf16_offline_casting_shared_params():
     amp_common_tests.test_amp_offline_casting_shared_params(AMP_DTYPE)
 
 
 @mx.util.use_np
-def test_lp16_fp32_ops_order_independence():
+def test_bf16_fp32_ops_order_independence():
     amp_common_tests.test_lp16_fp32_ops_order_independence(AMP_DTYPE)
+
+
+@mx.util.use_np
+def test_bf16_test_node_excluding():
+    amp_common_tests.test_amp_node_excluding(AMP_DTYPE)
 
 
 def get_param_name(param):

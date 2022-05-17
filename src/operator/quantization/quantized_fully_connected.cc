@@ -305,10 +305,12 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_ONEDNN == 1
 void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs& attrs,
                                          const OpContext& ctx,
-                                         const std::vector<NDArray>& in_data,
+                                         const std::vector<NDArray>& inputs,
                                          const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& out_data) {
-  DNNLQuantizedFullyConnectedForward(attrs, ctx, in_data, req, out_data);
+                                         const std::vector<NDArray>& outputs) {
+  DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+  DNNLRun(DNNLQuantizedFullyConnectedForward, attrs, ctx, inputs, req, outputs);
+  DNNL_OPCHECK_RUN(QuantizedFullyConnectedForwardCPU, attrs, ctx, inputs, req, outputs);
 }
 #endif
 
