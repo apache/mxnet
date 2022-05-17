@@ -23,6 +23,13 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
+# manually update cuda repo key: https://developer.nvidia.com/blog/updating-the-cuda-linux-gpg-repository-key/
+# remove this after nvidia updates the base images with new keys
+ARG IS_CUDA
+RUN if [ "$IS_CUDA" = "true" ] ; then \
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub; \
+    fi
+
 RUN apt-get update && \
     apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:deadsnakes/ppa && \
