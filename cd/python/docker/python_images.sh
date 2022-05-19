@@ -44,16 +44,15 @@ if [ ! -z "${RELEASE_PUBLIC_ECR_REPOSITORY}" ]; then
 fi
 
 build() {
-    # use this flag to manually update cuda repo key: https://developer.nvidia.com/blog/updating-the-cuda-linux-gpg-repository-key/
-    # remove it after nvidia updates the base images with new keys
+    # use this flag to set LD_LIBRARY_PATH for cuda files
     if [[ $mxnet_variant = cu* ]]; then
-        is_cuda="true"
+        cuda_version=${mxnet_variant:2:-1}.${mxnet_variant: -1}
     else
-        is_cuda="false"
+        cuda_version="false"
     fi
 
     # NOTE: Ensure the correct context root is passed in when building - Dockerfile expects ./wheel_build
-    docker build -t "${image_name}" --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} --build-arg MXNET_VARIANT=${mxnet_variant} --build-arg IS_CUDA=${is_cuda} -f ${resources_path}/Dockerfile ./wheel_build
+    docker build -t "${image_name}" --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} --build-arg MXNET_VARIANT=${mxnet_variant} --build-arg CUDA_VERSION=${cuda_version} -f ${resources_path}/Dockerfile ./wheel_build
 }
 
 test() {
