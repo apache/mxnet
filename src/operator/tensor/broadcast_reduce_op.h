@@ -1384,6 +1384,7 @@ void BroadcastCPU(const OpContext& ctx,
     }
   }
 
+  // determine if version with memcpy should be used
   // there is no need to check further axis' elements to copy as it for sure will be larger
   if (elements_to_copy[0] < ELEMENTS_THRESHOLD || !std::is_same<IType, OType>::value) {
     IType* src = static_cast<IType*>(inputs[0].dptr_);
