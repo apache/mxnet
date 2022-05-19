@@ -51,6 +51,10 @@ RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; then \
     fi
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib:/usr/local/cuda-${CUDA_VERSION}/compat
 
+RUN echo "CUDA_VERSION: ${CUDA_VERSION}"
+
+RUN echo "LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}"
+
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
 
