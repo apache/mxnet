@@ -23,11 +23,11 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG CUDA_VERSION
+ARG CUDA_VARIANT
 
 # manually update cuda repo key: https://developer.nvidia.com/blog/updating-the-cuda-linux-gpg-repository-key/
 # remove this after nvidia updates the base images with new keys
-RUN if [ "$CUDA_VERSION" != "false" ] ; then \
+RUN if [ "$CUDA_VARIANT" != "false" ] ; then \
     apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub; \
     fi
 
@@ -49,7 +49,7 @@ RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; then \
     tar -xvf arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2.tar && \
     arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2/arm-performance-libraries_21.0_Ubuntu-18.04.sh -a; \
     fi
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib:/usr/local/cuda-${CUDA_VERSION}/compat
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib:/usr/local/cuda-${CUDA_VARIANT}/compat
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
