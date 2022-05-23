@@ -15,6 +15,8 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+# oneDNN Quantization
+
 ## Introduction
 
 After successful model building and achieving desired accuracy on the test data, often the next step is to optimize inference to deploy the model to production. One of the key features of usable model is to have as small latency as possible to be able to provide services to large number of customers simultaneously. In addition to customer satisfaction, with well optimized model, hardware load is reduced which also reduces energy costs needed to perform inference.
