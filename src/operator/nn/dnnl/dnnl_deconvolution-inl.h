@@ -129,25 +129,6 @@ class DNNLDeconvFwd {
   std::shared_ptr<deconv_fwd_pd_t> fwd_pd;
 };
 
-// DNNLDeconvFwd::Tensors::Tensors(const bool no_bias,
-//                                 const std::vector<NDArray>& inputs,
-//                                 const std::vector<NDArray>& outputs)
-//     : data(inputs[deconv::kData]),
-//       weights(inputs[deconv::kWeight]),
-//       bias(no_bias ? nullptr : &inputs[deconv::kBias]),
-//       out(outputs[deconv::kOut]) {}
-
-// DNNLDeconvFwd::Tensors::Tensors(const NDArray& data,
-//                                 const NDArray& weights,
-//                                 const NDArray* const bias,
-//                                 const NDArray& out)
-//     : data(data), weights(weights), bias(bias), out(out) {}
-
-// DNNLDeconvFwd::DNNLDeconvFwd(const DeconvolutionParam& param, const Tensors& tensors)
-//     : fwd_pd(CreatePrimitiveDesc(param, tensors)) {
-//   fwd = std::make_shared<deconv_fwd_t>(*fwd_pd);
-// }
-
 inline const dnnl::memory* DNNLDeconvFwd::DataMem(const NDArray& data) const {
   auto fwd_src_desc = fwd_pd->src_desc();
   return data.GetDNNLDataReorder(&fwd_src_desc);
