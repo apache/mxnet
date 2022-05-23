@@ -59,8 +59,6 @@ class DNNLSumFwd {
   std::shared_ptr<sum_pd_t> fwd_pd;
 };
 
-void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
-
 void DNNLSumForward(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
                     const std::vector<NDArray>& inputs,

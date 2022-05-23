@@ -24,7 +24,6 @@
 #include "../../../common/exec_utils.h"
 #include "operator/operator_common.h"
 #include "dnnl_base-inl.h"
-#include "dnnl_sum-inl.h"
 
 namespace mxnet {
 
@@ -36,6 +35,36 @@ DNNLStream* DNNLStream::Get() {
 #endif
   return &stream;
 }
+
+namespace op {
+void DNNLMemorySum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out) {
+  std::vector<dnnl::memory::desc> input_pds(2);
+  std::vector<float> scales(2, 1);
+  input_pds[0] = arr1.get_desc();
+  input_pds[1] = arr2.get_desc();
+  CHECK(input_pds[0] == input_pds[0]);
+  const dnnl::memory* in_mem1 = &arr1;
+  const dnnl::memory* in_mem2 = &arr2;
+  auto output_pd              = out.get_desc();
+  if (input_pds[0] != output_pd) {
+    auto tmp_memory1 = TmpMemMgr::Get()->Alloc(output_pd);
+    auto tmp_memory2 = TmpMemMgr::Get()->Alloc(output_pd);
+    DNNLMemoryCopy(arr1, tmp_memory1);
+    DNNLMemoryCopy(arr2, tmp_memory2);
+    input_pds[0] = tmp_memory1->get_desc();
+    input_pds[1] = tmp_memory2->get_desc();
+    in_mem1      = tmp_memory1;
+    in_mem2      = tmp_memory2;
+  }
+  dnnl::sum::primitive_desc sum_pd(output_pd, scales, input_pds, CpuEngine::Get()->get_engine());
+  dnnl_args_map_t args = {
+      {DNNL_ARG_MULTIPLE_SRC, *in_mem1},
+      {DNNL_ARG_MULTIPLE_SRC + 1, *in_mem2},
+      {DNNL_ARG_DST, out},
+  };
+  DNNLStream::Get()->RegisterPrimArgs(dnnl::sum(sum_pd), args);
+}
+}  // namespace op
 
 void* AlignMem(void* mem, size_t size, size_t alignment, size_t* space) {
   if (size > *space)
@@ -222,7 +251,7 @@ void CommitOutput(const NDArray& arr, const dnnl_output_t& res) {
       res_memory = tmp_memory;
       mem        = arr.GetDNNLData();
     }
-    op::DNNLSum(*mem, *res_memory, *mem);
+    op::DNNLMemorySum(*mem, *res_memory, *mem);
   }
 }
 

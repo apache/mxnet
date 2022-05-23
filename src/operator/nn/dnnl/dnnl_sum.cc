@@ -33,33 +33,6 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_ONEDNN == 1
-void DNNLSum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out) {
-  std::vector<dnnl::memory::desc> input_pds(2);
-  std::vector<float> scales(2, 1);
-  input_pds[0] = arr1.get_desc();
-  input_pds[1] = arr2.get_desc();
-  CHECK(input_pds[0] == input_pds[0]);
-  const dnnl::memory* in_mem1 = &arr1;
-  const dnnl::memory* in_mem2 = &arr2;
-  auto output_pd              = out.get_desc();
-  if (input_pds[0] != output_pd) {
-    auto tmp_memory1 = TmpMemMgr::Get()->Alloc(output_pd);
-    auto tmp_memory2 = TmpMemMgr::Get()->Alloc(output_pd);
-    DNNLMemoryCopy(arr1, tmp_memory1);
-    DNNLMemoryCopy(arr2, tmp_memory2);
-    input_pds[0] = tmp_memory1->get_desc();
-    input_pds[1] = tmp_memory2->get_desc();
-    in_mem1      = tmp_memory1;
-    in_mem2      = tmp_memory2;
-  }
-  dnnl::sum::primitive_desc sum_pd(output_pd, scales, input_pds, CpuEngine::Get()->get_engine());
-  dnnl_args_map_t args = {
-      {DNNL_ARG_MULTIPLE_SRC, *in_mem1},
-      {DNNL_ARG_MULTIPLE_SRC + 1, *in_mem2},
-      {DNNL_ARG_DST, out},
-  };
-  DNNLStream::Get()->RegisterPrimArgs(dnnl::sum(sum_pd), args);
-}
 
 DNNLSumFwd& DNNLSumFwd::GetCached(const std::vector<NDArray>& inputs,
                                   const std::vector<NDArray>& outputs) {
