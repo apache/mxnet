@@ -212,20 +212,21 @@ def get_all_ops_cfgs(dtype):
 
         ######################################### Softmax #########################################
 
-        'softmax': {CFG_BASED_ON: 'sum'},
-        'log_softmax': {CFG_BASED_ON: 'softmax'},
-        'masked_softmax': {
+        'softmax': {
             'data': [
                 default_tensor(2, dtype),
-                default_tensor(3, dtype),
-                # default_tensor(4, dtype) TODO
+                default_tensor(4, dtype)
             ],
+            'axis': [-1]
+        },
+        'log_softmax': {CFG_BASED_ON: 'softmax'},
+        'masked_softmax': {
+            CFG_BASED_ON: 'softmax',
             'mask': [
                 CfgBasedArg(
                     lambda cfg: mx.nd.random.randint(0, 2, cfg['data'].shape).astype('bool')
                 )
             ],
-            'axis': [-1]
         },
 
         ################################### Activation / Unary ####################################
