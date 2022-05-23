@@ -97,11 +97,11 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   const float A_absmax = MaxAbs(A_min, A_max);
   const float B_absmax = MaxAbs(B_min, B_max);
   const bool is_A_int8 = (inputs[q_elemwise_add::kDataA].dtype() == mshadow::kInt8);
-  const float A_range  = is_A_int8 ? kInt8Range : kUint8Range;
   const float A_scale  = GetScale(inputs[q_elemwise_add::kDataA], A_min, A_max);
   const float B_scale  = GetScale(inputs[q_elemwise_add::kDataB], B_min, B_max);
   auto A_mem           = inputs[q_elemwise_add::kDataA].GetDNNLData();
   auto B_mem           = inputs[q_elemwise_add::kDataB].GetDNNLData();
+  float in_range;
   dnnl::memory* rescaled_mem;              // rescaled_mem is for reorder dnnl memory
   double output_data_range = kInt32Range;  // output default set as int32
   if (outputs[q_elemwise_add::kOut].dtype() == mshadow::kInt8) {
@@ -126,27 +126,9 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   std::vector<float> scales(scales_num, 1);
   auto engine = CpuEngine::Get()->get_engine();
   if (inputs[q_elemwise_add::kDataA].dtype() != inputs[q_elemwise_add::kDataB].dtype()) {
-    auto s8_desc           = (is_A_int8 == true) ? A_mem->get_desc() : B_mem->get_desc();
+    auto s8_desc                     = is_A_int8 ? A_mem->get_desc() : B_mem->get_desc();
     rescaled_mem = TmpMemMgr::Get()->Alloc(s8_desc);
-    float u8_reorder_scale = 0;
-    if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
-      if (is_A_int8 == true) {
-        u8_reorder_scale = output_scale / B_scale;
-        scales[0]        = output_scale / A_scale;
-      } else {
-        u8_reorder_scale = output_scale / A_scale;
-        scales[1]        = output_scale / B_scale;
-      }
-    } else {
-      // x*A_absmax/A_range = y*(A_absmax+B_absmax)/output_range
-      if (is_A_int8 == true) {
-        u8_reorder_scale = B_absmax * output_data_range / (output_max * kUint8Range);
-        scales[0]        = A_absmax * output_data_range / (output_max * A_range);
-      } else {
-        u8_reorder_scale = A_absmax * output_data_range / (output_max * A_range);
-        scales[1]        = B_absmax * output_data_range / (output_max * kInt8Range);
-      }
-    }
+    const float u8_reorder_scale     = 0.5;
     std::vector<float> reorder_scale = {u8_reorder_scale};
     dnnl::primitive_attr reorder_attr;
     reorder_attr.set_output_scales(0, reorder_scale);
@@ -156,20 +138,23 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
     dnnl_args_map_t args({{DNNL_ARG_FROM, *u8_mem}, {DNNL_ARG_TO, *rescaled_mem}});
     DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd), args);
 
-    if (is_A_int8 == true) {
+    if (is_A_int8) {
       B_mem = rescaled_mem;
     } else {
       A_mem = rescaled_mem;
     }
+    in_range = kInt8Range;  // range after conversion uint8 to common int8
   } else {
-    // same data type and has same data range
-    if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
-      scales[0] = output_scale / A_scale;
-      scales[1] = output_scale / B_scale;
-    } else {
-      scales[0] = A_absmax * output_data_range / (output_max * A_range);
-      scales[1] = B_absmax * output_data_range / (output_max * A_range);
-    }
+    // both inputs has the same type
+    in_range = is_A_int8 ? kInt8Range : kUint8Range;
+  }
+
+  if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
+    scales[0] = output_scale / A_scale;
+    scales[1] = output_scale / B_scale;
+  } else {
+    scales[0] = A_absmax * output_data_range / (output_max * in_range);
+    scales[1] = B_absmax * output_data_range / (output_max * in_range);
   }
 
   std::vector<dnnl::memory::desc> in_desc;

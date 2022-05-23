@@ -51,7 +51,7 @@
 namespace mxnet {
 namespace op {
 
-class SgDNNLTransformerQKSelector : public SubgraphSelector {
+class SgDNNLTransformerQKSelector : public SubgraphSelectorV2 {
   enum SelectStatus {
     kFail = 0,
     kStart,
@@ -69,59 +69,83 @@ class SgDNNLTransformerQKSelector : public SubgraphSelector {
 
  private:
   SelectStatus status_;
-  std::vector<const nnvm::Node*> matched_list_;
+  std::vector<const BiDirectedNode*> matched_list_;
+
+  bool CheckSplitConditions(const BiDirectedNode& node) {
+    const SplitParam& param = dmlc::get<SplitParam>(node.node->attrs.parsed);
+
+    if (param.axis != -1 || param.sections != 3 || param.squeeze_axis)
+      return false;
+
+    const auto first_reshape  = (*(matched_list_.end() - 2))->node;
+    const auto second_reshape = (*(matched_list_.end() - 1))->node;
+    if (first_reshape->op() != Op::Get("_npx_reshape") ||
+        second_reshape->op() != Op::Get("_npx_reshape")) {
+      return false;
+    }
+    // 3 sections - ensure that every output is used only once
+    if (node.outputs.size() == 3 && node.outputs.count(first_reshape) &&
+        node.outputs.count(second_reshape)) {
+      return true;
+    }
+
+    return false;
+  }
 
  public:
-  bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
-    if (n.op() == Op::Get("batch_dot")) {
+  bool Select(const BiDirectedNode& seed_node,
+              const std::shared_ptr<NodeAttr>& node_attr) override {
+    if (seed_node.node->op() == Op::Get("batch_dot")) {
       status_ = kStart;
       matched_list_.clear();
-      matched_list_.push_back(&n);
+      matched_list_.push_back(&seed_node);
       return true;
     }
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
-    if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
+  bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
+    if (status_ == kFail || status_ == kSuccess || input_node.node->is_variable())
       return false;
-
+    const auto& raw_input_node = *input_node.node;
     switch (status_) {
       case kStart:
-        if (new_node.op() == Op::Get("SwapAxis")) {
-          if (CheckSwapAxisConditions(new_node)) {
+        if (raw_input_node.op() == Op::Get("SwapAxis")) {
+          if (CheckSwapAxisConditions(raw_input_node)) {
             status_ = kFirstSwapAx;
-            matched_list_.push_back(&new_node);
+            matched_list_.push_back(&input_node);
           }
           return true;
         }
       case kFirstSwapAx:
-        if (new_node.op() == Op::Get("SwapAxis")) {
-          if (CheckSwapAxisConditions(new_node)) {
+        if (raw_input_node.op() == Op::Get("SwapAxis")) {
+          if (CheckSwapAxisConditions(raw_input_node)) {
             status_ = kSecondSwapAx;
-            matched_list_.push_back(&new_node);
+            matched_list_.push_back(&input_node);
             return true;
           }
         }
       case kSecondSwapAx:
-        if (new_node.op() == Op::Get("_npx_reshape")) {
+        if (raw_input_node.op() == Op::Get("_npx_reshape")) {
           // input to reshape must be first or second output from split
-          if (CheckReshapeConditions(new_node, 0) || CheckReshapeConditions(new_node, 1)) {
+          if (CheckReshapeConditions(raw_input_node, 0) ||
+              CheckReshapeConditions(raw_input_node, 1)) {
             status_ = kFirstReshape;
-            matched_list_.push_back(&new_node);
+            matched_list_.push_back(&input_node);
             return true;
           }
         }
       case kFirstReshape:
-        if (new_node.op() == Op::Get("_npx_reshape")) {
-          if (CheckReshapeConditions(new_node, 0) || CheckReshapeConditions(new_node, 1)) {
+        if (raw_input_node.op() == Op::Get("_npx_reshape")) {
+          if (CheckReshapeConditions(raw_input_node, 0) ||
+              CheckReshapeConditions(raw_input_node, 1)) {
             status_ = kSecondReshape;
-            matched_list_.push_back(&new_node);
+            matched_list_.push_back(&input_node);
             return true;
           }
         }
       case kSecondReshape:
-        if (new_node.op() == Op::Get("_split_v2")) {
+        if (raw_input_node.op() == Op::Get("_split_v2") && CheckSplitConditions(input_node)) {
           status_ = kSuccess;
           return true;
         }
@@ -132,17 +156,17 @@ class SgDNNLTransformerQKSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+  bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& output_node) override {
     return false;
   }
 
-  std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
+  std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
     if (status_ != kSuccess) {
-      return std::vector<nnvm::Node*>(0);
+      return std::vector<BiDirectedNode*>(0);
     } else {
-      std::vector<nnvm::Node*> ret;
+      std::vector<BiDirectedNode*> ret;
       for (auto i : matched_list_) {
-        auto non_const_i = const_cast<nnvm::Node*>(i);
+        auto non_const_i = const_cast<BiDirectedNode*>(i);
         if (std::find(candidates.begin(), candidates.end(), non_const_i) != candidates.end()) {
           ret.push_back(non_const_i);
         }
@@ -201,7 +225,7 @@ class SgDNNLTransformerQKProperty : public SubgraphProperty {
     return n;
   }
 
-  SubgraphSelectorPtr CreateSubgraphSelector() const override {
+  SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const override {
     auto selector = std::make_shared<SgDNNLTransformerQKSelector>();
     return selector;
   }

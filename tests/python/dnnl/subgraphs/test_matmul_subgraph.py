@@ -27,16 +27,19 @@ import math
 
 
 class MultiHeadAttention(nn.HybridBlock):
-  def __init__(self, units, num_heads, dtype='float32', **kwargs):
+  def __init__(self, units, num_heads, dtype='float32', negative_case=False, **kwargs):
       super(MultiHeadAttention, self).__init__(**kwargs)
       self._units = units
       self._num_heads = num_heads
       self._fc = nn.Dense(in_units=self._units, units=3*self._units, flatten=False, dtype=dtype)
       self._scale = math.sqrt(self._units // self._num_heads)
+      self.negative_case = negative_case
 
   def forward(self, x, mask):
       out = self._fc(x)
       query, key, value = mx.np.split(out, 3, axis=-1)
+      if self.negative_case:
+        key = key * 2
       query = mx.npx.reshape(query, (-2, -2, self._num_heads, -1))
       key = mx.npx.reshape(key, (-2, -2, self._num_heads, -1))
       value = mx.npx.reshape(value, (-2, -2, self._num_heads, -1))
@@ -48,7 +51,6 @@ class MultiHeadAttention(nn.HybridBlock):
       context_vec = mx.npx.batch_dot(attn_weights,
                                      mx.np.swapaxes(value, 1, 2)).transpose((0, 2, 1, 3))
       context_vec = mx.npx.reshape(context_vec, (-2, -2, -1))
-      
       return context_vec
 
 @use_np
@@ -70,8 +72,7 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
   out = fused_net(in_data, mask)
   mx.nd.waitall()
 
-  for i in range(len(out)):
-    assert_almost_equal(out[i].asnumpy(), ref_out[i].asnumpy())
+  assert_almost_equal(out.asnumpy(), ref_out.asnumpy())
 
   calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=1)
   qnet = mx.contrib.quant.quantize_net(net, quantized_dtype='auto',
@@ -85,11 +86,47 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
   qout = qnet(in_data, mask)
   mx.nd.waitall()
 
-  for i in range(len(ref_out)):
-      min_range = np.min(ref_out[i].asnumpy())
-      max_range = np.max(ref_out[i].asnumpy())
-      atol = 0.1 * max(abs(min_range), abs(max_range))
-      assert_almost_equal_with_err(qout[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+  min_range = np.min(ref_out.asnumpy())
+  max_range = np.max(ref_out.asnumpy())
+  atol = 0.1 * max(abs(min_range), abs(max_range))
+  assert_almost_equal_with_err(qout.asnumpy(), ref_out.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+
+@use_np
+@pytest.mark.parametrize('batch_size', [1, 32])
+@pytest.mark.parametrize('seq_length', [124, 384])
+@pytest.mark.parametrize('units', [256, 768])
+@pytest.mark.parametrize('num_heads', [4, 8])
+def test_self_attention_negative(batch_size, seq_length, units, num_heads):
+  net = MultiHeadAttention(units, num_heads, negative_case=True)
+  in_data = mx.np.random.uniform(size=[batch_size, seq_length, units], dtype='float32')
+  mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
+
+  net.initialize()
+  fused_net = net
+  net.hybridize()
+  ref_out = net(in_data, mask)
+
+  fused_net.optimize_for(in_data, mask, backend="ONEDNN")
+  out = fused_net(in_data, mask)
+  mx.nd.waitall()
+
+  assert_almost_equal(out.asnumpy(), ref_out.asnumpy())
+
+  calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=1)
+  qnet = mx.contrib.quant.quantize_net(net, quantized_dtype='auto',
+                                            exclude_layers=None,
+                                            exclude_layers_match=None,
+                                            calib_data=calib_data,
+                                            calib_mode='naive',
+                                            num_calib_batches=1,
+                                            ctx=mx.cpu())
+
+  qout = qnet(in_data, mask)
+  mx.nd.waitall()
+  min_range = np.min(ref_out.asnumpy())
+  max_range = np.max(ref_out.asnumpy())
+  atol = 0.1 * max(abs(min_range), abs(max_range))
+  assert_almost_equal_with_err(qout.asnumpy(), ref_out.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
 
 @use_np
 @pytest.mark.parametrize('batch_size', [1, 32])
@@ -133,8 +170,7 @@ def test_batch_dot(batch_size, seq_length, units, num_heads):
   qout = qnet(lhs_data, rhs_data)
   mx.nd.waitall()
 
-  for i in range(len(ref_out)):
-      min_range = np.min(ref_out[i].asnumpy())
-      max_range = np.max(ref_out[i].asnumpy())
-      atol = 0.1 * max(abs(min_range), abs(max_range))
-      assert_almost_equal_with_err(qout[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.1)
+  min_range = np.min(ref_out.asnumpy())
+  max_range = np.max(ref_out.asnumpy())
+  atol = 0.1 * max(abs(min_range), abs(max_range))
+  assert_almost_equal_with_err(qout.asnumpy(), ref_out.asnumpy(), rtol=0.1, atol=atol, etol=0.1)
