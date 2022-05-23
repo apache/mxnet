@@ -29,12 +29,6 @@
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLSplit(const NDArray& input) {
-  static const std::set<int> supported_dtypes = {
-      mshadow::kFloat32, mshadow::kBfloat16, mshadow::kInt32, mshadow::kInt8, mshadow::kUint8};
-  return supported_dtypes.count(input.dtype());
-}
-
 void DNNLSplitForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<NDArray>& inputs,

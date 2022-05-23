@@ -94,7 +94,7 @@ class SgDNNLFCSelector : public SubgraphSelector {
         // Currently, For INT8 FC fusion, only supports relu/bounded_relu(clip)/abs.
         if (new_node.op() == Op::Get("Activation")) {
           const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
-          if ((quantized_ && SupportQuantizedDNNLAct(param)) ||
+          if ((quantized_ && SupportDNNLQuantizedAct(param)) ||
               (!quantized_ && SupportDNNLAct(param))) {
             matched_list_.push_back(&new_node);
             status_ = kSuccess;

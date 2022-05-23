@@ -63,15 +63,10 @@ void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
   DNNLStream::Get()->Submit();
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_binary.html
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs) {
-  auto dtype_0 = inputs[0].dtype();
-  auto dtype_1 = inputs[1].dtype();
-  auto ndim_0  = inputs[0].shape().ndim();
-  auto ndim_1  = inputs[1].shape().ndim();
-  return ndim_0 >= 1 && ndim_0 <= 6 && ndim_1 >= 1 && ndim_1 <= 6 &&
-         inputs[0].shape().Size() != 0 && inputs[1].shape().Size() != 0 &&
-         (dtype_0 == mshadow::kFloat32 || dtype_0 == mshadow::kBfloat16) &&
-         (dtype_1 == mshadow::kFloat32 || dtype_1 == mshadow::kBfloat16);
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[1]) &&
+         SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[0]);
 }
 
 }  // namespace op

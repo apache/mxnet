@@ -1326,8 +1326,8 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
     TBlob tmp = to.data();
     ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp, from.ctx(), to.ctx(), ctx);
 #if MXNET_USE_ONEDNN == 1
-  } else if (SupportDNNL(from.dtype(), from.shape()) && SupportDNNL(to.dtype(), to.shape()) &&
-             from.ctx().dev_mask() == cpu::kDevMask && to.ctx().dev_mask() == cpu::kDevMask) {
+  } else if (SupportDNNL(from) && SupportDNNL(to) && from.ctx().dev_mask() == cpu::kDevMask &&
+             to.ctx().dev_mask() == cpu::kDevMask) {
     // If we copy data directly, we need to make sure both NDArrays are supported
     // by DNNL.
     auto from_mem = from.GetDNNLData();

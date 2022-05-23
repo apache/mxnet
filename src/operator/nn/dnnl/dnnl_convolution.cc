@@ -37,10 +37,11 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(DNNLConvParam);
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_convolution.html
 bool SupportDNNLConv(const ConvolutionParam& params, const NDArray& input) {
   if (params.kernel.ndim() > 3 || params.kernel.ndim() == 0)
     return false;
-  return IsDNNLType(input.dtype()) && input.shape().ndim() >= 3 && input.shape().ndim() <= 5;
+  return SupportDNNL<3, 5, DNNLTypeMode::AllTypes>(input);
 }
 
 std::shared_ptr<dnnl::convolution_forward::primitive_desc> GetConvFwdImpl(

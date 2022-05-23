@@ -31,15 +31,14 @@
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLDot(const std::vector<NDArray>& inputs, const NDArray& output) {
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_matmul.html
+bool SupportDNNLDot(const std::vector<NDArray>& inputs) {
 #if MXNET_USE_BLAS_MKL == 1
   return false;
 #endif
-  return inputs[DotIn::lhs].shape().Size() > 1 && inputs[DotIn::rhs].shape().Size() > 1 &&
-         inputs[DotIn::lhs].shape().ndim() > 0 && inputs[DotIn::rhs].shape().ndim() > 0 &&
-         output.shape().Size() != 0 && output.shape().ndim() > 0 && output.shape().ndim() <= 12 &&
-         (inputs[DotIn::lhs].dtype() == mshadow::kFloat32 ||
-          inputs[DotIn::lhs].dtype() == mshadow::kBfloat16);
+  // Remove cases where ndim of inputs is equal to 1, because output will be scalar in this case
+  return SupportDNNL<2, 12, DNNLTypeMode::FloatTypes>(inputs[DotIn::lhs]) &&
+         SupportDNNL<2, 12, DNNLTypeMode::FloatTypes>(inputs[DotIn::rhs]);
 }
 
 DNNLDotFwd& DNNLDotFwd::GetCached(const DotParam& param,

@@ -172,10 +172,11 @@ void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<cpu>* s,
 }
 
 #if MXNET_USE_ONEDNN == 1
-bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) {
-  for (int64_t idx = 2; idx < in_data.shape().ndim(); ++idx) {
-    const int s1 = in_data.shape()[idx];
-    const int s2 = out_data.shape()[idx];
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_pooling.html
+bool SupportDNNLAveragePooling(const NDArray& input, const NDArray& output) {
+  for (int64_t idx = 2; idx < input.shape().ndim(); ++idx) {
+    const int s1 = input.shape()[idx];
+    const int s2 = output.shape()[idx];
     if (s2 == 0) {
       return false;
     }
@@ -183,17 +184,18 @@ bool SupportDNNLAveragePooling(const NDArray& in_data, const NDArray& out_data) 
       return false;
     }
   }
-  const int IH         = in_data.shape()[2];
-  const int IW         = in_data.shape()[3];
-  const int OH         = out_data.shape()[2];
-  const int OW         = out_data.shape()[3];
+  const int IH         = input.shape()[2];
+  const int IW         = input.shape()[3];
+  const int OH         = output.shape()[2];
+  const int OW         = output.shape()[3];
   const int strides_H  = ((IH << 1) / OH) - (IH / OH);
   const int strides_W  = ((IW << 1) / OW) - (IW / OW);
   const int kernel_H   = DIV_ROUND_UP((IH << 1) / OH, 1) - (IH / OH);
   const int kernel_W   = DIV_ROUND_UP((IW << 1) / OW, 1) - (IW / OW);
   const int pad_l_top  = (strides_H * (OH - 1) + kernel_H - IH) / 2;
   const int pad_l_left = (strides_W * (OW - 1) + kernel_W - IW) / 2;
-  return pad_l_top == 0 && pad_l_left == 0;
+
+  return SupportDNNL<3, 5, DNNLTypeMode::AllTypes>(input) && pad_l_top == 0 && pad_l_left == 0;
 }
 
 void AdaptiveAvgPoolOpBackwardExCPU(const nnvm::NodeAttrs& attrs,
@@ -236,7 +238,7 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs& attrs,
   oneDNN doesn't support adaptive pooling.
   Fallback is needed when padding is not equal 0;
   */
-  if (SupportDNNL(inputs[0]) && SupportDNNLAveragePooling(inputs[0], outputs[0])) {
+  if (SupportDNNLAveragePooling(inputs[0], outputs[0])) {
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
     DNNLRun(DNNLPoolingCompute, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);

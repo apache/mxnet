@@ -43,7 +43,7 @@ static void MaskedSoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (inputs[0].shape().Size() == 0U)
     return;
   const MaskedSoftmaxParam& param = nnvm::get<MaskedSoftmaxParam>(attrs.parsed);
-  if (SupportDNNLMaskedSoftmax(param, inputs, outputs[0])) {
+  if (SupportDNNLMaskedSoftmax(param, inputs)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
 
     DNNLRun(DNNLMaskedSoftmaxForward, attrs, ctx, inputs, req, outputs);
@@ -61,7 +61,6 @@ inline static bool MaskedSoftmaxStorageType(const nnvm::NodeAttrs& attrs,
                                             DispatchMode* dispatch_mode,
                                             std::vector<int>* in_attrs,
                                             std::vector<int>* out_attrs) {
-  const MaskedSoftmaxParam& param = nnvm::get<MaskedSoftmaxParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 

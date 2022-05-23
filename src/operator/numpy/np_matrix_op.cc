@@ -60,7 +60,7 @@ static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportDNNLTranspose(inputs[0]) && req[0] == kWriteTo) {
+  if (SupportDNNL(inputs[0]) && req[0] == kWriteTo) {
     DNNLRun(DNNLTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }

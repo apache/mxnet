@@ -32,11 +32,9 @@
 namespace mxnet {
 namespace op {
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reorder.html
 bool SupportDNNLReshape(const NDArray& input, const NDArray& output) {
-  const int input_ndims  = input.shape().ndim();
-  const int output_ndims = output.shape().ndim();
-  return input.shape().Size() > 0 && input_ndims >= 1 && input_ndims <= 6 && output_ndims >= 1 &&
-         output_ndims <= 6 && IsDNNLType(input.dtype());
+  return SupportDNNL(input) && SupportDNNL(output);
 }
 
 DNNLReshapeFwd::DNNLReshapeFwd(const OpReqType& req, const NDArray& input, const NDArray& output) {
