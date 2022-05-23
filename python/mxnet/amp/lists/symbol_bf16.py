@@ -48,7 +48,7 @@ BF16_FP32_FUNCS = [
     'LRN',
     'softmax',
     'log_softmax',
-    'masked_softmax',
+    #'masked_softmax', TODO: fix segfault appearing for a 4D input tensor
     'Pooling',
     '_npi_mean',
     '_npi_sum',
@@ -115,6 +115,7 @@ BF16_USE_FP32_PARAMS = {
 FP32_FUNCS = [
     'amp_cast',
     'amp_multicast',
+    'masked_softmax',
     'BilinearSampler',
     'BlockGrad',
     'CTCLoss',

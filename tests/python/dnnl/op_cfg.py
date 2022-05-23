@@ -68,11 +68,12 @@ def common_weight_tensor(shape, dtype, numpy=False):
     return tensor.as_np_ndarray() if numpy else tensor
 
 
-def valatt_attention_tensor(cfg, dtype):
-    batch, seq_len, _ = cfg['queries_keys_values'].shape
+def valatt_attention_tensor(cfg):
+    qkv = cfg['queries_keys_values']
+    batch, seq_len, _ = qkv.shape
     heads = cfg['heads']
     att_shape = (batch, heads, seq_len, seq_len)
-    return mx.nd.random.randint(0, 2, att_shape).astype(dtype)
+    return mx.nd.random.randint(0, 2, att_shape).astype(qkv.dtype)
 
 
 def get_all_ops_cfgs(dtype):
@@ -106,7 +107,7 @@ def get_all_ops_cfgs(dtype):
             'data,kernel,output_size': [(default_tensor(4, dtype), (2, 2), (4, 4))],
         },
 
-        ########################################### Casting ###########################################
+        ######################################### Casting #########################################
 
         'Cast': {
             'data': [default_tensor(2, dtype)],
@@ -118,7 +119,7 @@ def get_all_ops_cfgs(dtype):
             'max_calib_range': [CfgBasedArg(lambda cfg: cfg['data'].max().asscalar())]
         },
 
-        ####################################### No calculations #######################################
+        ##################################### No calculations #####################################
 
         'Flatten': {
             'data': [default_tensor(2, dtype)]
@@ -180,7 +181,7 @@ def get_all_ops_cfgs(dtype):
         '_npi_where': {CFG_BASED_ON: 'where'},
         '_npx_reshape': {CFG_BASED_ON: 'Reshape'},
 
-        ######################################## Normalization ########################################
+        ###################################### Normalization ######################################
 
         'LayerNorm': {
             'data': [default_tensor(2, dtype)],
@@ -199,7 +200,7 @@ def get_all_ops_cfgs(dtype):
             'data,nsize': [(default_tensor(2, dtype), 3)]
         },
 
-        ########################################## Reduction ##########################################
+        ######################################## Reduction ########################################
 
         'mean': {
             '0': [default_tensor(2, dtype)],
@@ -209,18 +210,25 @@ def get_all_ops_cfgs(dtype):
         '_npi_mean': {CFG_BASED_ON: 'mean'},
         '_npi_sum': {CFG_BASED_ON: 'mean'},
 
-        ########################################### Softmax ###########################################
+        ######################################### Softmax #########################################
 
         'softmax': {CFG_BASED_ON: 'sum'},
         'log_softmax': {CFG_BASED_ON: 'softmax'},
         'masked_softmax': {
-            'data,mask': [
-                (default_tensor(2, dtype),
-                 mx.nd.random.randint(0, 2, DEFAULT_SHAPE*2).astype('bool'))
-            ]
+            'data': [
+                default_tensor(2, dtype),
+                default_tensor(3, dtype),
+                # default_tensor(4, dtype) TODO
+            ],
+            'mask': [
+                CfgBasedArg(
+                    lambda cfg: mx.nd.random.randint(0, 2, cfg['data'].shape).astype('bool')
+                )
+            ],
+            'axis': [-1]
         },
 
-        ##################################### Activation / Unary ######################################
+        ################################### Activation / Unary ####################################
 
         'Activation': {
             'data': [default_tensor(2, dtype)],
@@ -236,7 +244,8 @@ def get_all_ops_cfgs(dtype):
         '_npi_sqrt': {CFG_BASED_ON: '_npi_exp'},
         '_npi_square': {CFG_BASED_ON: '_npi_exp'},
         '_npi_tanh': {CFG_BASED_ON: '_npi_exp'},
-        ########################################### Binary ############################################
+
+        ######################################### Binary ##########################################
 
         'dot': {
             '0,1': [
@@ -257,7 +266,7 @@ def get_all_ops_cfgs(dtype):
 
         'add_n': {CFG_BASED_ON: 'dot'},  # this is not binary, but can work as binary
 
-        ########################################## Subgraph ###########################################
+        ######################################## Subgraph #########################################
 
         '_sg_onednn_conv': {
             CFG_BASED_ON: 'Convolution',
@@ -283,7 +292,7 @@ def get_all_ops_cfgs(dtype):
         '_sg_onednn_selfatt_valatt': {
             CFG_BASED_ON: '_sg_onednn_selfatt_qk',
             CFG_SUBGRAPH: [SubgraphCfg('_sg_onednn_selfatt_valatt', 'ONEDNN')],
-            'attention': [CfgBasedArg(partial(valatt_attention_tensor, dtype=dtype))]
+            'attention': [CfgBasedArg(valatt_attention_tensor)]
         }
     }
 
