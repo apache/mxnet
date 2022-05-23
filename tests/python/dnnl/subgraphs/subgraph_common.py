@@ -159,9 +159,26 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
       # make a list to have a common path for one and multiple outputs
       ref_out = [ref_out]
 
-  dataArray= mx.gluon.data.ArrayDataset(*data)
+  class TestDataLoader(mx.gluon.data.DataLoader):
+    def __init__(self, data):
+      self.data = data
+      self.finish = False
 
-  calib_data = mx.gluon.data.DataLoader(dataArray, batch_size=1)
+    def __iter__(self):
+      self.finish = False
+      return self
+
+    def __next__(self):
+      if self.finish:
+        raise StopIteration
+      self.finish = True
+      return self.data
+
+    def __del__(self):
+      pass
+
+  calib_data = TestDataLoader(data)
+
   for quantize_granularity in quantize_granularity_list:
     qnet = quantization.quantize_net(net_original,
                                      device=mx.cpu(),
