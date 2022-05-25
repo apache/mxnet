@@ -617,9 +617,24 @@ MXNET_UNARY_MATH_OP(gelu,
                           (1.0f + math::erf(static_cast<float>(a) / SQRT_2))));
 
 MXNET_BINARY_MATH_OP_NC(gelu_grad,
-                        DType(0.5f * (1.0f + math::erf(static_cast<float>(a) / SQRT_2) +
-                                      static_cast<float>(a) *
-                                          erf_grad::Map(static_cast<float>(a) / SQRT_2) / SQRT_2)));
+                        DType(static_cast<float>(b) / static_cast<float>(a) +
+                              0.5f * static_cast<float>(a) *
+                                  erf_grad::Map(static_cast<float>(a) / SQRT_2) / SQRT_2));
+
+MXNET_UNARY_MATH_OP(gelu_tanh,
+                    DType(0.5f * static_cast<float>(a) *
+                          (1.0f + math::tanh(math::sqrt(2.0f / PI) *
+                                             (static_cast<float>(a) +
+                                              0.044715 * math::pow(static_cast<float>(a), 3))))));
+
+MXNET_BINARY_MATH_OP_NC(gelu_tanh_grad,
+                        DType(static_cast<float>(b) * (1.0f / static_cast<float>(a) +
+                                  (1.0f -
+                                   math::tanh(math::sqrt(2.0f / PI) *
+                                              (static_cast<float>(a) +
+                                               0.044715 * math::pow(static_cast<float>(a), 3))) *
+                                       (math::sqrt(2.0f / PI) *
+                                        (1.0f + 0.134145 * math::pow(static_cast<float>(a), 2)))))));
 
 MXNET_SIMPLE_UNARY_MATH_OP(exp);
 
