@@ -256,7 +256,7 @@ bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& input);
 bool SupportDNNLMaskedSoftmax(const MaskedSoftmaxParam& param, const std::vector<NDArray>& input);
 bool SupportDNNLPower(const NDArray& input);
 bool SupportDNNLQuantizedAct(const ActivationParam& param);
-bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
+bool SupportDNNLReshape(const NDArray& input);
 bool SupportDNNLSlice(const SliceParam& param, const NDArray& input, const NDArray& output);
 bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& input);
 bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param, const NDArray& input);

@@ -127,7 +127,7 @@ void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // DNNL support the data type or the shape. Then convert
   // it to the output format and shape
 
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNLReshape(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -236,7 +236,7 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in DNNL format and
   // DNNL support the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNLReshape(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -422,7 +422,7 @@ static void ExpandDimEx(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in DNNL format and
   // DNNL support the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNLReshape(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
