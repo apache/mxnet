@@ -21,6 +21,8 @@
  * \file threaded_engine_perdevice.cc
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */
+#include <unistd.h>
+#include <mutex>
 #include <dmlc/base.h>
 #include <dmlc/omp.h>
 #include <dmlc/logging.h>
@@ -74,6 +76,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     gpu_copy_workers_.Clear();
     cpu_normal_workers_.Clear();
     cpu_priority_worker_.reset(nullptr);
+    streams_.clear();
+    cuda_event_pool_per_worker_.clear();
   }
 
   void Stop() override {
@@ -278,6 +282,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     CHECK(block != nullptr);
     mshadow::Stream<gpu>* stream = nullptr;
     GPUAuxStream* aux_stream     = nullptr;
+    CUDAEventPool* event_pool    = nullptr;
     do {
       ThreadPool::SetReadyOnDestroy setReady(ready_event);
       // allocate stream
@@ -288,18 +293,22 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         stream     = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
         aux_stream = new GPUAuxStream(stream);
       }
+      // With thread safety...
+      {
+        static std::mutex m;
+        std::lock_guard<std::mutex> lock(m);
+        // register stream
+        streams_.push_back(stream);
+        auto event_pool_it = cuda_event_pool_per_worker_.find(ctx.dev_id);
+        if (event_pool_it != cuda_event_pool_per_worker_.end()) {
+          event_pool = event_pool_it->second.get();
+        } else {
+          auto res =
+              cuda_event_pool_per_worker_.emplace(ctx.dev_id, std::make_unique<CUDAEventPool>(ctx));
+          event_pool = res.first->second.get();
+        }
+      }
     } while (false);
-    // register stream
-    streams_.push_back(stream);
-    CUDAEventPool* event_pool;
-    auto event_pool_it = cuda_event_pool_per_worker_.find(ctx.dev_id);
-    if (event_pool_it != cuda_event_pool_per_worker_.end()) {
-      event_pool = event_pool_it->second.get();
-    } else {
-      auto res =
-          cuda_event_pool_per_worker_.emplace(ctx.dev_id, std::make_unique<CUDAEventPool>(ctx));
-      event_pool = res.first->second.get();
-    }
     // execute task
     OprBlock* opr_block;
     RunContext run_ctx{ctx, stream, aux_stream};
