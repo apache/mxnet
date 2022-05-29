@@ -1822,7 +1822,10 @@ class SymbolBlock(HybridBlock):
             _initer_json_ = _s_.list_attr().get('__init__')
             if _initer_json_ is None:
                 return None
-            _type_str_, _args_di_ = json.loads(_initer_json_)
+            try:
+                _type_str_, _args_di_ = json.loads(_initer_json_)
+            except json.JSONDecodeError as e:
+                _type_str_, _args_di_ = _initer_json_, {}
             return initializer.create(_type_str_, **_args_di_)
 
         for i, arg in enumerate(arg_param_li):
