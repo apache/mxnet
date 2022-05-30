@@ -34,6 +34,7 @@ for nd_prefix in _OP_NAME_PREFIX_LIST:
 
 CFG_BASED_ON = '__based_on__'
 CFG_SUBGRAPH = '__subgraph__'
+CFG_RTOL_ATOL = '__rtol_atol__'
 DEFAULT_SHAPE = (8,)
 
 TensorArg = namedtuple('TensorArg', ['gen_tensor'])
@@ -116,7 +117,8 @@ def get_all_ops_cfgs(dtype):
         '_contrib_quantize_v2': {
             'data': [default_tensor(2, dtype)],
             'min_calib_range': [CfgBasedArg(lambda cfg: cfg['data'].min().asscalar())],
-            'max_calib_range': [CfgBasedArg(lambda cfg: cfg['data'].max().asscalar())]
+            'max_calib_range': [CfgBasedArg(lambda cfg: cfg['data'].max().asscalar())],
+            CFG_RTOL_ATOL: [(0, 0)]
         },
 
         ##################################### No calculations #####################################
@@ -242,7 +244,9 @@ def get_all_ops_cfgs(dtype):
         '_npi_exp': {
             '0': [default_tensor(2, dtype)]
         },
-        '_npi_sqrt': {CFG_BASED_ON: '_npi_exp'},
+        '_npi_sqrt': {
+            '0': [mx.nd.random.uniform(0, 8, DEFAULT_SHAPE*2, dtype)]
+        },
         '_npi_square': {CFG_BASED_ON: '_npi_exp'},
         '_npi_tanh': {CFG_BASED_ON: '_npi_exp'},
 
@@ -326,6 +330,8 @@ def get_op_cfg_generator(op_names, dtype):
 
 
 def get_symblock_from_args_scenario(op_name, args_scenario):
+    args_scenario = args_scenario.copy()
+    args_scenario.pop(CFG_RTOL_ATOL, None)  # not used here
     subgraph_cfg = args_scenario.pop(CFG_SUBGRAPH, None)
     if subgraph_cfg is None:
         op_sym_fn = get_op_sym_fn(op_name)

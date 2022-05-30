@@ -63,7 +63,7 @@
       .add_enum("float32", mshadow::kFloat32)                                                    \
       .describe(                                                                                 \
           "Imposed float output. Used to change the output dtype when the operator operates on " \
-          "low precision data (int8 or lp16).")
+          "low precision data - (u)int8 or lp16.")
 
 namespace mxnet {
 
