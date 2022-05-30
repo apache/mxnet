@@ -1070,6 +1070,7 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle,
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+    g                            = ApplyPass(std::move(g), "EliminateCommonNodes");
     g                            = ApplyPass(std::move(g), "BuildSubgraph");
     property->RemoveAttr("graph");
     g.attrs.erase("subgraph_property");
@@ -1151,7 +1152,12 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   NDArray** in_aux_ptr    = reinterpret_cast<NDArray**>(in_aux_handle);
 
   auto init_graph = [&](auto s) {
-    nnvm::Graph g                        = Symbol2Graph(*s);
+    nnvm::Graph g = Symbol2Graph(*s);
+
+    // EliminateCommonNodesPass must be performed before first call to the indexed graph,
+    // because otherwise changing graph via other passses will result in an error, due to the fact
+    // that once indexed_graph is created, it cannot be changed.
+    g                                    = ApplyPass(std::move(g), "EliminateCommonNodesPass");
     const auto& indexed_graph            = g.indexed_graph();
     const auto& mutable_nodes            = indexed_graph.mutable_input_nodes();
     std::vector<std::string> input_names = s->ListInputNames(nnvm::Symbol::kAll);
