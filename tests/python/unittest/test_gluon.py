@@ -237,7 +237,7 @@ def test_symbol_block_init():
     fn = mx.gluon.SymbolBlock([s_y], [s_x])
     fn.initialize()
     v_x = mx.nd.random_uniform(-1., 1., shape=(1,256), dtype=DTYPE,
-                               device=mx.device.current_device())
+                               ctx=mx.device.current_device())
     fn.forward(v_x)
     param_di = fn.collect_params()
     v_w, v_b = param_di['W'], param_di['b']
