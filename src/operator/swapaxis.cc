@@ -40,15 +40,19 @@ NNVM_REGISTER_OP(SwapAxis)
     .set_num_outputs(1)
     .set_attr_parser(ParamParser<SwapAxisParam>)
     .describe(R"code(Interchanges two axes of an array.
+
 Examples::
+
   x = [[1, 2, 3]])
   swapaxes(x, 0, 1) = [[ 1],
                        [ 2],
                        [ 3]]
+
   x = [[[ 0, 1],
         [ 2, 3]],
        [[ 4, 5],
         [ 6, 7]]]  // (2,2,2) array
+
  swapaxes(x, 0, 2) = [[[ 0, 4],
                        [ 2, 6]],
                       [[ 1, 5],
