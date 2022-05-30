@@ -34,29 +34,21 @@
 
 namespace mxnet {
 namespace op {
-
-bool DNNLPowMulScalarShape(const nnvm::NodeAttrs& attrs,
-                           mxnet::ShapeVector* in_attrs,
-                           mxnet::ShapeVector* out_attrs) {
-  return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
-}
-
 bool DNNLPowMulScalarType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int>* in_types,
-                          std::vector<int>* out_types) {
-  CHECK_EQ(in_types->size(), 1U);
-  CHECK_EQ(out_types->size(), 1U);
-  const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
-  bool scalar_is_int                  = param.is_int;
-  if (common::is_int(in_types->at(0)) && !scalar_is_int) {
-    TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
-  } else if (in_types->at(0) == mshadow::kBool) {
-    TYPE_ASSIGN_CHECK(*out_types, 0, scalar_is_int ? mshadow::kInt32 : mshadow::kFloat32);
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const DNNLPowMulScalarParam& param = nnvm::get<DNNLPowMulScalarParam>(attrs.parsed);
+  bool scalar_is_int                 = param.exp_is_int && param.mul_is_int;
+  if (common::is_int(in_attrs->at(0)) && !scalar_is_int) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat64);
+  } else if (in_attrs->at(0) == mshadow::kBool) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, scalar_is_int ? mshadow::kInt64 : mshadow::kFloat64);
   } else {
-    TYPE_ASSIGN_CHECK(*out_types, 0, in_types->at(0));
-    TYPE_ASSIGN_CHECK(*in_types, 0, out_types->at(0));
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   }
-  return out_types->at(0) != -1;
+  return out_attrs->at(0) != -1;
 }
 
 inline static bool DNNLPowMulScalarStorageType(const nnvm::NodeAttrs& attrs,
@@ -67,8 +59,70 @@ inline static bool DNNLPowMulScalarStorageType(const nnvm::NodeAttrs& attrs,
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-NNVM_REGISTER_OP(_sg_onednn_pow_mul_scalar)
-    .describe(R"code(_sg_onednn_pow_mul_scalar)code" ADD_FILELINE)
+template <typename OP>
+static void ComputeOP(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      mshadow::Stream<cpu>* s,
+                      const TBlob& input,
+                      const TBlob& output,
+                      const double scalar) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
+    TBlob temp_tblob = input;
+    auto temp_req    = kWriteInplace;
+    if (input.type_flag_ != output.type_flag_) {
+      temp_req   = kWriteTo;
+      temp_tblob = TBlob(ctx.requested[0].get_space_typed<cpu, 1, DType>(Shape1(output.Size()), s));
+      CastCompute<cpu>(attrs, ctx, {input}, {kWriteTo}, {temp_tblob});
+    }
+    MXNET_ASSIGN_REQ_SWITCH(temp_req, Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
+          s, input.Size(), output.dptr<DType>(), temp_tblob.dptr<DType>(), DType(scalar));
+    });
+  });
+}
+
+static void PowMulScalarCompute(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  DCHECK_EQ(inputs.size(), 1);
+  DCHECK_EQ(outputs.size(), 1);
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const DNNLPowMulScalarParam& param = nnvm::get<DNNLPowMulScalarParam>(attrs.parsed);
+  // temp_mid_tblob is output of power operation and input of multiplication.
+  // Its dtype depends on input dtype and scalar type.
+  TBlob temp_mid_tblob =
+      ((common::is_int(inputs[0].type_flag_) || inputs[0].type_flag_ == kBool) &&
+       !param.exp_is_int) ?
+          outputs[0] :
+          inputs[0].type_flag_ == kBool ?
+          TBlob(ctx.requested[0].get_space_typed<cpu, 1, int64_t>(Shape1(inputs[0].Size()), s)) :
+          inputs[0];
+  ComputeOP<mshadow_op::power>(attrs, ctx, s, inputs[0], temp_mid_tblob, param.exponent);
+  ComputeOP<mshadow_op::mul>(attrs, ctx, s, temp_mid_tblob, outputs[0], param.multiplier);
+}
+
+static void PowMulScalarComputeEx(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<mxnet::NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<mxnet::NDArray>& outputs) {
+  if (SupportDNNLPower(inputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLPowMulScalarForward<true>, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(PowMulScalarCompute, attrs, ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(PowMulScalarCompute, attrs, ctx, inputs, req, outputs);
+  }
+}
+
+NNVM_REGISTER_OP(_sg_pow_mul_scalar)
+    .describe(R"code(_sg_pow_mul_scalar)code" ADD_FILELINE)
     .set_num_inputs([](const NodeAttrs& attrs) { return 1; })
     .set_num_outputs([](const NodeAttrs& attrs) { return 1; })
     .set_attr_parser(ParamParser<DNNLPowMulScalarParam>)
@@ -80,10 +134,15 @@ NNVM_REGISTER_OP(_sg_onednn_pow_mul_scalar)
                                       [](const NodeAttrs& attrs) {
                                         return std::vector<std::string>{"output"};
                                       })
-    .set_attr<mxnet::FInferShape>("FInferShape", DNNLPowMulScalarShape)
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
     .set_attr<nnvm::FInferType>("FInferType", DNNLPowMulScalarType)
     .set_attr<FInferStorageType>("FInferStorageType", DNNLPowMulScalarStorageType)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLPowMulScalarForward<true>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", PowMulScalarCompute)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", PowMulScalarComputeEx)
     .set_attr<bool>("TIsDNNL", true)
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 

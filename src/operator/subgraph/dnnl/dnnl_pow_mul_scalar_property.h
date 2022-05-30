@@ -93,16 +93,18 @@ class SgDNNLPowMulScalarProperty : public SubgraphProperty {
       if (node->is_variable())
         return;
       if (node->op() == Op::Get("_npi_power_scalar")) {
-        n->attrs.dict["exponent"] =
-            std::to_string(nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed).scalar);
+        auto params = nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed);
+        n->attrs.dict["exponent"] = std::to_string(params.scalar);
+        n->attrs.dict["exp_is_int"] = std::to_string(params.is_int);
       } else if (node->op() == Op::Get("_npi_multiply_scalar")) {
-        n->attrs.dict["multiplier"] =
-            std::to_string(nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed).scalar);
+        auto params = nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed);
+        n->attrs.dict["multiplier"] = std::to_string(params.scalar);
+        n->attrs.dict["mul_is_int"] = std::to_string(params.is_int);
       }
     });
 
-    n->attrs.name = "sg_dnnl_pow_mul_scalar_" + std::to_string(subgraph_id);
-    n->attrs.op   = Op::Get("_sg_onednn_pow_mul_scalar");
+    n->attrs.name = "_sg_pow_mul_scalar" + std::to_string(subgraph_id);
+    n->attrs.op   = Op::Get("_sg_pow_mul_scalar");
     CHECK(n->attrs.op);
     n->op()->attr_parser(&(n->attrs));
     return n;

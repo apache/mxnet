@@ -219,27 +219,27 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
                                    rtol=0.1, atol=atol, etol=0.2)
 
 
-def check_fusion(net_original, data_shapes, attrs_dict, check_fp32_fusion=True,
+def check_fusion(net_original, data_shapes, attrs_dict, input_type='float32', check_fusion=True,
                  check_quantization=True, out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True,
                  quantize_mode='full'):
   net_original.initialize()
   net_original.hybridize(static_alloc=False, static_shape=False)
   one_shape = isinstance(data_shapes, tuple)
-  data_min = -1.0
-  data_max = 1.0
+  data_min = -1.0 if input_type is 'float32' else -128
+  data_max = 1.0 if input_type is 'float32' else 127
 
   if one_shape:
     # replace one shape with list of shapes with one element to follow later the same schema
     data_shapes=[data_shapes]
   data = []
   for shape in data_shapes:
-    data.append(mx.np.random.uniform(size=shape, dtype='float32', device=mx.cpu(),
+    data.append(mx.np.random.uniform(size=shape, dtype=input_type, device=mx.cpu(),
                 low=data_min, high=data_max))
   net_original(*data)
   net_fusion = copy.copy(net_original)
   sym, _ = net_original.export(None)
 
-  if check_fp32_fusion:
+  if check_fusion:
     if ''.join(sym.get_internals().list_outputs()).find('sqrt') != -1:
       check_quantization = False
       data_min = 0

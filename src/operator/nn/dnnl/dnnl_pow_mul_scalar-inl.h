@@ -36,14 +36,23 @@ namespace op {
 struct DNNLPowMulScalarParam : public dmlc::Parameter<DNNLPowMulScalarParam> {
   float exponent;
   float multiplier;
+  bool exp_is_int;
+  bool mul_is_int;
 
   DMLC_DECLARE_PARAMETER(DNNLPowMulScalarParam) {
     DMLC_DECLARE_FIELD(exponent).describe("Exponent for power operation.").set_default(1);
     DMLC_DECLARE_FIELD(multiplier).describe("Multiplier for multiply operation.").set_default(1);
+    DMLC_DECLARE_FIELD(exp_is_int)
+        .describe("Indicate whether exponent is int type.")
+        .set_default(true);
+    DMLC_DECLARE_FIELD(mul_is_int)
+        .describe("Indicate whether multiplier is int type.")
+        .set_default(true);
   }
 
   bool operator==(const DNNLPowMulScalarParam& other) const {
-    return this->exponent == other.exponent && this->multiplier == other.multiplier;
+    return this->exponent == other.exponent && this->multiplier == other.multiplier &&
+           this->exp_is_int == other.exp_is_int && this->mul_is_int == other.mul_is_int;
   }
 };
 
