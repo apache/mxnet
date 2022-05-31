@@ -39,7 +39,7 @@ namespace op {
 
 class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
  private:
-  SelectStatus status_ = kStart;
+  bool patternFound = false;
 
  public:
   bool Select(const BiDirectedNode& seed_node,
@@ -56,17 +56,20 @@ class SgDNNLPowMulScalarSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& output_node) override {
-    if (output_node.node->op() == Op::Get("_npi_multiply_scalar") &&
-        output_node.node->num_inputs() == 1 && status_ == kStart) {
-      status_ = kSuccess;
+    if (!patternFound && output_node.node->op() == Op::Get("_npi_multiply_scalar") &&
+        output_node.node->num_inputs() == 1) {
+      patternFound = true;
       return true;
     }
-    status_ = kFail;
     return false;
   }
 
+  std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
+    return patternFound ? candidates : std::vector<BiDirectedNode*>(0);
+  }
+
   void Reset() override {
-    status_ = kStart;
+    patternFound = false;
   }
 };
 
