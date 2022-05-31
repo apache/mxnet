@@ -93,11 +93,11 @@ class SgDNNLPowMulScalarProperty : public SubgraphProperty {
       if (node->is_variable())
         return;
       if (node->op() == Op::Get("_npi_power_scalar")) {
-        auto params = nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed);
-        n->attrs.dict["exponent"] = std::to_string(params.scalar);
+        auto params                 = nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed);
+        n->attrs.dict["exponent"]   = std::to_string(params.scalar);
         n->attrs.dict["exp_is_int"] = std::to_string(params.is_int);
       } else if (node->op() == Op::Get("_npi_multiply_scalar")) {
-        auto params = nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed);
+        auto params                 = nnvm::get<NumpyBinaryScalarParam>(node->attrs.parsed);
         n->attrs.dict["multiplier"] = std::to_string(params.scalar);
         n->attrs.dict["mul_is_int"] = std::to_string(params.is_int);
       }
