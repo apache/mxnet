@@ -65,16 +65,7 @@ class SgDNNLFCOp {
   }
 
  private:
-  enum {
-    kDataMin = 0,
-    kDataMax,
-    kWeightMin,
-    kWeightMax,
-    kBiasMin,
-    kBiasMax,
-    kSumMin,
-    kSumMax
-  };
+  enum { kDataMin = 0, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax, kSumMin, kSumMax };
 
   NDArray PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output);
   bool CheckInitializationConditions(const std::vector<NDArray>& inputs,
@@ -145,10 +136,10 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   minmaxvec[kBiasMin]   = 0.0f;
   minmaxvec[kBiasMax]   = 0.0f;
 
-  minmaxvec[kSumMin] = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
-  minmaxvec[kSumMax] = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
-  NDArray data                = in_data[idx.data];
-  const NDArray& weight       = in_data[idx.weight];
+  minmaxvec[kSumMin]    = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
+  minmaxvec[kSumMax]    = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
+  NDArray data          = in_data[idx.data];
+  const NDArray& weight = in_data[idx.weight];
   NDArray output;
 
   if (dnnl_param.with_sum) {
@@ -313,10 +304,8 @@ bool SgDNNLFCOp::CheckInitializationConditions(const std::vector<NDArray>& input
   if (initialized_ && full_param_.dnnl_param.quantized &&
       dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
     bool has_bias = !full_param_.default_param.no_bias;
-    if (cached_data_min_ != minmaxvec[kDataMin] ||
-        cached_data_max_ != minmaxvec[kDataMax] ||
-        cached_sum_min_ != minmaxvec[kSumMin] ||
-        cached_sum_max_ != minmaxvec[kSumMax]) {
+    if (cached_data_min_ != minmaxvec[kDataMin] || cached_data_max_ != minmaxvec[kDataMax] ||
+        cached_sum_min_ != minmaxvec[kSumMin] || cached_sum_max_ != minmaxvec[kSumMax]) {
       return false;
     }
 
@@ -328,8 +317,8 @@ bool SgDNNLFCOp::CheckInitializationConditions(const std::vector<NDArray>& input
     } else {
       if (cached_weight_min_ != minmaxvec[kWeightMin] ||
           cached_weight_max_ != minmaxvec[kWeightMax] ||
-          (has_bias && (cached_bias_min_ != minmaxvec[kBiasMin] ||
-                        cached_bias_max_ != minmaxvec[kBiasMax]))) {
+          (has_bias &&
+           (cached_bias_min_ != minmaxvec[kBiasMin] || cached_bias_max_ != minmaxvec[kBiasMax]))) {
         return false;
       }
     }
