@@ -69,10 +69,9 @@ static void ComputeOP(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
+    auto temp_req    = input.dptr_ == output.dptr_ ? kWriteInplace : kWriteTo;
     TBlob temp_tblob = input;
-    auto temp_req    = kWriteInplace;
     if (input.type_flag_ != output.type_flag_) {
-      temp_req   = kWriteTo;
       temp_tblob = TBlob(ctx.requested[0].get_space_typed<cpu, 1, DType>(Shape1(output.Size()), s));
       CastCompute<cpu>(attrs, ctx, {input}, {kWriteTo}, {temp_tblob});
     }
