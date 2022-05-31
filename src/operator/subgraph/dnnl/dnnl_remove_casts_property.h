@@ -44,9 +44,9 @@ namespace op {
 
 class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
  private:
-  enum CastStatus { kStart, kExpand, kCast, kSuccess, kFail };
-  CastStatus status_  = kStart;
-  const char* boolStr = "bool";
+  enum CastStatus { kExpand, kCast, kSuccess, kFail };
+  CastStatus status_ = kFail;
+  int castDtype      = -1;
 
  public:
   bool Select(const BiDirectedNode& seed_node,
@@ -62,8 +62,9 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
   bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
     if (input_node.node->op() != Op::Get("Cast")) {
       status_ = kFail;
-    } else if (input_node.node->attrs.dict["dtype"] != boolStr) {
-      status_ = kFail;
+    } else {
+      auto const& cast_param = nnvm::get<CastParam>(input_node.node->attrs.parsed);
+      castDtype              = cast_param.dtype;
     }
     return false;
   }
@@ -73,12 +74,11 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
       return false;
     }
     if (output_node.node->op() == Op::Get("Cast")) {
-      if (output_node.node->attrs.dict["dtype"] == boolStr) {
-        if (status_ == kExpand) {
-          if (output_node.node->num_outputs() == 1) {
-            status_ = kCast;
-            return true;
-          }
+      auto const& cast_param = nnvm::get<CastParam>(output_node.node->attrs.parsed);
+      if (cast_param.dtype == castDtype) {
+        if (status_ == kExpand && output_node.node->num_outputs() == 1) {
+          status_ = kCast;
+          return true;
         } else if (status_ == kCast) {
           status_ = kSuccess;
           return true;
@@ -91,6 +91,11 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
 
   std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
     return status_ == kSuccess ? candidates : std::vector<BiDirectedNode*>(0);
+  }
+
+  void Reset() override {
+    status_   = kFail;
+    castDtype = -1;
   }
 };
 
