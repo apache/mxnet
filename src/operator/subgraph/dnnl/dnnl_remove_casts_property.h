@@ -21,10 +21,10 @@
  * \file dnnl_remove_casts_property.h
  * \brief Graph property for removing two unnecessary Cast operations
  *
- * ... -> Cast(bool) -> expand_dims -> Cast(bool) -> Cast(bool) -> ...
+ * ... -> Cast(dtype) -> expand_dims -> Cast(dtype) -> Cast(dtype) -> ...
  *                                  ||
  *                                  \/
- *                ... -> Cast(bool) -> expand_dims -> ...
+ *                ... -> Cast(dtype) -> expand_dims -> ...
  */
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_REMOVE_CASTS_PROPERTY_H_
@@ -46,7 +46,8 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
  private:
   enum CastStatus { kExpand, kCast, kSuccess, kFail };
   CastStatus status_ = kFail;
-  int castDtype      = -1;
+  int castDtype = -1;  // used to determine whether Cast on the input to expand_dims has the same
+                       // dtype as the ones performed on the output
 
  public:
   bool Select(const BiDirectedNode& seed_node,
