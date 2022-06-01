@@ -44,8 +44,15 @@ if [ ! -z "${RELEASE_PUBLIC_ECR_REPOSITORY}" ]; then
 fi
 
 build() {
+    # use this flag to set LD_LIBRARY_PATH for cuda files
+    if [[ $mxnet_variant = cu* ]]; then
+        cuda_variant=${mxnet_variant:2:-1}.${mxnet_variant: -1}
+    else
+        cuda_variant="false"
+    fi
+
     # NOTE: Ensure the correct context root is passed in when building - Dockerfile expects ./wheel_build
-    docker build -t "${image_name}" --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} --build-arg MXNET_VARIANT=${mxnet_variant} -f ${resources_path}/Dockerfile ./wheel_build
+    docker build -t "${image_name}" --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} --build-arg MXNET_VARIANT=${mxnet_variant} --build-arg CUDA_VARIANT=${cuda_variant} -f ${resources_path}/Dockerfile ./wheel_build
 }
 
 test() {

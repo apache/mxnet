@@ -18,7 +18,7 @@
 #
 # Dockerfile to run MXNet on Ubuntu 18.04 for GPU
 
-FROM nvidia/cuda:10.2-devel-ubuntu18.04
+FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 WORKDIR /work/deps
 
@@ -63,11 +63,6 @@ RUN /work/ubuntu_docs.sh
 
 COPY install/ubuntu_tutorials.sh /work/
 RUN /work/ubuntu_tutorials.sh
-
-ENV CUDA_VERSION=10.2.89
-ENV CUDNN_VERSION=8.0.4.30
-COPY install/ubuntu_cudnn.sh /work/
-RUN /work/ubuntu_cudnn.sh
 
 # Always last
 ARG USER_ID=0
