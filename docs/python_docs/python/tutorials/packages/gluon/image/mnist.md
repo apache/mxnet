@@ -33,7 +33,7 @@ To complete this tutorial, we need:
 
 - MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.apache.org/get_started).
 
-- [Python Requests](http://docs.python-requests.org/en/master/) and [Jupyter Notebook](http://jupyter.org/index.html).
+- [Python Requests](https://requests.readthedocs.io/en/latest/) and [Jupyter Notebook](http://jupyter.org/index.html).
 
 ```
 $ pip install requests jupyter
