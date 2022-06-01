@@ -140,7 +140,10 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   if name in config:
     name = config[name][OP_NAME]
 
-  net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
+  sigma = 0.3 if hasattr(net_original, 'alg') is True and net_original.alg == 'exp' else 0.5
+
+  net_original.initialize(init=mx.init.Normal(sigma), force_reinit=True)
+
   min_value = -1 if out_type != 'uint8' else 0
   one_shape = isinstance(data_shapes, tuple)
   if one_shape:
@@ -226,7 +229,7 @@ def check_fusion(net_original, data_shapes, attrs_dict, check_fp32_fusion=True,
                 low=data_min, high=data_max))
   net_original(*data)
   net_fusion = copy.copy(net_original)
-  sym, params = net_original.export(None)
+  sym, _ = net_original.export(None)
 
   if check_fp32_fusion:
     if ''.join(sym.get_internals().list_outputs()).find('sqrt') != -1:
