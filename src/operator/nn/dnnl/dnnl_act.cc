@@ -65,9 +65,9 @@ bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input) {
 
 // Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
 bool SupportDNNLQuantizedAct(const ActivationParam& param) {
-  // TODO(zhennan): Add more activation type when dnnl supports.
-  //                Remove this when it's identity to SupportDNNLAct.
-  return param.act_type == activation::kReLU;
+  // Although it is the same as SupportDNNLAct i left it here, so when new activations
+  // will be introduced it will be easier to handle.
+  return SupportDNNLAct(param);
 }
 
 dnnl::algorithm GetDNNLActAlgo(const ActivationParam& param) {
