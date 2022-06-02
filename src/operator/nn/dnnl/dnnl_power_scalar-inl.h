@@ -28,7 +28,6 @@
 #if MXNET_USE_ONEDNN == 1
 
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 #include "operator/tensor/elemwise_binary_scalar_op.h"
 
 namespace mxnet {
@@ -53,6 +52,12 @@ class DNNLPowerFwd {
 };
 
 typedef OpSignature DNNLPowerSignature;
+
+void DNNLPowerForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const NDArray& input,
+                      const OpReqType& req,
+                      const NDArray& output);
 
 }  // namespace op
 }  // namespace mxnet

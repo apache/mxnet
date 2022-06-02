@@ -388,7 +388,6 @@ void ConcatCSRImpl(const nnvm::NodeAttrs& attrs,
     });
   });
 }
-
 }  // namespace op
 }  // namespace mxnet
 
