@@ -13,8 +13,8 @@
   {%- endif -%}
   <link rel="stylesheet" href="{{ "/assets/main.css" | relative_url }}">
   {%- feed_meta -%}
-  {%- if jekyll.environment == 'production' and site.google_analytics -%}
-    {%- include google-analytics.html -%}
+  {%- if jekyll.environment == 'production' -%}
+    {%- include matomo-analytics.html -%}
   {%- endif -%}
   {%- if jekyll.environment == 'production' -%}
     <script src="{{'/assets/js/jquery-3.3.1.min.js'|relative_url}}"></script>
