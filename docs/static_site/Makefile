@@ -23,8 +23,6 @@ html:
 	wget -O src/assets/img/mxnet-icon.png https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet-icon.png
 	wget -O src/assets/docsearch.min.css 'https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css'
 	wget -O src/assets/js/docsearch.min.js 'https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js'
-	wget -O src/assets/retainable.css https://www.twilik.com/assets/retainable/rss-embed/retainable.css
-	wget -O src/assets/js/retainable.js https://www.twilik.com/assets/retainable/rss-embed/retainable.js
 	cd src && bundle install && JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../build/html && cd ..
 
 
