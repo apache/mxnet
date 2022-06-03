@@ -33,4 +33,5 @@ if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
     $MAKE
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/libtiff.zip $DEPS_PATH/tiff-$TIFF_VERSION
 fi

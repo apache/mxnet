@@ -25,7 +25,7 @@ if [[ $PLATFORM == 'darwin' ]]; then
     JPEG_NASM_OPTION="-D CMAKE_ASM_NASM_COMPILER=/usr/local/bin/nasm"
 fi
 
-if [[ ! -f $DEPS_PATH/lib/libjpeg.a ]] || [[ ! -f $DEPS_PATH/lib/libturbojpeg.a ]]; then
+if [[ ! -e $DEPS_PATH/lib/libjpeg.a ]] && [[ ! -e $DEPS_PATH/lib64/libjpeg.a ]]; then
     # download and build libjpeg
     >&2 echo "Building libjpeg-turbo..."
     download \
@@ -48,4 +48,5 @@ if [[ ! -f $DEPS_PATH/lib/libjpeg.a ]] || [[ ! -f $DEPS_PATH/lib/libturbojpeg.a 
     $MAKE
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/libjpeg.zip $DEPS_PATH/libjpeg-turbo-$TURBO_JPEG_VERSION
 fi

@@ -37,4 +37,5 @@ if [[ ! -f $DEPS_PATH/lib/libz.a ]]; then
     $MAKE
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/zlib.zip $DEPS_PATH/zlib-$ZLIB_VERSION
 fi

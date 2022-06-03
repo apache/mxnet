@@ -39,4 +39,7 @@ then
     # we have to give the process the proper permission to these files. This is hacky, but unfortunately 
     # there's no better way to do this without patching all our submodules.
     chown -R jenkins_slave /usr/local/bin
+
+    yum install -y sudo
+    echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/yum, /usr/bin/yum-config-manager" >> /etc/sudoers.d/10_jenkins_slave
 fi

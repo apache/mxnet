@@ -92,3 +92,13 @@ services:
         BASE_IMAGE: nvidia/cuda:11.2.1-cudnn8-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu112
+  centos7_gpu_cu114:
+    image: ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu114
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.4.0-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu114
