@@ -180,10 +180,15 @@ Apache MXNet is evolving fast. To see what's next and what the community is curr
 <br/>
 [JIRA boards](https://issues.apache.org/jira/secure/RapidBoard.jspa) <i class="fas fa-lock"></i>
 
-
-<script defer src="https://use.fontawesome.com/releases/v5.0.12/js/all.js" integrity="sha384-Voup2lBiiyZYkRto2XWqbzxHXwzcm4A5RfdfG6466bu5LqjwwrjXCMBQBLMWh7qR" crossorigin="anonymous"></script>
-<script async defer src="https://buttons.github.io/buttons.js"></script>
-<script src="https://apis.google.com/js/platform.js"></script>
+{%- if jekyll.environment == 'production' -%}
+  <script defer src="{{ "/assets/js/fontawesome.js" | relative_url}}"></script>
+  <script async defer src="{{ "/assets/js/buttons.js" | relative_url}}"></script>
+  <script src="{{ "/assets/js/platform.js" | relative_url}}"></script>
+{%- else -%}
+  <script defer src="https://use.fontawesome.com/releases/v5.0.12/js/all.js" integrity="sha384-Voup2lBiiyZYkRto2XWqbzxHXwzcm4A5RfdfG6466bu5LqjwwrjXCMBQBLMWh7qR" crossorigin="anonymous"></script>
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+  <script src="https://apis.google.com/js/platform.js"></script>
+{%- endif -%}
 
 
 ## Contributors
