@@ -23,19 +23,19 @@ permalink: /community/contribute
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Contributing to MXNet
+# Contributing to Apache MXNet
 
-Apache MXNet (incubating) is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on MXNet best practices and processes.
+Apache MXNet (incubating) is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on Apache MXNet best practices and processes.
 
 
 ## Getting Started
 
-The following actions are recommended steps for you to get started with contributing to MXNet.
+The following actions are recommended steps for you to get started with contributing to Apache MXNet.
 
 | Action | Purpose |
 |---|---|
-| [Create a forum account](#forum) | Asking & answering MXNet usage questions |
-| [Join the dev comm channels](#mxnet-dev-communications) | Discussions about the direction of MXNet |
+| [Create a forum account](#forum) | Asking & answering Apache MXNet usage questions |
+| [Join the dev comm channels](#mxnet-dev-communications) | Discussions about the direction of Apache MXNet |
 | [Follow MXNet on Social Media](#social-media) | Get updates about new features and events |
 | [Create a JIRA account](#jira) | Tracking tasks & prioritizing issues |
 | [Check out the MXNet wiki](#confluence-wiki) | The wiki has detailed contributor information |
@@ -53,7 +53,7 @@ The following actions are recommended steps for you to get started with contribu
     * [Pull request process](#formal-pull-request-process)
 * I want to propose a new feature. What is the process for this?
     * [New feature process](#new-feature-process)
-* What's coming next with MXNet, and how can I help?
+* What's coming next with Apache MXNet, and how can I help?
     * [Roadmap info](#roadmap)
 
 
@@ -61,12 +61,12 @@ The following actions are recommended steps for you to get started with contribu
 
 ### Forum
 
-If you need help with using MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use the discussion forum:
+If you need help with using Apache MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use the discussion forum:
 * [discuss.mxnet.io](https://discuss.mxnet.io) <i class="fas fa-external-link-alt"></i>
 
 ### Mailing Lists
 
-Please join either or both of the MXNet mailing lists:
+Please join either or both of the Apache MXNet mailing lists:
 
 **For MXNet Users, join the USER mailing list**:
 
@@ -86,7 +86,7 @@ To join the MXNet slack channel send request to the contributor mailing list.
 
 ### Social Media
 
-Keep connected with the latest MXNet news and updates.
+Keep connected with the latest Apache MXNet news and updates.
 
 <p>
 <a href="https://medium.com/apache-mxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/medium_black.svg?sanitize=true" height="30px"/> Contributor and guest blogs about MXNet</a>
@@ -174,7 +174,7 @@ Detailed information is also required, if you plan to contribute the improvement
 
 ## Roadmap
 
-MXNet is evolving fast. To see what's next and what the community is currently working on, check out the Roadmap issues on GitHub and the JIRA Boards:
+Apache MXNet is evolving fast. To see what's next and what the community is currently working on, check out the Roadmap issues on GitHub and the JIRA Boards:
 
 <a class="github-button" href="https://github.com/apache/incubator-mxnet/labels/Roadmap" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Roadmap</a>
 <br/>
@@ -187,6 +187,6 @@ MXNet is evolving fast. To see what's next and what the community is currently w
 
 
 ## Contributors
-MXNet has been developed by and is used by a group of active community members. Contribute to improving it!
+Apache MXNet has been developed by and is used by a group of active community members. Contribute to improving it!
 
 <i class="fab fa-github"></i> [Contributors and Committers](https://github.com/apache/incubator-mxnet/blob/master/CONTRIBUTORS.md)
