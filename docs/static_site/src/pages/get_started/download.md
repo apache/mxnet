@@ -25,11 +25,11 @@ permalink: /get_started/download
 
 # Source Download
 
-The source archives listed on this page are official MXNet releases following
+The source archives listed on this page are official Apache MXNet releases following
 the [Apache Software Foundation Release
 Policy](http://www.apache.org/legal/release-policy.html).
 
-If you would like to actively participate in the MXNet development, you are
+If you would like to actively participate in the Apache MXNet development, you are
 encouraged to contribute to our development version on
 [GitHub](https://github.com/apache/incubator-mxnet).
 
