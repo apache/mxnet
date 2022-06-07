@@ -23,7 +23,7 @@ permalink: /get_started/build_from_source
 <!--- under the License. -->
 
 
-# Build MXNet from Source
+# Build Apache MXNet from Source
 
 Building and installing Apache MXNet from source is a three-step process. First, build
 the shared `libmxnet` which provides the MXNet backend, then install your
