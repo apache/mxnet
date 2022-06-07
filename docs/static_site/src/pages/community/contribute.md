@@ -89,16 +89,16 @@ To join the MXNet slack channel send request to the contributor mailing list.
 Keep connected with the latest Apache MXNet news and updates.
 
 <p>
-<a href="https://medium.com/apache-mxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/medium_black.svg?sanitize=true" height="30px"/> Contributor and guest blogs about MXNet</a>
+<a href="https://medium.com/apache-mxnet"><img src="{{ "/assets/img/medium_black.svg" | relative_url}}" height="30px"/> Contributor and guest blogs about MXNet</a>
 </p>
 <p>
-<a href="https://reddit.com/r/mxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/reddit_blue.svg?sanitize=true" height="30px" alt="reddit"/> Discuss MXNet on r/mxnet</a>
+<a href="https://reddit.com/r/mxnet"><img src="{{ "/assets/img/reddit_blue.svg" | relative_url}}" height="30px" alt="reddit"/> Discuss MXNet on r/mxnet</a>
 </p>
 <p>
-<a href="https://twitter.com/apachemxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/twitter.svg?sanitize=true" height="30px"/> Apache MXNet on Twitter</a>
+<a href="https://twitter.com/apachemxnet"><img src="{{ "/assets/img/twitter.svg" | relative_url}}" height="30px"/> Apache MXNet on Twitter</a>
 </p>
 <p>
-<a href="https://www.youtube.com/apachemxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/youtube_red.svg?sanitize=true" height="30px"/> MXNet YouTube channel</a>
+<a href="https://www.youtube.com/apachemxnet"><img src="{{ "/assets/img/youtube_red.svg" | relative_url}}" height="30px"/> MXNet YouTube channel</a>
 </p>
 
 
