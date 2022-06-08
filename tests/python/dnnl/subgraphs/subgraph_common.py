@@ -140,8 +140,16 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   if name in config:
     name = config[name][OP_NAME]
 
-  net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
-  min_value = -1 if out_type != 'uint8' else 0
+  if out_type == 'uint8':
+    # Initialize weights and tensors only with positive values to be sure
+    # that results are always positive
+    init = CustomNormalInit(sigma=0.5, bounded=True)
+    min_value = 0
+  else:
+    init = mx.init.Normal(0.5)
+    min_value = -1
+
+  net_original.initialize(init=init, force_reinit=True)
   one_shape = isinstance(data_shapes, tuple)
   if one_shape:
     # replace one shape with list of shapes with one element inside to follow later the same schema
