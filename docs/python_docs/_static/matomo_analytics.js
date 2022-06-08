@@ -1,4 +1,4 @@
- /*!
+/*!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,16 @@
  * under the License.
  */
 
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-96378503-1', 'auto');
-  ga('send', 'pageview');
+var _paq = window._paq = window._paq || [];
+/* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+/* We explicitly disable cookie tracking to avoid privacy issues */
+_paq.push(['disableCookies']);
+_paq.push(['trackPageView']);
+_paq.push(['enableLinkTracking']);
+(function() {
+  var u="https://analytics.apache.org/";
+  _paq.push(['setTrackerUrl', u+'matomo.php']);
+  _paq.push(['setSiteId', '23']);
+  var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+  g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+})();
