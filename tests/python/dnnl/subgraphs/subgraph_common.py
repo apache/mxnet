@@ -140,16 +140,18 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   if name in config:
     name = config[name][OP_NAME]
 
+  sigma = 0.3 if hasattr(net_original, 'alg') is True and net_original.alg == 'exp' else 0.5
   if out_type == 'uint8':
     # Initialize weights and tensors only with positive values to be sure
     # that results are always positive
-    init = CustomNormalInit(sigma=0.5, bounded=True)
+    init = CustomNormalInit(sigma=sigma, bounded=True)
     min_value = 0
   else:
-    init = mx.init.Normal(0.5)
+    init = mx.init.Normal(sigma)
     min_value = -1
 
-  net_original.initialize(init=init, force_reinit=True)
+  net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
+
   one_shape = isinstance(data_shapes, tuple)
   if one_shape:
     # replace one shape with list of shapes with one element inside to follow later the same schema
@@ -234,7 +236,7 @@ def check_fusion(net_original, data_shapes, attrs_dict, check_fp32_fusion=True,
                 low=data_min, high=data_max))
   net_original(*data)
   net_fusion = copy.copy(net_original)
-  sym, params = net_original.export(None)
+  sym, _ = net_original.export(None)
 
   if check_fp32_fusion:
     if ''.join(sym.get_internals().list_outputs()).find('sqrt') != -1:

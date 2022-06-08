@@ -43,7 +43,6 @@
 
 #include "operator/nn/deconvolution-inl.h"
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -129,25 +128,6 @@ class DNNLDeconvFwd {
   std::shared_ptr<deconv_fwd_t> fwd;
   std::shared_ptr<deconv_fwd_pd_t> fwd_pd;
 };
-
-DNNLDeconvFwd::Tensors::Tensors(const bool no_bias,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<NDArray>& outputs)
-    : data(inputs[deconv::kData]),
-      weights(inputs[deconv::kWeight]),
-      bias(no_bias ? nullptr : &inputs[deconv::kBias]),
-      out(outputs[deconv::kOut]) {}
-
-DNNLDeconvFwd::Tensors::Tensors(const NDArray& data,
-                                const NDArray& weights,
-                                const NDArray* const bias,
-                                const NDArray& out)
-    : data(data), weights(weights), bias(bias), out(out) {}
-
-DNNLDeconvFwd::DNNLDeconvFwd(const DeconvolutionParam& param, const Tensors& tensors)
-    : fwd_pd(CreatePrimitiveDesc(param, tensors)) {
-  fwd = std::make_shared<deconv_fwd_t>(*fwd_pd);
-}
 
 inline const dnnl::memory* DNNLDeconvFwd::DataMem(const NDArray& data) const {
   auto fwd_src_desc = fwd_pd->src_desc();
@@ -241,28 +221,6 @@ class DNNLDeconvBwd {
   std::shared_ptr<deconv_bwd_data_t> bwd_data;
   std::shared_ptr<deconv_bwd_weights_t> bwd_weights;
 };
-
-DNNLDeconvBwd::ReadTensors::ReadTensors(const bool no_bias, const std::vector<NDArray>& inputs)
-    : data(inputs[deconv::kData + 1]),
-      weights(inputs[deconv::kWeight + 1]),
-      bias(no_bias ? nullptr : &inputs[deconv::kBias + 1]),
-      out_grad(inputs[deconv::kOut]) {}
-
-DNNLDeconvBwd::WriteTensors::WriteTensors(const bool no_bias, const std::vector<NDArray>& outputs)
-    : data_grad(outputs[deconv::kData]),
-      weights_grad(outputs[deconv::kWeight]),
-      bias_grad(no_bias ? nullptr : &outputs[deconv::kBias]) {}
-
-DNNLDeconvBwd::DNNLDeconvBwd(const DeconvolutionParam& param, const ReadTensors& read_tensors) {
-  const auto& fwd_pd = DNNLDeconvFwd::CreatePrimitiveDesc(
-      param,
-      DNNLDeconvFwd::Tensors(
-          read_tensors.data, read_tensors.weights, read_tensors.bias, read_tensors.out_grad));
-  bwd_data_pd    = CreateDataPrimitiveDesc(param, read_tensors, *fwd_pd);
-  bwd_weights_pd = CreateWeightsPrimitiveDesc(param, read_tensors, *fwd_pd);
-  bwd_data       = std::make_shared<deconv_bwd_data_t>(*bwd_data_pd);
-  bwd_weights    = std::make_shared<deconv_bwd_weights_t>(*bwd_weights_pd);
-}
 
 inline void DNNLDeconvBwd::IOSwapWeightsTensors(const uint32_t num_group,
                                                 const std::vector<OpReqType>& req,
@@ -408,6 +366,18 @@ inline deconv_bwd_weights_t::desc DeconvDescCreator::CreateBwdWeightsDesc() cons
                                     padding,
                                     padding);
 }
+
+void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& in_data,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& out_data);
+
+void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

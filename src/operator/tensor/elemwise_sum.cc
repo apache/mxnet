@@ -25,8 +25,10 @@
 
 #include "../../common/utils.h"
 #include "../../ndarray/ndarray_function.h"
-#include "../nn/dnnl/dnnl_base-inl.h"
-#include "../nn/dnnl/dnnl_ops-inl.h"
+#if MXNET_USE_ONEDNN == 1
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_sum-inl.h"
+#endif  // MXNET_USE_ONEDNN == 1
 
 namespace mxnet {
 namespace op {

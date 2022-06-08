@@ -20,10 +20,11 @@
 /*!
  * \file dnnl_stack.cc
  */
+#include <vector>
 
 #include "dnnl_base-inl.h"
 #include "dnnl_concat-inl.h"
-#include "dnnl_ops-inl.h"
+#include "dnnl_stack-inl.h"
 
 #include "operator/tensor/matrix_op-inl.h"
 
@@ -103,7 +104,7 @@ void DNNLStackForward(const nnvm::NodeAttrs& attrs,
     }
   });
 
-  auto& fwd = GetConcatForward(stacking_dim, in_data, data_md, axis);
+  auto& fwd = DNNLConcatFwd::GetCached(stacking_dim, in_data, data_md, axis);
   mxnet::dnnl_output_t out_mem =
       CreateDNNLMem(out_data[concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
 
