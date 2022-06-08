@@ -1,6 +1,6 @@
 ---
 layout: page_category
-title:  Exception Handling in MXNet
+title:  Exception Handling in Apache MXNet
 category: architecture
 permalink: /api/architecture/exception_handling
 ---
@@ -21,9 +21,9 @@ permalink: /api/architecture/exception_handling
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Exception Handling in MXNet
+# Exception Handling in Apache MXNet
 
-This tutorial explains the exception handling support in MXNet,
+This tutorial explains the exception handling support in Apache MXNet,
 and provides examples on how to throw and handle exceptions when in a multithreaded context.
 Although, the examples are in Python, they can be easily extended to MXNet
 language bindings.

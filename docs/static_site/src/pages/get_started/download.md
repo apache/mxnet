@@ -25,17 +25,17 @@ permalink: /get_started/download
 
 # Source Download
 
-The source archives listed on this page are official MXNet releases following
+The source archives listed on this page are official Apache MXNet releases following
 the [Apache Software Foundation Release
 Policy](http://www.apache.org/legal/release-policy.html).
 
-If you would like to actively participate in the MXNet development, you are
+If you would like to actively participate in the Apache MXNet development, you are
 encouraged to contribute to our development version on
 [GitHub](https://github.com/apache/incubator-mxnet).
 
 | Version | Source                                                                                                      | PGP                                                                                                             | SHA                                                                                                                |
 |---------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| 1.9.1   | [apache-mxnet-src-1.9.1-incubating.tar.gz](http://www.apache.org/dyn/closer.lua?filename=incubator/mxnet/1.9.1/apache-mxnet-src-1.9.1-incubating.tar.gz&action=download)   | [asc](https://downloads.apache.org/incubator/mxnet/1.9.1/apache-mxnet-src-1.9.1-incubating.tar.gz.asc)    |  [sha512](https://downloads.apache.org/incubator/mxnet/1.9.1/apache-mxnet-src-1.9.1-incubating.tar.gz.sha512)    |
+| 1.9.1   | [apache-mxnet-src-1.9.1-incubating.tar.gz](https://www.apache.org/dyn/closer.lua?filename=incubator/mxnet/1.9.1/apache-mxnet-src-1.9.1-incubating.tar.gz&action=download)   | [asc](https://downloads.apache.org/incubator/mxnet/1.9.1/apache-mxnet-src-1.9.1-incubating.tar.gz.asc)    |  [sha512](https://downloads.apache.org/incubator/mxnet/1.9.1/apache-mxnet-src-1.9.1-incubating.tar.gz.sha512)    |
 | 1.9.0   | [apache-mxnet-src-1.9.0-incubating.tar.gz](https://archive.apache.org/dist/incubator/mxnet/1.9.0/apache-mxnet-src-1.9.0-incubating.tar.gz)   | [asc](https://archive.apache.org/dist/incubator/mxnet/1.9.0/apache-mxnet-src-1.9.0-incubating.tar.gz.asc)    |  [sha512](https://archive.apache.org/dist/incubator/mxnet/1.9.0/apache-mxnet-src-1.9.0-incubating.tar.gz.sha512)    |
 | 1.8.0   | [apache-mxnet-src-1.8.0-incubating.tar.gz](https://archive.apache.org/dist/incubator/mxnet/1.8.0/apache-mxnet-src-1.8.0-incubating.tar.gz)   | [asc](https://archive.apache.org/dist/incubator/mxnet/1.8.0/apache-mxnet-src-1.8.0-incubating.tar.gz.asc)    |  [sha512](https://archive.apache.org/dist/incubator/mxnet/1.8.0/apache-mxnet-src-1.8.0-incubating.tar.gz.sha512)    |
 | 1.7.0   | [apache-mxnet-src-1.7.0-incubating.tar.gz](https://archive.apache.org/dist/incubator/mxnet/1.7.0/apache-mxnet-src-1.7.0-incubating.tar.gz)   | [asc](https://archive.apache.org/dist/incubator/mxnet/1.7.0/apache-mxnet-src-1.7.0-incubating.tar.gz.asc)    |  [sha512](https://archive.apache.org/dist/incubator/mxnet/1.7.0/apache-mxnet-src-1.7.0-incubating.tar.gz.sha512)    |

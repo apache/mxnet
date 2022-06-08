@@ -241,6 +241,6 @@ def setup(app):
     app.add_transform(AutoStructify)
     app.add_config_value('recommonmark_config', {
     }, True)
-    app.add_javascript('google_analytics.js')
+    app.add_javascript('matomo_analytics.js')
     import mxtheme
     app.add_directive('card', mxtheme.CardDirective)
