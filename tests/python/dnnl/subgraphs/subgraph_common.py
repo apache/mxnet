@@ -150,7 +150,7 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
     init = mx.init.Normal(sigma)
     min_value = -1
 
-  net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
+  net_original.initialize(init=init, force_reinit=True)
 
   one_shape = isinstance(data_shapes, tuple)
   if one_shape:
