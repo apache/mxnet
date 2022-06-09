@@ -22,6 +22,8 @@ FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
 
 WORKDIR /work/deps
 
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+
 COPY install/ubuntu_core.sh /work/
 RUN /work/ubuntu_core.sh
 COPY install/deb_ubuntu_ccache.sh /work/
