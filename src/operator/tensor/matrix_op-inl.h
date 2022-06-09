@@ -225,12 +225,12 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
            && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
   }
   ReverseReshapeInferShape(&dshape, oshape);
-#if 0
-  CHECK_EQ(oshape.Size(), dshape.Size())
-    << "Target shape size is different to source. "
-    << "Target: " << oshape
-    << "\nSource: " << dshape;
-#endif
+  if (shape_is_known(dshape) && shape_is_known(oshape)){
+    CHECK_EQ(oshape.Size(), dshape.Size())
+      << "Target shape size is different to source. "
+      << "Target: " << oshape
+      << "\nSource: " << dshape;
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
 }
