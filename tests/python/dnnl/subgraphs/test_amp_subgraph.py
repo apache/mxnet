@@ -23,6 +23,7 @@ from mxnet.test_utils import assert_almost_equal
 from subgraph_common import SG_PASS_NAME, QUANTIZE_SG_PASS_NAME
 from test_matmul_subgraph import MultiHeadAttention
 
+import os
 import sys
 from pathlib import Path
 curr_path = Path(__file__).resolve().parent
@@ -172,6 +173,7 @@ def test_amp_transformers():
 
 @mx.util.use_np
 def test_amp_concat():
+  os.environ["MXNET_NODE_ELIMINATION"] = "0"
   class TestNet(nn.HybridBlock):
     def __init__(self):
       super(TestNet, self).__init__()
@@ -208,6 +210,7 @@ def test_amp_concat():
   exp_sym = mx.symbol.Concat(*exp_fc)
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(net, [data_example], exp_sym, ['sg_onednn_fully_connected_1'])
+  del os.environ["MXNET_NODE_ELIMINATION"]
 
 
 @mx.util.use_np
