@@ -235,7 +235,6 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
         else:
           self.act = nn.Activation(activation = alg)
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
-        self.conv1.share_parameters(self.conv0.collect_params())
 
     def forward(self, x):
         out = self.act(self.conv0(x)) + self.conv1(x)
@@ -308,7 +307,6 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
         super(ConvBNSumAct, self).__init__(**kwargs)
         self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1)
-        self.conv1.share_parameters(self.conv0.collect_params())
         self.bn = nn.BatchNorm()
         if alg == "relu6":
           self.act = RELU6()
