@@ -1155,7 +1155,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     nnvm::Graph g = Symbol2Graph(*s);
 
     // EliminateCommonNodesPass must be performed before first call to the indexed graph,
-    // because otherwise changing graph via other passses will result in an error, due to the fact
+    // because otherwise changing graph via other passes will result in an error, due to the fact
     // that once indexed_graph is created, it cannot be changed.
     g                                    = ApplyPass(std::move(g), "EliminateCommonNodesPass");
     const auto& indexed_graph            = g.indexed_graph();
