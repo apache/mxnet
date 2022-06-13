@@ -32,11 +32,6 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(QuantizeElemwiseAddParam);
 
-static inline float GetScale(const NDArray& data, float min, float max) {
-  auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-  return data_range / MaxAbs(min, max);
-}
-
 class DNNLQuantizedSumFwd {
  public:
   dnnl::sum::primitive_desc fwd_pd;
@@ -142,20 +137,23 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   // C, C_min, C_max
   CHECK_EQ(outputs.size(), 3U) << "should be C, C_min, C_max";
   // Collect data min,max,absmax
-  const float A_min    = inputs[q_elemwise_add::kAMin].data().dptr<float>()[0];
-  const float B_min    = inputs[q_elemwise_add::kBMin].data().dptr<float>()[0];
-  const float A_max    = inputs[q_elemwise_add::kAMax].data().dptr<float>()[0];
-  const float B_max    = inputs[q_elemwise_add::kBMax].data().dptr<float>()[0];
-  const float A_absmax = MaxAbs(A_min, A_max);
-  const float B_absmax = MaxAbs(B_min, B_max);
-  const bool is_A_int8 = (inputs[q_elemwise_add::kDataA].dtype() == mshadow::kInt8);
-  const float A_scale  = GetScale(inputs[q_elemwise_add::kDataA], A_min, A_max);
-  const float B_scale  = GetScale(inputs[q_elemwise_add::kDataB], B_min, B_max);
-  auto A_mem           = inputs[q_elemwise_add::kDataA].GetDNNLData();
-  auto B_mem           = inputs[q_elemwise_add::kDataB].GetDNNLData();
-  bool diff_in_types =
-      (inputs[q_elemwise_add::kDataA].dtype() != inputs[q_elemwise_add::kDataB].dtype());
-  const float in_range = (diff_in_types || is_A_int8) ? kInt8Range : kUint8Range;
+  const float A_min        = inputs[q_elemwise_add::kAMin].data().dptr<float>()[0];
+  const float B_min        = inputs[q_elemwise_add::kBMin].data().dptr<float>()[0];
+  const float A_max        = inputs[q_elemwise_add::kAMax].data().dptr<float>()[0];
+  const float B_max        = inputs[q_elemwise_add::kBMax].data().dptr<float>()[0];
+  const bool is_A_int8     = (inputs[q_elemwise_add::kDataA].dtype() == mshadow::kInt8);
+  const bool is_B_int8     = (inputs[q_elemwise_add::kDataB].dtype() == mshadow::kInt8);
+  const float A_type_range = is_A_int8 ? kInt8Range : kUint8Range;
+  const float B_type_range = is_B_int8 ? kInt8Range : kUint8Range;
+  const float A_absmax     = MaxAbs(A_min, A_max);
+  const float B_absmax     = MaxAbs(B_min, B_max);
+  const float A_scale      = A_type_range / A_absmax;
+  const float B_scale      = B_type_range / B_absmax;
+  auto A_mem               = inputs[q_elemwise_add::kDataA].GetDNNLData();
+  auto B_mem               = inputs[q_elemwise_add::kDataB].GetDNNLData();
+  bool diff_in_types       = (is_A_int8 != is_B_int8);
+  assert(diff_in_types ==
+         (inputs[q_elemwise_add::kDataA].dtype() != inputs[q_elemwise_add::kDataB].dtype()));
   dnnl::memory* rescaled_mem;              // rescaled_mem is for reorder dnnl memory
   double output_data_range = kInt32Range;  // output default set as int32
 
@@ -165,23 +163,22 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
     output_data_range = kUint8Range;
   }
 
-  float output_min     = 0;
-  float output_max     = 0;
-  float output_scale   = 0;
-  const int scales_num = 2;  // 2: scale 0 for input A, scale 1 for input B
-  std::vector<float> scales(scales_num, 1);
+  float output_min   = 0;
+  float output_max   = 0;
+  float output_scale = 0;
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     output_min     = params.min_calib_range.value();
     output_max     = params.max_calib_range.value();
     output_scale   = output_data_range / MaxAbs(output_min, output_max);
-    scales[0]      = output_scale / A_scale;
-    scales[1]      = output_scale / B_scale;
   } else {
-    output_max = A_absmax + B_absmax;
-    output_min = -output_max;
-    scales[0]  = A_absmax * output_data_range / (output_max * in_range);
-    scales[1]  = B_absmax * output_data_range / (output_max * in_range);
+    output_max   = A_absmax + B_absmax;
+    output_min   = -output_max;
+    output_scale = output_data_range / output_max;
   }
+
+  std::vector<float> scales(2);  // 2: scale 0 for input A, scale 1 for input B
+  scales[0] = output_scale / A_scale;
+  scales[1] = output_scale / B_scale;
 
   // We can use more efficient sum kernel when there is no broadcast - when shapes are the same
   const bool sum_kernel =
@@ -202,17 +199,13 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
           dnnl::reorder::primitive_desc(engine, u8_mem->get_desc(), engine, s8_desc, reorder_attr);
       dnnl_args_map_t args({{DNNL_ARG_FROM, *u8_mem}, {DNNL_ARG_TO, *rescaled_mem}});
       DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd), args);
+      // Modify scale to restore original uint8 values:
       if (is_A_int8) {
         B_mem = rescaled_mem;
+        scales[1] *= 1.0 / u8_reorder_scale;
       } else {
         A_mem = rescaled_mem;
-      }
-    } else {
-      // take into account conversion from uint8 to int8 in binary operator input scales
-      if (is_A_int8) {
-        scales[1] *= 0.5;  // convert B from uint8
-      } else {
-        scales[0] *= 0.5;  // convert A from uint8
+        scales[0] *= 1.0 / u8_reorder_scale;
       }
     }
   }
@@ -237,18 +230,16 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
     stream->RegisterPrimArgs(fwd.GetFwd(), args);
   } else {
     const auto& fwd = DNNLQuantizedBinAddFwd::GetCached(output_md, scales, in_desc);
-    if (outputs[q_elemwise_add::kOut].GetDNNLData()->get_data_handle() ==
-        inputs[q_elemwise_add::kDataB].GetDNNLData()->get_data_handle()) {
-      out_mem = CreateDNNLMem(outputs[q_elemwise_add::kOut],
-                              fwd.fwd_pd.dst_desc(),
-                              req[q_elemwise_add::kOut],
-                              &inputs[q_elemwise_add::kDataB]);
-    } else {
-      out_mem = CreateDNNLMem(outputs[q_elemwise_add::kOut],
-                              fwd.fwd_pd.dst_desc(),
-                              req[q_elemwise_add::kOut],
-                              &inputs[q_elemwise_add::kDataA]);
-    }
+    const auto potentially_inplace_input =
+        (outputs[q_elemwise_add::kOut].GetDNNLData()->get_data_handle() ==
+         inputs[q_elemwise_add::kDataB].GetDNNLData()->get_data_handle()) ?
+            q_elemwise_add::kDataB :
+            q_elemwise_add::kDataA;
+    out_mem = CreateDNNLMem(outputs[q_elemwise_add::kOut],
+                            fwd.fwd_pd.dst_desc(),
+                            req[q_elemwise_add::kOut],
+                            &inputs[potentially_inplace_input]);
+
     const dnnl_args_map_t args(
         {{DNNL_ARG_SRC_0, *A_mem}, {DNNL_ARG_SRC_1, *B_mem}, {DNNL_ARG_DST, *out_mem.second}});
     stream->RegisterPrimArgs(fwd.GetFwd(), args);
