@@ -132,7 +132,7 @@ def check_fusion_parameter(sym, attrs_dict):
 
 def check_quantize(net_original, data_shapes, out_type, name='conv',
                    check_calibration=True, check_scale_align=False, quantize_mode='full',
-                   attrs_dict={}):
+                   attrs_dict={}, calib_mode='naive', check_fusion=True):
   quantize_granularity_list = ['tensor-wise']
   if name == 'fc':
     quantize_granularity_list += ['channel-wise']
@@ -195,13 +195,14 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
                                      exclude_layers=None,
                                      exclude_operators=None,
                                      quantized_dtype=out_type,
-                                     calib_mode='naive',
+                                     calib_mode=calib_mode,
                                      calib_data=calib_data,
                                      num_calib_batches=1,
                                      quantize_mode=quantize_mode,
                                      quantize_granularity=quantize_granularity)
     qsym, _ = qnet.export(None)
-    check_fusion_parameter(qsym, attrs_dict)
+    if check_fusion:
+      check_fusion_parameter(qsym, attrs_dict)
     if check_calibration:
       check_qsym_calibrated(qsym, out_type, name=name)
     if check_scale_align:
