@@ -23,9 +23,6 @@
  * \author Ziheng Jiang, Jun Wu
  */
 #include "../nn/convolution-inl.h"
-#if MXNET_USE_ONEDNN == 1
-#include "../nn/dnnl/dnnl_ops-inl.h"
-#endif
 
 namespace mxnet {
 namespace op {

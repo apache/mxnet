@@ -597,7 +597,6 @@ void ConvolutionGradCompute(const nnvm::NodeAttrs& attrs,
     op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
   });
 }
-
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_CONVOLUTION_INL_H_

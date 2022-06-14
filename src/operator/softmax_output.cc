@@ -24,8 +24,8 @@
  */
 #include "./softmax_output-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./nn/dnnl/dnnl_base-inl.h"
-#include "./nn/dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_softmax_output-inl.h"
 #endif
 namespace mxnet {
 namespace op {

@@ -220,6 +220,12 @@ void DNNLFCForwardFullFeature(const DNNLFCFullParam& param,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data);
 
+void DNNLFCBackward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 

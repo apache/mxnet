@@ -30,8 +30,8 @@
 #include "../operator_common.h"
 #include "../../common/alm.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./dnnl/dnnl_base-inl.h"
-#include "./dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_convolution-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
