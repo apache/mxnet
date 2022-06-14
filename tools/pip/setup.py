@@ -141,7 +141,7 @@ else:
 
 from mxnet.runtime import Features
 if Features().is_enabled("ONEDNN"):
-    libraries.append('ONEDNN')
+    libraries.append('oneDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
