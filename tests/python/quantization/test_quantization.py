@@ -603,10 +603,6 @@ def test_quantized_rnn():
         if is_test_for_native_cpu():
             print('skipped testing test_quantized_rnn for native cpu since it is not supported yet')
             return
-        # skip test for mkldnn, flakey and failing - tracked in https://github.com/apache/incubator-mxnet/issues/21061
-        if is_test_for_mkldnn():
-            print('skipped flakey test test_quantized_rnn for mkldnn, see issue #21061')
-            return
 
         data_shape = (seq_len, batch_size, input_dim)
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
