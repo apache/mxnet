@@ -106,7 +106,8 @@ DNNLDotFwd::DNNLDotFwd(const DotParam& param,
   fwd    = std::make_shared<dot_fwd_t>(*fwd_pd);
 }
 
-void DNNLDotFwd::Execute(const std::vector<NDArray>& inputs,
+void DNNLDotFwd::Execute(const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs,
                          const bool isNumpy) {
@@ -117,6 +118,12 @@ void DNNLDotFwd::Execute(const std::vector<NDArray>& inputs,
   auto ndimRhs = inputs[DotIn::rhs].shape().ndim();
   if (isNumpy && ndimRhs > 2) {
     // Necessity of this reorder is described in DNNLDotFwd constructor.
+    rhs.set_data_handle(reinterpret_cast<void*>(
+        ctx.requested[0]
+            .get_space<cpu>(mshadow::Shape1(inputs[DotIn::rhs].shape().Size() *
+                                            GetTypeSize(inputs[DotIn::rhs].dtype())),
+                            ctx.get_stream<cpu>())
+            .dptr_));
     auto tmp_rhs = inputs[DotIn::rhs].GetDNNLData();
     dnnl::memory::desc rhs_md(
         dnnl::memory::dims(inputs[DotIn::rhs].shape().begin(), inputs[DotIn::rhs].shape().end()),
