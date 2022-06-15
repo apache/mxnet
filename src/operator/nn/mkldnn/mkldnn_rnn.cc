@@ -607,12 +607,12 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr,
         #pragma omp parallel num_threads(omp_threads)
         {
           #pragma omp for
-          for(size_t i = 0; i < input_size; ++i) {
+          for (size_t i = 0; i < input_size; ++i) {
             int offset_fused_wx = i + d * input_size + lyr * directions * input_size;
             AdjustGruGateOrder(fused_wx + wx_bytes * offset_fused_wx, state_size, dtype);
           }
           #pragma omp for
-          for(size_t s = 0; s < state_size; ++s) {
+          for (size_t s = 0; s < state_size; ++s) {
             int offset_fused_wh = s + d * state_size + lyr * directions * state_size;
             AdjustGruGateOrder(fused_wh + wh_bytes * offset_fused_wh, state_size, dtype);
           }
