@@ -23,7 +23,7 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "operator/nn/dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_reshape-inl.h"
 #include "operator/quantization/quantization_utils.h"
 
 namespace mxnet {

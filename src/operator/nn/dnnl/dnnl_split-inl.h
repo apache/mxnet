@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -62,6 +61,12 @@ class DNNLSplitFwd {
   std::vector<split_fwd_pd_t> split_pds;
   dnnl::memory::dims strides;
 };
+
+void DNNLSplitForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

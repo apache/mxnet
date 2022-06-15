@@ -30,7 +30,6 @@
 #include "operator/nn/convolution-inl.h"
 #include "dnnl_base-inl.h"
 #include "dnnl_convolution-inl.h"
-#include "dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {

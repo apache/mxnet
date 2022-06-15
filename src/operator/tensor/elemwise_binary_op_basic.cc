@@ -21,8 +21,9 @@
  * \file elemwise_binary_op_basic.cc
  * \brief CPU Implementation of basic elementwise binary broadcast operators
  */
-#include "../nn/dnnl/dnnl_base-inl.h"
-#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_copy-inl.h"
+#include "operator/nn/dnnl/dnnl_sum-inl.h"
 #include "./elemwise_binary_op-inl.h"
 #include "./elemwise_unary_op.h"
 

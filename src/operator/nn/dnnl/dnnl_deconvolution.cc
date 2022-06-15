@@ -35,6 +35,31 @@ bool SupportDNNLDeconv(const DeconvolutionParam& params, const NDArray& input) {
          SupportDNNL<3, 5, DNNLTypeMode::FloatTypes>(input);
 }
 
+DNNLDeconvFwd::Tensors::Tensors(const bool no_bias,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<NDArray>& outputs)
+    : data(inputs[deconv::kData]),
+      weights(inputs[deconv::kWeight]),
+      bias(no_bias ? nullptr : &inputs[deconv::kBias]),
+      out(outputs[deconv::kOut]) {}
+
+DNNLDeconvFwd::Tensors::Tensors(const NDArray& data,
+                                const NDArray& weights,
+                                const NDArray* const bias,
+                                const NDArray& out)
+    : data(data), weights(weights), bias(bias), out(out) {}
+
+DNNLDeconvBwd::ReadTensors::ReadTensors(const bool no_bias, const std::vector<NDArray>& inputs)
+    : data(inputs[deconv::kData + 1]),
+      weights(inputs[deconv::kWeight + 1]),
+      bias(no_bias ? nullptr : &inputs[deconv::kBias + 1]),
+      out_grad(inputs[deconv::kOut]) {}
+
+DNNLDeconvBwd::WriteTensors::WriteTensors(const bool no_bias, const std::vector<NDArray>& outputs)
+    : data_grad(outputs[deconv::kData]),
+      weights_grad(outputs[deconv::kWeight]),
+      bias_grad(no_bias ? nullptr : &outputs[deconv::kBias]) {}
+
 void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
@@ -47,6 +72,11 @@ void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
 
   fwd.ControlWeightsFormat(param.num_group, ctx.is_train, tensors.weights);
   fwd.Execute(param.num_group, req[deconv::kOut], tensors);
+}
+
+DNNLDeconvFwd::DNNLDeconvFwd(const DeconvolutionParam& param, const Tensors& tensors)
+    : fwd_pd(CreatePrimitiveDesc(param, tensors)) {
+  fwd = std::make_shared<deconv_fwd_t>(*fwd_pd);
 }
 
 DNNLDeconvFwd& DNNLDeconvFwd::GetCached(const DeconvolutionParam& param, const Tensors& tensors) {
@@ -178,6 +208,17 @@ void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
   DNNLDeconvBwd& bwd       = DNNLDeconvBwd::GetCached(param, read_tensors);
 
   bwd.Execute(param.num_group, req, read_tensors, write_tensors);
+}
+
+DNNLDeconvBwd::DNNLDeconvBwd(const DeconvolutionParam& param, const ReadTensors& read_tensors) {
+  const auto& fwd_pd = DNNLDeconvFwd::CreatePrimitiveDesc(
+      param,
+      DNNLDeconvFwd::Tensors(
+          read_tensors.data, read_tensors.weights, read_tensors.bias, read_tensors.out_grad));
+  bwd_data_pd    = CreateDataPrimitiveDesc(param, read_tensors, *fwd_pd);
+  bwd_weights_pd = CreateWeightsPrimitiveDesc(param, read_tensors, *fwd_pd);
+  bwd_data       = std::make_shared<deconv_bwd_data_t>(*bwd_data_pd);
+  bwd_weights    = std::make_shared<deconv_bwd_weights_t>(*bwd_weights_pd);
 }
 
 DNNLDeconvBwd& DNNLDeconvBwd::GetCached(const DeconvolutionParam& param,

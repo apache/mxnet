@@ -26,7 +26,6 @@
 #if MXNET_USE_ONEDNN == 1
 #include "operator/tensor/elemwise_unary_op.h"
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 #include "dnnl_reshape-inl.h"
 
 namespace mxnet {

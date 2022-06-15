@@ -53,6 +53,13 @@ typedef OpSignature DNNLReshapeSignature;
 DNNLReshapeFwd& GetReshapeForward(const OpReqType& req,
                                   const NDArray& input,
                                   const NDArray& output);
+
+void DNNLReshapeForward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const NDArray& input,
+                        const OpReqType& req,
+                        const NDArray& output);
+
 }  // namespace op
 }  // namespace mxnet
 

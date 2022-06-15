@@ -262,6 +262,8 @@ bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& input);
 bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param, const NDArray& input);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 bool SupportDNNLSum(const std::vector<NDArray>& inputs);
+
+void DNNLMemorySum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
