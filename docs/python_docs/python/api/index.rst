@@ -21,7 +21,7 @@ Python API
 Overview
 --------
 
-This API section details functions, modules, and objects included in MXNet,
+This API section details functions, modules, and objects included in Apache MXNet,
 describing what they are and what they do. The APIs are grouped into the
 following categories:
 
