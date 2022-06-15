@@ -520,9 +520,9 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr,
                                      const int dtype) {
   using format_tag  = mkldnn::memory::format_tag;
   const auto mkldnn_dtype = get_mkldnn_type(dtype);
-  const int input_size    = param_.input_size;
-  const int state_size    = param_.state_size;
-  const int directions    = param_.bidirectional + 1U;
+  const size_t input_size = param_.input_size;
+  const size_t state_size = param_.state_size;
+  const size_t directions = param_.bidirectional + 1U;
 
   // Get the weights' memory for RNN forward primitive
   if (weights_layer_ == nullptr) {
@@ -625,8 +625,8 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr,
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     DType* native_b_ptr = static_cast<DType*>(b_ptr);
     DType* fused_bias = static_cast<DType*>(bias_->get_data_handle());
-    for (int lyr = 0; lyr < param_.num_layer; ++lyr) {
-      for (int d = 0; d < directions; ++d) {
+    for (size_t lyr = 0; lyr < static_cast<size_t>(param_.num_layer); ++lyr) {
+      for (size_t d = 0; d < directions; ++d) {
         FuseBias<DType>(fused_bias, native_b_ptr, param_.mode, state_size);
         fused_bias += param_.single_b_size;
         native_b_ptr += param_.native_single_b_size;
