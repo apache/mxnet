@@ -114,16 +114,21 @@ void DNNLDotFwd::Execute(const OpContext& ctx,
   auto engine = mxnet::CpuEngine::Get()->get_engine();
   auto lhs    = dnnl::memory(
       fwd_pd->src_desc(), engine, reinterpret_cast<void*>(inputs[DotIn::lhs].data().dptr_));
-  auto rhs     = dnnl::memory(fwd_pd->weights_desc(), engine);
-  auto ndimRhs = inputs[DotIn::rhs].shape().ndim();
-  if (isNumpy && ndimRhs > 2) {
+  auto ndimRhs                = inputs[DotIn::rhs].shape().ndim();
+  const bool specialNumpyCase = isNumpy && ndimRhs > 2;
+  dnnl::memory rhs(
+      fwd_pd->weights_desc(),
+      engine,
+      specialNumpyCase ?
+          reinterpret_cast<void*>(
+              ctx.requested[0]
+                  .get_space<cpu>(mshadow::Shape1(inputs[DotIn::rhs].shape().Size() *
+                                                  GetTypeSize(inputs[DotIn::rhs].dtype())),
+                                  ctx.get_stream<cpu>())
+                  .dptr_) :
+          reinterpret_cast<void*>(inputs[DotIn::rhs].data().dptr_));
+  if (specialNumpyCase) {
     // Necessity of this reorder is described in DNNLDotFwd constructor.
-    rhs.set_data_handle(reinterpret_cast<void*>(
-        ctx.requested[0]
-            .get_space<cpu>(mshadow::Shape1(inputs[DotIn::rhs].shape().Size() *
-                                            GetTypeSize(inputs[DotIn::rhs].dtype())),
-                            ctx.get_stream<cpu>())
-            .dptr_));
     auto tmp_rhs = inputs[DotIn::rhs].GetDNNLData();
     dnnl::memory::desc rhs_md(
         dnnl::memory::dims(inputs[DotIn::rhs].shape().begin(), inputs[DotIn::rhs].shape().end()),
@@ -133,8 +138,6 @@ void DNNLDotFwd::Execute(const OpContext& ctx,
     const auto rhs_reorder_pd = dnnl::reorder::primitive_desc(*tmp_rhs, tmp_rhs_dst);
     DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(rhs_reorder_pd),
                                         {{DNNL_ARG_FROM, *tmp_rhs}, {DNNL_ARG_TO, tmp_rhs_dst}});
-  } else {
-    rhs.set_data_handle(reinterpret_cast<void*>(inputs[DotIn::rhs].data().dptr_));
   }
   dnnl_output_t out_mem = CreateDNNLMem(
       outputs[DotOut::out], fwd_pd->dst_desc(), req[DotOut::out], &inputs[DotIn::lhs]);
