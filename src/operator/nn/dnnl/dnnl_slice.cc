@@ -26,7 +26,6 @@
 #if MXNET_USE_ONEDNN == 1
 
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 #include "dnnl_slice-inl.h"
 
 namespace mxnet {

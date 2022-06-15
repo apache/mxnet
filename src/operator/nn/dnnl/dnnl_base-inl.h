@@ -211,6 +211,7 @@ bool SupportDNNLStack(const std::vector<NDArray>& inputs);
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs);
 bool SupportDNNLEltwise(const NDArray& input, const NDArray& output);
 bool SupportDNNLPower(const NDArray& input);
+void DNNLMemorySum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

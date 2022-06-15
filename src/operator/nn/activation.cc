@@ -26,8 +26,8 @@
 #include "../mshadow_op.h"
 #include "../tensor/elemwise_unary_op.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./dnnl/dnnl_base-inl.h"
-#include "./dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_act-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
 #endif  // MXNET_USE_ONEDNN == 1
 #include "../operator_common.h"
 #include "../../common/utils.h"

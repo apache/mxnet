@@ -24,7 +24,6 @@
 
 #if MXNET_USE_ONEDNN == 1
 #include "operator/nn/dnnl/dnnl_base-inl.h"
-#include "operator/nn/dnnl/dnnl_ops-inl.h"
 #include "operator/quantization/quantization_utils.h"
 #include "operator/quantization/quantized_elemwise_add-inl.h"
 
