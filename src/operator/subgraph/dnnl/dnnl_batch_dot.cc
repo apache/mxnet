@@ -30,7 +30,6 @@
 
 #include "operator/nn/dnnl/dnnl_base-inl.h"
 #include "operator/nn/dnnl/dnnl_batch_dot-inl.h"
-#include "operator/nn/dnnl/dnnl_ops-inl.h"
 #include "operator/quantization/quantization_utils.h"
 #include "operator/tensor/matrix_op-inl.h"
 #include "operator/subgraph/common.h"

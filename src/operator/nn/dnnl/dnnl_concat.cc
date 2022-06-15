@@ -56,6 +56,29 @@ DNNLConcatFwd::DNNLConcatFwd(int concat_dim, const std::vector<dnnl::memory::des
   fwd_ = std::make_shared<dnnl::concat>(fwd_pd);
 }
 
+DNNLConcatFwd& DNNLConcatFwd::GetCached(int concat_dim,
+                                        const std::vector<NDArray>& in_data,
+                                        const std::vector<dnnl::memory::desc>& data_md,
+                                        int stack_axis /*used only by stack op*/) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
+#endif
+
+  OpSignature key;
+  key.AddSign(concat_dim);
+  key.AddSign(stack_axis);
+  key.AddSign(in_data);
+
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    DNNLConcatFwd fwd(concat_dim, data_md);
+    it = AddToCache(&fwds, key, fwd);
+  }
+  return it->second;
+}
+
 void DNNLConcatForward(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<NDArray>& in_data,
@@ -76,7 +99,7 @@ void DNNLConcatForward(const nnvm::NodeAttrs& attrs,
     data_md.push_back(tmp_md);
     data_mem.push_back(tmp_mem);
   }
-  DNNLConcatFwd& fwd = GetConcatForward(concat_dim, in_data, data_md);
+  DNNLConcatFwd& fwd = DNNLConcatFwd::GetCached(concat_dim, in_data, data_md);
   mxnet::dnnl_output_t out_mem =
       CreateDNNLMem(out_data[concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
   std::unordered_map<int, dnnl::memory> net_args;
