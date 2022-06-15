@@ -617,7 +617,7 @@ class OpSignature {
 
 #endif
 
-  void AddSign(std::string& s) {
+  void AddSign(const std::string& s) {
     uint64_t key = static_cast<uint64_t>(std::hash<std::string>{}(s));
     eles.push_back(key);
   }

@@ -511,7 +511,7 @@ void SgDNNLFCOp::GetCachedWeightsAndBias(const NDArray& weight,
       std::unordered_map<DNNLFullyconSignature, std::pair<NDArray, NDArray>, OpHash>
           fcWeightsAndBias;
 #endif
-  const static bool use_cache = !(dmlc::GetEnv("MXNET_ONEDNN_DISABLE_FC_CACHE", 0));
+  static const bool use_cache = !(dmlc::GetEnv("MXNET_ONEDNN_DISABLE_FC_CACHE", 0));
   const bool has_id           = attrs.dict.count("__identifier__");
   bool read_from_cache        = false;
 
