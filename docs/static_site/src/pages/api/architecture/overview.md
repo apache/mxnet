@@ -1,6 +1,6 @@
 ---
 layout: page_category
-title:  MXNet System Architecture
+title:  Apache MXNet System Architecture
 category: architecture
 permalink: /api/architecture/overview
 ---

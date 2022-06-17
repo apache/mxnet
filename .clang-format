@@ -39,3 +39,6 @@ BinPackArguments: false
 BinPackParameters: false
 SortIncludes: false
 BreakBeforeTernaryOperators: false
+---
+Language: JavaScript
+DisableFormat: true
