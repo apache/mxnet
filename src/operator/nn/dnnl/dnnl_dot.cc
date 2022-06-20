@@ -116,9 +116,7 @@ void DNNLDotFwd::Execute(const OpContext& ctx,
       fwd_pd->src_desc(), engine, reinterpret_cast<void*>(inputs[DotIn::lhs].data().dptr_));
   auto ndimRhs                = inputs[DotIn::rhs].shape().ndim();
   const bool specialNumpyCase = isNumpy && ndimRhs > 2;
-  dnnl::memory rhs(
-      fwd_pd->weights_desc(),
-      engine,
+  auto rhsMemPointer =
       specialNumpyCase ?
           reinterpret_cast<void*>(
               ctx.requested[0]
@@ -126,7 +124,8 @@ void DNNLDotFwd::Execute(const OpContext& ctx,
                                                   GetTypeSize(inputs[DotIn::rhs].dtype())),
                                   ctx.get_stream<cpu>())
                   .dptr_) :
-          reinterpret_cast<void*>(inputs[DotIn::rhs].data().dptr_));
+          reinterpret_cast<void*>(inputs[DotIn::rhs].data().dptr_);
+  dnnl::memory rhs(fwd_pd->weights_desc(), engine, rhsMemPointer);
   if (specialNumpyCase) {
     // Necessity of this reorder is described in DNNLDotFwd constructor.
     auto tmp_rhs = inputs[DotIn::rhs].GetDNNLData();
