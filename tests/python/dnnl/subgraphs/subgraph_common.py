@@ -140,7 +140,7 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   if name in config:
     name = config[name][OP_NAME]
 
-  sigma = 0.3 if hasattr(net_original, 'alg') is True and net_original.alg == 'exp' else 0.5
+  sigma = 0.01 if hasattr(net_original, 'alg') is True and net_original.alg == 'exp' else 0.5
   if out_type == 'uint8':
     # Initialize weights and tensors only with positive values to be sure
     # that results are always positive
