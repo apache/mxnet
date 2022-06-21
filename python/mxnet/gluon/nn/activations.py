@@ -203,7 +203,7 @@ class GELU(HybridBlock):
     Parameters
     ----------
     approximation : string
-        Which approximation of GELU calculation to use (erf or tanh) 
+        Which approximation of GELU calculation to use (erf or tanh).
 
     Inputs:
         - **data**: input tensor with arbitrary shape.
@@ -213,7 +213,7 @@ class GELU(HybridBlock):
     """
     def __init__(self, approximation='erf', **kwargs):
         if approximation not in ['erf', 'tanh']:
-            raise ValueError("Unsupported approximation! Support values are 'erf' and 'tanh', "
+            raise ValueError("Unsupported approximation! Supported values are 'erf' and 'tanh', "
                              "but got '{}'".format(approximation))
         self._act_algorithm = 'gelu_' + approximation
         super(GELU, self).__init__(**kwargs)

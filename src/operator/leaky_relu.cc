@@ -158,7 +158,7 @@ static bool LRChangeLayout(nnvm::NodeAttrs* attrs,
 }
 
 static void LeakyReLUParamParser(nnvm::NodeAttrs* attrs) {
-  // For backward compatible, replace gelu to gelu_erf
+  // For backward compatibility, replace gelu to gelu_erf
   auto iter = attrs->dict.find("act_type");
   if (iter != attrs->dict.end()) {
     auto& type = attrs->dict["act_type"];
@@ -179,7 +179,7 @@ The following modified ReLU Activation functions are supported:
 
 - *elu*: Exponential Linear Unit. `y = x > 0 ? x : slope * (exp(x)-1)`
 - *gelu*: Gaussian Error Linear Unit. `y = 0.5 * x * (1 + erf(x / sqrt(2)))`
-- *gelu_erf*: Same as gelu
+- *gelu_erf*: Same as gelu.
 - *gelu_tanh*: Gaussian Error Linear Unit using tanh function.
   `y = 0.5 * x * (1 + tanh((sqrt(2/pi) * (x + 0.044715*x^3))))`
 - *selu*: Scaled Exponential Linear Unit. `y = lambda * (x > 0 ? x : alpha * (exp(x) - 1))` where

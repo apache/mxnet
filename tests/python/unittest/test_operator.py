@@ -621,7 +621,7 @@ def test_selu():
     x = mx.sym.Variable("x")
     y = mx.sym.LeakyReLU(data=x, act_type="selu")
     for dtype in [np.float16, np.float32, np.float64]:
-        xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
+        xa = np.random.uniform(low=-0.1, high=0.1, size=shape).astype(dtype)
         eps, rtol, atol = (7.5e-4, 1e-1, 1e-2) if dtype is np.float16 else (1e-4, 1e-2, 1e-4)
         if dtype is np.float16:
             xa /= 10.0
@@ -645,7 +645,7 @@ def test_gelu():
     x = mx.sym.Variable("x")
     y = mx.sym.LeakyReLU(data=x, act_type="gelu")
     for dtype in [np.float16, np.float32, np.float64]:
-        xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
+        xa = np.random.uniform(low=-0.1, high=0.1, size=shape).astype(dtype)
         eps, rtol, atol = (7.5e-4, 2e-2, 1e-3) if dtype is np.float16 else (1e-4, 1e-3, 1e-5)
         if dtype is np.float16:
             xa /= 10.0
