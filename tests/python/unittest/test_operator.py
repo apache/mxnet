@@ -677,7 +677,7 @@ def test_gelu_tanh():
     y = mx.sym.LeakyReLU(data=x, act_type="gelu_tanh")
     for dtype in [np.float16, np.float32, np.float64]:
         xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
-        eps, rtol, atol = (7.5e-4, 2e-2, 1e-3)
+        eps, rtol, atol = (7.5e-4, 5e-2, 2e-3)
         if dtype is np.float16:
             xa /= 10.0
         xa[abs(xa) < eps] = 0.01
