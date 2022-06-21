@@ -225,8 +225,8 @@ def check_fusion(net_original, data_shapes, attrs_dict, input_type='float32', ch
   net_original.initialize()
   net_original.hybridize(static_alloc=False, static_shape=False)
   one_shape = isinstance(data_shapes, tuple)
-  data_min = -1.0 if input_type == 'float32' else -128
-  data_max = 1.0 if input_type == 'float32' else 127
+  data_min = -1.0 if input_type == 'float32' else -10
+  data_max = 1.0 if input_type == 'float32' else 10
 
   if one_shape:
     # replace one shape with list of shapes with one element to follow later the same schema
