@@ -173,13 +173,11 @@ def test_amp_transformers():
 
 @mx.util.use_np
 def test_amp_concat():
-  os.environ["MXNET_NODE_ELIMINATION"] = "0"
   class TestNet(nn.HybridBlock):
     def __init__(self):
       super(TestNet, self).__init__()
       self.fc1 = nn.Dense(16)
       self.fc2 = nn.Dense(16)
-      self.fc2.share_parameters(self.fc1.collect_params())
 
     def forward(self, x):
       x1 = self.fc1(x)
@@ -194,23 +192,21 @@ def test_amp_concat():
 
   exp_data = mx.symbol.Variable('data')
   exp_amp_data = mx.symbol.amp_cast(exp_data, dtype=AMP_DTYPE)
-  exp_weight = mx.symbol.Variable('weight')
-  exp_bias = mx.symbol.Variable('bias')
-  exp_fc = [mx.symbol.FullyConnected(exp_amp_data, exp_weight, exp_bias, num_hidden=1)
-            for _ in range(2)]
+
+  exp_weight = [mx.symbol.Variable(f"fc{i}_weight") for i in range(2)]
+  exp_bias = [mx.symbol.Variable(f"fc{i}_bias") for i in range(2)]
+  exp_fc = [mx.symbol.FullyConnected(exp_amp_data, exp_weight[i], exp_bias[i], num_hidden=1)
+            for i in range(2)]
   exp_sym = mx.symbol.Concat(*exp_fc)
   exp_sym = mx.symbol.amp_cast(exp_sym, dtype='float32')
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(net, [data_example], exp_sym)
 
-  amp_weight = mx.symbol.amp_cast(exp_weight, dtype=AMP_DTYPE)
-  amp_bias = mx.symbol.amp_cast(exp_bias, dtype=AMP_DTYPE)
-  exp_fc[0] = mx.symbol.FullyConnected(exp_amp_data, amp_weight, amp_bias, num_hidden=1)
-  exp_fc[1] = mx.symbol.FullyConnected(exp_data, exp_weight, exp_bias, num_hidden=1)
+  exp_fc[0] = mx.symbol.FullyConnected(exp_amp_data, exp_weight[0], exp_bias[0], num_hidden=1)
+  exp_fc[1] = mx.symbol.FullyConnected(exp_data, exp_weight[1], exp_bias[1], num_hidden=1)
   exp_sym = mx.symbol.Concat(*exp_fc)
   exp_sym = exp_sym.get_backend_symbol(SG_PASS_NAME)
   check_amp_fuse(net, [data_example], exp_sym, ['sg_onednn_fully_connected_1'])
-  del os.environ["MXNET_NODE_ELIMINATION"]
 
 
 @mx.util.use_np
