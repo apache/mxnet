@@ -109,7 +109,7 @@ bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
   }
   // initial value not supported by oneDNN
   param_supported = param_supported && !param.initial.has_value();
-  // oneDNN does not support recution of tensors with size equal to 1
+  // oneDNN does not support reduction of tensors with size equal to 1
   return param_supported && input.shape().Size() > 1 &&
          SupportDNNL<DNNLTypeMode::FloatTypes>(input);
 }
