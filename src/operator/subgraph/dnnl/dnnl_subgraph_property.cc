@@ -29,7 +29,7 @@
 #include "dnnl_post_quantize_property.h"
 #include "dnnl_transformer_qk_property.h"
 #include "dnnl_transformer_valatt_property.h"
-#include "dnnl_fc_sum_fuse.h"
+#include "dnnl_fc_sum_fuse_property.h"
 #include "dnnl_remove_casts_property.h"
 
 namespace mxnet {

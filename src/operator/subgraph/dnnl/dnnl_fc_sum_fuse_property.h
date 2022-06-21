@@ -26,8 +26,8 @@
   this output is scaled to the proper range.
 */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_SUM_FUSE_H_
-#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_SUM_FUSE_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_SUM_FUSE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_SUM_FUSE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
 #include <memory>
@@ -63,7 +63,6 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
 
   bool quantized_;
   SelectStatus status_ = kFail;
-  std::vector<const BiDirectedNode*> matched_list_;
 
  public:
   explicit SgDNNLFCSumFuseSelector(bool quantized) : quantized_(quantized) {}
@@ -71,18 +70,14 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
   bool Select(const BiDirectedNode& seed_node,
               const std::shared_ptr<NodeAttr>& node_attr) override {
     const auto n = seed_node.node;
-    if (n->op() == Op::Get("_sg_onednn_fully_connected")) {
-      if (SupportDNNLAttr(node_attr) && (seed_node.outputs.size() == 1)) {
-        auto const& fc_param = nnvm::get<DNNLFCFullParam>(n->attrs.parsed);
-        if ((!quantized_) || (fc_param.dnnl_param.quantized && !fc_param.dnnl_param.with_eltwise)) {
-          // Start subgraph when fusing for floats (quantized_ is false for ONEDNN backend) or
-          // when FC is already quantized (second pass for ONEDNN_QUANTIZE) but not already fuzed
-          // with elemwise operator.
-          status_ = kStart;
-          matched_list_.clear();
-          matched_list_.push_back(&seed_node);
-          return true;
-        }
+    if (n->op() == Op::Get("_sg_onednn_fully_connected") && seed_node.outputs.size() == 1) {
+      auto const& fc_param = nnvm::get<DNNLFCFullParam>(n->attrs.parsed);
+      if (!quantized_ || (fc_param.dnnl_param.quantized && !fc_param.dnnl_param.with_eltwise)) {
+        // Start subgraph when fusing for floats (quantized_ is false for ONEDNN backend) or
+        // when FC is already quantized (second pass for ONEDNN_QUANTIZE) but not already fused
+        // with elemwise operator.
+        status_ = kStart;
+        return true;
       }
     }
     return false;
@@ -95,41 +90,26 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
   bool SelectOutput(const BiDirectedNode& cur_node, const BiDirectedNode& output_node) override {
     const auto cur_n    = cur_node.node;
     const auto output_n = output_node.node;
-    if (status_ == kFail || status_ == kSuccess || output_n->is_variable()) {
-      return false;
-    }
-    // If n isn't the last matched node, then we encoutered an internal
-    // branch, we should pop out the node behind n and stop fusion.
-    if (matched_list_.back() != &cur_node) {
-      if (std::find(matched_list_.begin(), matched_list_.end(), &cur_node) != matched_list_.end()) {
-        while (matched_list_.back() != &cur_node) {
-          matched_list_.pop_back();
-        }
-      }
-      status_ = kSuccess;
+    if (status_ != kStart || output_n->is_variable()) {
       return false;
     }
 
-    switch (status_) {
-      case kStart:
-        // Find _contrib_quantized_elemwise_add or elemwise_add
-        if (EndsWith(output_n->op()->name, "elemwise_add")) {
-          if (quantized_) {
-            auto const& fc_param = nnvm::get<DNNLFCFullParam>(cur_n->attrs.parsed);
-            if (!fc_param.dnnl_param.enable_float_output) {
-              // For quantized graph, when FC floating point output is not enabled
-              // elementwise add must also be quantized (min and max value have to be already stored
-              // in elementwise add).
-              CHECK_EQ(output_n->attrs.dict.count("min_calib_range"), 1);
-            }
-          }
-          matched_list_.push_back(&output_node);
-          status_ = kSuccess;
-          return true;
+    // Find _contrib_quantized_elemwise_add or elemwise_add
+    if (EndsWith(output_n->op()->name, "elemwise_add")) {
+      if (quantized_) {
+        auto const& fc_param = nnvm::get<DNNLFCFullParam>(cur_n->attrs.parsed);
+        if (!fc_param.dnnl_param.enable_float_output) {
+          // For quantized graph, when FC floating point output is not enabled
+          // elementwise add must also be quantized (min and max value have to be already stored
+          // in elementwise add).
+          CHECK_EQ(output_n->attrs.dict.count("min_calib_range"), 1);
         }
-      default:
-        status_ = kFail;
-        return false;
+      }
+      status_ = kSuccess;
+      return true;
+    } else {
+      status_ = kFail;
+      return false;
     }
   }
 
@@ -142,9 +122,7 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
   }
 
   void Reset() override {
-    CHECK_GE(matched_list_.size(), 1);
     auto new_selector = SgDNNLFCSumFuseSelector(quantized_);
-    new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
@@ -287,4 +265,4 @@ class SgDNNLFCSumFuseProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_SUM_FUSE_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_SUM_FUSE_PROPERTY_H_
