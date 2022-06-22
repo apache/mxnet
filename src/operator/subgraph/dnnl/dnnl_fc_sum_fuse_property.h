@@ -123,7 +123,7 @@ class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
 
   void Reset() override {
     auto new_selector = SgDNNLFCSumFuseSelector(quantized_);
-    *this = new_selector;
+    *this             = new_selector;
   }
 };
 
