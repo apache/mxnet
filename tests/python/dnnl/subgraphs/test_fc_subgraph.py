@@ -416,3 +416,58 @@ def test_neg_fc_add_quantized(data_shape, add_op, fc_out_add, scaled_fc_out):
   attrs = []
   excluded_attrs = ['with_sum']
   check_neg_fusion_quantized(net, attrs, excluded_attrs, data_shapes, name='fc')
+
+
+def function_add_quantized(data_shape, add_op, quantize_mode, relu, out_type, broadcast, calib_mode):
+  class SumExample(nn.HybridBlock):
+    def __init__(self,  add_op, **kwargs):
+      super(SumExample, self).__init__(**kwargs)
+      self.elemwise_add = (add_op == 'ele_add')
+      self.relu = (relu == 'relu')
+
+    def forward(self, data1a, data2):
+      fc_out = data1a
+      if self.relu:
+        fc_out = mx.npx.relu(fc_out)
+      if  self.elemwise_add:
+        sum1 = mx.nd.elemwise_add(data2.as_nd_ndarray(), fc_out.as_nd_ndarray()).as_np_ndarray()
+      else:
+        sum1 = data2 + fc_out
+      return sum1
+
+  attrs = {add_op: {}}
+  net = SumExample(add_op)
+  if broadcast:
+    broadcasted_shape = (1,) + data_shape[1:-1] + (1,)
+    data_shapes = [broadcasted_shape, data_shape]
+  else:
+    data_shapes = [data_shape, data_shape]
+
+  # check_calibration could be enabled if check_qsym_calibrated will be reimplemented
+  # to find operator names instead of node names
+  check_quantize(net, data_shapes, out_type, name="contrib_quantized_" + add_op,
+                 quantize_mode=quantize_mode, attrs_dict=attrs, calib_mode=calib_mode,
+                 check_calibration=(calib_mode != 'none') and False, check_fusion=False)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('calib_mode', ['naive', 'none'])
+@pytest.mark.parametrize('quantize_mode', ['full', 'smart'])
+@pytest.mark.parametrize('relu', ['nore', 'relu'])
+@pytest.mark.parametrize('broadcast', ['broadcast', 'no_broadc'])
+@pytest.mark.parametrize('add_op', ['ele_add', 'npi_add'])
+def test_add_quantized(add_op, quantize_mode, out_type, relu, broadcast, calib_mode):
+  """
+  The test check results from quantization of simple graph
+  with npi_add or elemwise_add with additional relu which force
+  unsigned representation of one inputs to the add operator.
+  Due to construction of quantization code unsigned int8 is never choosen
+  for scenario without calibration as operators always raports min = -max
+  """
+  broadcastB = (broadcast ==  'broadcast')
+  if broadcastB and add_op == 'ele_add':
+    # elemwise_Add doesn't support broadcasting
+    pytest.skip()
+  data_shape = DATA_SHAPE[0]
+  function_add_quantized(data_shape, add_op, quantize_mode, relu, out_type, broadcastB, calib_mode)

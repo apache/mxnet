@@ -90,7 +90,7 @@ def check_qsym_calibrated(qsym, out_type, name='conv'):
     if k.find('_quantize') != -1:
       assert v['out_type'] == out_type
     if k.find(quantized_op_name) != -1:
-      if (quantized_op_name.startswith("quantized_sg_onednn_fully_connected") 
+      if (quantized_op_name.startswith("quantized_sg_onednn_fully_connected")
           or quantized_op_name.startswith("quantized_sg_onednn_conv")) and 'enable_float_output' in v:
         continue
       assert 'min_calib_range' in v
@@ -132,7 +132,7 @@ def check_fusion_parameter(sym, attrs_dict):
 
 def check_quantize(net_original, data_shapes, out_type, name='conv',
                    check_calibration=True, check_scale_align=False, quantize_mode='full',
-                   attrs_dict={}):
+                   attrs_dict={}, calib_mode='naive', check_fusion=True):
   quantize_granularity_list = ['tensor-wise']
   if name == 'fc':
     quantize_granularity_list += ['channel-wise']
@@ -140,11 +140,18 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   if name in config:
     name = config[name][OP_NAME]
 
-  sigma = 0.3 if hasattr(net_original, 'alg') is True and net_original.alg == 'exp' else 0.5
+  sigma = 0.01 if hasattr(net_original, 'alg') is True and net_original.alg == 'exp' else 0.5
+  if out_type == 'uint8':
+    # Initialize weights and tensors only with positive values to be sure
+    # that results are always positive
+    init = CustomNormalInit(sigma=sigma, bounded=True)
+    min_value = 0
+  else:
+    init = mx.init.Normal(sigma)
+    min_value = -1
 
-  net_original.initialize(init=mx.init.Normal(sigma), force_reinit=True)
+  net_original.initialize(init=init, force_reinit=True)
 
-  min_value = -1 if out_type != 'uint8' else 0
   one_shape = isinstance(data_shapes, tuple)
   if one_shape:
     # replace one shape with list of shapes with one element inside to follow later the same schema
@@ -188,13 +195,14 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
                                      exclude_layers=None,
                                      exclude_operators=None,
                                      quantized_dtype=out_type,
-                                     calib_mode='naive',
+                                     calib_mode=calib_mode,
                                      calib_data=calib_data,
                                      num_calib_batches=1,
                                      quantize_mode=quantize_mode,
                                      quantize_granularity=quantize_granularity)
     qsym, _ = qnet.export(None)
-    check_fusion_parameter(qsym, attrs_dict)
+    if check_fusion:
+      check_fusion_parameter(qsym, attrs_dict)
     if check_calibration:
       check_qsym_calibrated(qsym, out_type, name=name)
     if check_scale_align:
