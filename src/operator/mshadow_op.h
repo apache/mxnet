@@ -612,11 +612,11 @@ MXNET_UNARY_MATH_OP(erf_grad, 2.0 / math::sqrt(PI) * math::exp(-(a * a)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(erf);
 
-MXNET_UNARY_MATH_OP(gelu,
+MXNET_UNARY_MATH_OP(gelu_erf,
                     DType(0.5f * static_cast<float>(a) *
                           (1.0f + math::erf(static_cast<float>(a) / SQRT_2))));
 
-MXNET_BINARY_MATH_OP_NC(gelu_grad,
+MXNET_BINARY_MATH_OP_NC(gelu_erf_grad,
                         DType(static_cast<float>(b) / static_cast<float>(a) +
                               0.5f * static_cast<float>(a) *
                                   erf_grad::Map(static_cast<float>(a) / SQRT_2) / SQRT_2));

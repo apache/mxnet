@@ -253,7 +253,7 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kGELU_ERF: {
         MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
-          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::gelu, Req>, xpu>::Launch(
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::gelu_erf, Req>, xpu>::Launch(
               s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_);
         });
         break;
@@ -404,7 +404,7 @@ class LeakyReLUOp : public Operator {
       case leakyrelu::kGELU_ERF: {
         MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kData], Req, {
           mxnet_op::Kernel<
-              mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<mshadow_op::gelu_grad>, Req>,
+              mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<mshadow_op::gelu_erf_grad>, Req>,
               xpu>::Launch(s,
                            gdata.size(0) * gdata.size(1) * gdata.size(2),
                            gdata.dptr_,

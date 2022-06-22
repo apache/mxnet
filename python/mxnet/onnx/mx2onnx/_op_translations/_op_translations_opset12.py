@@ -855,7 +855,7 @@ def convert_leakyrelu(node, **kwargs):
             inputs=input_nodes,
             outputs=[name],
             name=name)
-    elif act_type in ('gelu',):
+    elif act_type in ('gelu', 'gelu_erf'):
         sqrt2 = np.float32(1.4142135623730951)
         create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs)
         create_const_scalar_node(name+"_one", np.float32(1.0), kwargs)

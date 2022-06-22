@@ -971,7 +971,7 @@ DEFINE_UNARY_MATH_FUNC(erf, ::erf, ::erff)
 DEFINE_UNARY_MATH_FUNC(erfinv, ::erfinv, ::erfinvf)
 
 template <typename DType>
-__device__ inline DType gelu(const DType val) {
+__device__ inline DType gelu_erf(const DType val) {
   return 0.5f * val * (1.0f + op::erf(val / op::sqrt(2.0f)));
 }
 
