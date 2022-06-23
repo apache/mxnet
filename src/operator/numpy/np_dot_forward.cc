@@ -110,7 +110,7 @@ static void NumpyDotComputeExCPU(const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs) {
-  if (SupportDNNLDot(inputs, outputs[0])) {
+  if (SupportDNNLDot(inputs)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLDotForward<true>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(NumpyDotForward<cpu>, attrs, ctx, inputs, req, outputs);

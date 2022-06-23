@@ -32,27 +32,9 @@
 namespace mxnet {
 namespace op {
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reorder.html
 bool SupportDNNLStack(const std::vector<NDArray>& inputs) {
-  if (inputs[0].dtype() != mshadow::kFloat32 && inputs[0].dtype() != mshadow::kBfloat16) {
-    return false;
-  }
-
-  int src_dtype = inputs[0].dtype();
-  for (const auto& arr : inputs) {
-    if (arr.dtype() != src_dtype) {
-      return false;
-    }
-    // Do not support zero-size tensors.
-    if (arr.shape().Size() == 0) {
-      return false;
-    }
-
-    int ndim = arr.shape().ndim();
-    if (ndim <= 0) {
-      return false;
-    }
-  }
-  return true;
+  return SupportDNNL<DNNLTypeMode::FloatTypes, DNNLTensorsDtypes::AllSame>(inputs);
 }
 
 void DNNLStackForward(const nnvm::NodeAttrs& attrs,

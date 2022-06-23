@@ -32,16 +32,9 @@
 namespace mxnet {
 namespace op {
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_binary.html
 bool SupportDNNLWhere(const std::vector<NDArray>& inputs) {
-  static const std::set<int> supported_dtypes = {
-      mshadow::kFloat32, mshadow::kBfloat16, mshadow::kInt8, mshadow::kUint8};
-  for (int i = 0; i < inputs.size(); ++i) {
-    if (!supported_dtypes.count(inputs[i].dtype()) || inputs[i].shape().Size() <= 0 ||
-        inputs[i].shape().ndim() <= 0) {
-      return false;
-    }
-  }
-  return true;
+  return SupportDNNL<DNNLTypeMode::NoInt32, DNNLTensorsDtypes::Mixed>(inputs);
 }
 
 void DNNLWhereForward(const nnvm::NodeAttrs& attrs,

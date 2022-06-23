@@ -48,12 +48,9 @@ bool SupportDNNLAct(const ActivationParam& param) {
          param.act_type == activation::kSoftReLU || param.act_type == activation::kTanh;
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
 bool SupportDNNLAct(const ActivationParam& param, const NDArray& input) {
-  // DNNL Activation supports 1d, 2d, 3d, 4d and 5d data layout
-  if ((input.shape().ndim() < 1) || (input.shape().ndim() > 5) ||
-      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
-    return false;
-  return SupportDNNLAct(param);
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(input) && SupportDNNLAct(param);
 }
 
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param) {
@@ -61,15 +58,13 @@ bool SupportDNNLLeakyRelu(const LeakyReLUParam& param) {
          param.act_type == leakyrelu::kGELU;
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input) {
-  // DNNL Activation supports 1d, 2d, 3d, 4d and 5d data layout
-  if ((input.shape().ndim() < 1) || (input.shape().ndim() > 5) ||
-      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
-    return false;
-  return SupportDNNLLeakyRelu(param);
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(input) && SupportDNNLLeakyRelu(param);
 }
 
-bool SupportQuantizedDNNLAct(const ActivationParam& param) {
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
+bool SupportDNNLQuantizedAct(const ActivationParam& param) {
   // Although it is the same as SupportDNNLAct i left it here, so when new activations
   // will be introduced it will be easier to handle.
   return SupportDNNLAct(param);

@@ -107,7 +107,7 @@ void LRNComputeExCPU(const nnvm::NodeAttrs& attrs,
                      const std::vector<NDArray>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<NDArray>& outputs) {
-  if (SupportDNNL(inputs[0])) {
+  if (SupportDNNL<2, 5, DNNLTypeMode::FloatTypes>(inputs[0])) {
     // We only need to test one output array.
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
     DNNLRun(DNNLLRNForward, attrs, ctx, inputs[0], req[0], outputs[0]);
@@ -124,7 +124,7 @@ void LRNGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
-  if (SupportDNNL(inputs[0])) {
+  if (SupportDNNL<2, 5, DNNLTypeMode::FloatTypes>(inputs[0])) {
     DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     DNNLRun(DNNLLRNBackward, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);

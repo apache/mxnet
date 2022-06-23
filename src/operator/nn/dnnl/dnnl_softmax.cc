@@ -29,23 +29,13 @@
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& data, const NDArray& output) {
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_softmax.html
+bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& data) {
   const int ndim      = data.shape().ndim();
-  const int in_size   = data.shape().Size();
-  const int in_dtype  = data.dtype();
-  const int out_dtype = output.dtype();
-  const int axis      = CheckAxis(param.axis, ndim);
-
-  if (param.temperature.has_value() && param.temperature.value() == 0.0) {
-    return false;
-  }
-
-  if (in_dtype != mshadow::kFloat32 || in_dtype != out_dtype || axis != (ndim - 1)) {
-    return false;
-  }
-
-  // Supports ndim up to 6
-  return (ndim >= 1 && ndim <= 6 && in_size != 0);
+  const int out_dtype = param.dtype.has_value() ? param.dtype.value() : data.dtype();
+  return !(param.temperature.has_value() && param.temperature.value() != 0.0) &&
+         CheckAxis(param.axis, ndim) == (ndim - 1) && SupportDNNL<DNNLTypeMode::NoInt32>(data) &&
+         out_dtype == data.dtype();
 }
 
 void DNNLSoftmaxForward(const nnvm::NodeAttrs& attrs,
