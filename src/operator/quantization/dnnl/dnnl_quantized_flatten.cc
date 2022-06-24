@@ -44,7 +44,7 @@ static void DNNLQuantizedFlattenForward(const nnvm::NodeAttrs& attrs,
                                         const std::vector<NDArray>& inputs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNL(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);

@@ -432,6 +432,83 @@ def test_quantized_elemwise_add():
     check_quantized_elemwise_add((3, 4, 56, 56), 'int8', 'uint8')
     check_quantized_elemwise_add((32, 56, 64, 11), 'int8', 'int8')
 
+@use_np
+def test_quantized_npi_add():
+    def check_quantized_npi_add(data_shape,  qdtypeA, qdtypeB, broadcast=None):
+        if is_test_for_native_cpu():
+            print('skipped testing quantized_npi_add for native cpu since it is not supported yet')
+            return
+        elif (qdtypeA != 'uint8' and qdtypeA != 'int8') or (qdtypeB != 'uint8' and qdtypeB != 'int8'):
+            print('skipped testing quantized_npi_add for not supported data type')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantized_npi_add for gpu since it is not supported yet')
+            return
+
+        class ElemwiseSumBlock(mx.gluon.nn.HybridBlock):
+            def __init__(self, **kwargs):
+                super(ElemwiseSumBlock, self).__init__(**kwargs)
+
+            def forward(self, dataA, dataB):
+                return dataA + dataB
+
+        class QuantElemwiseSumBlock(mx.gluon.nn.HybridBlock):
+            def __init__(self, **kwargs):
+                super(QuantElemwiseSumBlock, self).__init__(**kwargs)
+
+            def forward(self, dataA, dataB, dataA_min, dataA_max, dataB_min, dataB_max):
+                return npx.quantized_npi_add(dataA, dataB, dataA_min, dataA_max, dataB_min, dataB_max)
+
+        elemwise_add_fp32 = ElemwiseSumBlock()
+
+        dataA_low, dataA_high = get_low_high(qdtypeA)
+        dataB_low, dataB_high = get_low_high(qdtypeB)
+
+        data_shapeA = data_shape
+        data_shapeB = data_shape
+
+        if broadcast :
+            if broadcast == 'A':
+                data_shapeA = ()
+                for index in range(len(data_shape)):
+                    data_shapeA += (1,)
+            else:
+                data_shapeB = ()
+                for index in range(len(data_shape)):
+                    data_shapeB += (1,)
+
+        dataA_val = mx.np.random.uniform(low=dataA_low, high=dataA_high, size=data_shapeA).astype('int32').astype('float32')
+        dataB_val = mx.np.random.uniform(low=dataB_low, high=dataB_high, size=data_shapeB).astype('int32').astype('float32')
+
+        output = elemwise_add_fp32(dataA_val, dataB_val)
+
+        #run quantized
+        quantized_elemwise_add = QuantElemwiseSumBlock()
+        dataA_val_int8 = dataA_val.astype(qdtypeA)
+        dataB_val_int8 = dataB_val.astype(qdtypeB)
+        quantized_range = 127.0
+        min_dataA = mx.np.array([dataA_low])
+        max_dataA = mx.np.array([dataA_high])
+        min_dataB = mx.np.array([dataB_low])
+        max_dataB = mx.np.array([dataB_high])
+        qoutput, min_range, max_range = quantized_elemwise_add(dataA_val_int8, dataB_val_int8,
+                                                               min_dataA, max_dataA,
+                                                               min_dataB, max_dataB)
+        int8_rslt = qoutput.astype(output.dtype) * max_range / 0x7fffffff
+        diff = mx.np.abs(output - int8_rslt)
+        cond = mx.np.less(2, diff).sum().item()
+        assert cond == 0
+
+    check_quantized_npi_add((4, 6), 'uint8', 'int8')
+    check_quantized_npi_add((13, 74, 52), 'uint8', 'uint8')
+    check_quantized_npi_add((3, 4, 56, 56), 'int8', 'uint8')
+    check_quantized_npi_add((32, 56, 64, 11), 'int8', 'int8')
+
+    check_quantized_npi_add((4, 6), 'uint8', 'int8', 'A')
+    check_quantized_npi_add((13, 74, 52), 'uint8', 'uint8', 'B')
+    check_quantized_npi_add((3, 4, 56, 56), 'int8', 'uint8', 'A')
+    check_quantized_npi_add((32, 56, 64, 11), 'int8', 'int8', 'B')
+
 
 @use_np
 def test_quantized_elemwise_mul():

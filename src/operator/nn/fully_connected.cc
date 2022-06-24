@@ -31,11 +31,12 @@
 namespace mxnet {
 namespace op {
 
+#if MXNET_USE_ONEDNN == 1
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_inner_product.html
 bool SupportDNNLFC(const NDArray& input) {
-  int ndim = input.shape().ndim();
-  return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
-         (ndim >= 1 && ndim <= 4) && input.storage_type() == kDefaultStorage;
+  return SupportDNNL<2, 5, DNNLTypeMode::FloatTypes>(input);
 }
+#endif
 
 static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
                                 mxnet::ShapeVector* in_shape,

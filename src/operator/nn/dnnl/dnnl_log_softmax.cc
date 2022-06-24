@@ -51,21 +51,15 @@ static dnnl::logsoftmax_backward::primitive_desc GetLogSoftmaxBwdPd(
   return dnnl::logsoftmax_backward::primitive_desc(desc, cpu_engine, hint_fwd_pd);
 }
 
-bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& data, const NDArray& output) {
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_logsoftmax.html
+bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& data) {
   const int ndim      = data.shape().ndim();
-  const int in_dtype  = data.dtype();
-  const int out_dtype = output.dtype();
-  const int axis      = CheckAxis(param.axis, ndim);
+  const int out_dtype = param.dtype.has_value() ? param.dtype.value() : data.dtype();
   // DNNL does not support temperature argument in their log_softmax function
   // now. Need update this once they start to support it.
   // Currently, DNNL shows bad performance when log_softmax is not performed on the last dimension
-  if (data.shape().Size() == 0 || data.shape().ndim() == 0 || param.temperature.has_value() ||
-      in_dtype != mshadow::kFloat32 || in_dtype != out_dtype || axis != (ndim - 1)) {
-    return false;
-  }
-
-  // only supports ndim = 1, 2, 3, 4 for now
-  return (ndim >= 1 && ndim <= 4);
+  return !param.temperature.has_value() && CheckAxis(param.axis, ndim) == (ndim - 1) &&
+         SupportDNNL<1, 4, DNNLTypeMode::FloatTypes>(data) && out_dtype == data.dtype();
 }
 
 class DNNLLogSoftmaxFwd {

@@ -29,6 +29,7 @@
 namespace mxnet {
 namespace op {
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_layer_normalization.html
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs) {
   const mxnet::TShape& shape = inputs[layernorm::kData].shape();
 
@@ -40,13 +41,10 @@ bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray
     return shape.Size() / shape[0] >= shapeLimit && shape[0] >= shapeLimit;
   };
 
-  return (ShapeBetterForDNNL(shape) &&
-          (GetRealAxis(param.axis, shape.ndim()) == shape.ndim() - 1) && (shape.ndim() >= 2) &&
-          (shape.ndim() <= 5) &&
-          (inputs[layernorm::kData].dtype() == mshadow::kFloat32 ||
-           inputs[layernorm::kData].dtype() == mshadow::kBfloat16) &&
-          inputs[layernorm::kGamma].dtype() == mshadow::kFloat32 &&
-          inputs[layernorm::kBeta].dtype() == mshadow::kFloat32);
+  return (ShapeBetterForDNNL(shape) && GetRealAxis(param.axis, shape.ndim()) == shape.ndim() - 1) &&
+         SupportDNNL<2, 5, DNNLTypeMode::FloatTypes>(inputs[layernorm::kData]) &&
+         inputs[layernorm::kGamma].dtype() == mshadow::kFloat32 &&
+         inputs[layernorm::kBeta].dtype() == mshadow::kFloat32;
 }
 
 void DNNLLayerNormForward(const nnvm::NodeAttrs& attrs,

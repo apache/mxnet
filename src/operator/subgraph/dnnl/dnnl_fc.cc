@@ -268,7 +268,8 @@ NDArray SgDNNLFCOp::PrepareOutputWithSum(const NDArray& sum_input, const NDArray
     // which make check (req[out_index] == kWriteInplace) useless.
     auto in_dnnl_mem  = static_cast<const dnnl::memory*>(sum_input.GetDNNLData());
     auto out_dnnl_mem = static_cast<const dnnl::memory*>(output.GetDNNLData());
-    if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle()) {
+    if (in_dnnl_mem->get_data_handle() == out_dnnl_mem->get_data_handle() &&
+        sum_input.dtype() == output.dtype()) {
       inplace_ = true;
     }
   }
@@ -286,6 +287,25 @@ NDArray SgDNNLFCOp::PrepareOutputWithSum(const NDArray& sum_input, const NDArray
           mem_desc, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
       DNNLStream::Get()->RegisterMem(tmp_mem);
       DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(*in_dnnl_mem, *tmp_mem),
+                                          {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
+      return NDArray(tmp_mem);
+    } else if (sum_input.dtype() == mshadow::kUint8 && output.dtype() == mshadow::kInt8) {
+      auto sum_mem_desc           = in_dnnl_mem->get_desc();
+      auto out_dtype              = get_dnnl_type(mshadow::kInt8);
+      sum_mem_desc.data.data_type = static_cast<dnnl_data_type_t>(out_dtype);
+      dnnl_mem_ptr tmp_mem(new dnnl::memory(
+          sum_mem_desc, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
+      DNNLStream::Get()->RegisterMem(tmp_mem);
+      const float u8_reorder_scale     = 0.5;
+      std::vector<float> reorder_scale = {u8_reorder_scale};
+      dnnl::primitive_attr reorder_attr;
+      reorder_attr.set_output_scales(0, reorder_scale);
+      const auto reorder_pd = dnnl::reorder::primitive_desc(CpuEngine::Get()->get_engine(),
+                                                            in_dnnl_mem->get_desc(),
+                                                            CpuEngine::Get()->get_engine(),
+                                                            sum_mem_desc,
+                                                            reorder_attr);
+      DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd),
                                           {{DNNL_ARG_FROM, *in_dnnl_mem}, {DNNL_ARG_TO, *tmp_mem}});
       return NDArray(tmp_mem);
     } else {
@@ -497,6 +517,11 @@ bool SgDNNLFCOp::PrepareQuantization(const OpContext& ctx,
     float sum_in_scale =
         GetQuantizeScale(in_data[idx.sum].dtype(), cached_sum_min_, cached_sum_max_);
     full_param_.sum_scale = out_scale / sum_in_scale;
+    if (in_data[idx.sum].dtype() == mshadow::kUint8 && output.dtype() == mshadow::kInt8) {
+      // In this case, reorder with scale 0.5 is used on in_data[idx.sum] to
+      // scale it to s8 range, so sum_scale has to be rescaled as well
+      full_param_.sum_scale *= 2.0;
+    }
   }
   return support_channelwise_scale;
 }
@@ -746,7 +771,8 @@ static bool SgDNNLFCInferType(const nnvm::NodeAttrs& attrs,
     } else {
       if (full_param.dnnl_param.min_calib_range.has_value() &&
           full_param.dnnl_param.max_calib_range.has_value()) {
-        if (IsOutputUint8(full_param)) {
+        if (IsOutputUint8(full_param) &&
+            (!idx.IsSumExist() || in_types->at(idx.sum) == mshadow::kUint8)) {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
         } else {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);

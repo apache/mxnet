@@ -677,6 +677,7 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
 }
 
 // Currently DNNL only supports step = 1 or step has no value
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reorder.html
 inline bool SupportDNNLSlice(const SliceParam& param) {
   if (param.step.ndim() == 0U)
     return true;

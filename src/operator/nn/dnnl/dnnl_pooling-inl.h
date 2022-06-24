@@ -127,25 +127,19 @@ inline bool SupportDNNLPooling(const PoolingParam& param) {
            param.layout.value() == mshadow::kNCDHW));
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_pooling.html
 inline bool SupportDNNLPooling(const PoolingParam& param, const NDArray& input) {
-  const auto dshape = input.shape();
-  const auto ndim   = dshape.ndim();
-  const auto dtype  = input.dtype();
-
-  if (!(SupportStorageDNNL(input.storage_type()) && (ndim == 3 || ndim == 4 || ndim == 5) &&
-        (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16)))
-    return false;
-
-  if (!SupportDNNLPooling(param))
+  if (!SupportDNNL<3, 5, DNNLTypeMode::FloatTypes>(input) || !SupportDNNLPooling(param))
     return false;
 
   if (param.pooling_convention == pool_enum::kValid) {
     return true;
   } else {
+    const auto dshape = input.shape();
     if (param.pool_type == pool_enum::kAvgPooling) {
       // dnnl works differently when padding is asymmetric, so let's skip this case.
       bool is_symmetric = true;
-      switch (ndim) {
+      switch (dshape.ndim()) {
         case 5:
           is_symmetric =
               is_symmetric &&

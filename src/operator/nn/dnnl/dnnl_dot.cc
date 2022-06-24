@@ -31,15 +31,14 @@
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLDot(const std::vector<NDArray>& inputs, const NDArray& output) {
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_matmul.html
+bool SupportDNNLDot(const std::vector<NDArray>& inputs) {
 #if MXNET_USE_BLAS_MKL == 1
   return false;
 #endif
-  return inputs[DotIn::lhs].shape().Size() > 1 && inputs[DotIn::rhs].shape().Size() > 1 &&
-         inputs[DotIn::lhs].shape().ndim() > 0 && inputs[DotIn::rhs].shape().ndim() > 0 &&
-         output.shape().Size() != 0 && output.shape().ndim() > 0 && output.shape().ndim() <= 12 &&
-         (inputs[DotIn::lhs].dtype() == mshadow::kFloat32 ||
-          inputs[DotIn::lhs].dtype() == mshadow::kBfloat16);
+  // Remove cases where ndim of inputs is equal to 1, because output will be scalar in this case
+  return SupportDNNL<2, 12, DNNLTypeMode::FloatTypes>(inputs[DotIn::lhs]) &&
+         SupportDNNL<2, 12, DNNLTypeMode::FloatTypes>(inputs[DotIn::rhs]);
 }
 
 DNNLDotFwd& DNNLDotFwd::GetCached(const DotParam& param,
@@ -106,16 +105,27 @@ DNNLDotFwd::DNNLDotFwd(const DotParam& param,
   fwd    = std::make_shared<dot_fwd_t>(*fwd_pd);
 }
 
-void DNNLDotFwd::Execute(const std::vector<NDArray>& inputs,
+void DNNLDotFwd::Execute(const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs,
                          const bool isNumpy) {
   auto engine = mxnet::CpuEngine::Get()->get_engine();
   auto lhs    = dnnl::memory(
       fwd_pd->src_desc(), engine, reinterpret_cast<void*>(inputs[DotIn::lhs].data().dptr_));
-  auto rhs     = dnnl::memory(fwd_pd->weights_desc(), engine);
-  auto ndimRhs = inputs[DotIn::rhs].shape().ndim();
-  if (isNumpy && ndimRhs > 2) {
+  auto ndimRhs                = inputs[DotIn::rhs].shape().ndim();
+  const bool specialNumpyCase = isNumpy && ndimRhs > 2;
+  auto rhsMemPointer =
+      specialNumpyCase ?
+          reinterpret_cast<void*>(
+              ctx.requested[0]
+                  .get_space<cpu>(mshadow::Shape1(inputs[DotIn::rhs].shape().Size() *
+                                                  GetTypeSize(inputs[DotIn::rhs].dtype())),
+                                  ctx.get_stream<cpu>())
+                  .dptr_) :
+          reinterpret_cast<void*>(inputs[DotIn::rhs].data().dptr_);
+  dnnl::memory rhs(fwd_pd->weights_desc(), engine, rhsMemPointer);
+  if (specialNumpyCase) {
     // Necessity of this reorder is described in DNNLDotFwd constructor.
     auto tmp_rhs = inputs[DotIn::rhs].GetDNNLData();
     dnnl::memory::desc rhs_md(
@@ -126,8 +136,6 @@ void DNNLDotFwd::Execute(const std::vector<NDArray>& inputs,
     const auto rhs_reorder_pd = dnnl::reorder::primitive_desc(*tmp_rhs, tmp_rhs_dst);
     DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(rhs_reorder_pd),
                                         {{DNNL_ARG_FROM, *tmp_rhs}, {DNNL_ARG_TO, tmp_rhs_dst}});
-  } else {
-    rhs.set_data_handle(reinterpret_cast<void*>(inputs[DotIn::rhs].data().dptr_));
   }
   dnnl_output_t out_mem = CreateDNNLMem(
       outputs[DotOut::out], fwd_pd->dst_desc(), req[DotOut::out], &inputs[DotIn::lhs]);

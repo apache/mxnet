@@ -494,7 +494,7 @@ class ResourceManagerImpl : public ResourceManager {
   /*! \brief Reference to the storage */
   std::shared_ptr<Storage> storage_ref_;
   /*! \brief internal seed to the random number generator */
-  uint32_t global_seed_{0};
+  uint32_t global_seed_{static_cast<uint32_t>(time(nullptr))};
   /*! \brief CPU random number resources */
   std::unique_ptr<ResourceRandom<cpu>> cpu_rand_;
   /*! \brief CPU temp space resources */

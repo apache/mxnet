@@ -18,19 +18,29 @@
  */
 
 /*!
- * \file swapaxis.cu
- * \brief
- * \author Ming Zhang
+ * \file eliminate_common_nodes_pass.cc
+ * \brief Graph pass to eliminate common nodes from the input graph
  */
+#include <nnvm/graph.h>
+#include <nnvm/pass.h>
 
-#include "./swapaxis-inl.h"
+#include "imperative/exec_pass.h"
 
 namespace mxnet {
-namespace op {
 
-NNVM_REGISTER_OP(SwapAxis).set_attr<FCompute>("FCompute<gpu>", SwapAxisCompute<gpu>);
+nnvm::Graph EliminateCommonNodesPass(nnvm::Graph&& g) {
+  const int enabled = dmlc::GetEnv("MXNET_NODE_ELIMINATION", 1);
+  if (enabled == 0) {
+    LOG(INFO) << "Skipping common nodes elimination.";
+    return std::move(g);
+  }
 
-NNVM_REGISTER_OP(_backward_SwapAxis).set_attr<FCompute>("FCompute<gpu>", SwapAxisGrad<gpu>);
+  return exec::EliminateCommonExpr(std::move(g));
+}
 
-}  // namespace op
+NNVM_REGISTER_PASS(EliminateCommonNodesPass)
+    .describe("Removes additional Nodes with identical inputs and function.")
+    .set_body(EliminateCommonNodesPass)
+    .set_change_graph(true);
+
 }  // namespace mxnet

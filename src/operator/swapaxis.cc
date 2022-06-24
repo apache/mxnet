@@ -24,28 +24,21 @@
  */
 
 #include "./swapaxis-inl.h"
+#include "operator/elemwise_op_common.h"
+#include "operator/operator_common.h"
+#include "operator/tensor/elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
 
-template <>
-Operator* CreateOp<cpu>(SwapAxisParam param, int dtype) {
-  Operator* op = nullptr;
-  MSHADOW_TYPE_SWITCH(dtype, DType, { op = new SwapAxisOp<cpu, DType>(param); });
-  return op;
-}
-
-Operator* SwapAxisProp::CreateOperatorEx(Context ctx,
-                                         mxnet::ShapeVector* in_shape,
-                                         std::vector<int>* in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
-}
-
 DMLC_REGISTER_PARAMETER(SwapAxisParam);
 
-MXNET_REGISTER_OP_PROPERTY(SwapAxis, SwapAxisProp)
-    .add_argument("data", "NDArray-or-Symbol", "Input array.")
-    .add_arguments(SwapAxisParam::__FIELDS__())
+NNVM_REGISTER_OP(SwapAxis)
+    .add_alias("swapaxes")
+    .add_alias("_npi_swapaxes")
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<SwapAxisParam>)
     .describe(R"code(Interchanges two axes of an array.
 
 Examples::
@@ -64,8 +57,27 @@ Examples::
                        [ 2, 6]],
                       [[ 1, 5],
                        [ 3, 7]]]
-)code" ADD_FILELINE);
+)code" ADD_FILELINE)
+    .set_attr<FCompute>("FCompute<cpu>", SwapAxisCompute<cpu>)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<mxnet::FInferShape>("FInferShape", SwapAxisShape)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_SwapAxis"})
+    .add_argument("data", "NDArray-or-Symbol", "Input array.")
+    .add_arguments(SwapAxisParam::__FIELDS__());
 
-NNVM_REGISTER_OP(SwapAxis).add_alias("swapaxes").add_alias("_npi_swapaxes");
+NNVM_REGISTER_OP(_backward_SwapAxis)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<SwapAxisParam>)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int>>{{0, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", SwapAxisGrad<cpu>)
+    .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity", [](const NodeAttrs& attrs) {
+      return std::vector<bool>{true};
+    });
+
 }  // namespace op
 }  // namespace mxnet
