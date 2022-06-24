@@ -95,13 +95,21 @@ static void PowMulScalarCompute(const nnvm::NodeAttrs& attrs,
   const DNNLPowMulScalarParam& param = nnvm::get<DNNLPowMulScalarParam>(attrs.parsed);
   // temp_mid_tblob is output of power operation and input of multiplication.
   // Its dtype depends on input dtype and scalar type.
-  TBlob temp_mid_tblob =
-      ((common::is_int(inputs[0].type_flag_) || inputs[0].type_flag_ == kBool) &&
-       !param.exp_is_int) ?
-          outputs[0] :
-          inputs[0].type_flag_ == kBool ?
-          TBlob(ctx.requested[0].get_space_typed<cpu, 1, int64_t>(Shape1(inputs[0].Size()), s)) :
-          inputs[0];
+  TBlob temp_mid_tblob;
+  if (!param.exp_is_int) {
+    // If exponent is not an integer, output of both power and multiplication operations is of same
+    // dtype as outputs[0], therefore we can assign it as temp_mid_tblob.
+    temp_mid_tblob = outputs[0];
+  } else if (inputs[0].type_flag_ == kBool) {
+    // If exponent is an integer and input data is of bool dtype, output of the power operation is
+    // of int64 dtype.
+    temp_mid_tblob =
+        TBlob(ctx.requested[0].get_space_typed<cpu, 1, int64_t>(Shape1(inputs[0].Size()), s));
+  } else {
+    // If both exponent and input data is of integer dtype, output of the power operation is of the
+    // same dtype as its input, therefore we can assign inputs[0] as temp_mid_tblob.
+    temp_mid_tblob = inputs[0];
+  }
   ComputeOP<mshadow_op::power>(attrs, ctx, s, inputs[0], temp_mid_tblob, param.exponent);
   ComputeOP<mshadow_op::mul>(attrs, ctx, s, temp_mid_tblob, outputs[0], param.multiplier);
 }
