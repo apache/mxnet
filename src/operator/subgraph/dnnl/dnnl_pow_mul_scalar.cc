@@ -111,7 +111,7 @@ static void PowMulScalarComputeEx(const nnvm::NodeAttrs& attrs,
                                   const std::vector<mxnet::NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<mxnet::NDArray>& outputs) {
-  if (SupportDNNLPower(inputs[0])) {
+  if (SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLPowMulScalarForward<true>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PowMulScalarCompute, attrs, ctx, inputs, req, outputs);
