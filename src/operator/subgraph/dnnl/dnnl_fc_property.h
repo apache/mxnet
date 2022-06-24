@@ -30,7 +30,6 @@
 
 #include <string>
 #include <vector>
-#include <random>
 
 #include "operator/tensor/matrix_op-inl.h"
 #include "operator/subgraph/common.h"

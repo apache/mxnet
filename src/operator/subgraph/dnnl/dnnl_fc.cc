@@ -66,15 +66,16 @@ class SgDNNLFCOp {
 
  private:
   enum { kDataMin = 0, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax, kSumMin, kSumMax };
+  const size_t MIN_MAX_COUNT = 8;
 
   NDArray PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output);
   bool CheckInitializationConditions(const std::vector<NDArray>& inputs,
-                                     const std::vector<float>& minmaxvec,
+                                     const std::vector<float>& min_max_vec,
                                      bool is_channel_wise);
   bool PrepareQuantization(const OpContext& ctx,
                            const std::vector<NDArray>& in_data,
                            const NDArray& output,
-                           const std::vector<float>& minmaxvec);
+                           const std::vector<float>& min_max_vec);
   dnnl::memory::desc CreateOutputMemoryDesc(const mxnet::TShape& oshape, int out_dtype);
   void GetCachedWeightsAndBias(const NDArray& weight,
                                bool support_channelwise_scale,
@@ -128,7 +129,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   const int out_max_index = out_quantized ? index++ : 0;
   CHECK_EQ(out_data.size(), index);  // index is equal to total number of outputs
 
-  std::vector<float> minmaxvec(8);
+  std::vector<float> minmaxvec(MIN_MAX_COUNT);
   minmaxvec[kDataMin]   = 0.0f;
   minmaxvec[kDataMax]   = 0.0f;
   minmaxvec[kWeightMin] = 0.0f;
@@ -136,8 +137,8 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   minmaxvec[kBiasMin]   = 0.0f;
   minmaxvec[kBiasMax]   = 0.0f;
 
-  minmaxvec[kSumMin]    = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
-  minmaxvec[kSumMax]    = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
+  minmaxvec[kSumMin]    = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0f;
+  minmaxvec[kSumMax]    = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0f;
   NDArray data          = in_data[idx.data];
   const NDArray& weight = in_data[idx.weight];
   NDArray output;
