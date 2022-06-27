@@ -94,14 +94,24 @@ std::shared_ptr<Primitives> DNNLMaskedSoftmaxFwd::CreatePrimitives(const MaskedS
   prim->minusone_pd  = dnnl::eltwise_forward::primitive_desc(minusone_desc, engine);
   prim->minusone     = dnnl::eltwise_forward(prim->minusone_pd);
 
-  // input * mask
+  // (input + mask) / temperature
   auto mask_input_desc =
       dnnl::binary::desc(dnnl::algorithm::binary_add,
                          input_desc,
                          dnnl::memory::desc(mask_dims, dnnl::memory::data_type::f32, mem_format),
                          input_desc);
-  prim->mask_input_pd = dnnl::binary::primitive_desc(mask_input_desc, engine);
-  prim->mask_input    = dnnl::binary(prim->mask_input_pd);
+  if (param.temperature.has_value() && param.temperature.value() != 1.0f) {
+    dnnl::post_ops binary_ops;
+    binary_ops.append_eltwise(
+        1.0f, dnnl::algorithm::eltwise_linear, 1 / param.temperature.value(), 0.0f);
+    dnnl::primitive_attr binary_attr;
+    binary_attr.set_post_ops(binary_ops);
+
+    prim->mask_input_pd = dnnl::binary::primitive_desc(mask_input_desc, binary_attr, engine);
+  } else {
+    prim->mask_input_pd = dnnl::binary::primitive_desc(mask_input_desc, engine);
+  }
+  prim->mask_input = dnnl::binary(prim->mask_input_pd);
 
   // output * mask
   auto mask_output_desc =
@@ -133,7 +143,7 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
   using namespace dnnl;
   /*
    Three steps of masked softmax:
-   1. out = input * [(mask - 1) * inf]
+   1. out = (input + [(mask - 1) * inf]) / temperature
    2. out = softmax(out)
    3. out = out * mask
   */
@@ -165,8 +175,7 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
 
   // prepare softmax primitive and memory
   SoftmaxParam p;
-  p.axis        = param.axis;
-  p.temperature = param.temperature;
+  p.axis = param.axis;
 
   auto softmax_tensors     = DNNLSoftmaxFwd::Tensors(output, output);
   auto softmax_op          = DNNLSoftmaxFwd::GetCached(p, softmax_tensors, is_train);
@@ -174,7 +183,7 @@ void DNNLMaskedSoftmaxFwd::Execute(const Tensors& tensors,
   auto softmax_out_mem     = output.GetDNNLData(&softmax_op_dst_desc);
   const auto input_mem     = input.GetDNNLData();
 
-  // 1. C) out = input * out
+  // 1. C) out = (input + out) / temperature
   stream->RegisterPrimArgs(this->primitives->mask_input,
                            {{DNNL_ARG_SRC_0, *input_mem},
                             {DNNL_ARG_SRC_1, *converted_mask_mem},
