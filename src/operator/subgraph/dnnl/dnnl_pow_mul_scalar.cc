@@ -96,9 +96,11 @@ static void PowMulScalarCompute(const nnvm::NodeAttrs& attrs,
   // temp_mid_tblob is output of power operation and input of multiplication.
   // Its dtype depends on input dtype and scalar type.
   TBlob temp_mid_tblob;
-  if (!param.exp_is_int) {
-    // If exponent is not an integer, output of both power and multiplication operations is of same
-    // dtype as outputs[0], therefore we can assign it as temp_mid_tblob.
+  if ((common::is_int(inputs[0].type_flag_) || inputs[0].type_flag_ == kBool) &&
+      !param.exp_is_int) {
+    // If exponent is not an integer and data is of int or bool dtype, output of both power and
+    // multiplication operations is of same dtype as outputs[0], therefore we can assign it as
+    // temp_mid_tblob.
     temp_mid_tblob = outputs[0];
   } else if (inputs[0].type_flag_ == kBool) {
     // If exponent is an integer and input data is of bool dtype, output of the power operation is
