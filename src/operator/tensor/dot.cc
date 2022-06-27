@@ -124,7 +124,7 @@ void DotForwardExDNNL(const nnvm::NodeAttrs& attrs,
                       const std::vector<NDArray>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs) {
-  if (SupportDNNLDot(inputs, outputs[DotOut::out])) {
+  if (SupportDNNLDot(inputs)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLDotForward<false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(DotForward_<cpu>, attrs, ctx, inputs, req, outputs);
@@ -138,7 +138,7 @@ static void BatchDotComputeExCPU(const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs) {
-  if (SupportDNNLBatchDot(inputs, outputs[DotOut::out])) {
+  if (SupportDNNLBatchDot(inputs)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLBatchDotForward<false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);

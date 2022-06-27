@@ -23,8 +23,8 @@
  */
 #include <mxnet/base.h>
 
-#include "../nn/dnnl/dnnl_ops-inl.h"
-#include "./elemwise_binary_op-inl.h"
+#include "elemwise_binary_op-inl.h"
+#include "operator/nn/dnnl/dnnl_copy-inl.h"
 #include "elemwise_unary_op.h"
 
 namespace mxnet {

@@ -32,7 +32,6 @@
 
 #include "operator/nn/convolution-inl.h"
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -165,6 +164,18 @@ class DNNLConvBackward {
   std::shared_ptr<dnnl::convolution_backward_data> bwd_data_;
   std::shared_ptr<dnnl::convolution_backward_weights> bwd_weight_;
 };
+
+void DNNLConvolutionForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& in_data,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& out_data);
+
+void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<NDArray>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

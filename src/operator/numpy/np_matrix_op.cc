@@ -27,9 +27,8 @@
 #include "./np_matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/dnnl/dnnl_ops-inl.h"
-#include "../nn/dnnl/dnnl_base-inl.h"
-#include "../nn/dnnl/dnnl_transpose-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_transpose-inl.h"
 #endif
 namespace mxnet {
 namespace op {
@@ -60,7 +59,7 @@ static void NumpyTransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportDNNLTranspose(inputs[0]) && req[0] == kWriteTo) {
+  if (SupportDNNL(inputs[0]) && req[0] == kWriteTo) {
     DNNLRun(DNNLTransposeForward<NumpyTransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }

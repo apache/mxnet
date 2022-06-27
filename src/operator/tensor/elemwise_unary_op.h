@@ -511,7 +511,7 @@ inline void EltwiseComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<mxnet::NDArray>& outputs) {
   auto fallBackFunction =
       computeMixed ? UnaryOp::ComputeMixedType<cpu, OP> : UnaryOp::Compute<cpu, OP>;
-  if (SupportDNNLEltwise(inputs[0], outputs[0])) {
+  if (SupportDNNLEltwise(inputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(
         DNNLEltwiseForward<DNNLAlgorithm<OP>::value>, attrs, ctx, inputs[0], req[0], outputs[0]);

@@ -24,7 +24,6 @@
  */
 
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 
 #if MXNET_USE_ONEDNN == 1
 namespace mxnet {
@@ -48,7 +47,7 @@ void DNNLCopy(const nnvm::NodeAttrs& attrs,
     in_mem            = in_data.GetDNNLData(&out_mem_desc);
     if (in_mem == nullptr)
       in_mem = in_data.GetDNNLDataReorder(&out_mem_desc);
-    DNNLSum(*out_mem, *in_mem, *out_mem);
+    DNNLMemorySum(*out_mem, *in_mem, *out_mem);
   } else {
     const_cast<NDArray&>(out_data).CopyFrom(*in_mem);
   }

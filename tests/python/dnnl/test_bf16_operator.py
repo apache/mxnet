@@ -217,8 +217,8 @@ def test_bf16_binary_broadcast_elemwise_funcs():
 
 @pytest.mark.parametrize('function', [mx.np.add, mx.np.subtract, mx.np.multiply, mx.np.divide])
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
-@pytest.mark.parametrize('ndim', [1,2,3,4,5,6])
-def test_bf16_binary_broadcast_elemwise_mixed_input(function, dtype, ndim):
+def test_bf16_binary_broadcast_elemwise_mixed_input(function, dtype):
+    ndim = np.random.randint(1, 6)
     dshape_0 = rand_shape_nd(ndim)
     dshape_1 = tuple()
     for i in range(ndim):

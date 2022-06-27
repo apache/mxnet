@@ -41,7 +41,7 @@ bool SupportsRequantizeFusion(const Op* op) {
   static const std::set<const Op*> support_requantize_fusion_ops = {
       Op::Get("_contrib_quantized_elemwise_add"),
       Op::Get("_contrib_quantized_elemwise_mul"),
-      // Op::Get("_contrib_quantized_npi_add") - to be added later on
+      Op::Get("_contrib_quantized_npi_add"),
       Op::Get("_sg_onednn_conv"),
       Op::Get("_sg_onednn_fully_connected"),
       Op::Get("_sg_onednn_selfatt_qk"),
@@ -92,7 +92,7 @@ class SgDNNLPostQuantizeSelector : public SubgraphSelectorV2 {
     const nnvm::Node* raw_new_node = new_node.node;
 
     static const std::set<const Op*> dequantize_fusion_unsupported_ops = {
-        Op::Get("_contrib_quantized_elemwise_add")};
+        Op::Get("_contrib_quantized_elemwise_add"), Op::Get("_contrib_quantized_npi_add")};
 
     if (status == SelectStatus::kFail || status == SelectStatus::kSuccess ||
         raw_new_node->is_variable())

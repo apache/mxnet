@@ -31,7 +31,6 @@
 
 #include "operator/nn/layer_norm-inl.h"
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -95,6 +94,18 @@ class DNNLLayerNormBwd {
   std::shared_ptr<layernorm_fwd_pd_t> fwd_pd;
   std::shared_ptr<layernorm_bwd_pd_t> bwd_pd;
 };
+
+void DNNLLayerNormForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs);
+
+void DNNLLayerNormBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

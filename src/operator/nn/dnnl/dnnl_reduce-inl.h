@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
 
 namespace mxnet {
 namespace op {

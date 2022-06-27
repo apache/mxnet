@@ -558,6 +558,7 @@ class DNNLRnnOp {
             const std::vector<NDArray>& outputs);
 };
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_rnn.html
 inline bool SupportDNNLRnn(const int input_dtype) {
   if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_ONEDNN_RNN", 1)) {
     return true;

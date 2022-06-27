@@ -20,10 +20,11 @@
 /*!
  * \file dnnl_stack.cc
  */
+#include <vector>
 
 #include "dnnl_base-inl.h"
 #include "dnnl_concat-inl.h"
-#include "dnnl_ops-inl.h"
+#include "dnnl_stack-inl.h"
 
 #include "operator/tensor/matrix_op-inl.h"
 
@@ -31,27 +32,9 @@
 namespace mxnet {
 namespace op {
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reorder.html
 bool SupportDNNLStack(const std::vector<NDArray>& inputs) {
-  if (inputs[0].dtype() != mshadow::kFloat32 && inputs[0].dtype() != mshadow::kBfloat16) {
-    return false;
-  }
-
-  int src_dtype = inputs[0].dtype();
-  for (const auto& arr : inputs) {
-    if (arr.dtype() != src_dtype) {
-      return false;
-    }
-    // Do not support zero-size tensors.
-    if (arr.shape().Size() == 0) {
-      return false;
-    }
-
-    int ndim = arr.shape().ndim();
-    if (ndim <= 0) {
-      return false;
-    }
-  }
-  return true;
+  return SupportDNNL<DNNLTypeMode::FloatTypes, DNNLTensorsDtypes::AllSame>(inputs);
 }
 
 void DNNLStackForward(const nnvm::NodeAttrs& attrs,
@@ -103,7 +86,7 @@ void DNNLStackForward(const nnvm::NodeAttrs& attrs,
     }
   });
 
-  auto& fwd = GetConcatForward(stacking_dim, in_data, data_md, axis);
+  auto& fwd = DNNLConcatFwd::GetCached(stacking_dim, in_data, data_md, axis);
   mxnet::dnnl_output_t out_mem =
       CreateDNNLMem(out_data[concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
 

@@ -27,7 +27,6 @@
 #include <vector>
 
 #include "dnnl_base-inl.h"
-#include "dnnl_ops-inl.h"
 #include "operator/nn/softmax-inl.h"
 #include "dnnl_softmax-inl.h"
 

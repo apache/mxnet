@@ -132,7 +132,7 @@ def check_fusion_parameter(sym, attrs_dict):
 
 def check_quantize(net_original, data_shapes, out_type, name='conv',
                    check_calibration=True, check_scale_align=False, quantize_mode='full',
-                   attrs_dict={}):
+                   attrs_dict={}, calib_mode='naive', check_fusion=True):
   quantize_granularity_list = ['tensor-wise']
   if name == 'fc':
     quantize_granularity_list += ['channel-wise']
@@ -140,8 +140,18 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
   if name in config:
     name = config[name][OP_NAME]
 
-  net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
-  min_value = -1 if out_type != 'uint8' else 0
+  sigma = 0.01 if hasattr(net_original, 'alg') is True and net_original.alg == 'exp' else 0.5
+  if out_type == 'uint8':
+    # Initialize weights and tensors only with positive values to be sure
+    # that results are always positive
+    init = CustomNormalInit(sigma=sigma, bounded=True)
+    min_value = 0
+  else:
+    init = mx.init.Normal(sigma)
+    min_value = -1
+
+  net_original.initialize(init=init, force_reinit=True)
+
   one_shape = isinstance(data_shapes, tuple)
   if one_shape:
     # replace one shape with list of shapes with one element inside to follow later the same schema
@@ -159,22 +169,40 @@ def check_quantize(net_original, data_shapes, out_type, name='conv',
       # make a list to have a common path for one and multiple outputs
       ref_out = [ref_out]
 
-  dataArray= mx.gluon.data.ArrayDataset(*data)
+  class TestDataLoader(mx.gluon.data.DataLoader):
+    def __init__(self, data):
+      self.data = data
+      self.finish = False
 
-  calib_data = mx.gluon.data.DataLoader(dataArray, batch_size=1)
+    def __iter__(self):
+      self.finish = False
+      return self
+
+    def __next__(self):
+      if self.finish:
+        raise StopIteration
+      self.finish = True
+      return self.data
+
+    def __del__(self):
+      pass
+
+  calib_data = TestDataLoader(data)
+
   for quantize_granularity in quantize_granularity_list:
     qnet = quantization.quantize_net(net_original,
                                      device=mx.cpu(),
                                      exclude_layers=None,
                                      exclude_operators=None,
                                      quantized_dtype=out_type,
-                                     calib_mode='naive',
+                                     calib_mode=calib_mode,
                                      calib_data=calib_data,
                                      num_calib_batches=1,
                                      quantize_mode=quantize_mode,
                                      quantize_granularity=quantize_granularity)
     qsym, _ = qnet.export(None)
-    check_fusion_parameter(qsym, attrs_dict)
+    if check_fusion:
+      check_fusion_parameter(qsym, attrs_dict)
     if check_calibration:
       check_qsym_calibrated(qsym, out_type, name=name)
     if check_scale_align:
@@ -209,7 +237,7 @@ def check_fusion(net_original, data_shapes, attrs_dict, check_fp32_fusion=True,
                 low=data_min, high=data_max))
   net_original(*data)
   net_fusion = copy.copy(net_original)
-  sym, params = net_original.export(None)
+  sym, _ = net_original.export(None)
 
   if check_fp32_fusion:
     if ''.join(sym.get_internals().list_outputs()).find('sqrt') != -1:

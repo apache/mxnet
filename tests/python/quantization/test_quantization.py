@@ -55,6 +55,14 @@ def is_test_for_native_cpu():
             and os.environ.get('ENABLE_ONEDNN_QUANTIZATION_TEST') == None)
 
 
+def get_low_high(qtype):
+    """ Return low and high value for given integer type as float number"""
+    if qtype == 'uint8':
+        return 0.0, 255.0
+    else:
+        return -128.0, 127.0
+
+
 def test_quantize_float32_to_int8():
     shape = rand_shape_nd(4)
     data = rand_ndarray(shape, 'default', dtype='float32')
@@ -317,7 +325,7 @@ def test_quantized_conv():
                 max_weight = self.max_weight.data().to_device(device)
                 min_bias = self.min_bias.data().to_device(device) if self.use_bias else None
                 max_bias = self.max_bias.data().to_device(device) if self.use_bias else None
-                out = npx.quantized_conv(data=x, weight=weight, bias=bias, 
+                out = npx.quantized_conv(data=x, weight=weight, bias=bias,
                                          min_data=min_data, max_data=max_data,
                                          min_weight=min_weight, max_weight=max_weight,
                                          min_bias=min_bias, max_bias=max_bias,
@@ -365,11 +373,11 @@ def test_quantized_conv():
 
 @use_np
 def test_quantized_elemwise_add():
-    def check_quantized_elemwise_add(data_shape, qtype):
+    def check_quantized_elemwise_add(data_shape, qdtypeA, qdtypeB):
         if is_test_for_native_cpu():
             print('skipped testing quantized_elemwise_add for native cpu since it is not supported yet')
             return
-        elif qtype != 'uint8' and qtype != 'int8':
+        elif (qdtypeA != 'uint8' and qdtypeA != 'int8') or (qdtypeB != 'uint8' and qdtypeB != 'int8'):
             print('skipped testing quantized_elemwise_add for not supported data type')
             return
         elif is_test_for_gpu():
@@ -392,27 +400,25 @@ def test_quantized_elemwise_add():
 
         elemwise_add_fp32 = ElemwiseSumBlock()
 
-        if qtype == 'uint8':
-            data_low = 0.0
-            data_high = 255.0
-        else:
-            data_low = -127.0
-            data_high = 127.0
+        dataA_low, dataA_high = get_low_high(qdtypeA)
+        dataB_low, dataB_high = get_low_high(qdtypeB)
 
-        dataA_val = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape).astype('int32').astype('float32')
-        dataB_val = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape).astype('int32').astype('float32')
+        dataA_val = mx.np.random.uniform(low=dataA_low, high=dataA_high, size=data_shape).astype('int32').astype('float32')
+        dataB_val = mx.np.random.uniform(low=dataB_low, high=dataB_high, size=data_shape).astype('int32').astype('float32')
 
         output = elemwise_add_fp32(dataA_val, dataB_val)
+        mx.nd.waitall()
 
         #run quantized
         quantized_elemwise_add = QuantElemwiseSumBlock()
-        dataA_val_int8 = dataA_val.astype(qtype)
-        dataB_val_int8 = dataB_val.astype(qtype)
+        dataA_val_int8 = dataA_val.astype(qdtypeA)
+        dataB_val_int8 = dataB_val.astype(qdtypeB)
+
         quantized_range = 127.0
-        min_dataA = mx.np.array([data_low])
-        max_dataA = mx.np.array([data_high])
-        min_dataB = mx.np.array([data_low])
-        max_dataB = mx.np.array([data_high])
+        min_dataA = mx.np.array([dataA_low])
+        max_dataA = mx.np.array([dataA_high])
+        min_dataB = mx.np.array([dataB_low])
+        max_dataB = mx.np.array([dataB_high])
         qoutput, min_range, max_range = quantized_elemwise_add(dataA_val_int8, dataB_val_int8,
                                                                min_dataA, max_dataA,
                                                                min_dataB, max_dataB)
@@ -421,11 +427,87 @@ def test_quantized_elemwise_add():
         cond = mx.np.less(2, diff).sum().item()
         assert cond == 0
 
-    for qtype in ['int8', 'uint8']:
-        check_quantized_elemwise_add((4, 6), qtype)
-        check_quantized_elemwise_add((13, 74, 52), qtype)
-        check_quantized_elemwise_add((3, 4, 56, 56), qtype)
-        check_quantized_elemwise_add((32, 56, 64, 11), qtype)
+    check_quantized_elemwise_add((4, 6), 'uint8', 'int8')
+    check_quantized_elemwise_add((13, 74, 52), 'uint8', 'uint8')
+    check_quantized_elemwise_add((3, 4, 56, 56), 'int8', 'uint8')
+    check_quantized_elemwise_add((32, 56, 64, 11), 'int8', 'int8')
+
+@use_np
+def test_quantized_npi_add():
+    def check_quantized_npi_add(data_shape,  qdtypeA, qdtypeB, broadcast=None):
+        if is_test_for_native_cpu():
+            print('skipped testing quantized_npi_add for native cpu since it is not supported yet')
+            return
+        elif (qdtypeA != 'uint8' and qdtypeA != 'int8') or (qdtypeB != 'uint8' and qdtypeB != 'int8'):
+            print('skipped testing quantized_npi_add for not supported data type')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantized_npi_add for gpu since it is not supported yet')
+            return
+
+        class ElemwiseSumBlock(mx.gluon.nn.HybridBlock):
+            def __init__(self, **kwargs):
+                super(ElemwiseSumBlock, self).__init__(**kwargs)
+
+            def forward(self, dataA, dataB):
+                return dataA + dataB
+
+        class QuantElemwiseSumBlock(mx.gluon.nn.HybridBlock):
+            def __init__(self, **kwargs):
+                super(QuantElemwiseSumBlock, self).__init__(**kwargs)
+
+            def forward(self, dataA, dataB, dataA_min, dataA_max, dataB_min, dataB_max):
+                return npx.quantized_npi_add(dataA, dataB, dataA_min, dataA_max, dataB_min, dataB_max)
+
+        elemwise_add_fp32 = ElemwiseSumBlock()
+
+        dataA_low, dataA_high = get_low_high(qdtypeA)
+        dataB_low, dataB_high = get_low_high(qdtypeB)
+
+        data_shapeA = data_shape
+        data_shapeB = data_shape
+
+        if broadcast :
+            if broadcast == 'A':
+                data_shapeA = ()
+                for index in range(len(data_shape)):
+                    data_shapeA += (1,)
+            else:
+                data_shapeB = ()
+                for index in range(len(data_shape)):
+                    data_shapeB += (1,)
+
+        dataA_val = mx.np.random.uniform(low=dataA_low, high=dataA_high, size=data_shapeA).astype('int32').astype('float32')
+        dataB_val = mx.np.random.uniform(low=dataB_low, high=dataB_high, size=data_shapeB).astype('int32').astype('float32')
+
+        output = elemwise_add_fp32(dataA_val, dataB_val)
+
+        #run quantized
+        quantized_elemwise_add = QuantElemwiseSumBlock()
+        dataA_val_int8 = dataA_val.astype(qdtypeA)
+        dataB_val_int8 = dataB_val.astype(qdtypeB)
+        quantized_range = 127.0
+        min_dataA = mx.np.array([dataA_low])
+        max_dataA = mx.np.array([dataA_high])
+        min_dataB = mx.np.array([dataB_low])
+        max_dataB = mx.np.array([dataB_high])
+        qoutput, min_range, max_range = quantized_elemwise_add(dataA_val_int8, dataB_val_int8,
+                                                               min_dataA, max_dataA,
+                                                               min_dataB, max_dataB)
+        int8_rslt = qoutput.astype(output.dtype) * max_range / 0x7fffffff
+        diff = mx.np.abs(output - int8_rslt)
+        cond = mx.np.less(2, diff).sum().item()
+        assert cond == 0
+
+    check_quantized_npi_add((4, 6), 'uint8', 'int8')
+    check_quantized_npi_add((13, 74, 52), 'uint8', 'uint8')
+    check_quantized_npi_add((3, 4, 56, 56), 'int8', 'uint8')
+    check_quantized_npi_add((32, 56, 64, 11), 'int8', 'int8')
+
+    check_quantized_npi_add((4, 6), 'uint8', 'int8', 'A')
+    check_quantized_npi_add((13, 74, 52), 'uint8', 'uint8', 'B')
+    check_quantized_npi_add((3, 4, 56, 56), 'int8', 'uint8', 'A')
+    check_quantized_npi_add((32, 56, 64, 11), 'int8', 'int8', 'B')
 
 
 @use_np
@@ -456,12 +538,7 @@ def test_quantized_elemwise_mul():
                 return npx.quantized_elemwise_mul(dataA, dataB, dataA_min, dataA_max, dataB_min, dataB_max)
 
         elemwise_mul_fp32 = ElemwiseMulBlock()
-        if qtype == 'uint8':
-            data_low = 0.0
-            data_high = 255.0
-        else:
-            data_low = -127.0
-            data_high = 127.0
+        data_low, data_high = get_low_high(qtype)
 
         dataA_val = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape).astype('int32').astype('float32')
         dataB_val = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape).astype('int32').astype('float32')
@@ -681,7 +758,7 @@ def test_quantized_fc():
                 max_weight = self.max_weight.data().to_device(device)
                 min_bias = self.min_bias.data().to_device(device) if self.use_bias else None
                 max_bias = self.max_bias.data().to_device(device) if self.use_bias else None
-                out = npx.quantized_fully_connected(data=x, weight=weight, bias=bias, 
+                out = npx.quantized_fully_connected(data=x, weight=weight, bias=bias,
                                                     min_data=min_data, max_data=max_data,
                                                     min_weight=min_weight, max_weight=max_weight,
                                                     min_bias=min_bias, max_bias=max_bias,
@@ -733,12 +810,7 @@ def test_quantized_fc():
 @use_np
 def test_quantized_transpose():
     def check_quantized_transpose(shape, qdtype, axes):
-        if qdtype == 'uint8':
-            data_low = 0.0
-            data_high = 255.0
-        else:
-            data_low = -127.0
-            data_high = 127.0
+        data_low, data_high = get_low_high(qdtype)
         data = mx.np.random.uniform(low=data_low, high=data_high, size=shape).astype(qdtype).astype('float32')
         min_data = mx.np.array([mx.np.min(data).astype('float32').item()])
         max_data = mx.np.array([mx.np.max(data).astype('float32').item()])
@@ -756,7 +828,6 @@ def test_quantized_transpose():
         check_quantized_transpose((7,3,9), qtype, (2,1,0))
         check_quantized_transpose((5,3,6,8), qtype, (2,3,0,1))
 
-        
 
 @use_np
 def test_quantized_embedding():
@@ -939,13 +1010,7 @@ def test_quantized_bn():
             print('skipped testing quantize_bn for gpu since it is not supported yet')
             return
 
-        # qdtype = uint8
-        if qdtype == 'uint8':
-            data_low = 0.0
-            data_high = 255.0
-        else:
-            data_low = -127.0
-            data_high = 127.0
+        data_low, data_high = get_low_high(qdtype)
 
         # run fp32 bn
         bn_fp32 = mx.gluon.nn.BatchNorm(use_global_stats=True, scale=True)
@@ -954,7 +1019,7 @@ def test_quantized_bn():
         bn_fp32.hybridize()
         bn_fp32(data)
         fp32_params = bn_fp32.collect_params()
-        
+
         data = mx.np.random.uniform(low=data_low, high=data_high, size=data_shape)
         gamma = mx.np.random.uniform(low=data_low, high=data_high, size=fp32_params['gamma'].shape)
         beta = mx.np.random.uniform(low=data_low, high=data_high, size=fp32_params['beta'].shape)
@@ -990,31 +1055,26 @@ def test_quantized_bn():
 
 
 def test_quantized_reshape():
-    test_cases = [((2, 3, 5, 5),  (-2, -1),         False, (2, 75)), 
-                  ((2, 3, 5, 5),  (-2, -2, -1),     False, (2, 3, 25)), 
-                  ((5, 3, 4, 5),  (-2, -1, -2),     False, (5, 15, 4)), 
-                  ((2, 3, 5, 4),  (-1, -2, -2),     False, (8, 3, 5)), 
-                  ((2, 3, 5, 5),  (-2, -2, -2, -2), False, (2, 3, 5, 5)), 
-                  ((2, 1, 4, 5),  (-2, -3, -2, -2), False, (2, 4, 5)), 
-                  ((1, 1, 4, 1),  (-3, -3, -2, -2), False, (4, 1)), 
-                  ((1, 1, 1, 1),  (-3, -3, -3, -3), False, ()), 
-                  ((2, 4, 5, 3),  (-1, 2, 2, 1),    False, (30, 2, 2, 1)), 
-                  ((2, 3, 5, 6),  (-4,),            False, (2, 3, 5, 6)), 
-                  ((2, 3, 5, 6),  (6, 1, -4),       False, (6, 1, 5, 6)), 
-                  ((2, 3, 5, 6),  (-5, -5),         False, (6, 30)), 
-                  ((2, 3, 5, 6),  (-5, -1),         False, (6, 30)), 
-                  ((64,),         (-6, 16, 4),      False, (16, 4)), 
+    test_cases = [((2, 3, 5, 5),  (-2, -1),         False, (2, 75)),
+                  ((2, 3, 5, 5),  (-2, -2, -1),     False, (2, 3, 25)),
+                  ((5, 3, 4, 5),  (-2, -1, -2),     False, (5, 15, 4)),
+                  ((2, 3, 5, 4),  (-1, -2, -2),     False, (8, 3, 5)),
+                  ((2, 3, 5, 5),  (-2, -2, -2, -2), False, (2, 3, 5, 5)),
+                  ((2, 1, 4, 5),  (-2, -3, -2, -2), False, (2, 4, 5)),
+                  ((1, 1, 4, 1),  (-3, -3, -2, -2), False, (4, 1)),
+                  ((1, 1, 1, 1),  (-3, -3, -3, -3), False, ()),
+                  ((2, 4, 5, 3),  (-1, 2, 2, 1),    False, (30, 2, 2, 1)),
+                  ((2, 3, 5, 6),  (-4,),            False, (2, 3, 5, 6)),
+                  ((2, 3, 5, 6),  (6, 1, -4),       False, (6, 1, 5, 6)),
+                  ((2, 3, 5, 6),  (-5, -5),         False, (6, 30)),
+                  ((2, 3, 5, 6),  (-5, -1),         False, (6, 30)),
+                  ((64,),         (-6, 16, 4),      False, (16, 4)),
                   ((64,),         (-6, 16, -1),     False, (16, 4)),
-                  ((64, 1, 2, 3), (-6, 16, -1, -4), False, (16, 4, 1, 2, 3)), 
+                  ((64, 1, 2, 3), (-6, 16, -1, -4), False, (16, 4, 1, 2, 3)),
                   ((8, 5, 4, 6),  (-4, -1, 3, -6),  True,  (8, 5, 4, 2, 3))]
 
     def check_quantized_reshape(shape, qdtype, newshape, reverse, expected_ret_shape):
-        if qdtype == 'uint8':
-            data_low = 0.0
-            data_high = 255.0
-        else:
-            data_low = -127.0
-            data_high = 127.0
+        data_low, data_high = get_low_high(qdtype)
         qdata = mx.np.random.uniform(low=data_low, high=data_high, size=shape).astype(qdtype)
         min_data = mx.np.array([-1023.343], dtype='float32')
         max_data = mx.np.array([2343.324275], dtype='float32')
@@ -1459,7 +1519,7 @@ def test_rnn_quantization():
 
             def __iter__(self):
                 return self
-            
+
             def __next__(self):
                 return [self.data, self.states]
 

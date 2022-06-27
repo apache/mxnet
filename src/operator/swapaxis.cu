@@ -28,12 +28,9 @@
 namespace mxnet {
 namespace op {
 
-template <>
-Operator* CreateOp<gpu>(SwapAxisParam param, int dtype) {
-  Operator* op = nullptr;
-  MSHADOW_TYPE_SWITCH(dtype, DType, { op = new SwapAxisOp<gpu, DType>(param); });
-  return op;
-}
+NNVM_REGISTER_OP(SwapAxis).set_attr<FCompute>("FCompute<gpu>", SwapAxisCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_SwapAxis).set_attr<FCompute>("FCompute<gpu>", SwapAxisGrad<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

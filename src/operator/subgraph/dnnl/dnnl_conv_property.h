@@ -28,7 +28,6 @@
 #include "operator/leaky_relu-inl.h"
 #include "operator/nn/activation-inl.h"
 #include "operator/nn/convolution-inl.h"
-#include "operator/nn/dnnl/dnnl_ops-inl.h"
 #include "operator/tensor/matrix_op-inl.h"
 #include "operator/subgraph/common.h"
 #include "dnnl_subgraph_base-inl.h"
@@ -115,7 +114,7 @@ class SgDNNLConvSelector : public SubgraphSelector {
       default:
         if ((!disable_conv_act_) && node_name == "Activation") {
           const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
-          if ((quantize_ && SupportQuantizedDNNLAct(param)) ||
+          if ((quantize_ && SupportDNNLQuantizedAct(param)) ||
               (!quantize_ && SupportDNNLAct(param))) {
             matched_list_.push_back(&new_node);
             // not support conv+relu+sum yet.

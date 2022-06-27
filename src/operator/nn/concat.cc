@@ -25,8 +25,10 @@
 
 #include "../../common/utils.h"
 #include "./concat-inl.h"
-#include "./dnnl/dnnl_base-inl.h"
-#include "./dnnl/dnnl_ops-inl.h"
+#if MXNET_USE_ONEDNN == 1
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_concat-inl.h"
+#endif  // MXNET_USE_ONEDNN == 1
 
 namespace mxnet {
 namespace op {
@@ -246,24 +248,21 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
 }
 #if MXNET_USE_ONEDNN == 1
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_concat.html
 bool SupportDNNLConcat(const std::vector<NDArray>& arrs) {
   for (auto& arr : arrs) {
-    if (arr.IsView())
-      return false;
-    if (!(arr.dtype() == mshadow::kFloat32 || arr.dtype() == mshadow::kBfloat16))
-      return false;
-    // Do not support zero-size tensors.
-    if (arr.shape().Size() == 0 || arr.shape().ndim() == 0)
+    if (arr.IsView() || !SupportDNNL<2, 12, AllTypes>(arr))
       return false;
     int ndim             = arr.shape().ndim();
     const int dnnl_ndims = arr.GetDNNLData()->get_desc().data.ndims;
-    if ((ndim != 2 && ndim != 4) || ndim != dnnl_ndims) {
+    if (ndim != dnnl_ndims) {
       return false;
     }
   }
   return true;
 }
 #endif  // MXNET_USE_ONEDNN == 1
+
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const OpContext& op_ctx,
                                const std::vector<NDArray>& inputs,

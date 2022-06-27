@@ -1,4 +1,4 @@
- /*!
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,30 @@
  * under the License.
  */
 
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+/*!
+ * \file dnnl_copy-inl.h
+ * \brief
+ * \author Wolinski Piotr piotr.wolinski@intel.com
+ */
 
-  ga('create', 'UA-96378503-1', 'auto');
-  ga('send', 'pageview');
+#ifndef MXNET_OPERATOR_NN_DNNL_DNNL_COPY_INL_H_
+#define MXNET_OPERATOR_NN_DNNL_DNNL_COPY_INL_H_
+
+#if MXNET_USE_ONEDNN == 1
+
+#include <dnnl.hpp>
+
+namespace mxnet {
+namespace op {
+
+void DNNLCopy(const nnvm::NodeAttrs& attrs,
+              const OpContext& ctx,
+              const NDArray& in_data,
+              const OpReqType& req,
+              const NDArray& out_data);
+
+}  // namespace op
+}  // namespace mxnet
+
+#endif  // MXNET_USE_ONEDNN == 1
+#endif  // MXNET_OPERATOR_NN_DNNL_DNNL_COPY_INL_H_

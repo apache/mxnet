@@ -39,12 +39,12 @@ RewriteOptions AllowNoSlash
 
 </IfModule>
 
-# Set default website version to old stable (v1.9.0)
+# Set default website version to old stable (v1.9.1)
 RewriteCond %{REQUEST_URI} !^/versions/
 RewriteCond %{HTTP_REFERER} !mxnet.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.incubator.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.cdn.apache.org
-RewriteRule ^(.*)$ /versions/1.9.0/$1 [r=307,L]
+RewriteRule ^(.*)$ /versions/1.9.1/$1 [r=307,L]
 
 # Redirect Chinese visitors to Chinese CDN, temporary solution for slow site speed in China
 RewriteCond %{ENV:GEOIP_COUNTRY_CODE} ^CN$

@@ -24,7 +24,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 #include "operator/quantization/quantized_reshape-inl.h"
-#include "operator/nn/dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_reshape-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -37,7 +37,7 @@ static void DNNLQuantizedReshapeForward(const nnvm::NodeAttrs& attrs,
   CHECK(inputs[0].dtype() == mshadow::kUint8 || inputs[0].dtype() == mshadow::kInt8)
       << "dnnl_quantized_reshape op only supports uint8 and int8 as input type";
 
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNLReshape(inputs[0])) {
     OpReqType reqType;
     if (inputs[0].GetDNNLData()->get_data_handle() != outputs[0].GetDNNLData()->get_data_handle())
       reqType = kWriteTo;
