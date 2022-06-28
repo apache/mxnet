@@ -123,7 +123,7 @@ def test_fc_eltwise(data_shape, use_bias, flatten, alg):
       fc_out = self.fc(x)
       if self.alg in ['relu', 'sigmoid', 'log_sigmoid', 'mish', 'tanh', 'softrelu']:
         out = mx.npx.activation(fc_out, act_type=self.alg)
-      elif self.alg in ['gelu', 'elu', 'leaky']:
+      elif self.alg in ['gelu', 'gelu_tanh', 'elu', 'leaky']:
         out = mx.npx.leaky_relu(fc_out, act_type=self.alg)
       elif self.alg == 'square':
         out = mx.np.square(fc_out)

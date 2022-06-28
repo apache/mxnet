@@ -196,10 +196,10 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
 
 // LeakyReLU ops: based on "act_type" attribute
 const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_ops = {
-    {"gelu", {{"op::gelu(%)", "_0"}}},
+    {"gelu_erf", {{"op::gelu_erf(%)", "_0"}}},
 };
 const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_bwd_ops = {
-    {"gelu", {{"op::backward_gelu(%, %)", "_0", "_1"}}},
+    {"gelu_erf", {{"op::backward_gelu_erf(%, %)", "_0", "_1"}}},
 };
 
 const std::map<std::string, std::string> slice_ops = {

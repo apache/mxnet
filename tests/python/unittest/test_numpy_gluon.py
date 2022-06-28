@@ -474,6 +474,11 @@ def test_activations_gelu():
     out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
 
+@use_np
+def test_activations_gelu_tanh():
+    act_layer = nn.GELU(approximation='tanh')
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
 
 @use_np
 def test_activations_swish():
