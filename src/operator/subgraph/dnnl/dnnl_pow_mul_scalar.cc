@@ -65,14 +65,18 @@ static void ComputeOP(const nnvm::NodeAttrs& attrs,
                       mshadow::Stream<cpu>* s,
                       const TBlob& input,
                       const TBlob& output,
-                      const double scalar) {
+                      const double scalar,
+                      void* extra_mem_handle        = nullptr,
+                      const size_t extra_mem_offset = 0) {
   using namespace mshadow;
   using namespace mshadow::expr;
   MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
     auto temp_req    = input.dptr_ == output.dptr_ ? kWriteInplace : kWriteTo;
     TBlob temp_tblob = input;
     if (input.type_flag_ != output.type_flag_) {
-      temp_tblob = TBlob(ctx.requested[0].get_space_typed<cpu, 1, DType>(Shape1(output.Size()), s));
+      auto shape = Shape1(output.Size());
+      temp_tblob = TBlob(mshadow::Tensor<cpu, 1, DType>(
+          reinterpret_cast<DType*>(extra_mem_handle + extra_mem_offset), shape, shape[0], s));
       CastCompute<cpu>(attrs, ctx, {input}, {kWriteTo}, {temp_tblob});
     }
     MXNET_ASSIGN_REQ_SWITCH(temp_req, Req, {
@@ -93,27 +97,67 @@ static void PowMulScalarCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   const DNNLPowMulScalarParam& param = nnvm::get<DNNLPowMulScalarParam>(attrs.parsed);
-  // temp_mid_tblob is output of power operation and input of multiplication.
-  // Its dtype depends on input dtype and scalar type.
+  // temp_mid_tblob is output of power operation and input of multiplication. Its dtype depends on
+  // input dtype and scalar type.
   TBlob temp_mid_tblob;
-  if ((common::is_int(inputs[0].type_flag_) || inputs[0].type_flag_ == kBool) &&
-      !param.exp_is_int) {
-    // If exponent is not an integer and data is of int or bool dtype, output of both power and
-    // multiplication operations is of same dtype as outputs[0], therefore we can assign it as
-    // temp_mid_tblob.
+  if (inputs[0].type_flag_ == outputs[0].type_flag_) {
+    // If dtype is the same for input and output data there is no need for additional memory.
     temp_mid_tblob = outputs[0];
-  } else if (inputs[0].type_flag_ == kBool) {
-    // If exponent is an integer and input data is of bool dtype, output of the power operation is
-    // of int64 dtype.
-    temp_mid_tblob =
-        TBlob(ctx.requested[0].get_space_typed<cpu, 1, int64_t>(Shape1(inputs[0].Size()), s));
+    ComputeOP<mshadow_op::power>(attrs, ctx, s, inputs[0], temp_mid_tblob, param.exponent);
+    ComputeOP<mshadow_op::mul>(attrs, ctx, s, temp_mid_tblob, outputs[0], param.multiplier);
   } else {
-    // If both exponent and input data is of integer dtype, output of the power operation is of the
-    // same dtype as its input, therefore we can assign inputs[0] as temp_mid_tblob.
-    temp_mid_tblob = inputs[0];
+    // If input dtype is different than the output dtype we can be sure that input is of integer or
+    // bool dtype and there will be some additional memory needed for temp_mid_tblob and Cast
+    // operations.
+    void* extra_mem_handle   = nullptr;
+    size_t exp_mem_offset    = 0;  // Memory offset for eventual Cast operation in power operation.
+    size_t mul_mem_offset    = 0;  // Memory offset for eventual Cast operation in mul operation.
+    size_t extra_mem_size    = 0;
+    const size_t tensor_size = inputs[0].Size();
+    const auto shape         = Shape1(tensor_size);
+    if (!param.exp_is_int) {
+      // If exponent is not an integer output of both power and multiplication operations is of same
+      // dtype as outputs[0]. Extra memory space is needed only for Cast in power operation.
+      temp_mid_tblob   = outputs[0];
+      extra_mem_size   = tensor_size * sizeof(double);
+      extra_mem_handle = ctx.requested[0].get_space_internal(extra_mem_size, "PowMul");
+    } else {
+      if (!param.mul_is_int) {
+        // Extra memory space needed for Cast in mul operation.
+        extra_mem_size = tensor_size * sizeof(double);
+      }
+      if (inputs[0].type_flag_ == kBool) {
+        // If exponent is an integer and input data is of bool dtype, output of the power operation
+        // is of int64 dtype. Extra memory needed for temp_mid_tblob and Cast in power operation.
+        exp_mem_offset = tensor_size * sizeof(int64_t);
+        mul_mem_offset = tensor_size * sizeof(int64_t) * 2;
+        extra_mem_size += mul_mem_offset;
+        extra_mem_handle = ctx.requested[0].get_space_internal(extra_mem_size, "PowMul");
+        temp_mid_tblob   = TBlob(mshadow::Tensor<cpu, 1, int64_t>(
+            reinterpret_cast<int64_t*>(extra_mem_handle), shape, shape[0], s));
+      } else {
+        // If both exponent and input data is of integer dtype, output of the power operation is of
+        // the same dtype as its input. Extra memory needed for temp_mid_tblob.
+        MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+          mul_mem_offset = tensor_size * sizeof(DType);
+          extra_mem_size += mul_mem_offset;
+          extra_mem_handle = ctx.requested[0].get_space_internal(extra_mem_size, "PowMul");
+          temp_mid_tblob   = TBlob(mshadow::Tensor<cpu, 1, DType>(
+              reinterpret_cast<DType*>(extra_mem_handle), shape, shape[0], s));
+        });
+      }
+    }
+    ComputeOP<mshadow_op::power>(
+        attrs, ctx, s, inputs[0], temp_mid_tblob, param.exponent, extra_mem_handle, exp_mem_offset);
+    ComputeOP<mshadow_op::mul>(attrs,
+                               ctx,
+                               s,
+                               temp_mid_tblob,
+                               outputs[0],
+                               param.multiplier,
+                               extra_mem_handle,
+                               mul_mem_offset);
   }
-  ComputeOP<mshadow_op::power>(attrs, ctx, s, inputs[0], temp_mid_tblob, param.exponent);
-  ComputeOP<mshadow_op::mul>(attrs, ctx, s, temp_mid_tblob, outputs[0], param.multiplier);
 }
 
 static void PowMulScalarComputeEx(const nnvm::NodeAttrs& attrs,
