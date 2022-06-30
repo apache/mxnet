@@ -62,7 +62,7 @@ class SgDNNLTransformerQKSelector : public SubgraphSelectorV2 {
     kSuccess
   };
 
-  /*
+  /*!
     kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSecondReshape ---> kSuccess
     Each status except kStart is connected with kFail
   */

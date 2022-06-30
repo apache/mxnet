@@ -17,7 +17,7 @@
  * under the License.
  */
 
-/*
+/*!
   \file
   \brief For fusing FullyConnected operator with element-wise add.
 
