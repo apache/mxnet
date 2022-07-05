@@ -320,7 +320,7 @@ def function_fc_add(data_shape, add_op, quantize_mode, fc_out_add, flatten, relu
     data_shapes = [data_shape, (*data_shape[0:-1], num_hidden)]
   check_fusion(net, data_shapes, attrs,
                out_types=[out_type],
-               check_fp32_fusion=(quantize_mode is None),
+               check_fusion=(quantize_mode is None),
                check_quantization=(quantize_mode is not None) and flatten,
                quantize_mode=quantize_mode)
 

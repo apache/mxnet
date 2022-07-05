@@ -21,9 +21,10 @@
  * \file elemwise_binary_scalar_op_extended.cc
  * \brief CPU Implementation of extended binary scalar functions.
  */
-#include "./elemwise_unary_op.h"
-#include "./elemwise_binary_op.h"
-#include "./elemwise_binary_scalar_op.h"
+#include "elemwise_unary_op.h"
+#include "elemwise_binary_op.h"
+#include "elemwise_binary_scalar_op.h"
+#include "operator/nn/dnnl/dnnl_pow_mul_scalar-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -66,9 +67,9 @@ void PowerComputeExCPU(const nnvm::NodeAttrs& attrs,
                        const std::vector<mxnet::NDArray>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<mxnet::NDArray>& outputs) {
-  if (SupportDNNLPower(inputs[0])) {
+  if (SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLPowerForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNLRun(DNNLPowMulScalarForward<false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(
         (BinaryScalarOp::Compute<cpu, mshadow_op::power>), attrs, ctx, inputs, req, outputs);
   } else {
