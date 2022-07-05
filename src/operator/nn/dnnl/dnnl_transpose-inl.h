@@ -33,8 +33,6 @@
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLTranspose(const NDArray& data);
-
 class DNNLTransposeFwd {
  public:
   std::shared_ptr<dnnl::memory> data_;

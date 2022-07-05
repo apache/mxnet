@@ -35,8 +35,6 @@ namespace op {
 
 class SgDNNLBNReLUSelector : public SubgraphSelector {
  public:
-  enum SelectStatus { kStart, kSuccess, kFail };
-
   explicit SgDNNLBNReLUSelector(const bool disable_bn_relu)
       : disable_bn_relu_(disable_bn_relu), status_(kStart) {}
 

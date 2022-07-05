@@ -50,6 +50,7 @@ int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
       property->SetAttr("graph", g);
       property->SetAttr("op_names", op_name_set);
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+      g                            = nnvm::ApplyPass(std::move(g), "EliminateCommonNodesPass");
       g                            = nnvm::ApplyPass(std::move(g), "BuildSubgraph");
       property->RemoveAttr("graph");
       g.attrs.erase("subgraph_property");

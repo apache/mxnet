@@ -216,7 +216,8 @@ def test_pos_conv_add4(no_bias, data_shape, out_type):
     #("softrelu", True), #TODO(bgawrych): bug in oneDNN with AVX
     ("relu6", False), #TODO(bgawrych): investigate
     ("leakyrelu", True),
-    ("gelu", True)
+    ("gelu", True),
+    ("gelu_tanh", True)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
@@ -232,10 +233,11 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
-        self.conv1.share_parameters(self.conv0.collect_params())
 
     def forward(self, x):
         out = self.act(self.conv0(x)) + self.conv1(x)
@@ -259,7 +261,8 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
     ("softrelu", False),
     ("relu6", True),
     ("leakyrelu", True),
-    ("gelu", True)
+    ("gelu", True),
+    ("gelu_tanh", True)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
@@ -275,6 +278,8 @@ def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
 
@@ -298,7 +303,8 @@ def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
     #("softrelu", True), #TODO(bgawrych): failing fusion check - difference in random single element
     ("relu6", False),
     ("leakyrelu", False),
-    ("gelu", False) #TODO: for True we get assert instead of not fusing pattern
+    ("gelu", False),
+    ("gelu_tanh", False)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
@@ -308,7 +314,6 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
         super(ConvBNSumAct, self).__init__(**kwargs)
         self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1)
-        self.conv1.share_parameters(self.conv0.collect_params())
         self.bn = nn.BatchNorm()
         if alg == "relu6":
           self.act = RELU6()
@@ -316,6 +321,8 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
 
@@ -324,7 +331,7 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
         out = self.act(out)
         return out
 
-  attr = {'conv': {'with_sum': 'true', 'with_postsum_act': 'true', 'with_bn': 'true'}}
+  attr = {'sg_onednn_conv_bn_add_act': {'with_sum': 'true', 'with_postsum_act': 'true', 'with_bn': 'true'}}
   net = ConvBNSumAct(alg, use_bias)
   check_fusion(net, data_shape, attr, check_quantization=quantize)
 
@@ -418,7 +425,8 @@ def test_pos_concat_scale_align(data_shape, out_type):
     ("softrelu", False),
     ("relu6", True),
     ("leakyrelu", True),
-    ("gelu", True)
+    ("gelu", True),
+    ("gelu_tanh", True)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_act(use_bias, data_shape, alg, quantize):
@@ -433,6 +441,8 @@ def test_pos_conv_act(use_bias, data_shape, alg, quantize):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
 

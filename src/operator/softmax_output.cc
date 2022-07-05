@@ -153,7 +153,7 @@ void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   const SoftmaxOutputParam& param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
-  if (SupportDNNL(inputs[0]) && !ctx.is_train && SupportDNNLSoftmaxOutput(param)) {
+  if (SupportDNNLSoftmaxOutput(param, inputs[0]) && !ctx.is_train) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLSoftmaxOutputForward, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);

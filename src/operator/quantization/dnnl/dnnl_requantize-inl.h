@@ -132,7 +132,8 @@ static void DNNLRequantizeForward(const nnvm::NodeAttrs& attrs,
         data_min = data_mins[i];
     }
     float src_range     = MinAbs(MinValue<SrcDType>(), MaxValue<SrcDType>());
-    SrcDType data_range = MaxAbs(data_min, data_max);
+    // MaxAbs is not used here as it converts data to float what could cause overflow errors.
+    SrcDType data_range = std::max(std::abs(data_min), std::abs(data_max));
     float data_scale    = MaxAbs(*inputs[1].data().dptr<float>(), *inputs[2].data().dptr<float>());
     real_range          = data_range * data_scale / src_range;
   }

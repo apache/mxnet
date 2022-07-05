@@ -28,13 +28,9 @@
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLEltwise(const NDArray& input, const NDArray& output) {
-  auto checkTensor = [](const NDArray& tensor) {
-    return (tensor.dtype() == mshadow::kFloat32 || tensor.dtype() == mshadow::kBfloat16) &&
-           tensor.shape().ndim() > 0 && tensor.shape().ndim() <= 12 && tensor.shape().Size() > 0 &&
-           SupportStorageDNNL(tensor.storage_type());
-  };
-  return checkTensor(input) && checkTensor(output);
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
+bool SupportDNNLEltwise(const NDArray& input) {
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(input);
 }
 
 DNNLEltwiseFwd& DNNLEltwiseFwd::GetCached(const NDArray& input,

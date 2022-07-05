@@ -58,7 +58,7 @@ enum OpReqType {
 };
 
 /*!
- * \brief All the possible information needed by Operator.Forward and Backward
+ * \brief All the possible information needed by Operator.
  *  This is the superset of RunContext.
  *  We use this data structure to bookkeep everything needed by Forward and Backward.
  * \sa Resource

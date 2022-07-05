@@ -40,13 +40,9 @@ inline static bool QuantizedTransposeStorageType(const nnvm::NodeAttrs& attrs,
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reorder.html
 bool SupportDNNLQuantizedTranspose(const NDArray& data) {
-  auto data_ndim = data.shape().ndim();
-
-  if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0)
-    return false;
-
-  return true;
+  return SupportDNNL<DNNLTypeMode::ByteTypes>(data);
 }
 typedef void (*TransposeFallbackFunAny)(const nnvm::NodeAttrs&,
                                         const OpContext&,

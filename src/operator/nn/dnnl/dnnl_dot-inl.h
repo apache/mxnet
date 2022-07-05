@@ -52,7 +52,8 @@ class DNNLDotFwd {
              const std::vector<NDArray>& outputs,
              const bool isNumpy);
 
-  void Execute(const std::vector<NDArray>& inputs,
+  void Execute(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
                const std::vector<OpReqType>& req,
                const std::vector<NDArray>& outputs,
                const bool isNumpy);
@@ -78,7 +79,7 @@ void DNNLDotForward(const nnvm::NodeAttrs& attrs,
     param = nnvm::get<DotParam>(attrs.parsed);
   }
   DNNLDotFwd& fwd = DNNLDotFwd::GetCached(param, inputs, outputs, isNumpy);
-  fwd.Execute(inputs, req, outputs, isNumpy);
+  fwd.Execute(ctx, inputs, req, outputs, isNumpy);
 }
 }  // namespace op
 }  // namespace mxnet
