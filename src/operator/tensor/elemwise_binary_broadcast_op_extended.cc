@@ -39,8 +39,8 @@ Example::
    y = [[ 0.],
         [ 1.]]
 
-   broadcast_power(x, y) = [[ 2.,  2.,  2.],
-                            [ 4.,  4.,  4.]]
+   broadcast_power(x, y) = [[ 1.,  1.,  1.],
+                            [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
@@ -112,7 +112,7 @@ Example::
    y = [[ 0.],
         [ 1.]]
 
-   broadcast_maximum(x, y) = [[ 0.,  0.,  0.],
+   broadcast_minimum(x, y) = [[ 0.,  0.,  0.],
                               [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
