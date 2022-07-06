@@ -95,7 +95,7 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
   }
 
   void Reset() override {
-    status_   = kFail;
+    status_   = kExpand;
     castDtype = -1;
   }
 };
