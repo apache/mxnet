@@ -181,6 +181,15 @@ class SgDNNLFCSumFuseProperty : public SubgraphProperty {
     return selector;
   }
 
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
+    // Connect all extern output entries to output[0]
+    for (size_t i = 0; i < output_entries->size(); ++i) {
+      auto entry_ptr = output_entries->at(i);
+      *entry_ptr     = nnvm::NodeEntry{n, entry_ptr->index, 0};
+    }
+  }
+
   void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
                              std::vector<nnvm::NodeEntry*>* input_entries,
                              std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
