@@ -112,15 +112,28 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
                          const std::vector<NDArray>& in_data,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& out_data) {
-  const auto& default_param = full_param_.default_param;
-  const auto& dnnl_param    = full_param_.dnnl_param;
   const FCInputIndex idx(full_param_);
   CHECK_EQ(in_data.size(), idx.GetTotal());
+  const auto& default_param = full_param_.default_param;
+  const auto& dnnl_param    = full_param_.dnnl_param;
 
-  const bool has_bias      = !default_param.no_bias;
-  const bool quantized     = dnnl_param.quantized;
-  const bool out_quantized = dnnl_param.quantized && !dnnl_param.enable_float_output;
-  const bool channel_wise  = quantized && dnnl_param.channel_wise_quantize.has_value() &&
+  NDArray output;
+  if (dnnl_param.with_sum) {
+    output = PrepareOutputWithSum(in_data[idx.sum], out_data[0]);
+  } else {
+    output = out_data[0];
+  }
+
+  // dispatch to float version
+  if (!dnnl_param.quantized) {
+    DNNLFCForwardImpl(full_param_, ctx, in_data, req, {output});
+    return;
+  }
+
+  const bool has_bias       = !default_param.no_bias;
+  const bool quantized      = dnnl_param.quantized;
+  const bool out_quantized  = dnnl_param.quantized && !dnnl_param.enable_float_output;
+  const bool channel_wise   = quantized && dnnl_param.channel_wise_quantize.has_value() &&
                             dnnl_param.channel_wise_quantize.value();
 
   int index               = 0;
@@ -128,18 +141,6 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   const int out_min_index = out_quantized ? index++ : 0;
   const int out_max_index = out_quantized ? index++ : 0;
   CHECK_EQ(out_data.size(), index);  // index is equal to total number of outputs
-
-  NDArray output;
-  if (dnnl_param.with_sum) {
-    output = PrepareOutputWithSum(in_data[idx.sum], out_data[out_index]);
-  } else {
-    output = out_data[out_index];
-  }
-
-  if (!dnnl_param.quantized) {
-    DNNLFCForwardImpl(full_param_, ctx, in_data, req, {output});
-    return;
-  }
 
   std::vector<float> min_max_vec(MIN_MAX_COUNT);
   min_max_vec[kDataMin]   = 0.0f;
@@ -154,18 +155,16 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   NDArray data          = in_data[idx.data];
   const NDArray& weight = in_data[idx.weight];
 
-  if (dnnl_param.quantized) {
-    if (!channel_wise) {
-      min_max_vec[kWeightMin] = in_data[idx.weight_min].data().dptr<float>()[0];
-      min_max_vec[kWeightMax] = in_data[idx.weight_max].data().dptr<float>()[0];
-      if (has_bias) {
-        min_max_vec[kBiasMin] = in_data[idx.bias_min].data().dptr<float>()[0];
-        min_max_vec[kBiasMax] = in_data[idx.bias_max].data().dptr<float>()[0];
-      }
+  if (!channel_wise) {
+    min_max_vec[kWeightMin] = in_data[idx.weight_min].data().dptr<float>()[0];
+    min_max_vec[kWeightMax] = in_data[idx.weight_max].data().dptr<float>()[0];
+    if (has_bias) {
+      min_max_vec[kBiasMin] = in_data[idx.bias_min].data().dptr<float>()[0];
+      min_max_vec[kBiasMax] = in_data[idx.bias_max].data().dptr<float>()[0];
     }
-    min_max_vec[kDataMin] = in_data[idx.data_min].data().dptr<float>()[0];
-    min_max_vec[kDataMax] = in_data[idx.data_max].data().dptr<float>()[0];
   }
+  min_max_vec[kDataMin] = in_data[idx.data_min].data().dptr<float>()[0];
+  min_max_vec[kDataMax] = in_data[idx.data_max].data().dptr<float>()[0];
 
   initialized_ = CheckInitializationConditions(in_data, min_max_vec, channel_wise);
 
@@ -206,11 +205,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     dnnl::memory::desc out_md = CreateOutputMemoryDesc(output.shape(), output.dtype());
     cached_out_mem_           = std::make_shared<dnnl::memory>(out_md, engine);
 
-    bool support_channelwise_scale = false;
-
-    if (dnnl_param.quantized) {
-      support_channelwise_scale = PrepareQuantization(ctx, in_data, output, min_max_vec);
-    }
+    bool support_channelwise_scale = PrepareQuantization(ctx, in_data, output, min_max_vec);
 
     fwd_.reset(new DNNLFullyConnectedForward(full_param_,
                                              ctx.is_train,
@@ -310,8 +305,7 @@ NDArray SgDNNLFCOp::PrepareOutputWithSum(const NDArray& sum_input, const NDArray
 bool SgDNNLFCOp::CheckInitializationConditions(const std::vector<NDArray>& inputs,
                                                const std::vector<float>& min_max_vec,
                                                bool is_channel_wise) {
-  if (initialized_ && full_param_.dnnl_param.quantized &&
-      dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
+  if (initialized_ && dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
     bool has_bias = !full_param_.default_param.no_bias;
     if (cached_data_min_ != min_max_vec[kDataMin] || cached_data_max_ != min_max_vec[kDataMax] ||
         cached_sum_min_ != min_max_vec[kSumMin] || cached_sum_max_ != min_max_vec[kSumMax]) {
