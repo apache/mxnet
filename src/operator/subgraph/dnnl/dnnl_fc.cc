@@ -114,33 +114,29 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
                          const std::vector<NDArray>& out_data) {
   const FCInputIndex idx(full_param_);
   CHECK_EQ(in_data.size(), idx.GetTotal());
+  const int out_index       = 0;
+  const int out_min_index   = 1;
+  const int out_max_index   = 2;
+
   const auto& default_param = full_param_.default_param;
   const auto& dnnl_param    = full_param_.dnnl_param;
 
   NDArray output;
   if (dnnl_param.with_sum) {
-    output = PrepareOutputWithSum(in_data[idx.sum], out_data[0]);
+    output = PrepareOutputWithSum(in_data[idx.sum], out_data[out_index]);
   } else {
-    output = out_data[0];
+    output = out_data[out_index];
   }
 
-  // dispatch to float version
   if (!dnnl_param.quantized) {
+    // dispatch to float version
     DNNLFCForwardImpl(full_param_, ctx, in_data, req, {output});
     return;
   }
 
-  const bool has_bias       = !default_param.no_bias;
-  const bool quantized      = dnnl_param.quantized;
-  const bool out_quantized  = dnnl_param.quantized && !dnnl_param.enable_float_output;
-  const bool channel_wise   = quantized && dnnl_param.channel_wise_quantize.has_value() &&
-                            dnnl_param.channel_wise_quantize.value();
-
-  int index               = 0;
-  const int out_index     = index++;
-  const int out_min_index = out_quantized ? index++ : 0;
-  const int out_max_index = out_quantized ? index++ : 0;
-  CHECK_EQ(out_data.size(), index);  // index is equal to total number of outputs
+  const bool has_bias      = !default_param.no_bias;
+  const bool channel_wise =
+      dnnl_param.channel_wise_quantize.has_value() && dnnl_param.channel_wise_quantize.value();
 
   std::vector<float> min_max_vec(MIN_MAX_COUNT);
   min_max_vec[kDataMin]   = 0.0f;
@@ -236,7 +232,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
   DNNLStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
   DNNLStream::Get()->Submit();
 
-  if (dnnl_param.quantized && !dnnl_param.enable_float_output) {
+  if (!dnnl_param.enable_float_output) {
     float* output_min_ptr = out_data[out_min_index].data().dptr<float>();
     float* output_max_ptr = out_data[out_max_index].data().dptr<float>();
 
@@ -363,8 +359,8 @@ bool SgDNNLFCOp::PrepareQuantization(const OpContext& ctx,
   bool has_bias                  = !full_param_.default_param.no_bias;
   const NDArray& data            = in_data[fullc::kData];
   const NDArray& weight          = in_data[fullc::kWeight];
-  const bool channel_wise = dnnl_param.quantized && dnnl_param.channel_wise_quantize.has_value() &&
-                            dnnl_param.channel_wise_quantize.value();
+  const bool channel_wise =
+      dnnl_param.channel_wise_quantize.has_value() && dnnl_param.channel_wise_quantize.value();
 
   CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
   data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
