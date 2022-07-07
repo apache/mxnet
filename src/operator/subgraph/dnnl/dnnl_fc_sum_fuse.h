@@ -54,13 +54,6 @@ inline bool EndsWith(std::string const& value, std::string const& ending) {
 
 class SgDNNLFCSumFuseSelector : public SubgraphSelectorV2 {
  private:
-  /*! \brief pattern match status */
-  enum SelectStatus {
-    kFail = 0,
-    kStart,
-    kSuccess,
-  };
-
   bool quantized_;
   SelectStatus status_ = kFail;
   std::vector<const BiDirectedNode*> matched_list_;

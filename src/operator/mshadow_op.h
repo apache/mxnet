@@ -56,15 +56,17 @@ using mshadow::isinf_typed::IsInf;
 using mshadow::isnan_typed::IsNan;
 
 #ifdef __CUDA_ARCH__
-__constant__ const float PI          = 3.14159265358979323846;
-__constant__ const float SELU_ALPHA  = 1.6732632423543772848170429916717;
-__constant__ const float SELU_LAMBDA = 1.0507009873554804934193349852946;
-__constant__ const float SQRT_2      = 1.4142135623730950488016887242096;
+__constant__ const float PI              = 3.14159265358979323846;
+__constant__ const float SELU_ALPHA      = 1.6732632423543772848170429916717;
+__constant__ const float SELU_LAMBDA     = 1.0507009873554804934193349852946;
+__constant__ const float SQRT_2          = 1.4142135623730950488016887242096;
+__constant__ const float GELU_TANH_CONST = 0.044715;
 #else
-const float PI          = 3.14159265358979323846;
-const float SELU_ALPHA  = 1.6732632423543772848170429916717;
-const float SELU_LAMBDA = 1.0507009873554804934193349852946;
-const float SQRT_2      = 1.4142135623730950488016887242096;
+const float PI              = 3.14159265358979323846;
+const float SELU_ALPHA      = 1.6732632423543772848170429916717;
+const float SELU_LAMBDA     = 1.0507009873554804934193349852946;
+const float SQRT_2          = 1.4142135623730950488016887242096;
+const float GELU_TANH_CONST = 0.044715;
 #endif
 using std::enable_if;
 using std::is_integral;
@@ -612,14 +614,31 @@ MXNET_UNARY_MATH_OP(erf_grad, 2.0 / math::sqrt(PI) * math::exp(-(a * a)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(erf);
 
-MXNET_UNARY_MATH_OP(gelu,
+MXNET_UNARY_MATH_OP(gelu_erf,
                     DType(0.5f * static_cast<float>(a) *
                           (1.0f + math::erf(static_cast<float>(a) / SQRT_2))));
 
-MXNET_BINARY_MATH_OP_NC(gelu_grad,
-                        DType(0.5f * (1.0f + math::erf(static_cast<float>(a) / SQRT_2) +
-                                      static_cast<float>(a) *
-                                          erf_grad::Map(static_cast<float>(a) / SQRT_2) / SQRT_2)));
+MXNET_BINARY_MATH_OP_NC(gelu_erf_grad,
+                        DType(static_cast<float>(b) / static_cast<float>(a) +
+                              0.5f * static_cast<float>(a) *
+                                  erf_grad::Map(static_cast<float>(a) / SQRT_2) / SQRT_2));
+
+MXNET_UNARY_MATH_OP(gelu_tanh,
+                    DType(0.5f * static_cast<float>(a) *
+                          (1.0f +
+                           math::tanh(math::sqrt(2.0f / PI) *
+                                      (static_cast<float>(a) +
+                                       GELU_TANH_CONST * math::pow(static_cast<float>(a), 3))))));
+
+MXNET_BINARY_MATH_OP_NC(
+    gelu_tanh_grad,
+    DType(static_cast<float>(b) *
+          (1.0f / static_cast<float>(a) +
+           (1.0f - math::tanh(math::sqrt(2.0f / PI) *
+                              (static_cast<float>(a) +
+                               GELU_TANH_CONST * math::pow(static_cast<float>(a), 3))) *
+                       (math::sqrt(2.0f / PI) *
+                        (1.0f + 3.0f * GELU_TANH_CONST * math::pow(static_cast<float>(a), 2)))))));
 
 MXNET_SIMPLE_UNARY_MATH_OP(exp);
 

@@ -29,6 +29,8 @@
 namespace mxnet {
 namespace op {
 
+enum SelectStatus { kFail = 0, kStart, kSuccess };
+
 inline uint32_t DefaultSubgraphOpNumInputs(const nnvm::NodeAttrs& attrs) {
   const nnvm::Symbol& sym = *attrs.subgraphs[0];
   return sym.ListInputNames(nnvm::Symbol::kAll).size();

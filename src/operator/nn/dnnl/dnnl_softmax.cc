@@ -33,7 +33,7 @@ namespace op {
 bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& data) {
   const int ndim      = data.shape().ndim();
   const int out_dtype = param.dtype.has_value() ? param.dtype.value() : data.dtype();
-  return !(param.temperature.has_value() && param.temperature.value() != 0.0) &&
+  return !(param.temperature.has_value() && param.temperature.value() == 0.0) &&
          CheckAxis(param.axis, ndim) == (ndim - 1) && SupportDNNL<DNNLTypeMode::NoInt32>(data) &&
          out_dtype == data.dtype();
 }

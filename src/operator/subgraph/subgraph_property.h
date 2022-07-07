@@ -192,7 +192,7 @@ class SubgraphSelectorV2 {
   /*!
    * \brief Post processes pre-selected subgraph nodes. Return a list of nodes that
    *        users want to keep in subgraph(s).
-   * \param candidates re-selected subgraph nodes to filt
+   * \param candidates re-selected subgraph nodes to filter
    * \return a list of nodes to keep
    */
   virtual std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) {

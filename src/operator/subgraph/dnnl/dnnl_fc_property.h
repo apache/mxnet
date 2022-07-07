@@ -40,14 +40,6 @@ namespace mxnet {
 namespace op {
 
 class SgDNNLFCSelector : public SubgraphSelector {
- public:
-  /* pattern match status */
-  enum SelectStatus {
-    kFail = 0,
-    kStart,
-    kSuccess,
-  };
-
  private:
   bool disable_fc_eltwise_;
   bool quantized_;
@@ -175,7 +167,9 @@ class SgDNNLFCProperty : public SubgraphProperty {
 
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
-    nnvm::ObjectPtr n = nnvm::Node::Create();
+    // distingush between exactly same node in different networks - for caching weights
+    static unsigned int node_identifier = 0;
+    nnvm::ObjectPtr n                   = nnvm::Node::Create();
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
     nnvm::Symbol new_sym;
@@ -197,6 +191,7 @@ class SgDNNLFCProperty : public SubgraphProperty {
     n->attrs.name = node_name.str();
     n->attrs.op   = Op::Get("_sg_onednn_fully_connected");
     CHECK(n->attrs.op);
+    n->attrs.dict["__identifier__"] = std::to_string(node_identifier++);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));
     return n;

@@ -55,7 +55,7 @@ bool SupportDNNLAct(const ActivationParam& param, const NDArray& input) {
 
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param) {
   return param.act_type == leakyrelu::kLeakyReLU || param.act_type == leakyrelu::kELU ||
-         param.act_type == leakyrelu::kGELU;
+         param.act_type == leakyrelu::kGELU_ERF || param.act_type == leakyrelu::kGELU_TANH;
 }
 
 // Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
@@ -96,8 +96,10 @@ dnnl::algorithm GetDNNLActAlgo(const LeakyReLUParam& param) {
       return dnnl::algorithm::eltwise_relu;
     case leakyrelu::kELU:
       return dnnl::algorithm::eltwise_elu;
-    case leakyrelu::kGELU:
+    case leakyrelu::kGELU_ERF:
       return dnnl::algorithm::eltwise_gelu_erf;
+    case leakyrelu::kGELU_TANH:
+      return dnnl::algorithm::eltwise_gelu_tanh;
     default:
       LOG(FATAL) << "unknown activation type for LeakyReLU: " << param.act_type;
       return dnnl::algorithm::eltwise_relu;

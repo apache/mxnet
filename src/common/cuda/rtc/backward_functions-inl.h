@@ -325,7 +325,7 @@ backward_digamma(const DTypeGrad grad, const DType val) {
 
 template <typename DType, typename DTypeGrad>
 __device__ inline mixed_type<DTypeGrad, DType>
-backward_gelu(const DTypeGrad grad, const DType val) {
+backward_gelu_erf(const DTypeGrad grad, const DType val) {
   return 0.5f * (grad + grad * op::erf(val / op::sqrt(2.0f)) +
                  val * backward_erf(grad, val / op::sqrt(2.0f)) / op::sqrt(2.0f));
 }
