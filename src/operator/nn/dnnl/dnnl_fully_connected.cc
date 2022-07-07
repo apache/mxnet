@@ -123,7 +123,7 @@ inline static dnnl::inner_product_backward_weights::primitive_desc GetFCBwdWeigh
   }
 }
 
-DNNLFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
+DNNLFullyConnectedForward& GetFCFwd(const DNNLFCFullParam& param,
                                     const bool is_train,
                                     const NDArray& data,
                                     const NDArray& weight,
@@ -146,10 +146,7 @@ DNNLFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
 
   auto it = fcFwds.find(key);
   if (it == fcFwds.end()) {
-    DNNLFCFullParam full_param;
-    full_param.default_param = param;
-    full_param.dnnl_param.Init(std::unordered_map<std::string, std::string>());
-    DNNLFullyConnectedForward fcFwd(full_param, is_train, data, weight, bias, out_md);
+    DNNLFullyConnectedForward fcFwd(param, is_train, data, weight, bias, out_md);
     it = AddToCache(&fcFwds, key, fcFwd);
   }
   return it->second;
@@ -230,11 +227,18 @@ void DNNLFCForward(const nnvm::NodeAttrs& attrs,
   DNNLFCFullParam full_param;
   full_param.default_param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   full_param.dnnl_param.Init(std::unordered_map<std::string, std::string>());
+  DNNLFCForwardImpl(full_param, ctx, in_data, req, out_data);
+}
 
+void DNNLFCForwardImpl(const DNNLFCFullParam& full_param,
+                       const OpContext& ctx,
+                       const std::vector<NDArray>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& out_data) {
   NDArray data              = in_data[fullc::kData];
   dnnl::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);
   DNNLFCFlattenData(full_param.default_param, out_data[fullc::kOut], &data, &out_md);
-  auto& fwd = GetFCFwd(full_param.default_param,
+  auto& fwd = GetFCFwd(full_param,
                        ctx.is_train,
                        data,
                        in_data[fullc::kWeight],

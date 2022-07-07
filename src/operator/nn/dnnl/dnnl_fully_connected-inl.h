@@ -78,14 +78,31 @@ struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
         .set_default(dmlc::optional<int>())
             MXNET_ADD_ALL_TYPES.describe("The output type deduced from the fused amp_cast.");
   }
+
+  bool operator==(const DNNLFCParam& other) const {
+    return this->quantized == other.quantized &&
+           this->enable_float_output == other.enable_float_output &&
+           this->with_eltwise == other.with_eltwise && this->with_sum == other.with_sum &&
+           this->min_calib_range == other.min_calib_range &&
+           this->max_calib_range == other.max_calib_range &&
+           this->channel_wise_quantize == other.channel_wise_quantize &&
+           this->amp_out_dtype == other.amp_out_dtype;
+  }
 };
 
-struct DNNLFCFullParam {
+struct DNNLFCFullParam : public dmlc::Parameter<DNNLFCFullParam> {
   FullyConnectedParam default_param;
   DNNLFCParam dnnl_param;
   DNNLPostEltwiseParam eltwise_param;
   float sum_scale                  = {1.0f};
   std::vector<float> output_scales = {0.0f};
+  DMLC_DECLARE_PARAMETER(DNNLFCFullParam) {}
+
+  bool operator==(const DNNLFCFullParam& other) const {
+    return this->default_param == other.default_param && this->dnnl_param == other.dnnl_param &&
+           this->eltwise_param == other.eltwise_param && this->sum_scale == other.sum_scale &&
+           this->output_scales == other.output_scales;
+  }
 };
 
 static inline size_t GetInSumIndex(const DNNLFCFullParam& param) {
@@ -193,9 +210,9 @@ class DNNLFullyConnectedForward {
   std::shared_ptr<dnnl::inner_product_forward> fwd_;
 };
 
-typedef ParamOpSign<FullyConnectedParam> DNNLFullyconSignature;
+typedef ParamOpSign<DNNLFCFullParam> DNNLFullyconSignature;
 
-DNNLFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
+DNNLFullyConnectedForward& GetFCFwd(const DNNLFCFullParam& param,
                                     const bool is_train,
                                     const NDArray& data,
                                     const NDArray& weight,
@@ -213,6 +230,12 @@ void DNNLFCForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<NDArray>& out_data);
 
+void DNNLFCForwardImpl(const DNNLFCFullParam& full_param,
+                       const OpContext& ctx,
+                       const std::vector<NDArray>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& out_data);
+
 void DNNLFCForwardFullFeature(const DNNLFCFullParam& param,
                               const OpContext& ctx,
                               DNNLFullyConnectedForward* fwd,
@@ -228,6 +251,41 @@ void DNNLFCBackward(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+
+template <>
+struct hash<mxnet::op::DNNLFCParam> {
+  size_t operator()(const mxnet::op::DNNLFCParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.min_calib_range.has_value() ? val.min_calib_range.value() : 0);
+    ret = dmlc::HashCombine(ret, val.max_calib_range.has_value() ? val.max_calib_range.value() : 0);
+    ret = dmlc::HashCombine(
+        ret, val.channel_wise_quantize.has_value() ? val.channel_wise_quantize.value() : 0);
+    ret = dmlc::HashCombine(ret, val.amp_out_dtype.has_value() ? val.amp_out_dtype.value() : 0);
+    ret = dmlc::HashCombine(ret, val.quantized);
+    ret = dmlc::HashCombine(ret, val.enable_float_output);
+    ret = dmlc::HashCombine(ret, val.with_eltwise);
+    ret = dmlc::HashCombine(ret, val.with_sum);
+
+    return ret;
+  }
+};
+
+template <>
+struct hash<mxnet::op::DNNLFCFullParam> {
+  size_t operator()(const mxnet::op::DNNLFCFullParam& val) {
+    size_t ret = 0;
+    ret        = dmlc::HashCombine(ret, val.default_param);
+    ret        = dmlc::HashCombine(ret, val.dnnl_param);
+    ret        = dmlc::HashCombine(ret, val.eltwise_param);
+    ret        = dmlc::HashCombine(ret, val.sum_scale);
+    for (const auto& v : val.output_scales)
+      ret = dmlc::HashCombine(ret, v);
+    return ret;
+  }
+};
+}  // namespace std
 
 #endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_DNNL_DNNL_FULLY_CONNECTED_INL_H_
