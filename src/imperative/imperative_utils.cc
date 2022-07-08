@@ -138,7 +138,8 @@ void RunGraph(const bool retain_graph,
               bool recording,
               mxnet::ShapeVector* shapes,
               const imperative::CachedOpMonCallback& callback,
-              const bool monitor_all) {
+              const bool monitor_all,
+              const std::vector<NDArray*>& nleafs) {
   CHECK(shapes == nullptr);
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
@@ -165,6 +166,15 @@ void RunGraph(const bool retain_graph,
         idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs, &req, &ref_count, invoke);
     if (callback) {
       mxnet::common::ExecuteMonOutputCallback(idx, arrays, i, callback);
+    }
+    // set the autograd_entry_ in marked nleafs
+    if (nleafs.size()) {
+      auto it = node.source->attrs.dict.find("mark_id");
+      if (it != node.source->attrs.dict.end()) {
+        int mark_id = std::stoi(it->second);
+        CHECK_LT(mark_id, nleafs.size()) << "Mark_id exceeds the nonleaf list size.";
+        nleafs[mark_id]->copy_autograd_entry_(ndoutputs[0]);
+      }
     }
   }
 }

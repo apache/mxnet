@@ -290,6 +290,8 @@ class Imperative {
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<uint32_t>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
+  /*! \brief mark nonleaf variables during DC for computing gradients. */
+  void MarkDCVariables(const std::vector<NDArray*>& nleafs, int cnt_vars);
   /*! \brief unmark nonleaf variables to free the memory. */
   void DropGrads(const std::vector<NDArray*>& variables);
   /*! \brief compute the gradient of outputs w.r.t variables. */

@@ -44,16 +44,18 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
         ndinputs.push_back(static_cast<mxnet::NDArray*>(args[i]));
       }
 
+      int num_outputs = args[num_inputs + 4];
+      int num_nleafs  = args[num_inputs + num_outputs + 5];
       std::vector<NDArray*> ndoutputs;
       ndoutputs.reserve(op->num_outputs());
-      if (args[num_inputs + 4].type_code() == kNull) {
+      if (args[num_inputs + 5].type_code() == kNull) {
         for (int i = 0; i < op->num_outputs(); ++i)
           ndoutputs.push_back(new NDArray());
       } else {
-        int array_size = args_size - num_inputs - 4;
+        int array_size = args_size - num_inputs - num_nleafs - 6;
         CHECK_EQ(array_size, op->num_outputs()) << "CachedOp expects " << op->num_outputs()
                                                 << " outputs, but " << array_size << " was given.";
-        for (int i = num_inputs + 4; i < array_size; ++i) {
+        for (int i = num_inputs + 5; i < num_inputs + num_outputs + 5; ++i) {
           ndoutputs.push_back(args[i].operator mxnet::NDArray*());
         }
       }
@@ -68,6 +70,13 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
         default_dev_type   = ctx.dev_type;
         default_dev_id     = ctx.dev_id;
       }
+
+      std::vector<NDArray*> nleafs;
+      nleafs.reserve(num_nleafs);
+      for (int i = 0; i < num_nleafs; ++i) {
+        nleafs.push_back(static_cast<mxnet::NDArray*>(args[i + num_inputs + num_outputs + 6]));
+      }
+      op->set_nleafs(nleafs);
 
       // construct default context
       Context ctx =

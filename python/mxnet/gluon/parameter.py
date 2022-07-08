@@ -773,3 +773,40 @@ class Constant(Parameter):
             warnings.warn('Constant parameter "{}" does not support '
                           'grad_req other than "null", and new value "{}" '
                           'is ignored.'.format(self.name, req))
+
+class Intermediate:
+    """A Container holding marked intermediate variables of Blocks.
+
+    Parameters
+    ----------
+    name : str.
+        Name of this parameter. It be used to retrieve the marked variables.
+    grad_req : {'write', 'add', 'null'}, default 'write'
+        Specifies how to update gradient to grad arrays.
+
+        - ``'write'`` means everytime gradient is written to grad :py:class:`NDArray`.
+        - ``'add'`` means everytime gradient is added to the grad :py:class:`NDArray`. You need
+          to manually call ``zero_grad()`` to clear the gradient buffer before each
+          iteration when using this option.
+        - 'null' means gradient is not requested for this parameter. gradient arrays
+          will not be allocated.
+    """
+    def __init__(self, name, data=None, grad_req='write'):
+        self._name = name
+        self._data = data
+        self._grad_req = grad_req
+
+    def __repr__(self):
+        s = 'Intermediate name={name}'
+        return s.format(name=self._name)
+
+    def data(self):
+        return self._data
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def grad_req(self):
+        return self._grad_req

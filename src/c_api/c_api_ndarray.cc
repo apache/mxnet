@@ -495,3 +495,15 @@ int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle* output_handles,
   *out = s;
   API_END_HANDLE_ERROR(delete s;);
 }
+
+int MXNDArrayMarkDCVariables(NDArrayHandle* nleaf_handles, int num_nleafs, int cnt_var) {
+  API_BEGIN();
+  std::vector<NDArray*> nleafs;
+  nleafs.reserve(num_nleafs);
+  for (int i = 0; i < num_nleafs; ++i) {
+    NDArray* array = reinterpret_cast<NDArray*>(nleaf_handles[i]);
+    nleafs.emplace_back(array);
+  }
+  Imperative::Get()->MarkDCVariables(nleafs, cnt_var);
+  API_END();
+}

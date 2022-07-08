@@ -33,13 +33,14 @@ import re
 import json
 import numpy as np
 
-from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB
+from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB, \
+    _as_list
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, device as _device
 from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol, fromjson
 from ..ndarray import NDArray, get_dtype_name
-from .parameter import Parameter, DeferredInitializationError
+from .parameter import Parameter, DeferredInitializationError, Intermediate
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays, _check_block_input_np_ndarrays
 from .. import numpy_extension as _mx_npx
@@ -1091,6 +1092,7 @@ class HybridBlock(Block):
         self._backend_opts = {}
         self._partition_if_dynamic = True
         self._first_forward = True
+        self._nleaf_vars = OrderedDict()
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -1302,7 +1304,7 @@ class HybridBlock(Block):
         args_without_none = [ele for ele in args if ele is not None]
         cargs = [args_without_none[i] if is_arg else i.data()
                  for is_arg, name, i in self._cached_op_args]
-        out = self._cached_op(*cargs)
+        out = self._cached_op(*cargs, _nleaf_vars=self._nleaf_vars.values())
         if isinstance(out, NDArray):
             out = [out]
         return _regroup(out, self._out_format)
@@ -1677,6 +1679,92 @@ class HybridBlock(Block):
                       ' HybridBlock.reset_device', DeprecationWarning)
         self.reset_device(ctx)
 
+
+    def intermediate(self, names, var_arrays_inp, grad_req='write'):
+        """Mark the intermediate variables.
+
+        Parameters
+        ----------
+        name : str or tuple[str], name of the registered intermediate variable
+        var_arrays_inp : ndarray or tuple[ndarray], the output of the expression
+        grad_req : str, gradient request
+        """
+        if not self._active:
+            var_arrays = _as_list(var_arrays_inp)
+            names = _as_list(names)
+            self._nleaf_vars.update(
+                {name : Intermediate(name, array, grad_req) for name, array in zip(names, var_arrays)})
+        else:
+            prev_val = dc.set_deferred_compute(False)
+            var_arrays = _as_list(var_arrays_inp)
+            names = _as_list(names)
+            # Prepare ctypes array types
+            import ctypes
+            var_handles_type = ctypes.c_void_p * len(var_arrays)
+            # Convert handles
+            var_handles = var_handles_type(*[arr.handle for arr in var_arrays])
+            check_call(_LIB.MXNDArrayMarkDCVariables(var_handles, len(var_arrays), len(self._nleaf_vars)))
+            self._nleaf_vars.update(
+                {name : Intermediate(name, array, grad_req) for name, array in zip(names, var_arrays)})
+            dc.set_deferred_compute(prev_val)
+        return var_arrays_inp
+
+    def attach_grad_intermediate(self):
+        """Attach gradient to all the intermediate variables.
+        """
+        for val in self._nleaf_vars.values():
+            val.data().attach_grad(grad_req=val.grad_req)
+
+    def get_intermediate(self, names):
+        """Get the intermediate variables by names
+        """
+        if isinstance(names, list):
+            return [self._nleaf_vars[n] for n in names]
+        else:
+            return self._nleaf_vars[names]
+
+    def intermediate(self, names, var_arrays_inp, grad_req='write'):
+        """Mark the intermediate variables.
+
+        Parameters
+        ----------
+        name : str or tuple[str], name of the registered intermediate variable
+        var_arrays_inp : ndarray or tuple[ndarray], the output of the expression
+        grad_req : str, gradient request
+        """
+        if not self._active:
+            var_arrays = _as_list(var_arrays_inp)
+            names = _as_list(names)
+            self._nleaf_vars.update(
+                {name : Intermediate(name, array, grad_req) for name, array in zip(names, var_arrays)})
+        else:
+            prev_val = dc.set_deferred_compute(False)
+            var_arrays = _as_list(var_arrays_inp)
+            names = _as_list(names)
+            # Prepare ctypes array types
+            import ctypes
+            var_handles_type = ctypes.c_void_p * len(var_arrays)
+            # Convert handles
+            var_handles = var_handles_type(*[arr.handle for arr in var_arrays])
+            check_call(_LIB.MXNDArrayMarkDCVariables(var_handles, len(var_arrays), len(self._nleaf_vars)))
+            self._nleaf_vars.update(
+                {name : Intermediate(name, array, grad_req) for name, array in zip(names, var_arrays)})
+            dc.set_deferred_compute(prev_val)
+        return var_arrays_inp
+
+    def attach_grad_intermediate(self):
+        """Attach gradient to all the intermediate variables.
+        """
+        for val in self._nleaf_vars.values():
+            val.data().attach_grad(grad_req=val.grad_req)
+
+    def get_intermediate(self, names):
+        """Get the intermediate variables by names
+        """
+        if isinstance(names, list):
+            return [self._nleaf_vars[n] for n in names]
+        else:
+            return self._nleaf_vars[names]
 
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
