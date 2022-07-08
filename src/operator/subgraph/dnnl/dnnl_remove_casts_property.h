@@ -95,7 +95,7 @@ class SgDNNLRemoveCastsSelector : public SubgraphSelectorV2 {
   }
 
   void Reset() override {
-    status_   = kExpand;
+    status_   = kFail;
     castDtype = -1;
   }
 };
@@ -105,7 +105,7 @@ class SgDNNLRemoveCastsProperty : public SubgraphProperty {
   SgDNNLRemoveCastsProperty() {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string& name = "Remove Casts optimization pass";
+    static const std::string& name = "Remove casts optimization pass";
     auto property                  = std::make_shared<SgDNNLRemoveCastsProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
@@ -136,15 +136,6 @@ class SgDNNLRemoveCastsProperty : public SubgraphProperty {
   SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const override {
     auto selector = std::make_shared<SgDNNLRemoveCastsSelector>();
     return selector;
-  }
-
-  void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
-                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
-    // Connect all extern output entries to output[0]
-    for (size_t i = 0; i < output_entries->size(); ++i) {
-      auto entry_ptr = output_entries->at(i);
-      *entry_ptr     = nnvm::NodeEntry{subgraph_node, entry_ptr->index, 0};
-    }
   }
 };
 
