@@ -254,7 +254,6 @@ inline void IndexUpdateOpBackwardA(const nnvm::NodeAttrs& attrs,
   TBlob ograd             = inputs[0];
   TBlob ind               = inputs[1];
   const TBlob& grad_a     = outputs[0];
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   // get the number of 'ind' index
   if (ind.shape_.ndim() == 0) {
     ind.shape_ = Shape2(1, 1);

@@ -279,8 +279,6 @@ void DNNLQuantizedRnnOp::Forward(const OpContext& op_ctx,
   char* dst_state         = nullptr;  // Output state
   char* src_state_cell    = nullptr;  // Used in LSTM for cell state
   char* dst_state_cell    = nullptr;  // Used in LSTM for cell state
-  const size_t cell_bytes = (default_param.bidirectional + 1) * default_param.batch_size_ *
-                            default_param.state_size * mshadow::mshadow_sizeof(data_dtype);
 
   if (default_param.state_outputs && req[rnn_enum::kStateOut] != kNullOp) {
     stateout_mem =

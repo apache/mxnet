@@ -787,7 +787,7 @@ struct ScopeSet {
   T saveValue_;
 };
 
-static void AssertEqual(const std::vector<NDArray*>& in_arrs,
+static inline void AssertEqual(const std::vector<NDArray*>& in_arrs,
                         const std::vector<NDArray*>& out_arrs,
                         float rtol           = 1e-5,
                         float atol           = 1e-8,
