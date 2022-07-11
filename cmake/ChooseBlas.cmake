@@ -16,13 +16,14 @@
 # under the License.
 
 set(BLAS "Open" CACHE STRING "Selected BLAS library")
-set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL")
+set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL;FlexiBLAS")
 # ---[ Root folders
 set(INTEL_HOME_ROOT "$ENV{HOME}/intel" CACHE PATH "Folder contains user-installed intel libs")
 set(INTEL_OPT_ROOT "/opt/intel" CACHE PATH "Folder contains root-installed intel libs")
 
 if(DEFINED USE_BLAS)
   set(BLAS "${USE_BLAS}")
+  message(STATUS "BLAS is set to ${USE_BLAS}")
 endif()
 if(USE_BLAS MATCHES "MKL" OR USE_BLAS MATCHES "mkl" OR NOT DEFINED USE_BLAS)
   find_path(MKL_INCLUDE_DIR mkl_version.h
@@ -33,7 +34,14 @@ if(USE_BLAS MATCHES "MKL" OR USE_BLAS MATCHES "mkl" OR NOT DEFINED USE_BLAS)
   endif()
 endif()
 
-if(BLAS STREQUAL "Atlas" OR BLAS STREQUAL "atlas")
+if(BLAS STREQUAL "FlexiBLAS" OR BLAS STREQUAL "flexiblas")
+  find_package(BLAS REQUIRED)
+  include_directories(SYSTEM ${BLAS_INCLUDE_DIR})
+  list(APPEND mshadow_LINKER_LIBS ${BLAS_LIBRARIES})
+  add_definitions(-DMSHADOW_USE_CBLAS=1)
+  add_definitions(-DMSHADOW_USE_MKL=0)
+  add_definitions(-DMXNET_USE_LAPACK=1)
+elseif(BLAS STREQUAL "Atlas" OR BLAS STREQUAL "atlas")
   find_package(Atlas REQUIRED)
   include_directories(SYSTEM ${Atlas_INCLUDE_DIR})
   list(APPEND mshadow_LINKER_LIBS ${Atlas_LIBRARIES})
