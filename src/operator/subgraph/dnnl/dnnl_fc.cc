@@ -114,9 +114,9 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
                          const std::vector<NDArray>& out_data) {
   const FCInputIndex idx(full_param_);
   CHECK_EQ(in_data.size(), idx.GetTotal());
-  const int out_index       = 0;
-  const int out_min_index   = 1;
-  const int out_max_index   = 2;
+  const int out_index     = 0;
+  const int out_min_index = 1;
+  const int out_max_index = 2;
 
   const auto& default_param = full_param_.default_param;
   const auto& dnnl_param    = full_param_.dnnl_param;
@@ -134,7 +134,7 @@ void SgDNNLFCOp::Forward(const OpContext& ctx,
     return;
   }
 
-  const bool has_bias      = !default_param.no_bias;
+  const bool has_bias = !default_param.no_bias;
   const bool channel_wise =
       dnnl_param.channel_wise_quantize.has_value() && dnnl_param.channel_wise_quantize.value();
 
