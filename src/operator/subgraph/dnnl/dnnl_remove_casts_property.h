@@ -142,7 +142,7 @@ class SgDNNLRemoveCastsProperty : public SubgraphProperty {
                               std::vector<nnvm::NodeEntry*>* output_entries) const override {
     // Connect all extern output entries to output[0]
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      *output_entries->at(i)     = nnvm::NodeEntry{subgraph_node, 0, 0};
+      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, 0, 0};
     }
   }
 };
