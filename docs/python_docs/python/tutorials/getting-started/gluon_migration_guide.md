@@ -21,7 +21,7 @@
 ## Overview
 Since the introduction of the Gluon API in MXNet 1.x, it has superseded commonly used symbolic, module and model APIs for model development. In fact, Gluon was the first in the deep learning community to unify the flexibility of imperative programming with the performance benefits of symbolic programming, through just-in-time compilation.
 
-In Gluon2.0, we extend the support to MXNet numpy and numpy extension with simplified interface and new functionalities:
+In Gluon2.0, we extend the support to MXNet NumPy and NumPy extension with simplified interface and new functionalities:
 
 - **Simplified hybridization with deferred compute and tracing**: Deferred compute allows the imperative execution to be used for graph construction, which allows us to unify the historic divergence of NDArray and Symbol. Hybridization now works in a simplified hybrid forward interface. Users only need to specify the computation through imperative programming. Hybridization also works through tracing, i.e. tracing the data flow of the first input data to create a graph.
 
@@ -31,7 +31,7 @@ In Gluon2.0, we extend the support to MXNet numpy and numpy extension with simpl
 
 - **Gluon Probability**: parameterizable probability distributions and sampling functions to facilitate more areas of research such as Baysian methods and AutoML.
 
-- **Gluon Metrics** and **Optimizers**: refactored with MXNet numpy interface and addressed legacy issues.
+- **Gluon Metrics** and **Optimizers**: refactored with MXNet NumPy interface and addressed legacy issues.
 
 Adopting these new functionalities may or may not require modifications on your models. But don't worry, this migration guide will go through a high-level mapping from old functionality to new APIs and make Gluon2.0 migration a hassle-free experience.
 
