@@ -236,10 +236,11 @@ struct rtrue_divide : public mxnet_op::tunable {
 /***** floor_divide ******/
 
 struct floor_divide : public mxnet_op::tunable {
-  template <
-      typename DType,
-      typename std::enable_if<!std::is_same<DType, bool>::value && std::is_integral<DType>::value,
-                              int>::type = 0>
+  template <typename DType,
+            typename std::enable_if<!std::is_same<DType, bool>::value &&
+                                        (std::is_integral<DType>::value ||
+                                         std::is_same<DType, mshadow::half::half_t>::value),
+                                    int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return static_cast<DType>(::floor(static_cast<double>(a) / static_cast<double>(b)));
   }
@@ -248,10 +249,11 @@ struct floor_divide : public mxnet_op::tunable {
     return static_cast<bool>(::floor(a / b));
   }
 
-  template <
-      typename DType,
-      typename std::enable_if<!std::is_integral<DType>::value && !std::is_same<DType, float>::value,
-                              int>::type = 0>
+  template <typename DType,
+            typename std::enable_if<!std::is_integral<DType>::value &&
+                                        !std::is_same<DType, float>::value &&
+                                        !std::is_same<DType, mshadow::half::half_t>::value,
+                                    int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return ::floor(a / b);
   }
