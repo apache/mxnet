@@ -784,5 +784,5 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
 PARAMS_OF_TYPE_NP_ARRAY = ["x1", "x2", "prototype", "source_array", "object", "a", "b", "fill_value", "array", "x", "arr",
                            "values", "ary", "seq", "arrays", "tup", "indices", "m", "ar", "q", "p", "condition",
                            "arys", "v", "A", "xp", "fp", "data", "gamma", "beta", "running_mean", "moving_mean", "moving_var",
-                           "running_var", "weight", "index", "lhs", "rhs", 'parameters', 'state', "mask", "bias"]
+                           "running_var", "weight", "index", "lhs", "rhs", "parameters", "state", "mask", "bias"]
 
