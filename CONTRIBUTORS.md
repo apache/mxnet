@@ -300,6 +300,7 @@ List of Contributors
 * [Maria Boerner](https://github.com/mariaboerner1987)
 * [Zhenghui Jin](https://github.com/barry-jin)
 * [Dominika Jedynak](https://github.com/DominikaJedynak)
+* [Adam Grabowski](https://github.com/agrabows)
 
 Label Bot
 ---------
