@@ -35,33 +35,16 @@ AMP_SG_PASS_NAME = 'ONEDNN_AMP'
 AMP_DTYPE = 'bfloat16'
 
 
-# Checks if amp (after the AMP_SG_PASS_NAME fuse) changes the name of tensors for calibration
-def check_amp_with_quantization(net, data_example, quantized_nodes):
-  net.optimize_for(data_example, backend=QUANTIZE_SG_PASS_NAME)
-  symnet = net.export(None)[0]
-  nodes = {n['name'] for n in json.loads(symnet.tojson())['nodes'] if n['op'] != 'null'}
-  quant_excluded_nodes = list(nodes - set(quantized_nodes))
-
-  _, calib_tensors1 = mx.contrib.quantization._quantize_symbol(
-      symnet, mx.current_context(), excluded_symbols=quant_excluded_nodes)
-
-  lp_net = amp.convert_hybrid_block(net, data_example, target_dtype=AMP_DTYPE,
-                                    excluded_sym_names=quantized_nodes, cast_params_offline=True,
-                                    device=mx.current_context())
-  lp_net.optimize_for(data_example, backend=AMP_SG_PASS_NAME)
-  lp_symnet = lp_net.export(None, remove_amp_cast=False)[0]
-  _, calib_tensors2 = mx.contrib.quantization._quantize_symbol(
-      lp_symnet, mx.cpu(), excluded_symbols=quant_excluded_nodes)
-  assert calib_tensors1 == calib_tensors2
-
 
 def same_graph_structure(symnet_observed, symnet_expected, expected):
   nodes_obs = json.loads(symnet_observed.tojson(remove_amp_cast=False))['nodes']
   nodes_exp = json.loads(symnet_expected.tojson(remove_amp_cast=False))['nodes']
+  nodes_obs = [(node['op'], node['inputs']) for node in nodes_obs]
+  nodes_exp = [(node['op'], node['inputs']) for node in nodes_exp]
   assert (len(nodes_obs) == len(nodes_exp)) == expected
   for node_obs, node_exp in zip(nodes_obs, nodes_exp):
-    if node_obs['op'] != node_exp['op'] or node_obs['inputs'] != node_exp['inputs']:
-      assert expected == False
+    if node_obs != node_exp:
+      assert expected == False, '\n'.join([f'{n1} vs {n2}' for n1, n2 in zip(nodes_obs, nodes_exp)])
       break
 
 
@@ -86,9 +69,6 @@ def check_amp_fuse(net, data_example, expected_sym=None, quantized_nodes=[], rto
   if expected_sym is not None:
     lp_symnet = lp_net.export(None, remove_amp_cast=False)[0]
     same_graph_structure(lp_symnet, expected_sym, True)
-
-  # check amp with quantization
-  check_amp_with_quantization(net, data_example, quantized_nodes)
 
 
 @mx.util.use_np
@@ -221,7 +201,8 @@ def test_amp_fuse_with_branch():
         out = self.fc1(x)
         out1 = self.fc2(out)
         out1 = nn.Activation('relu')(out1)
-        out2 = mx.npx.softmax(out)
+        with nn.HybridBlock.OptConstraint.disable_amp():
+          out2 = mx.npx.softmax(out)
         return out1, out2
 
   net = TestNet()

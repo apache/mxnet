@@ -407,10 +407,10 @@ Graph ReducePrecision(Graph&& src) {
       }
       return;
     }
-    auto opt_constraints = common::flag_attr_accumulate<std::underlying_type_t<OptConstraint>>(
-        old_node->attrs, OPT_CONSTRAINT_ATTR);
+    auto opt_constraints =
+        common::flag_attr_accumulate<OptConstraint_int_t>(old_node->attrs, OPT_CONSTRAINT_ATTR);
     if (fp32_ops.count(old_node->op()->name) > 0 ||
-        (opt_constraints & static_cast<int>(OptConstraint::DisableAMP))) {
+        (opt_constraints & static_cast<OptConstraint_int_t>(OptConstraint::DisableAMP))) {
       KeepOriginalNode(old_node, node_map, &entry_map);
     } else if (target_dtype_ops.count(old_node->op()->name) > 0) {
       if (!TryLowPrecision(target_dtype, old_node, node_map, nodes_entries, &entry_map)) {

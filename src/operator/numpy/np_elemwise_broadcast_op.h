@@ -233,8 +233,7 @@ void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& lhs = inputs[0];
   const TBlob& rhs = inputs[1];
   const TBlob& out = outputs[0];
-  if ((common::is_float(lhs.type_flag_) || common::is_bfloat(lhs.type_flag_)) &&
-      (common::is_float(rhs.type_flag_) || common::is_bfloat(rhs.type_flag_))) {
+  if ((common::is_float(lhs.type_flag_)) && (common::is_float(rhs.type_flag_))) {
     if (lhs.type_flag_ == out.type_flag_) {
       MixedAllRealBinaryElemwiseCompute<xpu, ROP>(attrs.op->name, ctx, lhs, rhs, out, req[0]);
     } else {
@@ -370,8 +369,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     MixedBinaryElemwiseCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-    if ((common::is_float(lhs.type_flag_) || common::is_bfloat(lhs.type_flag_)) &&
-        (common::is_float(rhs.type_flag_) || common::is_bfloat(rhs.type_flag_))) {
+    if ((common::is_float(lhs.type_flag_)) && (common::is_float(rhs.type_flag_))) {
       if (lhs.type_flag_ == out.type_flag_) {
         MixedAllRealBinaryBroadcastCompute<xpu, ROP>(
             attrs.op->name, ctx, lhs, rhs, out, req[0], ndim, new_oshape, new_lshape, new_rshape);
