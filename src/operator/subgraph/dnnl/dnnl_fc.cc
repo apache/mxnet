@@ -66,7 +66,8 @@ class SgDNNLFCOp {
 
  private:
   enum { kDataMin = 0, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax, kSumMin, kSumMax };
-  const size_t MIN_MAX_COUNT = 8;
+  const size_t MIN_MAX_COUNT   = 8;
+  const float u8_reorder_scale = 0.5;
 
   NDArray PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output);
   bool CheckInitializationConditions(const std::vector<NDArray>& inputs,
@@ -296,7 +297,6 @@ NDArray SgDNNLFCOp::PrepareOutputWithSum(const NDArray& sum_input, const NDArray
       dnnl_mem_ptr tmp_mem(new dnnl::memory(
           sum_mem_desc, CpuEngine::Get()->get_engine(), out_dnnl_mem->get_data_handle()));
       DNNLStream::Get()->RegisterMem(tmp_mem);
-      const float u8_reorder_scale     = 0.5;
       std::vector<float> reorder_scale = {u8_reorder_scale};
       dnnl::primitive_attr reorder_attr;
       reorder_attr.set_output_scales(0, reorder_scale);
@@ -520,7 +520,7 @@ bool SgDNNLFCOp::PrepareQuantization(const OpContext& ctx,
     if (in_data[idx.sum].dtype() == mshadow::kUint8 && output.dtype() == mshadow::kInt8) {
       // In this case, reorder with scale 0.5 is used on in_data[idx.sum] to
       // scale it to s8 range, so sum_scale has to be rescaled as well
-      full_param_.sum_scale *= 2.0;
+      full_param_.sum_scale *= 1.0 / u8_reorder_scale;
     }
   }
   return support_channelwise_scale;
