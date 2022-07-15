@@ -327,7 +327,7 @@ MSHADOW_XINLINE std::pair<AType, AType> seq_reduce_assign_block(size_t start,
                                                                 const Shape<ndim>& rshape,
                                                                 const Shape<ndim>& rstride) {
   Shape<ndim> coord;
-  AType val, residual;
+  AType val, residual{};
   Reducer::SetInitValue(val, residual);
   for (size_t k = start; k < start + len; ++k) {
     coord      = mxnet_op::unravel(k, rshape);
