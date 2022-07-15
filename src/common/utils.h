@@ -929,11 +929,8 @@ inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
 }
 
 inline bool is_float(const int dtype) {
-  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
-}
-
-inline bool is_bfloat(const int dtype) {
-  return dtype == mshadow::kBfloat16;
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16 ||
+         dtype == mshadow::kBfloat16;
 }
 
 inline bool is_int(const int dtype) {
