@@ -180,6 +180,8 @@ MSHADOW_BF16_OPERATOR(bool, <=)
 
 #define MSHADOW_BF16_MIN mshadow::bfloat::bf16_t::Binary(0xFF7F);
 #define MSHADOW_BF16_MAX mshadow::bfloat::bf16_t::Binary(0x7F7F);
+#define MSHADOW_BF16_SIGN_BIT      0x8000
+#define MSHADOW_BF16_EXPONENT_BITS 0x7f80
 }  // namespace bfloat
 }  // namespace mshadow
 #endif  // MSHADOW_BFLOAT_H_

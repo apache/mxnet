@@ -779,10 +779,10 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
                           "A", "B", "C", "r1", "r2", "rois", "lrs", "wds", "weights_sum_sq",
                           "grads_sum_sq", "mhs", "data1", "data2", "loc", "parameters", "state",
-                          "state_cell"]
+                          "state_cell", "tensor", "arrays", "mask", "running_mean", "running_var"]
 
-PARAMS_OF_TYPE_NP_ARRAY = ["x1", "x2", "prototype", "object", "a", "b", "fill_value", "array", "x", "arr",
+PARAMS_OF_TYPE_NP_ARRAY = ["x1", "x2", "prototype", "source_array", "object", "a", "b", "fill_value", "array", "x", "arr",
                            "values", "ary", "seq", "arrays", "tup", "indices", "m", "ar", "q", "p", "condition",
-                           "arys", "v", "A", "xp", "fp", "data", "mask", "gamma", "beta", "running_mean",
-                           "running_var", "weight", "index", "lhs", "rhs"]
+                           "arys", "v", "A", "xp", "fp", "data", "gamma", "beta", "running_mean", "moving_mean", "moving_var",
+                           "running_var", "weight", "index", "lhs", "rhs", "parameters", "state", "mask", "bias"]
 

@@ -128,7 +128,7 @@ class SgDNNLPostAMPProperty : public SubgraphProperty {
     });
     CHECK_NOTNULL(fuse_node);
     CHECK_NOTNULL(amp_node);
-    fuse_node->attrs.dict["amp_out_dtype"] = amp_node->attrs.dict["dtype"];
+    fuse_node->attrs.dict["enabled_float_output"] = amp_node->attrs.dict["dtype"];
     fuse_node->op()->attr_parser(&(fuse_node->attrs));
     return fuse_node;
   }

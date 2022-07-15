@@ -42,6 +42,7 @@ enum class OptConstraint : unsigned int {
   DisableAMP = 1 << 0
   // DisableQuantization = 1 << 1
 };
+using OptConstraint_int_t = std::underlying_type_t<OptConstraint>;
 
 /*! \brief there are three numpy shape flags based on priority.
  * GlobalOn
