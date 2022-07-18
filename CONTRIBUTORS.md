@@ -302,6 +302,7 @@ List of Contributors
 * [Dominika Jedynak](https://github.com/DominikaJedynak)
 * [Adam Grabowski](https://github.com/agrabows)
 * [Kacper Pietkun](https://github.com/Kacper-Pietkun)
+* [Hanna Jarlaczyńska](https://github.com/hankaj)
 
 Label Bot
 ---------
