@@ -101,6 +101,25 @@ def get_mx_np_ndarray(ctx, in_tensor, dtype, initializer, attach_grad=True):
     tensor.wait_to_read()
     return tensor
 
+def adjust_op_name(module, name):
+    np_to_nd_func = {
+        "batch_norm":           "BatchNorm",
+        "fully_connected":      "FullyConnected",
+        "activation":           "Activation",
+        "convolution":          "Convolution" }
+    nd_to_np_func = {
+        "BatchNorm":            "batch_norm",
+        "FullyConnected":       "fully_connected",
+        "Activation":           "activation",
+        "Convolution":          "convolution" }
+
+    if (module == mx.nd and (hasattr(mx.np, name) or hasattr(mx.npx, name)) and name in np_to_nd_func.keys()):
+        return np_to_nd_func[name]
+    elif ((module == mx.np or module == mx.npx) and hasattr(mx.nd, name) and name in nd_to_np_func.keys()):
+        return nd_to_np_func[name]
+    else:
+        return name
+
 def parse_input_ndarray(input_dict):
     """Parse input for ndarray and extract array shape for better readability
 
@@ -242,9 +261,10 @@ def run_benchmark_operator(name, size = (128,128), additional_inputs = {},
     modules = [mx.nd, mx.np, mx.npx]
     responses = []
     for module in modules:
+        name = adjust_op_name(module, name)
         if hasattr(module, name):
             function = getattr(module, name)
-            args = inspect.getargspec(function).args
+            args = inspect.signature(function).parameters.keys()
             inputs = {}
             for arg in args:
                 if arg in additional_inputs.keys():
@@ -252,8 +272,7 @@ def run_benchmark_operator(name, size = (128,128), additional_inputs = {},
                 elif arg in arg_list[module]:
                     inputs.update({arg:size})
             res = run_performance_test(function, run_backward=run_backward, dtype=dtype, ctx=ctx,
-                                inputs=[inputs],
-                                warmup=warmup, runs=runs, profiler=profiler)
+                                       inputs=[inputs], warmup=warmup, runs=runs, profiler=profiler)
             responses.append(res)
         else:
             responses.append(str(module.__name__) + " does not have operator " + name)

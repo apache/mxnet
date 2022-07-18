@@ -56,7 +56,7 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
     out_shape->resize(3);
     SHAPE_ASSIGN_CHECK(
         *out_shape, 0, mxnet::TShape({qkv_shape[0], params.heads, qkv_shape[1], qkv_shape[1]}));
-    if (!params.enable_float_output) {
+    if (!params.enabled_float_output.has_value()) {
       SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));  // min output
       SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));  // max output
     }
@@ -89,9 +89,9 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
     TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
     TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);
 
-    if (params.enable_float_output) {
+    if (params.enabled_float_output.has_value()) {
       CHECK_EQ(out_types->size(), 1U);
-      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*out_types, 0, params.enabled_float_output.value());
     } else {
       CHECK_EQ(out_types->size(), 3U);
       if (params.min_calib_range.has_value() && params.max_calib_range.has_value()) {
@@ -109,8 +109,8 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
     } else if (in_types->at(0) == mshadow::kBfloat16) {
-      if (params.amp_out_dtype.has_value()) {
-        TYPE_ASSIGN_CHECK(*out_types, 0, params.amp_out_dtype.value());
+      if (params.enabled_float_output.has_value()) {
+        TYPE_ASSIGN_CHECK(*out_types, 0, params.enabled_float_output.value());
       } else {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kBfloat16);
       }
@@ -239,7 +239,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
       max_output_ = param_.max_calib_range.value();
       oscale      = GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
                (data_scale_ * data_scale_);
-    } else if (param_.enable_float_output) {
+    } else if (param_.enabled_float_output.has_value()) {
       oscale = 1.0f / (data_scale_ * data_scale_);
     } else {
       mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
@@ -295,7 +295,7 @@ void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
   DNNLStream::Get()->RegisterPrimArgs(*fwd_, args_);
   DNNLStream::Get()->Submit();
 
-  if (param_.quantized && !param_.enable_float_output) {
+  if (param_.quantized && !param_.enabled_float_output.has_value()) {
     float* output_min = outputs[1].data().dptr<float>();
     float* output_max = outputs[2].data().dptr<float>();
 
@@ -331,7 +331,7 @@ NNVM_REGISTER_OP(_sg_onednn_selfatt_qk)
     })
     .set_num_outputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
-      if (param.quantized && !param.enable_float_output) {
+      if (param.quantized && !param.enabled_float_output.has_value()) {
         return 3;
       } else {
         return 1;
@@ -354,7 +354,8 @@ NNVM_REGISTER_OP(_sg_onednn_selfatt_qk)
                                         auto const& param =
                                             nnvm::get<DNNLSelfAttParam>(attrs.parsed);
                                         std::vector<std::string> output_names{"output"};
-                                        if (param.quantized && !param.enable_float_output) {
+                                        if (param.quantized &&
+                                            !param.enabled_float_output.has_value()) {
                                           output_names.emplace_back("min_output");
                                           output_names.emplace_back("max_output");
                                         }
@@ -407,7 +408,7 @@ static bool SgDNNLSelfAttValShape(const NodeAttrs& attrs,
         0,
         mxnet::TShape(
             {att_shape[0], att_shape[2], att_shape[1] * qkv_shape[2] / params.heads / QKV_NUM}));
-    if (!params.enable_float_output) {
+    if (!params.enabled_float_output.has_value()) {
       SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));  // min output
       SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));  // max output
     }
@@ -455,9 +456,9 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
     }
 
-    if (params.enable_float_output) {
+    if (params.enabled_float_output.has_value()) {
       CHECK_EQ(out_types->size(), 1U);
-      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*out_types, 0, params.enabled_float_output.value());
     } else {
       CHECK_EQ(out_types->size(), 3U);
       if (params.min_calib_range.has_value() && params.max_calib_range.has_value()) {
@@ -478,8 +479,9 @@ static bool SgDNNLSelfAttValInferType(const nnvm::NodeAttrs& attrs,
     } else if (in_types->at(0) == mshadow::kBfloat16 || in_types->at(1) == mshadow::kBfloat16) {
       TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kBfloat16);
       TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kBfloat16);
-      if (params.amp_out_dtype.has_value()) {
-        TYPE_ASSIGN_CHECK(*out_types, 0, params.amp_out_dtype.value());
+      if (params.enabled_float_output.has_value()) {
+        CHECK_EQ(params.enabled_float_output.value(), mshadow::kFloat32);
+        TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
       } else {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kBfloat16);
       }
@@ -633,7 +635,7 @@ void DNNLSelfAttValAttOp::Initialize(const OpContext& ctx,
       max_output_ = param_.max_calib_range.value();
       oscale      = GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
                (att_scale_ * qkv_scale_);
-    } else if (param_.enable_float_output) {
+    } else if (param_.enabled_float_output.has_value()) {
       oscale = 1.0f / (att_scale_ * qkv_scale_);
     } else {
       mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
@@ -720,7 +722,7 @@ void DNNLSelfAttValAttOp::Forward(const OpContext& ctx,
   DNNLStream::Get()->RegisterPrimArgs(*reorder_, reorder_args);
   DNNLStream::Get()->Submit();
 
-  if (param_.quantized && !param_.enable_float_output) {
+  if (param_.quantized && !param_.enabled_float_output.has_value()) {
     float* output_min = outputs[1].data().dptr<float>();
     float* output_max = outputs[2].data().dptr<float>();
 
@@ -742,7 +744,7 @@ NNVM_REGISTER_OP(_sg_onednn_selfatt_valatt)
     })
     .set_num_outputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
-      if (param.quantized && !param.enable_float_output) {
+      if (param.quantized && !param.enabled_float_output.has_value()) {
         return 3;
       } else {
         return 1;
@@ -768,7 +770,8 @@ NNVM_REGISTER_OP(_sg_onednn_selfatt_valatt)
                                         auto const& param =
                                             nnvm::get<DNNLSelfAttParam>(attrs.parsed);
                                         std::vector<std::string> output_names{"output"};
-                                        if (param.quantized && !param.enable_float_output) {
+                                        if (param.quantized &&
+                                            !param.enabled_float_output.has_value()) {
                                           output_names.emplace_back("min_output");
                                           output_names.emplace_back("max_output");
                                         }

@@ -311,7 +311,7 @@ def function_fc_add(data_shape, add_op, quantize_mode, fc_out_add, flatten, relu
   if quantize_mode is not None:
     attrs['fc']['quantized'] = 'true'
     if quantize_mode == 'smart':
-      attrs['fc']['enable_float_output'] = 'true'
+      attrs['fc']['enabled_float_output'] = mx.nd.get_dtype_name(mx.np.float32)
   num_hidden=10
   net = FCWithSumExample(num_hidden, add_op, fc_out_add)
   if flatten:

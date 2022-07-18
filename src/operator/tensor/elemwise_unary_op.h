@@ -280,7 +280,7 @@ class UnaryOp : public OpBase {
     if (mxnet::common::is_float(inputs[0].type_flag_)) {
       UnaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
-      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, DType, _, {
         MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, IType, {
           MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
             if (inputs[0].Size() != 0) {
@@ -622,7 +622,7 @@ void HardSigmoidForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data         = outputs[0];
   const HardSigmoidParam& param = nnvm::get<HardSigmoidParam>(attrs.parsed);
   using namespace mxnet_op;
-  MSHADOW_REAL_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(out_data.type_flag_, DType, _, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<hard_sigmoid_forward<req_type>, xpu>::Launch(s,
                                                           out_data.Size(),
@@ -650,7 +650,7 @@ void HardSigmoidBackward(const nnvm::NodeAttrs& attrs,
   const TBlob& in_grad          = outputs[0];
   const HardSigmoidParam& param = nnvm::get<HardSigmoidParam>(attrs.parsed);
   using namespace mxnet_op;
-  MSHADOW_REAL_TYPE_SWITCH(in_data.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(in_data.type_flag_, DType, _, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<hard_sigmoid_backward<req_type>, xpu>::Launch(s,
                                                            in_grad.Size(),
@@ -863,7 +863,7 @@ void NumpyNanToNumOpForward(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  MSHADOW_REAL_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(out_data.type_flag_, DType, _, {
     DType defaultnan = static_cast<DType>(param.nan);
     DType posinf;
     DType neginf;

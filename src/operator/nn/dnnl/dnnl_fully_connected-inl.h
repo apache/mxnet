@@ -41,20 +41,16 @@ namespace op {
 
 struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
   bool quantized;
-  bool enable_float_output;
   bool with_eltwise;
   bool with_sum;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   dmlc::optional<bool> channel_wise_quantize;
-  dmlc::optional<int> amp_out_dtype;  // mshadow dtype of a fused amp_cast node
+  dmlc::optional<int> enabled_float_output;
 
   DMLC_DECLARE_PARAMETER(DNNLFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false).describe(
         "Whether it's a quantized FullyConnected operator");
-    DMLC_DECLARE_FIELD(enable_float_output)
-        .set_default(false)
-        .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_eltwise)
         .set_default(false)
         .describe("Whether there's a post with_eltwise after FullyConnected operator");
@@ -74,9 +70,7 @@ struct DNNLFCParam : public dmlc::Parameter<DNNLFCParam> {
     DMLC_DECLARE_FIELD(channel_wise_quantize)
         .set_default(dmlc::optional<bool>())
         .describe("Whether support channel-wise-quantize for weight.");
-    DMLC_DECLARE_FIELD(amp_out_dtype)
-        .set_default(dmlc::optional<int>())
-            MXNET_ADD_ALL_TYPES.describe("The output type deduced from the fused amp_cast.");
+    DNNL_DECLARE_ENABLED_FLOAT_OUTPUT_PARAMETER();
   }
 };
 
@@ -100,7 +94,7 @@ class FCInputIndex {
     const bool has_bias  = !full_param.default_param.no_bias;
     const bool quantized = dnnl_param.quantized;
     const bool sum_input_quantized =
-        quantized && dnnl_param.with_sum && !dnnl_param.enable_float_output;
+        quantized && dnnl_param.with_sum && !dnnl_param.enabled_float_output.has_value();
     const bool channel_wise = quantized && dnnl_param.channel_wise_quantize.has_value() &&
                               dnnl_param.channel_wise_quantize.value();
 
