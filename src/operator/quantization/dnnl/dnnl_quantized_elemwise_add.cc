@@ -189,8 +189,8 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
       // rescale uint8 to int8 by reorder to temporary memory
       auto s8_desc                     = is_A_int8 ? A_mem->get_desc() : B_mem->get_desc();
       rescaled_mem                     = TmpMemMgr::Get()->Alloc(s8_desc);
-      const float u8_reorder_scale     = 0.5;
-      std::vector<float> reorder_scale = {u8_reorder_scale};
+      const float u8_to_s8_scale     = 0.5;
+      std::vector<float> reorder_scale = {u8_to_s8_scale};
       auto engine                      = CpuEngine::Get()->get_engine();
       dnnl::primitive_attr reorder_attr;
       reorder_attr.set_output_scales(0, reorder_scale);
@@ -202,10 +202,10 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
       // Modify scale to restore original uint8 values:
       if (is_A_int8) {
         B_mem = rescaled_mem;
-        scales[1] *= 1.0 / u8_reorder_scale;
+        scales[1] *= 1.0 / u8_to_s8_scale;
       } else {
         A_mem = rescaled_mem;
-        scales[0] *= 1.0 / u8_reorder_scale;
+        scales[0] *= 1.0 / u8_to_s8_scale;
       }
     }
   }
