@@ -248,10 +248,17 @@ struct floor_divide : public mxnet_op::tunable {
     return static_cast<bool>(::floor(a / b));
   }
 
-  template <
-      typename DType,
-      typename std::enable_if<!std::is_integral<DType>::value && !std::is_same<DType, float>::value,
-                              int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(mshadow::half::half_t a,
+                                                   mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(
+        ::floor(static_cast<float>(a) / static_cast<float>(b)));
+  }
+
+  template <typename DType,
+            typename std::enable_if<!std::is_integral<DType>::value &&
+                                        !std::is_same<DType, float>::value &&
+                                        !std::is_same<DType, mshadow::half::half_t>::value,
+                                    int>::type = 0>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return ::floor(a / b);
   }
