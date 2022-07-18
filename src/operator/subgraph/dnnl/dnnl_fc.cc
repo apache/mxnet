@@ -66,7 +66,7 @@ class SgDNNLFCOp {
 
  private:
   enum { kDataMin = 0, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax, kSumMin, kSumMax };
-  const size_t MIN_MAX_COUNT   = 8;
+  const size_t MIN_MAX_COUNT = 8;
   const float u8_to_s8_scale = 0.5;
 
   NDArray PrepareOutputWithSum(const NDArray& sum_input, const NDArray& output);

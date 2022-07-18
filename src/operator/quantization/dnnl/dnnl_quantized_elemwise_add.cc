@@ -167,9 +167,9 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   float output_max   = 0;
   float output_scale = 0;
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
-    output_min     = params.min_calib_range.value();
-    output_max     = params.max_calib_range.value();
-    output_scale   = output_data_range / MaxAbs(output_min, output_max);
+    output_min   = params.min_calib_range.value();
+    output_max   = params.max_calib_range.value();
+    output_scale = output_data_range / MaxAbs(output_min, output_max);
   } else {
     output_max   = A_absmax + B_absmax;
     output_min   = -output_max;
@@ -189,7 +189,7 @@ static void DNNLQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
       // rescale uint8 to int8 by reorder to temporary memory
       auto s8_desc                     = is_A_int8 ? A_mem->get_desc() : B_mem->get_desc();
       rescaled_mem                     = TmpMemMgr::Get()->Alloc(s8_desc);
-      const float u8_to_s8_scale     = 0.5;
+      const float u8_to_s8_scale       = 0.5;
       std::vector<float> reorder_scale = {u8_to_s8_scale};
       auto engine                      = CpuEngine::Get()->get_engine();
       dnnl::primitive_attr reorder_attr;
