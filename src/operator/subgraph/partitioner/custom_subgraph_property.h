@@ -18,6 +18,8 @@
  */
 
 /*!
+ * \file custom_subgraph_property.h
+ *
  * This file contains an implementation of a subgraph property
  * that interfaces between MXNet and custom subgraph properties
  * created by users in external libraries. It does not implement
