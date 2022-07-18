@@ -301,6 +301,7 @@ List of Contributors
 * [Zhenghui Jin](https://github.com/barry-jin)
 * [Dominika Jedynak](https://github.com/DominikaJedynak)
 * [Adam Grabowski](https://github.com/agrabows)
+* [Hanna Jarlaczyńska](https://github.com/hankaj)
 
 Label Bot
 ---------
