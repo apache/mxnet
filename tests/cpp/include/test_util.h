@@ -787,11 +787,11 @@ struct ScopeSet {
   T saveValue_;
 };
 
-static void AssertEqual(const std::vector<NDArray*>& in_arrs,
-                        const std::vector<NDArray*>& out_arrs,
-                        float rtol           = 1e-5,
-                        float atol           = 1e-8,
-                        bool test_first_only = false) {
+static inline void AssertEqual(const std::vector<NDArray*>& in_arrs,
+                               const std::vector<NDArray*>& out_arrs,
+                               float rtol           = 1e-5,
+                               float atol           = 1e-8,
+                               bool test_first_only = false) {
   for (size_t j = 0; j < in_arrs.size(); ++j) {
     // When test_all is fir
     if (test_first_only && j == 1) {
