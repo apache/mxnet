@@ -37,7 +37,10 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
                                         const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   FullyConnectedParam param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  const size_t num_inputs   = param.no_bias ? 2 : 3;
+  DNNLFCFullParam full_param;
+  full_param.default_param = param;
+  full_param.dnnl_param.Init(std::unordered_map<std::string, std::string>());
+  const size_t num_inputs = param.no_bias ? 2 : 3;
 
   CHECK_EQ(in_data.size(), static_cast<size_t>(num_inputs * 3));
   CHECK_EQ(out_data.size(), 3U);
@@ -87,8 +90,8 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   bool is_train             = false;
   dnnl::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);
   DNNLFCFlattenData(param, out_data[fullc::kOut], &data, &out_md);
-  auto& fwd =
-      GetFCFwd(param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);
+  auto& fwd = GetFCFwd(
+      full_param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);
 
   auto fwd_src_desc              = fwd.fwd_pd.src_desc();
   auto data_mem                  = in_data[fullc::kData].GetDNNLDataReorder(&fwd_src_desc);

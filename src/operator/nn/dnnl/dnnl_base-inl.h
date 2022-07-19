@@ -769,6 +769,11 @@ struct DNNLPostEltwiseParam {
   float scale         = 1.f;
   float alpha         = 0.f;
   float beta          = 1.f;
+
+  bool operator==(const DNNLPostEltwiseParam& other) const {
+    return this->alg == other.alg && this->scale == other.scale && this->alpha == other.alpha &&
+           this->beta == other.beta;
+  }
 };
 
 void DNNLRun(mxnet::FComputeEx fn,
@@ -792,5 +797,20 @@ void DNNLRun(FComputeExUnary fn,
              const mxnet::NDArray& outputs_);
 
 }  // namespace mxnet
+
+namespace std {
+template <>
+struct hash<mxnet::DNNLPostEltwiseParam> {
+  size_t operator()(const mxnet::DNNLPostEltwiseParam& val) {
+    size_t ret = dmlc::HashCombine(0, static_cast<int>(val.alg));
+    ret        = dmlc::HashCombine(ret, val.scale);
+    ret        = dmlc::HashCombine(ret, val.alpha);
+    ret        = dmlc::HashCombine(ret, val.beta);
+
+    return ret;
+  }
+};
+}  // namespace std
+
 #endif
 #endif  // MXNET_OPERATOR_NN_DNNL_DNNL_BASE_INL_H_
