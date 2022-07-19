@@ -131,11 +131,13 @@ static void DNNLRequantizeForward(const nnvm::NodeAttrs& attrs,
       if (data_mins[i] < data_min)
         data_min = data_mins[i];
     }
-    float src_range     = MinAbs(MinValue<SrcDType>(), MaxValue<SrcDType>());
-    // MaxAbs is not used here as it converts data to float what could cause overflow errors.
-    SrcDType data_range = std::max(std::abs(data_min), std::abs(data_max));
-    float data_scale    = MaxAbs(*inputs[1].data().dptr<float>(), *inputs[2].data().dptr<float>());
-    real_range          = data_range * data_scale / src_range;
+    float src_range = MinAbs(MinValue<SrcDType>(), MaxValue<SrcDType>());
+    // MaxAbs is not used here as it converts data to float what could cause errors.
+    // int64 is used because in case of std::abs(int32_MIN), overflow was occurring.
+    int64_t data_range = std::max(std::abs(static_cast<int64_t>(data_min)),
+                                  std::abs(static_cast<int64_t>(data_max)));
+    float data_scale   = MaxAbs(*inputs[1].data().dptr<float>(), *inputs[2].data().dptr<float>());
+    real_range         = data_range * data_scale / src_range;
   }
   auto out_type = GetQuantizeOutputType(param);
   if (out_type == mshadow::kUint8) {
