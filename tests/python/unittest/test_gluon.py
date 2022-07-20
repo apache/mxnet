@@ -1834,7 +1834,6 @@ def test_conv2d_16c(chn_num, kernel):
 @use_np
 @pytest.mark.parametrize('grp', [16])
 @pytest.mark.parametrize('kernel_size', [1, 3])
-@with_environment('MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES', '5')  # eng:5 causes test failure on M60
 def test_group_conv2d_16c(grp, kernel_size):
     input_size_list = onp.random.randint(low=3, high=65, size=10).tolist()
     batch_size = 4
