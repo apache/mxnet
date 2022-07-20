@@ -276,7 +276,7 @@ void DNNLMemorySum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnn
 
 static int GetTypeSize(int dtype) {
   int size = -1;
-  MSHADOW_TYPE_SWITCH(dtype, DType, { size = sizeof(DType); });
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, { size = sizeof(DType); });
   return size;
 }
 
@@ -298,6 +298,7 @@ static inline dnnl::memory::data_type get_dnnl_type(int dtype) {
     case mshadow::kInt8:
       return dnnl::memory::data_type::s8;
     case mshadow::kUint8:
+    case mshadow::kBool:
       return dnnl::memory::data_type::u8;
     default:
       LOG(FATAL) << "unknown type for oneDNN :" << static_cast<int>(dtype);

@@ -34,7 +34,16 @@ namespace op {
 
 // Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_binary.html
 bool SupportDNNLWhere(const std::vector<NDArray>& inputs) {
-  return SupportDNNL<DNNLTypeMode::NoInt32, DNNLTensorsDtypes::Mixed>(inputs);
+  if (inputs[0].dtype() == mshadow::kBool) {
+    // oneDNN natively doesn't support bool data type, however this operator was written
+    // to allow using bool datatype for 'condition' tensor - data will be treated as uint8
+    bool bool_support = SupportDNNLShape<1, 12>(inputs[0].shape());
+    return bool_support &&
+           SupportDNNL<DNNLTypeMode::NoInt32, DNNLTensorsDtypes::AllSame>({inputs[1], inputs[2]});
+  }
+
+  return SupportDNNL<DNNLTypeMode::NoInt32>(inputs[0]) &&
+         SupportDNNL<DNNLTypeMode::NoInt32, DNNLTensorsDtypes::AllSame>({inputs[1], inputs[2]});
 }
 
 void DNNLWhereForward(const nnvm::NodeAttrs& attrs,
@@ -95,6 +104,25 @@ static mxnet::TShape GetBroadcastableShape(const mxnet::TShape& in_shape,
   return broadcastable_in_shape;
 }
 
+/*!
+ * \brief Create shape vector basing on two input shapes
+ * \param first_shape first input shape
+ * \param second_shape second input shape
+ * \return deducted broadcasted shape basing on first_shape and second_shape
+ */
+static mxnet::TShape GetBroadcastedShape(const mxnet::TShape& first_shape,
+                                         const mxnet::TShape& second_shape) {
+  if (first_shape == second_shape) {
+    return first_shape;
+  }
+
+  mxnet::TShape dst_shape(first_shape.ndim(), 1);
+  for (int i = 0; i < first_shape.ndim(); ++i) {
+    dst_shape[i] = first_shape[i] == 1 ? second_shape[i] : first_shape[i];
+  }
+  return dst_shape;
+}
+
 DNNLWhereFwd::DNNLWhereFwd(const Tensors& tensors) {
   const auto cpu_engine = CpuEngine::Get()->get_engine();
 
@@ -107,7 +135,8 @@ DNNLWhereFwd::DNNLWhereFwd(const Tensors& tensors) {
   const auto lhs_shape = GetBroadcastableShape(lhs.shape(), out.shape());
   const auto rhs_shape = GetBroadcastableShape(rhs.shape(), out.shape());
 
-  const auto& cnd_dtype = get_dnnl_type(cnd.dtype());
+  const auto& cnd_dtype =
+      cnd.dtype() != mshadow::kBool ? get_dnnl_type(cnd.dtype()) : dnnl::memory::data_type::u8;
   const auto& inp_dtype = get_dnnl_type(lhs.dtype());
   const auto& def_ft    = static_cast<dnnl::memory::format_tag>(GetDefaultFormat(lhs_shape.ndim()));
 
@@ -129,14 +158,16 @@ DNNLWhereFwd::DNNLWhereFwd(const Tensors& tensors) {
       dnnl::binary::desc(dnnl::algorithm::binary_eq, cnd_md, scalar_md, cnd_md), cpu_engine);
 
   // if broadcast is needed output must be larger in size
-  auto lmask_dim  = lhs_shape.Size() > cnd_shape.Size() ? lhs_dims : cnd_dims;
-  auto lmask_md   = dnnl::memory::desc(lmask_dim, inp_dtype, def_ft);
-  binary_mul_l_pd = dnnl::binary::primitive_desc(
+  const auto lmask_shape = GetBroadcastedShape(lhs_shape, cnd_shape);
+  const auto lmask_dim   = dnnl::memory::dims(lmask_shape.begin(), lmask_shape.end());
+  auto lmask_md          = dnnl::memory::desc(lmask_dim, inp_dtype, def_ft);
+  binary_mul_l_pd        = dnnl::binary::primitive_desc(
       dnnl::binary::desc(dnnl::algorithm::binary_mul, lhs_md, cnd_md, lmask_md), cpu_engine);
 
-  auto rmask_dim  = rhs_shape.Size() > cnd_shape.Size() ? rhs_dims : cnd_dims;
-  auto rmask_md   = dnnl::memory::desc(rmask_dim, inp_dtype, def_ft);
-  binary_mul_r_pd = dnnl::binary::primitive_desc(
+  const auto rmask_shape = GetBroadcastedShape(rhs_shape, cnd_shape);
+  const auto rmask_dim   = dnnl::memory::dims(rmask_shape.begin(), rmask_shape.end());
+  auto rmask_md          = dnnl::memory::desc(rmask_dim, inp_dtype, def_ft);
+  binary_mul_r_pd        = dnnl::binary::primitive_desc(
       dnnl::binary::desc(dnnl::algorithm::binary_mul, rhs_md, cnd_md, rmask_md), cpu_engine);
 
   binary_sum_pd = dnnl::binary::primitive_desc(
