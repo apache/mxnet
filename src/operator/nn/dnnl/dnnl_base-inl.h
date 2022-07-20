@@ -184,10 +184,10 @@ enum DNNLTensorsDtypes { AllSame = 0, Mixed = 1 };
 
 template <int MinNdim, int MaxNdim, DNNLTypeMode TypeMode, DNNLTensorsDtypes MixedTensors>
 static inline bool SupportDNNL(const std::vector<NDArray>& inputs) {
-  int dtype = MixedTensors ? -1 : inputs[0].dtype();
-  if (!SupportDNNLType<TypeMode>(dtype)) {
+  if (!SupportDNNLType<TypeMode>(inputs[0].dtype())) {
     return false;
   }
+  int dtype = MixedTensors ? -1 : inputs[0].dtype();
   for (NDArray input : inputs) {
     if (dtype == -1) {
       if (!SupportDNNL<MinNdim, MaxNdim, TypeMode>(input))
