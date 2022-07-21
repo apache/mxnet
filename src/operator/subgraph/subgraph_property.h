@@ -64,7 +64,7 @@ struct NodeAttr {
   std::vector<int> itype;
 };
 
-/*
+/*!
  * This provides criteria for the graph partitioning algorithm to select
  * nodes to subgraphs.
  * The algorithm first sorts all the nodes in topological order, and then
@@ -588,10 +588,12 @@ class SubgraphBackendRegistry {
   std::unordered_map<std::string, SubgraphBackendPtr> backend_map_;
 };
 
-// This op name set is for setting the names of operators that should be grouped into
-// subgraphs. In practice, every backend accelerator should have a predefined name set.
-// This set is only used for the testing purpose.
-// key: property name, value: op name set
+/*!
+ * This op name set is for setting the names of operators that should be grouped into
+ * subgraphs. In practice, every backend accelerator should have a predefined name set.
+ * This set is only used for the testing purpose.
+ * key: property name, value: op name set
+ */
 typedef dmlc::ThreadLocalStore<std::unordered_map<std::string, std::unordered_set<std::string>>>
     SubgraphPropertyOpNameSet;
 

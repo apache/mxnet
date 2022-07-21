@@ -17,8 +17,8 @@
  * under the License.
  */
 
-/*
-  \file
+/*!
+  \file dnnl_fc_sum_fuse_property.h
   \brief For fusing FullyConnected operator with element-wise add.
 
   Element-wise add operator is replaced by DNNL FC "sum" post operator.

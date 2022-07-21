@@ -17,7 +17,9 @@
  * under the License.
  */
 
-/*
+/*!
+ * \file custom_subgraph_property.h
+ *
  * This file contains an implementation of a subgraph property
  * that interfaces between MXNet and custom subgraph properties
  * created by users in external libraries. It does not implement
@@ -41,7 +43,7 @@
 namespace mxnet {
 namespace op {
 
-/*
+/*!
  * This selects nodes for a subgraph based on node name as supplied
  * by the supportedOps from an external library. It visits nodes via
  * both input and output links.
@@ -138,7 +140,7 @@ class CustomContainOpSelector : public SubgraphSelector {
   std::unordered_map<const nnvm::Node*, unsigned> node2id_;
 };
 
-/*
+/*!
  * This subgraph property finds a subgraph that only contains
  * nodes as specified by the supportedOps from an external library.
  * The operators in the subgraph will be executed by the operator
