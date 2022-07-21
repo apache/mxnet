@@ -193,7 +193,7 @@ static inline bool SupportDNNL(const std::vector<NDArray>& inputs) {
       if (!SupportDNNL<MinNdim, MaxNdim, TypeMode>(input))
         return false;
     } else {
-      if (input.dtype() != dtype && !SupportDNNLShape<MinNdim, MaxNdim>(input.shape()))
+      if (input.dtype() != dtype || !SupportDNNLShape<MinNdim, MaxNdim>(input.shape()))
         return false;
     }
   }
