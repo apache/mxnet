@@ -37,8 +37,7 @@ bool SupportDNNLWhere(const std::vector<NDArray>& inputs) {
   if (inputs[0].dtype() == mshadow::kBool) {
     // oneDNN natively doesn't support bool data type, however this operator was written
     // to allow using bool datatype for 'condition' tensor - data will be treated as uint8
-    bool bool_support = SupportDNNLShape<1, 12>(inputs[0].shape());
-    return bool_support &&
+    return SupportDNNLShape<1, 12>(inputs[0].shape()) &&
            SupportDNNL<DNNLTypeMode::NoInt32, DNNLTensorsDtypes::AllSame>({inputs[1], inputs[2]});
   }
 
