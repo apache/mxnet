@@ -241,11 +241,14 @@ Descriptor MakeConvFwdOp(const Descriptor& conv,
   return ret;
 }
 
-Descriptor Conv::MakeConvFwdOp(const OpContext& ctx, const Param& param, const TBlob& x,
-                               const TBlob& w, const TBlob& y) {
-  auto dtype = static_cast<mshadow::TypeFlag>(x.type_flag_);
-  auto conv = MakeConvDesc(param, dtype);
-  auto li = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
+Descriptor Conv::MakeConvFwdOp(const OpContext& ctx,
+                               const Param& param,
+                               const TBlob& x,
+                               const TBlob& w,
+                               const TBlob& y) {
+  auto dtype  = static_cast<mshadow::TypeFlag>(x.type_flag_);
+  auto conv   = MakeConvDesc(param, dtype);
+  auto li     = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
   auto x_desc = MakeTensorDesc(ID_X, x, li, true, false);
   auto w_desc = MakeTensorDesc(ID_W, w, li, true, false);
   auto y_desc = MakeTensorDesc(ID_Y, y, li, true, false);
@@ -283,12 +286,15 @@ Descriptor MakeConvDgradOp(const Descriptor& conv,
   return ret;
 }
 
-Descriptor ConvDgrad::MakeConvDgradOp(const OpContext& ctx, const Param& param, const TBlob& w,
-                                      const TBlob& dy, const TBlob& dx) {
-  auto dtype = static_cast<mshadow::TypeFlag>(w.type_flag_);
-  auto conv = MakeConvDesc(param, dtype);
-  auto li = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
-  auto w_desc = MakeTensorDesc(ID_W, w, li, true, false);
+Descriptor ConvDgrad::MakeConvDgradOp(const OpContext& ctx,
+                                      const Param& param,
+                                      const TBlob& w,
+                                      const TBlob& dy,
+                                      const TBlob& dx) {
+  auto dtype   = static_cast<mshadow::TypeFlag>(w.type_flag_);
+  auto conv    = MakeConvDesc(param, dtype);
+  auto li      = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
+  auto w_desc  = MakeTensorDesc(ID_W, w, li, true, false);
   auto dy_desc = MakeTensorDesc(ID_DY, dy, li, true, false);
   auto dx_desc = MakeTensorDesc(ID_DX, dx, li, true, false);
   return cudnn::MakeConvDgradOp(conv, w_desc, dy_desc, dx_desc, param.add_to);
@@ -325,12 +331,15 @@ Descriptor MakeConvWgradOp(const Descriptor& conv,
   return ret;
 }
 
-Descriptor ConvWgrad::MakeConvWgradOp(const OpContext& ctx, const Param& param, const TBlob& x,
-                                      const TBlob& dy, const TBlob& dw) {
-  auto dtype = static_cast<mshadow::TypeFlag>(x.type_flag_);
-  auto conv = MakeConvDesc(param, dtype);
-  auto li = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
-  auto x_desc = MakeTensorDesc(ID_X, x, li, true, false);
+Descriptor ConvWgrad::MakeConvWgradOp(const OpContext& ctx,
+                                      const Param& param,
+                                      const TBlob& x,
+                                      const TBlob& dy,
+                                      const TBlob& dw) {
+  auto dtype   = static_cast<mshadow::TypeFlag>(x.type_flag_);
+  auto conv    = MakeConvDesc(param, dtype);
+  auto li      = GetLayoutInfo(static_cast<mshadow::LayoutFlag>(param.layout.value()));
+  auto x_desc  = MakeTensorDesc(ID_X, x, li, true, false);
   auto dy_desc = MakeTensorDesc(ID_DY, dy, li, true, false);
   auto dw_desc = MakeTensorDesc(ID_DW, dw, li, true, false);
   return cudnn::MakeConvWgradOp(conv, x_desc, dy_desc, dw_desc, param.add_to);
@@ -351,25 +360,33 @@ Descriptor MakeOpGraph(cudnnHandle_t handle, Descriptor op) {
 }
 
 Descriptor ClonePlan(cudnnHandle_t handle, Descriptor op_graph, const Descriptor& plan) {
-  auto cfg = GetAttr(plan, CUDNN_ATTR_EXECUTION_PLAN_ENGINE_CONFIG,
-                     CUDNN_BACKEND_ENGINECFG_DESCRIPTOR);
+  auto cfg =
+      GetAttr(plan, CUDNN_ATTR_EXECUTION_PLAN_ENGINE_CONFIG, CUDNN_BACKEND_ENGINECFG_DESCRIPTOR);
   auto engine = GetAttr(cfg, CUDNN_ATTR_ENGINECFG_ENGINE, CUDNN_BACKEND_ENGINE_DESCRIPTOR);
 
   auto engine_idx = GetAttr<int64_t>(engine, CUDNN_ATTR_ENGINE_GLOBAL_INDEX);
-  auto choices = GetSomeAttrs(CUDNN_KNOB_TYPE_COUNTS, cfg, CUDNN_ATTR_ENGINECFG_KNOB_CHOICES,
-                              CUDNN_BACKEND_KNOB_CHOICE_DESCRIPTOR);
+  auto choices    = GetSomeAttrs(CUDNN_KNOB_TYPE_COUNTS,
+                                 cfg,
+                                 CUDNN_ATTR_ENGINECFG_KNOB_CHOICES,
+                                 CUDNN_BACKEND_KNOB_CHOICE_DESCRIPTOR);
 
   auto cloned_engine = MakeFinalized(CUDNN_BACKEND_ENGINE_DESCRIPTOR,
-                                     CUDNN_ATTR_ENGINE_GLOBAL_INDEX, engine_idx,
-                                     CUDNN_ATTR_ENGINE_OPERATION_GRAPH, op_graph);
+                                     CUDNN_ATTR_ENGINE_GLOBAL_INDEX,
+                                     engine_idx,
+                                     CUDNN_ATTR_ENGINE_OPERATION_GRAPH,
+                                     op_graph);
 
   auto cloned_cfg = MakeFinalized(CUDNN_BACKEND_ENGINECFG_DESCRIPTOR,
-                                  CUDNN_ATTR_ENGINECFG_ENGINE, cloned_engine,
-                                  CUDNN_ATTR_ENGINECFG_KNOB_CHOICES, choices);
+                                  CUDNN_ATTR_ENGINECFG_ENGINE,
+                                  cloned_engine,
+                                  CUDNN_ATTR_ENGINECFG_KNOB_CHOICES,
+                                  choices);
 
   auto cloned_plan = cudnn_cxx::Make(CUDNN_BACKEND_EXECUTION_PLAN_DESCRIPTOR,
-                                     CUDNN_ATTR_EXECUTION_PLAN_HANDLE, handle,
-                                     CUDNN_ATTR_EXECUTION_PLAN_ENGINE_CONFIG, cloned_cfg);
+                                     CUDNN_ATTR_EXECUTION_PLAN_HANDLE,
+                                     handle,
+                                     CUDNN_ATTR_EXECUTION_PLAN_ENGINE_CONFIG,
+                                     cloned_cfg);
   CUDNN_CALL(cudnnBackendFinalize(cloned_plan.get()));
   return cloned_plan;
 }
@@ -681,9 +698,9 @@ cudnn_cxx::Descriptor Conv::Clone(const cudnn_cxx::Descriptor& plan,
                                   const TBlob& x,
                                   const TBlob& w,
                                   const TBlob& y) {
-  auto conv_fwd = MakeConvFwdOp(ctx, param, x, w, y);
-  auto handle = ctx.get_stream<gpu>()->dnn_handle_;
-  auto op_graph = MakeOpGraph(handle, std::move(conv_fwd));
+  auto conv_fwd    = MakeConvFwdOp(ctx, param, x, w, y);
+  auto handle      = ctx.get_stream<gpu>()->dnn_handle_;
+  auto op_graph    = MakeOpGraph(handle, std::move(conv_fwd));
   auto cloned_plan = ClonePlan(handle, std::move(op_graph), plan);
   return cloned_plan;
 }
@@ -742,9 +759,9 @@ cudnn_cxx::Descriptor ConvDgrad::Clone(const cudnn_cxx::Descriptor& plan,
                                        const TBlob& w,
                                        const TBlob& dy,
                                        const TBlob& dx) {
-  auto conv_dgrad = MakeConvDgradOp(ctx, param, w, dy, dx);
-  auto handle = ctx.get_stream<gpu>()->dnn_handle_;
-  auto op_graph = MakeOpGraph(handle, std::move(conv_dgrad));
+  auto conv_dgrad  = MakeConvDgradOp(ctx, param, w, dy, dx);
+  auto handle      = ctx.get_stream<gpu>()->dnn_handle_;
+  auto op_graph    = MakeOpGraph(handle, std::move(conv_dgrad));
   auto cloned_plan = ClonePlan(handle, std::move(op_graph), plan);
   return cloned_plan;
 }
@@ -803,9 +820,9 @@ cudnn_cxx::Descriptor ConvWgrad::Clone(const cudnn_cxx::Descriptor& plan,
                                        const TBlob& x,
                                        const TBlob& dy,
                                        const TBlob& dw) {
-  auto conv_wgrad = MakeConvWgradOp(ctx, param, x, dy, dw);
-  auto handle = ctx.get_stream<gpu>()->dnn_handle_;
-  auto op_graph = MakeOpGraph(handle, std::move(conv_wgrad));
+  auto conv_wgrad  = MakeConvWgradOp(ctx, param, x, dy, dw);
+  auto handle      = ctx.get_stream<gpu>()->dnn_handle_;
+  auto op_graph    = MakeOpGraph(handle, std::move(conv_wgrad));
   auto cloned_plan = ClonePlan(handle, std::move(op_graph), plan);
   return cloned_plan;
 }

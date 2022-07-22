@@ -112,11 +112,11 @@ struct LayoutInfo {
 
 LayoutInfo GetLayoutInfo(mshadow::LayoutFlag layout);
 
-cudnn_cxx::Descriptor MakeOpGraph(cudnnHandle_t handle,
-                                  cudnn_cxx::Descriptor op);
+cudnn_cxx::Descriptor MakeOpGraph(cudnnHandle_t handle, cudnn_cxx::Descriptor op);
 
 // Make a copy of an existing execution plan with a new cuDNN handle.  Op graph re-supplied.
-cudnn_cxx::Descriptor ClonePlan(cudnnHandle_t handle, cudnn_cxx::Descriptor op_graph,
+cudnn_cxx::Descriptor ClonePlan(cudnnHandle_t handle,
+                                cudnn_cxx::Descriptor op_graph,
                                 const cudnn_cxx::Descriptor& plan);
 
 TShape ExpandChannelDims(mshadow::LayoutFlag layout, int c);
@@ -142,20 +142,19 @@ bool Exec(const OpContext& ctx, const typename Op::Param& param, Args&&... args)
   auto match_it = [&]() {
     // Some cuDNN Op implementations require that the thread's cuDNN handle
     // (used in cudnnBackendExecute()) matches the one used in making the plan.
-    const bool require_handle_match = true;
-    auto range = op_map.equal_range(key);
-    auto handle = ctx.get_stream<gpu>()->dnn_handle_;
+    const bool ignore_handles = false;
+    auto range                = op_map.equal_range(key);
+    auto handle               = ctx.get_stream<gpu>()->dnn_handle_;
     for (auto it = range.first; it != range.second; ++it) {
-      if (!require_handle_match ||
-          handle == cudnn_cxx::GetAttr<cudnnHandle_t>(it->second,
-                                                      CUDNN_ATTR_EXECUTION_PLAN_HANDLE)) {
-          return it;
+      if (ignore_handles || handle == cudnn_cxx::GetAttr<cudnnHandle_t>(
+                                          it->second, CUDNN_ATTR_EXECUTION_PLAN_HANDLE)) {
+        return it;
       }
     }
     // No Op exists with this handle. Make a new op, cloning from an existing op if possible.
     auto op = (range.first == range.second) ?
-        Op::Make(ctx, param, std::forward<Args>(args)...) :
-        Op::Clone(range.first->second, ctx, param, std::forward<Args>(args)...);
+                  Op::Make(ctx, param, std::forward<Args>(args)...) :
+                  Op::Clone(range.first->second, ctx, param, std::forward<Args>(args)...);
     return op_map.emplace(key, std::move(op));
   }();
   lk.unlock();
@@ -225,8 +224,11 @@ struct Conv {
                    const TBlob& y);
 
  private:
-  static cudnn_cxx::Descriptor MakeConvFwdOp(const OpContext& ctx, const Param& param,
-                                             const TBlob& x, const TBlob& w, const TBlob& y);
+  static cudnn_cxx::Descriptor MakeConvFwdOp(const OpContext& ctx,
+                                             const Param& param,
+                                             const TBlob& x,
+                                             const TBlob& w,
+                                             const TBlob& y);
 };
 
 struct ConvDgrad {
@@ -270,8 +272,11 @@ struct ConvDgrad {
                    const TBlob& dx);
 
  private:
-  static cudnn_cxx::Descriptor MakeConvDgradOp(const OpContext& ctx, const Param& param,
-                                               const TBlob& w, const TBlob& dy, const TBlob& dx);
+  static cudnn_cxx::Descriptor MakeConvDgradOp(const OpContext& ctx,
+                                               const Param& param,
+                                               const TBlob& w,
+                                               const TBlob& dy,
+                                               const TBlob& dx);
 };
 
 struct ConvWgrad {
@@ -315,8 +320,11 @@ struct ConvWgrad {
                    const TBlob& dw);
 
  private:
-  static cudnn_cxx::Descriptor MakeConvWgradOp(const OpContext& ctx, const Param& param,
-                                               const TBlob& x, const TBlob& dy, const TBlob& dw);
+  static cudnn_cxx::Descriptor MakeConvWgradOp(const OpContext& ctx,
+                                               const Param& param,
+                                               const TBlob& x,
+                                               const TBlob& dy,
+                                               const TBlob& dw);
 };
 
 bool LegacyAddBias(const OpContext& ctx, const LayoutInfo& li, const TBlob& y, const TBlob& b);
