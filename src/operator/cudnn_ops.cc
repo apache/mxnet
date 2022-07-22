@@ -362,13 +362,13 @@ Descriptor MakeOpGraph(cudnnHandle_t handle, Descriptor op) {
 Descriptor ClonePlan(cudnnHandle_t handle, Descriptor op_graph, const Descriptor& plan) {
   auto cfg =
       GetAttr(plan, CUDNN_ATTR_EXECUTION_PLAN_ENGINE_CONFIG, CUDNN_BACKEND_ENGINECFG_DESCRIPTOR);
-  auto engine = GetAttr(cfg, CUDNN_ATTR_ENGINECFG_ENGINE, CUDNN_BACKEND_ENGINE_DESCRIPTOR);
-
+  auto engine     = GetAttr(cfg, CUDNN_ATTR_ENGINECFG_ENGINE, CUDNN_BACKEND_ENGINE_DESCRIPTOR);
   auto engine_idx = GetAttr<int64_t>(engine, CUDNN_ATTR_ENGINE_GLOBAL_INDEX);
-  auto choices    = GetSomeAttrs(CUDNN_KNOB_TYPE_COUNTS,
-                                 cfg,
-                                 CUDNN_ATTR_ENGINECFG_KNOB_CHOICES,
-                                 CUDNN_BACKEND_KNOB_CHOICE_DESCRIPTOR);
+
+  auto choices = GetSomeAttrs(CUDNN_KNOB_TYPE_COUNTS,
+                              cfg,
+                              CUDNN_ATTR_ENGINECFG_KNOB_CHOICES,
+                              CUDNN_BACKEND_KNOB_CHOICE_DESCRIPTOR);
 
   auto cloned_engine = MakeFinalized(CUDNN_BACKEND_ENGINE_DESCRIPTOR,
                                      CUDNN_ATTR_ENGINE_GLOBAL_INDEX,
