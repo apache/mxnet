@@ -107,7 +107,7 @@ static mxnet::TShape GetBroadcastableShape(const mxnet::TShape& in_shape,
  * \brief Create shape vector basing on two input shapes
  * \param first_shape first input shape
  * \param second_shape second input shape
- * \return deducted broadcasted shape basing on first_shape and second_shape
+ * \return deduced broadcasted shape based on first_shape and second_shape
  */
 static mxnet::TShape GetBroadcastedShape(const mxnet::TShape& first_shape,
                                          const mxnet::TShape& second_shape) {
