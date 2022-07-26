@@ -676,18 +676,6 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(in_attrs->at(0)) && shape_is_known(out_attrs->at(0));
 }
 
-// Currently DNNL only supports step = 1 or step has no value
-// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reorder.html
-inline bool SupportDNNLSlice(const SliceParam& param) {
-  if (param.step.ndim() == 0U)
-    return true;
-  for (int i = 0; i < param.step.ndim(); ++i) {
-    if (param.step[i].has_value() && param.step[i].value() != 1)
-      return false;
-  }
-  return true;
-}
-
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
                                          DispatchMode* dispatch_mode,
@@ -709,16 +697,9 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     trivial_step = true;
   }
 
-  if (in_stype == kDefaultStorage) {
-#if MXNET_USE_ONEDNN == 1
-    if (dev_mask == Context::kCPU && DNNLEnvSet() && SupportDNNLSlice(param)) {
-      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, dispatch_ex);
-    }
-#endif
-    if (!dispatched) {
-      dispatched =
-          storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
-    }
+  if (!dispatched && in_stype == kDefaultStorage) {
+    dispatched =
+        storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
   }
 
   if (!dispatched && in_stype == kCSRStorage && trivial_step) {

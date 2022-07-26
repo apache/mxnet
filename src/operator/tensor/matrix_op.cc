@@ -27,7 +27,6 @@
 #if MXNET_USE_ONEDNN == 1
 #include "operator/nn/dnnl/dnnl_base-inl.h"
 #include "operator/nn/dnnl/dnnl_reshape-inl.h"
-#include "operator/nn/dnnl/dnnl_slice-inl.h"
 #include "operator/nn/dnnl/dnnl_transpose-inl.h"
 #include "operator/nn/dnnl/dnnl_split-inl.h"
 #include "operator/nn/dnnl/dnnl_stack-inl.h"
@@ -473,12 +472,6 @@ will return a new array with shape ``(2,1,3,4)``.
     .add_argument("data", "NDArray-or-Symbol", "Source input")
     .add_arguments(ExpandDimParam::__FIELDS__());
 
-#if MXNET_USE_ONEDNN == 1
-bool SupportDNNLSlice(const SliceParam& param, const NDArray& input, const NDArray& output) {
-  return SupportDNNLSlice(param) && SupportDNNL(input) && SupportDNNL(output);
-}
-#endif
-
 void SliceExCPU(const nnvm::NodeAttrs& attrs,
                 const OpContext& ctx,
                 const std::vector<NDArray>& inputs,
@@ -490,14 +483,6 @@ void SliceExCPU(const nnvm::NodeAttrs& attrs,
   auto in_stype           = inputs[0].storage_type();
   if (in_stype == kCSRStorage) {
     SliceCsrImpl<cpu>(param, ctx, inputs[0], req[0], outputs[0]);
-#if MXNET_USE_ONEDNN == 1
-  } else if (in_stype == kDefaultStorage) {
-    if (SupportDNNLSlice(param, inputs[0], outputs[0])) {
-      DNNLRun(DNNLSlice, attrs, ctx, inputs[0], req[0], outputs[0]);
-    } else {
-      FallBackCompute(SliceOpForward<cpu>, attrs, ctx, inputs, req, outputs);
-    }
-#endif
   } else {
     LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
   }
@@ -561,9 +546,7 @@ Example::
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
     .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", SliceExCPU)
-#if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsDNNL", true)
-#endif
+    // oneDNN support removed in PR-XXX
     .add_argument("data", "NDArray-or-Symbol", "Source input")
     .add_arguments(SliceParam::__FIELDS__());
 
