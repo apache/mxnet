@@ -37,8 +37,9 @@ bool SupportDNNLMaskedSoftmax(const MaskedSoftmaxParam& param, const std::vector
   softmax_param.axis        = param.axis;
   softmax_param.dtype       = data.dtype();
   softmax_param.temperature = param.temperature;
-  // threshold value selected experimentally - PR-XX
-  return data.shape().Size() >= (2 << 13) && mask.dtype() == mshadow::kBool &&
+  // threshold value selected experimentally basing on performance results - PR-XX
+  const size_t optimal_size_threshold = 2 << 13;
+  return data.shape().Size() >= optimal_size_threshold && mask.dtype() == mshadow::kBool &&
          SupportDNNLSoftmax(softmax_param, data);
 }
 
