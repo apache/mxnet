@@ -35,6 +35,7 @@ if(USE_BLAS MATCHES "MKL" OR USE_BLAS MATCHES "mkl" OR NOT DEFINED USE_BLAS)
 endif()
 
 if(BLAS STREQUAL "FlexiBLAS" OR BLAS STREQUAL "flexiblas")
+  set(BLA_VENDOR FlexiBLAS)
   find_package(BLAS REQUIRED)
   include_directories(SYSTEM ${BLAS_INCLUDE_DIR})
   list(APPEND mshadow_LINKER_LIBS ${BLAS_LIBRARIES})
