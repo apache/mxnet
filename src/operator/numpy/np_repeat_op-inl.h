@@ -37,6 +37,7 @@
 #include "../channel_op_common.h"
 #include "../mxnet_op.h"
 #include "../../common/static_array.h"
+#include "../swapaxis-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -153,25 +154,21 @@ struct repeat_axis_fwd {
 };
 
 template <typename xpu>
-void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<TBlob>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<TBlob>& outputs) {
+void NumpyRepeatsOpForwardImpl(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs,
+                               int* ind) {
   using namespace mshadow;
   const TBlob& iTBlob         = inputs[0];
   const mxnet::TShape& ishape = iTBlob.shape_;
-  if (!shape_is_known(ishape))
-    return;
-  Stream<xpu>* s = ctx.get_stream<xpu>();
-
-  int repeats = 0;
+  int repeats                 = 0;
   dmlc::optional<int> axisOpt;
   int axis                  = -1;
   const RepeatsParam& param = nnvm::get<RepeatsParam>(attrs.parsed);
   GetRepeatsParams(param, ishape, &repeats, &axisOpt, &axis);
-  if (0 == repeats)
-    return;
+  axis                    = 0;
   mxnet::Tuple<int> repts = param.repeats.value();
   if (repts.ndim() == 1) {
     int len = static_cast<bool>(axisOpt) ? ishape[axis] : ishape.Size();
@@ -181,10 +178,6 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
   for (int i = 1; i < repts.ndim(); i++) {
     repts[i] += repts[i - 1];
   }
-  size_t total_temp_size = repts.ndim() * sizeof(int);
-  Tensor<xpu, 1, char> temp_space =
-      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
-  int* ind = reinterpret_cast<int*>(temp_space.dptr_);
 
   if (ctx.run_ctx.ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
@@ -225,6 +218,73 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
             s, out_data.Size(), out_data.dptr<OType>(), in_data.dptr<IType>(), ind, stride);
       });
     });
+  }
+}
+
+template <typename xpu>
+void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  int repeats                 = 0;
+  dmlc::optional<int> axisOpt;
+  int axis                  = -1;
+  const RepeatsParam& param = nnvm::get<RepeatsParam>(attrs.parsed);
+  GetRepeatsParams(param, ishape, &repeats, &axisOpt, &axis);
+
+  if (!shape_is_known(ishape) || repeats == 0)
+    return;
+
+  mxnet::Tuple<int> repts = param.repeats.value();
+  if (repts.ndim() == 1) {
+    int len = static_cast<bool>(axisOpt) ? ishape[axis] : ishape.Size();
+    std::vector<int> temp(len, repeats);
+    repts = mxnet::Tuple<int>(temp);
+  }
+
+  // If axis was specified then perform swapaxis before and after calling repeat function
+  if (static_cast<bool>(axisOpt)) {
+    size_t total_temp_size = inputs[0].shape_.Size() * sizeof(float) +
+                             outputs[0].shape_.Size() * sizeof(float) + repts.ndim() * sizeof(int);
+    Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
+        Shape1(total_temp_size), ctx.get_stream<xpu>());
+
+    // Specify parameters for swapaxis function
+    SwapAxisParam swap_axis_param{};
+    NodeAttrs swap_attrs;
+    swap_axis_param.dim1 = 0;
+    swap_axis_param.dim2 = axis;
+    swap_attrs.parsed    = swap_axis_param;
+
+    // Create TBlob that will store first swapaxis function output and then trigger swapaxis
+    // function
+    TShape swap_output_shape = inputs[0].shape_;
+    std::swap(swap_output_shape[0], swap_output_shape[axis]);
+    float* dptr1 = reinterpret_cast<float*>(temp_space.dptr_);
+    TBlob swap_output(dptr1, swap_output_shape, cpu::kDevMask);
+    SwapAxisCompute<xpu>(swap_attrs, ctx, inputs, req, {swap_output});
+
+    // Create TBlob that will store repeat function output and then trigger repeat function
+    TShape repeat_output_shape = outputs[0].shape_;
+    std::swap(repeat_output_shape[0], repeat_output_shape[axis]);
+    float* dptr2 = dptr1 + inputs[0].shape_.Size();
+    TBlob repeat_output(dptr2, repeat_output_shape, cpu::kDevMask);
+    int* dptr3 = reinterpret_cast<int*>(temp_space.dptr_ + inputs[0].shape_.Size() * sizeof(float) +
+                                        outputs[0].shape_.Size() * sizeof(float));
+    NumpyRepeatsOpForwardImpl<xpu>(attrs, ctx, {swap_output}, req, {repeat_output}, dptr3);
+
+    // "reswap" previously swapped axes
+    SwapAxisCompute<xpu>(swap_attrs, ctx, {repeat_output}, req, outputs);
+  } else {
+    // axis was not specified, so there is no need to call swapaxis
+    size_t total_temp_size          = repts.ndim() * sizeof(int);
+    Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
+        Shape1(total_temp_size), ctx.get_stream<xpu>());
+    int* dptr = reinterpret_cast<int*>(temp_space.dptr_);
+    NumpyRepeatsOpForwardImpl<xpu>(attrs, ctx, inputs, req, outputs, dptr);
   }
 }
 
