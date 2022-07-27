@@ -546,7 +546,7 @@ Example::
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
     .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", SliceExCPU)
-    // oneDNN support removed in PR-XXX
+    // oneDNN support removed in PR-21106 due to performance reasons
     .add_argument("data", "NDArray-or-Symbol", "Source input")
     .add_arguments(SliceParam::__FIELDS__());
 
