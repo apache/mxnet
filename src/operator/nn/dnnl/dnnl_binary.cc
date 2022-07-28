@@ -66,7 +66,7 @@ void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
 // Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_binary.html
 bool SupportDNNLBinary(const std::vector<NDArray>& inputs) {
   // threshold value selected experimentally basing on performance results - PR-21106
-  const size_t optimal_size_threshold = 2 << 13;
+  constexpr size_t optimal_size_threshold = 2 << 13;
   return (inputs[0].shape().Size() >= optimal_size_threshold ||
           inputs[1].shape().Size() >= optimal_size_threshold) &&
          SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[1]) &&
