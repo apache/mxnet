@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 import models
 from contextlib import contextmanager
 import pytest
-from tempfile import TemporaryDirectory
+from mxnet.util import TemporaryDirectory
 import locale
 
 xfail_when_nonstandard_decimal_separator = pytest.mark.xfail(

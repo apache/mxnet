@@ -20,6 +20,9 @@ import ctypes
 import functools
 import inspect
 import threading
+import tempfile
+import platform
+from contextlib import contextmanager
 
 from struct import calcsize
 from .base import (_LIB, check_call, c_str, py_str,
@@ -1359,3 +1362,20 @@ def dtype_from_number(number):
     elif isinstance(number, _np.generic):
         return number.dtype
     raise TypeError('type {} not supported'.format(str(type(number))))
+
+# This is a wrapping of tempfile.TemporaryDirectory(), known to have cleanup issues on Windows.
+# The problem is partially handled as of Python 3.10 by the adding of a 'ignore_cleanup_errors'
+# parameter.  Once MXNet's Python version is forced to be >= 3.10, a simplification of this
+# function to use 'ignore_cleanup_errors' would be possible.  Until the fundamental Windows
+# issues are resolved, best to use this routine instead of tempfile.TemporaryDirectory().
+@contextmanager
+def TemporaryDirectory(*args, **kwargs):
+    """A context wrapper of tempfile.TemporaryDirectory() that ignores cleanup errors on Windows.
+    """
+    dir = tempfile.TemporaryDirectory(*args, **kwargs)
+    yield dir
+    try:
+        dir.cleanup()
+    except PermissionError:
+        if platform.system() == 'Windows':
+            pass
