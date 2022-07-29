@@ -1377,5 +1377,5 @@ def TemporaryDirectory(*args, **kwargs):
     try:
         dir.cleanup()
     except PermissionError:
-        if platform.system() == 'Windows':
-            pass
+        if platform.system() != 'Windows':
+            raise
