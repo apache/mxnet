@@ -156,7 +156,7 @@ void SwapAxisCompute(const nnvm::NodeAttrs& attrs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& out_data) {
   using namespace mshadow;
-  MSHADOW_TYPE_SWITCH(in_data[swapaxisenum::kData].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(in_data[swapaxisenum::kData].type_flag_, DType, {
     SwapAxis<xpu, DType>(attrs, ctx, in_data, out_data, req);
   });
 }
