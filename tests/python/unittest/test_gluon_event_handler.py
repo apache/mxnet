@@ -78,8 +78,6 @@ def _get_batch_axis_test_data(in_size=32):
     data_arr = AxisArrayDataset(data, label)
     return mx.gluon.data.DataLoader(data_arr, batch_size=8)
 
-# Possible issue with bug in TemporaryDirectory() on Windows, as
-# mentioned in https://github.com/apache/incubator-mxnet/issues/20914
 @mx.util.use_np
 def test_checkpoint_handler():
     with TemporaryDirectory() as tmpdir:
