@@ -251,7 +251,7 @@ struct SoftmaxOutputParam;
 bool SupportDNNLAct(const ActivationParam& param);
 bool SupportDNNLAct(const ActivationParam& param, const NDArray& input);
 bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs);
-bool SupportDNNLBinary(const std::vector<NDArray>& inputs);
+bool SupportDNNLBinary(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs);
 bool SupportDNNLConcat(const std::vector<NDArray>& arrs);
 bool SupportDNNLConv(const ConvolutionParam& params, const NDArray& input);
 bool SupportDNNLDeconv(const DeconvolutionParam& params, const NDArray& input);

@@ -74,13 +74,11 @@ static void BinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
                                        const std::vector<NDArray>& outputs) {
 #if MXNET_USE_ONEDNN == 1
   if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
-    if (SupportDNNLBinary(inputs)) {
+    if (SupportDNNLBinary(inputs, outputs)) {
       const dnnl::algorithm alg = DNNLAlgorithm<OP>::value;
       DNNLRun(DNNLBinaryOpForward<alg>, attrs, ctx, inputs, req, outputs);
     } else {
-      std::vector<mxnet::TBlob> in_data  = {inputs[0].data(), inputs[1].data()};
-      std::vector<mxnet::TBlob> out_data = {outputs[0].data()};
-      BinaryBroadcastCompute<cpu, OP>(attrs, ctx, in_data, req, out_data);
+      FallBackCompute(BinaryBroadcastCompute<cpu, OP>, attrs, ctx, inputs, req, outputs);
     }
     return;
   }
