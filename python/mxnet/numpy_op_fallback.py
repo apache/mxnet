@@ -182,7 +182,7 @@ class MultivariateNormal(operator.CustomOp):
             scale = _mx_np.linalg.cholesky(cov)
         #set context
         noise = _mx_np.random.normal(size=out_data[0].shape, dtype=loc.dtype, device=loc.device)
-        out = loc + _mx_np.einsum('...jk,...j->...k', scale, noise)
+        out = loc + _mx_np.einsum('...jk,...k->...j', scale, noise)
         self.assign(out_data[0], req[0], out)
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
