@@ -1373,7 +1373,7 @@ def TemporaryDirectory(*args, **kwargs):
     """A context wrapper of tempfile.TemporaryDirectory() that ignores cleanup errors on Windows.
     """
     dir = tempfile.TemporaryDirectory(*args, **kwargs)
-    yield dir
+    yield dir.name
     try:
         dir.cleanup()
     except PermissionError:
