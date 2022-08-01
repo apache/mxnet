@@ -76,8 +76,10 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     gpu_copy_workers_.Clear();
     cpu_normal_workers_.Clear();
     cpu_priority_worker_.reset(nullptr);
+#if MXNET_USE_CUDA
     streams_.clear();
     cuda_event_pool_per_worker_.clear();
+#endif
   }
 
   void Stop() override {
