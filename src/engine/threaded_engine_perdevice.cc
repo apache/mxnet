@@ -28,7 +28,6 @@
 #include <dmlc/concurrency.h>
 #include <dmlc/thread_group.h>
 
-#include <unistd.h>
 #include <mutex>
 #include <memory>
 #include "../initialize.h"
