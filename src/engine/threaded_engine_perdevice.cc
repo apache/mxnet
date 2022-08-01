@@ -21,8 +21,6 @@
  * \file threaded_engine_perdevice.cc
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */
-#include <unistd.h>
-#include <mutex>
 #include <dmlc/base.h>
 #include <dmlc/omp.h>
 #include <dmlc/logging.h>
@@ -30,6 +28,8 @@
 #include <dmlc/concurrency.h>
 #include <dmlc/thread_group.h>
 
+#include <unistd.h>
+#include <mutex>
 #include <memory>
 #include "../initialize.h"
 #include "./threaded_engine.h"
