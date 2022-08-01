@@ -34,7 +34,7 @@ import requests
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array
+from ..util import is_np_shape, is_np_array, TemporaryDirectory
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
