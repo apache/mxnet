@@ -21,11 +21,12 @@
  * \file elemwise_binary_broadcast_op_basic.cc
  * \brief CPU Implementation of basic functions for elementwise binary broadcast operator.
  */
-#include "./elemwise_unary_op.h"
-#include "./elemwise_binary_op-inl.h"
-#include "./elemwise_binary_broadcast_op.h"
+#include "operator/tensor/elemwise_unary_op.h"
+#include "operator/tensor/elemwise_binary_op-inl.h"
+#include "operator/tensor/elemwise_binary_broadcast_op.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/dnnl/dnnl_binary-inl.h"
+#include "operator/nn/dnnl/dnnl_binary-inl.h"
+#include "operator/nn/dnnl/dnnl_sum-inl.h"
 #endif  // MXNET_USE_ONEDNN == 1
 
 namespace mxnet {
@@ -38,31 +39,39 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
-  mxnet::TShape new_lshape, new_rshape, new_oshape;
-  int ndim_diff = BinaryBroadcastShapeCompact(inputs[0].shape(),
-                                              inputs[1].shape(),
-                                              outputs[0].shape(),
-                                              &new_lshape,
-                                              &new_rshape,
-                                              &new_oshape);
-  std::vector<NDArray> new_inputs;
-  std::vector<NDArray> new_outputs;
-  if (ndim_diff) {
-    new_inputs  = {inputs[0].Reshape(new_lshape), inputs[1].Reshape(new_rshape)};
-    new_outputs = {outputs[0].Reshape(new_oshape)};
-  } else if (inputs[0].shape().Size() == 1 && inputs[1].shape().Size() == 1) {
-    // BinaryBroadcastShapeCompact function doesn't reshape tensors of size (1,1,...,1)
-    // into shape (1). It is mandatory for oneDNN primitive to have this reshape done.
-    mxnet::TShape one_shape = mxnet::TShape(1, 1);
-    new_inputs              = {inputs[0].Reshape(one_shape), inputs[1].Reshape(one_shape)};
-    new_outputs             = {outputs[0].Reshape(one_shape)};
-  } else {
-    new_inputs  = {inputs[0], inputs[1]};
-    new_outputs = {outputs[0]};
-  }
+  // We can use more efficient sum kernel when there is no broadcast - when shapes are the same
+  const bool same_shape = (inputs[0].shape() == inputs[1].shape());
 
-  DNNLBinaryOpFwd& fwd = DNNLBinaryOpFwd::GetBinaryOpForward<alg>(new_inputs, new_outputs);
-  fwd.Execute(new_inputs, req, new_outputs);
+  if (same_shape) {
+    DNNLSumFwd& fwd = DNNLSumFwd::GetCached(inputs, outputs);
+    fwd.Execute(ctx, inputs, req, outputs);
+  } else {
+    mxnet::TShape new_lshape, new_rshape, new_oshape;
+    int ndim_diff = BinaryBroadcastShapeCompact(inputs[0].shape(),
+                                                inputs[1].shape(),
+                                                outputs[0].shape(),
+                                                &new_lshape,
+                                                &new_rshape,
+                                                &new_oshape);
+    std::vector<NDArray> new_inputs;
+    std::vector<NDArray> new_outputs;
+    if (ndim_diff) {
+      new_inputs  = {inputs[0].Reshape(new_lshape), inputs[1].Reshape(new_rshape)};
+      new_outputs = {outputs[0].Reshape(new_oshape)};
+    } else if (inputs[0].shape().Size() == 1 && inputs[1].shape().Size() == 1) {
+      // BinaryBroadcastShapeCompact function doesn't reshape tensors of size (1,1,...,1)
+      // into shape (1). It is mandatory for oneDNN primitive to have this reshape done.
+      mxnet::TShape one_shape = mxnet::TShape(1, 1);
+      new_inputs              = {inputs[0].Reshape(one_shape), inputs[1].Reshape(one_shape)};
+      new_outputs             = {outputs[0].Reshape(one_shape)};
+    } else {
+      new_inputs  = {inputs[0], inputs[1]};
+      new_outputs = {outputs[0]};
+    }
+
+    DNNLBinaryOpFwd& fwd = DNNLBinaryOpFwd::GetBinaryOpForward<alg>(new_inputs, new_outputs);
+    fwd.Execute(new_inputs, req, new_outputs);
+  }
 }
 #endif
 
