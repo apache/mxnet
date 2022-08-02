@@ -260,22 +260,16 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
 
   // If axis was specified then perform swapaxis before and after calling repeat function
   if (axisOpt.has_value() && axisOpt.value() != 0) {
-    void* swap_output_tmp_dptr;
-    void* repeat_output_tmp_dptr;
-    int* repeat_tmp_dptr;
-
-    MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, DType, {
-      size_t total_temp_size = inputs[0].shape_.Size() * sizeof(DType) +
-                               outputs[0].shape_.Size() * sizeof(DType) +
-                               repts.ndim() * sizeof(int);
-      Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
-          Shape1(total_temp_size), ctx.get_stream<xpu>());
-      swap_output_tmp_dptr   = temp_space.dptr_;
-      repeat_output_tmp_dptr = temp_space.dptr_ + inputs[0].shape_.Size() * sizeof(DType);
-      repeat_tmp_dptr =
-          reinterpret_cast<int*>(temp_space.dptr_ + inputs[0].shape_.Size() * sizeof(DType) +
-                                 outputs[0].shape_.Size() * sizeof(DType));
-    });
+    int type_size          = mshadow_sizeof(inputs[0].type_flag_);
+    size_t total_temp_size = inputs[0].shape_.Size() * type_size +
+                             outputs[0].shape_.Size() * type_size + repts.ndim() * sizeof(int);
+    Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
+        Shape1(total_temp_size), ctx.get_stream<xpu>());
+    void* swap_output_tmp_dptr   = temp_space.dptr_;
+    void* repeat_output_tmp_dptr = temp_space.dptr_ + inputs[0].shape_.Size() * type_size;
+    int* repeat_tmp_dptr =
+        reinterpret_cast<int*>(temp_space.dptr_ + inputs[0].shape_.Size() * type_size +
+                               outputs[0].shape_.Size() * type_size);
 
     // Specify parameters for swapaxis function
     SwapAxisParam swap_axis_param{};
