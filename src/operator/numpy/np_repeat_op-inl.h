@@ -268,7 +268,8 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
     void* swap_output_tmp_dptr   = temp_space.dptr_;
     void* repeat_output_tmp_dptr = temp_space.dptr_ + inputs[0].shape_.Size() * type_size;
     int* repeat_tmp_dptr =
-        reinterpret_cast<int*>(repeat_output_tmp_dptr + outputs[0].shape_.Size() * type_size);
+        reinterpret_cast<int*>(temp_space.dptr_ + inputs[0].shape_.Size() * type_size +
+                               outputs[0].shape_.Size() * type_size);
 
     // Specify parameters for swapaxis function
     SwapAxisParam swap_axis_param{};
