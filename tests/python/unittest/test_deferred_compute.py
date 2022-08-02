@@ -17,13 +17,13 @@
 
 import functools
 import operator
-import tempfile
 
 import numpy as np
 
 import mxnet as mx
 import mxnet._deferred_compute as dc
 from mxnet.base import MXNetError
+from mxnet.util import TemporaryDirectory
 import pytest
 
 
@@ -420,7 +420,7 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
 
     _all_same(ys_np, ys_hybrid_np)
 
-    with tempfile.TemporaryDirectory() as root:
+    with TemporaryDirectory() as root:
         with mx.util.np_shape(True), mx.util.np_array(True):
             net.export(root)
 

@@ -21,11 +21,9 @@ __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
 import logging
-import tempfile
 import uuid
-import shutil
 
-from ..utils import download, check_sha1, replace_file
+from ..utils import download, check_sha1, replace_file, TemporaryDirectory
 from ... import base
 
 _model_sha1 = {name: checksum for checksum, name in [
@@ -114,11 +112,10 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     download(_url_format.format(repo_url=repo_url, file_name=file_name),
              path=temp_zip_file_path, overwrite=True)
     with zipfile.ZipFile(temp_zip_file_path) as zf:
-        temp_dir = tempfile.mkdtemp(dir=root)
-        zf.extractall(temp_dir)
-        temp_file_path = os.path.join(temp_dir, file_name+'.params')
-        replace_file(temp_file_path, file_path)
-        shutil.rmtree(temp_dir)
+        with TemporaryDirectory(dir=root) as temp_dir:
+            zf.extractall(temp_dir)
+            temp_file_path = os.path.join(temp_dir, file_name+'.params')
+            replace_file(temp_file_path, file_path)
     os.remove(temp_zip_file_path)
 
     if check_sha1(file_path, sha1_hash):
