@@ -103,6 +103,14 @@ inline bool RepeatsOpShape(const nnvm::NodeAttrs& attrs,
     return true;
   }
 
+  mxnet::Tuple<int> repts = param.repeats.value();
+  if (repts.ndim() != 1) {
+    int len = static_cast<bool>(axisOpt) ? ishape[axis] : ishape.Size();
+    CHECK(len == repts.ndim()) << "ValueError: Operands could not be broadcast together with shape "
+                               << "(" << len << ",)"
+                               << " (" << repts.ndim() << ",)";
+  }
+
   // If repeats > 0, multiply the size of the corresponding axis by repeats
   if (static_cast<bool>(axisOpt)) {
     mxnet::TShape shape(ishape.ndim(), -1);
@@ -244,14 +252,10 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
     return;
 
   mxnet::Tuple<int> repts = param.repeats.value();
-  int len                 = static_cast<bool>(axisOpt) ? ishape[axis] : ishape.Size();
   if (repts.ndim() == 1) {
+    int len = static_cast<bool>(axisOpt) ? ishape[axis] : ishape.Size();
     std::vector<int> temp(len, repeats);
     repts = mxnet::Tuple<int>(temp);
-  } else {
-    CHECK(len == repts.ndim()) << "ValueError: Operands could not be broadcast together with shape "
-                               << "(" << len << ",)"
-                               << " (" << repts.ndim() << ",)";
   }
 
   // If axis was specified then perform swapaxis before and after calling repeat function
