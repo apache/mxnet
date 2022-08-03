@@ -282,14 +282,14 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
     // function
     TShape swap_output_shape = inputs[0].shape_;
     std::swap(swap_output_shape[0], swap_output_shape[axis]);
-    TBlob swap_output(swap_output_tmp_dptr, swap_output_shape, cpu::kDevMask, inputs[0].type_flag_);
+    TBlob swap_output(swap_output_tmp_dptr, swap_output_shape, xpu::kDevMask, inputs[0].type_flag_);
     SwapAxisCompute<xpu>(swap_attrs, ctx, inputs, req, {swap_output});
 
     // Create TBlob that will store repeat function output and then trigger repeat function
     TShape repeat_output_shape = outputs[0].shape_;
     std::swap(repeat_output_shape[0], repeat_output_shape[axis]);
     TBlob repeat_output(
-        repeat_output_tmp_dptr, repeat_output_shape, cpu::kDevMask, inputs[0].type_flag_);
+        repeat_output_tmp_dptr, repeat_output_shape, xpu::kDevMask, inputs[0].type_flag_);
     NumpyRepeatsAxisZeroOpForward<xpu>(
         attrs, ctx, {swap_output}, req, {repeat_output}, repeat_tmp_dptr);
 
