@@ -42,7 +42,7 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
   // We can use more efficient sum kernel when there is no broadcast - when shapes are the same
   const bool same_shape = (inputs[0].shape() == inputs[1].shape());
 
-  if (same_shape) {
+  if (same_shape && alg == dnnl::algorithm::binary_add) {
     DNNLSumFwd& fwd = DNNLSumFwd::GetCached(inputs, outputs);
     fwd.Execute(ctx, inputs, req, outputs);
   } else {
