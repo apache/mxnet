@@ -57,7 +57,7 @@ inline static dnnl::normalization_flags _GetFlags(const std::vector<NDArray>& in
     flags |= dnnl::normalization_flags::use_global_stats;
   }
 
-  if (fuse_relu) {
+  if (fuse_relu /*&& is_train_and_not_global_stats*/) {
     flags |= dnnl::normalization_flags::fuse_norm_relu;
   }
   return flags;
@@ -74,8 +74,25 @@ inline static t_bn_f_pdesc _GetFwd(const dnnl::memory& data_mem,
     t_bn_f_desc bnFwd_desc(dnnl::prop_kind::forward_training, data_md, eps, flags);
     return t_bn_f_pdesc(bnFwd_desc, engine);
   } else {
-    t_bn_f_desc bnFwd_desc(dnnl::prop_kind::forward_inference, data_md, eps, flags);
-    return t_bn_f_pdesc(bnFwd_desc, engine);
+
+    if ((int)(dnnl::normalization_flags::fuse_norm_relu & flags)){
+      const float scale = 1.f;
+      const float alpha = 0.f;
+      const float beta = 0.f;
+      dnnl::post_ops conv_ops;
+      conv_ops.append_eltwise(scale, dnnl::algorithm::eltwise_relu, alpha, beta);
+      dnnl::primitive_attr conv_attr;
+      conv_attr.set_post_ops(conv_ops);
+      //printf("flags %d\n", flags);
+      flags &=  (~(dnnl::normalization_flags::fuse_norm_relu)); 
+      t_bn_f_desc bnFwd_desc(dnnl::prop_kind::forward_inference, data_md, eps, flags);
+      return t_bn_f_pdesc(bnFwd_desc, conv_attr,engine);
+    }
+    else {
+      t_bn_f_desc bnFwd_desc(dnnl::prop_kind::forward_inference, data_md, eps, flags);
+      return t_bn_f_pdesc(bnFwd_desc, engine);
+    }
+    
   }
 }
 
@@ -218,17 +235,17 @@ void DNNLBatchNormForwardImpl(const nnvm::NodeAttrs& attrs,
     net_args[DNNL_ARG_SRC]         = *data_mem;
     net_args[DNNL_ARG_SCALE_SHIFT] = weight_mem;
     net_args[DNNL_ARG_DST]         = *out_mem;
-    if (fuse_relu) {
-      const NDArray* workspace = nullptr;
-      workspace                = &outputs[3];
-      auto engine              = CpuEngine::Get()->get_engine();
-      if (workspace == nullptr) {
-        LOG(FATAL) << "oneDNN BatchNorm: incorrect workspace input";
-      }
-      auto ws = std::make_shared<dnnl::memory>(
-          fwd.GetPd().workspace_desc(), engine, workspace->GetDNNLData()->get_data_handle());
-      net_args[DNNL_ARG_WORKSPACE] = *ws;
-    }
+    // if (fuse_relu /*&& ctx.is_train*/) {
+    //   const NDArray* workspace = nullptr;
+    //   workspace                = &outputs[3];
+    //   auto engine              = CpuEngine::Get()->get_engine();
+    //   if (workspace == nullptr) {
+    //     LOG(FATAL) << "oneDNN BatchNorm: incorrect workspace input";
+    //   }
+    //   auto ws = std::make_shared<dnnl::memory>(
+    //       fwd.GetPd().workspace_desc(), engine, workspace->GetDNNLData()->get_data_handle());
+    //   net_args[DNNL_ARG_WORKSPACE] = *ws;
+    // }
     if (!ctx.is_train || param.use_global_stats) {
       float* omean  = outputs[batchnorm::kMean].data().dptr<float>();
       float* ovar   = outputs[batchnorm::kVar].data().dptr<float>();
@@ -332,11 +349,11 @@ void DNNLBatchNormBackwardImpl(const nnvm::NodeAttrs& attrs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs,
                                bool fuse_relu) {
-  if (fuse_relu) {
-    CHECK_EQ(inputs.size(), 9U);
-  } else {
-    CHECK_EQ(inputs.size(), 8U);
-  }
+  // if (fuse_relu) {
+  //   CHECK_EQ(inputs.size(), 9U);
+  // } else {
+  CHECK_EQ(inputs.size(), 8U);
+ // }
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<NDArray> out_grad(1);
   std::vector<NDArray> out_data(3);
@@ -422,13 +439,13 @@ void DNNLBatchNormBackwardImpl(const nnvm::NodeAttrs& attrs,
     net_args[DNNL_ARG_DIFF_SCALE_SHIFT] = bwd.GetGradw();
     net_args[DNNL_ARG_DIFF_DST]         = *diff_mem;
 
-    if (fuse_relu) {
-      const NDArray* workspace = nullptr;
-      workspace                = &inputs[8];
-      if (workspace != nullptr) {
-        net_args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
-      }
-    }
+    // if (fuse_relu) {
+    //   const NDArray* workspace = nullptr;
+    //   workspace                = &inputs[8];
+    //   if (workspace != nullptr) {
+    //     net_args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
+    //   }
+    // }
 
     // training but no input mean and variance
     if (ctx.is_train && !param.use_global_stats) {
