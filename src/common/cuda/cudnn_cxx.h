@@ -162,14 +162,14 @@ void SetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name, T val) {
 
 template <typename T>
 void SetAttr(const Descriptor& desc, cudnnBackendAttributeName_t name, const std::vector<T>& val) {
-  CUDNN_CALL(cudnnBackendSetAttribute(desc.get(), name, AttrType<T>::type, val.size(), &val[0]));
+  CUDNN_CALL(cudnnBackendSetAttribute(desc.get(), name, AttrType<T>::type, val.size(), val.data()));
 }
 
 template <typename T, size_t N>
 void SetAttr(const Descriptor& desc,
              cudnnBackendAttributeName_t name,
              const std::array<T, N>& val) {
-  CUDNN_CALL(cudnnBackendSetAttribute(desc.get(), name, AttrType<T>::type, val.size(), &val[0]));
+  CUDNN_CALL(cudnnBackendSetAttribute(desc.get(), name, AttrType<T>::type, val.size(), val.data()));
 }
 
 inline void SetAttrs(const Descriptor& desc) {}

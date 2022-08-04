@@ -63,7 +63,7 @@ void SetAttr(const Descriptor& desc,
   std::vector<cudnnBackendDescriptor_t> raw(val.size());
   std::transform(val.begin(), val.end(), raw.begin(), [](const Descriptor& d) { return d.get(); });
   CUDNN_CALL(cudnnBackendSetAttribute(
-      desc.get(), name, CUDNN_TYPE_BACKEND_DESCRIPTOR, raw.size(), &raw[0]));
+      desc.get(), name, CUDNN_TYPE_BACKEND_DESCRIPTOR, raw.size(), raw.data()));
 }
 
 Descriptor GetAttr(const Descriptor& desc,

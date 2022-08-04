@@ -112,6 +112,13 @@ struct LayoutInfo {
 
 LayoutInfo GetLayoutInfo(mshadow::LayoutFlag layout);
 
+cudnn_cxx::Descriptor MakeOpGraph(cudnnHandle_t handle, cudnn_cxx::Descriptor op);
+
+// Make a copy of an existing execution plan with a new cuDNN handle.  Op graph re-supplied.
+cudnn_cxx::Descriptor ClonePlan(cudnnHandle_t handle,
+                                cudnn_cxx::Descriptor op_graph,
+                                const cudnn_cxx::Descriptor& plan);
+
 TShape ExpandChannelDims(mshadow::LayoutFlag layout, int c);
 
 void MaybeLogSelectedPlan(const cudnn_cxx::Descriptor& plan);
@@ -121,25 +128,39 @@ void MaybeLogSelectedPlan(const cudnn_cxx::Descriptor& plan);
 // Op::Param - a type, collecting all data, required to create cuDNN descriptor(s), but not needed
 //             for execution.
 // Op::MakeKey() - a static function, which maps its arguments to a tuple - a key in the op cache.
-// Op::Make() - a static function, creating the necessary cuDNN descriptor.
-// Op::Exec() - a static function, calling cudnnBackendExecute() with the prepared descriptor and
+// Op::Make() - a static function, creating all necessary cuDNN descriptors.
+// Op::Clone() - a static function, creating a copy of the op's descriptors with a new cudNN handle.
+// Op::Exec() - a static function, calling cudnnBackendExecute() with the prepared descriptor(s) and
 //              the passed arguments.
 template <typename Op, typename... Args>
 bool Exec(const OpContext& ctx, const typename Op::Param& param, Args&&... args) {
   auto key = std::tuple_cat(std::make_tuple(ctx.run_ctx.ctx.dev_id),
                             Op::MakeKey(param, std::forward<Args>(args)...));
-  static std::unordered_map<decltype(key), cudnn_cxx::Descriptor> op_map;
   static std::mutex mx;
   std::unique_lock<std::mutex> lk(mx);
-  auto it = op_map.find(key);
-  if (it == op_map.end()) {
-    auto op = Op::Make(ctx, param, std::forward<Args>(args)...);
-    it      = op_map.emplace(key, std::move(op)).first;
-  }
+  static std::unordered_multimap<decltype(key), const cudnn_cxx::Descriptor> op_map;
+  auto match_it = [&]() {
+    // Some cuDNN Op implementations require that the thread's cuDNN handle
+    // (used in cudnnBackendExecute()) matches the one used in making the plan.
+    const bool ignore_handles = false;
+    auto range                = op_map.equal_range(key);
+    auto handle               = ctx.get_stream<gpu>()->dnn_handle_;
+    for (auto it = range.first; it != range.second; ++it) {
+      if (ignore_handles || handle == cudnn_cxx::GetAttr<cudnnHandle_t>(
+                                          it->second, CUDNN_ATTR_EXECUTION_PLAN_HANDLE)) {
+        return it;
+      }
+    }
+    // No Op exists with this handle. Make a new op, cloning from an existing op if possible.
+    auto op = (range.first == range.second) ?
+                  Op::Make(ctx, param, std::forward<Args>(args)...) :
+                  Op::Clone(range.first->second, ctx, param, std::forward<Args>(args)...);
+    return op_map.emplace(key, std::move(op));
+  }();
   lk.unlock();
-  if (!it->second)
+  if (!match_it->second)
     return false;
-  Op::Exec(it->second, ctx, std::forward<Args>(args)...);
+  Op::Exec(match_it->second, ctx, std::forward<Args>(args)...);
   return true;
 }
 
@@ -189,11 +210,25 @@ struct Conv {
                                     const TBlob& w,
                                     const TBlob& y);
 
+  static cudnn_cxx::Descriptor Clone(const cudnn_cxx::Descriptor& plan,
+                                     const OpContext& ctx,
+                                     const Param& param,
+                                     const TBlob& x,
+                                     const TBlob& w,
+                                     const TBlob& y);
+
   static void Exec(const cudnn_cxx::Descriptor& plan,
                    const OpContext& ctx,
                    const TBlob& x,
                    const TBlob& w,
                    const TBlob& y);
+
+ private:
+  static cudnn_cxx::Descriptor MakeConvFwdOp(const OpContext& ctx,
+                                             const Param& param,
+                                             const TBlob& x,
+                                             const TBlob& w,
+                                             const TBlob& y);
 };
 
 struct ConvDgrad {
@@ -223,11 +258,25 @@ struct ConvDgrad {
                                     const TBlob& dy,
                                     const TBlob& dx);
 
+  static cudnn_cxx::Descriptor Clone(const cudnn_cxx::Descriptor& plan,
+                                     const OpContext& ctx,
+                                     const Param& param,
+                                     const TBlob& x,
+                                     const TBlob& w,
+                                     const TBlob& y);
+
   static void Exec(const cudnn_cxx::Descriptor& plan,
                    const OpContext& ctx,
                    const TBlob& w,
                    const TBlob& dy,
                    const TBlob& dx);
+
+ private:
+  static cudnn_cxx::Descriptor MakeConvDgradOp(const OpContext& ctx,
+                                               const Param& param,
+                                               const TBlob& w,
+                                               const TBlob& dy,
+                                               const TBlob& dx);
 };
 
 struct ConvWgrad {
@@ -257,11 +306,25 @@ struct ConvWgrad {
                                     const TBlob& dy,
                                     const TBlob& dw);
 
+  static cudnn_cxx::Descriptor Clone(const cudnn_cxx::Descriptor& plan,
+                                     const OpContext& ctx,
+                                     const Param& param,
+                                     const TBlob& x,
+                                     const TBlob& w,
+                                     const TBlob& y);
+
   static void Exec(const cudnn_cxx::Descriptor& plan,
                    const OpContext& ctx,
                    const TBlob& x,
                    const TBlob& dy,
                    const TBlob& dw);
+
+ private:
+  static cudnn_cxx::Descriptor MakeConvWgradOp(const OpContext& ctx,
+                                               const Param& param,
+                                               const TBlob& x,
+                                               const TBlob& dy,
+                                               const TBlob& dw);
 };
 
 bool LegacyAddBias(const OpContext& ctx, const LayoutInfo& li, const TBlob& y, const TBlob& b);
