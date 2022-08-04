@@ -31,12 +31,16 @@ namespace op {
 // Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_softmax.html
 bool SupportDNNLMaskedSoftmax(const MaskedSoftmaxParam& param, const std::vector<NDArray>& inputs) {
   CHECK_EQ(inputs.size(), 2);
+  const auto data = inputs[0];
   const auto mask = inputs[1];
   SoftmaxParam softmax_param;
   softmax_param.axis        = param.axis;
-  softmax_param.dtype       = inputs[0].dtype();
+  softmax_param.dtype       = data.dtype();
   softmax_param.temperature = param.temperature;
-  return mask.dtype() == mshadow::kBool && SupportDNNLSoftmax(softmax_param, inputs[0]);
+  // threshold value selected experimentally basing on performance results - PR-21106
+  constexpr size_t optimal_size_threshold = 2 << 13;
+  return data.shape().Size() >= optimal_size_threshold && mask.dtype() == mshadow::kBool &&
+         SupportDNNLSoftmax(softmax_param, data);
 }
 
 inline static dnnl::memory::dims GetOneDNNDims(const NDArray& arr) {

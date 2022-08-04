@@ -95,7 +95,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
     if (common::is_float(lhs.type_flag_)) {
       // If both are the same floats, normal launch
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, DType, {
+        MSHADOW_REAL_TYPE_SWITCH_EX(lhs.type_flag_, DType, _, {
           Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
               s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>());
         });

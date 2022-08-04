@@ -64,9 +64,16 @@ void DNNLBinaryOpFwd::Execute(const std::vector<NDArray>& inputs,
 }
 
 // Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_binary.html
-bool SupportDNNLBinary(const std::vector<NDArray>& inputs) {
-  return SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[1]) &&
-         SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[0]);
+bool SupportDNNLBinary(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs) {
+  // threshold value selected experimentally basing on performance results - PR-21106
+  constexpr size_t optimal_size_threshold = 2 << 13;
+  const bool threshold_condition          = outputs[0].shape().Size() >= optimal_size_threshold;
+  const bool is_any_dnnl_data =
+      inputs[0].IsDNNLData() || inputs[1].IsDNNLData() || outputs[0].IsDNNLData();
+
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[0]) &&
+         SupportDNNL<DNNLTypeMode::FloatTypes>(inputs[1]) &&
+         (threshold_condition || is_any_dnnl_data);
 }
 
 }  // namespace op
