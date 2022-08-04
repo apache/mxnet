@@ -25,10 +25,10 @@
 #include <string>
 #include <vector>
 
+#include "dnnl_subgraph_base-inl.h"
 #include "operator/nn/dnnl/dnnl_act-inl.h"
 #include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
 #include "operator/subgraph/common.h"
-#include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -116,7 +116,7 @@ class SgDNNLBNReLUProperty : public SubgraphProperty {
     });
 
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_contrib_BatchNormWithReLU");
+    n->attrs.op   = Op::Get("_sg_onednn_batch_norm");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(sym));
     param.SetAttrDict(&(n->attrs.dict));

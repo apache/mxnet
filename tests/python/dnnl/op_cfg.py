@@ -197,7 +197,6 @@ def get_all_ops_cfgs(dtype):
                 TensorArg(lambda shape, dtype: mx.nd.random.uniform(0, 1, shape, dtype))
             ],
         },
-        '_contrib_BatchNormWithReLU': {CFG_BASED_ON: 'BatchNorm'},
         'LRN': {
             'data,nsize': [(default_tensor(2, dtype), 3)]
         },
@@ -289,6 +288,7 @@ def get_all_ops_cfgs(dtype):
             CFG_BASED_ON: 'batch_dot',
             CFG_SUBGRAPH: [SubgraphCfg('batch_dot', 'ONEDNN')],
         },
+        '_sg_onednn_batch_norm': {CFG_BASED_ON: 'BatchNorm'},
         '_sg_onednn_selfatt_qk': {
             CFG_SUBGRAPH: [SubgraphCfg('_sg_onednn_selfatt_qk', 'ONEDNN')],
             'queries_keys_values': [mx.nd.random.normal(0, 1, (1, 4, 3*2*8), dtype)],
