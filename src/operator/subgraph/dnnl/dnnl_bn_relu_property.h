@@ -119,7 +119,8 @@ class SgDNNLBNReLUProperty : public SubgraphProperty {
     n->attrs.op   = Op::Get("_contrib_BatchNormWithReLU");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(sym));
-    n->attrs.parsed = param;
+    param.SetAttrDict(&(n->attrs.dict));
+    n->op()->attr_parser(&(n->attrs));
     return n;
   }
 
