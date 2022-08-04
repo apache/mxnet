@@ -43,7 +43,6 @@ FP16_FP32_FUNCS = [
     'BlockGrad',
     'Cast',
     'cast_storage',
-    '_contrib_BatchNormWithReLU',
     '_contrib_allclose',
     '_contrib_arange_like',
     '_contrib_dynamic_reshape',
@@ -637,6 +636,7 @@ if Features().is_enabled('ONEDNN'):
         '_sg_onednn_selfatt_qk',
         '_sg_onednn_selfatt_valatt',
         '_sg_onednn_batch_dot',
+        '_sg_onednn_batch_norm',
         '_sg_pow_mul_scalar'
     ])
 

@@ -41,7 +41,6 @@ if Features.instance.is_enabled('ONEDNN'):
 # are dtype neutral (can work in both bf16 and fp32)
 BF16_FP32_FUNCS = [
     '_contrib_AdaptiveAvgPooling2D',
-    '_contrib_BatchNormWithReLU',
     'Activation',
     'BatchNorm',
     'LayerNorm',
@@ -102,6 +101,7 @@ WIDEST_TYPE_CASTS = [
 if Features.instance.is_enabled('ONEDNN'):
     WIDEST_TYPE_CASTS.extend([
         '_sg_onednn_batch_dot',
+        '_sg_onednn_batch_norm',
     ])
 
 # Functions that when running with Bfloat16, the params that still need float32.
