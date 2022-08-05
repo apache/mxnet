@@ -120,6 +120,7 @@ class DNNLBNForward {
   static DNNLBNForward& GetCached(const BatchNormParam& param,
                                   const OpContext& ctx,
                                   const dnnl::memory* data_mem,
+                                   bool fuse_relu,
                                   bool fuse_relu,
                                   dnnl::normalization_flags flags);
   void Execute(const OpContext& ctx,
@@ -129,6 +130,7 @@ class DNNLBNForward {
                const std::vector<NDArray>& outputs,
                bool fuse_relu);
 };
+  key.AddSign(fuse_relu);
 
 template <bool fuse_relu>
 void DNNLBatchNormForward(const nnvm::NodeAttrs& attrs,
