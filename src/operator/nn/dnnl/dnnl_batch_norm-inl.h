@@ -56,7 +56,6 @@ inline static dnnl::normalization_flags _GetFlags(const std::vector<NDArray>& in
   if (aux_states.size() == 2U && !is_train_and_not_global_stats) {
     flags |= dnnl::normalization_flags::use_global_stats;
   }
-
   return flags;
 }
 
