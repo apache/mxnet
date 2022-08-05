@@ -58,14 +58,15 @@ inline static dnnl::normalization_flags _GetFlags(const std::vector<NDArray>& in
     flags |= dnnl::normalization_flags::use_global_stats;
   }
 
-  if (fuse_relu) {
-    flags |= dnnl::normalization_flags::fuse_norm_relu;
-  }
+  // if (fuse_relu) {
+  //   flags |= dnnl::normalization_flags::fuse_norm_relu;
+  // }
   return flags;
 }
 
 inline static t_bn_f_pdesc _GetFwd(const dnnl::memory& data_mem,
                                    bool is_train,
+                                   bool fuse_relu,
                                    float eps,
                                    dnnl::normalization_flags flags) {
   auto data_md = data_mem.get_desc();
@@ -76,7 +77,7 @@ inline static t_bn_f_pdesc _GetFwd(const dnnl::memory& data_mem,
     return t_bn_f_pdesc(bnFwd_desc, engine);
   }
 
-  if ((int)(dnnl::normalization_flags::fuse_norm_relu & flags)) {
+  if (fuse_relu) {
     const float scale = 1.f;
     const float alpha = 0.f;
     const float beta  = 0.f;
@@ -84,7 +85,7 @@ inline static t_bn_f_pdesc _GetFwd(const dnnl::memory& data_mem,
     post_ops.append_eltwise(scale, dnnl::algorithm::eltwise_relu, alpha, beta);
     dnnl::primitive_attr attr;
     attr.set_post_ops(post_ops);
-    flags &= ~(dnnl::normalization_flags::fuse_norm_relu);
+    // flags &= ~(dnnl::normalization_flags::fuse_norm_relu);
     t_bn_f_desc bnFwd_desc(dnnl::prop_kind::forward_inference, data_md, eps, flags);
     return t_bn_f_pdesc(bnFwd_desc, attr, engine);
   } else {
@@ -102,7 +103,7 @@ inline static t_bn_b_pdesc _GetBwd(const dnnl::memory& data_mem,
   auto engine  = CpuEngine::Get()->get_engine();
 
   t_bn_b_desc bnBwd_desc(dnnl::prop_kind::backward, diff_md, data_md, eps, flags);
-  return t_bn_b_pdesc(bnBwd_desc, engine, _GetFwd(data_mem, true, eps, flags));
+  return t_bn_b_pdesc(bnBwd_desc, engine, _GetFwd(data_mem, true, false, eps, flags));
 }
 
 typedef ParamOpSign<BatchNormParam> DNNLBNSignature;
@@ -137,6 +138,7 @@ template <typename DType>
 static DNNLBNForward& GetBNForward(const BatchNormParam& param,
                                    const OpContext& ctx,
                                    const dnnl::memory* data_mem,
+                                   bool fuse_relu,
                                    dnnl::normalization_flags flags) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLBNSignature, DNNLBNForward, OpHash> fwds;
@@ -150,7 +152,7 @@ static DNNLBNForward& GetBNForward(const BatchNormParam& param,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    auto fwd_pd = _GetFwd(*data_mem, ctx.is_train, param.eps, flags);
+    auto fwd_pd = _GetFwd(*data_mem, ctx.is_train, fuse_relu, param.eps, flags);
     DNNLBNForward fwd(fwd_pd, ctx.is_train && !param.use_global_stats);
     it = AddToCache(&fwds, key, fwd);
   }
@@ -190,7 +192,7 @@ void DNNLBatchNormForwardImpl(const nnvm::NodeAttrs& attrs,
   if (data.IsDNNLData() && data.IsView())
     data = data.Reorder2Default();
   auto data_mem = data.GetDNNLData();
-  auto& fwd     = GetBNForward<DType>(param, ctx, data_mem, flags);
+  auto& fwd     = GetBNForward<DType>(param, ctx, data_mem, fuse_relu, flags);
 
   // for output memory
   auto fwd_dst_desc = fwd.GetPd().dst_desc();
