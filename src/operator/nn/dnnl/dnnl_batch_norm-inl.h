@@ -45,8 +45,7 @@ typedef dnnl::batch_normalization_backward::desc t_bn_b_desc;
 
 inline static dnnl::normalization_flags _GetFlags(const std::vector<NDArray>& in_data,
                                                   const std::vector<NDArray>& aux_states,
-                                                  bool is_train_and_not_global_stats,
-                                                  bool fuse_relu) {
+                                                  bool is_train_and_not_global_stats) {
   dnnl::normalization_flags flags = static_cast<dnnl::normalization_flags>(0U);
   if (in_data.size() == 3U) {
     flags |= dnnl::normalization_flags::use_scale_shift;
@@ -58,14 +57,12 @@ inline static dnnl::normalization_flags _GetFlags(const std::vector<NDArray>& in
     flags |= dnnl::normalization_flags::use_global_stats;
   }
 
-  if (fuse_relu) {
-    flags |= dnnl::normalization_flags::fuse_norm_relu;
-  }
   return flags;
 }
 
 inline static t_bn_f_pdesc _GetFwd(const dnnl::memory& data_mem,
                                    bool is_train,
+                                   bool fuse_relu,
                                    float eps,
                                    dnnl::normalization_flags flags) {
   auto data_md = data_mem.get_desc();
@@ -76,7 +73,7 @@ inline static t_bn_f_pdesc _GetFwd(const dnnl::memory& data_mem,
     return t_bn_f_pdesc(bnFwd_desc, engine);
   }
 
-  if ((int)(dnnl::normalization_flags::fuse_norm_relu & flags)) {
+  if (fuse_relu) {
     const float scale = 1.f;
     const float alpha = 0.f;
     const float beta  = 0.f;
@@ -84,7 +81,6 @@ inline static t_bn_f_pdesc _GetFwd(const dnnl::memory& data_mem,
     post_ops.append_eltwise(scale, dnnl::algorithm::eltwise_relu, alpha, beta);
     dnnl::primitive_attr attr;
     attr.set_post_ops(post_ops);
-    flags &= ~(dnnl::normalization_flags::fuse_norm_relu);
     t_bn_f_desc bnFwd_desc(dnnl::prop_kind::forward_inference, data_md, eps, flags);
     return t_bn_f_pdesc(bnFwd_desc, attr, engine);
   } else {
@@ -102,7 +98,7 @@ inline static t_bn_b_pdesc _GetBwd(const dnnl::memory& data_mem,
   auto engine  = CpuEngine::Get()->get_engine();
 
   t_bn_b_desc bnBwd_desc(dnnl::prop_kind::backward, diff_md, data_md, eps, flags);
-  return t_bn_b_pdesc(bnBwd_desc, engine, _GetFwd(data_mem, true, eps, flags));
+  return t_bn_b_pdesc(bnBwd_desc, engine, _GetFwd(data_mem, true, false, eps, flags));
 }
 
 typedef ParamOpSign<BatchNormParam> DNNLBNSignature;
@@ -137,6 +133,7 @@ template <typename DType>
 static DNNLBNForward& GetBNForward(const BatchNormParam& param,
                                    const OpContext& ctx,
                                    const dnnl::memory* data_mem,
+                                   bool fuse_relu,
                                    dnnl::normalization_flags flags) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLBNSignature, DNNLBNForward, OpHash> fwds;
@@ -147,10 +144,11 @@ static DNNLBNForward& GetBNForward(const BatchNormParam& param,
   key.AddSign(ctx.is_train);
   key.AddSign(*data_mem);
   key.AddSign(static_cast<int>(flags));
+  key.AddSign(fuse_relu);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    auto fwd_pd = _GetFwd(*data_mem, ctx.is_train, param.eps, flags);
+    auto fwd_pd = _GetFwd(*data_mem, ctx.is_train, fuse_relu, param.eps, flags);
     DNNLBNForward fwd(fwd_pd, ctx.is_train && !param.use_global_stats);
     it = AddToCache(&fwds, key, fwd);
   }
@@ -185,12 +183,12 @@ void DNNLBatchNormForwardImpl(const nnvm::NodeAttrs& attrs,
   const std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   dnnl::normalization_flags flags =
-      _GetFlags(in_data, aux_states, ctx.is_train && !param.use_global_stats, fuse_relu);
+      _GetFlags(in_data, aux_states, ctx.is_train && !param.use_global_stats);
   NDArray& data = in_data[batchnorm::kData];
   if (data.IsDNNLData() && data.IsView())
     data = data.Reorder2Default();
   auto data_mem = data.GetDNNLData();
-  auto& fwd     = GetBNForward<DType>(param, ctx, data_mem, flags);
+  auto& fwd     = GetBNForward<DType>(param, ctx, data_mem, fuse_relu, flags);
 
   // for output memory
   auto fwd_dst_desc = fwd.GetPd().dst_desc();
@@ -232,17 +230,6 @@ void DNNLBatchNormForwardImpl(const nnvm::NodeAttrs& attrs,
     net_args[DNNL_ARG_SRC]         = *data_mem;
     net_args[DNNL_ARG_SCALE_SHIFT] = weight_mem;
     net_args[DNNL_ARG_DST]         = *out_mem;
-    if (fuse_relu) {
-      const NDArray* workspace = nullptr;
-      workspace                = &outputs[3];
-      auto engine              = CpuEngine::Get()->get_engine();
-      if (workspace == nullptr) {
-        LOG(FATAL) << "oneDNN BatchNorm: incorrect workspace input";
-      }
-      auto ws = std::make_shared<dnnl::memory>(
-          fwd.GetPd().workspace_desc(), engine, workspace->GetDNNLData()->get_data_handle());
-      net_args[DNNL_ARG_WORKSPACE] = *ws;
-    }
     if (!ctx.is_train || param.use_global_stats) {
       float* omean  = outputs[batchnorm::kMean].data().dptr<float>();
       float* ovar   = outputs[batchnorm::kVar].data().dptr<float>();
@@ -367,7 +354,7 @@ void DNNLBatchNormBackwardImpl(const nnvm::NodeAttrs& attrs,
   const std::vector<NDArray>& in_grad = outputs;
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   dnnl::normalization_flags flags =
-      _GetFlags(in_data, aux_states, ctx.is_train && !param.use_global_stats, fuse_relu);
+      _GetFlags(in_data, aux_states, ctx.is_train && !param.use_global_stats);
 
   NDArray data               = in_data[batchnorm::kData];
   NDArray diff               = out_grad[batchnorm::kOut];
@@ -435,14 +422,6 @@ void DNNLBatchNormBackwardImpl(const nnvm::NodeAttrs& attrs,
     net_args[DNNL_ARG_SCALE_SHIFT]      = bwd.GetWeight();
     net_args[DNNL_ARG_DIFF_SCALE_SHIFT] = bwd.GetGradw();
     net_args[DNNL_ARG_DIFF_DST]         = *diff_mem;
-
-    if (fuse_relu) {
-      const NDArray* workspace = nullptr;
-      workspace                = &inputs[8];
-      if (workspace != nullptr) {
-        net_args[DNNL_ARG_WORKSPACE] = *(workspace->GetDNNLData());
-      }
-    }
 
     // training but no input mean and variance
     if (ctx.is_train && !param.use_global_stats) {
