@@ -288,64 +288,6 @@ def test_batchnorm():
     for stype in stypes:
         check_batchnorm_training(stype)
 
-def test_batchnorm_relu_fusion():
-    def check_batchnorm_relu_fusion(shape):
-        x = mx.sym.Variable('x')
-        in_data = mx.nd.random.normal(shape=shape)
-        grad_out = mx.nd.random.uniform(0, 1, shape)
-        bn = mx.sym.BatchNorm(data=x, fix_gamma=False)
-        relu = mx.sym.Activation(data=bn, act_type='relu', name='relu')
-        exe = relu._simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
-        exe.arg_arrays[0][:] = in_data
-        exe.forward(is_train=True)
-        exe.backward(grad_out)
-        no_fuse_outputs = exe.outputs
-        no_fuse_grads = exe.grad_arrays
-
-        bnrelu = mx.sym.contrib.BatchNormWithReLU(data=x, fix_gamma=False)
-        exe_fuse = bnrelu._simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
-        exe_fuse.arg_arrays[0][:] = in_data
-        exe_fuse.forward(is_train=True)
-        exe_fuse.backward(grad_out)
-        fuse_outputs = exe_fuse.outputs
-        fuse_grads = exe_fuse.grad_arrays
-
-        for i in range(len(no_fuse_outputs)):
-            assert_almost_equal(no_fuse_outputs[i], fuse_outputs[i])
-        for i in range(len(no_fuse_grads)):
-            assert_almost_equal(no_fuse_grads[i], fuse_grads[i])
-
-    def check_batchnorm_relu_fusion_gluon(shape):
-        class BNNet(gluon.HybridBlock):
-            def __init__(self, fuse_relu):
-                super(BNNet, self).__init__()
-                self.fuse_relu = fuse_relu
-                if self.fuse_relu:
-                    self.bn = gluon.nn.BatchNormReLU()
-                else:
-                    self.bn = gluon.nn.BatchNorm()
-                self.relu = gluon.nn.Activation('relu')
-
-            def forward(self, x):
-                y = self.bn(x)
-                if not self.fuse_relu:
-                    y = self.relu(y)
-                return y
-        fused_net = BNNet(fuse_relu=True)
-        unfused_net = BNNet(fuse_relu=False)
-        fused_net.initialize()
-        unfused_net.initialize()
-        in_data = mx.np.random.normal(size=shape)
-        no_fuse_outputs = unfused_net.forward(in_data)
-        fuse_outputs = fused_net.forward(in_data)
-
-        for i in range(len(no_fuse_outputs)):
-            assert_almost_equal(no_fuse_outputs[i], fuse_outputs[i])
-
-    check_batchnorm_relu_fusion((1, 3, 224, 224))
-    check_batchnorm_relu_fusion((8, 3, 224, 224))
-    check_batchnorm_relu_fusion_gluon((1, 3, 224, 224))
-    check_batchnorm_relu_fusion_gluon((8, 3, 224, 224))
 
 def test_softmax():
     def check_softmax_training(stype):
