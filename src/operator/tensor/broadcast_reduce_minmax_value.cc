@@ -31,7 +31,7 @@ MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(max)
     .describe(get_reduce_axes_description("max", __LINE__))
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::maximum>)
     #if MXNET_USE_ONEDNN == 1
-    .set_attr<FInferStorageType>("FInferStorageType", )
+    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesMinMaxOpForwardStorage)
     .set_attr<bool>("TIsDNNL", true)
     .setattr_<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red:maximum>)
     #endif

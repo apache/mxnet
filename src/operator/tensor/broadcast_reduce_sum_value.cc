@@ -67,7 +67,7 @@ Example::
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum>)
-    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesSumMeanOpForwardStorage)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsMKLDNN", true)
 #endif
@@ -87,7 +87,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(mean)
     .describe(get_reduce_axes_description("mean", __LINE__))
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum, true>)
-    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
+    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesSumMeanOpForwardStorage)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsMKLDNN", true)
 #endif

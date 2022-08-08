@@ -585,12 +585,30 @@ inline void BroadcastReduceShapeCompact(const mxnet::TShape& big,
   }
 }
 
+// infer storage function for min and max
+inline bool ReduceAxesMinMaxOpForwardStorage(const nnvm::NodeAttrs& attrs,
+                                             const int dev_mask,
+                                             DsipatchMode* dispatch_mode,
+                                             std::vector<int>* in_attrs,
+                                             std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+
+  bool onednn_dispatch = true;
+  if (param.dtype.has_value()) {
+    onednn_dispatch = param.dtype.value() == mshadow::kfloat32;
+  }
+
+  return DNNLStorageType(attrs, dev_mask, onednn_dispatch, dispatch_mode, in_attrs, out_attrs);
+}
+
 // infer storage function for sum(csr) and mean(csr)
-inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
-                                       const int dev_mask,
-                                       DispatchMode* dispatch_mode,
-                                       std::vector<int>* in_attrs,
-                                       std::vector<int>* out_attrs) {
+inline bool ReduceAxesSumMeanOpForwardStorage(const nnvm::NodeAttrs& attrs,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int>* in_attrs,
+                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
