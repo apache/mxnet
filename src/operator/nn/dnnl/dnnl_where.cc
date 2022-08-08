@@ -35,8 +35,8 @@ namespace op {
 // Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_binary.html
 bool SupportDNNLWhere(const std::vector<NDArray>& inputs) {
   if (inputs[0].dtype() == mshadow::kBool) {
-    // oneDNN natively doesn't support bool data type, however this operator was written
-    // to allow using bool datatype for 'condition' tensor - data will be treated as uint8
+    // oneDNN natively doesn't support bool type, however this operator was written
+    // to allow using bool type for 'condition' tensor - data will be treated as uint8
     return SupportDNNLShape<1, 12>(inputs[0].shape()) &&
            SupportDNNL<DNNLTypeMode::NoInt32, DNNLTensorsDtypes::AllSame>({inputs[1], inputs[2]});
   }
