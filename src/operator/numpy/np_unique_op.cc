@@ -199,7 +199,7 @@ void NumpyUniqueCPUImpl(const NumpyUniqueParam& param,
         workspace.dptr_,
         Shape3(input_tensor_3d.shape_[1], input_tensor_3d.shape_[0], input_tensor_3d.shape_[2]),
         stream);
-    input_tensor              = swapaxis<1, 0>(input_tensor_3d);
+    input_tensor              = swapaxisexp<1, 0>(input_tensor_3d);
     const Shape<3> temp_shape = input_tensor.shape_;
     DType* input_data         = input_tensor.dptr_;
     dim_t numel               = temp_shape[1] * temp_shape[2];
@@ -248,7 +248,7 @@ void NumpyUniqueCPUImpl(const NumpyUniqueParam& param,
     const_cast<NDArray&>(outputs[0]).Init(out_shape);
     Tensor<cpu, 3, DType> output_tensor(
         outputs[0].data().dptr<DType>(), Shape3(temp_shape[1], valid_num, temp_shape[2]), stream);
-    output_tensor = swapaxis<1, 0>(temp_tensor);
+    output_tensor = swapaxisexp<1, 0>(temp_tensor);
     // handle other optional outputs
     int output_flag = 0;
     if (param.return_index) {
