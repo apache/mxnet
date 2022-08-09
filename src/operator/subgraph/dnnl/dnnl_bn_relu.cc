@@ -18,18 +18,18 @@
  */
 
 /*!
- * \file batch_norm_relu.cc
+ * \file dnnl_bn_relu.cc
  * \brief
  * \author Xinyu Chen
  */
 
 #include <nnvm/op_attr_types.h>
 
-#include "../elemwise_op_common.h"
-#include "../nn/batch_norm-inl.h"
-#include "../operator_common.h"
+#include "operator/elemwise_op_common.h"
+#include "operator/nn/batch_norm-inl.h"
+#include "operator/operator_common.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/dnnl/dnnl_batch_norm-inl.h"
+#include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
 #endif
 
 namespace mxnet {
@@ -146,7 +146,7 @@ void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
     CHECK_GT(outputs.size(), 3U);
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNL_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-      DNNLRun(DNNLBatchNormForward<DTYPE, /*fuse_relu*/ true>, attrs, ctx, inputs, req, outputs);
+      DNNLRun(DNNLBatchNormForward</*fuse_relu*/ true>, attrs, ctx, inputs, req, outputs);
     });
     return;
   }
@@ -161,7 +161,7 @@ void BatchNormWithReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (SupportDNNLBNReLU(inputs[0])) {
     CHECK_EQ(inputs.size(), 9U);
     DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLBatchNormBackward<float, /*fuse_relu*/ true>, attrs, ctx, inputs, req, outputs);
+    DNNLRun(DNNLBatchNormBackward</*fuse_relu*/ true>, attrs, ctx, inputs, req, outputs);
     return;
   }
   LOG(FATAL) << "BatchNormWithReLU operator only supports oneDNN Backend.";
