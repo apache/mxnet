@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #if MXNET_USE_TVM_OP
 #include "../tvmop/op_module.h"
@@ -191,7 +192,7 @@ inline bool NumpyBroadcastToShape(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_ONEDNN == 1
-template <dnnl::algorithm reduction_alg>
+template <typename PType, typename reducer, bool normalize = false>
 static void DNNLReduceEx(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<NDArray>& inputs,
@@ -200,23 +201,17 @@ static void DNNLReduceEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportDNNLReduce<NumpyReduceAxesParam>(attrs, inputs[0], outputs[0])) {
-    DNNLRun(DNNLReduceForward<NumpyReduceAxesParam, reduction_alg>,
-            attrs,
-            ctx,
-            inputs[0],
-            req[0],
-            outputs[0]);
-    return;
+  if (SupportDNNLReduce<PType>(attrs, inputs[0], outputs[0])) {
+    const dnnl::algorithm alg = DNNLReduceAlgorithm<reducer, normalize>::value;
+    DNNLRun(DNNLReduceForward<PType, alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
-    constexpr bool normalize = reduction_alg == dnnl::algorithm::reduction_mean;
-    FallBackCompute(NumpyReduceAxesCompute<cpu, mshadow_op::sum, true, normalize>,
-                    attrs,
-                    ctx,
-                    inputs,
-                    req,
-                    outputs);
-    return;
+    if (std::is_same<PType, NumpyReduceAxesNoDTypeParam>::value) {
+      FallBackCompute(
+          NumpyReduceAxesNoDTypeCompute<cpu, reducer>, attrs, ctx, inputs, req, outputs);
+    } else {
+      FallBackCompute(
+          NumpyReduceAxesCompute<cpu, reducer, true, normalize>, attrs, ctx, inputs, req, outputs);
+    }
   }
 }
 
@@ -236,6 +231,17 @@ inline static bool NumpyReduceAxesStorageType(const nnvm::NodeAttrs& attrs,
 
   return DNNLStorageType(attrs, dev_mask, onednn_disptach, dispatch_mode, in_attrs, out_attrs);
 }
+
+inline static bool NumpyReduceAxesNoDTypeStorageType(const nnvm::NodeAttrs& attrs,
+                                                     const int dev_mask,
+                                                     DispatchMode* dispatch_mode,
+                                                     std::vector<int>* in_attrs,
+                                                     std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
 #endif
 
 }  // namespace op

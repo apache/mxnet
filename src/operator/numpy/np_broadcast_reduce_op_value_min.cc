@@ -46,6 +46,12 @@ NNVM_REGISTER_OP(_npi_min)
     .add_argument("a", "NDArray-or-Symbol", "The input")
     .add_arguments(NumpyReduceAxesNoDTypeParam::__FIELDS__())
     .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesNoDTypeCompute<cpu, mshadow::red::minimum>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FInferStorageType>("FInferStorageType", NumpyReduceAxesNoDTypeStorageType)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          DNNLReduceEx<NumpyReduceAxesNoDTypeParam, mshadow::red::minimum>)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

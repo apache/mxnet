@@ -1114,8 +1114,7 @@ void ReduceAxesMinMaxOpForwardEx(const nnvm::NodeAttrs& attrs,
 
   if (SupportDNNLReduce<ReduceAxesParam>(attrs, inputs[0], outputs[0])) {
     const dnnl::algorithm alg = DNNLReduceAlgorithm<reducer>::value;
-    DNNLRun(DNNLReduceForward<ReduceAxesParam, alg>, attrs, ctx, inputs[0], req[0],
-    outputs[0]);
+    DNNLRun(DNNLReduceForward<ReduceAxesParam, alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(ReduceAxesCompute<cpu, reducer, false>, attrs, ctx, inputs, req, outputs);
   }
