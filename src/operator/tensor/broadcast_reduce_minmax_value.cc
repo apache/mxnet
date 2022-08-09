@@ -22,6 +22,7 @@
  * \brief CPU Implementation of broadcast and reduce min and max functions based on value.
  */
 #include "./broadcast_reduce_op.h"
+#include "../numpy/np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -33,7 +34,7 @@ MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(max)
     #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesMinMaxOpForwardStorage)
     .set_attr<bool>("TIsDNNL", true)
-    .setattr_<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red:maximum>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesMinMaxOpForwardEx<cpu, mshadow::red::maximum>)
     #endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
@@ -50,6 +51,11 @@ MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(min)
     .add_alias("min_axis")
     .describe(get_reduce_axes_description("min", __LINE__))
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::minimum>)
+    #if MXNET_USE_ONEDNN == 1
+    .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesMinMaxOpForwardStorage)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesMinMaxOpForwardEx<cpu, mshadow::red::minimum>)
+    #endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

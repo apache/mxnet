@@ -41,6 +41,32 @@
 
 namespace mxnet {
 namespace op {
+
+// template struct converting mshadow::red to dnnl::algorithm
+// normalize is false as a default, bacause onlu mean and sum use it
+template <typename OP, bool normalize = false>
+struct DNNLReduceAlgorithm {};
+
+template <>
+struct DNNLReduceAlgorithm<mshadow::red::sum, false> {
+  static const dnnl::algorithm value = dnnl::algorithm::reduction_sum;
+};
+
+template <>
+struct DNNLReduceAlgorithm<mshadow::red::sum, true> {
+  static const dnnl::algorithm value = dnnl::algorithm::reduction_mean;
+};
+
+template <>
+struct DNNLReduceAlgorithm<mshadow::red::maximum> {
+  static const dnnl::algorithm value = dnnl::algorithm::reduction_max;
+};
+
+template <>
+struct DNNLReduceAlgorithm<mshadow::red::minimum> {
+  static const dnnl::algorithm value = dnnl::algorithm::reduction_min;
+};
+
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   dmlc::optional<mxnet::TShape> axis;
   bool keepdims;
@@ -588,19 +614,12 @@ inline void BroadcastReduceShapeCompact(const mxnet::TShape& big,
 // infer storage function for min and max
 inline bool ReduceAxesMinMaxOpForwardStorage(const nnvm::NodeAttrs& attrs,
                                              const int dev_mask,
-                                             DsipatchMode* dispatch_mode,
+                                             DispatchMode* dispatch_mode,
                                              std::vector<int>* in_attrs,
                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-
-  bool onednn_dispatch = true;
-  if (param.dtype.has_value()) {
-    onednn_dispatch = param.dtype.value() == mshadow::kfloat32;
-  }
-
-  return DNNLStorageType(attrs, dev_mask, onednn_dispatch, dispatch_mode, in_attrs, out_attrs);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 // infer storage function for sum(csr) and mean(csr)
@@ -1053,11 +1072,11 @@ void ReduceCsr(const nnvm::NodeAttrs& attrs,
 }
 
 template <typename xpu, typename reducer, bool normalize = false>
-void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<NDArray>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<NDArray>& outputs) {
+void ReduceAxesSumMeanOpForwardEx(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -1069,9 +1088,7 @@ void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_ONEDNN == 1
   } else if (istype == kDefaultStorage) {
     if (SupportDNNLReduce<ReduceAxesParam>(attrs, inputs[0], outputs[0])) {
-      constexpr dnnl::algorithm alg =
-          normalize ? dnnl::algorithm::reduction_mean : dnnl::algorithm::reduction_sum;
-
+      const dnnl::algorithm alg = DNNLReduceAlgorithm<reducer, normalize>::value;
       DNNLRun(DNNLReduceForward<ReduceAxesParam, alg>, attrs, ctx, inputs[0], req[0], outputs[0]);
       return;
     } else {
@@ -1083,6 +1100,27 @@ void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs,
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
+
+#if MXNET_USE_ONEDNN == 1
+template <typename xpu, typename reducer>
+void ReduceAxesMinMaxOpForwardEx(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
+  if (SupportDNNLReduce<ReduceAxesParam>(attrs, inputs[0], outputs[0])) {
+    const dnnl::algorithm alg = DNNLReduceAlgorithm<reducer>::value;
+    DNNLRun(DNNLReduceForward<ReduceAxesParam, alg>, attrs, ctx, inputs[0], req[0],
+    outputs[0]);
+  } else {
+    FallBackCompute(ReduceAxesCompute<cpu, reducer, false>, attrs, ctx, inputs, req, outputs);
+  }
+}
+#endif  // MXNET_USE_ONEDNN == 1
 
 template <int req, typename OP>
 struct reduce_axes_backward_broadcast {
