@@ -237,13 +237,8 @@ void DNNLBNBackward::Execute(const BatchNormParam& param,
                              const OpContext& ctx,
                              const std::vector<NDArray>& inputs,
                              const std::vector<OpReqType>& req,
-                             const std::vector<NDArray>& outputs,
-                             bool fuse_relu) {
-  if (fuse_relu) {
-    CHECK_EQ(inputs.size(), 9U);
-  } else {
-    CHECK_EQ(inputs.size(), 8U);
-  }
+                             const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 8U);
   std::vector<NDArray> out_grad(1);
   std::vector<NDArray> out_data(3);
   std::vector<NDArray> in_data(3);
