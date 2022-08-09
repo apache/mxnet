@@ -153,19 +153,6 @@ void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
   LOG(FATAL) << "BatchNormWithReLU operator only supports oneDNN Backend.";
 }
 
-void BatchNormWithReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                       const OpContext& ctx,
-                                       const std::vector<NDArray>& inputs,
-                                       const std::vector<OpReqType>& req,
-                                       const std::vector<NDArray>& outputs) {
-  if (SupportDNNLBNReLU(inputs[0])) {
-    CHECK_EQ(inputs.size(), 9U);
-    DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    DNNLRun(DNNLBatchNormBackward</*fuse_relu*/ true>, attrs, ctx, inputs, req, outputs);
-    return;
-  }
-  LOG(FATAL) << "BatchNormWithReLU operator only supports oneDNN Backend.";
-}
 #endif
 
 static inline bool BatchNormWithReLUStorageType(const nnvm::NodeAttrs& attrs,
@@ -202,7 +189,6 @@ static inline bool BatchNormWithReLUStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_sg_onednn_batch_norm)
-    .add_alias("_npx_batch_norm_with_relu")
     .describe(R"code(Batch normalization with ReLU fusion.
 
 An extented operator of Batch normalization which can fuse ReLU activation.

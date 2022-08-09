@@ -192,16 +192,14 @@ class DNNLBNBackward {
                const OpContext& ctx,
                const std::vector<NDArray>& inputs,
                const std::vector<OpReqType>& req,
-               const std::vector<NDArray>& outputs,
-               bool fuse_relu);
+               const std::vector<NDArray>& outputs);
 };
 
-template <bool fuse_relu>
-void DNNLBatchNormBackward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<NDArray>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<NDArray>& outputs) {
+inline void DNNLBatchNormBackward(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<NDArray> out_grad(1);
   std::vector<NDArray> in_data(3);
@@ -244,7 +242,7 @@ void DNNLBatchNormBackward(const nnvm::NodeAttrs& attrs,
   }
   DNNLBNBackward& bwd =
       DNNLBNBackward::GetCached(param, ctx, data, *data_mem, diff, *diff_mem, flags);
-  bwd.Execute(param, ctx, inputs, req, outputs, fuse_relu);
+  bwd.Execute(param, ctx, inputs, req, outputs);
 }
 }  // namespace op
 }  // namespace mxnet
