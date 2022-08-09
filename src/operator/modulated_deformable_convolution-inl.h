@@ -174,7 +174,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
         Shape4(num_ / im2col_step_, conv_out_channels_, im2col_step_, conv_out_spatial_dim_), s);
     Tensor<xpu, 4, DType> original_output_4d = out_data[dmconv::kOut].get_with_shape<xpu, 4, DType>(
         Shape4(num_ / im2col_step_, im2col_step_, conv_out_channels_, conv_out_spatial_dim_), s);
-    original_output_4d = swapaxisexp<2, 1>(trans_output_4d);
+    original_output_4d = swapaxis<2, 1>(trans_output_4d);
 
     if (bias_term_) {
       Tensor<xpu, 1, DType> bias      = in_data[dmconv::kBias].get<xpu, 1, DType>(s);
@@ -228,7 +228,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
         Shape4(num_ / im2col_step_, conv_out_channels_, im2col_step_, conv_out_spatial_dim_), s);
     Tensor<xpu, 4, DType> original_output_4d = out_grad[dmconv::kOut].get_with_shape<xpu, 4, DType>(
         Shape4(num_ / im2col_step_, im2col_step_, conv_out_channels_, conv_out_spatial_dim_), s);
-    trans_output_4d = swapaxisexp<2, 1>(original_output_4d);
+    trans_output_4d = swapaxis<2, 1>(original_output_4d);
 
     // initialize weight and col_buffer 3D tensors for using gemm
     // For computing dLoss/d(in_data[kData])

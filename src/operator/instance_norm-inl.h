@@ -158,11 +158,10 @@ void InstanceNormBackward(const nnvm::NodeAttrs& attrs,
   gmean += tmp;
 
   // Calculate grads
-  Assign(
-      gbeta, req[instance_norm::kBeta], sumall_except_dim<0>(swapaxisexp<1, 0>(reshape(gout, s3))));
+  Assign(gbeta, req[instance_norm::kBeta], sumall_except_dim<0>(swapaxis<1, 0>(reshape(gout, s3))));
   Assign(ggamma,
          req[instance_norm::kGamma],
-         sumall_except_dim<0>(swapaxisexp<1, 0>(
+         sumall_except_dim<0>(swapaxis<1, 0>(
              reshape(gout * (data - broadcast<0>(mean, data.shape_)) /
                          F<mshadow_op::square_root>(broadcast<0>(var + param.eps, data.shape_)),
                      s3))));

@@ -39,10 +39,10 @@
 namespace mxnet {
 namespace op {
 
-namespace swapaxis {
+namespace swapaxisenum {
 enum SwapAxisOpInputs { kData };
 enum SwapAxisOpOutputs { kOut };
-};  // namespace swapaxis
+};  // namespace swapaxisenum
 
 struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
   // use int for enumeration
@@ -96,9 +96,9 @@ void SwapAxis(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
 
-  TBlob data_in              = in_data[swapaxis::kData];
-  TBlob data_out             = out_data[swapaxis::kOut];
-  OpReqType out_req          = req[swapaxis::kOut];
+  TBlob data_in              = in_data[swapaxisenum::kData];
+  TBlob data_out             = out_data[swapaxisenum::kOut];
+  OpReqType out_req          = req[swapaxisenum::kOut];
   Stream<xpu>* s             = ctx.get_stream<xpu>();
   const SwapAxisParam& param = nnvm::get<SwapAxisParam>(attrs.parsed);
 
@@ -143,9 +143,9 @@ void SwapAxis(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 5, DType> inter_data_out = data_out.get_with_shape<xpu, 5, DType>(inter_shape2, s);
 
   if (out_req == kAddTo) {
-    inter_data_out += swapaxisexp<3, 1>(inter_data_in);
+    inter_data_out += swapaxis<3, 1>(inter_data_in);
   } else {
-    inter_data_out = swapaxisexp<3, 1>(inter_data_in);
+    inter_data_out = swapaxis<3, 1>(inter_data_in);
   }
 }
 
@@ -156,7 +156,7 @@ void SwapAxisCompute(const nnvm::NodeAttrs& attrs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& out_data) {
   using namespace mshadow;
-  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(in_data[swapaxis::kData].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(in_data[swapaxisenum::kData].type_flag_, DType, {
     SwapAxis<xpu, DType>(attrs, ctx, in_data, out_data, req);
   });
 }
@@ -168,7 +168,7 @@ void SwapAxisGrad(const nnvm::NodeAttrs& attrs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& out_data) {
   using namespace mshadow;
-  MSHADOW_TYPE_SWITCH(in_data[swapaxis::kData].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(in_data[swapaxisenum::kData].type_flag_, DType, {
     SwapAxis<xpu, DType>(attrs, ctx, in_data, out_data, req);
   });
 }
@@ -179,7 +179,7 @@ inline bool SwapAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), 1U);
   const SwapAxisParam& param = nnvm::get<SwapAxisParam>(attrs.parsed);
 
-  mxnet::TShape& shape0 = (*in_shape)[swapaxis::kData];
+  mxnet::TShape& shape0 = (*in_shape)[swapaxisenum::kData];
   if (!ndim_is_known(shape0))
     return false;
   int axis1 = param.dim1;
@@ -198,7 +198,7 @@ inline bool SwapAxisShape(const nnvm::NodeAttrs& attrs,
 
   out_shape->clear();
   out_shape->push_back(shape0);
-  mxnet::TShape& shape1 = (*out_shape)[swapaxis::kOut];
+  mxnet::TShape& shape1 = (*out_shape)[swapaxisenum::kOut];
 
   std::swap(shape1[axis1], shape1[axis2]);
 
