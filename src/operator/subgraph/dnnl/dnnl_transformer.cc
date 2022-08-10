@@ -44,17 +44,17 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
                                mxnet::ShapeVector* out_shape) {
   const auto& params = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
   uint in_shape_num  = 1;
-  auto in_shape_0   = in_shape->at(0);
-  auto in_shape_1   = in_shape_0;       // in include_split mode there is only one input
+  auto in_shape_0    = in_shape->at(0);
+  auto in_shape_1    = in_shape_0;  // in include_split mode there is only one input
   CHECK_EQ(in_shape_0.ndim(), 3U)
       << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
       << "but the given tensor is " << in_shape_0.ndim() << "D";
 
   if constexpr (qk_mode == qk_common::mode::without_split) {
-    in_shape_1   = in_shape->at(1);   // in without_split mode we need to consider 2nd input
+    in_shape_1 = in_shape->at(1);  // in without_split mode we need to consider 2nd input
     CHECK_EQ(in_shape_1.ndim(), 3U)
-      << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
-      << "but the given tensor is " << in_shape_1.ndim() << "D";
+        << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
+        << "but the given tensor is " << in_shape_1.ndim() << "D";
     CHECK_EQ(in_shape_0[0], in_shape_1[0]);
     CHECK_EQ(in_shape_0[2], in_shape_1[2]);
     in_shape_num = 2;
@@ -253,8 +253,8 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   using namespace dnnl;
 
   const auto in_tensor_0 = inputs[0];
-  auto in_tensor_1 = in_tensor_0;           // in include_split mode there is only one input
-  const auto out_tensor   = outputs[0];
+  auto in_tensor_1       = in_tensor_0;  // in include_split mode there is only one input
+  const auto out_tensor  = outputs[0];
 
   const auto in_dtype = get_dnnl_type(in_tensor_0.dtype());
 
@@ -266,10 +266,10 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   if constexpr (qk_mode == qk_common::mode::include_split) {
     embed_dim /= QKV_NUM;
   } else {
-    in_tensor_1 = inputs[1];                // in without_split mode we need to consider 2nd input
+    in_tensor_1 = inputs[1];  // in without_split mode we need to consider 2nd input
   }
   const memory::dim qkv_seq_len_1  = in_tensor_1.shape()[1];
-  const memory::dim head_dim     = embed_dim / heads;
+  const memory::dim head_dim       = embed_dim / heads;
   const memory::dim batch_stride_0 = output_lin_dim * qkv_seq_len_0;
   const memory::dim batch_stride_1 = output_lin_dim * qkv_seq_len_1;
 
@@ -278,11 +278,10 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
 
   const auto engine = CpuEngine::Get()->get_engine();
 
-  memory::dims query_dims = {sequences, heads, qkv_seq_len_0, head_dim};
-  memory::dims key_dims   = {sequences, heads, head_dim, qkv_seq_len_1};
+  memory::dims query_dims    = {sequences, heads, qkv_seq_len_0, head_dim};
+  memory::dims key_dims      = {sequences, heads, head_dim, qkv_seq_len_1};
   memory::dims query_strides = {batch_stride_0, head_dim, output_lin_dim, 1};
   memory::dims key_strides   = {batch_stride_1, head_dim, 1, output_lin_dim};
-  
 
   auto query_md = memory::desc(query_dims, in_dtype, query_strides);
   auto key_md   = memory::desc(key_dims, in_dtype, key_strides);
@@ -290,14 +289,15 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   float oscale = 1.0f;
   if (param_.quantized) {
     if constexpr (qk_mode == qk_common::mode::include_split) {
-      min_data_0_ = inputs[1].data().dptr<float>()[0];
-      max_data_0_ = inputs[2].data().dptr<float>()[0];
-      data_scale_0_ = data_scale_1_ = GetQuantizeScale(in_tensor_0.dtype(), min_data_0_, max_data_0_);
+      min_data_0_   = inputs[1].data().dptr<float>()[0];
+      max_data_0_   = inputs[2].data().dptr<float>()[0];
+      data_scale_0_ = data_scale_1_ =
+          GetQuantizeScale(in_tensor_0.dtype(), min_data_0_, max_data_0_);
     } else {
-      min_data_0_ = inputs[2].data().dptr<float>()[0];
-      max_data_0_ = inputs[3].data().dptr<float>()[0];
-      min_data_1_ = inputs[4].data().dptr<float>()[0];
-      max_data_1_ = inputs[5].data().dptr<float>()[0];
+      min_data_0_   = inputs[2].data().dptr<float>()[0];
+      max_data_0_   = inputs[3].data().dptr<float>()[0];
+      min_data_1_   = inputs[4].data().dptr<float>()[0];
+      max_data_1_   = inputs[5].data().dptr<float>()[0];
       data_scale_0_ = GetQuantizeScale(in_tensor_0.dtype(), min_data_0_, max_data_0_);
       data_scale_1_ = GetQuantizeScale(in_tensor_1.dtype(), min_data_1_, max_data_1_);
     }
@@ -476,10 +476,8 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk)
                                   SgDNNLSelfAttQKForward<qk_common::mode::without_split>)
     .set_attr<FQuantizedOp>("FQuantizedOp",
                             SgDNNLSelfAttQKQuantizedOp<qk_common::mode::without_split>)
-    .add_argument(
-          "queries", "NDArray-or-Symbol", "Interleaved queries, keys and values")
-    .add_argument(
-          "keys", "NDArray-or-Symbol", "Interleaved queries, keys and values");
+    .add_argument("queries", "NDArray-or-Symbol", "Interleaved queries, keys and values")
+    .add_argument("keys", "NDArray-or-Symbol", "Interleaved queries, keys and values");
 
 MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk_split)
     .add_alias("_sg_mkldnn_selfatt_qk")
@@ -510,8 +508,8 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk_split)
                                   SgDNNLSelfAttQKForward<qk_common::mode::include_split>)
     .set_attr<FQuantizedOp>("FQuantizedOp",
                             SgDNNLSelfAttQKQuantizedOp<qk_common::mode::include_split>)
-    .add_argument(
-          "query_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values");;
+    .add_argument("query_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values");
+;
 
 /**********************************_sg_onednn_selfatt_valatt**********************************/
 
