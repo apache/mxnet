@@ -42,8 +42,13 @@ class MultiHeadAttention(nn.HybridBlock):
       out = self._fc(x)
       query, key, value = mx.np.split(out, 3, axis=-1)
       if self.no_split_case:
-        key = key * 2
-      query = mx.npx.reshape(query, (-2, -2, self._num_heads, -1))
+        key = mx.np.expand_dims(key, 3)
+        key = mx.np.broadcast_to(key, (key.shape[0], key.shape[1], key.shape[2], self._num_heads))
+        key = mx.np.reshape(key, (key.shape[0], key.shape[1]*self._num_heads, key.shape[2]))
+        value = mx.np.expand_dims(value, 3)
+        value = mx.np.broadcast_to(value, (value.shape[0], value.shape[1], value.shape[2], self._num_heads))
+        value = mx.np.reshape(value, (value.shape[0], value.shape[1]*self._num_heads, value.shape[2]))
+      query = mx.np.reshape(query, (-2, -2, self._num_heads, -1))
       if self.negative_case:
         shape_from = self.batch_size * self.seq_length * self._units
         shape_to = self.batch_size * self._num_heads * self.seq_length* self.seq_length
@@ -56,8 +61,8 @@ class MultiHeadAttention(nn.HybridBlock):
         negative_test_tensor = negative_test_tensor.flatten()
         negative_test_tensor = mx.np.split(negative_test_tensor, [shape_to])[0]
         negative_test_tensor = mx.np.reshape(negative_test_tensor, (self.batch_size,self._num_heads,self.seq_length,self.seq_length))
-      key = mx.npx.reshape(key, (-2, -2, self._num_heads, -1))
-      value = mx.npx.reshape(value, (-2, -2, self._num_heads, -1))
+      key = mx.np.reshape(key, (-2, -2, self._num_heads, -1))
+      value = mx.np.reshape(value, (-2, -2, self._num_heads, -1))
       scores = mx.npx.batch_dot(mx.np.swapaxes(query, 1, 2), mx.np.swapaxes(key, 1, 2),
                                 transpose_b=True)
       mask = mx.np.expand_dims(mask, axis=1).astype(np.bool)
@@ -79,7 +84,12 @@ class MultiHeadAttention(nn.HybridBlock):
 def test_self_attention(batch_size, seq_length, units, num_heads, split):
   net = MultiHeadAttention(units, num_heads, no_split_case=not split)
   in_data = mx.np.random.uniform(size=[batch_size, seq_length, units], dtype='float32')
-  mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
+  if (split):
+    mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
+  else:
+    # key dimension will be expanded by num_heads value to simulate gpt-2 model
+    # mask needs to be expanded as well
+    mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length * num_heads], dtype='int32')
 
   net.initialize()
   fused_net = net

@@ -291,11 +291,17 @@ def get_all_ops_cfgs(dtype):
         },
         '_sg_onednn_selfatt_qk': {
             CFG_SUBGRAPH: [SubgraphCfg('_sg_onednn_selfatt_qk', 'ONEDNN')],
+            'queries': [mx.nd.random.normal(0, 1, (1, 4, 3*2*8), dtype)],
+            'keys': [mx.nd.random.normal(0, 1, (1, 8, 3*2*8), dtype)],
+            'heads': [2]
+        },
+        '_sg_onednn_selfatt_qk_split': {
+            CFG_SUBGRAPH: [SubgraphCfg('_sg_onednn_selfatt_qk_split', 'ONEDNN')],
             'queries_keys_values': [mx.nd.random.normal(0, 1, (1, 4, 3*2*8), dtype)],
             'heads': [2]
         },
         '_sg_onednn_selfatt_valatt': {
-            CFG_BASED_ON: '_sg_onednn_selfatt_qk',
+            CFG_BASED_ON: '_sg_onednn_selfatt_qk_split',
             CFG_SUBGRAPH: [SubgraphCfg('_sg_onednn_selfatt_valatt', 'ONEDNN')],
             'attention': [CfgBasedArg(valatt_attention_tensor)]
         }

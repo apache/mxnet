@@ -51,7 +51,7 @@ enum SelectStatusTransformerQK {
 // kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSecondReshape ---> kSuccess
 // OR
 // kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSuccess
-// Each status except kStart is connected with kFail
+// Each status except kStart is connected with kFail.
 // */
 
 enum mode { include_split = 0, without_split };

@@ -30,7 +30,7 @@
 #include "dnnl_transformer-inl.h"
 #include "dnnl_transformer_qk_common.h"
 
-// 3 tensors within one (queries key values) =
+// 3 tensors within one (queries key values)
 #define QKV_NUM 3
 
 namespace mxnet {
@@ -44,13 +44,19 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
                                mxnet::ShapeVector* out_shape) {
   const auto& params = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
   uint in_shape_num  = 1;
-  auto input_shape   = in_shape->at(0);
-  CHECK_EQ(input_shape.ndim(), 3U)
+  auto in_shape_0   = in_shape->at(0);
+  auto in_shape_1   = in_shape_0;       // in include_split mode there is only one input
+  CHECK_EQ(in_shape_0.ndim(), 3U)
       << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
-      << "but the given tensor is " << input_shape.ndim() << "D";
+      << "but the given tensor is " << in_shape_0.ndim() << "D";
 
   if constexpr (qk_mode == qk_common::mode::without_split) {
-    CHECK_EQ(in_shape->at(0), in_shape->at(1));
+    in_shape_1   = in_shape->at(1);   // in without_split mode we need to consider 2nd input
+    CHECK_EQ(in_shape_1.ndim(), 3U)
+      << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
+      << "but the given tensor is " << in_shape_1.ndim() << "D";
+    CHECK_EQ(in_shape_0[0], in_shape_1[0]);
+    CHECK_EQ(in_shape_0[2], in_shape_1[2]);
     in_shape_num = 2;
   }
 
@@ -58,13 +64,14 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
     CHECK_EQ(in_shape->size(), 3 * in_shape_num)
         << "Input: [queries_keys_values, min_qkv, max_qkv] "
         << "- currently have " << in_shape->size() << " inputs";
-    SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape({1}));
     if constexpr (qk_mode == qk_common::mode::without_split) {
+      SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape({1}));
       SHAPE_ASSIGN_CHECK(*in_shape, 3, mxnet::TShape({1}));
       SHAPE_ASSIGN_CHECK(*in_shape, 4, mxnet::TShape({1}));
       SHAPE_ASSIGN_CHECK(*in_shape, 5, mxnet::TShape({1}));
     } else {
       SHAPE_ASSIGN_CHECK(*in_shape, 1, mxnet::TShape({1}));
+      SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape({1}));
     }
 
     out_shape->resize(3);
@@ -79,7 +86,7 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
   }
 
   SHAPE_ASSIGN_CHECK(
-      *out_shape, 0, mxnet::TShape({input_shape[0], params.heads, input_shape[1], input_shape[1]}));
+      *out_shape, 0, mxnet::TShape({in_shape_0[0], params.heads, in_shape_0[1], in_shape_1[1]}));
   return true;
 }
 
@@ -90,6 +97,7 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
   const auto& params = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
   uint in_shape_num  = 1;
   if constexpr (qk_mode == qk_common::mode::without_split) {
+    CHECK_EQ(in_types->at(0), in_types->at(1));
     in_shape_num = 2;
   }
   if (params.quantized) {
@@ -103,19 +111,20 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
         << "QuantizedSelfAttentionQK only supports int8 input, while " << in_types->at(0)
         << " is given.";
 
-    TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);
     if constexpr (qk_mode == qk_common::mode::without_split) {
       if (in_types->at(1) == mshadow::kBfloat16) {
         return false;
       }
       CHECK(in_types->at(1) == mshadow::kInt8)
-          << "QuantizedSelfAttentionQK only supports int8 input, while " << in_types->at(0)
+          << "QuantizedSelfAttentionQK only supports int8 input, while " << in_types->at(1)
           << " is given.";
+      TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*in_types, 3, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*in_types, 4, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*in_types, 5, mshadow::kFloat32);
     } else {
       TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);
     }
 
     if (params.enabled_float_output.has_value()) {
@@ -196,11 +205,14 @@ class SgDNNLSelfAttQKOp {
   std::shared_ptr<dnnl::memory> cached_query_mem_;
   std::shared_ptr<dnnl::memory> cached_key_mem_;
   std::shared_ptr<dnnl::memory> cached_out_mem_;
-  float min_data_;
-  float max_data_;
+  float min_data_0_;
+  float max_data_0_;
+  float min_data_1_;
+  float max_data_1_;
   float min_output_;
   float max_output_;
-  float data_scale_{0.0f};
+  float data_scale_0_{0.0f};
+  float data_scale_1_{0.0f};
 };
 
 static OpStatePtr CreateSgDNNLSelfAttQKState(const nnvm::NodeAttrs& attrs,
@@ -240,54 +252,63 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
                                    const std::vector<NDArray>& outputs) {
   using namespace dnnl;
 
-  const auto input_tensor = inputs[0];
+  const auto in_tensor_0 = inputs[0];
+  auto in_tensor_1 = in_tensor_0;           // in include_split mode there is only one input
   const auto out_tensor   = outputs[0];
 
-  const auto qkv_dtype = get_dnnl_type(input_tensor.dtype());
+  const auto in_dtype = get_dnnl_type(in_tensor_0.dtype());
 
   const memory::dim heads          = param_.heads;
-  const memory::dim sequences      = inputs[0].shape()[0];
-  const memory::dim qkv_seq_len    = inputs[0].shape()[1];
-  const memory::dim output_lin_dim = inputs[0].shape()[2];
+  const memory::dim sequences      = in_tensor_0.shape()[0];
+  const memory::dim qkv_seq_len_0  = in_tensor_0.shape()[1];
+  const memory::dim output_lin_dim = in_tensor_0.shape()[2];
   memory::dim embed_dim            = output_lin_dim;
   if constexpr (qk_mode == qk_common::mode::include_split) {
     embed_dim /= QKV_NUM;
+  } else {
+    in_tensor_1 = inputs[1];                // in without_split mode we need to consider 2nd input
   }
+  const memory::dim qkv_seq_len_1  = in_tensor_1.shape()[1];
   const memory::dim head_dim     = embed_dim / heads;
-  const memory::dim batch_stride = output_lin_dim * qkv_seq_len;
+  const memory::dim batch_stride_0 = output_lin_dim * qkv_seq_len_0;
+  const memory::dim batch_stride_1 = output_lin_dim * qkv_seq_len_1;
 
   float min_data = 0.0f;
   float max_data = 0.0f;
 
   const auto engine = CpuEngine::Get()->get_engine();
 
-  memory::dims query_dims = {sequences, heads, qkv_seq_len, head_dim};
-  memory::dims key_dims   = {sequences, heads, head_dim, qkv_seq_len};
+  memory::dims query_dims = {sequences, heads, qkv_seq_len_0, head_dim};
+  memory::dims key_dims   = {sequences, heads, head_dim, qkv_seq_len_1};
+  memory::dims query_strides = {batch_stride_0, head_dim, output_lin_dim, 1};
+  memory::dims key_strides   = {batch_stride_1, head_dim, 1, output_lin_dim};
+  
 
-  memory::dims query_strides = {batch_stride, head_dim, output_lin_dim, 1};
-  memory::dims key_strides   = {batch_stride, head_dim, 1, output_lin_dim};
-
-  auto query_md = memory::desc(query_dims, qkv_dtype, query_strides);
-  auto key_md   = memory::desc(key_dims, qkv_dtype, key_strides);
+  auto query_md = memory::desc(query_dims, in_dtype, query_strides);
+  auto key_md   = memory::desc(key_dims, in_dtype, key_strides);
 
   float oscale = 1.0f;
   if (param_.quantized) {
     if constexpr (qk_mode == qk_common::mode::include_split) {
-      min_data_ = inputs[1].data().dptr<float>()[0];
-      max_data_ = inputs[2].data().dptr<float>()[0];
+      min_data_0_ = inputs[1].data().dptr<float>()[0];
+      max_data_0_ = inputs[2].data().dptr<float>()[0];
+      data_scale_0_ = data_scale_1_ = GetQuantizeScale(in_tensor_0.dtype(), min_data_0_, max_data_0_);
     } else {
-      min_data_ = inputs[2].data().dptr<float>()[0];
-      max_data_ = inputs[3].data().dptr<float>()[0];
+      min_data_0_ = inputs[2].data().dptr<float>()[0];
+      max_data_0_ = inputs[3].data().dptr<float>()[0];
+      min_data_1_ = inputs[4].data().dptr<float>()[0];
+      max_data_1_ = inputs[5].data().dptr<float>()[0];
+      data_scale_0_ = GetQuantizeScale(in_tensor_0.dtype(), min_data_0_, max_data_0_);
+      data_scale_1_ = GetQuantizeScale(in_tensor_1.dtype(), min_data_1_, max_data_1_);
     }
-    data_scale_ = GetQuantizeScale(input_tensor.dtype(), min_data_, max_data_);
 
     if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
       min_output_ = param_.min_calib_range.value();
       max_output_ = param_.max_calib_range.value();
       oscale      = GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
-               (data_scale_ * data_scale_);
+               (data_scale_0_ * data_scale_1_);
     } else if (param_.enabled_float_output.has_value()) {
-      oscale = 1.0f / (data_scale_ * data_scale_);
+      oscale = 1.0f / (data_scale_0_ * data_scale_1_);
     } else {
       mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
       mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
@@ -360,10 +381,14 @@ void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
       *output_min       = min_output_;
       *output_max       = max_output_;
     } else {
-      float* output_min = outputs[3].data().dptr<float>();
-      float* output_max = outputs[4].data().dptr<float>();
-      *output_min       = min_output_;
-      *output_max       = max_output_;
+      float* output_min_0 = outputs[2].data().dptr<float>();
+      float* output_max_0 = outputs[3].data().dptr<float>();
+      float* output_min_1 = outputs[4].data().dptr<float>();
+      float* output_max_1 = outputs[5].data().dptr<float>();
+      *output_min_0       = min_output_;
+      *output_max_0       = max_output_;
+      *output_min_1       = min_output_;
+      *output_max_1       = max_output_;
     }
   }
 }
@@ -416,8 +441,6 @@ nnvm::ObjectPtr SgDNNLSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
       .set_attr<FQuantizable>("FQuantizable",                                                    \
                               [](const NodeAttrs& attrs) { return QuantizeType::kMust; })        \
       .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; }) \
-      .add_argument(                                                                             \
-          "queries_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values")    \
       .add_arguments(DNNLSelfAttParam::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk)
@@ -452,7 +475,11 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk)
     .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
                                   SgDNNLSelfAttQKForward<qk_common::mode::without_split>)
     .set_attr<FQuantizedOp>("FQuantizedOp",
-                            SgDNNLSelfAttQKQuantizedOp<qk_common::mode::without_split>);
+                            SgDNNLSelfAttQKQuantizedOp<qk_common::mode::without_split>)
+    .add_argument(
+          "queries", "NDArray-or-Symbol", "Interleaved queries, keys and values")
+    .add_argument(
+          "keys", "NDArray-or-Symbol", "Interleaved queries, keys and values");
 
 MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk_split)
     .add_alias("_sg_mkldnn_selfatt_qk")
@@ -482,7 +509,9 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk_split)
     .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
                                   SgDNNLSelfAttQKForward<qk_common::mode::include_split>)
     .set_attr<FQuantizedOp>("FQuantizedOp",
-                            SgDNNLSelfAttQKQuantizedOp<qk_common::mode::include_split>);
+                            SgDNNLSelfAttQKQuantizedOp<qk_common::mode::include_split>)
+    .add_argument(
+          "query_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values");;
 
 /**********************************_sg_onednn_selfatt_valatt**********************************/
 
