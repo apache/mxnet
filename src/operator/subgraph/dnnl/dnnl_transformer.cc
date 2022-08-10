@@ -509,7 +509,6 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk_split)
     .set_attr<FQuantizedOp>("FQuantizedOp",
                             SgDNNLSelfAttQKQuantizedOp<qk_common::mode::include_split>)
     .add_argument("query_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values");
-;
 
 /**********************************_sg_onednn_selfatt_valatt**********************************/
 
