@@ -145,9 +145,7 @@ void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (SupportDNNLBNReLU(inputs[0])) {
     CHECK_GT(outputs.size(), 3U);
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    DNNL_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-      DNNLRun(DNNLBatchNormForward</*fuse_relu*/ true>, attrs, ctx, inputs, req, outputs);
-    });
+    DNNLRun(DNNLBatchNormForward</*fuse_relu*/ true>, attrs, ctx, inputs, req, outputs);
     return;
   }
   LOG(FATAL) << "BatchNormWithReLU operator only supports oneDNN Backend.";
