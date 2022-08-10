@@ -271,7 +271,8 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
   if (axisOpt.has_value() && axisOpt.value() != 0) {
     int type_size          = mshadow_sizeof(inputs[0].type_flag_);
     size_t total_temp_size = inputs[0].shape_.Size() * type_size +
-                             outputs[0].shape_.Size() * type_size + tuple_with_repetitions.ndim() * sizeof(int);
+                             outputs[0].shape_.Size() * type_size +
+                             tuple_with_repetitions.ndim() * sizeof(int);
     Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
         Shape1(total_temp_size), ctx.get_stream<xpu>());
     void* swap_output_tmp_dptr   = temp_space.dptr_;
