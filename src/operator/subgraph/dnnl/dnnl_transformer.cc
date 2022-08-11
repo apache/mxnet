@@ -43,7 +43,7 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
                                mxnet::ShapeVector* in_shape,
                                mxnet::ShapeVector* out_shape) {
   const auto& params = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
-  uint in_shape_num  = 1;
+  unsigned int in_shape_num  = 1;
   auto in_shape_0    = in_shape->at(0);
   auto in_shape_1    = in_shape_0;  // in include_split mode there is only one input
   CHECK_EQ(in_shape_0.ndim(), 3U)
@@ -95,7 +95,7 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
                                      std::vector<int>* in_types,
                                      std::vector<int>* out_types) {
   const auto& params = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
-  uint in_shape_num  = 1;
+  unsigned int in_shape_num  = 1;
   if constexpr (qk_mode == qk_common::mode::without_split) {
     CHECK_EQ(in_types->at(0), in_types->at(1));
     in_shape_num = 2;
