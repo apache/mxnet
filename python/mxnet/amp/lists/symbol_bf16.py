@@ -209,6 +209,7 @@ FP32_FUNCS = [
     '_contrib_quantize_asym',
     '_contrib_quantized_act',
     '_contrib_quantized_batch_norm',
+    '_contrib_quantized_batch_norm_relu',
     '_contrib_quantized_concat',
     '_contrib_quantized_conv',
     '_contrib_quantized_elemwise_add',
