@@ -48,8 +48,18 @@ template <typename OP, bool normalize = false>
 struct DNNLReduceAlgorithm {};
 
 template <>
-struct DNNLReduceAlgorithm<mshadow::red::sum, false> {
+struct DNNLReduceAlgorithm<mshadow::red::sum> {
   static const dnnl::algorithm value = dnnl::algorithm::reduction_sum;
+};
+
+template <>
+struct DNNLReduceAlgorithm<mshadow_op::sum> {
+  static const dnnl::algorithm value = dnnl::algorithm::reduction_sum;
+};
+
+template <>
+struct DNNLReduceAlgorithm<mshadow_op::sum, true> {
+  static const dnnl::algorithm value = dnnl::algorithm::reduction_mean;
 };
 
 template <>

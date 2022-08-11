@@ -47,11 +47,11 @@ NNVM_REGISTER_OP(_npi_sum)
                                      })
     .add_argument("a", "NDArray-or-Symbol", "The input")
     .add_arguments(NumpyReduceAxesParam::__FIELDS__())
-    .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow::red::sum, true>)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", NumpyReduceAxesStorageType)
     .set_attr<bool>("TIsDNNL", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLReduceEx<NumpyReduceAxesParam, mshadow::red::sum>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLReduceEx<NumpyReduceAxesParam, mshadow_op::sum>)
 #endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
