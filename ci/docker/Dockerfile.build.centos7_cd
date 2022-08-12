@@ -33,9 +33,14 @@ ARG USER_ID=0
 COPY install/centos7_adduser.sh /work/
 RUN /work/centos7_adduser.sh
 
-RUN yum install -y sudo patchelf nasm automake libtool file && \
-    echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/yum, /usr/bin/yum-config-manager" >> /etc/sudoers.d/10_jenkins_slave && \
-    mkdir -p /opt/cmake && cd /opt/cmake && \
+# Install tools for static dependency builds
+RUN yum install -y sudo patchelf nasm automake libtool file
+
+# Allow jenkins user to use sudo for installing cuda libraries
+RUN echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/yum, /usr/bin/yum-config-manager" >> /etc/sudoers.d/10_jenkins_slave
+
+# Install cmake
+RUN mkdir -p /opt/cmake && cd /opt/cmake && \
     wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh && \
     sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && \
