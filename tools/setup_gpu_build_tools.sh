@@ -111,3 +111,4 @@ fi
 export CMAKE_PARAMETERS="-DCMAKE_EXE_LINKER_FLAGS='-L/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/stubs' \
 	-DCMAKE_SHARED_LINKER_FLAGS='-L/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/stubs'"
 
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/stubs
