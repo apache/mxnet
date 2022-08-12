@@ -69,4 +69,4 @@ fi
 source $DIR/zmq.sh
 source $DIR/lz4.sh
 
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(dirname $(find $DEPS_PATH -type f -name 'libprotoc*' | grep protobuf | head -n 1)):$DEPS_PATH/lib
+export LD_LIBRARY_PATH=$DEPS_PATH/lib:$DEPS_PATH/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
