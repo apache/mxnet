@@ -46,9 +46,6 @@ RUN yum -y check-update || true && \
         devtoolset-10-gcc \
         devtoolset-10-gcc-c++ \
         devtoolset-10-gcc-gfortran \
-        rh-python38 \
-        rh-python38-python-numpy \
-        rh-python38-python-scipy \
         # Libraries
         opencv-devel \
         openssl-devel \
@@ -59,9 +56,9 @@ RUN yum -y check-update || true && \
         libzstd-devel && \
     yum clean all
 
-# Make Red Hat Developer Toolset 10.0 and Python 3.8 Software Collections available by default
+# Make Red Hat Developer Toolset 10.0 Software Collection available by default
 # during the following build steps in this Dockerfile
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-10", "rh-python38" ]
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-10" ]
 
 # Install minimum required cmake version
 RUN cd /usr/local/src && \
@@ -92,10 +89,10 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib
 # Fix the en_DK.UTF-8 locale to test locale invariance
 RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
 
-# Python dependencies
-RUN python3 -m pip install --upgrade pip
-COPY install/requirements_aarch64 /work/
-RUN python3 -m pip install -r /work/requirements_aarch64
+# Install Python and dependency packages
+COPY install/centos7_python.sh /work/
+COPY install/requirements /work/
+RUN /work/centos7_python.sh
 
 ARG USER_ID=0
 COPY install/centos7_adduser.sh /work/

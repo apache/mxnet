@@ -22,12 +22,17 @@
 
 set -ex
 
- # Python 2.7 is installed by default, install 3.6 on top
-yum -y install https://repo.ius.io/ius-release-el7.rpm
-yum -y install python36u
+yum -y install openssl-devel bzip2-devel libffi-devel xz-devel
 
-# Install PIP
-curl "https://bootstrap.pypa.io/pip/3.6/get-pip.py" -o "get-pip.py"
-python3.6 get-pip.py
-# Allow numpy version as advanced as 1.19.5 to avoid CVE-2021-41495 and CVE-2021-41496 affecting <1.19.1.
-python3.6 -m pip install nose pylint 'numpy>=1.16.0,<1.20.0' nose-timer requests 'h5py<3' scipy==1.2.3 packaging
+PYTHON_VERSION=3.8.12
+wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
+tar -xzf Python-$PYTHON_VERSION.tgz
+cd Python-$PYTHON_VERSION
+./configure --prefix=/usr/local
+make -j $(nproc)
+make install
+cd ..
+rm -rf Python-$PYTHON_VERSION*
+pip3 install --upgrade pip setuptools wheel
+pip3 install -r /work/requirements
+
