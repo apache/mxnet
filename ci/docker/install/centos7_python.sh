@@ -22,7 +22,7 @@
 
 set -ex
 
-yum -y install openssl-devel bzip2-devel libffi-devel xz-devel
+yum -y install gcc make wget openssl-devel bzip2-devel libffi-devel xz-devel
 
 PYTHON_VERSION=3.8.12
 wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
