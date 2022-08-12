@@ -195,3 +195,4 @@ if [[ ! -f $DEPS_PATH/lib/libopencv_core.a ]] || [[ ! -f $DEPS_PATH/lib/libopenc
     cat $DEPS_PATH/include/opencv2/imgcodecs/imgcodecs_c.h >> $DEPS_PATH/include/opencv2/imgcodecs.hpp
     rm -rf $DEPS_PATH/opencv.zip $DEPS_PATH/opencv-$OPENCV_VERSION
 fi
+export OpenCV_DIR=$DEPS_PATH/share/OpenCV

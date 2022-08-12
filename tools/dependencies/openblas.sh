@@ -58,3 +58,4 @@ if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
     fi
     rm -rf ${DEPS_PATH}/openblas.zip $DEPS_PATH/OpenBLAS-$OPENBLAS_VERSION
 fi
+export OpenBLAS_HOME=$DEPS_PATH
