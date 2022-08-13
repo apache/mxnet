@@ -40,12 +40,8 @@ RUN yum install -y sudo patchelf nasm automake libtool file
 RUN echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/yum, /usr/bin/yum-config-manager" >> /etc/sudoers.d/10_jenkins_slave
 
 # Install cmake
-RUN mkdir -p /opt/cmake && cd /opt/cmake && \
-    wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh && \
-    sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && \
-    rm cmake-3.13.5-Linux-x86_64.sh && \
-    cmake --version
+COPY install/centos7_cmake.sh /work/
+RUN /work/centos7_cmake.sh
 
 ENV PYTHONPATH=./python/
 WORKDIR /work/mxnet
