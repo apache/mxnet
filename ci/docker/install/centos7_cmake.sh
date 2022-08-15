@@ -23,7 +23,7 @@ set -ex
 
 pushd .
 
-#yum install -y autoconf gcc gcc-c++ make wget
+yum install -y autoconf gcc gcc-c++ make wget
 
 mkdir -p /work/deps/cmake
 cd /work/deps/cmake
