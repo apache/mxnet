@@ -17,11 +17,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# Script to build ccache for centos7 based images
+
 set -ex
 
 pushd .
 
-yum install -y wget
+apt update
+apt install -y wget
 
 mkdir -p /work/deps/cmake
 cd /work/deps/cmake
