@@ -637,7 +637,7 @@ def compile_windows_gpu_mkldnn() {
 }
 
 def test_static_scala_cpu() {
-  return ['Static build CPU 14.04 Scala' : {
+  return ['Static build CPU Scala' : {
     node(NODE_LINUX_CPU) {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -650,12 +650,12 @@ def test_static_scala_cpu() {
 }
 
 def test_static_python_cpu() {
-  return ['Static build CPU 14.04 Python' : {
+  return ['Static build CPU Python' : {
     node(NODE_LINUX_CPU) {
         ws('workspace/ut-publish-python-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('publish.ubuntu1404_cpu', 'build_static_python_cpu', false)
+            utils.docker_run('centos7_cd', 'build_static_python_cpu', false)
           }
         }
     }
@@ -663,12 +663,12 @@ def test_static_python_cpu() {
 }
 
 def test_static_python_cpu_cmake() {
-    return ['Static build CPU 14.04 Python with CMake' : {
+    return ['Static build CPU Python with CMake' : {
         node(NODE_LINUX_CPU) {
             ws('workspace/ut-publish-python-cpu') {
                 timeout(time: max_time, unit: 'MINUTES') {
                     utils.init_git()
-                    utils.docker_run('publish.ubuntu1404_cpu', 'build_static_python_cpu_cmake', false)
+                    utils.docker_run('centos7_cd', 'build_static_python_cpu_cmake', false)
                 }
             }
         }
@@ -676,12 +676,12 @@ def test_static_python_cpu_cmake() {
 }
 
 def test_static_python_gpu() {
-  return ['Static build GPU 14.04 Python' : {
+  return ['Static build GPU Python' : {
     node(NODE_LINUX_GPU) {
         ws('workspace/ut-publish-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('publish.ubuntu1404_gpu', 'build_static_python_cu101', true)
+            utils.docker_run('centos7_cd', 'build_static_python_gpu', true)
           }
         }
     }
@@ -689,12 +689,12 @@ def test_static_python_gpu() {
 }
 
 def test_static_python_gpu_cmake() {
-    return ['Static build GPU 14.04 Python' : {
+    return ['Static build GPU Python' : {
         node(NODE_LINUX_GPU) {
             ws('workspace/ut-publish-python-gpu') {
                 timeout(time: max_time, unit: 'MINUTES') {
                     utils.init_git()
-                    utils.docker_run('publish.ubuntu1404_gpu', 'build_static_python_cu101_cmake', true)
+                    utils.docker_run('centos7_cd', 'build_static_python_gpu_cmake', true)
                 }
             }
         }
