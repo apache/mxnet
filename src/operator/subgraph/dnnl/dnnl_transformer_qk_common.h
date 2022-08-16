@@ -51,10 +51,8 @@ enum SelectStatusTransformerQK {
 // kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSecondReshape ---> kSuccess
 // OR
 // kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSuccess
-// Each status except kStart is connected with kFail.
+// each status except kStart is connected with kFail
 // */
-
-enum mode { include_split = 0, without_split };
 
 inline bool CheckSwapAxisConditionsQK(const BiDirectedNode& input_node) {
   if (input_node.outputs.size() != 1)
@@ -103,7 +101,7 @@ inline bool Select(SelectStatusTransformerQK* status,
   return false;
 }
 
-template <mode qk_mode>
+template <bool with_split>
 bool SelectInput(SelectStatusTransformerQK* status,
                  std::vector<const BiDirectedNode*>* matched_list,
                  const BiDirectedNode& n,
@@ -143,7 +141,7 @@ bool SelectInput(SelectStatusTransformerQK* status,
     case kFirstReshape:
       if (raw_input_node.op() == Op::Get("_npx_reshape")) {
         if (CheckReshapeConditionsQK(input_node, 0) || CheckReshapeConditionsQK(input_node, 1)) {
-          if constexpr (qk_mode == mode::include_split) {
+          if constexpr (with_split) {
             *status = kSecondReshape;
           } else {
             *status = kSuccess;
@@ -184,16 +182,16 @@ inline std::vector<BiDirectedNode*> Filter(const SelectStatusTransformerQK& stat
   }
 }
 
-template <mode qk_mode>
+template <bool with_split>
 nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym, const int subgraph_id = 0) {
   std::string op_name;
-  if constexpr (qk_mode == mode::include_split) {
+  if constexpr (with_split) {
     op_name = "_sg_onednn_selfatt_qk_split";
   } else {
     op_name = "_sg_onednn_selfatt_qk";
   }
   nnvm::ObjectPtr n = nnvm::Node::Create();
-  // This op has single output, remove duplicated.
+  // this op has single output, remove duplicated
   auto last_node = sym.outputs[0].node;
   nnvm::Symbol new_sym;
   new_sym.outputs.emplace_back(last_node);
@@ -217,7 +215,7 @@ nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym, const int subgraph_i
 
 inline void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
                                    std::vector<nnvm::NodeEntry*>* output_entries) {
-  // Connect all extern output entries to output[0]
+  // connect all extern output entries to output[0]
   for (size_t i = 0; i < output_entries->size(); ++i) {
     auto entry_ptr = output_entries->at(i);
     *entry_ptr     = nnvm::NodeEntry{n, entry_ptr->index, 0};

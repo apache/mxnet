@@ -71,8 +71,7 @@ class SgDNNLTransformerQKSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
-    return qk_common::SelectInput<qk_common::mode::without_split>(
-        &status_, &matched_list_, n, input_node);
+    return qk_common::SelectInput<false>(&status_, &matched_list_, n, input_node);
   }
 
   bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& output_node) override {
@@ -103,8 +102,7 @@ class SgDNNLTransformerQKSplitSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
-    return qk_common::SelectInput<qk_common::mode::include_split>(
-        &status_, &matched_list_, n, input_node);
+    return qk_common::SelectInput<true>(&status_, &matched_list_, n, input_node);
   }
 
   bool SelectOutput(const BiDirectedNode& n, const BiDirectedNode& output_node) override {
@@ -140,7 +138,7 @@ class SgDNNLTransformerQKProperty : public SubgraphProperty {
 
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
-    return qk_common::CreateSubgraphNode<qk_common::mode::without_split>(sym, subgraph_id);
+    return qk_common::CreateSubgraphNode<false>(sym, subgraph_id);
   }
 
   void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
@@ -171,7 +169,7 @@ class SgDNNLTransformerQKSplitProperty : public SubgraphProperty {
 
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
-    return qk_common::CreateSubgraphNode<qk_common::mode::include_split>(sym, subgraph_id);
+    return qk_common::CreateSubgraphNode<true>(sym, subgraph_id);
   }
 
   void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,

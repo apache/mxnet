@@ -28,7 +28,6 @@
 #include "operator/tensor/elemwise_unary_op.h"
 #include "operator/subgraph/common.h"
 #include "dnnl_transformer-inl.h"
-#include "dnnl_transformer_qk_common.h"
 
 // 3 tensors within one (queries key values)
 #define QKV_NUM 3
@@ -38,19 +37,19 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(DNNLSelfAttParam);
 
-template <qk_common::mode qk_mode>
+template <bool with_split>
 static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
                                mxnet::ShapeVector* in_shape,
                                mxnet::ShapeVector* out_shape) {
   const auto& params        = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
   unsigned int in_shape_num = 1;
   auto in_shape_0           = in_shape->at(0);
-  auto in_shape_1           = in_shape_0;  // in include_split mode there is only one input
+  auto in_shape_1           = in_shape_0;  // in with_split mode there is only one input
   CHECK_EQ(in_shape_0.ndim(), 3U)
       << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
       << "but the given tensor is " << in_shape_0.ndim() << "D";
 
-  if constexpr (qk_mode == qk_common::mode::without_split) {
+  if constexpr (!with_split) {
     in_shape_1 = in_shape->at(1);  // in without_split mode we need to consider 2nd input
     CHECK_EQ(in_shape_1.ndim(), 3U)
         << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
@@ -64,14 +63,14 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
     CHECK_EQ(in_shape->size(), 3 * in_shape_num)
         << "Input: [queries_keys_values, min_qkv, max_qkv] "
         << "- currently have " << in_shape->size() << " inputs";
-    if constexpr (qk_mode == qk_common::mode::without_split) {
+    if constexpr (with_split) {
+      SHAPE_ASSIGN_CHECK(*in_shape, 1, mxnet::TShape({1}));
+      SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape({1}));
+    } else {
       SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape({1}));
       SHAPE_ASSIGN_CHECK(*in_shape, 3, mxnet::TShape({1}));
       SHAPE_ASSIGN_CHECK(*in_shape, 4, mxnet::TShape({1}));
       SHAPE_ASSIGN_CHECK(*in_shape, 5, mxnet::TShape({1}));
-    } else {
-      SHAPE_ASSIGN_CHECK(*in_shape, 1, mxnet::TShape({1}));
-      SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape({1}));
     }
 
     out_shape->resize(3);
@@ -90,13 +89,13 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
   return true;
 }
 
-template <qk_common::mode qk_mode>
+template <bool with_split>
 static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
                                      std::vector<int>* in_types,
                                      std::vector<int>* out_types) {
   const auto& params        = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
   unsigned int in_shape_num = 1;
-  if constexpr (qk_mode == qk_common::mode::without_split) {
+  if constexpr (!with_split) {
     CHECK_EQ(in_types->at(0), in_types->at(1));
     in_shape_num = 2;
   }
@@ -111,20 +110,14 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
         << "QuantizedSelfAttentionQK only supports int8 input, while " << in_types->at(0)
         << " is given.";
 
-    if constexpr (qk_mode == qk_common::mode::without_split) {
-      if (in_types->at(1) == mshadow::kBfloat16) {
-        return false;
-      }
-      CHECK(in_types->at(1) == mshadow::kInt8)
-          << "QuantizedSelfAttentionQK only supports int8 input, while " << in_types->at(1)
-          << " is given.";
+    if constexpr (with_split) {
+      TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);
+    } else {
       TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*in_types, 3, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*in_types, 4, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*in_types, 5, mshadow::kFloat32);
-    } else {
-      TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
-      TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);
     }
 
     if (params.enabled_float_output.has_value()) {
@@ -145,12 +138,12 @@ static bool SgDNNLSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(out_types->size(), 1U);
     if (in_types->at(0) == mshadow::kFloat32) {
       TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kFloat32);
-      if constexpr (qk_mode == qk_common::mode::without_split) {
+      if constexpr (!with_split) {
         TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);
       }
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
     } else if (in_types->at(0) == mshadow::kBfloat16) {
-      if constexpr (qk_mode == qk_common::mode::without_split) {
+      if constexpr (!with_split) {
         TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kBfloat16);
       }
       if (params.enabled_float_output.has_value()) {
@@ -172,7 +165,7 @@ class SgDNNLSelfAttQKOp {
   explicit SgDNNLSelfAttQKOp(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<DNNLSelfAttParam>(attrs.parsed)) {}
 
-  template <qk_common::mode qk_mode>
+  template <bool with_split>
   void Forward(const OpContext& ctx,
                const std::vector<NDArray>& inputs,
                const std::vector<OpReqType>& req,
@@ -187,7 +180,7 @@ class SgDNNLSelfAttQKOp {
                   "inference computation.";
   }
 
-  template <qk_common::mode qk_mode>
+  template <bool with_split>
   void Initialize(const OpContext& ctx,
                   const std::vector<NDArray>& inputs,
                   const std::vector<OpReqType>& req,
@@ -222,7 +215,7 @@ static OpStatePtr CreateSgDNNLSelfAttQKState(const nnvm::NodeAttrs& attrs,
   return OpStatePtr::Create<SgDNNLSelfAttQKOp>(attrs);
 }
 
-template <qk_common::mode qk_mode>
+template <bool with_split>
 void SgDNNLSelfAttQKForward(const OpStatePtr& state_pointer,
                             const OpContext& ctx,
                             const std::vector<NDArray>& inputs,
@@ -231,10 +224,10 @@ void SgDNNLSelfAttQKForward(const OpStatePtr& state_pointer,
   SgDNNLSelfAttQKOp& op = state_pointer.get_state<SgDNNLSelfAttQKOp>();
   bool already_prepared = false;
   if (!op.IsInitialized()) {
-    op.Initialize<qk_mode>(ctx, inputs, req, outputs);
+    op.Initialize<with_split>(ctx, inputs, req, outputs);
     already_prepared = true;
   }
-  op.Forward<qk_mode>(ctx, inputs, req, outputs, already_prepared);
+  op.Forward<with_split>(ctx, inputs, req, outputs, already_prepared);
 }
 
 static bool SgDNNLSelfAttStorageType(const nnvm::NodeAttrs& attrs,
@@ -245,7 +238,7 @@ static bool SgDNNLSelfAttStorageType(const nnvm::NodeAttrs& attrs,
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-template <qk_common::mode qk_mode>
+template <bool with_split>
 void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
@@ -253,7 +246,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   using namespace dnnl;
 
   const auto in_tensor_0 = inputs[0];
-  auto in_tensor_1       = in_tensor_0;  // in include_split mode there is only one input
+  auto in_tensor_1       = in_tensor_0;  // in with_split mode there is only one input
   const auto out_tensor  = outputs[0];
 
   const auto in_dtype = get_dnnl_type(in_tensor_0.dtype());
@@ -263,7 +256,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   const memory::dim qkv_seq_len_0  = in_tensor_0.shape()[1];
   const memory::dim output_lin_dim = in_tensor_0.shape()[2];
   memory::dim embed_dim            = output_lin_dim;
-  if constexpr (qk_mode == qk_common::mode::include_split) {
+  if constexpr (with_split) {
     embed_dim /= QKV_NUM;
   } else {
     in_tensor_1 = inputs[1];  // in without_split mode we need to consider 2nd input
@@ -288,7 +281,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
 
   float oscale = 1.0f;
   if (param_.quantized) {
-    if constexpr (qk_mode == qk_common::mode::include_split) {
+    if constexpr (with_split) {
       min_data_0_   = inputs[1].data().dptr<float>()[0];
       max_data_0_   = inputs[2].data().dptr<float>()[0];
       data_scale_0_ = data_scale_1_ =
@@ -325,7 +318,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
     DType* query_mem_ptr = inputs[0].data().dptr<DType>();
     DType* key_mem_ptr;
-    if constexpr (qk_mode == qk_common::mode::include_split) {
+    if constexpr (with_split) {
       key_mem_ptr = query_mem_ptr + embed_dim;
     } else {
       key_mem_ptr = inputs[1].data().dptr<DType>();
@@ -345,7 +338,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   initialized_            = true;
 }
 
-template <qk_common::mode qk_mode>
+template <bool with_split>
 void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
@@ -358,7 +351,7 @@ void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
     MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
       DType* query_mem_ptr = inputs[0].data().dptr<DType>();
       DType* key_mem_ptr;
-      if constexpr (qk_mode == qk_common::mode::include_split) {
+      if constexpr (with_split) {
         key_mem_ptr = query_mem_ptr + embed_dim;
       } else {
         key_mem_ptr = inputs[1].data().dptr<DType>();
@@ -375,7 +368,7 @@ void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
   DNNLStream::Get()->Submit();
 
   if (param_.quantized && !param_.enabled_float_output.has_value()) {
-    if constexpr (qk_mode == qk_common::mode::include_split) {
+    if constexpr (with_split) {
       float* output_min = outputs[1].data().dptr<float>();
       float* output_max = outputs[2].data().dptr<float>();
       *output_min       = min_output_;
@@ -393,11 +386,11 @@ void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
   }
 }
 
-template <qk_common::mode qk_mode>
+template <bool with_split>
 nnvm::ObjectPtr SgDNNLSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node = nnvm::Node::Create();
   auto const& param    = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
-  if constexpr (qk_mode == qk_common::mode::include_split) {
+  if constexpr (with_split) {
     node->attrs.op = Op::Get("_sg_onednn_selfatt_qk_split");
   } else {
     node->attrs.op = Op::Get("_sg_onednn_selfatt_qk");
@@ -469,13 +462,10 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk)
                                        }
                                        return input_names;
                                      })
-    .set_attr<mxnet::FInferShape>("FInferShape", SgDNNLSelfAttShape<qk_common::mode::without_split>)
-    .set_attr<nnvm::FInferType>("FInferType",
-                                SgDNNLSelfAttQKInferType<qk_common::mode::without_split>)
-    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                  SgDNNLSelfAttQKForward<qk_common::mode::without_split>)
-    .set_attr<FQuantizedOp>("FQuantizedOp",
-                            SgDNNLSelfAttQKQuantizedOp<qk_common::mode::without_split>)
+    .set_attr<mxnet::FInferShape>("FInferShape", SgDNNLSelfAttShape<false>)
+    .set_attr<nnvm::FInferType>("FInferType", SgDNNLSelfAttQKInferType<false>)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgDNNLSelfAttQKForward<false>)
+    .set_attr<FQuantizedOp>("FQuantizedOp", SgDNNLSelfAttQKQuantizedOp<false>)
     .add_argument("queries", "NDArray-or-Symbol", "Interleaved queries, keys and values")
     .add_argument("keys", "NDArray-or-Symbol", "Interleaved queries, keys and values");
 
@@ -501,13 +491,10 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk_split)
                                        }
                                        return input_names;
                                      })
-    .set_attr<mxnet::FInferShape>("FInferShape", SgDNNLSelfAttShape<qk_common::mode::include_split>)
-    .set_attr<nnvm::FInferType>("FInferType",
-                                SgDNNLSelfAttQKInferType<qk_common::mode::include_split>)
-    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                  SgDNNLSelfAttQKForward<qk_common::mode::include_split>)
-    .set_attr<FQuantizedOp>("FQuantizedOp",
-                            SgDNNLSelfAttQKQuantizedOp<qk_common::mode::include_split>)
+    .set_attr<mxnet::FInferShape>("FInferShape", SgDNNLSelfAttShape<true>)
+    .set_attr<nnvm::FInferType>("FInferType", SgDNNLSelfAttQKInferType<true>)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgDNNLSelfAttQKForward<true>)
+    .set_attr<FQuantizedOp>("FQuantizedOp", SgDNNLSelfAttQKQuantizedOp<true>)
     .add_argument("query_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values");
 
 /**********************************_sg_onednn_selfatt_valatt**********************************/
