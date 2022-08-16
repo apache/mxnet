@@ -642,7 +642,7 @@ def test_static_scala_cpu() {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('publish.ubuntu1404_cpu', 'build_static_scala_cpu', false)
+            utils.docker_run('centos7_cd', 'build_static_scala_cpu', false)
           }
         }
     }
@@ -1403,7 +1403,7 @@ def docs_julia() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
-            utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
+            utils.docker_run('ubuntu_cpu', 'build_julia_docs', false)
             if (should_pack_website()) {
               utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
             }
