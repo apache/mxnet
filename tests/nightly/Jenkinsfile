@@ -38,34 +38,6 @@ core_logic: {
         }
       }
     },
-    'InstallationGuide: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-Installation-cpu') {
-          utils.init_git()
-          //Some install guide tests are currently diabled and tracked here:
-          //1. https://github.com/apache/incubator-mxnet/issues/11369
-          //2. https://github.com/apache/incubator-mxnet/issues/11288
-          //utils.docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_virtualenv', false)
-          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_pip', false)
-          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_docker', false)
-          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_source', false)
-        }
-      }
-    },
-    'InstallationGuide: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/nt-Installation-gpu') {
-          utils.init_git()
-          //Some install guide tests are currently diabled and tracked here:
-          //1. https://github.com/apache/incubator-mxnet/issues/11369
-          //2. https://github.com/apache/incubator-mxnet/issues/11288
-          //utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_virtualenv', true)
-          //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_pip', true)
-          //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_docker', true)
-          //utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
-        }
-      }
-    },
     'PipTest: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-pipTest') {
