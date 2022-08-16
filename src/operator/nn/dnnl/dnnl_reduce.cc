@@ -112,7 +112,7 @@ bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
     auto axes    = CanonicalizeAndSortAxes(input, param, param.axis.value());
     int last_dim = *(axes.end() - 1);
     if (last_dim != input.shape().ndim() - 1) {
-      // oneDNN (v2.3.2) not optimized case
+      // oneDNN (v2.6.1) not optimized case
       return false;
     } else {
       for (int i = 0; i < axes.ndim(); i++) {
