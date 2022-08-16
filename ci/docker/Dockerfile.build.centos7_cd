@@ -34,7 +34,7 @@ COPY install/centos7_adduser.sh /work/
 RUN /work/centos7_adduser.sh
 
 # Install tools for static dependency builds
-RUN yum install -y sudo patchelf nasm automake libtool file gcc-c++ gcc
+RUN yum install -y sudo patchelf nasm automake libtool file gcc-c++ gcc gcc-gfortran
 
 # Allow jenkins user to use sudo for installing cuda libraries
 RUN echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/yum, /usr/bin/yum-config-manager" >> /etc/sudoers.d/10_jenkins_slave
