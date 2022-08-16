@@ -40,14 +40,12 @@ $MAKE DEPS_PATH=$DEPS_PATH mkldnn
 $MAKE DEPS_PATH=$DEPS_PATH
 
 if [[ $PLATFORM == 'linux' ]]; then
-    if [[ -f /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so ]]; then
-        cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3
-    elif [[ -f /usr/lib/x86_64-linux-gnu/libgfortran.so.3 ]]; then
-        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.3 lib/libgfortran.so.3
-    else
-        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.4 lib/libgfortran.so.4
+    if ldd lib/libmxnet.so | grep -q libgfortran; then
+        cp -L $(ldd lib/libmxnet.so | grep libgfortran | awk '{print $3}') lib/
     fi
-    cp -L /usr/lib/x86_64-linux-gnu/libquadmath.so.0 lib/libquadmath.so.0
+    if ldd lib/libmxnet.so | grep -q libquadmath; then
+        cp -L $(ldd lib/libmxnet.so | grep libquadmath | awk '{print $3}') lib/
+    fi
 fi
 
 # Print the linked objects on libmxnet.so
