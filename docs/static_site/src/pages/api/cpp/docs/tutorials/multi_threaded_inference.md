@@ -30,7 +30,7 @@ A long standing request from MXNet users has been to invoke parallel inference o
 With this use case in mind, the threadsafe version of CachedOp was added to provide a way for customers to do multi-threaded inference for MXNet users.
 This doc attempts to do the following:
 1. Discuss the current state of thread safety in MXNet
-2. Explain how one can use C API and thread safe version of cached op, along with CPP package to achieve iultithreaded inference. This will be useful for end users as well as frontend developers of different language bindings
+2. Explain how one can use C API and thread safe version of cached op, along with CPP package to achieve multi threaded inference. This will be useful for end users as well as frontend developers of different language bindings
 3. Discuss the limitations of the above approach
 4. Future Work
 

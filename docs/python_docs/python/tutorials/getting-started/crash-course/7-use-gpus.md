@@ -36,7 +36,7 @@ npx.num_gpus() #This command provides the number of GPUs MXNet can access
 
 ## Allocate data to a GPU
 
-MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `device` attribute specifieing which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
+MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `device` attribute specifying which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
 
 ```{.python .input}
 gpu = npx.gpu() if npx.num_gpus() > 0 else npx.cpu()
