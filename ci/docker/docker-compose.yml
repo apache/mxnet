@@ -102,6 +102,16 @@ services:
         BASE_IMAGE: nvidia/cuda:11.4.3-cudnn8-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu114
+  centos7_gpu_cu115:
+    image: ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu115
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.5.2-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu115
   centos7_gpu_cu116:
     image: ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu116
     build:
@@ -112,3 +122,13 @@ services:
         BASE_IMAGE: nvidia/cuda:11.6.2-cudnn8-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu116
+  centos7_gpu_cu117:
+    image: ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu117
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.7.1-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}:build.centos7_gpu_cu117
