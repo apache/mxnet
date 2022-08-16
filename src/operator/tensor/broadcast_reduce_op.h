@@ -43,7 +43,7 @@ namespace mxnet {
 namespace op {
 
 // template struct converting mshadow::red to dnnl::algorithm
-// normalize is false as a default, bacause onlu mean and sum use it
+// normalize is false as a default, bacause only mean and sum use it
 template <typename OP, bool normalize = false>
 struct DNNLReduceAlgorithm {};
 
