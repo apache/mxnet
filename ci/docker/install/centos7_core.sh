@@ -25,24 +25,23 @@ set -ex
 # Multipackage installation does not fail in yum
 yum -y install ca-certificates
 yum -y install epel-release
-yum -y install git
-yum -y install wget
-yum -y install atlas-devel # Provide clbas headerfiles
-yum -y install openblas-devel
-yum -y install lapack-devel
-yum -y install opencv-devel
-yum -y install protobuf-compiler
-yum -y install protobuf-devel
-yum -y install zeromq-devel
-yum -y install openssl-devel
-yum -y install gcc-c++-4.8.*
-yum -y install make
-yum -y install wget
-yum -y install unzip
-yum -y install ninja-build
-yum -y install automake 
-yum -y install patchelf 
-yum -y install nasm 
-yum -y install libtool  
-yum -y install dpkg-dev
+yum -y install git \
+    wget \
+    atlas-devel \
+    openblas-devel \
+    lapack-devel \
+    opencv-devel \
+    protobuf-compiler \
+    protobuf-devel \
+    zeromq-devel \
+    openssl-devel \
+    gcc-c++-4.8.* \
+    make \
+    unzip \
+    ninja-build \
+    automake \
+    patchelf \
+    nasm \
+    libtool \
+    dpkg-dev
 
