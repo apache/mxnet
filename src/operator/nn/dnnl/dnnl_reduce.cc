@@ -24,6 +24,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 
+#include <algorithm>
 #include "operator/nn/dnnl/dnnl_reduce-inl.h"
 #include "operator/numpy/np_broadcast_reduce_op.h"
 
