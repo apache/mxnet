@@ -26,11 +26,17 @@ RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/
 
 COPY install/ubuntu_core.sh /work/
 RUN /work/ubuntu_core.sh
+
+COPY install/ubuntu_cmake.sh /work/
+RUN /work/ubuntu_cmake.sh
+
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
+
 COPY install/ubuntu_python.sh /work/
 COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
+
 COPY install/tensorrt.sh /work
 RUN /work/tensorrt.sh
 
