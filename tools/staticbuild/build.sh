@@ -58,6 +58,15 @@ else
     export CXX="g++ -fPIC -mno-avx"
     export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
 fi
+
+# on osx, set minimum version to compile dependencies for, which should match mxnet build
+# for our CI/CD systems, we set to this to 10.13
+#  (see CMAKE_OSX_DEPLOYMENT_TARGET in config/distribution/darwin_cpu.cmake)
+if [[ $PLATFORM == 'darwin' ]]; then
+    export CFLAGS="-mmacosx-version-min=10.13"
+    export CXXFLAGS="-mmacosx-version-min=10.13"
+fi
+
 export FC="gfortran"
 if [[ $ARCH == 'aarch64' ]]; then
     export CPATH=/opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp:$CPATH
