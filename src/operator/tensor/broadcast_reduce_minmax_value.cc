@@ -31,11 +31,12 @@ MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(max)
     .add_alias("max_axis")
     .describe(get_reduce_axes_description("max", __LINE__))
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::maximum>)
-    #if MXNET_USE_ONEDNN == 1
+#if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesMinMaxOpForwardStorage)
     .set_attr<bool>("TIsDNNL", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesMinMaxOpForwardEx<cpu, mshadow::red::maximum>)
-    #endif
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          ReduceAxesMinMaxOpForwardEx<cpu, mshadow::red::maximum>)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -51,11 +52,12 @@ MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(min)
     .add_alias("min_axis")
     .describe(get_reduce_axes_description("min", __LINE__))
     .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::minimum>)
-    #if MXNET_USE_ONEDNN == 1
+#if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesMinMaxOpForwardStorage)
     .set_attr<bool>("TIsDNNL", true)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesMinMaxOpForwardEx<cpu, mshadow::red::minimum>)
-    #endif
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          ReduceAxesMinMaxOpForwardEx<cpu, mshadow::red::minimum>)
+#endif
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& attrs) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
