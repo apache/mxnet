@@ -44,13 +44,13 @@ static bool SgDNNLSelfAttShape(const NodeAttrs& attrs,
   const auto& params        = nnvm::get<DNNLSelfAttParam>(attrs.parsed);
   unsigned int in_shape_num = 1;
   auto in_shape_0           = in_shape->at(0);
-  auto in_shape_1           = in_shape_0;  // in with_split mode there is only one input
+  auto in_shape_1           = in_shape_0;  // with split there is only one input
   CHECK_EQ(in_shape_0.ndim(), 3U)
       << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
       << "but the given tensor is " << in_shape_0.ndim() << "D";
 
   if constexpr (!with_split) {
-    in_shape_1 = in_shape->at(1);  // in without_split mode we need to consider 2nd input
+    in_shape_1 = in_shape->at(1);  // without split we need to consider 2nd input
     CHECK_EQ(in_shape_1.ndim(), 3U)
         << "Input queries_keys_values should be 3D in batch-seq_length-proj_dim, "
         << "but the given tensor is " << in_shape_1.ndim() << "D";
@@ -246,7 +246,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   using namespace dnnl;
 
   const auto in_tensor_0 = inputs[0];
-  auto in_tensor_1       = in_tensor_0;  // in with_split mode there is only one input
+  auto in_tensor_1       = in_tensor_0;  // with split there is only one input
   const auto out_tensor  = outputs[0];
 
   const auto in_dtype = get_dnnl_type(in_tensor_0.dtype());
@@ -259,7 +259,7 @@ void SgDNNLSelfAttQKOp::Initialize(const OpContext& ctx,
   if constexpr (with_split) {
     embed_dim /= QKV_NUM;
   } else {
-    in_tensor_1 = inputs[1];  // in without_split mode we need to consider 2nd input
+    in_tensor_1 = inputs[1];  // without split we need to consider 2nd input
   }
   const memory::dim qkv_seq_len_1  = in_tensor_1.shape()[1];
   const memory::dim head_dim       = embed_dim / heads;
