@@ -17,15 +17,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 # Build and install TVM
 cd /tmp
-git clone https://github.com/dmlc/tvm/ --recursive
+git clone https://github.com/dmlc/tvm.git tvm
 cd tvm
 
 # This is a stable tag that support MXNet TVM bridge.
 # We use this since support for mxnet bridge just checked
 # into master and there is yet a version tag
 git checkout v0.4
+git submodule update --init --recursive
 
 cp cmake/config.cmake .
 echo set\(USE_CUDA /usr/local/cuda\) >> config.cmake
@@ -36,9 +39,9 @@ echo set\(USE_GRAPH_RUNTIME ON\) >> config.cmake
 make -j$(nproc)
 
 cd python
-python setup.py install
+python3 setup.py install
 cd -
 
 cd topi/python
-python setup.py install
+python3 setup.py install
 cd -
