@@ -705,7 +705,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda101_cudnn7
+    build_ubuntu_gpu_cudnn8
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -771,7 +771,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda101_cudnn7() {
+build_ubuntu_gpu_cudnn7() {
     set -ex
     build_ccache_wrappers
     make \
@@ -790,7 +790,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     make cython PYTHON=python3
 }
 
-build_ubuntu_gpu_cuda110_cudnn8() {
+build_ubuntu_gpu_cudnn8() {
     set -ex
     build_ccache_wrappers
     local CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 \
@@ -811,7 +811,7 @@ build_ubuntu_gpu_cuda110_cudnn8() {
     make cython PYTHON=python3
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
+build_ubuntu_gpu_cudnn8_mkldnn_cpp_test() {
     set -ex
     build_ccache_wrappers
     make \
