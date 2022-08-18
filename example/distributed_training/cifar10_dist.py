@@ -204,5 +204,5 @@ for epoch in range(epochs):
 
     # Print test accuracy after every epoch
     test_accuracy = evaluate_accuracy(test_data, net)
-    print("Epoch %d: Test_acc %f" % (epoch, test_accuracy))
+    print(f"Epoch {epoch}: Test_acc {test_accuracy}")
     sys.stdout.flush()

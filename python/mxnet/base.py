@@ -541,14 +541,14 @@ def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):
         if key == 'num_args':
             continue
         param_keys.add(key)
-        ret = '%s : %s' % (key, type_info)
+        ret = f'{key} : {type_info}'
         if len(desc) != 0:
             ret += '\n    ' + desc
         param_str.append(ret)
     doc_str = ('Parameters\n' +
                '----------\n' +
-               '%s\n')
-    doc_str = doc_str % ('\n'.join(param_str))
+               '{}\n')
+    doc_str = doc_str.format('\n'.join(param_str))
     return doc_str
 
 
@@ -581,7 +581,7 @@ def add_fileline_to_docstring(module, incursive=True):
             line = inspect.getsourcelines(obj)[-1]
         except IOError:
             return
-        obj.__doc__ += '\n\nFrom:%s:%d' % (fname, line)
+        obj.__doc__ += f'\n\nFrom:{fname}:{line}'
 
     if isinstance(module, str):
         module = sys.modules[module]
@@ -656,17 +656,17 @@ def _init_op_module(root_namespace, module_name, make_op_func):
         if not _is_np_op(op_name):
             op_names.append(op_name)
 
-    module_op = sys.modules["%s.%s.op" % (root_namespace, module_name)]
-    module_internal = sys.modules["%s.%s._internal" % (root_namespace, module_name)]
+    module_op = sys.modules[f"{root_namespace}.{module_name}.op"]
+    module_internal = sys.modules[f"{root_namespace}.{module_name}._internal"]
     # contrib module in the old format (deprecated)
     # kept here for backward compatibility
     # use mx.nd.contrib or mx.sym.contrib from now on
-    contrib_module_name_old = "%s.contrib.%s" % (root_namespace, module_name)
+    contrib_module_name_old = f"{root_namespace}.contrib.{module_name}"
     contrib_module_old = sys.modules[contrib_module_name_old]
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
         submodule_dict[op_name_prefix] =\
-            sys.modules["%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])]
+            sys.modules[f"{root_namespace}.{module_name}.{op_name_prefix[1:-1]}"]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
@@ -676,7 +676,7 @@ def _init_op_module(root_namespace, module_name, make_op_func):
             if op_name_prefix != '_random_' or name.endswith('_like'):
                 func_name = name[len(op_name_prefix):]
                 cur_module = submodule_dict[op_name_prefix]
-                module_name_local = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
+                module_name_local = f"{root_namespace}.{module_name}.{op_name_prefix[1:-1]}"
             else:
                 func_name = name
                 cur_module = module_internal
@@ -760,7 +760,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
         """Write the proper __all__ based on available operators."""
         module_file.write(os.linesep)
         module_file.write(os.linesep)
-        all_str = '__all__ = [' + ', '.join(["'%s'"%s for s in module_all_list]) + ']'
+        all_str = '__all__ = [' + ', '.join([f"'{s}'" for s in module_all_list]) + ']'
         module_file.write(all_str)
 
     plist = ctypes.POINTER(ctypes.c_char_p)()
@@ -774,15 +774,14 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
         if not _is_np_op(op_name):
             op_names.append(op_name)
 
-    module_op_file = get_module_file("%s.%s.op" % (root_namespace, module_name))
+    module_op_file = get_module_file(f"{root_namespace}.{module_name}.op")
     module_op_all = []
-    module_internal_file = get_module_file("%s.%s._internal"%(root_namespace, module_name))
+    module_internal_file = get_module_file(f"{root_namespace}.{module_name}._internal")
     module_internal_all = []
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
         submodule_dict[op_name_prefix] =\
-            (get_module_file("%s.%s.%s" % (root_namespace, module_name,
-                                           op_name_prefix[1:-1])), [])
+            (get_module_file(f"{root_namespace}.{module_name}.{op_name_prefix[1:-1]}"), [])
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
@@ -914,26 +913,26 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
 
     if mx_module_name is None:
         # register np/npx ops for imperative programming
-        op_module_name = "%s.%s._op" % (root_module_name, np_module_name)  # e.g. mxnet.numpy._op
-        op_submodule_name = "%s.%s" % (root_module_name, np_module_name)  # e.g. mxnet.numpy.random
+        op_module_name = f"{root_module_name}.{np_module_name}._op" # e.g. mxnet.numpy._op
+        op_submodule_name = f"{root_module_name}.{np_module_name}" # e.g. mxnet.numpy.random
     elif mx_module_name in ('ndarray', 'symbol'):
         # register numpy internal ops and np/npx ops for use in Gluon
         # np internal ops are registered in mxnet.ndarray/symbol.numpy._internal
         # np ops are registered in mxnet.ndarray/symbol.numpy._op
         # npx ops are registered in mxnet.ndarray/symbol.numpy_extension._op
-        op_module_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
+        op_module_name = f"{root_module_name}.{mx_module_name}.{np_module_name}"
         if op_name_prefix != _NP_INTERNAL_OP_PREFIX:
             op_module_name += '._op'
         # e.g. mxnet.symbol.numpy.random
-        op_submodule_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
+        op_submodule_name = f"{root_module_name}.{mx_module_name}.{np_module_name}"
     else:
         raise ValueError('unsupported mxnet module {}'.format(mx_module_name))
-    op_submodule_name += '.%s'
+    op_submodule_name += '.{}'
 
     op_module = sys.modules[op_module_name]
     submodule_dict = {}
     for submodule_name in submodule_name_list:
-        submodule_dict[submodule_name] = sys.modules[op_submodule_name % submodule_name[1:-1]]
+        submodule_dict[submodule_name] = sys.modules[op_submodule_name.format(submodule_name[1:-1])]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
@@ -941,7 +940,7 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
         if len(submodule_name) > 0:
             func_name = name[(len(op_name_prefix) + len(submodule_name)):]
             cur_module = submodule_dict[submodule_name]
-            module_name_local = op_submodule_name % submodule_name[1:-1]
+            module_name_local = op_submodule_name.format(submodule_name[1:-1])
         else:
             func_name = name[len(op_name_prefix):]
             cur_module = op_module

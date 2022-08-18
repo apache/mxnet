@@ -327,7 +327,7 @@ class ImageFolderDataset(dataset.Dataset):
         for folder in sorted(os.listdir(root)):
             path = os.path.join(root, folder)
             if not os.path.isdir(path):
-                warnings.warn('Ignoring %s, which is not a directory.'%path, stacklevel=3)
+                warnings.warn(f'Ignoring {path}, which is not a directory.', stacklevel=3)
                 continue
             label = len(self.synsets)
             self.synsets.append(folder)
@@ -335,8 +335,7 @@ class ImageFolderDataset(dataset.Dataset):
                 filename = os.path.join(path, filename)
                 ext = os.path.splitext(filename)[1]
                 if ext.lower() not in self._exts:
-                    warnings.warn('Ignoring %s of type %s. Only support %s'%(
-                        filename, ext, ', '.join(self._exts)))
+                    warnings.warn(f'Ignoring {filename} of type {ext}. Only support {", ".join(self._exts)}')
                     continue
                 self.items.append((filename, label))
 

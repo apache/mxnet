@@ -91,8 +91,7 @@ def meshgrid(*xi, **kwargs):
     indexing = kwargs.pop('indexing', 'xy')
 
     if kwargs:
-        raise TypeError("meshgrid() got an unexpected keyword argument '%s'"
-                        % (list(kwargs)[0],))
+        raise TypeError(f"meshgrid() got an unexpected keyword argument '{list(kwargs)[0]}'")
 
     if indexing not in ['xy', 'ij']:
         raise ValueError(

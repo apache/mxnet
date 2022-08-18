@@ -482,7 +482,7 @@ class TopKAccuracy(EvalMetric):
             output_names=output_names, label_names=label_names)
         self.top_k = top_k
         assert(self.top_k > 1), 'Please use Accuracy if top_k is no more than 1'
-        self.name += '_%d' % self.top_k
+        self.name += f'_{self.top_k}'
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -537,7 +537,7 @@ def predict_with_threshold(pred, threshold=0.5):
     elif isinstance(threshold, (numpy.ndarray, ndarray.ndarray.NDArray)):
         num_classes = pred.shape[-1]
         assert threshold.shape[-1] == num_classes, \
-                "shape mismatch: %s vs. %s"%(pred.shape[-1], threshold.shape[-1])
+                f"shape mismatch: {pred.shape[-1]} vs. {threshold.shape[-1]}"
         return pred > threshold
     else:
         raise ValueError("{} is a wrong type for threshold!".format(type(threshold)))
@@ -1411,7 +1411,7 @@ class CrossEntropy(EvalMetric):
         num = 0
         for label, pred in zip(labels, preds):
             assert label.size == pred.size/pred.shape[-1], \
-                "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
+                f"shape mismatch: {label.shape} vs. {pred.shape}"
             label = label.reshape((label.size,))
             if self.from_logits:
                 pred = npx.softmax(pred, axis=self.axis)
@@ -1792,7 +1792,7 @@ class CustomMetric(EvalMetric):
         if name is None:
             name = feval.__name__
             if name.find('<') != -1:
-                name = 'custom(%s)' % name
+                name = f'custom({name})'
         super(CustomMetric, self).__init__(
             name, feval=feval,
             allow_extra_outputs=allow_extra_outputs,

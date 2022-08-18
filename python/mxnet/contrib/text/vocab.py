@@ -209,7 +209,7 @@ class Vocabulary(object):
         tokens = []
         for idx in indices:
             if not isinstance(idx, int) or idx > max_idx:
-                raise ValueError('Token index %d in the provided `indices` is invalid.' % idx)
+                raise ValueError(f'Token index {idx} in the provided `indices` is invalid.')
             tokens.append(self.idx_to_token[idx])
 
         return tokens[0] if to_reduce else tokens

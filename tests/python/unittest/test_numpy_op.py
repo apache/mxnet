@@ -8543,7 +8543,7 @@ def test_np_take():
         elif axis == 4:
             grad_in[:, :, :, :, idx] += 1.0
         else:
-            raise ValueError("axis %d is not supported..." % axis)
+            raise ValueError(f"axis {axis} is not supported...")
 
     def check_output_n_grad(data_shape, idx_shape, axis, mode):
         data_real = onp.random.normal(size=data_shape).astype('float32')

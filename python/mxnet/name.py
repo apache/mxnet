@@ -54,7 +54,7 @@ class NameManager:
             return name
         if hint not in self._counter:
             self._counter[hint] = 0
-        name = '%s%d' % (hint, self._counter[hint])
+        name = f'{hint}{self._counter[hint]}'
         self._counter[hint] += 1
         return name
 

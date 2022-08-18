@@ -163,9 +163,9 @@ class _Symbol(Symbol):
         if self._alive:
             if self.num_outputs > 1:
                 name = ', '.join([str(ele_sym) for ele_sym in self])
-                return '<%s group [%s]>' % (self.__class__.__name__, name)
+                return f'<{self.__class__.__name__} group [{name}]>'
             else:
-                return '<%s %s>' % (self.__class__.__name__, self.name)
+                return f'<{self.__class__.__name__} {self.name}>'
         else:
             return '<FREED {}>'.format(self.__class__.__name__)
 
@@ -1618,7 +1618,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
     elif isinstance(rhs, Symbol):
         return fn_array(lhs, rhs, out=out)
     else:
-        raise TypeError('type %s not supported' % str(type(rhs)))
+        raise TypeError(f'type {str(type(rhs))} not supported')
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 
@@ -7837,7 +7837,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         # Make sure have allowed kwargs appropriate for mode
         for key in kwargs:
             if key not in allowedkwargs[mode]:
-                raise ValueError('%s keyword not in allowed keywords %s' %(key, allowedkwargs[mode]))
+                raise ValueError(f'{key} keyword not in allowed keywords {allowedkwargs[mode]}')
 
     unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
     if unsupported_kwargs:

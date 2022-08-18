@@ -38,17 +38,17 @@ def _build_doc(func_name,
     param_str = _build_param_doc(arg_names, arg_types, arg_desc)
     # if key_var_num_args:
     #     desc += '\nThis function support variable length of positional input.'
-    doc_str = ('%s\n\n' +
-               '%s\n' +
+    doc_str = ('{}\n\n' +
+               '{}\n' +
                'out : NDArray, optional\n' +
                '    The output NDArray to hold the result.\n\n'+
                'Returns\n' +
                '-------\n' +
                'out : NDArray or list of NDArrays\n' +
                '    The output of this function.')
-    doc_str = doc_str % (desc, param_str)
+    doc_str = doc_str.format(desc, param_str)
     extra_doc = "\n" + '\n'.join([x.__doc__ for x in type.__subclasses__(NDArrayDoc)
-                                  if x.__name__ == '%sDoc' % func_name])
+                                  if x.__name__ == f'{func_name}Doc'])
     doc_str += _re.sub(_re.compile("    "), "", extra_doc)
     doc_str = _re.sub('NDArray-or-Symbol', 'NDArray', doc_str)
 

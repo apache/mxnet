@@ -156,9 +156,9 @@ class Optimizer(object):
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
-            warnings.warn('WARNING: New optimizer %s.%s is overriding '
-                          'existing optimizer %s.%s' %
-                          (klass.__module__, klass.__name__,
+            warnings.warn('WARNING: New optimizer {}.{} is overriding '
+                          'existing optimizer {}.{}'.format(
+                           klass.__module__, klass.__name__,
                            Optimizer.opt_registry[name].__module__,
                            Optimizer.opt_registry[name].__name__))
         Optimizer.opt_registry[name] = klass
@@ -196,7 +196,7 @@ class Optimizer(object):
         if name.lower() in Optimizer.opt_registry:
             return Optimizer.opt_registry[name.lower()](**kwargs)
         else:
-            raise ValueError('Cannot find optimizer %s' % name)
+            raise ValueError(f'Cannot find optimizer {name}')
 
     @property
     def learning_rate(self):

@@ -72,8 +72,7 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
         return ret
 
     def __repr__(self):
-        return "DataDesc[%s,%s,%s,%s]" % (self.name, self.shape, self.dtype,
-                                          self.layout)
+        return f"DataDesc[{self.name},{self.shape},{self.dtype},{self.layout}]"
 
     @staticmethod
     def get_batch_axis(layout):
@@ -955,13 +954,13 @@ def _make_io_iterator(handle):
         [py_str(arg_types[i]) for i in range(narg)],
         [py_str(arg_descs[i]) for i in range(narg)])
 
-    doc_str = ('%s\n\n' +
-               '%s\n' +
+    doc_str = ('{}\n\n' +
+               '{}\n' +
                'Returns\n' +
                '-------\n' +
                'MXDataIter\n'+
                '    The result iterator.')
-    doc_str = doc_str % (desc.value, param_str)
+    doc_str = doc_str.format(desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create an iterator.
@@ -1002,7 +1001,7 @@ def _make_io_iterator(handle):
             ctypes.byref(iter_handle)))
 
         if len(args):
-            raise TypeError('%s can only accept keyword arguments' % iter_name)
+            raise TypeError(f'{iter_name} can only accept keyword arguments')
 
         return MXDataIter(iter_handle, **kwargs)
 

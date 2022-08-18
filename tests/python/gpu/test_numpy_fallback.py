@@ -88,11 +88,11 @@ def test_np_fallback_decorator():
     for fallback_out, onp_out in zip(fallback_ret, onp_ret):
         if isinstance(fallback_out, (list, tuple)):
             for fallback_item, onp_item in zip(fallback_out, onp_out):
-                assert fallback_item.device == mx.device.current_device(), "incorrect output device %s vs desired %s" % (str(fallback_item.device), str(mx.device.current_device()))
+                assert fallback_item.device == mx.device.current_device(), f"incorrect output device {str(fallback_item.device)} vs desired {str(mx.device.current_device())}"
                 assert isinstance(fallback_item, np.ndarray)
                 assert_almost_equal(fallback_item.asnumpy(), onp_item, rtol=1e-3, atol=1e-5, equal_nan=False)
         else:
-            assert fallback_out.device == mx.device.current_device(), "incorrect output device %s vs desired %s" % (str(fallback_out.device), str(mx.device.current_device()))
+            assert fallback_out.device == mx.device.current_device(), f"incorrect output device {str(fallback_out.device)} vs desired {str(mx.device.current_device())}"
             assert isinstance(fallback_out, np.ndarray)
             assert_almost_equal(fallback_out.asnumpy(), onp_out, rtol=1e-3, atol=1e-5, equal_nan=False)
 

@@ -148,14 +148,14 @@ class CudaModule(object):
             match = pattern.match(sanitized_arg)
             if not match or match.groups()[1] == 'const':
                 raise ValueError(
-                    'Invalid function prototype "%s". Must be in the '
-                    'form of "(const) type (*) (name)"'%sanitized_arg)
+                    f'Invalid function prototype "{sanitized_arg}". Must be in the '
+                    'form of "(const) type (*) (name)"')
             is_const.append(bool(match.groups()[0]))
             dtype = match.groups()[1]
             is_ndarray.append(bool(match.groups()[2]))
             if dtype not in _DTYPE_CPP_TO_NP:
                 raise TypeError(
-                    "Unsupported kernel argument type %s. Supported types are: %s." % (
+                    "Unsupported kernel argument type {}. Supported types are: {}.".format(
                         sanitized_arg, ','.join(_DTYPE_CPP_TO_NP.keys())))
             dtypes.append(dtype_np_to_mx(_DTYPE_CPP_TO_NP[dtype]))
 
@@ -205,20 +205,17 @@ class CudaKernel(object):
         assert len(grid_dims) == 3, "grid_dims must be a tuple of 3 integers"
         assert len(block_dims) == 3, "grid_dims must be a tuple of 3 integers"
         assert len(args) == len(self._dtypes), \
-            "CudaKernel(%s) expects %d arguments but got %d"%(
-                self._name, len(self._dtypes), len(args))
+            f"CudaKernel({self._name}) expects {len(self._dtypes)} arguments but got {len(args)}"
         void_args = []
         ref_holder = []
         for i, (arg, is_nd, dtype) in enumerate(zip(args, self._is_ndarray, self._dtypes)):
             if is_nd:
                 assert isinstance(arg, NDArray), \
-                    "The %d-th argument is expected to be a NDArray but got %s"%(
-                        i, type(arg))
+                    f"The {i}-th argument is expected to be a NDArray but got {type(arg)}"
                 void_args.append(arg.handle)
             else:
                 assert isinstance(arg, numeric_types), \
-                    "The %d-th argument is expected to be a number, but got %s"%(
-                        i, type(arg))
+                    f"The {i}-th argument is expected to be a number, but got {type(arg)}"
                 ref_holder.append(np.array(arg, dtype=dtype))
                 void_args.append(ref_holder[-1].ctypes.data_as(ctypes.c_void_p))
 

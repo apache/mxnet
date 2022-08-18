@@ -244,10 +244,10 @@ def test_stack():
     for i in range(5):
         if i==1:
             continue
-        assert '%d.h2h_weight'%i in keys
-        assert '%d.h2h_bias'%i in keys
-        assert '%d.i2h_weight'%i in keys
-        assert '%d.i2h_bias'%i in keys
+        assert f'{i}.h2h_weight' in keys
+        assert f'{i}.h2h_bias' in keys
+        assert f'{i}.i2h_weight' in keys
+        assert f'{i}.i2h_bias' in keys
     assert '1.base_cell.h2h_weight' in keys
     assert '1.base_cell.h2h_bias' in keys
     assert '1.base_cell.i2h_weight' in keys
@@ -274,10 +274,10 @@ def test_hybridstack():
     for i in range(5):
         if i==1:
             continue
-        assert '%d.h2h_weight'%i in keys
-        assert '%d.h2h_bias'%i in keys
-        assert '%d.i2h_weight'%i in keys
-        assert '%d.i2h_bias'%i in keys
+        assert f'{i}.h2h_weight' in keys
+        assert f'{i}.h2h_bias' in keys
+        assert f'{i}.i2h_weight' in keys
+        assert f'{i}.i2h_bias' in keys
     assert '1.base_cell.h2h_weight' in keys
     assert '1.base_cell.h2h_bias' in keys
     assert '1.base_cell.i2h_weight' in keys

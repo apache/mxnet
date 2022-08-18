@@ -373,7 +373,7 @@ class Executor:
                 dst = self.arg_dict[name]
                 array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
-                raise ValueError('Find name \"%s\" that is not in the arguments' % name)
+                raise ValueError(f'Find name \"{name}\" that is not in the arguments')
 
         if aux_params is None:
             return
@@ -383,4 +383,4 @@ class Executor:
                 dst = self.aux_dict[name]
                 array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
-                raise ValueError('Find name %s that is not in the auxiliary states' % name)
+                raise ValueError(f'Find name {name} that is not in the auxiliary states')

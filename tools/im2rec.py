@@ -84,10 +84,10 @@ def write_list(path_out, image_list):
     """
     with open(path_out, 'w') as fout:
         for i, item in enumerate(image_list):
-            line = '%d\t' % item[0]
+            line = f'{item[0]}\t'
             for j in item[2:]:
-                line += '%f\t' % j
-            line += '%s\n' % item[1]
+                line += f'{j}\t'
+            line += f'{item[1]}\n'
             fout.write(line)
 
 def make_list(args):
@@ -106,7 +106,7 @@ def make_list(args):
     for i in range(args.chunks):
         chunk = image_list[i * chunk_size:(i + 1) * chunk_size]
         if args.chunks > 1:
-            str_chunk = '_%d' % i
+            str_chunk = f'_{i}'
         else:
             str_chunk = ''
         sep = int(chunk_size * args.train_ratio)
@@ -138,12 +138,12 @@ def read_list(path_in):
             line_len = len(line)
             # check the data format of .lst file
             if line_len < 3:
-                print('lst should have at least has three parts, but only has %s parts for %s' % (line_len, line))
+                print(f'lst should have at least has three parts, but only has {line_len} parts for {line}')
                 continue
             try:
                 item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
             except Exception as e:
-                print('Parsing lst met error for %s, detail: %s' % (line, e))
+                print(f'Parsing lst met error for {line}, detail: {e}')
                 continue
             yield item
 
@@ -179,11 +179,11 @@ def image_encode(args, i, item, q_out):
         img = cv2.imread(fullpath, args.color)
     except:
         traceback.print_exc()
-        print('imread error trying to load file: %s ' % fullpath)
+        print(f'imread error trying to load file: {fullpath} ')
         q_out.put((i, None, item))
         return
     if img is None:
-        print('imread read blank (None) image for file: %s' % fullpath)
+        print(f'imread read blank (None) image for file: {fullpath}')
         q_out.put((i, None, item))
         return
     if args.center_crop:
@@ -205,7 +205,7 @@ def image_encode(args, i, item, q_out):
         q_out.put((i, s, item))
     except Exception as e:
         traceback.print_exc()
-        print('pack_img error on file: %s' % fullpath, e)
+        print(f'pack_img error on file: {fullpath}', e)
         q_out.put((i, None, item))
         return
 
@@ -390,4 +390,4 @@ if __name__ == '__main__':
                             pre_time = cur_time
                         cnt += 1
         if not count:
-            print('Did not find and list file with prefix %s'%args.prefix)
+            print(f'Did not find and list file with prefix {args.prefix}')

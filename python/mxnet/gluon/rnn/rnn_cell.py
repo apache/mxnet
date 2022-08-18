@@ -901,7 +901,7 @@ class ModifierCell(HybridRecurrentCell):
     """
     def __init__(self, base_cell):
         assert not base_cell._modified, \
-            "Cell %s is already modified. One cell cannot be modified twice"%base_cell.name
+            f"Cell {base_cell.name} is already modified. One cell cannot be modified twice"
         base_cell._modified = True
         super(ModifierCell, self).__init__()
         self.base_cell = base_cell

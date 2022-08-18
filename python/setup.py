@@ -87,8 +87,8 @@ def config_cython():
             if not fn.endswith(".pyx"):
                 continue
             ret.append(Extension(
-                "mxnet.%s.%s" % (subdir, fn[:-4]),
-                ["mxnet/cython/%s" % fn],
+                f"mxnet.{subdir}.{fn[:-4]}",
+                [f"mxnet/cython/{fn}"],
                 include_dirs=["../include/", "../3rdparty/tvm/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,
@@ -100,8 +100,8 @@ def config_cython():
             if not fn.endswith(".pyx"):
                 continue
             ret.append(Extension(
-                "mxnet._ffi.%s.%s" % (subdir, fn[:-4]),
-                ["mxnet/_ffi/_cython/%s" % fn],
+                f"mxnet._ffi.{subdir}.{fn[:-4]}",
+                [f"mxnet/_ffi/_cython/{fn}"],
                 include_dirs=["../include/", "../3rdparty/tvm/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,

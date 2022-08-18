@@ -30,8 +30,8 @@ needs_sphinx = '1.5.6'
 
 # General information about the project.
 project = u'Apache MXNet'
-author = u'%s developers' % project
-copyright = u'2015-2020, %s' % author
+author = u'{} developers'.format(project)
+copyright = u'2015-2020, {}'.format(author)
 github_doc_root = 'https://github.com/apache/incubator-mxnet/tree/master/docs/'
 doc_root = 'https://mxnet.apache.org/'
 

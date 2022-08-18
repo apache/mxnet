@@ -73,7 +73,7 @@ def convert_to_node(value):
             vlist.append(item[0])
             vlist.append(convert_to_node(item[1]))
         return _api_internal._Map(*vlist)
-    raise ValueError("don't know how to convert type %s to node" % type(value))
+    raise ValueError(f"don't know how to convert type {type(value)} to node")
 
 
 def const(value, dtype=None):

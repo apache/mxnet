@@ -109,8 +109,8 @@ def _flatten(args, inout_str):
         return [args], int(0)
 
     assert isinstance(args, (list, tuple)), \
-        "%s must be (nested) list of NDArray, " \
-        "but got %s of type %s"%(inout_str, str(args), str(type(args)))
+        f"{inout_str} must be (nested) list of NDArray, " \
+        f"but got {str(args)} of type {str(type(args))}"
     flat = []
     fmts = []
     for i in args:
@@ -128,7 +128,7 @@ def _regroup(args, fmt):
 
     assert isinstance(args, (list, tuple)), \
         "output must be (nested) list of NDArray, " \
-        "but got %s of type %s"%(str(args), str(type(args)))
+        f"but got {str(args)} of type {str(type(args))}"
     ret = []
     for i in fmt:
         res, args = _regroup(args, i)
@@ -327,7 +327,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
         try:
             inputs = type_(inputs)
         except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
+            raise ValueError(f"Cannot convert {name} to python {type_.__name__}")
         return inputs
 
     def _func_wrapper(loop_vars):
@@ -389,8 +389,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             stacked_outputs.append(ndarray.op.concat(*items, dim=0))
         except ValueError:
             raise ValueError("\n".join(
-                ["Shapes of %d-th elements in step_outputs are inconsistent, which are:" % i_th] +
-                ["  Step %d, shape is %s" % (i, str(x.shape)) for i, x in enumerate(items)]
+                [f"Shapes of {i_th}-th elements in step_outputs are inconsistent, which are:"] +
+                [f"  Step {i}, shape is {str(x.shape)}" for i, x in enumerate(items)]
             ))
     if out_fmt is not None:
         stacked_outputs, _ = _regroup(stacked_outputs, out_fmt)
@@ -455,7 +455,7 @@ def cond(pred, then_func, else_func):
         try:
             inputs = type_(inputs)
         except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
+            raise ValueError(f"Cannot convert {name} to python {type_.__name__}")
         return inputs
 
     branch = _to_python_scalar(pred, bool, "pred")

@@ -167,9 +167,8 @@ class Estimator(object):
                                  "refer to mxnet.Device:{}".format(devices))
             for device in devices:
                 assert device in available_gpus or str(device).startswith('cpu'), \
-                    "%s is not available, please make sure " \
-                    "your device is in one of: mx.cpu(), %s" % \
-                    (device, ", ".join([str(device) for device in available_gpus]))
+                    f"{device} is not available, please make sure " \
+                    f"your device is in one of: mx.cpu(), {', '.join([str(device) for device in available_gpus])}"
         else:
             # provide default device
             if gpus > 0:

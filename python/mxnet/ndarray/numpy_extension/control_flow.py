@@ -405,7 +405,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         try:
             inputs = type_(inputs)
         except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
+            raise ValueError(f"Cannot convert {name} to python {type_.__name__}")
         return inputs
 
     def _cond_wrapper(loop_vars):
@@ -543,7 +543,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         _union_inputs(cond_g, func_g)
     for i_th, loc in enumerate(func_var_locs, 1):
         if loc == -1:
-            raise ValueError("The %d-th loop_var doesn't involve into the computation" % i_th)
+            raise ValueError(f"The {i_th}-th loop_var doesn't involve into the computation")
     result = _api_internal.while_loop(
         cond_g.handle,
         func_g.handle,

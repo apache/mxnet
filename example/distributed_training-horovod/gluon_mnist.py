@@ -54,7 +54,7 @@ logging.info(args)
 
 # Function to get mnist iterator given a rank
 def get_mnist_iterator(rank):
-    data_dir = "data-%d" % rank
+    data_dir = f"data-{rank}"
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     zip_file_path = download('http://data.mxnet.io/mxnet/data/mnist.zip',
@@ -66,8 +66,8 @@ def get_mnist_iterator(rank):
     batch_size = args.batch_size
 
     train_iter = mx.io.MNISTIter(
-        image="%s/train-images-idx3-ubyte" % data_dir,
-        label="%s/train-labels-idx1-ubyte" % data_dir,
+        image=f"{data_dir}/train-images-idx3-ubyte",
+        label=f"{data_dir}/train-labels-idx1-ubyte",
         input_shape=input_shape,
         batch_size=batch_size,
         shuffle=True,
@@ -77,8 +77,8 @@ def get_mnist_iterator(rank):
     )
 
     val_iter = mx.io.MNISTIter(
-        image="%s/t10k-images-idx3-ubyte" % data_dir,
-        label="%s/t10k-labels-idx1-ubyte" % data_dir,
+        image=f"{data_dir}/t10k-images-idx3-ubyte",
+        label=f"{data_dir}/t10k-labels-idx1-ubyte",
         input_shape=input_shape,
         batch_size=batch_size,
         flat=False,
@@ -168,8 +168,7 @@ for epoch in range(args.epochs):
 
         if nbatch % 100 == 0:
             name, acc = metric.get()
-            logging.info('[Epoch %d Batch %d] Training: %s=%f' %
-                         (epoch, nbatch, name, acc))
+            logging.info(f'[Epoch {epoch} Batch {nbatch}] Training: {name}={acc}')
 
     if hvd.rank() == 0:
         elapsed = time.time() - tic
@@ -185,5 +184,5 @@ for epoch in range(args.epochs):
                      train_acc, name, val_acc)
 
     if hvd.rank() == 0 and epoch == args.epochs - 1:
-        assert val_acc > 0.96, "Achieved accuracy (%f) is lower than expected\
-                                (0.96)" % val_acc
+        assert val_acc > 0.96, f"Achieved accuracy ({val_acc}) is lower than expected\
+                                (0.96)"

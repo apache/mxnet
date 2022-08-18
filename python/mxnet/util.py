@@ -765,7 +765,7 @@ def numpy_fallback(func):
         else:
             if new_device is None:
                 new_device = device
-            assert device == new_device, "inconsistent device %s and %s" % (str(device), str(new_device))
+            assert device == new_device, f"inconsistent device {str(device)} and {str(new_device)}"
             return device
 
     def _as_official_np_array(object):

@@ -1980,8 +1980,8 @@ def test_kernel_error_checking():
     try:
         mpctx = mp.get_context('spawn')
     except:
-        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
-              sys.version_info[0:2], file=sys.stderr, end='')
+        print('SKIP: python{}.{} lacks the required process fork-exec support ... '.format(
+            sys.version_info[0:2]), file=sys.stderr, end='')
     else:
         with discard_stderr():
             for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:
@@ -1989,7 +1989,7 @@ def test_kernel_error_checking():
                 p.start()
                 p.join()
                 assert p.exitcode != 0,\
-                    "Expected a synchronous kernel error from %s(), none seen." % f.__name__
+                    f"Expected a synchronous kernel error from {f.__name__}(), none seen."
 
 def test_incorrect_gpu():
     # Try setting dev_id to a really big number

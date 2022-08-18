@@ -47,7 +47,7 @@ def assertRaises(expected_exception, func, *args, **kwargs):
         pass
     else:
         # Did not raise exception
-        assert False, "%s did not raise %s" % (func.__name__, expected_exception.__name__)
+        assert False, f"{func.__name__} did not raise {expected_exception.__name__}"
 
 
 def default_logger():
@@ -201,8 +201,8 @@ def run_in_spawned_process(func, env, *args):
     try:
         mpctx = mp.get_context('spawn')
     except:
-        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
-              sys.version_info[0:2], file=sys.stderr, end='')
+        print('SKIP: python{}.{} lacks the required process fork-exec support ... '.format(
+              sys.version_info[0:2]), file=sys.stderr, end='')
         return False
     else:
         seed = np.random.randint(0,1024*1024*1024)
@@ -211,7 +211,7 @@ def run_in_spawned_process(func, env, *args):
             p = mpctx.Process(target=func, args=(seed,)+args)
             p.start()
             p.join()
-            assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
+            assert p.exitcode == 0, f"Non-zero exit code {p.exitcode} from {func.__name__}()."
     return True
 
 

@@ -638,7 +638,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         elif isinstance(value, ndarray):
             _npi.boolean_mask_assign_tensor(data=self, mask=key, value=value, start_axis=0, out=self)
         else:
-            raise NotImplementedError('type %s is not supported.'%(type(value)))
+            raise NotImplementedError(f'type {type(value)} is not supported.')
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):

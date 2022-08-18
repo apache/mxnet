@@ -33,7 +33,7 @@ class OtherOptionSpace(object):
         return len(self.entities)
 
     def __repr__(self):
-        return "OtherOption(%s) len=%d" % (self.entities, len(self))
+        return f"OtherOption({self.entities}) len={len(self)}"
 
 
 class OtherOptionEntity(object):
@@ -97,9 +97,9 @@ class ConfigSpace(object):
         return self._length
 
     def __repr__(self):
-        res = "ConfigSpace (len=%d, space_map=\n" % len(self)
+        res = f"ConfigSpace (len={len(self)}, space_map=\n"
         for i, (name, space) in enumerate(self.space_map.items()):
-            res += "  %2d %s: %s\n" % (i, name, space)
+            res += f"  {i:2} {name}: {space}\n"
         return res + ")"
 
     def to_json_dict(self):
@@ -172,9 +172,9 @@ class ConfigSpaces(object):
         return len(self.spaces)
 
     def __repr__(self):
-        res = "ConfigSpaces (len=%d, config_space=\n" % len(self)
+        res = f"ConfigSpaces (len={len(self)}, config_space=\n"
         for i, (key, val) in enumerate(self.spaces.items()):
-            res += "  %2d %s:\n %s\n" % (i, key, val)
+            res += f"  {i:2} {key}:\n {val}\n"
         return res + ")"
 
     def to_json_dict(self):
