@@ -43,7 +43,7 @@ bool QuantizedBatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
-  const int channelAxis = GetRealAxis(dshape, param.axis);
+  const int channelAxis = batchnorm::GetRealAxis(dshape, param.axis);
   CHECK(channelAxis >= 0 && channelAxis < dshape.ndim())
       << "Channel axis out of range: " << param.axis;
   const int channelCount = dshape[channelAxis];
