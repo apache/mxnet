@@ -19,7 +19,7 @@
 
 # This script builds the static library of libtiff that can be used as dependency of mxnet/opencv.
 set -ex
-TIFF_VERSION="4.0.9"
+TIFF_VERSION="4.4.0"
 if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
     # download and build libtiff
     >&2 echo "Building libtiff..."
@@ -29,8 +29,9 @@ if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
     unzip -q $DEPS_PATH/libtiff.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/tiff-$TIFF_VERSION
-    ./configure --quiet --disable-shared --disable-jpeg --disable-zlib --disable-jbig --disable-lzma --prefix=$DEPS_PATH
+    ./configure --quiet --disable-shared --disable-jpeg --disable-zstd --disable-zlib --disable-jbig --disable-lzma --disable-webp --prefix=$DEPS_PATH
     $MAKE
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/libtiff.zip $DEPS_PATH/tiff-$TIFF_VERSION
 fi

@@ -19,11 +19,7 @@ Prerequisites
 -------------
 This package supports Linux and Windows platforms. You may also want to check:
 
-- [mxnet-cu111](https://pypi.python.org/pypi/mxnet-cu111/) with CUDA-11.1 support.
 - [mxnet-cu110](https://pypi.python.org/pypi/mxnet-cu110/) with CUDA-11.0 support.
-- [mxnet-cu102](https://pypi.python.org/pypi/mxnet-cu102/) with CUDA-10.2 support.
-- [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
-- [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100/) with CUDA-10.0 support.
 - [mxnet](https://pypi.python.org/pypi/mxnet/).
 - [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without MKLDNN.
 
@@ -43,5 +39,5 @@ Installation
 ------------
 To install:
 ```bash
-pip install mxnet-cu112
+pip install mxnet-cu111
 ```

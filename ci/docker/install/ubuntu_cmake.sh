@@ -17,24 +17,26 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script imports the headers from eigen3 that can be used to in opencv.
+# Script to build ccache for centos7 based images
+
 set -ex
-EIGEN_VERSION=3.3.4
-if [[ ! -d $DEPS_PATH/include/eigen3 ]]; then
-    # download eigen
-    >&2 echo "Loading eigen..."
-    download \
-        https://github.com/eigenteam/eigen-git-mirror/archive/${EIGEN_VERSION}.zip \
-        ${DEPS_PATH}/eigen.zip
-    unzip -q $DEPS_PATH/eigen.zip -d $DEPS_PATH
-    mkdir -p $DEPS_PATH/eigen-git-mirror-$EIGEN_VERSION/build
-    pushd .
-    cd $DEPS_PATH/eigen-git-mirror-$EIGEN_VERSION/build
-    cmake \
-          -D CMAKE_BUILD_TYPE=RELEASE \
-          -D EIGEN_MPL2_ONLY=1 \
-          -D CMAKE_INSTALL_PREFIX=$DEPS_PATH ..
-    $MAKE install
-    popd
-    rm -rf $DEPS_PATH/eigen.zip $DEPS_PATH/eigen-git-mirror-$EIGEN_VERSION
-fi
+
+pushd .
+
+apt update
+apt install -y wget
+
+mkdir -p /work/deps/cmake
+cd /work/deps/cmake
+
+CMAKE_VERSION=3.24.0
+CMAKE_MAJOR=$(echo $CMAKE_VERSION | cut -d. -f1,2)
+CMAKE_ARCH=$(uname -m)
+wget -q https://cmake.org/files/v$CMAKE_MAJOR/cmake-$CMAKE_VERSION-linux-$CMAKE_ARCH.sh
+sh cmake-$CMAKE_VERSION-linux-$CMAKE_ARCH.sh --prefix=/usr/local --skip-license
+
+cd /work/deps
+rm -rf /work/deps/cmake
+
+popd
+

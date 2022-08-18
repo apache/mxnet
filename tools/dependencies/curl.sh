@@ -65,4 +65,5 @@ if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
     $MAKE
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/libcurl.zip $DEPS_PATH/curl-$LIBCURL_VERSION
 fi

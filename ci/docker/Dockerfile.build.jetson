@@ -43,12 +43,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     crossbuild-essential-arm64 \
  && rm -rf /var/lib/apt/lists/*
 
-# cmake on Ubuntu 18.04 is too old
-RUN python3 -m pip install cmake
-
-# ccache on Ubuntu 18.04 is too old to support Cuda correctly
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
+# Install cmake
+COPY install/ubuntu_cmake.sh /work/
+RUN /work/ubuntu_cmake.sh
 
 COPY toolchains/aarch64-linux-gnu-toolchain.cmake /usr
 ENV CMAKE_TOOLCHAIN_FILE=/usr/aarch64-linux-gnu-toolchain.cmake
