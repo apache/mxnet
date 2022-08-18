@@ -29,7 +29,7 @@ if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
     unzip -q $DEPS_PATH/libtiff.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/tiff-$TIFF_VERSION
-    ./configure --quiet --disable-shared --disable-jpeg --disable-zstd --disable-jbig --disable-lzma --prefix=$DEPS_PATH
+    ./configure --quiet --disable-shared --disable-jpeg --disable-zstd --disable-zlib --disable-jbig --disable-lzma --prefix=$DEPS_PATH
     $MAKE
     $MAKE install
     popd
