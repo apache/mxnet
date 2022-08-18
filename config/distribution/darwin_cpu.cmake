@@ -16,11 +16,7 @@
 # under the License.
 
 set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
-# when setting this, you must also set CFLAGS/CXXFLAGS for
-#  all dependency libraries, for example:
-#    export CFLAGS="$CFLAGS -mmacosx-version-min=10.13"
-#    export CXXFLAGS="$CXXFLAGS -mmacosx-version-min=10.13"
-#set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum supported version of OSX.")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum supported version of OSX.")
 set(CFLAGS "-mno-avx" CACHE STRING "CFLAGS")
 set(CXXFLAGS "-mno-avx" CACHE STRING "CXXFLAGS")
 
