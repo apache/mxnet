@@ -76,7 +76,7 @@ def save_to_file(inp_dict, out_filepath, out_format='json', runtime_features=Non
         with open(out_filepath, "w") as result_file:
             result_file.write(_prepare_markdown(inp_dict, runtime_features, profiler))
     else:
-        raise ValueError("Invalid output file format provided - '{}'. Supported - json, md".format(format))
+        raise ValueError(f"Invalid output file format provided - '{out_format}'. Supported - json, md")
 
 
 def get_json(inp_dict):
@@ -126,10 +126,9 @@ def _prepare_op_benchmark_result(op, op_bench_result, profiler):
 
     result = ""
     if profiler == "native":
-        result = "| {} | {} | {} | {} | {} |".format(operator_name,
-                 inputs, max_mem_usage, avg_forward_time, avg_backward_time)
+        result = f"| {operator_name} | {inputs} | {max_mem_usage} | {avg_forward_time} | {avg_backward_time} |"
     elif profiler == "python":
-        result = "| {} | {} | {} | {} | {} | {} |".format(operator_name, avg_time, p50_time, p90_time, p99_time, inputs)
+        result = f"| {operator_name} | {avg_time} | {p50_time} | {p90_time} | {p99_time} | {inputs} |"
     return result
 
 
@@ -139,7 +138,7 @@ def _prepare_markdown(results, runtime_features=None, profiler='native'):
         results_markdown.append("# Runtime Features")
         idx = 0
         for key, value in runtime_features['runtime_features'].items():
-            results_markdown.append('{}. {} : {}'.format(idx, key, value))
+            results_markdown.append(f'{idx}. {key} : {value}')
 
     results_markdown.append("# Benchmark Results")
     if profiler == 'native':

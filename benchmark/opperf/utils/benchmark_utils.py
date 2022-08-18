@@ -189,7 +189,7 @@ def _run_operator_performance_test(op, inputs, run_backward, warmup, runs, kwarg
 
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
-    logging.info("Begin Benchmark - {name}".format(name=op.__name__))
+    logging.info(f"Begin Benchmark - {op.__name__}")
 
     for idx, kwargs in enumerate(kwargs_list):
         _, profiler_output = benchmark_helper_func(op, runs, **kwargs)
@@ -199,7 +199,7 @@ def _run_operator_performance_test(op, inputs, run_backward, warmup, runs, kwarg
         new_inp = parse_input_ndarray(inputs[idx])
         profiler_output = merge_map_list([{"inputs": new_inp}] + [profiler_output])
         op_benchmark_result[op.__name__].append(profiler_output)
-    logging.info("Complete Benchmark - {name}".format(name=op.__name__))
+    logging.info(f"Complete Benchmark - {op.__name__}")
     return op_benchmark_result
 
 
@@ -250,7 +250,7 @@ def run_performance_test(ops, inputs, run_backward=True,
             kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx, op.__module__)
             benchmark_result = _run_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler)
         else:
-            raise ValueError("Unknown {0} operator provided to benchmark. - {1}".format(op.__module__,  op.__name__))
+            raise ValueError(f"Unknown {op.__module__} operator provided to benchmark. - {op.__name__}")
         op_benchmark_result.append(benchmark_result)
     return op_benchmark_result
 
