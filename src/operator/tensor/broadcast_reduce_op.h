@@ -623,6 +623,7 @@ inline void BroadcastReduceShapeCompact(const mxnet::TShape& big,
   }
 }
 
+#if MXNET_USE_ONEDNN == 1
 // infer storage function for min and max
 inline bool ReduceAxesMinMaxOpForwardStorage(const nnvm::NodeAttrs& attrs,
                                              const int dev_mask,
@@ -633,6 +634,7 @@ inline bool ReduceAxesMinMaxOpForwardStorage(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
+#endif
 
 // infer storage function for sum(csr) and mean(csr)
 inline bool ReduceAxesSumMeanOpForwardStorage(const nnvm::NodeAttrs& attrs,
