@@ -37,7 +37,7 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS += -L$(DEPS_PATH)/lib -L$(DEPS_PATH)/lib64 -lpng -ltiff -ljpeg -lz -lgfortran -ldl  -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
+ADD_LDFLAGS += -L$(DEPS_PATH)/lib -L$(DEPS_PATH)/lib64 $(DEPS_PATH)/lib/libculibos.a -lpng -ltiff -ljpeg -lz -ldl -lgfortran -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
 
 # the additional compile flags you want to add
 ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections
@@ -61,22 +61,27 @@ USE_OPENCV_INC_PATH = NONE
 USE_OPENCV_LIB_PATH = NONE
 
 # whether use CUDA during compile
-USE_CUDA = 0
+USE_CUDA = 1
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = NONE
+USE_CUDA_PATH = $(DEPS_PATH)/usr/local/cuda-11.1
 
-# whether use CuDNN R3 library
-USE_CUDNN = 0
+# whether to use CuDNN library
+USE_CUDNN = 1
+
+# whether to use NCCL library
+USE_NCCL = 1
 
 # CUDA architecture setting: going with all of them.
 # For CUDA < 6.0, comment the *_50 lines for compatibility.
 # CUDA_ARCH :=
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-ENABLE_CUDA_RTC = 0
+ENABLE_CUDA_RTC = 1
+
+USE_NVTX=1
 
 # use openmp for parallelization
 USE_OPENMP = 1
@@ -165,3 +170,4 @@ EXTRA_OPERATORS =
 # git@github.com:dato-code/SFrame.git
 # SFRAME_PATH = $(HOME)/SFrame
 # MXNET_PLUGINS += plugin/sframe/plugin.mk
+

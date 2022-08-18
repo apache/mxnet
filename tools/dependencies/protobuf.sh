@@ -42,5 +42,6 @@ if [[ ! -e $LIBPROTOBUF ]] || [[ ! -e $LIBPROTOC ]]; then
     $MAKE
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/protobuf.zip $DEPS_PATH/protobuf-$PROTOBUF_VERSION
 fi
 

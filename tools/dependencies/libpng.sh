@@ -20,7 +20,7 @@
 # This script builds the static library of libpng that can be used as dependency of mxnet/opencv.
 set -ex
 PNG_VERSION=1.6.35
-if [[ ! -f $DEPS_PATH/lib/libpng.a ]]; then
+if [[ ! -e $DEPS_PATH/lib/libpng.a ]] && [[ ! -e $DEPS_PATH/lib64/libpng.a ]]; then
     # download and build libpng
     >&2 echo "Building libpng..."
     download \
@@ -39,6 +39,7 @@ if [[ ! -f $DEPS_PATH/lib/libpng.a ]]; then
     $MAKE
     $MAKE install
     mkdir -p $DEPS_PATH/include/libpng
-    ln -s $DEPS_PATH/include/png.h $DEPS_PATH/include/libpng/png.h
+    ln -sf $DEPS_PATH/include/png.h $DEPS_PATH/include/libpng/png.h
     popd
+    rm -rf $DEPS_PATH/libpng.zip $DEPS_PATH/libpng-$PNG_VERSION
 fi

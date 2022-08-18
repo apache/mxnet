@@ -58,6 +58,7 @@ else
     export CXX="g++ -fPIC -mno-avx"
     export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
 fi
+
 export FC="gfortran"
 if [[ $ARCH == 'aarch64' ]]; then
     export CPATH=/opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp:$CPATH

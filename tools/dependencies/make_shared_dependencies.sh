@@ -55,18 +55,16 @@ fi
 source $DIR/libz.sh
 source $DIR/libturbojpeg.sh
 source $DIR/libpng.sh
-if [[ ! $ARCH == 'aarch64' ]]; then
-    source $DIR/libtiff.sh
-fi
+source $DIR/libtiff.sh
 source $DIR/openssl.sh
 source $DIR/curl.sh
 source $DIR/eigen.sh
 source $DIR/opencv.sh
+source $DIR/protobuf.sh
 if [[ ! $ARCH == 'aarch64' ]]; then
-    source $DIR/protobuf.sh
     source $DIR/cityhash.sh
 fi
 source $DIR/zmq.sh
 source $DIR/lz4.sh
 
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(dirname $(find $DEPS_PATH -type f -name 'libprotoc*' | grep protobuf | head -n 1)):$DEPS_PATH/lib
+export LD_LIBRARY_PATH=$DEPS_PATH/lib:$DEPS_PATH/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}

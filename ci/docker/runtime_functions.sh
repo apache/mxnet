@@ -2093,10 +2093,10 @@ build_static_python_cpu() {
     popd
 }
 
-build_static_python_cu101() {
+build_static_python_gpu() {
     set -ex
     pushd .
-    export mxnet_variant=cu101
+    export mxnet_variant=cu112
     ./ci/publish/python/build.sh
     popd
 }
@@ -2110,10 +2110,10 @@ build_static_python_cpu_cmake() {
     popd
 }
 
-build_static_python_cu101_cmake() {
+build_static_python_gpu_cmake() {
     set -ex
     pushd .
-    export mxnet_variant=cu101
+    export mxnet_variant=cu112
     export CMAKE_STATICBUILD=1
     ./ci/publish/python/build.sh
     popd

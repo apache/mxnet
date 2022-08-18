@@ -31,4 +31,5 @@ if [[ ! -f $DEPS_PATH/lib/libcityhash.a ]]; then
     $MAKE CXXFLAGS="-g -O3 -msse4.2"
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/cityhash-$CITYHASH_VERSION
 fi

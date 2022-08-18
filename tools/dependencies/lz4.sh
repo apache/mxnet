@@ -32,4 +32,5 @@ if [[ ! -f $DEPS_PATH/lib/liblz4.a ]]; then
     $MAKE
     $MAKE PREFIX=$DEPS_PATH install
     popd
+    rm -rf $DEPS_PATH/lz4.zip $DEPS_PATH/lz4-$LZ4_VERSION
 fi
