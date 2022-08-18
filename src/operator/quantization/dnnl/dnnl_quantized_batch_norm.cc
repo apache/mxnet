@@ -19,7 +19,6 @@
 
 /*!
  * \file dnnl_quantized_batch_norm.cc
- * \brief
  * \author Yixin Bao
  */
 
@@ -137,11 +136,7 @@ inline static bool QuantizedBatchNormStorageType(const nnvm::NodeAttrs& attrs,
                                                  DispatchMode* dispatch_mode,
                                                  std::vector<int>* in_attrs,
                                                  std::vector<int>* out_attrs) {
-  bool dispatched = false;
-  if (!dispatched) {
-    dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
-  }
-  return dispatched;
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool QuantizedBatchNormWithReLUStorageType(const nnvm::NodeAttrs& attrs,

@@ -19,21 +19,20 @@
 
 /*!
  * \file quantized_batch_norm_relu.cc
- * \brief
- * \author Hanna Jarlaczyńska
+ * \author Hanna Jarlaczyńska, hanna.jarlaczynska@intel.com
  */
 #include <mxnet/op_attr_types.h>
-#include "../nn/batch_norm-inl.h"
+#include "operator/nn/batch_norm-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/dnnl/dnnl_batch_norm-inl.h"
+#include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
 #endif
 
 namespace mxnet {
 namespace op {
 
 bool QuantizedBatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector* in_shape,
-                             mxnet::ShapeVector* out_shape) {
+                                     mxnet::ShapeVector* in_shape,
+                                     mxnet::ShapeVector* out_shape) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 7U)
@@ -44,8 +43,9 @@ bool QuantizedBatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
-  const int channelAxis = param.axis < 0 ? dshape.ndim() + param.axis : param.axis;
-  CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
+  const int channelAxis = GetRealAxis(dshape, param.axis);
+  CHECK(channelAxis >= 0 && channelAxis < dshape.ndim())
+      << "Channel axis out of range: " << param.axis;
   const int channelCount = dshape[channelAxis];
 
   SHAPE_ASSIGN_CHECK(*in_shape, 1, mxnet::TShape(Shape1(channelCount)))  // gamma,beta
@@ -55,22 +55,15 @@ bool QuantizedBatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*in_shape, 5, mxnet::TShape(1, 1));  // min_data, max_data
   SHAPE_ASSIGN_CHECK(*in_shape, 6, mxnet::TShape(1, 1));
 
-  // TODO: to moge inaczej napisac gdyby nie dzialalo
-  // SHAPE_ASSIGN_CHECK(*out_shape, 0, dshape);
-  // SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));  // min_output, max_output
-  // SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
-  // SHAPE_ASSIGN_CHECK(*out_shape, 3, dshape); // workspace
-  out_shape->clear();
-  out_shape->push_back(dshape);                // kOut
-  out_shape->push_back(Shape1(channelCount));  // kMean
-  out_shape->push_back(Shape1(channelCount));  // kVar
-  out_shape->push_back(dshape);                // kWorkspace
+  SHAPE_ASSIGN_CHECK(*out_shape, 0, dshape);
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));  // min_output, max_output
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 
 bool QuantizedBatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
-                            std::vector<int>* in_type,
-                            std::vector<int>* out_type) {
+                                    std::vector<int>* in_type,
+                                    std::vector<int>* out_type) {
   using namespace mshadow;
   CHECK_EQ(in_type->size(), 7U);
   CHECK_EQ(out_type->size(), 4U);
@@ -89,7 +82,6 @@ bool QuantizedBatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt8);
   TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
-  TYPE_ASSIGN_CHECK(*out_type, 3, mshadow::kInt8); // to jest to workspace to nie wiem w sumie jakiego powinno być typu
 
   return true;
 }
@@ -116,19 +108,12 @@ the float32 data into int8.
         [](const NodeAttrs& attrs) {
           return std::vector<std::string>{"output", "min_output", "max_output", "workspace"};
         })
-    .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
-                                    [](const NodeAttrs& attrs) {
-                                        const BatchNormParam& param =
-                                            nnvm::get<BatchNormParam>(attrs.parsed);
-                                        return param.output_mean_var ? 3 : 1;
-                                    })
     .set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                    [](const nnvm::NodeAttrs& attrs) {
                                      return std::vector<uint32_t>{3, 4};
                                    })
     .set_attr<mxnet::FInferShape>("FInferShape", QuantizedBatchNormWithReLUShape)
     .set_attr<nnvm::FInferType>("FInferType", QuantizedBatchNormWithReLUType)
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
     .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return false; })
     .set_attr<FNeedCalibrateInput>("FNeedCalibrateOutput",
                                    [](const NodeAttrs& attrs) { return std::vector<int>{0}; })
