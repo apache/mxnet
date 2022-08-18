@@ -9421,16 +9421,18 @@ def test_elementwise_ops_on_misaligned_input():
 def test_broadcast_ops_on_input_with_the_same_shape(dtype, ndim, max_dim_size):
     shape = list(rand_shape_nd(ndim, dim=max_dim_size))
     shape_size = np.product(shape)
-    a = mx.nd.arange(5000)
-    b = mx.nd.arange(5000)
-    e = mx.nd.arange(5000)
+    a = np.random.uniform(low=-100, high=100, size=5000)
+    b = np.random.uniform(low=-100, high=100, size=5000)
+    e = np.random.uniform(low=-100, high=100, size=5000)
     c = a[1:shape_size + 1].reshape(shape)
     d = b[1:shape_size + 1].reshape(shape)
     f = e[1:shape_size + 1].reshape(shape)
-    mx.nd.broadcast_add(c, d, out=f)
-    expected = c.asnumpy() + d.asnumpy()
+    expected = c + d
+    cm = mx.nd.array(c)
+    dm = mx.nd.array(d)
+    fm = cm + dm
     mx.nd.waitall()
-    assert_almost_equal(f, expected)
+    assert_almost_equal(fm, expected)
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('lead_dim', [2, 3, 4, 6, 10])
