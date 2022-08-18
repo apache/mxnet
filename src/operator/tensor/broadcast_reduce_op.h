@@ -30,10 +30,10 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
-#include "../mshadow_op.h"
-#include "../elemwise_op_common.h"
-#include "./elemwise_binary_broadcast_op.h"
-#include "../mxnet_op.h"
+#include "operator/mshadow_op.h"
+#include "operator/elemwise_op_common.h"
+#include "operator/tensor/elemwise_binary_broadcast_op.h"
+#include "operator/mxnet_op.h"
 
 #if MXNET_USE_ONEDNN
 #include "../nn/dnnl/dnnl_reduce-inl.h"
@@ -42,6 +42,7 @@
 namespace mxnet {
 namespace op {
 
+#if MXNET_USE_ONEDNN
 // template struct converting mshadow::red to dnnl::algorithm
 // normalize is false as a default, bacause only mean and sum use it
 template <typename OP, bool normalize = false>
@@ -76,6 +77,7 @@ template <>
 struct DNNLReduceAlgorithm<mshadow::red::minimum> {
   static const dnnl::algorithm value = dnnl::algorithm::reduction_min;
 };
+#endif  // MXNET_USE_ONEDNN
 
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   dmlc::optional<mxnet::TShape> axis;
