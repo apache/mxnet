@@ -22,7 +22,7 @@ boto3==1.9.229
 cpplint==1.3.0
 Cython
 decorator==4.4.0
-h5py<3
+h5py
 mock==2.0.0
 nose==1.3.7
 nose-timer==0.7.3
