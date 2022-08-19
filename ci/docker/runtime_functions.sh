@@ -26,7 +26,6 @@ NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-b
 NOSE_TIMER_ARGUMENTS="--with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error"
 CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
 CI_CMAKE_CUDA_ARCH="5.2 7.0"
-CUB_IGNORE_DEPRECATED_CPP_DIALECT=1
 
 clean_repo() {
     set -ex
@@ -469,6 +468,7 @@ build_centos7_gpu() {
         USE_CUDNN=1                               \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        CUB_IGNORE_DEPRECATED_CPP_DIALECT=1       \
         -j$(nproc)
 }
 
@@ -751,6 +751,7 @@ build_ubuntu_gpu_mkldnn() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
+        CUB_IGNORE_DEPRECATED_CPP_DIALECT=1       \
         -j$(nproc)
 }
 
@@ -769,6 +770,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
+        CUB_IGNORE_DEPRECATED_CPP_DIALECT=1       \
         -j$(nproc)
 }
 
