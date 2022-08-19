@@ -23,7 +23,7 @@
 set -ex
 
 apt-get update
-apt-get install -y make wget libssl-dev libbz2-dev libffi-dev libhdf5-dev
+apt-get install -y make wget libssl-dev libbz2-dev libffi-dev libhdf5-dev libsqlite3-dev
 
 PYTHON_VERSION=3.8.12
 wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
