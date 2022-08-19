@@ -987,10 +987,6 @@ cd_unittest_ubuntu() {
 
     local nose_cmd="nosetests-3.4"
 
-    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
-        source /opt/rh/rh-python38/enable
-    fi
-
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
@@ -2014,9 +2010,6 @@ cd_package_pypi() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
-    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
-        source /opt/rh/rh-python38/enable
-    fi
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
 }
@@ -2033,10 +2026,6 @@ cd_integration_test_pypi() {
     if [ "${gpu_enabled}" = "true" ]; then
         mnist_params="--gpu 0"
         test_conv_params="--gpu"
-    fi
-
-    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
-        source /opt/rh/rh-python38/enable
     fi
 
     # install mxnet wheel package
