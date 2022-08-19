@@ -18,7 +18,8 @@
 #
 # Dockerfile to build and run MXNet on Ubuntu 18.04 for CPU
 
-FROM ubuntu:18.04
+ARG BASE_IMAGE
+FROM $BASE_IMAGE AS base
 
 WORKDIR /work/deps
 
