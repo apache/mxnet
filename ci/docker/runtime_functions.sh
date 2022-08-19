@@ -468,7 +468,6 @@ build_centos7_gpu() {
         USE_CUDNN=1                               \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        CUB_IGNORE_DEPRECATED_CPP_DIALECT=1       \
         -j$(nproc)
 }
 
@@ -751,7 +750,6 @@ build_ubuntu_gpu_mkldnn() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
-        CUB_IGNORE_DEPRECATED_CPP_DIALECT=1       \
         -j$(nproc)
 }
 
@@ -770,7 +768,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
-        CUB_IGNORE_DEPRECATED_CPP_DIALECT=1       \
         -j$(nproc)
 }
 
