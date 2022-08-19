@@ -193,8 +193,8 @@ _NUMPY_ARRAY_FUNCTION_DICT = {}
 _NUMPY_ARRAY_UFUNC_DICT = {}
 
 
-@set_module('mxnet.numpy')  # pylint: disable=invalid-name
-class ndarray(NDArray):
+@set_module('mxnet.numpy')
+class ndarray(NDArray): # pylint: disable=invalid-name
     """
     ndarray(handle, writable=True):
 

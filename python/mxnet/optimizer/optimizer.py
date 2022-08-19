@@ -1537,8 +1537,8 @@ class SGLD(Optimizer):
 
 
 
-@register  # pylint: disable=invalid-name
-class ccSGD(SGD):
+@register
+class ccSGD(SGD): # pylint: disable=invalid-name
     """[DEPRECATED] Same as `SGD`. Left here for backward compatibility."""
     def __init__(self, *args, **kwargs):
         super(ccSGD, self).__init__(*args, **kwargs)
