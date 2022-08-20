@@ -318,7 +318,7 @@ def load_docker_cache(platform, tag, docker_registry) -> None:
                     docker_cache._ecr_login(docker_registry)
                 except Exception:
                     logging.exception('Unable to login to ECR...')
-            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', docker_compose_platform]
+            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', '--quiet', docker_compose_platform]
             logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
             check_call(cmd, env=env)
             return
