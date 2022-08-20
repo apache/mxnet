@@ -187,11 +187,11 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     env["DOCKER_CACHE_REGISTRY"] = registry
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
-    def run_cmd(env=None):
-        logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd, env=env)
+    def run_cmd(c, e):
+        logging.info("Running command: '%s'", ' '.join(c))
+        check_call(c, env=e)
 
-    run_cmd(env=env)
+    run_cmd(cmd, env)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
@@ -308,10 +308,10 @@ def list_platforms(arch=machine()) -> str:
 def load_docker_cache(platform, tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
+        env = os.environ.copy()
+        env["DOCKER_CACHE_REGISTRY"] = docker_registry
         if is_docker_compose(platform):
             docker_compose_platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
-            env = os.environ.copy()
-            env["DOCKER_CACHE_REGISTRY"] = docker_registry
             if "dkr.ecr" in docker_registry:
                 try:
                     import docker_cache
@@ -319,12 +319,10 @@ def load_docker_cache(platform, tag, docker_registry) -> None:
                 except Exception:
                     logging.exception('Unable to login to ECR...')
             cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', '--quiet', docker_compose_platform]
-            logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
+            logging.info("Running command: '%s'", ' '.join(cmd))
             check_call(cmd, env=env)
             return
 
-        env = os.environ.copy()
-        env["DOCKER_CACHE_REGISTRY"] = docker_registry
         # noinspection PyBroadException
         try:
             import docker_cache
