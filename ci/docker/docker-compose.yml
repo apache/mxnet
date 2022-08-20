@@ -35,8 +35,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      # Use "base" target declared in Dockerfile.build.centos7 as "build.centos7_cpu:latest"  
-      target: base
       args:
         # BASE_IMAGE is used to dynamically specify the FROM image in Dockerfile.build.centos7
         BASE_IMAGE: centos:7
@@ -47,7 +45,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:10.0-cudnn7-devel-centos7
       cache_from:
@@ -57,7 +54,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-centos7
       cache_from:
@@ -67,7 +63,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:10.2-cudnn8-devel-centos7
       cache_from:
@@ -77,7 +72,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.0.3-cudnn8-devel-centos7
       cache_from:
@@ -87,7 +81,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.1.1-cudnn8-devel-centos7
       cache_from:
@@ -97,7 +90,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.2.2-cudnn8-devel-centos7
       cache_from:
@@ -107,7 +99,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.3.1-cudnn8-devel-centos7
       cache_from:
@@ -117,7 +108,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.4.3-cudnn8-devel-centos7
       cache_from:
@@ -127,7 +117,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.5.2-cudnn8-devel-centos7
       cache_from:
@@ -137,7 +126,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.6.2-cudnn8-devel-centos7
       cache_from:
@@ -147,7 +135,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.7.1-cudnn8-devel-centos7
       cache_from:
@@ -164,7 +151,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
       cache_from:
@@ -174,7 +160,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
       cache_from:
@@ -184,7 +169,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
       cache_from:
@@ -194,7 +178,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.0.3-cudnn8-devel-ubuntu18.04
       cache_from:
@@ -204,7 +187,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.2.2-cudnn8-devel-ubuntu18.04
       cache_from:
@@ -214,7 +196,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.4.3-cudnn8-devel-ubuntu18.04
       cache_from:
@@ -224,7 +205,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.5.2-cudnn8-devel-ubuntu18.04
       cache_from:
@@ -234,7 +214,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.6.2-cudnn8-devel-ubuntu18.04
       cache_from:
@@ -244,7 +223,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_gpu
-      target: base
       args:
         BASE_IMAGE: nvidia/cuda:11.7.1-cudnn8-devel-ubuntu18.04
       cache_from:

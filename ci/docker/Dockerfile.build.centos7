@@ -31,7 +31,7 @@
 # "--target" option or docker-compose.yml
 ####################################################################################################
 ARG BASE_IMAGE
-FROM $BASE_IMAGE AS base
+FROM $BASE_IMAGE
 
 WORKDIR /work/deps
 

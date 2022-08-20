@@ -19,7 +19,7 @@
 # Dockerfile base to run MXNet on Ubuntu 18.04 for GPU
 
 ARG BASE_IMAGE
-FROM $BASE_IMAGE AS base
+FROM $BASE_IMAGE
 
 WORKDIR /work/deps
 
