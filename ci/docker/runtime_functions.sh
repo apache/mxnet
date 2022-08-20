@@ -807,6 +807,7 @@ build_ubuntu_gpu_cudnn8() {
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CUDA_ARCH"                    \
         USE_SIGNAL_HANDLER=1                      \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
     make cython PYTHON=python3
 }
