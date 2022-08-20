@@ -85,7 +85,7 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
         env = os.environ.copy()
         env["DOCKER_CACHE_REGISTRY"] = registry
         if load_cache:
-            push_cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', docker_compose_service]
+            push_cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', '--quiet', docker_compose_service]
             subprocess.check_call(push_cmd, env=env)
         build_util.build_docker(platform=platform, registry=registry,
                                 num_retries=DOCKER_BUILD_NUM_RETRIES, no_cache=False)
