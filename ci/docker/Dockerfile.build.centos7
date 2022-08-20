@@ -44,12 +44,13 @@ RUN /work/centos7_cmake.sh
 COPY install/centos7_ccache.sh /work/
 RUN /work/centos7_ccache.sh
 
-COPY install/centos7_python.sh /work/
-COPY install/requirements /work/
-RUN /work/centos7_python.sh
-
 COPY install/centos7_scala.sh /work/
 RUN /work/centos7_scala.sh
+
+COPY install/centos7_python.sh /work/
+RUN /work/centos7_python.sh
+COPY install/requirements /work/
+RUN pip3 install -r /work/requirements
 
 ARG USER_ID=0
 COPY install/centos7_adduser.sh /work/

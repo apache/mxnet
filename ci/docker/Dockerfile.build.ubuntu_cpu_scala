@@ -31,16 +31,17 @@ RUN /work/ubuntu_cmake.sh
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
-COPY install/ubuntu_python.sh /work/
-COPY install/requirements /work/
-RUN /work/ubuntu_python.sh
-
 COPY install/ubuntu_scala.sh /work/
 COPY install/sbt.gpg /work/
 RUN /work/ubuntu_scala.sh
 
 COPY install/ubuntu_clojure.sh /work/
 RUN /work/ubuntu_clojure.sh
+
+COPY install/ubuntu_python.sh /work/
+RUN /work/ubuntu_python.sh
+COPY install/requirements /work/
+RUN pip3 install -r /work/requirements
 
 # Always last
 ARG USER_ID=0

@@ -32,10 +32,6 @@ RUN /work/ubuntu_cmake.sh
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
-COPY install/ubuntu_python.sh /work/
-COPY install/requirements /work/
-RUN /work/ubuntu_python.sh
-
 COPY install/ubuntu_scala.sh /work/
 COPY install/sbt.gpg /work/
 RUN /work/ubuntu_scala.sh
@@ -52,11 +48,16 @@ RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_llvm.sh /work/
 RUN /work/ubuntu_llvm.sh
 
-COPY install/ubuntu_tvm.sh /work/
-RUN /work/ubuntu_tvm.sh
-
 COPY install/ubuntu_caffe.sh /work/
 RUN /work/ubuntu_caffe.sh
+
+COPY install/ubuntu_python.sh /work/
+RUN /work/ubuntu_python.sh
+COPY install/requirements /work/
+RUN pip3 install -r /work/requirements
+
+COPY install/ubuntu_tvm.sh /work/
+RUN /work/ubuntu_tvm.sh
 
 COPY install/ubuntu_onnx.sh /work/
 RUN /work/ubuntu_onnx.sh

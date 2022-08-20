@@ -157,9 +157,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu_cpu
-      target: base
-      args:
-        BASE_IMAGE: ubuntu:18.04
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}:build.ubuntu_cpu
   ubuntu_gpu_cu100:
