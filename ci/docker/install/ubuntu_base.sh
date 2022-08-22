@@ -21,6 +21,9 @@
 # the whole docker cache for the image
 
 set -ex
+
+export DEBIAN_FRONTEND=noninteractive
+
 apt-get update || true
 apt-get install -y \
     build-essential \
