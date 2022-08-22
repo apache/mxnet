@@ -24,10 +24,4 @@ set -ex
 
 # Multipackage installation does not fail in yum
 yum -y install epel-release
-yum -y install git
-yum -y install wget
-yum -y install make
-yum -y install cmake
-yum -y install unzip
-yum -y install ninja-build
-yum -y install gcc-gfortran
+yum -y install git wget make unzip ninja-build gcc-gfortran

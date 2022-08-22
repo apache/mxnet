@@ -579,8 +579,9 @@ ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
 	CUDA_VERSION_MAJOR := $(shell $(NVCC) --version | grep "release" | awk '{print $$6}' | cut -c2- | cut -d '.' -f1)
+	CFLAGS += -DCUB_IGNORE_DEPRECATED_CPP_DIALECT
 	ifeq ($(shell test $(CUDA_VERSION_MAJOR) -lt 11; echo $$?), 0)
-		CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub -DCUB_IGNORE_DEPRECATED_CPP_DIALECT
+		CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub
 	endif
 
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)

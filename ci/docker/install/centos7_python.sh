@@ -35,6 +35,3 @@ make install
 cd ..
 rm -rf Python-$PYTHON_VERSION*
 pip3 install --upgrade pip setuptools wheel
-if [[ -f /work/requirements ]]; then
-    pip3 install -r /work/requirements
-fi
