@@ -29,7 +29,7 @@
 #include "operator/subgraph/common.h"
 #include "dnnl_transformer-inl.h"
 
-// 3 tensors within one (queries key values)
+// 3 tensors within one (queries keys values)
 #define QKV_NUM 3
 
 namespace mxnet {
@@ -368,21 +368,10 @@ void SgDNNLSelfAttQKOp::Forward(const OpContext& ctx,
   DNNLStream::Get()->Submit();
 
   if (param_.quantized && !param_.enabled_float_output.has_value()) {
-    if constexpr (with_split) {
-      float* output_min = outputs[1].data().dptr<float>();
-      float* output_max = outputs[2].data().dptr<float>();
-      *output_min       = min_output_;
-      *output_max       = max_output_;
-    } else {
-      float* output_min_0 = outputs[2].data().dptr<float>();
-      float* output_max_0 = outputs[3].data().dptr<float>();
-      float* output_min_1 = outputs[4].data().dptr<float>();
-      float* output_max_1 = outputs[5].data().dptr<float>();
-      *output_min_0       = min_output_;
-      *output_max_0       = max_output_;
-      *output_min_1       = min_output_;
-      *output_max_1       = max_output_;
-    }
+    float* output_min = outputs[1].data().dptr<float>();
+    float* output_max = outputs[2].data().dptr<float>();
+    *output_min       = min_output_;
+    *output_max       = max_output_;
   }
 }
 
@@ -451,12 +440,10 @@ MXNET_OPERATOR_REGISTER_SELFATT_QK(_sg_onednn_selfatt_qk)
                                        auto const& param =
                                            nnvm::get<DNNLSelfAttParam>(attrs.parsed);
                                        std::vector<std::string> input_names{"queries"};
+                                       input_names.emplace_back("keys");
                                        if (param.quantized) {
                                          input_names.emplace_back("min_q");
                                          input_names.emplace_back("max_q");
-                                       }
-                                       input_names.emplace_back("keys");
-                                       if (param.quantized) {
                                          input_names.emplace_back("min_k");
                                          input_names.emplace_back("max_k");
                                        }

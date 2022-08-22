@@ -115,8 +115,8 @@ bool SelectInput(SelectStatusTransformerQK* status,
         if (CheckSwapAxisConditionsQK(input_node)) {
           *status = kFirstSwapAx;
           matched_list->push_back(&input_node);
+          return true;
         }
-        return true;
       }
       break;
     case kFirstSwapAx:
