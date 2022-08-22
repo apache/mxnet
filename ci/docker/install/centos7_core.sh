@@ -25,31 +25,23 @@ set -ex
 # Multipackage installation does not fail in yum
 yum -y install ca-certificates
 yum -y install epel-release
-yum -y install git
-yum -y install wget
-yum -y install atlas-devel # Provide clbas headerfiles
-yum -y install openblas-devel
-yum -y install lapack-devel
-yum -y install opencv-devel
-yum -y install protobuf-compiler
-yum -y install protobuf-devel
-yum -y install zeromq-devel
-yum -y install openssl-devel
-yum -y install gcc-c++-4.8.*
-yum -y install make
-yum -y install wget
-yum -y install unzip
-yum -y install ninja-build
-yum -y install automake 
-yum -y install patchelf 
-yum -y install nasm 
-yum -y install libtool  
-yum -y install dpkg-dev
+yum -y install git \
+    wget \
+    atlas-devel \
+    openblas-devel \
+    lapack-devel \
+    opencv-devel \
+    protobuf-compiler \
+    protobuf-devel \
+    zeromq-devel \
+    openssl-devel \
+    gcc-c++-4.8.* \
+    make \
+    unzip \
+    ninja-build \
+    automake \
+    patchelf \
+    nasm \
+    libtool \
+    dpkg-dev
 
-# CMake 3.13.2+ is required
-mkdir /opt/cmake && cd /opt/cmake
-wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh
-sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
-ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
-rm cmake-3.13.5-Linux-x86_64.sh
-cmake --version

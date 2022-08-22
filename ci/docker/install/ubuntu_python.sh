@@ -21,16 +21,17 @@
 # the whole docker cache for the image
 
 set -ex
-# install libraries for mxnet's python package on ubuntu
-apt-get update || true
-apt-get install -y software-properties-common
-add-apt-repository -y ppa:deadsnakes/ppa
-apt-get update || true
-apt-get install -y python3.7-dev python3.7-distutils virtualenv wget
-# setup symlink in /usr/local/bin to override python3 version
-ln -sf /usr/bin/python3.7 /usr/local/bin/python3
 
-# the version of the pip shipped with ubuntu may be too lower, install a recent version here
-wget -nv https://bootstrap.pypa.io/get-pip.py
-/usr/local/bin/python3 get-pip.py
-/usr/local/bin/python3 -m pip install -r /work/requirements
+apt-get update
+apt-get install -y make wget libssl-dev libbz2-dev libffi-dev libhdf5-dev libsqlite3-dev
+
+PYTHON_VERSION=3.8.12
+wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
+tar -xzf Python-$PYTHON_VERSION.tgz
+cd Python-$PYTHON_VERSION
+./configure --prefix=/usr/local
+make -j $(nproc)
+make install
+cd ..
+rm -rf Python-$PYTHON_VERSION*
+pip3 install --upgrade pip setuptools wheel

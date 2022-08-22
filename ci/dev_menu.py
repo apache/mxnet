@@ -134,7 +134,7 @@ COMMANDS = OrderedDict([
     ('[Docker] Build the Java API docs - outputs to "docs/scala-package/build/docs/java"',
         "ci/build.py --platform ubuntu_cpu_scala /work/runtime_functions.sh build_java_docs"),
     ('[Docker] Build the Julia API docs - outputs to "julia/docs/site/"',
-        "ci/build.py --platform ubuntu_cpu_julia /work/runtime_functions.sh build_julia_docs"),
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_julia_docs"),
     ('[Docker] Build the R API docs - outputs to "R-package/build/mxnet-r-reference-manual.pdf"',
         "ci/build.py --platform ubuntu_cpu_r /work/runtime_functions.sh build_r_docs"),
     ('[Docker] Build the Scala API docs - outputs to "scala-package/docs/build/docs/scala"',

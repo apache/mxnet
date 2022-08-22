@@ -705,7 +705,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda101_cudnn7
+    build_ubuntu_gpu_cudnn8
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -771,7 +771,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda101_cudnn7() {
+build_ubuntu_gpu_cudnn7() {
     set -ex
     build_ccache_wrappers
     make \
@@ -790,7 +790,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     make cython PYTHON=python3
 }
 
-build_ubuntu_gpu_cuda110_cudnn8() {
+build_ubuntu_gpu_cudnn8() {
     set -ex
     build_ccache_wrappers
     local CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 \
@@ -807,11 +807,12 @@ build_ubuntu_gpu_cuda110_cudnn8() {
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CUDA_ARCH"                    \
         USE_SIGNAL_HANDLER=1                      \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
     make cython PYTHON=python3
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
+build_ubuntu_gpu_cudnn8_mkldnn_cpp_test() {
     set -ex
     build_ccache_wrappers
     make \
@@ -984,10 +985,6 @@ cd_unittest_ubuntu() {
 
     local nose_cmd="nosetests-3.4"
 
-    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
-        source /opt/rh/rh-python38/enable
-    fi
-
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
@@ -1043,7 +1040,7 @@ unittest_ubuntu_python3_gpu() {
     export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.5.0.96}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
@@ -1055,7 +1052,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.5.0.96}
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=10
@@ -1098,19 +1095,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
-    export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
-}
-
-unittest_ubuntu_python3_quantization_gpu_cu110() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-8.0.33}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.5.0.96}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
@@ -1251,7 +1236,7 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.5.0.96}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -2023,9 +2008,6 @@ cd_package_pypi() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
-    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
-        source /opt/rh/rh-python38/enable
-    fi
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
 }
@@ -2042,10 +2024,6 @@ cd_integration_test_pypi() {
     if [ "${gpu_enabled}" = "true" ]; then
         mnist_params="--gpu 0"
         test_conv_params="--gpu"
-    fi
-
-    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
-        source /opt/rh/rh-python38/enable
     fi
 
     # install mxnet wheel package
