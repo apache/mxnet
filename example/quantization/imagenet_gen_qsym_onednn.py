@@ -267,7 +267,7 @@ if __name__ == '__main__':
         elif calib_mode == 'naive':
             suffix = f'-quantized-{num_calib_batches}batches-naive'
         else:
-            raise ValueError(f'unknow calibration mode {calib_mode} received, only supports `none`, `naive`, and `entropy`')
+            raise ValueError(f'unknown calibration mode {calib_mode} received, only supports `none`, `naive`, and `entropy`')
     save_path = prefix + suffix
     model_path, params_path = qsym.export(save_path, epoch)
     if logger is not None:

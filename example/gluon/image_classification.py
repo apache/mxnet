@@ -179,14 +179,14 @@ def update_learning_rate(lr, trainer, epoch, ratio, steps):
 
 def save_checkpoint(epoch, top1, best_acc):
     if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
-        fname = os.path.join(opt.prefix, f'{opt.model}_{epoch}_acc_{top1:.4}.params')
+        fname = os.path.join(opt.prefix, f'{opt.model}_{epoch}_acc_{top1:.4f}.params')
         net.save_parameters(fname)
-        logger.info(f'[Epoch {epoch}] Saving checkpoint to {fname} with Accuracy: {top1:.4}')
+        logger.info(f'[Epoch {epoch}] Saving checkpoint to {fname} with Accuracy: {top1:.4f}')
     if top1 > best_acc[0]:
         best_acc[0] = top1
         fname = os.path.join(opt.prefix, f'{opt.model}_best.params')
         net.save_parameters(fname)
-        logger.info(f'[Epoch {epoch}] Saving checkpoint to {fname} with Accuracy: {top1:.4}')
+        logger.info(f'[Epoch {epoch}] Saving checkpoint to {fname} with Accuracy: {top1:.4f}')
 
 def train(opt, device):
     if isinstance(device, mx.Device):

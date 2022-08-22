@@ -51,7 +51,7 @@ class EnumType:
             logging.warn(f"trying to parse none-enum type as enum: {typeString}")
     def GetDefinitionString(self, indent = 0):
         indentStr = ' ' * indent
-        ret = indentStr + 'enum class {} {\n'.format(self.name)
+        ret = indentStr + 'enum class {} {{\n'.format(self.name)
         for i in range(0, len(self.enumValues)):
             ret = ret + indentStr + f'  {gen_enum_value(self.enumValues[i])} = {i}'
             if (i != len(self.enumValues) -1):
@@ -63,7 +63,7 @@ class EnumType:
         return self.name + "::" + gen_enum_value(value)
     def GetEnumStringArray(self, indent = 0):
         indentStr = ' ' * indent
-        ret = indentStr + 'static const char *{}Values[] = {\n'.format(self.name)
+        ret = indentStr + 'static const char *{}Values[] = {{\n'.format(self.name)
         for i in range(0, len(self.enumValues)):
             ret = ret + indentStr + f'  "{self.enumValues[i]}"'
             if (i != len(self.enumValues) -1):
@@ -412,12 +412,12 @@ if __name__ == "__main__":
                       "#include \"dmlc/optional.h\"\n"
                       "#include \"nnvm/tuple.h\"\n"
                       "\n"
-                      "namespace mxnet {\n"
-                      "namespace cpp {\n"
+                      "namespace mxnet {{\n"
+                      "namespace cpp {{\n"
                       "\n"
                       "{}"
-                      "} //namespace cpp\n"
-                      "} //namespace mxnet\n"
+                      "}} //namespace cpp\n"
+                      "}} //namespace mxnet\n"
                       "#endif  // MXNET_CPP_OP_H_\n")
 
         # Generate a temporary file name

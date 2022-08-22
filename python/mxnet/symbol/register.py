@@ -129,7 +129,7 @@ def _generate_symbol_function_code(handle, op_name, func_name, signature_only=Fa
                 "Op can only have one argument with variable " \
                 "size and it must be the last argument."
             if atype.endswith('[]'):
-                ndsignature.append('f*{name}')
+                ndsignature.append(f'*{name}')
                 arr_name = name
             else:
                 ndsignature.append(f'{name}=None')
