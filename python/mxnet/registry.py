@@ -72,10 +72,8 @@ def get_register_func(base_class, nickname):
         name = name.lower()
         if name in registry:
             warnings.warn(
-                "\033[91mNew {} {}.{} registered with name {} is"
-                "overriding existing {} {}.{}\033[0m".format(
-                    nickname, klass.__module__, klass.__name__, name,
-                    nickname, registry[name].__module__, registry[name].__name__),
+                f"\033[91mNew {nickname} {klass.__module__}.{klass.__name__} registered with name {name} is"
+                f"overriding existing {nickname} {registry[name].__module__}.{registry[name].__name__}\033[0m",
                 UserWarning, stacklevel=2)
         registry[name] = klass
         return klass
