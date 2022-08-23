@@ -36,7 +36,7 @@ COPY install/ubuntu_ccache.sh /work/
 RUN /work/ubuntu_ccache.sh
 
 # Install tools for static dependency builds
-RUN apt install -y sudo patchelf nasm automake file g++ gcc gfortran
+RUN apt install -y sudo patchelf nasm automake file g++ gcc gfortran libtool
 
 # Allow jenkins user to use sudo for installing cuda libraries
 RUN echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/apt" >> /etc/sudoers.d/10_jenkins_slave
