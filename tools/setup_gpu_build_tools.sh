@@ -97,7 +97,6 @@ if [[ $ID == "centos" ]]; then
         "
     fi
 elif [[ $ID == "ubuntu" ]]; then
-    sudo apt search libcudnn7
     pkgs="cuda-libraries-${CUDA_MAJOR_DASH} \
           cuda-libraries-dev-${CUDA_MAJOR_DASH} \
           cuda-nvcc-$CUDA_MAJOR_DASH \
