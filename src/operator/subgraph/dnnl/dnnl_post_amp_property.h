@@ -35,6 +35,7 @@ inline bool IsSupportedAMPFuseOp(const nnvm::Node& node) {
   static const std::set<const Op*> supported_ops = {Op::Get("_sg_onednn_conv"),
                                                     Op::Get("_sg_onednn_fully_connected"),
                                                     Op::Get("_sg_onednn_selfatt_qk"),
+                                                    Op::Get("_sg_onednn_selfatt_qk_split"),
                                                     Op::Get("_sg_onednn_selfatt_valatt")};
   return supported_ops.count(node.op()) > 0;
 }

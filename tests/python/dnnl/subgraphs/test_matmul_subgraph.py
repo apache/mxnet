@@ -27,22 +27,28 @@ import math
 
 
 class MultiHeadAttention(nn.HybridBlock):
-  def __init__(self, units, num_heads, dtype='float32', negative_case=False, **kwargs):
+  def __init__(self, units, num_heads, batch_size=-1, seq_length=-1, dtype='float32', negative_case=False, no_split_case = False, **kwargs):
       super(MultiHeadAttention, self).__init__(**kwargs)
       self._units = units
       self._num_heads = num_heads
       self._fc = nn.Dense(in_units=self._units, units=3*self._units, flatten=False, dtype=dtype)
       self._scale = math.sqrt(self._units // self._num_heads)
       self.negative_case = negative_case
+      self.no_split_case = no_split_case
+      self.batch_size = batch_size
+      self.seq_length = seq_length
 
   def forward(self, x, mask):
       out = self._fc(x)
       query, key, value = mx.np.split(out, 3, axis=-1)
+      if self.no_split_case:
+        key = mx.np.concat((key, key), axis = 1)
+        value = mx.np.concat((value, value), axis = 1)
+      query = mx.np.reshape(query, (-2, -2, self._num_heads, -1))
       if self.negative_case:
-        key = key * 2
-      query = mx.npx.reshape(query, (-2, -2, self._num_heads, -1))
-      key = mx.npx.reshape(key, (-2, -2, self._num_heads, -1))
-      value = mx.npx.reshape(value, (-2, -2, self._num_heads, -1))
+        query = query * 2
+      key = mx.np.reshape(key, (-2, -2, self._num_heads, -1))
+      value = mx.np.reshape(value, (-2, -2, self._num_heads, -1))
       scores = mx.npx.batch_dot(mx.np.swapaxes(query, 1, 2), mx.np.swapaxes(key, 1, 2),
                                 transpose_b=True)
       mask = mx.np.expand_dims(mask, axis=1).astype(np.bool)
@@ -58,10 +64,16 @@ class MultiHeadAttention(nn.HybridBlock):
 @pytest.mark.parametrize('seq_length', [124, 384])
 @pytest.mark.parametrize('units', [256, 768])
 @pytest.mark.parametrize('num_heads', [4, 8])
-def test_self_attention(batch_size, seq_length, units, num_heads):
-  net = MultiHeadAttention(units, num_heads)
+@pytest.mark.parametrize('split', [True, False])
+def test_self_attention(batch_size, seq_length, units, num_heads, split):
+  net = MultiHeadAttention(units, num_heads, no_split_case=not split)
   in_data = mx.np.random.uniform(size=[batch_size, seq_length, units], dtype='float32')
-  mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
+  if (split):
+    mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
+  else:
+    # key dimension will be expanded by num_heads value to simulate gpt-2 model
+    # mask needs to be expanded as well
+    mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length * 2], dtype='int32')
 
   net.initialize()
   fused_net = net
@@ -74,13 +86,13 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
 
   assert_almost_equal(out.asnumpy(), ref_out.asnumpy())
 
-  calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=1)
+  calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=batch_size)
   qnet = mx.contrib.quant.quantize_net(net, quantized_dtype='auto',
                                             exclude_layers=None,
                                             exclude_layers_match=None,
                                             calib_data=calib_data,
                                             calib_mode='naive',
-                                            num_calib_batches=1,
+                                            num_calib_batches=batch_size,
                                             ctx=mx.cpu())
 
   qout = qnet(in_data, mask)
@@ -97,7 +109,7 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
 @pytest.mark.parametrize('units', [256, 768])
 @pytest.mark.parametrize('num_heads', [4, 8])
 def test_self_attention_negative(batch_size, seq_length, units, num_heads):
-  net = MultiHeadAttention(units, num_heads, negative_case=True)
+  net = MultiHeadAttention(units, num_heads, batch_size, seq_length, negative_case=True)
   in_data = mx.np.random.uniform(size=[batch_size, seq_length, units], dtype='float32')
   mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
 
@@ -112,13 +124,13 @@ def test_self_attention_negative(batch_size, seq_length, units, num_heads):
 
   assert_almost_equal(out.asnumpy(), ref_out.asnumpy())
 
-  calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=1)
+  calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(in_data, mask), batch_size=batch_size)
   qnet = mx.contrib.quant.quantize_net(net, quantized_dtype='auto',
                                             exclude_layers=None,
                                             exclude_layers_match=None,
                                             calib_data=calib_data,
                                             calib_mode='naive',
-                                            num_calib_batches=1,
+                                            num_calib_batches=batch_size,
                                             ctx=mx.cpu())
 
   qout = qnet(in_data, mask)

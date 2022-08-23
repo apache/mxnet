@@ -36,12 +36,12 @@
 #include "dnnl_transformer-inl.h"
 
 /*
-                 custom_op
-   _________________|_________
-  |               Split      |
-  |                 |        |
-  |             _npx_reshape |
-  |                 |        |
+            custom_op
+   _____________|_____________
+  |           Split          |
+  |          /      |        |
+  | custom_op   _npx_reshape |
+  |    ...          |        |
   | custom_op    SwapAxis    |
   |      \        /          |
   |       batch_dot          |

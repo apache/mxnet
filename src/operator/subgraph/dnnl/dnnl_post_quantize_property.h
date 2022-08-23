@@ -45,6 +45,7 @@ bool SupportsRequantizeFusion(const Op* op) {
       Op::Get("_sg_onednn_conv"),
       Op::Get("_sg_onednn_fully_connected"),
       Op::Get("_sg_onednn_selfatt_qk"),
+      Op::Get("_sg_onednn_selfatt_qk_split"),
       Op::Get("_sg_onednn_selfatt_valatt"),
       Op::Get("_sg_onednn_batch_dot")};
 

@@ -634,6 +634,7 @@ if Features().is_enabled('ONEDNN'):
         '_sg_onednn_conv',
         '_sg_onednn_fully_connected',
         '_sg_onednn_selfatt_qk',
+        '_sg_onednn_selfatt_qk_split',
         '_sg_onednn_selfatt_valatt',
         '_sg_onednn_batch_dot',
         '_sg_onednn_batch_norm',
