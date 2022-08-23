@@ -31,7 +31,6 @@ then
     usermod -aG wheel jenkins_slave
 
     # By default, docker creates all WORK_DIRs with root owner
-    mkdir /work/mxnet
-    mkdir /work/build
-    chown jenkins_slave /work/mxnet /work/build
+    mkdir -p /work/{mxnet,build,deps}
+    chown jenkins_slave /work /work/{mxnet,build,deps}
 fi
