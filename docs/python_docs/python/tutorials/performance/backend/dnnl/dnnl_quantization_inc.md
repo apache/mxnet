@@ -42,7 +42,7 @@ Most tuning strategies will try different configurations on an evaluation datase
   # install stable version from conda
   conda install neural-compressor -c conda-forge -c intel
   ```
-  If you get into trouble with dependencies on `cv2` library you can run: `apt-get update && apt-get install -y python3-opencv`.
+  If you get into trouble with dependencies on `cv2` library you can run: `apt-get update && apt-get install -y python3-opencv`
 
 ## Configuration file
 
@@ -249,29 +249,37 @@ script.
 Accuracy results on the whole validation dataset (782 batches) are shown below.
 
 | Optimization method  | Top 1 accuracy | Top 5 accuracy | Top 1 relative accuracy loss [%] | Top 5 relative accuracy loss [%] | Cost = one-time optimization on 9 batches [s] | Validation time [s] | Speedup |
-|----------------------|-------:|-------:|-----:|-----:|-------:|--------:|-----:|
-| fp32 no optimization | 0.7699 | 0.9340 |  0.0 |  0.0 |   0.00 | 1448.69 |  1.0 |
-| fp32 fused           | 0.7699 | 0.9340 | 99.9 | 99.5 |   0.03 |  149.45 |  9.7 |
-| int8 full naive      | 0.2207 | 0.3912 | 71.3 | 58.1 |  12.74 |   46.28 | 31.3 |
-| int8 full entropy    | 0.6933 | 0.8917 |  9.9 |  4.5 |  81.50 |   47.07 | 30.8 |
-| int8 smart naive     | 0.2210 | 0.3905 | 71.3 | 58.2 |  12.55 |   46.56 | 31.1 |
-| int8 smart entropy   | 0.6928 | 0.8910 | 10.0 |  4.6 |  80.89 |   46.58 | 31.1 |
-| int8 INC basic       | 0.7692 | 0.9331 |  0.1 |  0.1 | 526.47 |   48.68 | 29.8 |
-| int8 INC mse         | 0.7692 | 0.9337 |  **0.1** |  **0.0** | 227.89 |   50.19 | **28.9** |
+|----------------------|-------:|-------:|------:|------:|-------:|--------:|------:|
+| fp32 no optimization 0.7699 | 0.9340 |  0.00 |  0.00 |   0.00 | 316.50 | 1.0 |
+| fp32 fused           0.7699 | 0.9340 |  0.00 |  0.00 |   0.03 | 147.77 | 2.1 |
+| int8 full naive      0.2207 | 0.3912 | 71.33 | 58.12 |  11.29 |  45.81 | **6.9** |
+| int8 full entropy    0.6933 | 0.8917 |  9.95 |  4.53 |  80.23 |  46.39 | 6.8 |
+| int8 smart naive     0.2210 | 0.3905 | 71.29 | 58.19 |  11.15 |  46.02 | 6.9 |
+| int8 smart entropy   0.6928 | 0.8910 | 10.01 |  4.60 |  79.75 |  45.98 | 6.9 |
+| int8 INC basic       0.7692 | 0.9331 | **0.09** |  0.10 | 266.50 |  48.32 | **6.6** |
+| int8 INC mse         0.7692 | 0.9337 | **0.09** |  0.03 | 106.50 |  49.76 | **6.4** |
+| int8 INC mycustom    0.7699 | 0.9338 | **0.00** |  0.02 | 370.29 |  70.07 | **4.5** |
+
 
 Environment:  
 - Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz (c6i.16xlarge Amazon EC2 instance)  
 - Ubuntu 20.04.4 LTS (GNU/Linux Ubuntu 20.04.4 LTS 5.15.0-1017-aws ami-0558cee5b20db1f9c)  
-- MXNet 2.0.0b20220823 (commit daac02c7854ffa71bc11fd950c2d6c9ea356b394 ) 
+- MXNet 2.0.0b20220902 (commit 3a19f0e50d75fedb05eb558a9c835726b57df4cf)  
 - INC 1.13.1  
 - scripts above were run as parameter for [run.sh](https://github.com/apache/incubator-mxnet/blob/master/benchmark/python/dnnl/run.sh) 
 script to properly setup parallel computation parameters.  
 
-For this model INC basic and mse strategies found configurations meeting the 1.5% relative accuracy 
+For this model INC basic, mse and custom strategies found configurations meeting the 1.5% relative accuracy 
 loss criterion. Only the `bayesian` strategy didn't find solution within 500 attempts limit. 
 Although these results may suggest that the `mse` strategy is the best compromise between time spent
 to find the optimized model and final model performance efficiency, different strategies may give 
-better results for specific models and tasks. You can notice, that the most important thing done by INC
+better results for specific models and tasks. For example for ALBERT model there is no solution 
+given by build-in INC strategies. For such situation you can create your custom strategy, similar 
+to this one: 
+[custom_strategy.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/custom_strategy.py). 
+You can find description of this particular custom strategy in the Medium article
+(add link to article).  
+You can notice, that the most important thing done by INC
 was to find the operator, which had the most significant impact on the loss of accuracy and disable it from quantization if needed. 
 You can see below which operator was excluded by `mse` strategy in last print given by 
 [resnet_mse.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_mse.py) 

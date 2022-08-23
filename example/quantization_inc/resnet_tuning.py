@@ -24,6 +24,7 @@ import mxnet as mx
 from mxnet.gluon.model_zoo.vision import resnet50_v2
 from mxnet.gluon.data.vision import transforms
 from mxnet.contrib.quantization import quantize_net
+import custom_strategy
 
 
 def save_model(net, data_loader, description, time_spend):
@@ -107,7 +108,7 @@ quantizer = Quantization("resnet50v2_mse.yaml")
 quantizer.model = net
 quantizer.calib_dataloader = val_data
 quantizer.eval_func = eval_func
-for strategy in ['basic', 'mse', 'bayesian']:
+for strategy in ['basic', 'mse', 'mycustom', 'bayesian']:
   quantizer.cfg.tuning.strategy.name = strategy
   start = time.time()
   qnet_inc = quantizer.fit().model
