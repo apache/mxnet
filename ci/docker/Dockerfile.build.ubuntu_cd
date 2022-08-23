@@ -32,8 +32,8 @@ RUN /work/ubuntu_scala.sh
 COPY install/ubuntu_cmake.sh /work/
 RUN /work/ubuntu_cmake.sh
 
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
+COPY install/ubuntu_ccache.sh /work/
+RUN /work/ubuntu_ccache.sh
 
 # Install tools for static dependency builds
 RUN apt install -y sudo patchelf nasm automake file g++ gcc gfortran
