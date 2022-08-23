@@ -28,7 +28,6 @@
 #include "operator/elemwise_op_common.h"
 #include "operator/nn/batch_norm-inl.h"
 #include "operator/operator_common.h"
-#include "common/alm.h"
 #if MXNET_USE_ONEDNN == 1
 #include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
 #endif

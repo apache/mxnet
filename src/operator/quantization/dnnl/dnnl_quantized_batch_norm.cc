@@ -36,11 +36,7 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
   CHECK_EQ(in_data.size(), 7U);
-  if (fuse_relu) {
-    CHECK_EQ(outputs.size(), 4U);
-  } else {
-    CHECK_EQ(outputs.size(), 3U);
-  }
+  CHECK_EQ(outputs.size(), 3U);
 
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);

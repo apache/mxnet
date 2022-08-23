@@ -37,7 +37,7 @@ bool QuantizedBatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 7U)
       << "Input:[data, gamma, beta, moving_mean, moving_var, min_data, max_data]";
-  CHECK_EQ(out_shape->size(), 4U);
+  CHECK_EQ(out_shape->size(), 3U);
 
   const mxnet::TShape& dshape = in_shape->at(batchnorm::kData);
   if (!mxnet::ndim_is_known(dshape)) {
@@ -66,7 +66,7 @@ bool QuantizedBatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
                                     std::vector<int>* out_type) {
   using namespace mshadow;
   CHECK_EQ(in_type->size(), 7U);
-  CHECK_EQ(out_type->size(), 4U);
+  CHECK_EQ(out_type->size(), 3U);
 
 #if MXNET_USE_ONEDNN == 1
   CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
@@ -95,7 +95,7 @@ the float32 data into int8.
     This operator only supports forward propogation. DO NOT use it in training.
 )code" ADD_FILELINE)
     .set_num_inputs(7)
-    .set_num_outputs(4)
+    .set_num_outputs(3)
     .set_attr_parser(ParamParser<BatchNormParam>)
     .set_attr<nnvm::FListInputNames>(
         "FListInputNames",
@@ -106,7 +106,7 @@ the float32 data into int8.
     .set_attr<nnvm::FListOutputNames>(
         "FListOutputNames",
         [](const NodeAttrs& attrs) {
-          return std::vector<std::string>{"output", "min_output", "max_output", "workspace"};
+          return std::vector<std::string>{"output", "min_output", "max_output"};
         })
     .set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                    [](const nnvm::NodeAttrs& attrs) {
