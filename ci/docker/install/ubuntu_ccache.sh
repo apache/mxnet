@@ -21,34 +21,21 @@
 
 set -ex
 
+CCACHE_TAG="v3.7.12"
+
+apt update
+apt install -y git autoconf gcc make gperf
 pushd .
 
-CCACHE_TAG="v4.6.2"
-
-export DEBIAN_FRONTEND=noninteractive
-
-apt update || true
-apt install -y \
-    libxslt1-dev \
-    docbook-xsl \
-    xsltproc \
-    libxml2-utils
-
-apt install -y --no-install-recommends \
-    autoconf \
-    asciidoc \
-    xsltproc
-
-mkdir -p /work/deps/ccache
-cd /work/deps/ccache
-
+mkdir -p /work/deps
+cd /work/deps
 git clone --recursive -b $CCACHE_TAG https://github.com/ccache/ccache.git ccache
 cd ccache
 ./autogen.sh
-./configure
-make -j$(nproc)
+./configure --disable-man --prefix=/usr/local
+make -j $(nproc)
 make install
-
-popd
+cd /work/deps
 rm -rf /work/deps/ccache
+popd
 

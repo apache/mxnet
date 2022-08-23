@@ -21,25 +21,20 @@
 
 set -ex
 
+CCACHE_TAG="v3.7.12"
+
+yum install -y git autoconf gcc make gperf
+
 pushd .
-
-yum -y install autoconf
-yum -y install asciidoc
-
 mkdir -p /work/deps
 cd /work/deps
-
-git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git
-
+git clone --recursive -b $CCACHE_TAG https://github.com/ccache/ccache.git ccache
 cd ccache
-
 ./autogen.sh
-./configure
-make -j$(nproc)
+./configure --disable-man --prefix=/usr/local
+make -j $(nproc)
 make install
-
 cd /work/deps
 rm -rf /work/deps/ccache
-
 popd
 
