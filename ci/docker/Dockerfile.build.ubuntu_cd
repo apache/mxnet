@@ -16,62 +16,47 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build and run MXNet on Ubuntu 18.04 for CPU
+# Dockerfile to build and run MXNet on CentOS 7 for CPU
 
 FROM ubuntu:18.04
 
 WORKDIR /work/deps
 
-COPY install/ubuntu_core.sh /work/
-RUN /work/ubuntu_core.sh
+COPY install/ubuntu_base.sh /work/
+RUN /work/ubuntu_base.sh
 
+COPY install/ubuntu_scala.sh /work/
+RUN /work/ubuntu_scala.sh
+
+# Install cmake
 COPY install/ubuntu_cmake.sh /work/
 RUN /work/ubuntu_cmake.sh
 
 COPY install/ubuntu_ccache.sh /work/
 RUN /work/ubuntu_ccache.sh
 
-COPY install/ubuntu_scala.sh /work/
-COPY install/sbt.gpg /work/
-RUN /work/ubuntu_scala.sh
+# Install tools for static dependency builds
+RUN apt install -y sudo patchelf nasm automake file g++ gcc gfortran libtool
 
-COPY install/ubuntu_r.sh /work/
-RUN /work/ubuntu_r.sh
-
-COPY install/ubuntu_perl.sh /work/
-RUN /work/ubuntu_perl.sh
-
-COPY install/ubuntu_clang.sh /work/
-RUN /work/ubuntu_clang.sh
-
-COPY install/ubuntu_caffe.sh /work/
-RUN /work/ubuntu_caffe.sh
+# Allow jenkins user to use sudo for installing cuda libraries
+RUN echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/apt" >> /etc/sudoers.d/10_jenkins_slave
 
 COPY install/ubuntu_python.sh /work/
 RUN /work/ubuntu_python.sh
 COPY install/requirements /work/
 RUN pip3 install -r /work/requirements
 
-COPY install/ubuntu_onnx.sh /work/
-RUN /work/ubuntu_onnx.sh
-
-COPY install/ubuntu_docs.sh /work/
-COPY install/requirements /work/
-RUN /work/ubuntu_docs.sh
-
-COPY install/ubuntu_nightly_tests.sh /work/
-RUN /work/ubuntu_nightly_tests.sh
-
-COPY install/ubuntu_emscripten.sh /work/
-RUN /work/ubuntu_emscripten.sh
-
 ARG USER_ID=0
-ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
-COPY runtime_functions.sh /work/
-
+ENV PYTHONPATH=./python/
 WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-ENV LLVM=/work/deps/emscripten-fastcomp/build/bin
+
+# setup cuda repos
+RUN curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
+    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/$(uname -m) /" > /etc/apt/sources.list.d/nvidia-ml.list && \
+    wget -O /tmp/cuda.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/$(uname -m)/cuda-keyring_1.0-1_all.deb && \
+    dpkg -i /tmp/cuda.deb
+
+COPY runtime_functions.sh /work/

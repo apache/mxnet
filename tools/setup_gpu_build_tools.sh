@@ -29,30 +29,39 @@ DEPS_PATH=$2
 source /etc/os-release
 
 >&2 echo "Setting CUDA versions for $VARIANT"
-if [[ $VARIANT == cu117* ]]; then
+if [[ $VARIANT == cu117 ]]; then
     CUDA_VERSION='11.7'
     LIBCUDNN_VERSION='8.5.0.96'
-elif [[ $VARIANT == cu116* ]]; then
+elif [[ $VARIANT == cu116 ]]; then
     CUDA_VERSION='11.6'
     LIBCUDNN_VERSION='8.4.1.50'
-elif [[ $VARIANT == cu115* ]]; then
+elif [[ $VARIANT == cu115 ]]; then
     CUDA_VERSION='11.5'
     LIBCUDNN_VERSION='8.3.3.40'
-elif [[ $VARIANT == cu114* ]]; then
+elif [[ $VARIANT == cu114 ]]; then
     CUDA_VERSION='11.4'
     LIBCUDNN_VERSION='8.2.4.15'
-elif [[ $VARIANT == cu113* ]]; then
+elif [[ $VARIANT == cu113 ]]; then
     CUDA_VERSION='11.3'
     LIBCUDNN_VERSION='8.2.1.32'
-elif [[ $VARIANT == cu112* ]]; then
+elif [[ $VARIANT == cu112 ]]; then
     CUDA_VERSION='11.2'
     LIBCUDNN_VERSION='8.1.1.33'
-elif [[ $VARIANT == cu111* ]]; then
+elif [[ $VARIANT == cu111 ]]; then
     CUDA_VERSION='11.1'
     LIBCUDNN_VERSION='8.0.5.39'
-elif [[ $VARIANT == cu110* ]]; then
+elif [[ $VARIANT == cu110 ]]; then
     CUDA_VERSION='11.0'
     LIBCUDNN_VERSION='8.0.5.39'
+elif [[ $VARIANT == cu102 ]]; then
+    CUDA_VERSION='10.2'
+    LIBCUDNN_VERSION='7.6.5.33'
+elif [[ $VARIANT == cu101 ]]; then
+    CUDA_VERSION='10.1'
+    LIBCUDNN_VERSION='7.6.5.32'
+elif [[ $VARIANT == cu100 ]]; then
+    CUDA_VERSION='10.0'
+    LIBCUDNN_VERSION='7.6.5.32'
 else
     echo "Unsupported CUDA variant '$VARIANT'"
     exit -1
@@ -62,53 +71,55 @@ CUDA_MAJOR_VERSION=$(echo $CUDA_VERSION | tr '-' '.' | cut -d. -f1,2)
 CUDA_MAJOR_DASH=$(echo $CUDA_VERSION | tr '-' '.' | cut -d. -f1,2 | tr '.' '-')
 LIBCUDNN_MAJOR=$(echo $LIBCUDNN_VERSION | cut -d. -f1)
 
-if [[ "$ID" == "centos" ]]; then
-    distro="rhel${VERSION_ID}"
-    sudo yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/$distro/$(uname -m)/cuda-$distro.repo
-elif [[ "$ID" == "ubuntu" ]]; then
-    distro=$(echo ${ID}${VERSION_ID} | sed 's/\.//g')
-    wget -O /tmp/cuda.deb https://developer.download.nvidia.com/compute/cuda/repos/$distro/$(uname -m)/cuda-keyring_1.0-1_all.deb
-    sudo dpkg -i /tmp/cuda.deb
+if [[ "$ID" == "ubuntu" ]]; then
+    sudo apt update -y
 fi
 
 if [[ $ID == "centos" ]]; then
-    pkgs=(\
-        "cuda-libraries-${CUDA_MAJOR_DASH}" \
-        "cuda-libraries-devel-${CUDA_MAJOR_DASH}" \
-        "cuda-nvcc-$CUDA_MAJOR_DASH" \
-        "cuda-nvtx-$CUDA_MAJOR_DASH" \
-        "cuda-nvprof-${CUDA_MAJOR_DASH}" \
-        "libcudnn${LIBCUDNN_MAJOR}-${LIBCUDNN_VERSION}-1.cuda${CUDA_MAJOR_VERSION}" \
-        "libcudnn${LIBCUDNN_MAJOR}-devel-${LIBCUDNN_VERSION}-1.cuda${CUDA_MAJOR_VERSION}" \
-        "libnccl-devel" \
-        "libnccl2" \
-    )
+    pkgs="cuda-libraries-${CUDA_MAJOR_DASH} \
+          cuda-nvcc-$CUDA_MAJOR_DASH \
+          cuda-nvtx-$CUDA_MAJOR_DASH \
+          cuda-nvprof-${CUDA_MAJOR_DASH} \
+          libcudnn${LIBCUDNN_MAJOR}-${LIBCUDNN_VERSION}-1.cuda${CUDA_MAJOR_VERSION} \
+          libcudnn${LIBCUDNN_MAJOR}-devel-${LIBCUDNN_VERSION}-1.cuda${CUDA_MAJOR_VERSION} \
+    "
+    if [[ $CUDA_MAJOR_VERSION == 10* ]]; then
+        pkgs="$pkgs \
+              cuda-libraries-dev-${CUDA_MAJOR_DASH} \
+              libnccl-devel \
+              libnccl
+        "
+    else
+        pkgs="$pkgs \
+              cuda-libraries-devel-${CUDA_MAJOR_DASH} \
+              libnccl-devel \
+              libnccl2
+        "
+    fi
 elif [[ $ID == "ubuntu" ]]; then
-    pkgs=(\
-        "cuda-libraries-${CUDA_MAJOR_DASH}" \
-        "cuda-libraries-dev-${CUDA_MAJOR_DASH}" \
-        "cuda-nvcc-$CUDA_MAJOR_DASH" \
-        "cuda-nvtx-$CUDA_MAJOR_DASH" \
-        "cuda-nvprof-$CUDA_MAJOR_DASH" \
-        "libcudnn${LIBCUDNN_MAJOR}-${LIBCUDNN_VERSION}-1+cuda${CUDA_MAJOR_VERSION}" \
-        "libcudnn${LIBCUDNN_MAJOR}-dev-${LIBCUDNN_VERSION}-1+cuda${CUDA_MAJOR_VERSION}" \
-        "libnccl-dev" \
-        "libnccl2" \
-    )
+    pkgs="cuda-libraries-${CUDA_MAJOR_DASH} \
+          cuda-libraries-dev-${CUDA_MAJOR_DASH} \
+          cuda-nvcc-$CUDA_MAJOR_DASH \
+          cuda-nvtx-$CUDA_MAJOR_DASH \
+          cuda-nvprof-$CUDA_MAJOR_DASH \
+          libcudnn${LIBCUDNN_MAJOR}=${LIBCUDNN_VERSION}-1+cuda${CUDA_MAJOR_VERSION} \
+          libcudnn${LIBCUDNN_MAJOR}-dev=${LIBCUDNN_VERSION}-1+cuda${CUDA_MAJOR_VERSION} \
+          libnccl-dev \
+          libnccl2"
 fi
 
 if [[ ! -d /usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
 
     if [[ "$ID" == "ubuntu" ]]; then
-        sudo apt install -y ${pkgs[*]}
+        sudo apt install -y $pkgs
     elif [[ "$ID" == "centos" ]]; then
-        sudo yum install -y ${pkgs[*]}
+        sudo yum install -y $pkgs
     fi
 
 fi
 
 # allow linking against libcuda stubs if no driver is present
 export CMAKE_PARAMETERS="-DCMAKE_EXE_LINKER_FLAGS='-L/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/stubs' \
-	-DCMAKE_SHARED_LINKER_FLAGS='-L/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/stubs'"
+    -DCMAKE_SHARED_LINKER_FLAGS='-L/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/stubs'"
 
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/stubs

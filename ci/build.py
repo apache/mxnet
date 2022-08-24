@@ -43,11 +43,8 @@ import yaml
 
 from util import *
 
-# Files for docker compose
-DOCKER_COMPOSE_FILES = set(['docker/build.centos7'])
-
 # keywords to identify arm-based dockerfiles
-AARCH_FILE_KEYWORDS = ['aarch64']
+AARCH_FILE_KEYWORDS = ['aarch64', 'armv']
 
 def get_dockerfiles_path():
     return "docker"
@@ -60,13 +57,20 @@ def get_docker_compose_platforms(path: str = get_dockerfiles_path()):
             platforms.add(platform)
     return platforms
 
+def get_docker_compose_dockerfiles(path: str = get_dockerfiles_path()):
+    dockerfiles = set()
+    with open(os.path.join(path, "docker-compose.yml"), "r") as f:
+        compose_config = yaml.load(f.read(), yaml.SafeLoader)
+        for platform in compose_config["services"]:
+            dockerfiles.add("docker/" + compose_config['services'][platform]['build']['dockerfile'])
+    return dockerfiles
 
 def get_platforms(path: str = get_dockerfiles_path(), arch=machine()) -> List[str]:
     """Get a list of platforms given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
+    dockerfiles = dockerfiles - get_docker_compose_dockerfiles()
     files = set(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
-    files = files - DOCKER_COMPOSE_FILES
     files.update(["build."+x for x in get_docker_compose_platforms()])
     arm_files = set(filter(lambda x: any(y in x for y in AARCH_FILE_KEYWORDS), files))
     if arch == 'x86_64':

@@ -724,6 +724,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_MKLDNN=0                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+          -DPYTHON_EXECUTABLE=/usr/local/bin/python3 \
           -G Ninja                                \
           /work/mxnet
 

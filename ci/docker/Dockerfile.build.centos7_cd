@@ -32,11 +32,14 @@ RUN /work/centos7_scala.sh
 COPY install/centos7_cmake.sh /work/
 RUN /work/centos7_cmake.sh
 
+COPY install/centos7_ccache.sh /work/
+RUN /work/centos7_ccache.sh
+
 # Install tools for static dependency builds
 RUN yum install -y sudo patchelf nasm automake libtool file gcc-c++ gcc gcc-gfortran which
 
 # Allow jenkins user to use sudo for installing cuda libraries
-RUN echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/yum, /usr/bin/yum-config-manager" >> /etc/sudoers.d/10_jenkins_slave
+RUN echo "jenkins_slave ALL=(root) NOPASSWD: /usr/bin/yum" >> /etc/sudoers.d/10_jenkins_slave
 
 COPY install/centos7_python.sh /work/
 RUN /work/centos7_python.sh
@@ -49,5 +52,10 @@ RUN /work/centos7_adduser.sh
 
 ENV PYTHONPATH=./python/
 WORKDIR /work/mxnet
+
+# setup cuda repos
+RUN yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/$(uname -m)/cuda-rhel7.repo && \
+    rpm --import http://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/$(uname -m)/7fa2af80.pub && \
+    yum-config-manager --add-repo https://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/$(uname -m)
 
 COPY runtime_functions.sh /work/
