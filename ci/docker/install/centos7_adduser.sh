@@ -31,12 +31,7 @@ then
     usermod -aG wheel jenkins_slave
 
     # By default, docker creates all WORK_DIRs with root owner
-    mkdir /work/mxnet
-    mkdir /work/build
-    chown -R jenkins_slave /work/
-
-    # Later on, we have to override the links because underlying build systems ignore our compiler settings. Thus,
-    # we have to give the process the proper permission to these files. This is hacky, but unfortunately 
-    # there's no better way to do this without patching all our submodules.
-    chown -R jenkins_slave /usr/local/bin
+    mkdir -p /work/{mxnet,build,deps}
+    chown jenkins_slave /work /work/{mxnet,build}
+    chown -R jenkins_slave /work/deps
 fi

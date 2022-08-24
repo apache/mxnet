@@ -35,6 +35,7 @@ add-apt-repository ppa:cran/libgit2
 
 apt-get update || true
 apt-get install -y --allow-unauthenticated \
+    libtool \
     libcairo2-dev \
     libfribidi-dev \
     libgit2-dev \
