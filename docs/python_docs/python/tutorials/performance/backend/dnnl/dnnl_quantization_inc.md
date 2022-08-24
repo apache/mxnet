@@ -158,7 +158,7 @@ Since this model already achieves good accuracy using native quantization (less 
 
 This example shows how to use INC to quantize ResNet50 v2. In this case, the native MXNet quantization introduce a huge accuracy drop (70% using `naive` calibration mode) and INC allows automatically find better solution.
 
-This is the [INC configuration file](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet50v2_mse.yaml) for this example: 
+This is the (TODO link to INC configuration file) for this example: 
 ```yaml
 version: 1.0
 
@@ -182,7 +182,7 @@ tuning:
 ```
 
 It could be used with script below 
-([resnet_mse.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_mse.py))
+(TODO link to resnet_mse.py)
 to find operator which mostly influence accuracy drops and disable it from quantization. 
 You can find description of MSE strategy 
 [here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md#user-content-mse).
@@ -241,10 +241,10 @@ print(quantizer.strategy.best_qmodel.q_config['quant_cfg'])
 #### Results:
 Resnet50 v2 model could be prepared to achieve better performance with various calibration and tuning methods.  
 It is done by 
-[resnet_tuning.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_tuning.py) 
+(TODO link to resnet_tuning.py) 
 script on a small part of data set to reduce time required for tuning (9 batches). 
 Later saved model are validated on a whole data set by 
-[resnet_measurment.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_measurment.py)
+(TODO link to resnet_measurment.py)
 script.
 Accuracy results on the whole validation dataset (782 batches) are shown below.
 
@@ -274,7 +274,7 @@ to find the optimized model and final model performance efficiency, different st
 better results for specific models and tasks. You can notice that most imported thing done by INC 
 is to find operator which mostly influence loss of accuracy and disable it from quantization if needed. 
 You can see below which operator was excluded by `mse` strategy in last print given by 
-[resnet_mse.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_mse.py) 
+(TODO link to resnet_mse.py)
 script:  
 
 {'excluded_symbols': ['**sg_onednn_conv_bn_act_0**'], 'quantized_dtype': 'auto', 'quantize_mode': 'smart', 'quantize_granularity': 'tensor-wise'}
