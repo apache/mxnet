@@ -185,7 +185,7 @@ It could be used with script below
 ([resnet_mse.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_mse.py))
 to find operator which mostly influence accuracy drops and disable it from quantization. 
 You can find description of MSE strategy 
-[here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md#mse).
+[here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md#user-content-mse).
 
 ```python
 import mxnet as mx
