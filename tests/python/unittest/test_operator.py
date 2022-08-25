@@ -9423,10 +9423,8 @@ def test_broadcast_ops_on_input_with_the_same_shape(dtype, ndim, max_dim_size):
     shape_size = np.product(shape)
     a = np.random.uniform(low=-100, high=100, size=5000)
     b = np.random.uniform(low=-100, high=100, size=5000)
-    e = np.random.uniform(low=-100, high=100, size=5000)
     c = a[1:shape_size + 1].reshape(shape)
     d = b[1:shape_size + 1].reshape(shape)
-    f = e[1:shape_size + 1].reshape(shape)
     expected = c + d
     cm = mx.nd.array(c)
     dm = mx.nd.array(d)
