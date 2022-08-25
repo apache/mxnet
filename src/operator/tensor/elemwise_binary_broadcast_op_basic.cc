@@ -39,26 +39,26 @@ void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
-  // We can use more efficient sum kernel when there is no broadcast - when shapes are the same
-  const bool same_shape = (inputs[0].shape() == inputs[1].shape());
+  const mxnet::TShape& input_0_shape  = inputs[0].shape();
+  const mxnet::TShape& input_1_shape  = inputs[1].shape();
+  const mxnet::TShape& output_0_shape = outputs[0].shape();
+  // We can use more efficient sum kernel, when there is no broadcast - when shapes are the
+  // same.
+  const bool same_shape = (input_0_shape == input_1_shape);
 
   if (same_shape && alg == dnnl::algorithm::binary_add) {
     DNNLSumFwd& fwd = DNNLSumFwd::GetCached(inputs, outputs);
     fwd.Execute(ctx, inputs, req, outputs);
   } else {
     mxnet::TShape new_lshape, new_rshape, new_oshape;
-    int ndim_diff = BinaryBroadcastShapeCompact(inputs[0].shape(),
-                                                inputs[1].shape(),
-                                                outputs[0].shape(),
-                                                &new_lshape,
-                                                &new_rshape,
-                                                &new_oshape);
+    int ndim_diff = BinaryBroadcastShapeCompact(
+        input_0_shape, input_1_shape, output_0_shape, &new_lshape, &new_rshape, &new_oshape);
     std::vector<NDArray> new_inputs;
     std::vector<NDArray> new_outputs;
     if (ndim_diff) {
       new_inputs  = {inputs[0].Reshape(new_lshape), inputs[1].Reshape(new_rshape)};
       new_outputs = {outputs[0].Reshape(new_oshape)};
-    } else if (inputs[0].shape().Size() == 1 && inputs[1].shape().Size() == 1) {
+    } else if (input_0_shape.Size() == 1 && input_1_shape.Size() == 1) {
       // BinaryBroadcastShapeCompact function doesn't reshape tensors of size (1,1,...,1)
       // into shape (1). It is mandatory for oneDNN primitive to have this reshape done.
       mxnet::TShape one_shape = mxnet::TShape(1, 1);
