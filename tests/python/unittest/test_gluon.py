@@ -224,6 +224,26 @@ def test_basic():
     model.setattr('grad_req', 'write')
     assert list(model.collect_params().values())[0]._grad is not None
 
+@use_np
+def test_symbol_block_init():
+    DTYPE = mx.np.float32
+    LR_MULT, WD_MULT = 0.555, 0.444
+    svar = mx.symbol.var
+    s_x = svar('x', shape=(1,256,), dtype=DTYPE)
+    s_w = svar('W', shape=(256,192), dtype=DTYPE, lr_mult=LR_MULT, wd_mult=WD_MULT)
+    s_b = svar('b', shape=(1,192,), dtype=DTYPE, init=mx.init.Zero())
+    s_y = mx.symbol.linalg.gemm(s_x, s_w, s_b)
+
+    fn = mx.gluon.SymbolBlock([s_y], [s_x])
+    fn.initialize()
+    v_x = mx.nd.random_uniform(-1., 1., shape=(1,256), dtype=DTYPE,
+                               ctx=mx.device.current_device())
+    fn.forward(v_x)
+    param_di = fn.collect_params()
+    v_w, v_b = param_di['W'], param_di['b']
+    assert v_w.lr_mult == LR_MULT
+    assert v_w.wd_mult == WD_MULT
+    assert not v_b.data().asnumpy().any()
 
 def test_sparse_symbol_block():
     data = mx.sym.var('data')
