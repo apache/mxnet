@@ -42,7 +42,7 @@ Most tuning strategies will try different configurations on an evaluation datase
   # install stable version from conda
   conda install neural-compressor -c conda-forge -c intel
   ```
-  If you come into trouble with dependencies on `cv2` library you can run: `apt-get update && apt-get install -y python3-opencv`
+  If you get into trouble with dependencies on `cv2` library you can run: `apt-get update && apt-get install -y python3-opencv`.
 
 ## Configuration file
 
@@ -73,14 +73,14 @@ tuning:
 
 We are using the `basic` strategy, but you could also try out different ones. [Here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md) you can find a list of strategies available in INC and details of how they work. You can also add your own strategy if the existing ones do not suit your needs.
 
-Since the value of `timeout` is 0, INC will run until it finds a configuration that satisfies the accuracy criterion and then exit. Depending on the strategy this may not be ideal, as sometimes it would be better to further explore the tuning space to find a superior configuration both in terms of accuracy and speed. To achieve this, we can set a specific `timeout` value, which will tell INC how long (in seconds) it should run.
+Since the value of `timeout` in the example above is 0, INC will run until it finds a configuration that satisfies the accuracy criterion and then exit. Depending on the strategy this may not be ideal, as sometimes it would be better to further explore the tuning space to find a superior configuration both in terms of accuracy and speed. To achieve this, we can set a specific `timeout` value, which will tell INC how long (in seconds) it should run.
 
 For more information about the configuration file, see the [template](https://github.com/intel/neural-compressor/blob/master/neural_compressor/template/ptq.yaml) from the official INC repo. Keep in mind that only the `post training quantization` is currently supported for MXNet.
 
 ## Model quantization and tuning
 
 In general, Intel® Neural Compressor requires 4 elements in order to run:  
-1. Config file - like the example above  
+1. Configuration file - like the example above  
 2. Model to be quantized  
 3. Calibration dataloader  
 4. Evaluation function - a function that takes a model as an argument and returns the accuracy it achieves on a certain evaluation dataset. 
@@ -156,7 +156,7 @@ Since this model already achieves good accuracy using native quantization (less 
 
 ### Quantizing ResNet50v2
 
-This example shows how to use INC to quantize ResNet50 v2. In this case, the native MXNet quantization introduce a huge accuracy drop (70% using `naive` calibration mode) and INC allows automatically find better solution.
+This example shows how to use INC to quantize ResNet50 v2. In this case, the native MXNet quantization introduce a huge accuracy drop (70% using `naive` calibration mode) and INC allows to automatically find better solution.
 
 This is the (TODO link to INC configuration file) for this example: 
 ```yaml
@@ -183,7 +183,7 @@ tuning:
 
 It could be used with script below 
 (TODO link to resnet_mse.py)
-to find operator which mostly influence accuracy drops and disable it from quantization. 
+to find operator, which caused the most significant accuracy drop and disable it from quantization. 
 You can find description of MSE strategy 
 [here](https://github.com/intel/neural-compressor/blob/master/docs/tuning_strategies.md#user-content-mse).
 
@@ -198,17 +198,17 @@ rgb_mean = (0.485, 0.456, 0.406)
 rgb_std = (0.229, 0.224, 0.225)
 batch_size = 64
 num_calib_batches = 9
-# set below proper path to ImageNet data set
+# set proper path to ImageNet data set below
 dataset = mx.gluon.data.vision.ImageRecordDataset('../imagenet/rec/val.rec')
-# Tuning in INC on whole data set takes too long time so we take only part of the whole data set
+# Tuning with INC on whole data set takes a lot of time. Therefore, we take only a part of the data set
 # as representative part of it:
 dataset = dataset.take(num_calib_batches * batch_size)
 transformer = transforms.Compose([transforms.Resize(256),
                                   transforms.CenterCrop(224),
                                   transforms.ToTensor(),
                                   transforms.Normalize(mean=rgb_mean, std=rgb_std)])
-# Note: as input data are used many times during tuning it is better to prepared data earlier,
-#       so lazy parameter for transform_first is set to False
+# Note: as input data is used many times during tuning, it is better to have it prepared earlier.
+#       Therefore, lazy parameter for transform_first is set to False.
 val_data = mx.gluon.data.DataLoader(
     dataset.transform_first(transformer, lazy=False), batch_size, shuffle=False)
 val_data.batch_size = batch_size
@@ -233,8 +233,8 @@ qnet_inc = quantizer.fit().model
 print("INC finished")
 # You can save optimized model for the later use:
 qnet_inc.export("__quantized_with_inc")
-# You can see what configurations was applied aby INC and which nodes was excluded from quantization
-# to achieve given accuracy lost against floating point calculation
+# You can see which configuration was applied by INC and which nodes were excluded from quantization,
+# to achieve given accuracy loss against floating point calculation.
 print(quantizer.strategy.best_qmodel.q_config['quant_cfg'])
 ```
 
@@ -243,7 +243,7 @@ Resnet50 v2 model could be prepared to achieve better performance with various c
 It is done by 
 (TODO link to resnet_tuning.py) 
 script on a small part of data set to reduce time required for tuning (9 batches). 
-Later saved model are validated on a whole data set by 
+Later saved models are validated on a whole data set by 
 (TODO link to resnet_measurment.py)
 script.
 Accuracy results on the whole validation dataset (782 batches) are shown below.
@@ -265,14 +265,14 @@ Environment:
 - MXNet 2.0.0b20220823 (commit daac02c7854ffa71bc11fd950c2d6c9ea356b394 ) 
 - INC 1.13.1  
 - scripts above were run as parameter for [run.sh](https://github.com/apache/incubator-mxnet/blob/master/benchmark/python/dnnl/run.sh) 
-script to properly setup parallel computation parameters  
+script to properly setup parallel computation parameters.  
 
 For this model INC basic and mse strategies found configurations meeting the 1.5% relative accuracy 
 loss criterion. Only the `bayesian` strategy didn't find solution within 500 attempts limit. 
 Although these results may suggest that the `mse` strategy is the best compromise between time spent
 to find the optimized model and final model performance efficiency, different strategies may give 
-better results for specific models and tasks. You can notice that most imported thing done by INC 
-is to find operator which mostly influence loss of accuracy and disable it from quantization if needed. 
+better results for specific models and tasks. You can notice, that the most important thing done by INC
+was to find the operator, which had the most significant impact on the loss of accuracy and disable it from quantization if needed. 
 You can see below which operator was excluded by `mse` strategy in last print given by 
 (TODO link to resnet_mse.py)
 script:  

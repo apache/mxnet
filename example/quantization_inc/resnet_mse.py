@@ -25,17 +25,17 @@ rgb_mean = (0.485, 0.456, 0.406)
 rgb_std = (0.229, 0.224, 0.225)
 batch_size = 64
 num_calib_batches = 9
-# Set below proper path to ImageNet data set
+# Set proper path to ImageNet data set below
 dataset = mx.gluon.data.vision.ImageRecordDataset('../imagenet/rec/val.rec')
-# Tuning in INC on whole data set takes too long time so we take only part of the whole data set
+# Tuning with INC on the whole data set takes a lot of time. Therefore, we take only a part of the whole data set
 # as representative part of it:
 dataset = dataset.take(num_calib_batches * batch_size)
 transformer = transforms.Compose([transforms.Resize(256),
                                   transforms.CenterCrop(224),
                                   transforms.ToTensor(),
                                   transforms.Normalize(mean=rgb_mean, std=rgb_std)])
-# Note: as input data are used many times during tuning it is better to prepared data earlier,
-#       so lazy parameter for transform_first is set to False
+# Note: as input data is used many times during tuning it is better to have it prepared earlier.
+#       Therefore, lazy parameter for transform_first is set to False.
 val_data = mx.gluon.data.DataLoader(
     dataset.transform_first(transformer, lazy=False), batch_size, shuffle=False)
 val_data.batch_size = batch_size
@@ -58,8 +58,8 @@ quantizer.calib_dataloader = val_data
 quantizer.eval_func = eval_func
 qnet_inc = quantizer.fit().model
 print("INC finished")
-# You can save optimized model for the later use:
+# You can save the optimized model for the later use:
 qnet_inc.export("__quantized_with_inc")
-# You can see what configurations was applied aby INC and which nodes was excluded from quantization
-# to achieve given accuracy lost against floating point calculation
+# You can see which configuration was applied by INC and which nodes were excluded from quantization
+# to achieve given accuracy loss against floating point calculation.
 print(quantizer.strategy.best_qmodel.q_config['quant_cfg'])
