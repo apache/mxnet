@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,25 +16,26 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to run MXNet on Ubuntu 14.04 for GPU
 
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu14.04
+# Script to build ccache for debian and ubuntu based images.
 
-WORKDIR /work/deps
+set -ex
 
-COPY install/ubuntu_publish.sh /work/
-RUN /work/ubuntu_publish.sh
+CCACHE_TAG="v3.7.12"
 
-COPY install/ubuntu_binutils.sh /work/
-RUN /work/ubuntu_binutils.sh
+apt update
+apt install -y git autoconf gcc make gperf
+pushd .
 
-ARG USER_ID=0
-ARG GROUP_ID=0
-COPY install/ubuntu_adduser.sh /work/
-RUN /work/ubuntu_adduser.sh
+mkdir -p /work/deps
+cd /work/deps
+git clone --recursive -b $CCACHE_TAG https://github.com/ccache/ccache.git ccache
+cd ccache
+./autogen.sh
+./configure --disable-man --prefix=/usr/local
+make -j $(nproc)
+make install
+cd /work/deps
+rm -rf /work/deps/ccache
+popd
 
-COPY runtime_functions.sh /work/
-
-WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib

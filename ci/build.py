@@ -43,11 +43,8 @@ import yaml
 
 from util import *
 
-# Files for docker compose
-DOCKER_COMPOSE_FILES = set(['docker/build.centos7'])
-
 # keywords to identify arm-based dockerfiles
-AARCH_FILE_KEYWORDS = ['aarch64']
+AARCH_FILE_KEYWORDS = ['aarch64', 'armv']
 
 def get_dockerfiles_path():
     return "docker"
@@ -60,13 +57,20 @@ def get_docker_compose_platforms(path: str = get_dockerfiles_path()):
             platforms.add(platform)
     return platforms
 
+def get_docker_compose_dockerfiles(path: str = get_dockerfiles_path()):
+    dockerfiles = set()
+    with open(os.path.join(path, "docker-compose.yml"), "r") as f:
+        compose_config = yaml.load(f.read(), yaml.SafeLoader)
+        for platform in compose_config["services"]:
+            dockerfiles.add("docker/" + compose_config['services'][platform]['build']['dockerfile'])
+    return dockerfiles
 
 def get_platforms(path: str = get_dockerfiles_path(), arch=machine()) -> List[str]:
     """Get a list of platforms given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
+    dockerfiles = dockerfiles - get_docker_compose_dockerfiles()
     files = set(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
-    files = files - DOCKER_COMPOSE_FILES
     files.update(["build."+x for x in get_docker_compose_platforms()])
     arm_files = set(filter(lambda x: any(y in x for y in AARCH_FILE_KEYWORDS), files))
     if arch == 'x86_64':
@@ -187,11 +191,11 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     env["DOCKER_CACHE_REGISTRY"] = registry
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
-    def run_cmd(env=None):
-        logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd, env=env)
+    def run_cmd(c, e):
+        logging.info("Running command: '%s'", ' '.join(c))
+        check_call(c, env=e)
 
-    run_cmd(env=env)
+    run_cmd(cmd, env)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
@@ -308,23 +312,21 @@ def list_platforms(arch=machine()) -> str:
 def load_docker_cache(platform, tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
+        env = os.environ.copy()
+        env["DOCKER_CACHE_REGISTRY"] = docker_registry
         if is_docker_compose(platform):
             docker_compose_platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
-            env = os.environ.copy()
-            env["DOCKER_CACHE_REGISTRY"] = docker_registry
             if "dkr.ecr" in docker_registry:
                 try:
                     import docker_cache
                     docker_cache._ecr_login(docker_registry)
                 except Exception:
                     logging.exception('Unable to login to ECR...')
-            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', docker_compose_platform]
-            logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
+            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', '--quiet', docker_compose_platform]
+            logging.info("Running command: '%s'", ' '.join(cmd))
             check_call(cmd, env=env)
             return
 
-        env = os.environ.copy()
-        env["DOCKER_CACHE_REGISTRY"] = docker_registry
         # noinspection PyBroadException
         try:
             import docker_cache

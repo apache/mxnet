@@ -35,8 +35,11 @@ add-apt-repository ppa:cran/libgit2
 
 apt-get update || true
 apt-get install -y --allow-unauthenticated \
+    libtool \
     libcairo2-dev \
+    libfribidi-dev \
     libgit2-dev \
+    libharfbuzz-dev \
     libssh2-1-dev \
     libssl-dev \
     libxml2-dev \
@@ -45,4 +48,4 @@ apt-get install -y --allow-unauthenticated \
     r-base-dev \
     texinfo \
     texlive \
-    texlive-fonts-extra 
+    texlive-fonts-extra

@@ -37,7 +37,7 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS += -L$(DEPS_PATH)/lib -lpng -ltiff -ljpeg -lz -lgfortran -ldl  -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
+ADD_LDFLAGS += -L$(DEPS_PATH)/lib -L$(DEPS_PATH)/lib64 -lpng -ltiff -ljpeg -lz -lgfortran -ldl  -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
 
 # the additional compile flags you want to add
 ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections

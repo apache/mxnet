@@ -43,7 +43,7 @@ pipeline {
     // any disruption caused by different COMMIT_ID values chaning the job parameter configuration on
     // Jenkins.
     string(defaultValue: "mxnet_lib", description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
-    string(defaultValue: "cpu,native,cu100,cu101,cu102,cu110,cu112,aarch64_cpu", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    string(defaultValue: "cpu,native,cu100,cu102,cu110,cu111,cu112,cu113,cu114,cu115,cu116,cu117,aarch64_cpu", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
     string(defaultValue: "nightly_v1.x", description: "String used for naming docker images", name: "VERSION")
   }

@@ -32,11 +32,11 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   stage('Build') {
-    parallel 'GPU: CUDA10.1+cuDNN7': {
+    parallel 'GPU: CUDA11.7+cuDNN8': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-mkldnn-gpu') {
           utils.init_git()
-          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
+          utils.docker_run('ubuntu_gpu_cu117', 'build_ubuntu_gpu_mkldnn', false)
           utils.pack_lib('gpu', mx_lib_cpp_example_mkl)
         }
       }

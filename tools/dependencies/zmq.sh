@@ -53,4 +53,5 @@ if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
     fi
 
     popd
+    rm -rf ${DEPS_PATH}/zeromq.zip $DEPS_PATH/libzmq-$ZEROMQ_VERSION
 fi

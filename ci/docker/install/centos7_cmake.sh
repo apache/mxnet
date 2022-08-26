@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,30 +16,24 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-FROM nvidia/cuda:9.2-cudnn7-devel-ubuntu16.04
+set -ex
 
-WORKDIR /work/deps
+pushd .
 
-COPY install/ubuntu_base.sh /work/
-RUN /work/ubuntu_base.sh
+yum install -y wget
 
-COPY install/ubuntu_python.sh /work/
-COPY install/requirements /work/
-RUN /work/ubuntu_python.sh
+mkdir -p /work/deps/cmake
+cd /work/deps/cmake
 
-COPY install/ubuntu_scala.sh /work/
-COPY install/sbt.gpg /work/
-RUN /work/ubuntu_scala.sh
+CMAKE_VERSION=3.24.0
+CMAKE_MAJOR=$(echo $CMAKE_VERSION | cut -d. -f1,2)
+CMAKE_ARCH=$(uname -m)
+wget -q https://cmake.org/files/v$CMAKE_MAJOR/cmake-$CMAKE_VERSION-linux-$CMAKE_ARCH.sh
+sh cmake-$CMAKE_VERSION-linux-$CMAKE_ARCH.sh --prefix=/usr/local --skip-license
 
-ARG USER_ID=0
-ARG GROUP_ID=0
-COPY install/ubuntu_adduser.sh /work/
-RUN /work/ubuntu_adduser.sh
+cd /work/deps
+rm -rf /work/deps/cmake
 
-COPY runtime_functions.sh /work/
+popd
 
-WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib

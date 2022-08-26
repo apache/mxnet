@@ -81,11 +81,14 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     if build_util.is_docker_compose(platform):
         if "dkr.ecr" in registry:
             _ecr_login(registry)
-        build_util.build_docker(platform=platform, registry=registry,
-                                num_retries=DOCKER_BUILD_NUM_RETRIES, no_cache=False)
         docker_compose_service = platform.split(".")[1]
         env = os.environ.copy()
         env["DOCKER_CACHE_REGISTRY"] = registry
+        if load_cache:
+            push_cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', '--quiet', docker_compose_service]
+            subprocess.check_call(push_cmd, env=env)
+        build_util.build_docker(platform=platform, registry=registry,
+                                num_retries=DOCKER_BUILD_NUM_RETRIES, no_cache=False)
         push_cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'push', docker_compose_service]
         subprocess.check_call(push_cmd, env=env)
         return None

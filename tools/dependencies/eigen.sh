@@ -36,4 +36,5 @@ if [[ ! -d $DEPS_PATH/include/eigen3 ]]; then
           -D CMAKE_INSTALL_PREFIX=$DEPS_PATH ..
     $MAKE install
     popd
+    rm -rf $DEPS_PATH/eigen.zip $DEPS_PATH/eigen-git-mirror-$EIGEN_VERSION
 fi
