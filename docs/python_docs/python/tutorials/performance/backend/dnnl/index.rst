@@ -32,6 +32,12 @@ oneDNN
 
       How to perform quantization with oneDNN
 
+   .. card::
+      :title: Intel® Neural Compressor
+      :link: dnnl_quantization_inc.html
+
+      How to improve accuracy of quantization with oneDNN
+
 .. toctree::
    :hidden:
    :maxdepth: 1
@@ -39,3 +45,4 @@ oneDNN
 
    dnnl_readme
    dnnl_quantization
+   dnnl_quantization_inc
