@@ -577,9 +577,9 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                 estimator.max_batch = estimator.max_batch - self.trained_batch - 1
                 msg += f"{estimator.max_batch} batches "
             # load checkpoint
-            param_file = f"{self.model_prefix}-epoch{self.trained_epoch}batch{self.trained_batch}.params"
+            param_file = "{}-epoch{}batch{}.params".format(self.model_prefix, self.trained_epoch, self.trained_batch)
             param_file = os.path.join(self.model_dir, param_file)
-            trainer_file = f"{self.model_prefix}-epoch{self.trained_epoch}batch{self.trained_batch}.states"
+            trainer_file = "{}-epoch{}batch{}.states".format(self.model_prefix, self.trained_epoch, self.trained_batch)
             trainer_file = os.path.join(self.model_dir, trainer_file)
             assert os.path.exists(param_file), f"Failed to load checkpoint, {param_file} does not exist"
             assert os.path.exists(trainer_file), f"Failed to load checkpoint, {trainer_file} does not exist"

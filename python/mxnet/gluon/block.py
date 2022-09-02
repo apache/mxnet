@@ -1546,8 +1546,9 @@ class HybridBlock(Block):
         for var in sym.get_inputs():
             if var.name in rename_map:
                 var._set_attr(name=rename_map[var.name])
-
-        sym_filename = f'{path if path is not None else ""}-symbol.json'
+        
+        path_string = path if path is not None else ""
+        sym_filename = f'{path_string}-symbol.json'
         if path is not None:
             sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
@@ -1564,7 +1565,7 @@ class HybridBlock(Block):
                                       .format(name=name), stacklevel=3)
                     else:
                         arg_dict[f'aux:{name}'] = param._reduce()
-        params_filename = f'{path if path is not None else ""}-{epoch:04d}.params'
+        params_filename = f'{path_string}-{epoch:04d}.params'
 
         if path is not None:
             if is_np_array():
