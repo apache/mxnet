@@ -2421,8 +2421,8 @@ def test_reshape_like():
         _, output_shape, __ = net.infer_shape(lhs=lhs_shape, rhs=rhs_shape)
 
         assert output_shape[0] == dst_shape, \
-            'LHS Shape = {}, RHS Shape = {}, lhs_begin = {}, lhs_end = {}, rhs_begin= {}, rhs_end= {}'.format(
-             str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+            f'LHS Shape = {str(lhs_shape)}, RHS Shape = {str(rhs_shape)}, lhs_begin = {str(lbeg)}, ' \
+            f'lhs_end = {str(lend)}, rhs_begin = {str(rbeg)}, rhs_end = {str(rend)}'
 
         lhs_npy = np.random.rand(*lhs_shape)
         rhs_npy = np.random.rand(*rhs_shape)
@@ -2433,12 +2433,12 @@ def test_reshape_like():
         exe.arg_dict['rhs'][:] = rhs_npy
         exe.forward(is_train=True)
         assert np.square(exe.outputs[0].asnumpy() - lhs_npy.reshape(dst_shape)).mean() < 1E-7, \
-            'LHS Shape = {}, RHS Shape = {}, lhs_begin = {}, lhs_end = {}, rhs_begin= {}, rhs_end= {}'.format(
-             str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+            f'LHS Shape = {str(lhs_shape)}, RHS Shape = {str(rhs_shape)}, lhs_begin = {str(lbeg)}, ' \
+            f'lhs_end = {str(lend)}, rhs_begin = {str(rbeg)}, rhs_end = {str(rend)}'
         exe.backward(out_grads=mx.nd.array(grad_npy))
         assert np.square(exe.grad_dict['lhs'].asnumpy() - grad_npy.reshape(lhs_shape)).mean() < 1E-7, \
-            'LHS Shape = {}, RHS Shape = {}, lhs_begin = {}, lhs_end = {}, rhs_begin= {}, rhs_end= {}'.format(
-             str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+            f'LHS Shape = {str(lhs_shape)}, RHS Shape = {str(rhs_shape)}, lhs_begin = {str(lbeg)}, ' \
+            f'lhs_end = {str(lend)}, rhs_begin = {str(rbeg)}, rhs_end = {str(rend)}'
     # Test new api (Using shape)
     test_cases = [
         [(30,), (15,2,4), 0, None, 0, 2, (15,2)],
@@ -3226,17 +3226,15 @@ def test_correlation():
         if arg_type1[0] != np.dtype(dtype) and arg_type1[1] != np.dtype(dtype) and out_type1[0] != np.dtype(dtype):
             msg = npt.npt.build_err_msg([a, b],
                                         err_msg="Inferred type from a is not as expected, "
-                                                "Expected :{} {} {}, Got: {} {} {}".format(
-                                                dtype, dtype, dtype, arg_type1[0], arg_type1[1], out_type1[0]),
-                                                names=['a', 'b'])
+                                                f"Expected :{dtype} {dtype} {dtype}, Got: {arg_type1[0]} {arg_type1[1]} {out_type1[0]}",
+                                        names=['a', 'b'])
             raise AssertionError(msg)
         arg_type2, out_type2, _ = corr.infer_type(b=dtype)
         if arg_type2[0] != np.dtype(dtype) and arg_type2[1] != np.dtype(dtype) and out_type2[0] != np.dtype(dtype):
             msg = npt.npt.build_err_msg([a, b],
                                         err_msg="Inferred type from b is not as expected, "
-                                                "Expected :{} {} {}, Got: {} {} {}".format(
-                                                dtype, dtype, dtype, arg_type1[0], arg_type1[1], out_type1[0]),
-                                                names=['a', 'b'])
+                                                f"Expected :{dtype} {dtype} {dtype}, Got: {arg_type1[0]} {arg_type1[1]} {out_type1[0]}",
+                                        names=['a', 'b'])
             raise AssertionError(msg)
 
     for dtype in ['float16', 'float32']:

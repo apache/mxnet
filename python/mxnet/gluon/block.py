@@ -483,7 +483,7 @@ class Block:
         for name in loaded:
             if not ignore_extra and name not in params:
                 raise ValueError(
-                f"Parameter '{name}' loaded from '{error_str}' is not present in Dict, " \
+                    f"Parameter '{name}' loaded from '{error_str}' is not present in Dict, " \
                     f"which contains parameters {_brief_print_list(params.keys())}. Set ignore_extra=True to ignore. ")
             if name in params:
                 param = loaded[name]
