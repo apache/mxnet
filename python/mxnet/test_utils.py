@@ -649,7 +649,7 @@ def locationError(a, b, index, names, maxError=False):
         Flag indicating that maximum error is reporting.
     """
     maximum = "maximum " if maxError else ""
-    return f"Location of {maximum}error: {str(index)}, {names[0]}={a[index]:.8f}, {names[1]}={b[index]:.8f}"
+    return f"Location of {maximum} error: {str(index)}, {names[0]}={a[index]:.8f}, {names[1]}={b[index]:.8f}"
 def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False,
                         use_broadcast=True, mismatches=(10, 10)):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
@@ -726,9 +726,9 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
                 break
 
         mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
-        errMsg = "Error {} exceeds tolerance rtol={:e}, atol={:e} (mismatch {}{}%).\n{}".format(
-                  relErr, rtol, atol, mismatchDegree, 100*i/a.size,
-                  locationError(a, b, indexErr, names, maxError=True))
+        errMsg = f"Error {relErr} exceeds tolerance rtol={rtol:e}, atol={atol:e} " \
+                 f"(mismatch {mismatchDegree}{100*i/a.size}%).\n" \
+                 f"{locationError(a, b, indexErr, names, maxError=True)}"
     else:
         errMsg = f"Error {rel} exceeds tolerance rtol={rtol:e}, atol={atol:e}.\n"
 
@@ -797,9 +797,9 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
                     break
 
             mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
-            errMsg = "Error {} exceeds tolerance rtol={:e}, atol={:e} (mismatch {}{}%).\n{}".format(
-                    relErr, rtol, atol, mismatchDegree, 100*i/a.size,
-                    locationError(a, b, indexErr, names, maxError=True))
+            errMsg = f"Error {relErr} exceeds tolerance rtol={rtol:e}, atol={atol:e} " \
+                     f"(mismatch {mismatchDegree}{100*i/a.size}%).\n" \
+                     f"{locationError(a, b, indexErr, names, maxError=True)}"
             np.set_printoptions(threshold=4, suppress=True)
             msg = npt.build_err_msg([a, b], err_msg=errMsg)
             raise AssertionError(msg)
@@ -2219,9 +2219,9 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
         expected_freq_l.append(expected_freq)
     success_num = (np.array(cs_ret_l) > alpha).sum()
     if success_num < nrepeat * success_rate:
-        raise AssertionError("Generator test fails, Chi-square p={}, obs_freq={}, expected_freq={}."
-                             "\nbuckets={}, probs={}".format(str(cs_ret_l), str(obs_freq_l),
-                                                             str(expected_freq_l), str(buckets), str(probs)))
+        raise AssertionError(f"Generator test fails, Chi-square p={str(cs_ret_l)}, "
+                             f"obs_freq={str(obs_freq_l)}, expected_freq={str(expected_freq_l)}."
+                             f"\nbuckets={str(buckets)}, probs={str(probs)}")
     return cs_ret_l
 
 

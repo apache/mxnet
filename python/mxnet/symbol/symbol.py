@@ -959,9 +959,9 @@ class Symbol(SymbolBase):
         except MXNetError:
             print("infer_type error. Arguments:")
             for i, arg in enumerate(args):
-                print("  #{i}: {arg}")
+                print(f"  #{i}: {arg}")
             for k, v in kwargs.items():
-                print("  {k}: {v}")
+                print(f"  {k}: {v}")
             raise
 
     def infer_type_partial(self, *args, **kwargs):
@@ -1459,7 +1459,7 @@ class Symbol(SymbolBase):
                         arg_handles.append(None)
                         arg_arrays.append(None)
                     else:
-                        raise ValueError('key `{name}` is missing in `{arg_key}`')
+                        raise ValueError(f'key `{name}` is missing in `{arg_key}`')
         else:
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays

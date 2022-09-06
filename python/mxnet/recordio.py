@@ -78,7 +78,7 @@ class MXRecordIO(object):
             check_call(_LIB.MXRecordIOReaderCreate(self.uri, ctypes.byref(self.handle)))
             self.writable = False
         else:
-            raise ValueError("Invalid flag {self.flag}")
+            raise ValueError(f"Invalid flag {self.flag}")
         # pylint: disable=not-callable
         # It's bug from pylint(astroid). See https://github.com/PyCQA/pylint/issues/1699
         self.pid = current_process().pid

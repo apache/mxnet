@@ -954,13 +954,12 @@ def _make_io_iterator(handle):
         [py_str(arg_types[i]) for i in range(narg)],
         [py_str(arg_descs[i]) for i in range(narg)])
 
-    doc_str = ('{}\n\n' +
-               '{}\n' +
+    doc_str = (f'{desc.value}\n\n' +
+               f'{param_str}\n' +
                'Returns\n' +
                '-------\n' +
                'MXDataIter\n'+
                '    The result iterator.')
-    doc_str = doc_str.format(desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create an iterator.

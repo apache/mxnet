@@ -63,7 +63,7 @@ def test_lenet_gluon_hybrid_imports_api():
         assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy(), rtol=rtol_default, atol=atol_default)
         clean_model_files(model_files, model_name)
         logging.info('=================================')
-    logging.info('Assertion passed for model : {model_name}')
+    logging.info(f'Assertion passed for model : {model_name}')
 
 
 def test_lstm_gluon_load_parameters_api():
@@ -76,10 +76,10 @@ def test_lstm_gluon_load_parameters_api():
         return
 
     model_name = 'lstm_gluon_save_parameters_api'
-    logging.info('Performing inference for model/API {model_name} and model')
+    logging.info(f'Performing inference for model/API {model_name} and model')
 
     for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-        logging.info('Fetching files for MXNet version : {folder}')
+        logging.info(f'Fetching files for MXNet version : {folder}')
         model_files = download_model_files_from_s3(model_name, folder)
         if len(model_files) == 0:
             logging.warn(f'No training files found for {model_name} for MXNet version : {folder}')

@@ -156,11 +156,8 @@ class Optimizer(object):
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
-            warnings.warn('WARNING: New optimizer {}.{} is overriding '
-                          'existing optimizer {}.{}'.format(
-                           klass.__module__, klass.__name__,
-                           Optimizer.opt_registry[name].__module__,
-                           Optimizer.opt_registry[name].__name__))
+            warnings.warn(f'WARNING: New optimizer {klass.__module__}.{klass.__name__} is overriding '
+                          f'existing optimizer {Optimizer.opt_registry[name].__module__}.{Optimizer.opt_registry[name].__name__}')
         Optimizer.opt_registry[name] = klass
         return klass
 

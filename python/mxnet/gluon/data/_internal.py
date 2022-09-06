@@ -199,13 +199,12 @@ def _make_internal_datasets(handle):
         [py_str(arg_types[i]) for i in range(narg)],
         [py_str(arg_descs[i]) for i in range(narg)])
 
-    doc_str = ('{}\n\n' +
-               '{}\n' +
+    doc_str = (f'{desc.value}\n\n' +
+               f'{param_str}\n' +
                'Returns\n' +
                '-------\n' +
                'MXDataset\n'+
                '    The result dataset.')
-    doc_str = doc_str.format(desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create a dataset.
@@ -287,13 +286,12 @@ def _make_internal_batchify_functions(handle):
         [py_str(arg_types[i]) for i in range(narg)],
         [py_str(arg_descs[i]) for i in range(narg)])
 
-    doc_str = ('{}\n\n' +
-               '{}\n' +
+    doc_str = (f'{desc.value}\n\n' +
+               f'{param_str}\n' +
                'Returns\n' +
                '-------\n' +
                'MXBatchifyFunction\n'+
                '    The result batchify function.')
-    doc_str = doc_str.format(desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create an iterator.
