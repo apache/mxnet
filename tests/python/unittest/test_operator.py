@@ -7753,11 +7753,11 @@ def allclose_function(contexts):
                     idx_flat = np.asarray(np.where(bad_indexes.flatten() == True)).flatten()
                     for i in range(len(a_values[0])):
                         flat_idx = idx_flat[i]
-                        print('{}:  index = {}   flat_index = {}'.format(f'{i:4d}', idx[i], flat_idx))
+                        print(f'{i:4d}:  index = {idx[i]}   flat_index = {flat_idx}')
                         print(frmt.format(flat_idx))
                         for j in range(2):
                             diff = np.abs(a_values[j][i]-b_values[j][i]) - atol + rtol*abs(b_values[j][i])
-                            print('{}:  {}  {}              {}'.format('%6s'%v_ctx, a_values[j][i], b_values[j][i], diff))
+                            print(f'{v_ctx:6s}:  {a_values[j][i]}  {b_values[j][i]}              {diff}')
 
 
             if num_ctx == 1:
@@ -7930,7 +7930,7 @@ def test_op_roi_align():
             Input data types to compare
         '''
         assert dtype_a == dtype_b,\
-            TypeError('Unmatched data types: {dtype_a} vs {dtype_b}')
+            TypeError(f'Unmatched data types: {dtype_a} vs {dtype_b}')
 
     def bilinear_interpolate(bottom, height, width, y, x):
         if y < -1.0 or y > height or x < -1.0 or x > width:

@@ -287,7 +287,7 @@ class Parameter(object):
             unknown_dim_size = -1 if is_np_shape() else 0
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim in (unknown_dim_size, data_dim), \
-                    "Failed loading Parameter '{self.name}' from saved params: " \
+                    f"Failed loading Parameter '{self.name}' from saved params: " \
                     f"shape incompatible expected {str(self.shape)} vs saved {str(data.shape)}"
             self.shape = tuple(i if i != unknown_dim_size else j
                                for i, j in zip(self.shape, data.shape))
