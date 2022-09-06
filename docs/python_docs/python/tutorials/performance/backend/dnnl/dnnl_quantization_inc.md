@@ -244,7 +244,7 @@ It is done by
 [resnet_tuning.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_tuning.py) 
 script on a small part of data set to reduce time required for tuning (9 batches). 
 Later saved models are validated on a whole data set by 
-[resnet_measurment.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_measurment.py)
+[resnet_measurement.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/resnet_measurement.py)
 script.
 Accuracy results on the whole validation dataset (782 batches) are shown below.
 
@@ -269,7 +269,7 @@ Environment:
 - scripts above were run as parameter for [run.sh](https://github.com/apache/incubator-mxnet/blob/master/benchmark/python/dnnl/run.sh) 
 script to properly setup parallel computation parameters.  
 
-For this model INC basic, mse and custom strategies found configurations meeting the 1.5% relative accuracy 
+For this model INC `basic`, `mse` and `mycustom` strategies found configurations meeting the 1.5% relative accuracy 
 loss criterion. Only the `bayesian` strategy didn't find solution within 500 attempts limit. 
 Although these results may suggest that the `mse` strategy is the best compromise between time spent
 to find the optimized model and final model performance efficiency, different strategies may give 
