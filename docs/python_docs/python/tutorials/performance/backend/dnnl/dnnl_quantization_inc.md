@@ -277,8 +277,6 @@ better results for specific models and tasks. For example for ALBERT model there
 given by build-in INC strategies. For such situation you can create your custom strategy, similar 
 to this one: 
 [custom_strategy.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization_inc/custom_strategy.py). 
-You can find description of this particular custom strategy in the Medium article
-(add link to article).  
 You can notice, that the most important thing done by INC
 was to find the operator, which had the most significant impact on the loss of accuracy and disable it from quantization if needed. 
 You can see below which operator was excluded by `mse` strategy in last print given by 
