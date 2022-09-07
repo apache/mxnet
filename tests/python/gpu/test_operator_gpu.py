@@ -1980,8 +1980,8 @@ def test_kernel_error_checking():
     try:
         mpctx = mp.get_context('spawn')
     except:
-        print('SKIP: python{}.{} lacks the required process fork-exec support ... '.format(
-            sys.version_info[0:2]), file=sys.stderr, end='')
+        print(f'SKIP: python{sys.version_info[0]}.{sys.version_info[1]} lacks the required process fork-exec support ... ',
+              file=sys.stderr, end='')
     else:
         with discard_stderr():
             for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:

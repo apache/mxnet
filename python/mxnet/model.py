@@ -215,7 +215,7 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_ca
     save_dict.update({(f'aux:{k}') : v.as_in_context(cpu()) for k, v in aux_params.items()})
     param_name = f'{prefix}-{epoch:04}.params'
     nd.save(param_name, save_dict)
-    logging.info(f'Saved checkpoint to \"{param_name}\"')
+    logging.info('Saved checkpoint to "{}"'.format(param_name))
 
 
 def load_params(prefix, epoch):

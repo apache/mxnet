@@ -77,9 +77,9 @@ class MXNetGraph(object):
         op = str(node["op"])
         opset_version = kwargs.get("opset_version", onnx_opset_version())
         if opset_version < 12:
-            logging.warning(f'Your ONNX op set version is {str(opset_version)}, '
+            logging.warning('Your ONNX op set version is {}, '
                             'which is lower than then lowest tested op set (12), please consider '
-                            'updating ONNX')
+                            'updating ONNX'.format(str(opset_version)))
             opset_version = 12
         # Fallback to older opset versions if op is not registered in current version
         convert_func = None
@@ -368,7 +368,7 @@ class MXNetGraph(object):
                             if nodename in graph_outputs:
                                 graph_output_names.append(nodename)
                                 if verbose:
-                                    logging.info(f"Output node is: {nodename}")
+                                    logging.info("Output node is: {}".format(nodename))
                     elif isinstance(converted_node, TensorProto):
                         raise ValueError("Did not expect TensorProto")
                     else:

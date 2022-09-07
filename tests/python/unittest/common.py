@@ -201,8 +201,8 @@ def run_in_spawned_process(func, env, *args):
     try:
         mpctx = mp.get_context('spawn')
     except:
-        print('SKIP: python{}.{} lacks the required process fork-exec support ... '.format(
-              sys.version_info[0:2]), file=sys.stderr, end='')
+        print(f'SKIP: python{sys.version_info[0]}.{sys.version_info[1]} lacks the required process fork-exec support ... ',
+              file=sys.stderr, end='')
         return False
     else:
         seed = np.random.randint(0,1024*1024*1024)
