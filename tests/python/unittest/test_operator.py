@@ -6646,7 +6646,7 @@ def test_stack():
         dshape = [random.randint(1, 5) for _ in range(ndim)]
         inputs = [np.random.uniform(size=dshape) for _ in range(nin)]
         output = np.stack(inputs, axis=axis)
-        sym_ins = [mx.sym.var('x{i}') for i in range(nin)]
+        sym_ins = [mx.sym.var(f'x{i}') for i in range(nin)]
         out = mx.sym.stack(*sym_ins, axis=axis)
         check_symbolic_forward(out, inputs, [output])
         check_numeric_gradient(out, inputs)
