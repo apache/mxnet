@@ -148,7 +148,8 @@ def _compare_sparse_dense(data_dir, file_name, mini_file_name, feature_dim,
             last = _line_count(path) - num_batches * batch_size
             last = last if last >= 1 else 1
             start = int(rnd.uniform(1, last))
-            os.system(f"sed -n '{start},{start + num_batches * batch_size}p' {repr(path)} > {repr(mini_path)}")
+            os.system("sed -n '{},{}p' {} > {}".format(
+                start, start + num_batches * batch_size, repr(path), repr(mini_path)))
             assert os.path.exists(mini_path)
 
     def run_benchmark(mini_path):
