@@ -20,8 +20,8 @@
   :repositories [["vendredi" "https://repository.hellonico.info/repository/hellonico/"]]
   :plugins [[lein-cljfmt "0.5.7"]]
   :aliases {"run-detector" ["run" "--" "-m" "models/resnet50_ssd/resnet50_ssd_model" "-i" "images/dog.jpg" "-d" "images/"]}
-  :dependencies [[org.clojure/clojure "1.9.0"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/tools.cli "0.4.1"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.9.0-SNAPSHOT"]]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.10.0-SNAPSHOT"]]
   :main ^:skip-aot infer.objectdetector-example
   :profiles {:uberjar {:aot :all}})

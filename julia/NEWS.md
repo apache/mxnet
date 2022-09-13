@@ -15,6 +15,8 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+# v1.10.0
+
 # v1.9.0
 
 # v1.8.0
