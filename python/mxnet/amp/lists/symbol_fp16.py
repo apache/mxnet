@@ -52,6 +52,7 @@ FP16_FP32_FUNCS = [
     '_contrib_intgemm_prepare_weight',
     '_contrib_intgemm_take_weight',
     '_contrib_quantized_batch_norm',
+    '_contrib_quantized_batch_norm_relu',
     '_contrib_quantized_elemwise_mul',
     '_contrib_quantized_embedding',
     '_contrib_mrcnn_mask_target',
