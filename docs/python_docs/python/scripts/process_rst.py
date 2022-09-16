@@ -81,6 +81,6 @@ if __name__ == '__main__':
         inputs = f.read()
     outputs, num = add_hidden_title(inputs)
     if num is not None:
-        print('%s: add %d hidden sections for %s' % (src_fn, num, input_fn))
+        print(f'{src_fn}: add {num} hidden sections for {input_fn}')
     with open(output_fn, 'w') as f:
         f.write(outputs)

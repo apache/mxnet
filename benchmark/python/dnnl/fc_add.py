@@ -59,9 +59,9 @@ def print_header(header):
 
 def print_value(shape, hidden, mean):
     if table_left_colums:
-        print("| ({:4},{:4}) | {:6} | {:9.3f} |".format(shape[0], shape[1], hidden, mean))
+        print(f"| ({shape[0]:4},{shape[1]:4}) | {hidden:6} | {mean:9.3f} |")
     else:
-        print(" {:9.3f} |".format(mean))
+        print(f" {mean:9.3f} |")
 
 
 def measure(net, data0, data1, data2, shape, nhid):

@@ -42,13 +42,13 @@ def test_custom_op():
         elif os.path.exists(os.path.join(base_path,'build/'+lib)):
             fname = os.path.join(base_path,'build/'+lib)
         else:
-            raise MXNetError("library %s not found " % lib)
+            raise MXNetError(f"library {lib} not found ")
     elif (os.name=='nt'):
         lib = 'libcustomop_lib.dll'
         if os.path.exists('windows_package\\lib\\'+lib):
             fname = 'windows_package\\lib\\'+lib
         else:
-            raise MXNetError("library %s not found " % lib)
+            raise MXNetError(f"library {lib} not found ")
 
     fname = os.path.abspath(fname)
     # load the library containing gemm custom operators
@@ -109,7 +109,7 @@ def test_subgraph():
             # plain cmake build when run in the CI
             fname = os.path.join(base_path, 'build/'+lib)
         else:
-            raise MXNetError("library %s not found " % lib)
+            raise MXNetError(f"library {lib} not found ")
     elif (os.name=='nt'):
         lib = 'libsubgraph_lib.dll'
         if os.path.exists('windows_package\\lib\\'+lib):
@@ -117,7 +117,7 @@ def test_subgraph():
             fname = 'windows_package\\lib\\'+lib
         else:
             # plain cmake build when run in the CI
-            raise MXNetError("library %s not found " % lib)
+            raise MXNetError(f"library {lib} not found ")
 
     fname = os.path.abspath(fname)
     mx.library.load(fname)
@@ -204,7 +204,7 @@ def test_external_op():
     lib = 'libexternal_lib.so'
     fname = os.path.join(base_path,'example/extensions/lib_external_ops/build/'+lib)
     if not os.path.exists(fname):
-        raise MXNetError("library %s not found " % lib)
+        raise MXNetError(f"library {lib} not found ")
 
     fname = os.path.abspath(fname)
     mx.library.load(fname, False)

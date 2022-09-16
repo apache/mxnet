@@ -693,7 +693,7 @@ class ImageDetIter(ImageIter):
     def _check_valid_label(self, label):
         """Validate label and its shape."""
         if len(label.shape) != 2 or label.shape[1] < 5:
-            msg = "Label with shape (1+, 5+) required, %s received." % str(label)
+            msg = f"Label with shape (1+, 5+) required, {str(label)} received."
             raise RuntimeError(msg)
         valid_label = np.where(np.logical_and(label[:, 0] >= 0, label[:, 3] > label[:, 1],
                                               label[:, 4] > label[:, 2]))[0]
@@ -730,8 +730,7 @@ class ImageDetIter(ImageIter):
         header_width = int(raw[0])
         obj_width = int(raw[1])
         if (raw.size - header_width) % obj_width != 0:
-            msg = "Label shape %s inconsistent with annotation width %d." \
-                %(str(raw.shape), obj_width)
+            msg = f"Label shape {str(raw.shape)} inconsistent with annotation width {obj_width}."
             raise RuntimeError(msg)
         out = np.reshape(raw[header_width:], (-1, obj_width))
         # remove bad ground-truths
@@ -848,12 +847,10 @@ class ImageDetIter(ImageIter):
         if not len(label_shape) == 2:
             raise ValueError('label_shape should have length 2')
         if label_shape[0] < self.label_shape[0]:
-            msg = 'Attempts to reduce label count from %d to %d, not allowed.' \
-                % (self.label_shape[0], label_shape[0])
+            msg = f'Attempts to reduce label count from {self.label_shape[0]} to {label_shape[0]}, not allowed.'
             raise ValueError(msg)
         if label_shape[1] != self.provide_label[0][1][2]:
-            msg = 'label_shape object width inconsistent: %d vs %d.' \
-                % (self.provide_label[0][1][2], label_shape[1])
+            msg = f'label_shape object width inconsistent: {self.provide_label[0][1][2]} vs {label_shape[1]}.'
             raise ValueError(msg)
 
     def draw_next(self, color=None, thickness=2, mean=None, std=None, clip=True,

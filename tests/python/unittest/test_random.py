@@ -245,10 +245,10 @@ def check_with_device(device, dtype):
         mx.random.seed(128)
         ret2 = ndop(*args, **params).asnumpy()
         assert same(ret1, ret2), \
-                "ndarray test: `%s` should give the same result with the same seed" % name
+                f"ndarray test: `{name}` should give the same result with the same seed"
 
         for check_name, check_func, tol in symbdic['checks']:
-            assert np.abs(check_func(ret1, params)) < tol, "ndarray test: %s check for `%s` did not pass" % (check_name, name)
+            assert np.abs(check_func(ret1, params)) < tol, f"ndarray test: {check_name} check for `{name}` did not pass"
 
         # check multi-distribution sampling
         if 'inputs' not in symbdic: continue  # randn does not support multi-distribution sampling
@@ -263,13 +263,13 @@ def check_with_device(device, dtype):
         mx.random.seed(128)
         ret2 = ndop(*args, **params).asnumpy()
         assert same(ret1, ret2), \
-                "ndarray test: `%s` should give the same result with the same seed" % name
+                f"ndarray test: `{name}` should give the same result with the same seed"
         for i in range(2):
             for j in range(2):
                 stats = {k : v[i][j] for k, v in symbdic['inputs']}
                 for check_name, check_func, tol in symbdic['checks']:
                     err = np.abs(check_func(ret2[i,j], stats))
-                    assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
+                    assert err < tol, f"{err} vs {tol}: symbolic test: {check_name} check for `{name}` did not pass"
 
         # check symbolic
         symbol = symbdic['symbol']
@@ -291,11 +291,11 @@ def check_with_device(device, dtype):
         yexec.forward()
         un2 = (yexec.outputs[0] - x).copyto(device)
         assert same(un1.asnumpy(), un2.asnumpy()), \
-                "symbolic test: `%s` should give the same result with the same seed" % name
+                f"symbolic test: `{name}` should give the same result with the same seed"
 
         ret1 = un1.asnumpy()
         for check_name, check_func, tol in symbdic['checks']:
-            assert np.abs(check_func(ret1, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
+            assert np.abs(check_func(ret1, params)) < tol, f"symbolic test: {check_name} check for `{name}` did not pass"
         if name.endswith('_like'): continue
 
         # check multi-distribution sampling
@@ -324,7 +324,7 @@ def check_with_device(device, dtype):
                    params.update({ symbdic['inputs'][1][0] : symbdic['inputs'][1][1][i][j] })
                 samples = un1[i,j]
                 for check_name, check_func, tol in symbdic['checks']:
-                    assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
+                    assert np.abs(check_func(samples, params)) < tol, f"symbolic test: {check_name} check for `{name}` did not pass"
 
         if 'pdfsymbol' not in symbdic: continue  # randn not tested for pdf
 
@@ -812,11 +812,11 @@ def test_with_random_seed():
 
     def check_same(x, y, name):
         assert same(x, y), \
-            "%s rng should give the same result with the same seed" % name
+            f"{name} rng should give the same result with the same seed"
 
     def check_diff(x, y, name):
         assert not same(x, y), \
-            "%s rng should give different results with different seeds" % name
+            f"{name} rng should give different results with different seeds"
 
     # generate python, numpy and mxnet datasets with the given seed
     def gen_data(seed=None):

@@ -142,7 +142,7 @@ def get_densenet(num_layers, pretrained=False, device=cpu(),
     net = DenseNet(num_init_features, growth_rate, block_config, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_parameters(get_model_file('densenet%d'%(num_layers), root=root), device=device)
+        net.load_parameters(get_model_file(f'densenet{num_layers}', root=root), device=device)
     return net
 
 def densenet121(**kwargs):

@@ -179,14 +179,14 @@ def update_learning_rate(lr, trainer, epoch, ratio, steps):
 
 def save_checkpoint(epoch, top1, best_acc):
     if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
-        fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
+        fname = os.path.join(opt.prefix, f'{opt.model}_{epoch}_acc_{top1:.4f}.params')
         net.save_parameters(fname)
-        logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+        logger.info(f'[Epoch {epoch}] Saving checkpoint to {fname} with Accuracy: {top1:.4f}')
     if top1 > best_acc[0]:
         best_acc[0] = top1
-        fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
+        fname = os.path.join(opt.prefix, f'{opt.model}_best.params')
         net.save_parameters(fname)
-        logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+        logger.info(f'[Epoch {epoch}] Saving checkpoint to {fname} with Accuracy: {top1:.4f}')
 
 def train(opt, device):
     if isinstance(device, mx.Device):
@@ -267,10 +267,10 @@ def main():
 if __name__ == '__main__':
     if opt.profile:
         import hotshot, hotshot.stats
-        prof = hotshot.Profile('image-classifier-%s-%s.prof'%(opt.model, opt.mode))
+        prof = hotshot.Profile(f'image-classifier-{opt.model}-{opt.mode}.prof')
         prof.runcall(main)
         prof.close()
-        stats = hotshot.stats.load('image-classifier-%s-%s.prof'%(opt.model, opt.mode))
+        stats = hotshot.stats.load(f'image-classifier-{opt.model}-{opt.mode}.prof')
         stats.strip_dirs()
         stats.sort_stats('cumtime', 'calls')
         stats.print_stats()

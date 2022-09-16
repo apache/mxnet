@@ -38,7 +38,7 @@ def test_np_einsum():
     a = np.ones(64).reshape(2,4,8)
     args = ['ijk,ilm,njm,nlk,abc->', a, a, a, a, a]
     cost = measure_cost(500, np.einsum, *args)
-    print("Basic einsum: {} ms".format(cost * 1000))
+    print(f"Basic einsum: {cost * 1000} ms")
 
     # Sub-optimal einsum
     # cost = measure_cost(500, np.einsum, *args, optimize='optimal')
@@ -46,40 +46,40 @@ def test_np_einsum():
 
     # Greedy einsum
     cost = measure_cost(500, np.einsum, *args, optimize=True)
-    print("Greedy einsum: {} ms".format(cost * 1000))
+    print(f"Greedy einsum: {cost * 1000} ms")
 
     print("RNN Use Case:")
     a = np.random.uniform(0, 1, size=(64, 128, 512))
     b = np.random.uniform(0, 1, size=(128, 512, 2, 2))
     args = ['bij, ijkl->bkl', a, b]
     cost = measure_cost(2, np.einsum, *args, optimize=True)
-    print('Greedy einsum: {} ms'.format(cost * 1000))
+    print(f'Greedy einsum: {cost * 1000} ms')
     cost = measure_cost(2, np.einsum, *args)
-    print('Basic einsum: {} ms'.format(cost * 1000))
+    print(f'Basic einsum: {cost * 1000} ms')
 
     print('Inner Product:')
     a = np.ones(6000000)
     b = np.ones(6000000)
     args = [a, b]
     cost = measure_cost(50, np.tensordot, *args, axes=([0],[0]))
-    print('Tensordot: {} ms'.format(cost * 1000))
+    print(f'Tensordot: {cost * 1000} ms')
     args = ['i, i', a, b]
     cost = measure_cost(50, np.einsum, *args, optimize=True)
-    print('Greedy einsum: {} ms'.format(cost * 1000))
+    print(f'Greedy einsum: {cost * 1000} ms')
     cost = measure_cost(50, np.einsum, *args)
-    print('Basic einsum: {} ms'.format(cost * 1000))
+    print(f'Basic einsum: {cost * 1000} ms')
 
     print('Matrix Product:')
     a = np.ones(600000).reshape(200, 3000)
     b = np.ones(600000).reshape(3000, 200)
     args = [a, b]
     cost = measure_cost(50, np.tensordot, *args, axes=([1],[0]))
-    print('Tensordot: {} ms'.format(cost * 1000))
+    print(f'Tensordot: {cost * 1000} ms')
     args = ['ij, jk', a, b]
     cost = measure_cost(50, np.einsum, *args, optimize=True)
-    print('Greedy einsum: {} ms'.format(cost * 1000))
+    print(f'Greedy einsum: {cost * 1000} ms')
     cost = measure_cost(50, np.einsum, *args)
-    print('Basic einsum: {} ms'.format(cost * 1000))
+    print(f'Basic einsum: {cost * 1000} ms')
 
 
 if __name__ == "__main__":

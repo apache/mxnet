@@ -28,7 +28,7 @@ from mxnet.gluon.data.vision import transforms
 
 def download_dataset(dataset_url, dataset_dir, logger=None):
     if logger is not None:
-        logger.info('Downloading dataset for inference from %s to %s' % (dataset_url, dataset_dir))
+        logger.info(f'Downloading dataset for inference from {dataset_url} to {dataset_dir}')
     mx.test_utils.download(dataset_url, dataset_dir)
 
 
@@ -37,7 +37,7 @@ def score(symblock, data, ctx, max_num_examples, skip_num_batches, logger=None):
                gluon.metric.create('top_k_accuracy', top_k=5)]
 
     # make sure that fp32 inference works on the same images as calibrated quantized model
-    logger.info('Skipping the first %d batches' % skip_num_batches)
+    logger.info(f'Skipping the first {skip_num_batches} batches')
 
     tic = time.time()
     num = 0
@@ -56,8 +56,8 @@ def score(symblock, data, ctx, max_num_examples, skip_num_batches, logger=None):
     speed = num / (time.time() - tic)
 
     if logger is not None:
-        logger.info('Finished inference with %d images' % num)
-        logger.info('Finished with %f images per second', speed)
+        logger.info(f'Finished inference with {num} images')
+        logger.info(f'Finished with {speed} images per second')
         for m in metrics:
             logger.info(m.get())
 
@@ -132,32 +132,32 @@ if __name__ == '__main__':
         ctx = mx.gpu(0)
         logger.warning('Notice that oneDNN optimized and quantized model may not work with GPU context')
     else:
-        raise ValueError('ctx %s is not supported in this script' % args.device)
+        raise ValueError(f'ctx {args.device} is not supported in this script')
 
     symbol_file = args.symbol_file
     param_file = args.param_file
     data_nthreads = args.data_nthreads
 
     batch_size = args.batch_size
-    logger.info('batch size = %d for inference' % batch_size)
+    logger.info(f'batch size = {batch_size} for inference')
 
     rgb_mean = args.rgb_mean
-    logger.info('rgb_mean = %s' % rgb_mean)
+    logger.info(f'rgb_mean = {rgb_mean}')
     rgb_mean = [float(i) for i in rgb_mean.split(',')]
     rgb_std = args.rgb_std
-    logger.info('rgb_std = %s' % rgb_std)
+    logger.info(f'rgb_std = {rgb_std}')
     rgb_std = [float(i) for i in rgb_std.split(',')]
 
     image_shape = args.image_shape
     data_shape = tuple([int(i) for i in image_shape.split(',')])
-    logger.info('Input data shape = %s' % str(data_shape))
+    logger.info(f'Input data shape = {str(data_shape)}')
 
     data_layer_type = args.data_layer_type
 
     if not args.benchmark:
         dataset = args.dataset
         download_dataset('http://data.mxnet.io/data/val_256_q90.rec', dataset)
-        logger.info('Dataset for inference: %s' % dataset)
+        logger.info(f'Dataset for inference: {dataset}')
 
         dataset = mx.gluon.data.vision.ImageRecordDataset(dataset)
         transformer = transforms.Compose([transforms.Resize(256),
@@ -171,7 +171,7 @@ if __name__ == '__main__':
         symblock = gluon.SymbolBlock.imports(symbol_file, ['data'], param_file)
 
         num_inference_images = args.num_inference_batches * batch_size
-        logger.info('Running model %s for inference' % symbol_file)
+        logger.info(f'Running model {symbol_file} for inference')
         score(symblock, data_loader, ctx, max_num_examples=num_inference_images,
               skip_num_batches=args.num_skipped_batches, logger=logger)
     else:

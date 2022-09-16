@@ -215,7 +215,7 @@ def get_mobilenet(multiplier, pretrained=False, device=cpu(),
         if version_suffix in ('1.00', '0.50'):
             version_suffix = version_suffix[:-1]
         net.load_parameters(
-            get_model_file('mobilenet%s' % version_suffix, root=root), device=device)
+            get_model_file(f'mobilenet{version_suffix}', root=root), device=device)
     return net
 
 
@@ -248,7 +248,7 @@ def get_mobilenet_v2(multiplier, pretrained=False, device=cpu(),
         if version_suffix in ('1.00', '0.50'):
             version_suffix = version_suffix[:-1]
         net.load_parameters(
-            get_model_file('mobilenetv2_%s' % version_suffix, root=root), device=device)
+            get_model_file(f'mobilenetv2_{version_suffix}', root=root), device=device)
     return net
 
 

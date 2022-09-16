@@ -102,7 +102,7 @@ class OpDef:
                     yield sch, args, subname
 
     def get_op_name(self, name, args):
-        return name + ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args if hasattr(arg, 'shape')])
+        return name + ''.join([f"{arg.dtype}_{len(arg.shape)}" for arg in args if hasattr(arg, 'shape')])
 
     def get_config_spaces(self):
         for each_kwargs in self.arg_combination:

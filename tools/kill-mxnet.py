@@ -23,7 +23,7 @@ import os, sys
 import subprocess
 
 if len(sys.argv) != 4:
-  print("usage: %s <hostfile> <user> <prog>" % sys.argv[0])
+  print(f"usage: {sys.argv[0]} <hostfile> <user> <prog>")
   sys.exit(1)
 
 host_file = sys.argv[1]
@@ -45,7 +45,7 @@ with open(host_file, "r") as f:
     if ':' in host:
       host = host[:host.index(':')]
     print(host)
-    subprocess.Popen(["ssh", "-oStrictHostKeyChecking=no", "%s" % host, kill_cmd],
+    subprocess.Popen(["ssh", "-oStrictHostKeyChecking=no", f"{host}", kill_cmd],
             shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)

@@ -120,10 +120,10 @@ def get_pretrained_file_names(embedding_name=None):
 
     if embedding_name is not None:
         if embedding_name not in text_embedding_reg:
-            raise KeyError('Cannot find `embedding_name` %s. Use '
+            raise KeyError(f'Cannot find `embedding_name` {embedding_name}. Use '
                            '`get_pretrained_file_names('
                            'embedding_name=None).keys()` to get all the valid embedding '
-                           'names.' % embedding_name)
+                           'names.')
         return list(text_embedding_reg[embedding_name].pretrained_file_name_sha1.keys())
     else:
         return {embedding_name: list(embedding_cls.pretrained_file_name_sha1.keys())
@@ -259,9 +259,9 @@ class _TokenEmbedding(vocab.Vocabulary):
                 line_num += 1
                 elems = line.rstrip().split(elem_delim)
 
-                assert len(elems) > 1, 'At line %d of the pre-trained text embedding file: the ' \
-                                       'data format of the pre-trained token embedding file %s ' \
-                                       'is unexpected.' % (line_num, pretrained_file_path)
+                assert len(elems) > 1, f'At line {line_num} of the pre-trained text embedding file: the ' \
+                                       f'data format of the pre-trained token embedding file {pretrained_file_path} ' \
+                                       'is unexpected.'
 
                 token, elems = elems[0], [float(i) for i in elems[1:]]
 
@@ -269,14 +269,13 @@ class _TokenEmbedding(vocab.Vocabulary):
                     loaded_unknown_vec = elems
                     tokens.add(self.unknown_token)
                 elif token in tokens:
-                    warnings.warn('At line %d of the pre-trained token embedding file: the '
-                                  'embedding vector for token %s has been loaded and a duplicate '
-                                  'embedding for the  same token is seen and skipped.' %
-                                  (line_num, token))
+                    warnings.warn(f'At line {line_num} of the pre-trained token embedding file: the '
+                                  f'embedding vector for token {token} has been loaded and a duplicate '
+                                  'embedding for the  same token is seen and skipped.')
                 elif len(elems) == 1:
-                    warnings.warn('At line %d of the pre-trained text embedding file: token %s '
-                                  'with 1-dimensional vector %s is likely a header and is '
-                                  'skipped.' % (line_num, token, elems))
+                    warnings.warn(f'At line {line_num} of the pre-trained text embedding file: token {token} '
+                                  f'with 1-dimensional vector {elems} is likely a header and is '
+                                  'skipped.')
                 else:
                     if vec_len is None:
                         vec_len = len(elems)
@@ -285,10 +284,9 @@ class _TokenEmbedding(vocab.Vocabulary):
                         all_elems.extend([0] * vec_len)
                     else:
                         assert len(elems) == vec_len, \
-                            'At line %d of the pre-trained token embedding file: the dimension ' \
-                            'of token %s is %d but the dimension of previous tokens is %d. ' \
-                            'Dimensions of all the tokens must be the same.' \
-                            % (line_num, token, len(elems), vec_len)
+                            f'At line {line_num} of the pre-trained token embedding file: the dimension ' \
+                            f'of token {token} is {len(elems)} but the dimension of previous tokens is {vec_len}. ' \
+                            'Dimensions of all the tokens must be the same.'
                     all_elems.extend(elems)
                     self._idx_to_token.append(token)
                     self._token_to_idx[token] = len(self._idx_to_token) - 1
@@ -450,10 +448,10 @@ class _TokenEmbedding(vocab.Vocabulary):
             if token in self.token_to_idx:
                 indices.append(self.token_to_idx[token])
             else:
-                raise ValueError('Token %s is unknown. To update the embedding vector for an '
+                raise ValueError(f'Token {token} is unknown. To update the embedding vector for an '
                                  'unknown token, please specify it explicitly as the '
-                                 '`unknown_token` %s in `tokens`. This is to avoid unintended '
-                                 'updates.' % (token, self.idx_to_token[C.UNKNOWN_IDX]))
+                                 f'`unknown_token` {self.idx_to_token[C.UNKNOWN_IDX]} in `tokens`. '
+                                 'This is to avoid unintended updates.')
 
         array_fn = _mx_np.array if is_np_array() else nd.array
         self._idx_to_vec[array_fn(indices)] = new_vectors
@@ -471,10 +469,8 @@ class _TokenEmbedding(vocab.Vocabulary):
 
         embedding_name = cls.__name__.lower()
         if pretrained_file_name not in cls.pretrained_file_name_sha1:
-            raise KeyError('Cannot find pretrained file %s for token embedding %s. Valid '
-                           'pretrained files for embedding %s: %s' %
-                           (pretrained_file_name, embedding_name, embedding_name,
-                            ', '.join(cls.pretrained_file_name_sha1.keys())))
+            raise KeyError(f'Cannot find pretrained file {pretrained_file_name} for token embedding {embedding_name}. Valid '
+                           f'pretrained files for embedding {embedding_name}: {", ".join(cls.pretrained_file_name_sha1.keys())}')
 
 
 @register

@@ -33,12 +33,12 @@ def test_resnet50_v2(tmp_path):
         model.hybridize(static_alloc=True)
         out = model(inp)
 
-        prefix = "%s/resnet50" % tmp_path
+        prefix = f"{tmp_path}/resnet50"
         model.export(prefix)
 
-        sym_file = "%s-symbol.json" % prefix
-        params_file = "%s-0000.params" % prefix
-        onnx_file = "%s.onnx" % prefix
+        sym_file = f"{prefix}-symbol.json"
+        params_file = f"{prefix}-0000.params"
+        onnx_file = f"{prefix}.onnx"
     
         dynamic_input_shapes = [('batch', 3, 224, 224)]
         input_shapes = [(1, 3, 224, 224)]

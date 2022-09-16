@@ -23,7 +23,7 @@ from .common import *
 def train_lenet_gluon_save_params_api():
     model_name = 'lenet_gluon_save_params_api'
     create_model_folder(model_name)
-    logging.info('Saving files for model %s' % model_name)
+    logging.info(f'Saving files for model {model_name}')
     net = Net()
     weights = mx.initializer.Xavier(magnitude=2.57)
     net.initialize(weights, ctx=[mx.cpu(0)])
@@ -41,7 +41,7 @@ def train_lenet_gluon_save_params_api():
 @mx.util.use_np
 def train_lenet_gluon_hybrid_export_api():
     model_name = 'lenet_gluon_hybrid_export_api'
-    logging.info('Saving files for model %s' % model_name)
+    logging.info(f'Saving files for model {model_name}')
     create_model_folder(model_name)
     net = HybridNet()
     weights = mx.initializer.Xavier(magnitude=2.57)
@@ -70,12 +70,12 @@ def train_lstm_gluon_save_parameters_api():
     # If this code is being run on version >= 1.2.1 only then execute it,
     # since it uses save_parameters and load_parameters API
     if compare_versions(str(mxnet_version), '1.2.1') < 0:
-        logging.warn('Found MXNet version %s and exiting because this version does not contain save_parameters'
-                     ' and load_parameters functions' % str(mxnet_version))
+        logging.warn(f'Found MXNet version {str(mxnet_version)} and exiting because this version does not contain save_parameters'
+                     ' and load_parameters functions')
         return
 
     model_name = 'lstm_gluon_save_parameters_api'
-    logging.info('Saving files for model %s' % model_name)
+    logging.info(f'Saving files for model {model_name}')
     create_model_folder(model_name)
     net = SimpleLSTMModel()
     weights = mx.initializer.Xavier(magnitude=2.57)

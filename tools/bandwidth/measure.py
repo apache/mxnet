@@ -94,7 +94,7 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
     shapes = get_shapes(symbol, data_shape)
 
     size = float(sum([reduce(lambda x,y : x*y, s, 1) for s in shapes])) * 4 / 1e6
-    logging.info('num of arrays = %d, total size = %f MB' % (len(shapes), size))
+    logging.info(f'num of arrays = {len(shapes)}, total size = {size} MB')
 
     for i, s in enumerate(shapes):
         kv.init(i, mx.nd.zeros(s))
@@ -136,8 +136,7 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
                 # 0 is used for warmup, ignored
                 r = Results(iter=b, time=toc, error=err,
                             bandwidth=size*2*(len(devs)-1)/len(devs)/toc/1e3)
-                logging.info('iter %d, %f sec, %f GB/sec per gpu, error %f' % (
-                    r.iter, r.time, r.bandwidth, r.error))
+                logging.info(f'iter {r.iter}, {r.time} sec, {r.bandwidth} GB/sec per gpu, error {r.error}')
                 res.append(r)
             toc = 0
     return res

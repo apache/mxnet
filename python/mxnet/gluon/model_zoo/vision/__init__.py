@@ -147,6 +147,5 @@ def get_model(name, **kwargs):
     name = name.lower()
     if name not in models:
         raise ValueError(
-            'Model %s is not supported. Available options are\n\t%s' % (
-                name, '\n\t'.join(sorted(models.keys()))))
+            "Model {} is not supported. Available options are\n\t{}".format(name, '\n\t'.join(sorted(models.keys()))))
     return models[name](**kwargs)

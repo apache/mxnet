@@ -166,7 +166,7 @@ def np_softmax(x, axis=-1, temperature=1.0):
 
 def check_elementwise_sum_with_shape(shape, n):
     # forward
-    inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
+    inputs = [mx.symbol.Variable(f'arg{i}') for i in range(n)]
     out = mx.symbol.ElementWiseSum(*inputs, name='esum')
     arr = [mx.nd.empty(shape) for i in range(n)]
     arr_grad = [mx.nd.empty(shape) for i in range(n)]
@@ -208,7 +208,7 @@ def check_concat_with_shape(shapes, dimension, skip_second):
     for shape in shapes:
         target_dim += shape[dimension]
 
-    inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
+    inputs = [mx.symbol.Variable(f'arg{i}') for i in range(n)]
     out = mx.symbol.Concat(*inputs, name='conc',dim=dimension)
     arr = [mx.nd.empty(shape) for shape in shapes]
     for i in range(n):
@@ -1362,15 +1362,15 @@ def test_deconvolution_forward_with_bias(shape, num_filter, num_group, kernel, p
 
 
 def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
-    arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_device()) for i, shape in zip(range(len(shapes)), shapes)}
-    arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
+    arr = {f'arg_{i}': mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_device()) for i, shape in zip(range(len(shapes)), shapes)}
+    arr_grad = {f'arg_{i}': mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
 
-    up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='nearest', scale=root_scale)
+    up = mx.sym.UpSampling(*[mx.sym.Variable(f'arg_{i}') for i in range(len(shapes))], sample_type='nearest', scale=root_scale)
     exe = up._bind(default_device(), args=arr, args_grad=arr_grad)
     exe.forward(is_train=True)
     exe.backward(exe.outputs)
     for k in range(len(shapes)):
-        name = 'arg_%d'%k
+        name = f'arg_{k}'
         assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 
@@ -2365,21 +2365,18 @@ def test_reshape_new(src_shape, shape_args, reverse, dst_shape):
     net = mx.sym.fromjson(js)
     _, output_shape, __ = net.infer_shape(data=src_shape)
     assert output_shape[0] == dst_shape, \
-        'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
-        'Output Shape = %s' %(str(src_shape), str(shape_args), str(reverse),
-                              str(dst_shape), str(output_shape[0]))
+        f'Src Shape = {str(src_shape)}, Shape Arguments = {str(shape_args)}, Reverse = {str(reverse)}, Dst Shape = {str(dst_shape)}, ' \
+        f'Output Shape = {str(output_shape[0])}'
     dat_npy = np.random.rand(*src_shape)
     grad_npy = np.random.rand(*dst_shape)
     exe = net._simple_bind(default_device(), data=src_shape)
     exe.arg_dict['data'][:] = dat_npy
     exe.forward(is_train=True)
     assert np.square(exe.outputs[0].asnumpy() - dat_npy.reshape(dst_shape)).mean() < 1E-7, \
-        'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s'\
-        %(str(src_shape), str(shape_args), str(reverse), str(dst_shape))
+        f'Src Shape = {str(src_shape)}, Shape Arguments = {str(shape_args)}, Reverse = {str(reverse)}, Dst Shape = {str(dst_shape)}'
     exe.backward(out_grads=mx.nd.array(grad_npy))
     assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7, \
-        'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s'\
-        %(str(src_shape), str(shape_args), str(reverse), str(dst_shape))
+        f'Src Shape = {str(src_shape)}, Shape Arguments = {str(shape_args)}, Reverse = {str(reverse)}, Dst Shape = {str(dst_shape)}'
 
     for i in range(len(src_shape)):
         holdout_src_shape = list(src_shape)
@@ -2389,13 +2386,11 @@ def test_reshape_new(src_shape, shape_args, reverse, dst_shape):
         net = mx.sym.elemwise_add(net.reshape(shape_args, reverse=reverse), mx.sym.ones(shape=dst_shape))
         input_shape, output_shape, __ = net.infer_shape(data=holdout_src_shape)
         assert output_shape[0] == dst_shape, \
-            'Holdout Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
-            'Output Shape = %s' %(str(holdout_src_shape), str(shape_args), str(reverse),
-                                  str(dst_shape), str(output_shape[0]))
+            f'Holdout Src Shape = {str(holdout_src_shape)}, Shape Arguments = {str(shape_args)}, ' \
+            f'Reverse = {str(reverse)}, Dst Shape = {str(dst_shape)}, Output Shape = {str(output_shape[0])}'
         assert input_shape[0] == src_shape, \
-            'Holdout Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
-            'Output Shape = %s' %(str(holdout_src_shape), str(shape_args), str(reverse),
-                                  str(dst_shape), str(output_shape[0]))
+            f'Holdout Src Shape = {str(holdout_src_shape)}, Shape Arguments = {str(shape_args)}, ' \
+            f'Reverse = {str(reverse)}, Dst Shape = {str(dst_shape)}, Output Shape = {str(output_shape[0])}'
 
 def test_reshape_old():
     net = mx.sym.Variable("data")
@@ -2426,8 +2421,8 @@ def test_reshape_like():
         _, output_shape, __ = net.infer_shape(lhs=lhs_shape, rhs=rhs_shape)
 
         assert output_shape[0] == dst_shape, \
-            'LHS Shape = %s, RHS Shape = %s, lhs_begin = %s, lhs_end = %s, rhs_begin= %s, rhs_end= %s'\
-            %(str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+            f'LHS Shape = {str(lhs_shape)}, RHS Shape = {str(rhs_shape)}, lhs_begin = {str(lbeg)}, ' \
+            f'lhs_end = {str(lend)}, rhs_begin = {str(rbeg)}, rhs_end = {str(rend)}'
 
         lhs_npy = np.random.rand(*lhs_shape)
         rhs_npy = np.random.rand(*rhs_shape)
@@ -2438,12 +2433,12 @@ def test_reshape_like():
         exe.arg_dict['rhs'][:] = rhs_npy
         exe.forward(is_train=True)
         assert np.square(exe.outputs[0].asnumpy() - lhs_npy.reshape(dst_shape)).mean() < 1E-7, \
-            'LHS Shape = %s, RHS Shape = %s, lhs_begin = %s, lhs_end = %s, rhs_begin= %s, rhs_end= %s'\
-            %(str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+            f'LHS Shape = {str(lhs_shape)}, RHS Shape = {str(rhs_shape)}, lhs_begin = {str(lbeg)}, ' \
+            f'lhs_end = {str(lend)}, rhs_begin = {str(rbeg)}, rhs_end = {str(rend)}'
         exe.backward(out_grads=mx.nd.array(grad_npy))
         assert np.square(exe.grad_dict['lhs'].asnumpy() - grad_npy.reshape(lhs_shape)).mean() < 1E-7, \
-            'LHS Shape = %s, RHS Shape = %s, lhs_begin = %s, lhs_end = %s, rhs_begin= %s, rhs_end= %s'\
-            %(str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+            f'LHS Shape = {str(lhs_shape)}, RHS Shape = {str(rhs_shape)}, lhs_begin = {str(lbeg)}, ' \
+            f'lhs_end = {str(lend)}, rhs_begin = {str(rbeg)}, rhs_end = {str(rend)}'
     # Test new api (Using shape)
     test_cases = [
         [(30,), (15,2,4), 0, None, 0, 2, (15,2)],
@@ -3231,17 +3226,15 @@ def test_correlation():
         if arg_type1[0] != np.dtype(dtype) and arg_type1[1] != np.dtype(dtype) and out_type1[0] != np.dtype(dtype):
             msg = npt.npt.build_err_msg([a, b],
                                         err_msg="Inferred type from a is not as expected, "
-                                                "Expected :%s %s %s, Got: %s %s %s"
-                                                % (dtype, dtype, dtype, arg_type1[0], arg_type1[1], out_type1[0]),
-                                                names=['a', 'b'])
+                                                f"Expected :{dtype} {dtype} {dtype}, Got: {arg_type1[0]} {arg_type1[1]} {out_type1[0]}",
+                                        names=['a', 'b'])
             raise AssertionError(msg)
         arg_type2, out_type2, _ = corr.infer_type(b=dtype)
         if arg_type2[0] != np.dtype(dtype) and arg_type2[1] != np.dtype(dtype) and out_type2[0] != np.dtype(dtype):
             msg = npt.npt.build_err_msg([a, b],
                                         err_msg="Inferred type from b is not as expected, "
-                                                "Expected :%s %s %s, Got: %s %s %s"
-                                                % (dtype, dtype, dtype, arg_type1[0], arg_type1[1], out_type1[0]),
-                                                names=['a', 'b'])
+                                                f"Expected :{dtype} {dtype} {dtype}, Got: {arg_type1[0]} {arg_type1[1]} {out_type1[0]}",
+                                        names=['a', 'b'])
             raise AssertionError(msg)
 
     for dtype in ['float16', 'float32']:
@@ -4238,7 +4231,7 @@ def test_take(mode, out_of_range, data_ndim, idx_ndim):
         elif axis == 4:
             grad_in[:, :, :, :, idx] += 1.0
         else:
-            raise ValueError("axis %d is not supported..." % axis)
+            raise ValueError(f"axis {axis} is not supported...")
             
     for axis in range(-data_ndim, data_ndim):
             data_shape = ()
@@ -4278,7 +4271,7 @@ def test_take(mode, out_of_range, data_ndim, idx_ndim):
                     return
                 else:
                     # Did not raise exception
-                    assert False, "did not raise %s" % MXNetError.__name__
+                    assert False, f"did not raise {MXNetError.__name__}"
 
             assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
 
@@ -6653,7 +6646,7 @@ def test_stack():
         dshape = [random.randint(1, 5) for _ in range(ndim)]
         inputs = [np.random.uniform(size=dshape) for _ in range(nin)]
         output = np.stack(inputs, axis=axis)
-        sym_ins = [mx.sym.var('x%d'%i) for i in range(nin)]
+        sym_ins = [mx.sym.var(f'x{i}') for i in range(nin)]
         out = mx.sym.stack(*sym_ins, axis=axis)
         check_symbolic_forward(out, inputs, [output])
         check_numeric_gradient(out, inputs)
@@ -7747,7 +7740,7 @@ def allclose_function(contexts):
                         a_g = a_ctx.asnumpy()
                         b_g = b_ctx.asnumpy()
 
-                    print('\n *** Violations found on %s, but not on %s side  ***' % (v_ctx, v_cmp))
+                    print(f'\n *** Violations found on {v_ctx}, but not on {v_cmp} side  ***')
                     frmt = "                 a[{0:d}]:                 b[{0:d}]:"  \
                            "          abs(a[{0:d}]-b[{0:d}]) - atol + rtol*abs(b[{0:d}]):"
 
@@ -7760,11 +7753,11 @@ def allclose_function(contexts):
                     idx_flat = np.asarray(np.where(bad_indexes.flatten() == True)).flatten()
                     for i in range(len(a_values[0])):
                         flat_idx = idx_flat[i]
-                        print('{}:  index = {}   flat_index = {}'.format('%4d'%i, idx[i], flat_idx))
+                        print(f'{i:4d}:  index = {idx[i]}   flat_index = {flat_idx}')
                         print(frmt.format(flat_idx))
                         for j in range(2):
                             diff = np.abs(a_values[j][i]-b_values[j][i]) - atol + rtol*abs(b_values[j][i])
-                            print('{}:  {}  {}              {}'.format('%6s'%v_ctx, a_values[j][i], b_values[j][i], diff))
+                            print(f'{v_ctx:6s}:  {a_values[j][i]}  {b_values[j][i]}              {diff}')
 
 
             if num_ctx == 1:
@@ -7937,7 +7930,7 @@ def test_op_roi_align():
             Input data types to compare
         '''
         assert dtype_a == dtype_b,\
-            TypeError('Unmatched data types: %s vs %s' % (dtype_a, dtype_b))
+            TypeError(f'Unmatched data types: {dtype_a} vs {dtype_b}')
 
     def bilinear_interpolate(bottom, height, width, y, x):
         if y < -1.0 or y > height or x < -1.0 or x > width:
@@ -7986,10 +7979,10 @@ def test_op_roi_align():
         PH, PW = pooled_size
         assert rois.ndim == 2,\
             ValueError(
-                'The ndim of rois should be 2 rather than %d' % rois.ndim)
+                f'The ndim of rois should be 2 rather than {rois.ndim}')
         assert rois.shape[1] == 5,\
             ValueError(
-                'The length of the axis 1 of rois should be 5 rather than %d' % rois.shape[1])
+                f'The length of the axis 1 of rois should be 5 rather than {rois.shape[1]}')
         assert_same_dtype(data.dtype, T)
         assert_same_dtype(rois.dtype, T)
 
@@ -8107,7 +8100,7 @@ def test_op_rroi_align():
             Input data types to compare
         '''
         assert dtype_a == dtype_b,\
-            TypeError('Unmatched data types: %s vs %s' % (dtype_a, dtype_b))
+            TypeError(f'Unmatched data types: {dtype_a} vs {dtype_b}')
 
     def bilinear_interpolate(bottom, height, width, y, x):
         if y < -1.0 or y > height or x < -1.0 or x > width:
@@ -8153,10 +8146,10 @@ def test_op_rroi_align():
         PH, PW = pooled_size
         assert rois.ndim == 2,\
             ValueError(
-                'The ndim of rois should be 2 rather than %d' % rois.ndim)
+                f'The ndim of rois should be 2 rather than {rois.ndim}')
         assert rois.shape[1] == 6,\
             ValueError(
-                'The length of the axis 1 of rois should be 6 rather than %d' % rois.shape[1])
+                f'The length of the axis 1 of rois should be 6 rather than {rois.shape[1]}')
         assert_same_dtype(data.dtype, T)
         assert_same_dtype(rois.dtype, T)
 

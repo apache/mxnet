@@ -151,7 +151,7 @@ def _init_api_prefix(module_name, prefix):
         f = get_global_func(name)
         ff = _get_api(f)
         ff.__name__ = fname
-        ff.__doc__ = ("MXNet PackedFunc %s. " % fname)
+        ff.__doc__ = (f"MXNet PackedFunc {fname}. ")
         setattr(target_module, ff.__name__, ff)
 
 _set_class_packed_func(Function)

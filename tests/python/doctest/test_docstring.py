@@ -29,13 +29,12 @@ def import_into(globs, module, names=None, error_on_overwrite=True):
     mod_names = dir(module)
     if names is not None:
         for name in names:
-            assert name in mod_names, '%s not found in %s' % (
-                    name, module)
+            assert name in mod_names, f'{name} not found in {module}'
         mod_names = names
 
     for name in mod_names:
         if name in globs and globs[name] is not getattr(module, name):
-            error_msg = 'Attempting to overwrite definition of %s' % name
+            error_msg = f'Attempting to overwrite definition of {name}'
             if error_on_overwrite:
                 raise RuntimeError(error_msg)
             logging.warning('%s', error_msg)

@@ -77,9 +77,9 @@ class MXNetGraph(object):
         op = str(node["op"])
         opset_version = kwargs.get("opset_version", onnx_opset_version())
         if opset_version < 12:
-            logging.warning('Your ONNX op set version is %s, '  % str(opset_version) +
+            logging.warning('Your ONNX op set version is {}, '
                             'which is lower than then lowest tested op set (12), please consider '
-                            'updating ONNX')
+                            'updating ONNX'.format(str(opset_version)))
             opset_version = 12
         # Fallback to older opset versions if op is not registered in current version
         convert_func = None
@@ -91,7 +91,7 @@ class MXNetGraph(object):
 
         # The conversion logic is not implemented
         if convert_func is None:
-            raise AttributeError("No conversion function registered for op type %s yet." % op)
+            raise AttributeError(f"No conversion function registered for op type {op} yet.")
 
         ret = convert_func(node, **kwargs)
         # in case the conversion function does not specify the returned dtype, we just return None
@@ -368,11 +368,11 @@ class MXNetGraph(object):
                             if nodename in graph_outputs:
                                 graph_output_names.append(nodename)
                                 if verbose:
-                                    logging.info("Output node is: %s", nodename)
+                                    logging.info("Output node is: {}".format(nodename))
                     elif isinstance(converted_node, TensorProto):
                         raise ValueError("Did not expect TensorProto")
                     else:
-                        raise ValueError("node is of an unrecognized type: %s" % type(node))
+                        raise ValueError(f"node is of an unrecognized type: {type(node)}")
 
                     all_processed_nodes.append(converted_node)
 

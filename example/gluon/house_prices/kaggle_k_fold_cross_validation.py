@@ -97,7 +97,7 @@ def train(net, X_train, y_train, epochs, verbose_epoch, learning_rate,
             trainer.step(batch_size)
             avg_loss = get_rmse_log(net, X_train, y_train)
         if epoch > verbose_epoch:
-            print("Epoch %d, train loss: %f" % (epoch, avg_loss))
+            print(f"Epoch {epoch}, train loss: {avg_loss}")
     return avg_loss
 
 def k_fold_cross_valid(k, epochs, verbose_epoch, X_train, y_train,
@@ -129,7 +129,7 @@ def k_fold_cross_valid(k, epochs, verbose_epoch, X_train, y_train,
                            learning_rate, weight_decay, batch_size)
         train_loss_sum += train_loss
         test_loss = get_rmse_log(net, X_val_test, y_val_test)
-        print("Test loss: %f" % test_loss)
+        print(f"Test loss: {test_loss}")
         test_loss_sum += test_loss
     return train_loss_sum / k, test_loss_sum / k
 
@@ -145,8 +145,7 @@ batch_size = 100
 train_loss, test_loss = \
     k_fold_cross_valid(k, epochs, verbose_epoch, X_train, y_train,
                        learning_rate, weight_decay, batch_size)
-print("%d-fold validation: Avg train loss: %f, Avg test loss: %f" %
-      (k, train_loss, test_loss))
+print(f"{k}-fold validation: Avg train loss: {train_loss}, Avg test loss: {test_loss}")
 
 def learn(epochs, verbose_epoch, X_train, y_train, test, learning_rate,
           weight_decay, batch_size):

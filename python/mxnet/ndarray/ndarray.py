@@ -300,10 +300,8 @@ fixed-size items.
     def __repr__(self):
         """Returns a string representation of the array."""
         if self._alive:
-            shape_info = 'x'.join(['%d' % x for x in self.shape])
-            return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
-                                          self.__class__.__name__,
-                                          shape_info, self.ctx)
+            shape_info = 'x'.join([f'{x}' for x in self.shape])
+            return f'\n{str(self.asnumpy())}\n<{self.__class__.__name__} {shape_info} @{self.ctx}>'
         else:
             return '<FREED {}>'.format(self.__class__.__name__)
 
@@ -334,7 +332,7 @@ fixed-size items.
         elif isinstance(other, numeric_types):
             return _internal._plus_scalar(self, float(other), out=self)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -352,7 +350,7 @@ fixed-size items.
         elif isinstance(other, numeric_types):
             return _internal._minus_scalar(self, float(other), out=self)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y-x <=> mx.nd.subtract(y, x) """
@@ -375,7 +373,7 @@ fixed-size items.
         elif isinstance(other, numeric_types):
             return _internal._mul_scalar(self, float(other), out=self)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -397,7 +395,7 @@ fixed-size items.
         elif isinstance(other, numeric_types):
             return _internal._div_scalar(self, float(other), out=self)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __truediv__(self, other):
         return divide(self, other)
@@ -425,7 +423,7 @@ fixed-size items.
         elif isinstance(other, numeric_types):
             return _internal._mod_scalar(self, float(other), out=self)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y <=> mx.nd.power(x,y) """
@@ -1374,11 +1372,10 @@ fixed-size items.
                 source_array = np.array(source_array, dtype=self.dtype)
             except:
                 raise TypeError('array must consist of array-like data,' +
-                                'type %s is not supported' % str(type(array)))
+                                f'type {str(type(array))} is not supported')
         source_array = np.asarray(source_array, dtype=self.dtype, order='C')
         if source_array.shape != self.shape:
-            raise ValueError('Shape inconsistent: expected %s vs got %s'%(
-                str(source_array.shape), str(self.shape)))
+            raise ValueError(f'Shape inconsistent: expected {str(source_array.shape)} vs got {str(self.shape)}')
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.c_void_p),
@@ -1442,8 +1439,7 @@ fixed-size items.
             length = self.shape[0]
             idx += length
             if idx < 0:
-                raise IndexError('index %d is out of bounds for axis 0 with size %d'
-                                 % (idx-length, length))
+                raise IndexError(f'index {idx-length} is out of bounds for axis 0 with size {length}')
         if _int64_enabled():
             check_call(_LIB.MXNDArrayAt64(
                 self.handle, ctypes.c_int64(idx), ctypes.byref(handle)))
@@ -2987,7 +2983,7 @@ fixed-size items.
         """
         if stype == 'csr' and len(self.shape) != 2:
             raise ValueError("To convert to a CSR, the NDArray should be 2 Dimensional. Current "
-                             "shape is %s" % str(self.shape))
+                             f"shape is {str(self.shape)}")
 
         return op.cast_storage(self, stype=stype)
 
@@ -3334,7 +3330,7 @@ def _get_broadcast_shape(shape1, shape2):
     i = max(length1, length2) - 1
     for a, b in zip(shape1[::-1], shape2[::-1]):
         if a != 1 and b != 1 and a != b:
-            raise ValueError('shape1=%s is not broadcastable to shape2=%s' % (shape1, shape2))
+            raise ValueError(f'shape1={shape1} is not broadcastable to shape2={shape2}')
         shape[i] = b if a == 1 else a
         i -= 1
     return tuple(shape)
@@ -3506,12 +3502,12 @@ def moveaxis(tensor, source, destination):
         source = np.core.numeric.normalize_axis_tuple(source, tensor.ndim)
     except IndexError:
         raise ValueError('Source should verify 0 <= source < tensor.ndim'
-                         'Got %d' % source)
+                         f'Got {source}')
     try:
         destination = np.core.numeric.normalize_axis_tuple(destination, tensor.ndim)
     except IndexError:
-        raise ValueError('Destination should verify 0 <= destination < tensor.ndim (%d).'
-                         % tensor.ndim, 'Got %d' % destination)
+        raise ValueError(f'Destination should verify 0 <= destination < tensor.ndim ({tensor.ndim}).',
+                         f'Got {destination}')
 
     if len(source) != len(destination):
         raise ValueError('`source` and `destination` arguments must have '
@@ -3671,7 +3667,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
     elif isinstance(rhs, NDArray):
         return fn_array(lhs, rhs)
     else:
-        raise TypeError('type %s not supported' % str(type(rhs)))
+        raise TypeError(f'type {str(type(rhs))} not supported')
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 

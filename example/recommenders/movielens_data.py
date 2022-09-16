@@ -43,22 +43,22 @@ def load_mldataset(filename):
     return gluon.data.ArrayDataset(user, item, score)
 
 def ensure_local_data(prefix):
-    if not os.path.exists("%s.zip" % prefix):
-        print("Downloading MovieLens data: %s" % prefix)
+    if not os.path.exists(f"{prefix}.zip"):
+        print(f"Downloading MovieLens data: {prefix}")
         # MovieLens 100k dataset from https://grouplens.org/datasets/movielens/
         # This dataset is copy right to GroupLens Research Group at the University of Minnesota,
         # and licensed under their usage license.
         # For full text of the usage license, see http://files.grouplens.org/datasets/movielens/ml-100k-README.txt
-        os.system("wget http://files.grouplens.org/datasets/movielens/%s.zip" % prefix)
-        os.system("unzip %s.zip" % prefix)
+        os.system(f"wget http://files.grouplens.org/datasets/movielens/{prefix}.zip")
+        os.system(f"unzip {prefix}.zip")
 
 
 def get_dataset(prefix='ml-100k'):
     """Returns a pair of NDArrayDataIter, one for train, one for test.
     """
     ensure_local_data(prefix)
-    return (load_mldataset('./%s/u1.base' % prefix),
-            load_mldataset('./%s/u1.test' % prefix))
+    return (load_mldataset(f'./{prefix}/u1.base'),
+            load_mldataset(f'./{prefix}/u1.test'))
 
 def max_id(fname):
     mu = 0

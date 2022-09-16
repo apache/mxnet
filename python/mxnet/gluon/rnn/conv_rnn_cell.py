@@ -71,7 +71,7 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         self._h2h_kernel = (h2h_kernel,) * dims if isinstance(h2h_kernel, numeric_types) \
                            else h2h_kernel
         assert all(k % 2 == 1 for k in self._h2h_kernel), \
-            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
+            f"Only support odd number, get h2h_kernel= {str(h2h_kernel)}"
         self._h2h_dilate = (h2h_dilate,) * dims if isinstance(h2h_dilate, numeric_types) \
                            else h2h_dilate
 

@@ -1700,7 +1700,7 @@ def test_sparse_storage_fallback():
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stypes, shape, n):
         # forward
-        inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
+        inputs = [mx.symbol.Variable(f'arg{i}') for i in range(n)]
         out = mx.symbol.sparse.add_n(*inputs, name='esum')
         arr = []
         arr_grad = [mx.nd.empty(shape, stype=stype) for stype in stypes]

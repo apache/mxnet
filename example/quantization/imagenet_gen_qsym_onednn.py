@@ -36,7 +36,7 @@ from tools.rec2idx import IndexCreator
 
 def download_calib_dataset(dataset_url, calib_dataset, logger=None):
     if logger is not None:
-        logger.info('Downloading calibration dataset from %s to %s' % (dataset_url, calib_dataset))
+        logger.info(f'Downloading calibration dataset from {dataset_url} to {calib_dataset}')
     mx.test_utils.download(dataset_url, calib_dataset)
 
 
@@ -44,7 +44,7 @@ def get_from_gluon(model_name, classes=1000, logger=None):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     model_path = os.path.join(dir_path, 'model')
     if logger is not None:
-        logger.info('Converting model from Gluon-CV ModelZoo %s... into path %s' % (model_name, model_path))
+        logger.info(f'Converting model from Gluon-CV ModelZoo {model_name}... into path {model_path}')
     net = get_model(name=model_name, classes=classes, pretrained=True)
     prefix = os.path.join(model_path, model_name)
     return net, prefix
@@ -94,7 +94,7 @@ def get_exclude_symbols(model_name, exclude_first_conv):
         }
         excluded_first_conv_sym_names = regex_find_excluded_symbols(first_conv_regex, model_name)
         if excluded_first_conv_sym_names is None:
-            raise ValueError('Currently, model %s is not supported in this script' % model_name)
+            raise ValueError(f'Currently, model {model_name} is not supported in this script')
         excluded_sym_names += excluded_first_conv_sym_names
     return excluded_sym_names
 
@@ -152,8 +152,8 @@ if __name__ == '__main__':
 
     if logger:
         logger.info(args)
-        logger.info('shuffle_dataset=%s' % args.shuffle_dataset)
-        logger.info('calibration mode set to %s' % args.calib_mode)
+        logger.info(f'shuffle_dataset={args.shuffle_dataset}')
+        logger.info(f'calibration mode set to {args.calib_mode}')
 
     calib_mode = args.calib_mode
 
@@ -197,7 +197,7 @@ if __name__ == '__main__':
     # get batch size
     batch_size = args.batch_size
     if logger:
-        logger.info('batch size = %d for calibration' % batch_size)
+        logger.info(f'batch size = {batch_size} for calibration')
 
     # get number of batches for calibration
     num_calib_batches = args.num_calib_batches
@@ -205,7 +205,7 @@ if __name__ == '__main__':
         if calib_mode == 'none':
             logger.info('skip calibration step as calib_mode is none')
         else:
-            logger.info('number of batches = %d for calibration' % num_calib_batches)
+            logger.info(f'number of batches = {num_calib_batches} for calibration')
 
     # get number of threads for decoding the dataset
     data_nthreads = args.data_nthreads
@@ -234,10 +234,10 @@ if __name__ == '__main__':
             excluded_sym_names += []
 
     if logger:
-        logger.info('These layers have been excluded %s' % excluded_sym_names)
-        logger.info('Input data shape = %s' % str(data_shape))
-        logger.info('rgb_mean = %s' % rgb_mean)
-        logger.info('rgb_std = %s' % rgb_std)
+        logger.info(f'These layers have been excluded {excluded_sym_names}')
+        logger.info(f'Input data shape = {str(data_shape)}')
+        logger.info(f'rgb_mean = {rgb_mean}')
+        logger.info(f'rgb_std = {rgb_std}')
 
     rgb_mean = [float(i) for i in rgb_mean.split(',')]
     mean_args = {'mean_r': rgb_mean[0], 'mean_g': rgb_mean[1], 'mean_b': rgb_mean[2]}
@@ -245,7 +245,7 @@ if __name__ == '__main__':
     std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}
     if calib_mode == 'none':
         if logger:
-            logger.info('Quantizing FP32 model %s' % args.model)
+            logger.info(f'Quantizing FP32 model {args.model}')
         qsym = quantize_net(net, ctx=ctx, exclude_layers_match=excluded_sym_names, data_shapes=data_shape,
                             calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
                             logger=logger)
@@ -263,12 +263,11 @@ if __name__ == '__main__':
                             calib_mode=calib_mode, calib_data=data_loader, num_calib_batches=num_calib_batches,
                             quantized_dtype=args.quantized_dtype, logger=logger)
         if calib_mode == 'entropy':
-            suffix = '-quantized-%dbatches-entropy' % num_calib_batches
+            suffix = f'-quantized-{num_calib_batches}batches-entropy'
         elif calib_mode == 'naive':
-            suffix = '-quantized-%dbatches-naive' % num_calib_batches
+            suffix = f'-quantized-{num_calib_batches}batches-naive'
         else:
-            raise ValueError('unknow calibration mode %s received, only supports `none`, `naive`, and `entropy`'
-                             % calib_mode)
+            raise ValueError(f'unknown calibration mode {calib_mode} received, only supports `none`, `naive`, and `entropy`')
     save_path = prefix + suffix
     model_path, params_path = qsym.export(save_path, epoch)
     if logger is not None:

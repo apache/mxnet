@@ -128,7 +128,7 @@ def module_scope_seed(request):
         # shown to users. https://github.com/pytest-dev/pytest/issues/7819
         print('*** module-level seed is set: all tests running deterministically ***')
     print('Setting module np/mx/python random seeds, '
-                    'use MXNET_MODULE_SEED={} to reproduce.'.format(seed))
+          f'use MXNET_MODULE_SEED={seed} to reproduce.')
     old_state = random.getstate()
     random.seed(seed)
     try:
@@ -204,8 +204,7 @@ def function_scope_seed(request):
     except:
         logging.warning('Unable to import numpy/mxnet. Skip setting function-level seed.')
 
-    seed_message = 'Setting np/mx/python random seeds to {}. Use MXNET_TEST_SEED={} to reproduce.'
-    seed_message = seed_message.format(seed, seed)
+    seed_message = f'Setting np/mx/python random seeds to {seed}. Use MXNET_TEST_SEED={seed} to reproduce.'
 
     # Always log seed on DEBUG log level. This makes sure we can find out the
     # value of the seed even if the test case causes a segfault and subsequent
@@ -220,8 +219,7 @@ def function_scope_seed(request):
         # Either request.node.rep_setup.failed or request.node.rep_setup.passed should be True
         assert request.node.rep_setup.passed
         # On failure also log seed on WARNING log level
-        error_message = 'Error seen with seeded test, use MXNET_TEST_SEED={} to reproduce'
-        error_message = error_message.format(seed)
+        error_message = f'Error seen with seeded test, use MXNET_TEST_SEED={seed} to reproduce'
         logging.warning(error_message)
 
     random.setstate(old_state)

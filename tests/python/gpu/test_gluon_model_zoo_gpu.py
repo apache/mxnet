@@ -44,7 +44,7 @@ def download_data():
 def test_inference(model_name):
     batch_size = 10
     download_data()
-    eprint('testing inference on %s'%model_name)
+    eprint(f'testing inference on {model_name}')
 
     data_shape = (3, 224, 224) if 'inception' not in model_name else (3, 299, 299)
     dataIter = mx.io.ImageRecordIter(
@@ -128,7 +128,7 @@ def test_training():
     softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 
     for model_name in all_models:
-        eprint('testing %s'%model_name)
+        eprint(f'testing {model_name}')
         #data = mx.nd.random.uniform(shape=(100, 3, 224, 224))
 
         # This is to create a model and run the model once to initialize

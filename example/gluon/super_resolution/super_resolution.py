@@ -171,7 +171,7 @@ def test(device):
         avg_psnr += 10 * math.log10(1/metric.get()[1])
         metric.reset()
     avg_psnr /= batches
-    print('validation avg psnr: %f' % avg_psnr)
+    print(f'validation avg psnr: {avg_psnr}')
 
 
 def train(epoch, device):
@@ -200,7 +200,7 @@ def train(epoch, device):
 
         name, acc = metric.get()
         metric.reset()
-        print('training mse at epoch %d: %s=%f'%(i, name, acc))
+        print(f'training mse at epoch {i}: {name}={acc}')
         test(device)
 
     net.save_parameters(path.join(this_dir, 'superres.params'))

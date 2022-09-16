@@ -51,7 +51,7 @@ def _get_global_func(name, allow_missing=False):
     if allow_missing:
         return None
 
-    raise ValueError("Cannot find global function %s" % name)
+    raise ValueError(f"Cannot find global function {name}")
 
 def _make_mxnet_args(args, temp_args):
     """Pack arguments into c args mxnet call accept"""
@@ -98,7 +98,7 @@ def _make_mxnet_args(args, temp_args):
             values[i].v_str = c_str(onp.dtype(arg).name)
             type_codes[i] = TypeCode.STR
         else:
-            raise TypeError("Don't know how to handle type %s" % type(arg))
+            raise TypeError(f"Don't know how to handle type {type(arg)}")
     return values, type_codes, num_args
 
 

@@ -402,7 +402,7 @@ def init_trainer(optimizer_or_trainer):
         raise TypeError("AMP is currently only compatible with Gluon Trainer")
     else:
         raise TypeError("optimizer_or_trainer should be a Gluon Trainer or "
-                        "an optimizer, instead is %s" % type(optimizer_or_trainer))
+                        f"an optimizer, instead is {type(optimizer_or_trainer)}")
 
 def unscale(optimizer_or_trainer):
     """Check and unscale the gradients manually. This function should only be used
@@ -425,7 +425,7 @@ def unscale(optimizer_or_trainer):
         raise TypeError("AMP is currently only compatible with Gluon Trainer")
     else:
         raise TypeError("optimizer_or_trainer should be a Gluon Trainer or "
-                        "an optimizer, instead is %s" % type(optimizer_or_trainer))
+                        f"an optimizer, instead is {type(optimizer_or_trainer)}")
 
 
 def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_ops=None,
@@ -535,13 +535,13 @@ def convert_symbol(sym, input_dtypes, param_dtypes, target_dtype, target_dtype_o
                             list_lp16_fp32_ops(target_dtype) + original_cond_ops)
 
     illegal_ops = combined_ops - all_lp16_fp32_ops
-    assert len(illegal_ops) == 0, '''Can only choose ops from one of the four lists
+    assert len(illegal_ops) == 0, f'''Can only choose ops from one of the four lists
                             for lp16_ops and fp32_ops
                             1. amp.list_lp16_ops(target_dtype)
                             2. amp.list_fp32_ops(target_dtype)
                             3. amp.list_lp16_fp32_ops(target_dtype)
                             4. amp.list_conditional_fp32_ops(target_dtype)
-                            Op %s not in any of them''' % (illegal_ops)
+                            Op {illegal_ops} not in any of them'''
 
     widest_dtype_ops = list_widest_type_cast(target_dtype)
 

@@ -31,7 +31,7 @@ class OpArgMngr(object):
             _specifier = kwargs["_specififer"]
             del kwargs["_specififer"]
         if _specifier in OpArgMngr.args:
-            raise ValueError("duplicate {}".format(_specifier))
+            raise ValueError(f"duplicate {_specifier}")
         OpArgMngr.args[_specifier] = {'args': args, 'kwargs': kwargs, 'funcname': funcname}
 
 
@@ -43,7 +43,7 @@ def generate_workloads():
     for shape in shapes:
         name = 'x'.join(str(i) for i in shape)
         if name in array_pool:
-            raise ValueError("duplicate array {}".format(name))
+            raise ValueError(f"duplicate array {name}")
         array_pool[name] = dnp.ones(shape)
     return array_pool
 
@@ -229,7 +229,7 @@ def run_benchmark(packages):
     for (k, v) in OpArgMngr.args.items():
         result = {}
         for (name, package) in packages.items():
-            print('{}.{} running...'.format(name, k))
+            print(f'{name}.{k} running...')
             op = get_op(package["module"], v["funcname"])
             args = [package["data"](arg) for arg in v["args"]]
             kwargs = {k: package["data"](v) for (k, v) in v["kwargs"].items()}
@@ -240,10 +240,10 @@ def run_benchmark(packages):
 
 
 def show_results(results):
-    print("{:>24}{:>24}{:>24}".format("name", "package", "time(us)"))
+    print(f'{"name":>24}{"package":>24}{"time(us)":>24}')
     for (specifier, d) in results.items():
         for (k, v) in d.items():
-            print("{:>24}{:>24}{:>24}".format(specifier, k, v * 10 ** 6))
+            print(f"{specifier:>24}{k:>24}{v * 10 ** 6:>24}")
 
 
 if __name__ == "__main__":

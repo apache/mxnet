@@ -234,11 +234,9 @@ class KVStoreBase(object):
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
         if name in KVStoreBase.kv_registry:
-            warnings.warn('WARNING: New kvstore %s.%s is overriding '
-                          'existing kvstore %s.%s' %
-                          (klass.__module__, klass.__name__,
-                           KVStoreBase.kv_registry[name].__module__,
-                           KVStoreBase.kv_registry[name].__name__))
+            warnings.warn(f'WARNING: New kvstore {klass.__module__}.{klass.__name__} is overriding '
+                          'existing kvstore '
+                          f'{KVStoreBase.kv_registry[name].__module__}.{KVStoreBase.kv_registry[name].__name__}')
         KVStoreBase.kv_registry[name] = klass
         return klass
 

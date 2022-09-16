@@ -95,8 +95,8 @@ class Sequential(Block):
         """
         if self._children and all(isinstance(c(), HybridBlock) for c in self._children.values()):
             warnings.warn(
-                "All children of this Sequential layer '%s'\n are HybridBlocks. Consider "
-                "using HybridSequential for the best performance."%repr(self), stacklevel=2)
+                f"All children of this Sequential layer '{repr(self)}'\n are HybridBlocks. Consider "
+                "using HybridSequential for the best performance.", stacklevel=2)
         super(Sequential, self).hybridize(active, **kwargs)
 
 
@@ -858,7 +858,7 @@ class Lambda(Block):
             elif hasattr(npx, function):
                 self._func_impl = getattr(npx, function)
             else:
-                raise Exception("Function name %s is not found in np/npx." % function)
+                raise Exception(f"Function name {function} is not found in np/npx.")
             self._func_name = function
         elif callable(function):
             self._func_impl = function
@@ -907,7 +907,7 @@ class HybridLambda(HybridBlock):
             elif hasattr(npx, function):
                 self._func = getattr(npx, function)
             else:
-                raise Exception("Function name %s is not found in np/npx." % function)
+                raise Exception(f"Function name {function} is not found in np/npx.")
             self._func_name = function
         elif callable(function):
             self._func = function

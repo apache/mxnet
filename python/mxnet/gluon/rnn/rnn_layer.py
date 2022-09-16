@@ -41,7 +41,7 @@ class _RNNLayer(HybridBlock):
                  dtype, use_sequence_length=False, **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
         assert layout in ('TNC', 'NTC'), \
-            "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
+            f"Invalid layout {layout}; must be one of ['TNC' or 'NTC']"
         self._hidden_size = hidden_size
         self._projection_size = projection_size if projection_size else None
         self._num_layers = num_layers
@@ -149,8 +149,7 @@ class _RNNLayer(HybridBlock):
         for state, info in zip(states, self.state_info(batch_size)):
             if state.shape != info['shape']:
                 raise ValueError(
-                    "Invalid recurrent state shape. Expecting %s, got %s."%(
-                        str(info['shape']), str(state.shape)))
+                    f"Invalid recurrent state shape. Expecting {str(info['shape'])}, got {str(state.shape)}.")
         out = self._forward_kernel(inputs, states, sequence_length)
 
         # out is (output, state)

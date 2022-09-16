@@ -61,7 +61,7 @@ def parse_helper(attrs, attrs_name, alt_value=None):
             dims = eval(attrs_str)
             return dims
         else:
-            raise AttributeError("Malformed %s dimensions: %s" % (attrs_name, str(attrs_str)))
+            raise AttributeError(f"Malformed {attrs_name} dimensions: {str(attrs_str)}")
     return alt_value
 
 def transform_padding(pad_width):
@@ -537,7 +537,7 @@ def convert_activation(node, **kwargs):
         )
     else:
         raise AttributeError(
-            "Activation %s not implemented or recognized in the converter" % act_type
+            f"Activation {act_type} not implemented or recognized in the converter"
         )
 
     return [node]

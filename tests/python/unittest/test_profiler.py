@@ -96,7 +96,7 @@ def test_profile_create_domain_dept():
 def test_profile_task():
     def makeParams():
         objects = tuple('foo' for _ in range(50))
-        template = ''.join('{%d}' % i for i in range(len(objects)))
+        template = ''.join(f'{{{i}}}' for i in range(len(objects)))
         return template, objects
 
     def get_log():
@@ -122,7 +122,7 @@ def test_profile_task():
 def test_profile_frame():
     def makeParams():
         objects = tuple('foo' for _ in range(50))
-        template = ''.join('{%d}' % i for i in range(len(objects)))
+        template = ''.join(f'{{{i}}}' for i in range(len(objects)))
         return template, objects
 
     def get_log():
@@ -149,7 +149,7 @@ def test_profile_frame():
 def test_profile_event(do_enable_profiler=True):
     def makeParams():
         objects = tuple('foo' for _ in range(50))
-        template = ''.join('{%d}' % i for i in range(len(objects)))
+        template = ''.join(f'{{{i}}}' for i in range(len(objects)))
         return template, objects
 
     def get_log():
@@ -189,7 +189,7 @@ def test_profile_tune_pause_resume():
 def test_profile_counter(do_enable_profiler=True):
     def makeParams():
         objects = tuple('foo' for _ in range(50))
-        template = ''.join('{%d}' % i for i in range(len(objects)))
+        template = ''.join(f'{{{i}}}' for i in range(len(objects)))
         return template, objects
 
     def get_log(counter):

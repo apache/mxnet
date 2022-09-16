@@ -63,8 +63,8 @@ def _create_sparse_kvstore(kvstore):
     elif isinstance(kvstore, str):
         kv = kvs.create(kvstore)
     else:
-        raise TypeError("Cannot create '%s' KVStore with row_sparse parameters. "
-                        "The type must be KVStore or str." % kvstore)
+        raise TypeError(f"Cannot create '{kvstore}' KVStore with row_sparse parameters. "
+                        "The type must be KVStore or str.")
     assert kv.is_capable(kvs.KVStoreBase.OPTIMIZER), \
         "KVStore with sparse weight requires optimizer support. " \
         "However, type(kv) does not support optimizer. " \
@@ -209,23 +209,23 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_ca
     - ``prefix-epoch.params`` will be saved for parameters.
     """
     if symbol is not None:
-        symbol.save('%s-symbol.json' % prefix, remove_amp_cast=remove_amp_cast)
+        symbol.save(f'{prefix}-symbol.json', remove_amp_cast=remove_amp_cast)
 
-    save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
-    param_name = '%s-%04d.params' % (prefix, epoch)
+    save_dict = {(f'arg:{k}') : v.as_in_context(cpu()) for k, v in arg_params.items()}
+    save_dict.update({(f'aux:{k}') : v.as_in_context(cpu()) for k, v in aux_params.items()})
+    param_name = f'{prefix}-{epoch:04}.params'
     nd.save(param_name, save_dict)
-    logging.info('Saved checkpoint to \"%s\"', param_name)
+    logging.info('Saved checkpoint to "{}"'.format(param_name))
 
 
 def load_params(prefix, epoch):
     """Load params from a file
     """
-    save_dict = nd.load("%s-%04d.params" % (prefix, epoch))
+    save_dict = nd.load(f'{prefix}-{epoch:04}.params')
     arg_params = {}
     aux_params = {}
     if not save_dict:
-        logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
+        logging.warning("Params file '%s' is empty", f'{prefix}-{epoch:04}.params')
         return (arg_params, aux_params)
     for k, v in save_dict.items():
         tp, name = k.split(":", 1)
@@ -259,6 +259,6 @@ def load_checkpoint(prefix, epoch):
     - Symbol will be loaded from ``prefix-symbol.json``.
     - Parameters will be loaded from ``prefix-epoch.params``.
     """
-    symbol = sym.load('%s-symbol.json' % prefix)
+    symbol = sym.load(f'{prefix}-symbol.json')
     arg_params, aux_params = load_params(prefix, epoch)
     return (symbol, arg_params, aux_params)

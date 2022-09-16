@@ -350,7 +350,7 @@ def _get_interp_method(interp, sizes=()):
     if interp == 10:
         return random.randint(0, 4)
     if interp not in (0, 1, 2, 3, 4):
-        raise ValueError('Unknown interp method %d' % interp)
+        raise ValueError(f'Unknown interp method {interp}')
     return interp
 
 

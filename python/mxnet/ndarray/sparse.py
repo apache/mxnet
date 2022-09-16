@@ -125,10 +125,9 @@ class BaseSparseNDArray(NDArray):
 
     def __repr__(self):
         """Returns a string representation of the sparse array."""
-        shape_info = 'x'.join(['%d' % x for x in self.shape])
+        shape_info = 'x'.join([f'{x}' for x in self.shape])
         # The data content is not displayed since the array usually has big shape
-        return '\n<%s %s @%s>' % (self.__class__.__name__,
-                                  shape_info, self.context)
+        return f'\n<{self.__class__.__name__} {shape_info} @{self.context}>'
 
     def __add__(self, other):
         return add(self, other)
@@ -450,7 +449,7 @@ class CSRNDArray(BaseSparseNDArray):
                 tmp = _array(value)
                 tmp.copyto(self)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
+                raise TypeError(f'type {str(type(value))} not supported')
         else:
             assert(isinstance(key, (int, tuple)))
             raise Exception('CSRNDArray only supports [:] for assignment')
@@ -713,7 +712,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 tmp = _array(value)
                 tmp.copyto(self)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
+                raise TypeError(f'type {str(type(value))} not supported')
         else:
             assert(isinstance(key, (int, tuple)))
             raise TypeError('RowSparseNDArray only supports [:] for assignment')
@@ -1201,7 +1200,7 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
     elif stype == _STORAGE_TYPE_ROW_SPARSE:
         return RowSparseNDArray(handle, writable=writable)
     else:
-        raise Exception("unknown storage type: %s"%stype)
+        raise Exception(f"unknown storage type: {stype}")
 
 
 _set_ndarray_class(_ndarray_cls)

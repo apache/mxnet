@@ -389,7 +389,7 @@ def test_ndarray_saveload(save_fn):
         for x, y in zip(data, data2 if save_fn is mx.nd.save else data2.values()):
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
         # test save/load as dict
-        dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
+        dmap = {f'ndarray xx {i}' : x for i, x in enumerate(data)}
         if save_fn is mx.nd.save:
             save_fn(fname, dmap)
         else:
@@ -466,7 +466,7 @@ def test_buffer_load():
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
             # test load_buffer as dict
-            dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
+            dmap = {f'ndarray xx {i}' : x for i, x in enumerate(data)}
             fname = os.path.join(tmpdir, 'dict_{0}.param'.format(repeat))
             mx.nd.save(fname, dmap)
             with open(fname, 'rb') as dfile:
@@ -664,8 +664,8 @@ def test_reduce():
             if type(ndarray_ret) is mx.ndarray.NDArray:
                 ndarray_ret = ndarray_ret.asnumpy()
             assert (ndarray_ret.shape == numpy_ret.shape) or \
-                   (ndarray_ret.shape == (1,) and numpy_ret.shape == ()), "nd:%s, numpy:%s" \
-                                                         %(ndarray_ret.shape, numpy_ret.shape)
+                   (ndarray_ret.shape == (1,) and numpy_ret.shape == ()), \
+                   f"nd:{ndarray_ret.shape}, numpy:{numpy_ret.shape}"
             if check_dtype:
                 assert ndarray_ret.dtype == numpy_ret.dtype,\
                         (ndarray_ret.dtype, numpy_ret.dtype)

@@ -54,14 +54,14 @@ def load(path, verbose=True):
 
     #check if path exists
     if not os.path.exists(path):
-        raise MXNetError("load path %s does NOT exist" % path)
+        raise MXNetError(f"load path {path} does NOT exist")
     #check if path is an absolute path
     if not os.path.isabs(path):
-        raise MXNetError("load path %s is not an absolute path" % path)
+        raise MXNetError(f"load path {path} is not an absolute path")
     #check if path is to a library file
     _, file_ext = os.path.splitext(path)
     if not file_ext in ['.so', '.dll']:
-        raise MXNetError("load path %s is NOT a library file" % path)
+        raise MXNetError(f"load path {path} is NOT a library file")
 
     verbose_val = 1 if verbose else 0
     byt_obj = path.encode('utf-8')

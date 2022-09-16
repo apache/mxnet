@@ -60,7 +60,7 @@ def test_model(pass_name):
 
     # Gluon optimize_for
     print('-------------------------------')
-    print('Testing pass "%s" Gluon Hybridize with shapes/types without inference' % pass_name)
+    print(f'Testing pass "{pass_name}" Gluon Hybridize with shapes/types without inference')
     inputs = [a,b]
     sym_block2 = nn.SymbolBlock(sym, inputs)
     sym_block2.initialize()

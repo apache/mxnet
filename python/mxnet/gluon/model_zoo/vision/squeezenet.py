@@ -134,7 +134,7 @@ def get_squeezenet(version, pretrained=False, device=cpu(),
     net = SqueezeNet(version, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_parameters(get_model_file('squeezenet%s'%version, root=root), device=device)
+        net.load_parameters(get_model_file(f'squeezenet{version}', root=root), device=device)
     return net
 
 @wrap_ctx_to_device_func

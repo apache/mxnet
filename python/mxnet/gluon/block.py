@@ -59,7 +59,7 @@ def _block_scope(block):
     if counter is not None:
         count = counter.get(name, 0)
         counter[name] = count + 1
-        name = '%s%d'%(name, count)
+        name = f'{name}{count}'
     counter_token = _naming_counter.set({})
     prefix_token = _prefix.set(_prefix.get() + name + '_')
     with _name.Prefix(_prefix.get()):
@@ -464,7 +464,7 @@ class Block:
         else:
             filename = None
         params = self.collect_params()
-        error_str = "file: %s" % (filename) if filename else "param_dict"
+        error_str = f"file: {filename}" if filename else "param_dict"
         loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
                   for k, v in param_dict.items()}
 
@@ -475,18 +475,16 @@ class Block:
 
             for name, param in params.items():
                 assert any(p in loaded for p in params_inv[param]), \
-                    "Parameter '%s' is missing in '%s', which contains parameters: %s. " \
-                    "Set allow_missing=True to ignore missing parameters."%(
-                        name, error_str, _brief_print_list(loaded.keys()))
+                f"Parameter '{name}' is missing in '{error_str}', which contains parameters: {_brief_print_list(loaded.keys())}. " \
+                    "Set allow_missing=True to ignore missing parameters."
 
         if device is None:
             device = _device.current_device()
         for name in loaded:
             if not ignore_extra and name not in params:
                 raise ValueError(
-                    "Parameter '%s' loaded from '%s' is not present in Dict, " \
-                    "which contains parameters %s. Set ignore_extra=True to ignore. "%(
-                        name, error_str, _brief_print_list(params.keys())))
+                    f"Parameter '{name}' loaded from '{error_str}' is not present in Dict, " \
+                    f"which contains parameters {_brief_print_list(params.keys())}. Set ignore_extra=True to ignore. ")
             if name in params:
                 param = loaded[name]
                 if isinstance(param, np.ndarray):
@@ -948,7 +946,7 @@ class Block:
                 class_name = block.__class__.__name__
                 block_idx = len(summary) - 1
 
-                m_key = '%s-%i' % (class_name, block_idx+1)
+                m_key = f'{class_name}-{block_idx+1}'
                 summary[m_key] = OrderedDict()
                 summary[m_key]['output_shape'] = _get_shape_str(outputs)
 
@@ -1140,20 +1138,20 @@ class HybridBlock(Block):
         expected_names = set(input_names)
         for name in expected_names:
             assert name in param_names or name in data_names, \
-                "Unknown input to HybridBlock: %s" %name
+                f"Unknown input to HybridBlock: {name}"
 
         used_data_names = [i for i in data_names if i in expected_names]
         if len(used_data_names) != len(data_names):
-            unused = ', '.join(['%d-th'%i for name, i in data_names.items()
+            unused = ', '.join([f'{i}-th' for name, i in data_names.items()
                                 if name not in expected_names])
-            warnings.warn("The %s input to HybridBlock is not used by any "
-                          "computation. Is this intended?"%unused, stacklevel=4)
+            warnings.warn(f"The {unused} input to HybridBlock is not used by "
+                          "any computation. Is this intended?", stacklevel=4)
 
         used_param_names = [i for i in param_names if i in expected_names]
         if len(used_param_names) != len(param_names):
             unused = ', '.join(list(param_names - set(used_param_names)))
-            warnings.warn("Parameter %s is not used by any computation. "
-                          "Is this intended?"%unused, stacklevel=4)
+            warnings.warn(f"Parameter {unused} is not used by any computation. "
+                          "Is this intended?", stacklevel=4)
 
         args, _ = _flatten(args, "input")
         try:
@@ -1404,9 +1402,8 @@ class HybridBlock(Block):
         if not isinstance(block, HybridBlock):
             raise ValueError(
                 "Children of HybridBlock must also be HybridBlock, " \
-                "but %s has type %s. If you are using Sequential, " \
-                "please try HybridSequential instead."%(
-                    str(block), str(type(block))))
+                f"but {str(block)} has type {str(type(block))}. If you are using Sequential, " \
+                "please try HybridSequential instead.")
         super(HybridBlock, self).register_child(block, name)
         if self._active:
             warnings.warn("Currently the model has been hybridized. Automatically deactivate the hybridization \
@@ -1549,8 +1546,9 @@ class HybridBlock(Block):
         for var in sym.get_inputs():
             if var.name in rename_map:
                 var._set_attr(name=rename_map[var.name])
-
-        sym_filename = '%s-symbol.json' % (path if path is not None else "")
+        
+        path_string = path if path is not None else ""
+        sym_filename = f'{path_string}-symbol.json'
         if path is not None:
             sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
@@ -1566,8 +1564,8 @@ class HybridBlock(Block):
                         warnings.warn('Parameter "{name}" is not found in the graph. '
                                       .format(name=name), stacklevel=3)
                     else:
-                        arg_dict['aux:%s'%name] = param._reduce()
-        params_filename = '%s-%04d.params'%((path if path is not None else ""), epoch)
+                        arg_dict[f'aux:{name}'] = param._reduce()
+        params_filename = f'{path_string}-{epoch:04d}.params'
 
         if path is not None:
             if is_np_array():
@@ -1788,7 +1786,7 @@ class SymbolBlock(HybridBlock):
         input_names = set()
         for i in syms:
             assert len(i.get_internals().list_outputs()) == 1, \
-                "Input symbols must be variable, but %s is an output of operators"%str(i)
+                f"Input symbols must be variable, but {str(i)} is an output of operators"
             input_names.add(i.name)
 
         # check if any symbol is row_sparse
@@ -1797,8 +1795,8 @@ class SymbolBlock(HybridBlock):
         for i in out:
             for j in i.get_internals():
                 assert(j.attr("__storage_type__") != str(row_sparse_storage)), \
-                    "SymbolBlock doesn't support Parameter '%s' because its storage " \
-                    "type is 'row_sparse'." % j.name
+                    f"SymbolBlock doesn't support Parameter '{j.name}' because its storage " \
+                    "type is 'row_sparse'."
         if len(out) > 1:
             out = symbol.Group(out, _check_same_symbol_type(out))
         else:
@@ -1866,7 +1864,7 @@ class SymbolBlock(HybridBlock):
 
         assert isinstance(x, Symbol), \
             "HybridBlock requires the first argument to forward be either " \
-            "Symbol or NDArray, but got %s"%type(x)
+            f"Symbol or NDArray, but got {type(x)}"
         args, in_fmt = _flatten([x] + list(args), "input")
         assert in_fmt == self._in_format, "Invalid input format"
         ret = copy.copy(self._cached_graph[1])

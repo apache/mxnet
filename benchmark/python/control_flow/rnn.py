@@ -97,7 +97,8 @@ def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
         layer.initialize(ctx=ctx)
         if is_hyb_layer:
             layer.hybridize(static_alloc=True)
-        print("is_train = %r, hybridize_cell = %r, hybridize_layer = %r" % (is_train, is_hyb_cell, is_hyb_layer))
+        print(
+            f"is_train = {repr(is_train)}, hybridize_cell = {repr(is_hyb_cell)}, hybridize_layer = {repr(is_hyb_layer)}")
         times = []
         for _ in range(args.warmup_rounds + args.test_rounds):
             tick = time()
@@ -112,7 +113,7 @@ def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
             tock = time()
             times.append((tock - tick) * 1000.0)
         times = times[args.warmup_rounds: ]
-        print("Time used: mean = %.3f ms, std = %.3f ms" % (onp.mean(times), onp.std(times)))
+        print(f"Time used: mean = {onp.mean(times):.3f} ms, std = {onp.std(times):.3f} ms")
 
 
 def main():
@@ -131,8 +132,7 @@ def main():
     for cell_type, ctx, seq_len, batch_size, hidden_dim in product(  \
         cell_types, ctxs, seq_lens, batch_sizes, hidden_dims):
         print("--------------------------------------")
-        print("cell: %s  ctx: %s  length: %d  batch size: %d dim: %d" % \
-              (cell_type.__name__, str(ctx), seq_len, batch_size, hidden_dim))
+        print(f"cell: {cell_type.__name__}  ctx: {str(ctx)}  length: {seq_len}  batch size: {batch_size} dim: {hidden_dim}")
         run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim)
 
 

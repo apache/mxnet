@@ -262,10 +262,10 @@ class Initializer(object):
 
     def _init_default(self, name, _):
         raise ValueError(
-            'Unknown initialization pattern for %s. ' \
+            f'Unknown initialization pattern for {name}. ' \
             'Default initialization is now limited to '\
             '"weight", "bias", "gamma" (1.0), and "beta" (0.0).' \
-            'Please use mx.sym.Variable(init=mx.init.*) to set initialization pattern' % name)
+            'Please use mx.sym.Variable(init=mx.init.*) to set initialization pattern')
 
     def __eq__(self, other):
         if not isinstance(other, Initializer):
@@ -345,15 +345,14 @@ class Load(object):
     def __call__(self, name, arr):
         if name in self.param:
             assert arr.shape == self.param[name].shape, \
-                'Parameter %s cannot be initialized from loading. '%name + \
-                'Shape mismatch, target %s vs loaded %s'%(str(arr.shape),
-                                                          self.param[name].shape)
+                f'Parameter {name} cannot be initialized from loading. ' + \
+                f'Shape mismatch, target {str(arr.shape)} vs loaded {self.param[name].shape}'
             arr[:] = self.param[name]
             if self.verbose:
                 logging.info('Initialized %s by loading', name)
         else:
             assert self.default_init is not None, \
-                "Cannot Initialize %s. Not found in loaded param "%name + \
+                f"Cannot Initialize {name}. Not found in loaded param " + \
                 "and no default Initializer is provided."
             self.default_init(name, arr)
             if self.verbose:

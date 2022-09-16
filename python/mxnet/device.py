@@ -103,7 +103,7 @@ class Device:
             self.device_id == other.device_id
 
     def __str__(self):
-        return '%s(%d)' % (self.device_type, self.device_id)
+        return f'{self.device_type}({self.device_id})'
 
     def __repr__(self):
         return self.__str__()
