@@ -250,15 +250,15 @@ Accuracy results on the whole validation dataset (782 batches) are shown below.
 
 | Optimization method  | Top 1 accuracy | Top 5 accuracy | Top 1 relative accuracy loss [%] | Top 5 relative accuracy loss [%] | Cost = one-time optimization on 9 batches [s] | Validation time [s] | Speedup |
 |----------------------|-------:|-------:|------:|------:|-------:|--------:|------:|
-| fp32 no optimization 0.7699 | 0.9340 |  0.00 |  0.00 |   0.00 | 316.50 | 1.0 |
-| fp32 fused           0.7699 | 0.9340 |  0.00 |  0.00 |   0.03 | 147.77 | 2.1 |
-| int8 full naive      0.2207 | 0.3912 | 71.33 | 58.12 |  11.29 |  45.81 | **6.9** |
-| int8 full entropy    0.6933 | 0.8917 |  9.95 |  4.53 |  80.23 |  46.39 | 6.8 |
-| int8 smart naive     0.2210 | 0.3905 | 71.29 | 58.19 |  11.15 |  46.02 | 6.9 |
-| int8 smart entropy   0.6928 | 0.8910 | 10.01 |  4.60 |  79.75 |  45.98 | 6.9 |
-| int8 INC basic       0.7692 | 0.9331 | **0.09** |  0.10 | 266.50 |  48.32 | **6.6** |
-| int8 INC mse         0.7692 | 0.9337 | **0.09** |  0.03 | 106.50 |  49.76 | **6.4** |
-| int8 INC mycustom    0.7699 | 0.9338 | **0.00** |  0.02 | 370.29 |  70.07 | **4.5** |
+| fp32 no optimization | 0.7699 | 0.9340 |  0.00 |  0.00 |   0.00 | 316.50 | 1.0 |
+| fp32 fused           | 0.7699 | 0.9340 |  0.00 |  0.00 |   0.03 | 147.77 | 2.1 |
+| int8 full naive      | 0.2207 | 0.3912 | 71.33 | 58.12 |  11.29 |  45.81 | **6.9** |
+| int8 full entropy    | 0.6933 | 0.8917 |  9.95 |  4.53 |  80.23 |  46.39 | 6.8 |
+| int8 smart naive     | 0.2210 | 0.3905 | 71.29 | 58.19 |  11.15 |  46.02 | 6.9 |
+| int8 smart entropy   | 0.6928 | 0.8910 | 10.01 |  4.60 |  79.75 |  45.98 | 6.9 |
+| int8 INC basic       | 0.7692 | 0.9331 | **0.09** |  0.10 | 266.50 |  48.32 | **6.6** |
+| int8 INC mse         | 0.7692 | 0.9337 | **0.09** |  0.03 | 106.50 |  49.76 | **6.4** |
+| int8 INC mycustom    | 0.7699 | 0.9338 | **0.00** |  0.02 | 370.29 |  70.07 | **4.5** |
 
 
 Environment:  
