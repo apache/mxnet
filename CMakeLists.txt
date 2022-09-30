@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.19)
 
 # workaround to store CMAKE_CROSSCOMPILING because is getting reset by the project command
 if(CMAKE_CROSSCOMPILING)
