@@ -317,6 +317,21 @@ build_centos7_gpu() {
     ninja
 }
 
+build_centos7_gpu_cu101() {
+  build_centos7_gpu
+}
+build_centos7_gpu_cu102() {
+  build_centos7_gpu
+}
+
+build_centos7_gpu_cu110() {
+  build_centos7_gpu
+}
+
+build_centos7_gpu_cu112() {
+  build_centos7_gpu
+}
+
 build_ubuntu_cpu() {
     build_ubuntu_cpu_openblas
 }
@@ -550,11 +565,8 @@ build_ubuntu_cpu_onednn_mkl() {
 }
 
 build_ubuntu_gpu_tensorrt() {
-
     set -ex
 
-    export CC=gcc-7
-    export CXX=g++-7
     export ONNX_NAMESPACE=onnx
     export PYBIN=$(which python3)
     PYVERFULL=$($PYBIN -V | awk '{print $2}')
@@ -580,6 +592,7 @@ build_ubuntu_gpu_tensorrt() {
     export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
+    rm -rf build
     mkdir -p build
     cd build
     cmake -DPYTHON_EXECUTABLE=$PYBIN -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
@@ -589,23 +602,41 @@ build_ubuntu_gpu_tensorrt() {
 
     mkdir -p /work/mxnet/lib/
     cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so* /work/mxnet/lib/
 
-    cd /work/build
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${LIBRARY_PATH}:/usr/local/cuda/lib64/stubs/
+
+
+    cd /work/mxnet/
+    rm -rf build
+    mkdir build
+    cd build
     cmake -DUSE_CUDA=1                            \
           -DUSE_CUDNN=1                           \
           -DUSE_OPENCV=1                          \
           -DUSE_TENSORRT=1                        \
+          -DBUILD_CYTHON_MODULES=ON               \
+          -DUSE_CPP_PACKAGE=1                     \
+          -DBUILD_CPP_EXAMPLES=1                  \
           -DUSE_INT64_TENSOR_SIZE=1               \
           -DUSE_OPENMP=0                          \
           -DUSE_BLAS=Open                         \
           -DUSE_ONEDNN=0                          \
           -DUSE_NVML=OFF                          \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+          -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
           -G Ninja                                \
           /work/mxnet
 
     ninja
+}
+
+build_ubuntu_tensorrt_cu114() {
+  build_ubuntu_gpu_tensorrt
+}
+
+build_ubuntu_gpu_cu114() {
+  build_ubuntu_tensorrt_cu114
 }
 
 build_ubuntu_gpu_onednn() {
@@ -922,7 +953,7 @@ unittest_ubuntu_python3_gpu() {
     export MXNET_ONEDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.2.1}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
@@ -940,10 +971,11 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ONEDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.2.1}
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=100
+    export LD_LIBRARY_PATH=/work/mxnet/lib
     check_cython
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator and not test_amp_init.py' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
@@ -974,7 +1006,14 @@ unittest_ubuntu_python3_gpu_nocudnn() {
 unittest_cpp() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=100
+    export LD_LIBRARY_PATH=/work/mxnet/lib:/usr/local/cuda/lib64/stubs/
     build/tests/mxnet_unit_tests
+}
+
+citest_cpp_package() {
+    set -ex
+    export LD_LIBRARY_PATH=/work/mxnet/lib
+    cpp-package/tests/ci_test.sh
 }
 
 unittest_centos7_cpu() {

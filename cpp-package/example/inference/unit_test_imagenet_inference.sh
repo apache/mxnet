@@ -60,4 +60,7 @@ else
     else
         echo "Skipped INT8 test because onednn was not found which is required for running inference with quantized models."
     fi
+    echo ">>> INFO: TensorRT dummy data"
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../build ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 8 --num_inference_batches 16 --benchmark --gpu --params_file "model/Inception-BN-0126.params"   --enableTRT
+
 fi

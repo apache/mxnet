@@ -642,6 +642,11 @@ if Features().is_enabled('ONEDNN'):
         '_sg_pow_mul_scalar'
     ])
 
+if Features().is_enabled('TENSORRT'):
+    FP32_FUNCS.extend([
+        '_TensorRT'
+    ])
+
 # Functions that have to be cast to FP32 only for
 # some values of their parameters
 CONDITIONAL_FP32_FUNCS = [

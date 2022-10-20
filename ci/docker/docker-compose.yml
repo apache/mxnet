@@ -118,7 +118,7 @@ services:
       args:
         BASE_IMAGE: nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04
       cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu111:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu114:latest
   ###################################################################################################
   # Dockerfile.build.android based images used for testing cross-compilation for plain ARM
   ###################################################################################################

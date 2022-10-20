@@ -53,8 +53,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         build-essential \
         ninja-build \
         git \
-        protobuf-compiler \
-        libprotobuf-dev \
         default-jdk \
         clang-6.0 \
         clang-format \
@@ -127,6 +125,18 @@ RUN cd /usr/local/src && \
     cd /usr/local/src && \
     rm -rf ccache
 
+# Build static protobuf to avoid namespace collisions 
+RUN cd /usr/local/src && \
+    git clone --recursive -b v3.9.2 https://github.com/google/protobuf.git  && \
+    cd protobuf && \
+    ./autogen.sh && \
+    ./configure --disable-shared CXXFLAGS=-fPIC && \
+    make -j $(nproc) && \
+    make install && \
+    rm -rf /usr/local/lib/libprotobuf-lite.so* && \
+    rm -rf /usr/local/lib/libprotobuf.so* && \
+    rm -rf /usr/local/lib/libprotoc.so* 
+
 # RAT License Checker tool
 RUN cd /usr/local/src && \
     wget https://archive.apache.org/dist/creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz && \
@@ -173,5 +183,4 @@ RUN if [ ! -z "${TRT_VERSION}" ]; then \
                            libnvinfer-plugin-dev=${TRT_VERSION}; \
         rm -rf /var/lib/apt/lists/*; \
     fi
-
 
