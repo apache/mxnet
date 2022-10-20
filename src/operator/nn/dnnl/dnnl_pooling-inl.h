@@ -28,9 +28,12 @@
 
 #include <dnnl.hpp>
 #include <utility>
+#include <vector>
 
-#include "../pooling-inl.h"
-#include "./dnnl_base-inl.h"
+#include "operator/nn/pooling-inl.h"
+#include "dnnl_base-inl.h"
+
+#define DIV_ROUND_UP(a, b) ((a + (b - 1)) / b)
 
 namespace mxnet {
 namespace op {
@@ -54,7 +57,8 @@ class DNNLPoolingFwd {
   void Execute(const NDArray& in_data,
                const OpReqType req,
                const NDArray& out_data,
-               const NDArray* workspace);
+               const NDArray* workspace,
+               const bool use_adaptive_pooling);
 
  private:
   bool with_workspace_;
@@ -92,19 +96,19 @@ void UseAdaptivePaddingKernel(T* kernel,
                               T* strides,
                               T* pad_l,
                               T* pad_r,
-                              const NDArray& in_data,
-                              const NDArray& out_data) {
-  const int IH = in_data.shape()[2];
-  const int IW = in_data.shape()[3];
-  const int OH = out_data.shape()[2];
-  const int OW = out_data.shape()[3];
+                              const mxnet::TShape& input_shape,
+                              const mxnet::TShape& output_shape) {
+  const int IH = input_shape[2];
+  const int IW = input_shape[3];
+  const int OH = output_shape[2];
+  const int OW = output_shape[3];
 
-  strides->at(0) = floor((IH << 1) / OH) - floor(IH / OH);
-  strides->at(1) = floor((IW << 1) / OW) - floor(IW / OW);
-  kernel->at(0)  = ceil((IH << 1) / OH) - floor(IH / OH);
-  kernel->at(1)  = ceil((IW << 1) / OW) - floor(IW / OW);
-  pad_l->at(0)   = (strides->at(0) * (OH - 1) + kernel->at(0) - IH) >> 1;
-  pad_l->at(1)   = (strides->at(1) * (OW - 1) + kernel->at(1) - IW) >> 1;
+  strides->at(0) = ((IH << 1) / OH) - (IH / OH);
+  strides->at(1) = ((IW << 1) / OW) - (IW / OW);
+  kernel->at(0)  = DIV_ROUND_UP((IH << 1) / OH, 1) - (IH / OH);
+  kernel->at(1)  = DIV_ROUND_UP((IW << 1) / OW, 1) - (IW / OW);
+  pad_l->at(0)   = (strides->at(0) * (OH - 1) + kernel->at(0) - IH) / 2;
+  pad_l->at(1)   = (strides->at(1) * (OW - 1) + kernel->at(1) - IW) / 2;
 }
 
 inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
@@ -123,25 +127,19 @@ inline bool SupportDNNLPooling(const PoolingParam& param) {
            param.layout.value() == mshadow::kNCDHW));
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_pooling.html
 inline bool SupportDNNLPooling(const PoolingParam& param, const NDArray& input) {
-  const auto dshape = input.shape();
-  const auto ndim   = dshape.ndim();
-  const auto dtype  = input.dtype();
-
-  if (!(SupportStorageDNNL(input.storage_type()) && (ndim == 3 || ndim == 4 || ndim == 5) &&
-        (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16)))
-    return false;
-
-  if (!SupportDNNLPooling(param))
+  if (!SupportDNNL<3, 5, DNNLTypeMode::FloatTypes>(input) || !SupportDNNLPooling(param))
     return false;
 
   if (param.pooling_convention == pool_enum::kValid) {
     return true;
   } else {
+    const auto dshape = input.shape();
     if (param.pool_type == pool_enum::kAvgPooling) {
       // dnnl works differently when padding is asymmetric, so let's skip this case.
       bool is_symmetric = true;
-      switch (ndim) {
+      switch (dshape.ndim()) {
         case 5:
           is_symmetric =
               is_symmetric &&
@@ -168,31 +166,35 @@ inline bool SupportDNNLPooling(const PoolingParam& param, const NDArray& input) 
 }
 
 inline bool DNNLRequireWorkspace(const PoolingParam& param) {
-  return param.pool_type != pool_enum::kAvgPooling;
+  return param.pool_type != pool_enum::kAvgPooling && !param.IsAdaptivePooling();
 }
 
 typedef ParamOpSign<PoolingParam> DNNLPoolingSignature;
-void DNNLPoolingCompute(const OpContext& ctx,
-                        const PoolingParam& param,
-                        const NDArray& in_data,
-                        const OpReqType req,
-                        const NDArray& out_data,
-                        const NDArray* workspace,
-                        const bool use_adaptive_pooling);
-
-void DNNLPoolingGradCompute(const OpContext& ctx,
-                            const PoolingParam& param,
-                            const NDArray& out_grad,
-                            const NDArray& in_data,
-                            const NDArray* workspace,
-                            const OpReqType req,
-                            const NDArray& in_grad);
 
 DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                               const bool is_train,
                               const NDArray& data,
                               const NDArray& output,
                               const bool use_adaptive_pooling);
+
+DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
+                              const NDArray& in_data,
+                              const NDArray& in_grad,
+                              const NDArray& out_grad,
+                              const bool use_adaptive_pooling);
+
+void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs);
+
+void DNNLPoolingCompute(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& in_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& out_data);
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_ONEDNN == 1

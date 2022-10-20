@@ -81,7 +81,7 @@ As part of making sure all our tutorials are running correctly with the latest v
 
 Add your own test here `tests/tutorials/test_tutorials.py`. (If you forget, don't worry your PR will not pass the sanity check).
 
-If your tutorial depends on specific packages, simply add them to this provisionning script: `ci/docker/install/ubuntu_tutorials.sh`
+If your tutorial depends on specific packages, simply add them to this provisioning script: `ci/docker/install/ubuntu_tutorials.sh`
 
 ## <a name="list-of-examples"></a>List of examples
 

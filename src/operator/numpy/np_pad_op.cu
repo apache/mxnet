@@ -28,9 +28,17 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_pad).set_attr<FCompute>("FCompute<gpu>", NumpyPadOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_pad)
+    // Incompatible due to Copy(xpu_tensor, cpu_tensor) in NumpyPadOpForward
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyPadOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_pad).set_attr<FCompute>("FCompute<gpu>", NumpyPadOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_pad)
+    // Incompatible due to Copy(xpu_tensor, cpu_tensor) in NumpyPadOpBackward
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyPadOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -203,7 +203,7 @@ def test_ndarray_saveload():
         assert len(data) == len(data2)
         for x, y in zip(data, data2):
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
-        dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
+        dmap = {f'ndarray xx {i}': x for i, x in enumerate(data)}
         mx.nd.save(fname, dmap)
         dmap2 = mx.nd.load(fname)
         assert len(dmap2) == len(dmap)
@@ -279,8 +279,8 @@ def test_reduce():
             if type(ndarray_ret) is mx.ndarray.NDArray:
                 ndarray_ret = ndarray_ret.asnumpy()
             assert (ndarray_ret.shape == numpy_ret.shape) or \
-                   (ndarray_ret.shape == (1,) and numpy_ret.shape == ()), "nd:%s, numpy:%s" \
-                                                         %(ndarray_ret.shape, numpy_ret.shape)
+                   (ndarray_ret.shape == (1,) and numpy_ret.shape == ()), \
+                   f"nd:{ndarray_ret.shape}, numpy:{numpy_ret.shape}"
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-4
     test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),

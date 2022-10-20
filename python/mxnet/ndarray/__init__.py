@@ -29,7 +29,7 @@ from .ndarray import *
 # pylint: enable=wildcard-import
 from .utils import load, load_frombuffer, save, zeros, empty, array
 from .sparse import _ndarray_cls
-from .ndarray import _GRAD_REQ_MAP, _DTYPE_MX_TO_NP, _DTYPE_NP_TO_MX, _new_empty_handle
+from .ndarray import _GRAD_REQ_MAP, dtype_mx_to_np, dtype_np_to_mx, _new_empty_handle
 from . import numpy as np
 from . import numpy_extension as npx
 

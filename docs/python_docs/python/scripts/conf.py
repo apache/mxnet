@@ -29,9 +29,9 @@ MOCK_MODULES = ['scipy', 'scipy.sparse', 'sklearn']
 needs_sphinx = '1.5.6'
 
 # General information about the project.
-project = u'Apache MXNet'
-author = u'%s developers' % project
-copyright = u'2015-2020, %s' % author
+project = 'Apache MXNet'
+author = f'{project} developers'
+copyright = f'2015-2020, {author}'
 github_doc_root = 'https://github.com/apache/incubator-mxnet/tree/master/docs/'
 doc_root = 'https://mxnet.apache.org/'
 
@@ -255,6 +255,6 @@ def setup(app):
     app.add_transform(AutoStructify)
     app.add_config_value('recommonmark_config', {
     }, True)
-    app.add_javascript('google_analytics.js')
+    app.add_javascript('matomo_analytics.js')
     import mxtheme
     app.add_directive('card', mxtheme.CardDirective)

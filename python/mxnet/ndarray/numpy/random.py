@@ -22,6 +22,7 @@ from ...device import current_device
 from . import _internal as _npi
 from . import _api_internal
 from ...util import wrap_ctx_to_device_func
+from ..ndarray import get_dtype_name
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
@@ -83,7 +84,7 @@ def randint(low, high=None, size=None, dtype=None, device=None, out=None):
     if dtype is None:
         dtype = 'int64'
     elif not isinstance(dtype, str):
-        dtype = np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if device is None:
         device = str(current_device())
     else:
@@ -137,7 +138,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, device=None, out=None):
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if size == ():
         size = None
     return _api_internal.uniform(low, high, size, device, dtype, out)
@@ -180,7 +181,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, device=None, out=None):
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if size == ():
         size = None
     return _api_internal.normal(loc, scale, size, device, dtype, out)
@@ -745,7 +746,7 @@ def gamma(shape, scale=1.0, size=None, dtype=None, device=None, out=None):
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.gamma(shape, scale, size, device, dtype, out)
 
 
@@ -1051,7 +1052,7 @@ def laplace(loc=0.0, scale=1.0, size=None, dtype=None, device=None, out=None):
     else:
         device = str(device)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if size == ():
         size = None
     return _api_internal.laplace(loc, scale, size, dtype, device, out)

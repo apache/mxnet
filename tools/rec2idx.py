@@ -84,7 +84,7 @@ class IndexCreator(mx.recordio.MXRecordIO):
             if cont is None:
                 break
             key = self.key_type(counter)
-            self.fidx.write('%s\t%d\n'%(str(key), pos))
+            self.fidx.write(f'{str(key)}\t{pos}\n')
             counter = counter + 1
 
 def parse_args():

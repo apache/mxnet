@@ -268,9 +268,13 @@ void CallKernel2(Stream<gpu>* s,
 }
 
 NNVM_REGISTER_OP(_multi_lamb_update)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", MultiLAMBUpdate<gpu, false>);
 
 NNVM_REGISTER_OP(_multi_mp_lamb_update)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs& attrs, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", MultiLAMBUpdate<gpu, true>);
 
 }  // namespace op

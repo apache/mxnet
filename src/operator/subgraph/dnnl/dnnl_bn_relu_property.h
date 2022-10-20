@@ -19,22 +19,22 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_BN_RELU_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_BN_RELU_PROPERTY_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_act-inl.h"
-#include "../../nn/dnnl/dnnl_batch_norm-inl.h"
-#include "../common.h"
 #include "dnnl_subgraph_base-inl.h"
+#include "operator/nn/dnnl/dnnl_act-inl.h"
+#include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
+#include "operator/subgraph/common.h"
+
 namespace mxnet {
 namespace op {
 
 class SgDNNLBNReLUSelector : public SubgraphSelector {
  public:
-  enum SelectStatus { kStart, kSuccess, kFail };
-
   explicit SgDNNLBNReLUSelector(const bool disable_bn_relu)
       : disable_bn_relu_(disable_bn_relu), status_(kStart) {}
 
@@ -116,10 +116,11 @@ class SgDNNLBNReLUProperty : public SubgraphProperty {
     });
 
     n->attrs.name = node_name.str();
-    n->attrs.op   = Op::Get("_contrib_BatchNormWithReLU");
+    n->attrs.op   = Op::Get("_sg_onednn_batch_norm");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(sym));
-    n->attrs.parsed = param;
+    param.SetAttrDict(&(n->attrs.dict));
+    n->op()->attr_parser(&(n->attrs));
     return n;
   }
 

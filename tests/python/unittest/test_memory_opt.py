@@ -56,11 +56,11 @@ def test_mlp_attn():
     num_steps = 5
     in_arg_shapes = {'x': (num_steps, num_hidden,)}
     for i in range(num_steps):
-        y = mx.sym.Variable("y_t%d"%i)
-        tmp.append(mx.sym.broadcast_add(x, y, name="broadcast_add%d"%i))
+        y = mx.sym.Variable(f"y_t{i}")
+        tmp.append(mx.sym.broadcast_add(x, y, name=f"broadcast_add{i}"))
         z.append(mx.sym.Activation(tmp[-1], act_type='tanh',
-                                   name="activation%d"%i))
-        in_arg_shapes["y_t%d"%i] = (1, num_hidden,)
+                                   name=f"activation{i}"))
+        in_arg_shapes[f"y_t{i}"] = (1, num_hidden,)
     z = mx.sym.Group(z)
     exec = z._simple_bind(mx.cpu(), 'write', **in_arg_shapes)
 

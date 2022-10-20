@@ -34,7 +34,7 @@ import requests
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array
+from ..util import is_np_shape, is_np_array, TemporaryDirectory
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
@@ -64,10 +64,9 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
     size = data.shape[batch_axis]
     if even_split and size % num_slice != 0:
         raise ValueError(
-            "data with shape %s cannot be evenly split into %d slices along axis %d. " \
-            "Use a batch size that's multiple of %d or set even_split=False to allow " \
-            "uneven partitioning of data."%(
-                str(data.shape), num_slice, batch_axis, num_slice))
+            f"data with shape {str(data.shape)} cannot be evenly split into {num_slice} slices " \
+            f"along axis {batch_axis}. Use a batch size that's multiple of {num_slice} " \
+            f"or set even_split=False to allow uneven partitioning of data.")
 
     n_each_section, extras = divmod(size, num_slice)
     section_sizes = [0] + (extras * [n_each_section + 1] +
@@ -392,7 +391,7 @@ def _brief_print_list(lst, limit=7):
     if len(lst) > limit:
         return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
             _brief_print_list(lst[-limit//2:], limit)
-    return ', '.join(["'%s'"%str(i) for i in lst])
+    return ', '.join([f"'{str(i)}'" for i in lst])
 
 
 class HookHandle(object):

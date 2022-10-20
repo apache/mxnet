@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file quantize.cc
+ * \file quantize_v2.cc
  * \brief
  */
 

@@ -26,7 +26,7 @@
 namespace mxnet {
 namespace op {
 
-/*
+/*!
  * This selects nodes for a subgraph that only contains operators
  * in a given set and it visits nodes via both input and output links.
  */
@@ -51,7 +51,7 @@ class ContainOpSelector : public SubgraphSelector {
   const std::unordered_set<std::string>& op_names_;
 };
 
-/*
+/*!
  * This subgraph property finds a subgraph whose nodes have only operators
  * within a set. The operators in the subgraph will be executed by _CachedOp.
  */

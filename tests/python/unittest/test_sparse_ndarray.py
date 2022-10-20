@@ -566,7 +566,7 @@ def test_sparse_nd_save_load(save_fn):
     for x, y in zip(data_list1, data_list2):
         assert same(x.asnumpy(), y.asnumpy())
 
-    data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
+    data_map1 = {f'ndarray xx {i}': x for i, x in enumerate(data_list1)}
     if save_fn is mx.nd.save:
         save_fn(fname, data_map1)
     else:

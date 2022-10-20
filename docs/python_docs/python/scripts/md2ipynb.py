@@ -47,12 +47,12 @@ def md2ipynb():
         if not any([i in input_fn for i in ignore_execution]):
             tic = time.time()
             notedown.run(notebook, timeout)
-            print('%s: Evaluated %s in %f sec'%(src_fn, input_fn, time.time()-tic))
+            print(f'{src_fn}: Evaluated {input_fn} in {time.time()-tic} sec')
     # need to add language info to for syntax highlight
     notebook['metadata'].update({'language_info':{'name':'python'}})
     with open(output_fn, 'w', encoding='utf-8') as f:
         f.write(nbformat.writes(notebook))
-    print('%s: Write results into %s'%(src_fn, output_fn))
+    print(f'{src_fn}: Write results into {output_fn}')
 
 if __name__ == '__main__':
     md2ipynb()

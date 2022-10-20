@@ -78,7 +78,7 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
         # pylint: disable=W0703
         try:
             r = requests.get(url, stream=True)
-            assert r.status_code == 200, "failed to open %s" % url
+            assert r.status_code == 200, f"failed to open {url}"
             with open(fname, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk: # filter out keep-alive new chunks

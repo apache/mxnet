@@ -24,9 +24,8 @@
 
 #include "./dot-inl.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./../nn/dnnl/dnnl_base-inl.h"
-#include "./../nn/dnnl/dnnl_ops-inl.h"
-#include "./../nn/dnnl/dnnl_batch_dot-inl.h"
+#include "operator/nn/dnnl/dnnl_batch_dot-inl.h"
+#include "operator/nn/dnnl/dnnl_dot-inl.h"
 #endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
@@ -97,6 +96,9 @@ above patterns, ``dot`` will fallback and generate output with default storage.
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
     .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", DotForwardEx<cpu>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsMKLDNN", true)
+#endif
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
     .add_argument("lhs", "NDArray-or-Symbol", "The first input")
     .add_argument("rhs", "NDArray-or-Symbol", "The second input")
@@ -117,12 +119,26 @@ NNVM_REGISTER_OP(_backward_dot)
     .add_arguments(DotParam::__FIELDS__());
 
 #if MXNET_USE_ONEDNN == 1
+void DotForwardExDNNL(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
+  if (SupportDNNLDot(inputs)) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLDotForward<false>, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(DotForward_<cpu>, attrs, ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(DotForward_<cpu>, attrs, ctx, inputs, req, outputs);
+  }
+}
+
 static void BatchDotComputeExCPU(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs) {
-  if (SupportDNNLBatchDot(inputs, outputs[0])) {
+  if (SupportDNNLBatchDot(inputs)) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     DNNLRun(DNNLBatchDotForward<false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);

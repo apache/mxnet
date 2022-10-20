@@ -111,7 +111,7 @@ def main():
             from dmlc_tracker import sge
             sge.submit(args)
         else:
-            raise RuntimeError('Unknown submission cluster type %s' % args.cluster)
+            raise RuntimeError(f'Unknown submission cluster type {args.cluster}')
     else:
         if args.cluster == 'ssh':
             from dmlc_tracker import ssh
@@ -120,7 +120,7 @@ def main():
             from dmlc_tracker import mpi
             mpi.submit(args)
         else:
-            raise RuntimeError('Unknown submission cluster type %s' % args.cluster)
+            raise RuntimeError(f'Unknown submission cluster type {args.cluster}')
 
 
 def signal_handler(signal, frame):

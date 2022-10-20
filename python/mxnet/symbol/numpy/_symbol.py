@@ -163,9 +163,9 @@ class _Symbol(Symbol):
         if self._alive:
             if self.num_outputs > 1:
                 name = ', '.join([str(ele_sym) for ele_sym in self])
-                return '<%s group [%s]>' % (self.__class__.__name__, name)
+                return f'<{self.__class__.__name__} group [{name}]>'
             else:
-                return '<%s %s>' % (self.__class__.__name__, self.name)
+                return f'<{self.__class__.__name__} {self.name}>'
         else:
             return '<FREED {}>'.format(self.__class__.__name__)
 
@@ -1618,7 +1618,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
     elif isinstance(rhs, Symbol):
         return fn_array(lhs, rhs, out=out)
     else:
-        raise TypeError('type %s not supported' % str(type(rhs)))
+        raise TypeError(f'type {str(type(rhs))} not supported')
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 
@@ -3005,7 +3005,7 @@ def arcsin(x, out=None, **kwargs):
     The inverse sine is also known as `asin` or sin^{-1}.
     The output `symbol` has the same `ctx` as the input `symbol`.
     This function differs from the original `numpy.arcsin
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.arcsin.html>`_ in
     the following aspects:
     - Only support _Symbol or scalar now.
     - `where` argument is not supported.
@@ -4878,7 +4878,7 @@ def argmax(a, axis=None, out=None):
     corresponding to the first occurrence are returned.
 
     This function differs from the original `numpy.argmax
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.argmax.html>`_ in
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
@@ -4917,7 +4917,7 @@ def argmin(a, axis=None, out=None):
     corresponding to the first occurrence are returned.
 
     This function differs from the original `numpy.argmin
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmin.html>`_ in
+    <https://numpy.org/doc/stable/reference/generated/numpy.argmin.html>`_ in
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
@@ -7837,7 +7837,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         # Make sure have allowed kwargs appropriate for mode
         for key in kwargs:
             if key not in allowedkwargs[mode]:
-                raise ValueError('%s keyword not in allowed keywords %s' %(key, allowedkwargs[mode]))
+                raise ValueError(f'{key} keyword not in allowed keywords {allowedkwargs[mode]}')
 
     unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
     if unsupported_kwargs:

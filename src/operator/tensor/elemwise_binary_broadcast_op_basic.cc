@@ -21,12 +21,86 @@
  * \file elemwise_binary_broadcast_op_basic.cc
  * \brief CPU Implementation of basic functions for elementwise binary broadcast operator.
  */
-#include "./elemwise_unary_op.h"
-#include "./elemwise_binary_op-inl.h"
-#include "./elemwise_binary_broadcast_op.h"
+#include "operator/tensor/elemwise_unary_op.h"
+#include "operator/tensor/elemwise_binary_op-inl.h"
+#include "operator/tensor/elemwise_binary_broadcast_op.h"
+#if MXNET_USE_ONEDNN == 1
+#include "operator/nn/dnnl/dnnl_binary-inl.h"
+#include "operator/nn/dnnl/dnnl_sum-inl.h"
+#endif  // MXNET_USE_ONEDNN == 1
 
 namespace mxnet {
 namespace op {
+
+#if MXNET_USE_ONEDNN == 1
+template <dnnl::algorithm alg>
+void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs) {
+  const mxnet::TShape& input_0_shape  = inputs[0].shape();
+  const mxnet::TShape& input_1_shape  = inputs[1].shape();
+  const mxnet::TShape& output_0_shape = outputs[0].shape();
+  // We can use more efficient sum kernel, when there is no broadcast - when shapes are the
+  // same.
+  const bool same_shape = (input_0_shape == input_1_shape);
+
+  if (same_shape && alg == dnnl::algorithm::binary_add) {
+    DNNLSumFwd& fwd = DNNLSumFwd::GetCached(inputs, outputs);
+    fwd.Execute(ctx, inputs, req, outputs);
+  } else {
+    mxnet::TShape new_lshape, new_rshape, new_oshape;
+    int ndim_diff = BinaryBroadcastShapeCompact(
+        input_0_shape, input_1_shape, output_0_shape, &new_lshape, &new_rshape, &new_oshape);
+    std::vector<NDArray> new_inputs;
+    std::vector<NDArray> new_outputs;
+    if (ndim_diff) {
+      new_inputs  = {inputs[0].Reshape(new_lshape), inputs[1].Reshape(new_rshape)};
+      new_outputs = {outputs[0].Reshape(new_oshape)};
+    } else if (input_0_shape.Size() == 1 && input_1_shape.Size() == 1) {
+      // BinaryBroadcastShapeCompact function doesn't reshape tensors of size (1,1,...,1)
+      // into shape (1). It is mandatory for oneDNN primitive to have this reshape done.
+      mxnet::TShape one_shape = mxnet::TShape(1, 1);
+      new_inputs              = {inputs[0].Reshape(one_shape), inputs[1].Reshape(one_shape)};
+      new_outputs             = {outputs[0].Reshape(one_shape)};
+    } else {
+      new_inputs  = {inputs[0], inputs[1]};
+      new_outputs = {outputs[0]};
+    }
+
+    DNNLBinaryOpFwd& fwd = DNNLBinaryOpFwd::GetBinaryOpForward<alg>(new_inputs, new_outputs);
+    fwd.Execute(new_inputs, req, new_outputs);
+  }
+}
+#endif
+
+template <typename OP>
+static void BinaryOperatorComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
+#if MXNET_USE_ONEDNN == 1
+  if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
+    if (SupportDNNLBinary(inputs, outputs)) {
+      const dnnl::algorithm alg = DNNLAlgorithm<OP>::value;
+      DNNLRun(DNNLBinaryOpForward<alg>, attrs, ctx, inputs, req, outputs);
+    } else {
+      FallBackCompute(BinaryBroadcastCompute<cpu, OP>, attrs, ctx, inputs, req, outputs);
+    }
+    return;
+  }
+#endif  // MXNET_USE_ONEDNN == 1
+  if (std::is_same<OP, op::mshadow_op::plus>::value ||
+      std::is_same<OP, op::mshadow_op::minus>::value) {
+    BinaryBroadcastComputeDenseEx<cpu, OP>(attrs, ctx, inputs, req, outputs);
+  } else if (std::is_same<OP, op::mshadow_op::mul>::value ||
+             std::is_same<OP, op::mshadow_op::div>::value) {
+    BinaryBroadcastComputeSparseEx<cpu, OP>(attrs, ctx, inputs, req, outputs);
+  }
+}
+
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_add)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_plus)
@@ -56,8 +130,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>",
-                          BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::plus>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::plus>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
@@ -106,8 +179,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>",
-                          BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::minus>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::minus>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
@@ -148,8 +220,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>",
-                          BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::mul>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::mul>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 
@@ -189,8 +260,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
     .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>",
-                          BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::div>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryOperatorComputeExCPU<op::mshadow_op::div>)
     .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"});
 

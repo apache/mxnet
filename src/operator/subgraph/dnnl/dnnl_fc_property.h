@@ -25,13 +25,14 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_FC_PROPERTY_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "../../tensor/matrix_op-inl.h"
-#include "../common.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/subgraph/common.h"
 #include "dnnl_fc-inl.h"
 #include "dnnl_subgraph_base-inl.h"
 
@@ -39,14 +40,6 @@ namespace mxnet {
 namespace op {
 
 class SgDNNLFCSelector : public SubgraphSelector {
- public:
-  /* pattern match status */
-  enum SelectStatus {
-    kFail = 0,
-    kStart,
-    kSuccess,
-  };
-
  private:
   bool disable_fc_eltwise_;
   bool quantized_;
@@ -93,7 +86,7 @@ class SgDNNLFCSelector : public SubgraphSelector {
         // Currently, For INT8 FC fusion, only supports relu/bounded_relu(clip)/abs.
         if (new_node.op() == Op::Get("Activation")) {
           const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
-          if ((quantized_ && SupportQuantizedDNNLAct(param)) ||
+          if ((quantized_ && SupportDNNLQuantizedAct(param)) ||
               (!quantized_ && SupportDNNLAct(param))) {
             matched_list_.push_back(&new_node);
             status_ = kSuccess;
@@ -102,22 +95,16 @@ class SgDNNLFCSelector : public SubgraphSelector {
         }
         if (new_node.op() == Op::Get("LeakyReLU")) {
           const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
-          if (param.act_type == leakyrelu::kLeakyReLU || param.act_type == leakyrelu::kELU ||
-              param.act_type == leakyrelu::kGELU) {
+          if (SupportDNNLLeakyRelu(param)) {
             matched_list_.push_back(&new_node);
             status_ = kSuccess;
             return true;
           }
         }
-        if (!quantized_ &&
-            (new_node.op() == Op::Get("square") || new_node.op() == Op::Get("_npi_square") ||
-             new_node.op() == Op::Get("sqrt") || new_node.op() == Op::Get("_npi_sqrt") ||
-             new_node.op() == Op::Get("exp") || new_node.op() == Op::Get("_npi_exp"))) {
-          matched_list_.push_back(&new_node);
-          status_ = kSuccess;
-          return true;
-        }
-        if (new_node.op() == Op::Get("abs") || new_node.op() == Op::Get("_npi_absolute")) {
+        if (new_node.op() == Op::Get("square") || new_node.op() == Op::Get("_npi_square") ||
+            new_node.op() == Op::Get("sqrt") || new_node.op() == Op::Get("_npi_sqrt") ||
+            new_node.op() == Op::Get("abs") || new_node.op() == Op::Get("_npi_absolute") ||
+            new_node.op() == Op::Get("exp") || new_node.op() == Op::Get("_npi_exp")) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
@@ -180,7 +167,9 @@ class SgDNNLFCProperty : public SubgraphProperty {
 
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
-    nnvm::ObjectPtr n = nnvm::Node::Create();
+    // distingush between exactly same node in different networks - for caching weights
+    static unsigned int node_identifier = 0;
+    nnvm::ObjectPtr n                   = nnvm::Node::Create();
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
     nnvm::Symbol new_sym;
@@ -202,6 +191,7 @@ class SgDNNLFCProperty : public SubgraphProperty {
     n->attrs.name = node_name.str();
     n->attrs.op   = Op::Get("_sg_onednn_fully_connected");
     CHECK(n->attrs.op);
+    n->attrs.dict["__identifier__"] = std::to_string(node_identifier++);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));
     return n;

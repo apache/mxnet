@@ -29,6 +29,7 @@ from ..symbol_doc import _build_doc
 from ..base import _Null, _init_op_module, _is_np_op, _output_is_list
 from ..name import NameManager
 from ..profiler import _current_scope as _profiler_scope
+from ..ndarray import get_dtype_name
 # pylint: enable=unused-import
 
 
@@ -122,19 +123,19 @@ def _generate_symbol_function_code(handle, op_name, func_name, signature_only=Fa
         name, atype = arg_names[i], arg_types[i]
         if name == 'dtype':
             dtype_name = name
-            signature.append('%s=_Null'%name)
+            signature.append(f'{name}=_Null')
         elif atype.startswith('NDArray') or atype.startswith('Symbol'):
             assert not arr_name, \
                 "Op can only have one argument with variable " \
                 "size and it must be the last argument."
             if atype.endswith('[]'):
-                ndsignature.append('*%s'%name)
+                ndsignature.append(f'*{name}')
                 arr_name = name
             else:
-                ndsignature.append('%s=None'%name)
+                ndsignature.append(f'{name}=None')
                 ndarg_names.append(name)
         else:
-            signature.append('%s=_Null'%name)
+            signature.append(f'{name}=_Null')
             kwarg_names.append(name)
     #signature.append('is_train=False')
     signature.append('name=None')
@@ -162,12 +163,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        if _np.dtype(kwargs['%s']).names:
-            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
-        else:
-            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-                dtype_name, dtype_name, dtype_name,
-                dtype_name, dtype_name, dtype_name))
+        kwargs['%s'] = get_dtype_name(kwargs['%s'])"""%(dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
     kwargs.update(attribute.current().get(attr))
@@ -235,16 +231,12 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                     code.append("""
     if %s is not _Null and %s is not None:
         _keys.append('%s')
-        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name, dtype_name))
+        _vals.append(get_dtype_name(%s))"""%(dtype_name, dtype_name, dtype_name, dtype_name))
                 else:
                     code.append("""
     if %s is not _Null:
         _keys.append('%s')
-        if _np.dtype(%s).names:
-            _vals.append(_np.dtype(%s).names[0])
-        else:
-            _vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
-                                                  dtype_name, dtype_name))
+        _vals.append(get_dtype_name(%s))"""%(dtype_name, dtype_name, dtype_name))
 
             code.append("""
     name = _name.current().get(name, '%s')

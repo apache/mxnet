@@ -51,7 +51,7 @@ void PoolingParamParser(nnvm::NodeAttrs* attrs) {
       param.pad = Shape2(0, 0);
   } else {
     // ignore kernel size only if global_pool not assigned false
-    if (param.global_pool == false) {
+    if (param.global_pool == false && !param.IsAdaptivePooling()) {
       CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim() << "D pooling not supported";
     }
     if (param.stride.ndim() == 0)
@@ -59,6 +59,7 @@ void PoolingParamParser(nnvm::NodeAttrs* attrs) {
     if (param.pad.ndim() == 0)
       param.pad = Shape3(0, 0, 0);
   }
+
   attrs->parsed = std::move(param);
 }
 
@@ -294,21 +295,10 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs& attrs,
                          const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-  const NDArray* workspace  = nullptr;
-
-  // Pooling does not currently support working with views
-  if (inputs[0].IsView() || outputs[0].IsView()) {
-    FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
-    return;
-  }
 
   if (SupportDNNLPooling(param, inputs[0])) {
-    if (DNNLRequireWorkspace(param)) {
-      CHECK_GT(outputs.size(), 1U);
-      workspace = &outputs[1];
-    }
     DNNL_OPCHECK_INIT(false, 1, inputs, outputs);
-    DNNLPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace, false);
+    DNNLRun(DNNLPoolingCompute, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -329,23 +319,8 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   }
 
   if (SupportDNNLPooling(param, inputs[0])) {
-    const NDArray& out_grad  = inputs[0];
-    const NDArray* workspace = nullptr;
-    const NDArray* in_data   = nullptr;
-    if (DNNLRequireWorkspace(param)) {
-      // The first two elements are the gradient of the outputs in forward.
-      // The third is the input of forward.
-      // The fourth and the fifth are the outputs of forward.
-      CHECK_EQ(inputs.size(), 5U);
-      in_data   = &inputs[2];
-      workspace = &inputs[4];
-    } else {
-      CHECK_EQ(inputs.size(), 3U);
-      in_data = &inputs[1];
-    }
-    const NDArray& in_grad = outputs[0];
     DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    DNNLPoolingGradCompute(ctx, param, out_grad, *in_data, workspace, req[0], in_grad);
+    DNNLRun(DNNLPoolingGradCompute, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

@@ -66,21 +66,19 @@ def get_register_func(base_class, nickname):
     def register(klass, name=None):
         """Register functions"""
         assert issubclass(klass, base_class), \
-            "Can only register subclass of %s"%base_class.__name__
+             f"Can only register subclass of {base_class.__name__}"
         if name is None:
             name = klass.__name__
         name = name.lower()
         if name in registry:
             warnings.warn(
-                "\033[91mNew %s %s.%s registered with name %s is"
-                "overriding existing %s %s.%s\033[0m"%(
-                    nickname, klass.__module__, klass.__name__, name,
-                    nickname, registry[name].__module__, registry[name].__name__),
+                f"\033[91mNew {nickname} {klass.__module__}.{klass.__name__} registered with name {name} is"
+                f"overriding existing {nickname} {registry[name].__module__}.{registry[name].__name__}\033[0m",
                 UserWarning, stacklevel=2)
         registry[name] = klass
         return klass
 
-    register.__doc__ = "Register %s to the %s factory"%(nickname, nickname)
+    register.__doc__ = f"Register {nickname} to the {nickname} factory"
     return register
 
 
@@ -139,13 +137,13 @@ def get_create_func(base_class, nickname):
 
         if isinstance(name, base_class):
             assert len(args) == 0 and len(kwargs) == 0, \
-                "%s is already an instance. Additional arguments are invalid"%(nickname)
+                f"{nickname} is already an instance. Additional arguments are invalid"
             return name
 
         if isinstance(name, dict):
             return create(**name)
 
-        assert isinstance(name, string_types), "%s must be of string type"%nickname
+        assert isinstance(name, string_types), f"{nickname} must be of string type"
 
         if name.startswith('['):
             assert not args and not kwargs
@@ -158,18 +156,17 @@ def get_create_func(base_class, nickname):
 
         name = name.lower()
         assert name in registry, \
-            "%s is not registered. Please register with %s.register first"%(
-                str(name), nickname)
+            f"{str(name)} is not registered. Please register with {nickname}.register first"
         return registry[name](*args, **kwargs)
 
-    create.__doc__ = """Create a %s instance from config.
+    create.__doc__ = f"""Create a {nickname} instance from config.
 
 Parameters
 ----------
-%s : str or %s instance
+{nickname} : str or {base_class.__name__} instance
     class name of desired instance. If is a instance,
     it will be returned directly.
 **kwargs : dict
-    arguments to be passed to constructor"""%(nickname, nickname, base_class.__name__)
+    arguments to be passed to constructor"""
 
     return create

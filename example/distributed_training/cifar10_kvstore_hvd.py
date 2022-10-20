@@ -234,4 +234,4 @@ for epoch in range(args.epochs):
     # Print test accuracy after every epoch
     test_accuracy = evaluate(test_data, net, ctx)
     if store.rank == 0:
-        logging.info("Epoch %d: Test_acc %f" % (epoch, test_accuracy))
+        logging.info(f"Epoch {epoch}: Test_acc {test_accuracy}")

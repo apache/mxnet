@@ -199,13 +199,12 @@ def _make_internal_datasets(handle):
         [py_str(arg_types[i]) for i in range(narg)],
         [py_str(arg_descs[i]) for i in range(narg)])
 
-    doc_str = ('%s\n\n' +
-               '%s\n' +
+    doc_str = (f'{desc.value}\n\n' +
+               f'{param_str}\n' +
                'Returns\n' +
                '-------\n' +
                'MXDataset\n'+
                '    The result dataset.')
-    doc_str = doc_str % (desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create a dataset.
@@ -243,7 +242,7 @@ def _make_internal_datasets(handle):
             ctypes.byref(dataset_handle)))
 
         if len(args):
-            raise TypeError('%s can only accept keyword arguments' % iter_name)
+            raise TypeError(f'{iter_name} can only accept keyword arguments')
 
         return MXDataset(dataset_handle, **kwargs)
 
@@ -287,13 +286,12 @@ def _make_internal_batchify_functions(handle):
         [py_str(arg_types[i]) for i in range(narg)],
         [py_str(arg_descs[i]) for i in range(narg)])
 
-    doc_str = ('%s\n\n' +
-               '%s\n' +
+    doc_str = (f'{desc.value}\n\n' +
+               f'{param_str}\n' +
                'Returns\n' +
                '-------\n' +
                'MXBatchifyFunction\n'+
                '    The result batchify function.')
-    doc_str = doc_str % (desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create an iterator.
@@ -331,7 +329,7 @@ def _make_internal_batchify_functions(handle):
             ctypes.byref(batchify_fn_handle)))
 
         if len(args):
-            raise TypeError('%s can only accept keyword arguments' % bf_name)
+            raise TypeError(f'{bf_name} can only accept keyword arguments')
 
         return MXBatchifyFunction(batchify_fn_handle, creator_name=bf_name, **kwargs)
 

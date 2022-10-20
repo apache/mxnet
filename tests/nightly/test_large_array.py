@@ -23,6 +23,7 @@ import numpy as np
 import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_device, check_symbolic_forward, create_2d_tensor
+from mxnet.util import TemporaryDirectory
 from mxnet import gluon, nd
 from common import with_seed
 import pytest
@@ -1028,7 +1029,7 @@ def test_tensor():
 
     def check_load_save():
         x = create_2d_tensor(SMALL_Y, LARGE_X)
-        with tempfile.TemporaryDirectory() as tmp:
+        with TemporaryDirectory() as tmp:
             tmpfile = os.path.join(tmp, 'large_tensor')
             nd.save(tmpfile, [x])
             y = nd.load(tmpfile)

@@ -676,17 +676,6 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(in_attrs->at(0)) && shape_is_known(out_attrs->at(0));
 }
 
-// Currently DNNL only supports step = 1 or step has no value
-inline bool SupportDNNLSlice(const SliceParam& param) {
-  if (param.step.ndim() == 0U)
-    return true;
-  for (int i = 0; i < param.step.ndim(); ++i) {
-    if (param.step[i].has_value() && param.step[i].value() != 1)
-      return false;
-  }
-  return true;
-}
-
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
                                          DispatchMode* dispatch_mode,
@@ -708,16 +697,9 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     trivial_step = true;
   }
 
-  if (in_stype == kDefaultStorage) {
-#if MXNET_USE_ONEDNN == 1
-    if (dev_mask == Context::kCPU && DNNLEnvSet() && SupportDNNLSlice(param)) {
-      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, dispatch_ex);
-    }
-#endif
-    if (!dispatched) {
-      dispatched =
-          storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
-    }
+  if (!dispatched && in_stype == kDefaultStorage) {
+    dispatched =
+        storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
   }
 
   if (!dispatched && in_stype == kCSRStorage && trivial_step) {
@@ -3062,6 +3044,11 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
     (*dict)["squeeze_axis"] = squeeze_axis_s.str();
     (*dict)["sections"]     = sections_s.str();
   }
+
+  bool operator==(const SplitParam& other) const {
+    return this->indices == other.indices && this->axis == other.axis &&
+           this->squeeze_axis == other.squeeze_axis && this->sections == other.sections;
+  }
 };  // struct SplitParam
 
 inline mxnet::TShape GetSplitIndices(const mxnet::TShape& ishape, int axis, int sections) {
@@ -3451,6 +3438,17 @@ struct hash<mxnet::op::ExpandDimParam> {
   }
 };
 
+template <>
+struct hash<mxnet::op::SplitParam> {
+  size_t operator()(const mxnet::op::SplitParam& val) {
+    size_t ret = 0;
+    ret        = dmlc::HashCombine(ret, val.indices);
+    ret        = dmlc::HashCombine(ret, val.axis);
+    ret        = dmlc::HashCombine(ret, val.squeeze_axis);
+    ret        = dmlc::HashCombine(ret, val.sections);
+    return ret;
+  }
+};
 }  // namespace std
 
 #endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_

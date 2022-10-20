@@ -291,9 +291,9 @@ inline size_t GetRNNReserveSpaceSize(int num_layer,
   return size;
 }
 
-inline size_t GetNumInputArguments(RNNParam param_) {
-  size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4U : 3U;
-  if (param_.use_sequence_length)
+inline size_t GetRnnNumInputs(RNNParam param) {
+  size_t num_inputs = (param.mode == rnn_enum::kLstm) ? 4U : 3U;
+  if (param.use_sequence_length)
     num_inputs += 1U;
   return num_inputs;
 }
@@ -748,7 +748,7 @@ class RNNOp {
     using namespace mshadow::expr;
     CHECK(param_.p >= 0.0f && param_.p < 1.0f)
         << "unsupported dropout value, should be 0 <= dropout < 1";
-    size_t num_inputs = GetNumInputArguments(param_);
+    size_t num_inputs = GetRnnNumInputs(param_);
 
     //  kOut
     size_t num_outputs = 1;
@@ -1125,7 +1125,7 @@ class RNNOp {
     CHECK(param_.p >= 0.0f && param_.p < 1.0f)
         << "unsupported dropout value, should be 0 <= dropout < 1";
 
-    size_t num_inputs = GetNumInputArguments(param_);
+    size_t num_inputs = GetRnnNumInputs(param_);
 
     //  kOut
     size_t num_outputs = 1;
@@ -1369,7 +1369,7 @@ class RNNOp {
                    const std::vector<TBlob>& out_data) {
     using namespace mshadow;
 
-    size_t num_inputs = GetNumInputArguments(param_);
+    size_t num_inputs = GetRnnNumInputs(param_);
     //  kOut
     size_t num_outputs = 1;
     if (param_.state_outputs) {

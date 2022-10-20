@@ -28,7 +28,7 @@
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
 
-#include "../../tensor/matrix_op-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
 #include "dnnl_base-inl.h"
 
 namespace mxnet {
@@ -53,6 +53,13 @@ typedef OpSignature DNNLReshapeSignature;
 DNNLReshapeFwd& GetReshapeForward(const OpReqType& req,
                                   const NDArray& input,
                                   const NDArray& output);
+
+void DNNLReshapeForward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const NDArray& input,
+                        const OpReqType& req,
+                        const NDArray& output);
+
 }  // namespace op
 }  // namespace mxnet
 

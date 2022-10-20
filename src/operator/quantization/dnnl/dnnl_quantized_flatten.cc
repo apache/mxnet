@@ -23,8 +23,8 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/dnnl/dnnl_ops-inl.h"
-#include "../quantization_utils.h"
+#include "operator/nn/dnnl/dnnl_reshape-inl.h"
+#include "operator/quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -44,7 +44,7 @@ static void DNNLQuantizedFlattenForward(const nnvm::NodeAttrs& attrs,
                                         const std::vector<NDArray>& inputs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNL(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);

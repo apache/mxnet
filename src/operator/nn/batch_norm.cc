@@ -462,16 +462,9 @@ static bool BNChangeLayout(nnvm::NodeAttrs* attrs,
 }
 
 #if MXNET_USE_ONEDNN == 1
-static inline bool SupportDNNLBN(const NDArray& input, const BatchNormParam& param) {
-  if (mxnet::op::batchnorm::disable_mkl)
-    return false;
-  const mxnet::TShape shape = input.shape();
-  const int ndim            = shape.ndim();
-  if (ndim == 0 || shape.Size() == 0)
-    return false;
-  const int dtype = input.dtype();
-  return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
-         SupportStorageDNNL(input.storage_type());
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_batch_normalization.html
+static inline bool SupportDNNLBN(const NDArray& input) {
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(input) && !mxnet::op::batchnorm::disable_mkl;
 }
 
 void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -480,13 +473,9 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 5U);
-  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
-  bool fuse_relu              = false;
-  if (SupportDNNLBN(inputs[0], param)) {
+  if (SupportDNNLBN(inputs[0])) {
     DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    DNNL_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-      DNNLBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
-    });
+    DNNLRun(DNNLBatchNormForward</*fuse_relu*/ false>, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -498,11 +487,9 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs) {
-  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
-  bool fuse_relu              = false;
-  if (SupportDNNLBN(inputs[0], param)) {
+  if (SupportDNNLBN(inputs[0])) {
     DNNL_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    DNNLBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
+    DNNLRun(DNNLBatchNormBackward, attrs, ctx, inputs, req, outputs);
     DNNL_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

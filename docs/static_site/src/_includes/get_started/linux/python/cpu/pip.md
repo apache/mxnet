@@ -9,12 +9,12 @@ page](https://mxnet.apache.org/get_started/download).
 
 Run the following command:
 
-<div class="v1-9-0">
+<div class="v1-9-1">
 {% highlight bash %}
 pip install mxnet
 {% endhighlight %}
 
-</div> <!-- End of v1-9-0 -->
+</div> <!-- End of v1-9-1 -->
 
 <div class="v1-8-0">
 {% highlight bash %}

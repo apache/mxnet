@@ -30,11 +30,21 @@
 
 #include <vector>
 
-#include "../../rnn-inl.h"
-#include "./dnnl_base-inl.h"
+#include "operator/rnn-inl.h"
+#include "dnnl_base-inl.h"
+#include "operator/quantization/quantized_rnn-inl.h"
 
 namespace mxnet {
 namespace op {
+
+struct DNNLRnnParam : public dmlc::Parameter<DNNLRnnParam> {
+  bool quantized;
+
+  DMLC_DECLARE_PARAMETER(DNNLRnnParam) {
+    DMLC_DECLARE_FIELD(quantized).set_default(false).describe(
+        "Whether it's a quantized RNN operator");
+  }
+};
 
 struct DNNLRnnLayerParam {
   using memory = dnnl::memory;
@@ -66,6 +76,10 @@ struct DNNLRnnLayerParam {
   size_t native_single_b_size;  // bias size of a single cell from framework
   size_t single_state_size;     // state size of a single cell, hy, cy
 
+  bool quantized;         // whether this layer is quantized
+  bool enable_u8_output;  // true by default, only be false when it is the last fusion layer of the
+                          // quantized rnn operator
+
   DNNLRnnLayerParam(int num_layer,
                     index_t batch_size,
                     index_t seq_len,
@@ -82,7 +96,9 @@ struct DNNLRnnLayerParam {
         input_size(input_size),
         state_size(state_size),
         proj_size(proj_size),
-        seq_len(seq_len) {}
+        seq_len(seq_len),
+        quantized(false),
+        enable_u8_output(false) {}
 
   void SetDims();
 };
@@ -90,10 +106,11 @@ struct DNNLRnnLayerParam {
 typedef std::vector<DNNLRnnLayerParam> LayerParamVector;
 struct DNNLRnnFullParam {
   RNNParam default_param;
+  DNNLRnnParam dnnl_param;
   LayerParamVector layer_params;
 };
 
-DNNLRnnFullParam DNNLRnnFullParamParser(const RNNParam& rnn_param,
+DNNLRnnFullParam DNNLRnnFullParamParser(const nnvm::NodeAttrs& attrs,
                                         const index_t seq_len,
                                         const index_t batch_size,
                                         const index_t input_size);
@@ -105,7 +122,7 @@ class DNNLRnnMemMgr {
   // The memory buffer in NDArray life-cycle
   NDArray workspace_;
   // This points to the memory buffer from a NDArray
-  char* curr_mem;
+  char* curr_mem = nullptr;
   // The total bytes of the workspace of a DNNLRnnOp
   size_t mem_size = 0;
   // The current available memory bytes
@@ -121,7 +138,7 @@ class DNNLRnnMemMgr {
    * \param size byte number
    * \param ctx Context of device enviroment
    */
-  void Init(dim_t size, const Context& ctx);
+  void Init(const dim_t size, const Context& ctx);
 
   // Return the bytes number of the buffer
   const size_t Size() {
@@ -135,6 +152,8 @@ class DNNLRnnMemMgr {
   dnnl::memory* Alloc(const dnnl::memory::desc& md);
 };
 
+typedef std::shared_ptr<dnnl::primitive_attr> shared_dnnl_attr_t;
+
 /*
  * Rnn Primitive.
  */
@@ -144,15 +163,15 @@ class RnnPrimitive {
    * lstm_forward, lbr_gru_forward, vanilla_rnn_forward
    */
   template <typename rnn_fwd, typename... Args>
-  static RnnPrimitive Create(Args&&... args) {
+  static RnnPrimitive Create(const shared_dnnl_attr_t attr, Args&&... args) {
     RnnPrimitive rnn_fwd_prim;
     auto fwd_desc = typename rnn_fwd::desc(std::forward<Args>(args)...);
     rnn_fwd_prim.fwd_pd_.reset(
-        new typename rnn_fwd::primitive_desc(fwd_desc, CpuEngine::Get()->get_engine()),
-        [](typename rnn_fwd::primitive_desc* pd) {
-          delete reinterpret_cast<typename rnn_fwd::primitive_desc*>(pd);
-        });
+        new typename rnn_fwd::primitive_desc(
+            fwd_desc, attr ? *attr : dnnl::primitive_attr(), CpuEngine::Get()->get_engine()),
+        [](void* pd) { delete reinterpret_cast<typename rnn_fwd::primitive_desc*>(pd); });
     auto fwd_pd = reinterpret_cast<typename rnn_fwd::primitive_desc*>(rnn_fwd_prim.fwd_pd_.get());
+    rnn_fwd_prim.attr_               = attr;
     rnn_fwd_prim.weights_layer_desc_ = fwd_pd->weights_layer_desc();
     rnn_fwd_prim.weights_iter_desc_  = fwd_pd->weights_iter_desc();
     rnn_fwd_prim.weights_proj_desc_  = fwd_pd->weights_projection_desc();
@@ -164,6 +183,7 @@ class RnnPrimitive {
   }
 
   RnnPrimitive() {
+    this->attr_               = nullptr;
     this->fwd_pd_             = nullptr;
     this->primitive_          = nullptr;
     this->weights_layer_desc_ = dnnl::memory::desc();
@@ -173,6 +193,7 @@ class RnnPrimitive {
   }
 
   RnnPrimitive(const RnnPrimitive& rnn_fwd_prim) {
+    this->attr_               = rnn_fwd_prim.attr_;
     this->fwd_pd_             = rnn_fwd_prim.fwd_pd_;
     this->primitive_          = rnn_fwd_prim.primitive_;
     this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
@@ -183,6 +204,7 @@ class RnnPrimitive {
 
   RnnPrimitive& operator=(const RnnPrimitive& rnn_fwd_prim) {
     if (this != &rnn_fwd_prim) {
+      this->attr_               = rnn_fwd_prim.attr_;
       this->fwd_pd_             = rnn_fwd_prim.fwd_pd_;
       this->primitive_          = rnn_fwd_prim.primitive_;
       this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
@@ -217,9 +239,14 @@ class RnnPrimitive {
     return workspace_desc_;
   }
 
+  const dnnl::primitive_attr& GetPrimAttr() const {
+    return *attr_;
+  }
+
  private:
   std::shared_ptr<void> fwd_pd_;
   std::shared_ptr<dnnl::primitive> primitive_;
+  shared_dnnl_attr_t attr_;
   dnnl::memory::desc weights_layer_desc_;
   dnnl::memory::desc weights_iter_desc_;
   dnnl::memory::desc weights_proj_desc_;
@@ -229,7 +256,8 @@ class RnnPrimitive {
 RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
                            const bool is_train,
                            const NDArray& data,
-                           const NDArray& params);
+                           const NDArray& params,
+                           const shared_dnnl_attr_t attr = nullptr);
 
 /*
  * Use this to manage memory and primitive of DNNL RNN forward inference.
@@ -240,11 +268,12 @@ class DNNLRnnForward {
                  const DNNLRnnLayerParam& layer_param,
                  const bool is_train,
                  const NDArray& data,
-                 const NDArray& params)
+                 const NDArray& params,
+                 const shared_dnnl_attr_t attr = nullptr)
       : ctx_(ctx),
         initialized_(false),
         param_(layer_param),
-        fwd_inf_(GetRnnFwdPrim(layer_param, false, data, params)) {}
+        fwd_inf_(GetRnnFwdPrim(layer_param, false, data, params, attr)) {}
 
   void SetNewDataMem(void* x,
                      void* hx,
@@ -261,6 +290,10 @@ class DNNLRnnForward {
 
   const dnnl::primitive& GetFwd() const {
     return fwd_inf_.GetPrim();
+  }
+
+  void ResetFwd(const NDArray& data, const NDArray& params, const shared_dnnl_attr_t& attr) {
+    fwd_inf_ = GetRnnFwdPrim(this->param_, false, data, params, attr);
   }
 
   const size_t GetSize() const {
@@ -482,13 +515,13 @@ class DNNLRnnBackward {
  */
 class DNNLRnnOp {
  public:
-  explicit DNNLRnnOp(const RNNParam& param,
+  explicit DNNLRnnOp(const nnvm::NodeAttrs& attrs,
                      const int seq_len,
                      const int batch_size,
                      const int input_size)
       : initialized_(false),
         weights_version_(0),
-        full_param_(DNNLRnnFullParamParser(param, seq_len, batch_size, input_size)) {}
+        full_param_(DNNLRnnFullParamParser(attrs, seq_len, batch_size, input_size)) {}
 
   void Forward(const OpContext& ctx,
                const std::vector<NDArray>& inputs,
@@ -525,6 +558,7 @@ class DNNLRnnOp {
             const std::vector<NDArray>& outputs);
 };
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_rnn.html
 inline bool SupportDNNLRnn(const int input_dtype) {
   if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_ONEDNN_RNN", 1)) {
     return true;

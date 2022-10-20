@@ -55,6 +55,10 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rmod_scalar)
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_power_scalar)
     .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::power>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", PowerComputeExCPU)
+    .set_attr<FInferStorageType>("FInferStorageType", PowerStorageType)
+#endif
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_power_scalar"});
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rpower_scalar)

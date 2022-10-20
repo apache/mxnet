@@ -59,9 +59,9 @@ def print_header(header):
 
 def print_value(shape, hidden, mean):
     if table_left_colums:
-        print("| ({:4},{:4}) | {:6} | {:9.3f} |".format(shape[0], shape[1], hidden, mean))
+        print(f"| ({shape[0]:4},{shape[1]:4}) | {hidden:6} | {mean:9.3f} |")
     else:
-        print(" {:9.3f} |".format(mean))
+        print(f" {mean:9.3f} |")
 
 
 def measure(net, data0, data1, data2, shape, nhid):
@@ -97,8 +97,8 @@ class FCWithSum(nn.HybridBlock):
             _sum1 = _fc1 + _sum0
         return _sum1
 
-def benchmark_float(elemwise_add):
-    header = operator_string(elemwise_add) + ', float'
+def benchmark_float(elemwise_add, broadcast=False):
+    header = operator_string(elemwise_add) + ', float' + (' , broadcast' if broadcast else "")
     print_header(header)
     for shape, nhid in sizes:
         net = FCWithSum(shape[1], nhid, elemwise_add)
@@ -107,6 +107,9 @@ def benchmark_float(elemwise_add):
         data0 = mx.np.random.uniform(size=shape, low=-1.0, high=1.0)
         data1 = mx.np.random.uniform(size=shape, low=-1.0, high=1.0)
         shape2 = (shape[0], nhid)
+        if broadcast and not elemwise_add:
+            # broadcast is allowed only for npi_add version
+            shape2 = (1, 1)
         data2 = mx.np.random.uniform(size=shape2, low=-1.0, high=1.0)
         net.optimize_for(data0, data1, data2, backend='ONEDNN')
         measure(net, data0, data1, data2, shape, nhid)
@@ -126,9 +129,9 @@ class CalibIter(mx.io.DataIter):
     def __iter__(self):
         yield self.batch
 
-def benchmark_int8(quantize_mode, quantize_granularity, elemwise_add):
+def benchmark_int8(quantize_mode, quantize_granularity, elemwise_add, broadcast = False):
     header = operator_string(elemwise_add) + ', mode = ' + quantize_mode + \
-             ', granularity = ' + quantize_granularity
+             ', granularity = ' + quantize_granularity + (' , broadcast' if broadcast else "")
     print_header(header)
     for shape, nhid in sizes:
         net = FCWithSum(shape[1], nhid, elemwise_add)
@@ -137,6 +140,9 @@ def benchmark_int8(quantize_mode, quantize_granularity, elemwise_add):
         data0 = mx.np.random.uniform(size=shape, low=-1.0, high=1.0)
         data1 = mx.np.random.uniform(size=shape, low=-1.0, high=1.0)
         shape2 = (shape[0], nhid)
+        if broadcast and not elemwise_add:
+            # broadcast is allowed only for npi_add
+            shape2 = (shape[0], 1)
         data2 = mx.np.random.uniform(size=shape2, low=-1.0, high=1.0)
         data = mx.gluon.data.ArrayDataset(data0, data1, data2)
         calib_data = mx.gluon.data.DataLoader(data, batch_size=1)
@@ -162,3 +168,11 @@ for quantize_mode in ['smart', 'full']:
     for quantize_granularity in ['tensor-wise', 'channel-wise']:
         for elemwise_add in [True, False]:
             benchmark_int8(quantize_mode, quantize_granularity, elemwise_add)
+
+# Benchmark FC + npi_add with broadcasted input
+benchmark_float(False, True)
+
+# Benchmark quantized FC + npi_add with broadcasted input
+for quantize_mode in ['smart', 'full']:
+    for quantize_granularity in ['tensor-wise', 'channel-wise']:
+        benchmark_int8(quantize_mode, quantize_granularity, False, True)

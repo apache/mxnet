@@ -48,7 +48,7 @@ try:
 except ImportError:
     gs_retain = None
 from ._internal import _set_ndarray_class
-from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .ndarray import NDArray, _storage_type, dtype_np_to_mx, dtype_mx_to_np
 from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR, _int64_enabled
 from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import zeros as _zeros_ndarray
@@ -81,7 +81,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     for aux_t in aux_types:
         if np.dtype(aux_t) != np.dtype("int64"):
             raise NotImplementedError("only int64 is supported for aux types")
-    aux_type_ids = [int(_DTYPE_NP_TO_MX[np.dtype(aux_t).type]) for aux_t in aux_types]
+    aux_type_ids = [int(dtype_np_to_mx(aux_t)) for aux_t in aux_types]
     aux_shapes = [(0,) for aux_t in aux_types] if aux_shapes is None else aux_shapes
     aux_shape_lens = [len(aux_shape) for aux_shape in aux_shapes]
     aux_shapes = py_sum(aux_shapes, ())
@@ -94,7 +94,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             num_aux,
             c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
             c_array_buf(ctypes.c_int, native_array('i', aux_shape_lens)),
@@ -108,7 +108,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             num_aux,
             c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
             c_array_buf(ctypes.c_uint, native_array('I', aux_shape_lens)),
@@ -125,10 +125,9 @@ class BaseSparseNDArray(NDArray):
 
     def __repr__(self):
         """Returns a string representation of the sparse array."""
-        shape_info = 'x'.join(['%d' % x for x in self.shape])
+        shape_info = 'x'.join([f'{x}' for x in self.shape])
         # The data content is not displayed since the array usually has big shape
-        return '\n<%s %s @%s>' % (self.__class__.__name__,
-                                  shape_info, self.context)
+        return f'\n<{self.__class__.__name__} {shape_info} @{self.context}>'
 
     def __add__(self, other):
         return add(self, other)
@@ -184,7 +183,7 @@ class BaseSparseNDArray(NDArray):
         """
         aux_type = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetAuxType(self.handle, i, ctypes.byref(aux_type)))
-        return _DTYPE_MX_TO_NP[aux_type.value]
+        return dtype_mx_to_np(aux_type.value)
 
     @property
     def _num_aux(self):
@@ -450,7 +449,7 @@ class CSRNDArray(BaseSparseNDArray):
                 tmp = _array(value)
                 tmp.copyto(self)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
+                raise TypeError(f'type {str(type(value))} not supported')
         else:
             assert(isinstance(key, (int, tuple)))
             raise Exception('CSRNDArray only supports [:] for assignment')
@@ -713,7 +712,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 tmp = _array(value)
                 tmp.copyto(self)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
+                raise TypeError(f'type {str(type(value))} not supported')
         else:
             assert(isinstance(key, (int, tuple)))
             raise TypeError('RowSparseNDArray only supports [:] for assignment')
@@ -1201,7 +1200,7 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
     elif stype == _STORAGE_TYPE_ROW_SPARSE:
         return RowSparseNDArray(handle, writable=writable)
     else:
-        raise Exception("unknown storage type: %s"%stype)
+        raise Exception(f"unknown storage type: {stype}")
 
 
 _set_ndarray_class(_ndarray_cls)

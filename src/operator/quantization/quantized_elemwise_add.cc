@@ -138,5 +138,55 @@ NNVM_REGISTER_OP(elemwise_add).set_attr<FQuantizedOp>("FQuantizedOp", [](const N
   return node;
 });
 
+NNVM_REGISTER_OP(_contrib_quantized_npi_add)
+    .add_alias("_npx_quantized_npi_add")
+    .describe(R"code(elemwise_add operator for input dataA and input dataB data type of int8,
+and accumulates in type int32 for the output. For each argument, two more arguments of type
+float32 must be provided representing the thresholds of quantizing argument from data
+type float32 to int8. The final outputs contain result in int32, and min
+and max thresholds representing the threholds for quantizing the float32 output into int32.
+
+.. Note::
+    This operator only supports forward propogation. DO NOT use it in training.
+
+)code")
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      // A, B, A_min, A_max, B_min, B_max
+      return 6;
+    })
+    // C, C_min, C_max
+    .set_num_outputs(3)
+    .set_attr<nnvm::FListInputNames>(
+        "FListInputNames",
+        [](const NodeAttrs& attrs) {
+          return std::vector<std::string>{"lhs", "rhs", "lhs_min", "lhs_max", "rhs_min", "rhs_max"};
+        })
+    .set_attr<nnvm::FListOutputNames>(
+        "FListOutputNames",
+        [](const NodeAttrs& attrs) {
+          return std::vector<std::string>{"output", "min_output", "max_output"};
+        })
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseAddType)
+    .set_attr<mxnet::FInferShape>("FInferShape", QuantizedBinaryBroadcastShape)
+    .set_attr<FCompute>("FCompute<cpu>", QuantizedElemwiseAddForward)
+    .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
+    .add_argument("lhs", "NDArray-or-Symbol", "first input")
+    .add_argument("rhs", "NDArray-or-Symbol", "second input")
+    .add_argument("lhs_min", "NDArray-or-Symbol", "3rd input")
+    .add_argument("lhs_max", "NDArray-or-Symbol", "4th input")
+    .add_argument("rhs_min", "NDArray-or-Symbol", "5th input")
+    .add_argument("rhs_max", "NDArray-or-Symbol", "6th input");
+
+NNVM_REGISTER_OP(_npi_add).set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
+  nnvm::ObjectPtr node = nnvm::Node::Create();
+  node->attrs.op       = Op::Get("_contrib_quantized_npi_add");
+  node->attrs.name     = "quantized_" + attrs.name;
+  node->attrs.dict     = attrs.dict;
+  if (node->op()->attr_parser != nullptr) {
+    node->op()->attr_parser(&(node->attrs));
+  }
+  return node;
+});
+
 }  // namespace op
 }  // namespace mxnet

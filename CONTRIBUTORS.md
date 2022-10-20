@@ -106,6 +106,7 @@ healthy project. The PPMC actively seeks to appoint new committers from the list
 * [Anirudh Acharya](https://github.com/anirudhacharya)
 * [Anna Karbownik](https://github.com/akarbown)
 * [Aston Zhang](https://github.com/astonzhang)
+* [Bartłomiej Gawrych](https://github.com/bgawrych)
 * [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [Ciyong Chen](https://github.com/ciyongch)
 * [Da Zheng](https://github.com/zheng-da)
@@ -298,6 +299,10 @@ List of Contributors
 * [Bartosz Kuncer](https://github.com/bartekkuncer)
 * [Maria Boerner](https://github.com/mariaboerner1987)
 * [Zhenghui Jin](https://github.com/barry-jin)
+* [Dominika Jedynak](https://github.com/DominikaJedynak)
+* [Adam Grabowski](https://github.com/agrabows)
+* [Kacper Pietkun](https://github.com/Kacper-Pietkun)
+* [Hanna Jarlaczyńska](https://github.com/hankaj)
 
 Label Bot
 ---------

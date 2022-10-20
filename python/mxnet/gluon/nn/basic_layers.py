@@ -19,7 +19,7 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
-           'BatchNorm', 'SyncBatchNorm', 'BatchNormReLU', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
+           'BatchNorm', 'SyncBatchNorm', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
            'Flatten', 'Lambda', 'HybridLambda', 'Concatenate', 'HybridConcatenate', 'Identity']
 import warnings
 import uuid
@@ -31,7 +31,7 @@ from ..utils import _indent
 from ... import np, npx, device as _device
 from ...util import use_np
 from ..parameter import Parameter
-
+from ...ndarray import get_dtype_name
 
 class Sequential(Block):
     """Stacks Blocks sequentially.
@@ -95,8 +95,8 @@ class Sequential(Block):
         """
         if self._children and all(isinstance(c(), HybridBlock) for c in self._children.values()):
             warnings.warn(
-                "All children of this Sequential layer '%s'\n are HybridBlocks. Consider "
-                "using HybridSequential for the best performance."%repr(self), stacklevel=2)
+                f"All children of this Sequential layer '{repr(self)}'\n are HybridBlocks. Consider "
+                "using HybridSequential for the best performance.", stacklevel=2)
         super(Sequential, self).hybridize(active, **kwargs)
 
 
@@ -322,8 +322,6 @@ class _BatchNorm(HybridBlock):
         If True, use global moving statistics instead of local batch-norm. This will force
         change batch-norm into a scale shift operator.
         If False, use local batch-norm.
-    fuse_relu: bool, default False
-        If True, this operator is equal to `BN+ReLU`.
     beta_initializer: str or `Initializer`, default 'zeros'
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
@@ -345,14 +343,13 @@ class _BatchNorm(HybridBlock):
         - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-                 use_global_stats=False, fuse_relu=False,
+                 use_global_stats=False,
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
         super(_BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats}
-        self.fuse_relu = fuse_relu
         self._axis = axis
         if in_channels != 0:
             self.in_channels = in_channels
@@ -377,19 +374,13 @@ class _BatchNorm(HybridBlock):
                                      differentiable=False)
 
     def cast(self, dtype):
-        if _np.dtype(dtype).name == 'float16':
+        if get_dtype_name(dtype) == 'float16':
             dtype = 'float32'
         super(_BatchNorm, self).cast(dtype)
 
     def forward(self, x):
         device = x.device
-        if self.fuse_relu:
-            return npx.batch_norm_with_relu(x, self.gamma.data(device), self.beta.data(device),
-                                            self.running_mean.data(device),
-                                            self.running_var.data(device),
-                                            name='fwd', **self._kwargs)
-        else:
-            return npx.batch_norm(x, self.gamma.data(device), self.beta.data(device),
+        return npx.batch_norm(x, self.gamma.data(device), self.beta.data(device),
                                   self.running_mean.data(device),
                                   self.running_var.data(device),
                                   name='fwd', **self._kwargs)
@@ -467,71 +458,7 @@ class BatchNorm(_BatchNorm):
         super(BatchNorm, self).__init__(
             axis=axis, momentum=momentum, epsilon=epsilon, center=center,
             scale=scale,
-            use_global_stats=use_global_stats, fuse_relu=False,
-            beta_initializer=beta_initializer,
-            gamma_initializer=gamma_initializer,
-            running_mean_initializer=running_mean_initializer,
-            running_variance_initializer=running_variance_initializer,
-            in_channels=in_channels, **kwargs)
-
-
-class BatchNormReLU(_BatchNorm):
-    """Batch normalization layer (Ioffe and Szegedy, 2014).
-    Normalizes the input at each batch, i.e. applies a transformation
-    that maintains the mean activation close to 0 and the activation
-    standard deviation close to 1.
-
-    Parameters
-    ----------
-    axis : int, default 1
-        The axis that should be normalized. This is typically the channels
-        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
-        set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
-    momentum: float, default 0.9
-        Momentum for the moving average.
-    epsilon: float, default 1e-5
-        Small float added to variance to avoid dividing by zero.
-    center: bool, default True
-        If True, add offset of `beta` to normalized tensor.
-        If False, `beta` is ignored.
-    scale: bool, default True
-        If True, multiply by `gamma`. If False, `gamma` is not used.
-        When the next layer is linear (also e.g. `nn.relu`),
-        this can be disabled since the scaling
-        will be done by the next layer.
-    use_global_stats: bool, default False
-        If True, use global moving statistics instead of local batch-norm. This will force
-        change batch-norm into a scale shift operator.
-        If False, use local batch-norm.
-    beta_initializer: str or `Initializer`, default 'zeros'
-        Initializer for the beta weight.
-    gamma_initializer: str or `Initializer`, default 'ones'
-        Initializer for the gamma weight.
-    running_mean_initializer: str or `Initializer`, default 'zeros'
-        Initializer for the running mean.
-    running_variance_initializer: str or `Initializer`, default 'ones'
-        Initializer for the running variance.
-    in_channels : int, default 0
-        Number of channels (feature maps) in input data. If not specified,
-        initialization will be deferred to the first time `forward` is called
-        and `in_channels` will be inferred from the shape of input data.
-
-
-    Inputs:
-        - **data**: input tensor with arbitrary shape.
-
-    Outputs:
-        - **out**: output tensor with the same shape as `data`.
-    """
-    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-                 use_global_stats=False,
-                 beta_initializer='zeros', gamma_initializer='ones',
-                 running_mean_initializer='zeros', running_variance_initializer='ones',
-                 in_channels=0, **kwargs):
-        super(BatchNormReLU, self).__init__(
-            axis=axis, momentum=momentum, epsilon=epsilon,
-            center=center, scale=scale,
-            use_global_stats=use_global_stats, fuse_relu=True,
+            use_global_stats=use_global_stats,
             beta_initializer=beta_initializer,
             gamma_initializer=gamma_initializer,
             running_mean_initializer=running_mean_initializer,
@@ -931,7 +858,7 @@ class Lambda(Block):
             elif hasattr(npx, function):
                 self._func_impl = getattr(npx, function)
             else:
-                raise Exception("Function name %s is not found in np/npx." % function)
+                raise Exception(f"Function name {function} is not found in np/npx.")
             self._func_name = function
         elif callable(function):
             self._func_impl = function
@@ -980,7 +907,7 @@ class HybridLambda(HybridBlock):
             elif hasattr(npx, function):
                 self._func = getattr(npx, function)
             else:
-                raise Exception("Function name %s is not found in np/npx." % function)
+                raise Exception(f"Function name {function} is not found in np/npx.")
             self._func_name = function
         elif callable(function):
             self._func = function

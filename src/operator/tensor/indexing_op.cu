@@ -957,7 +957,10 @@ NNVM_REGISTER_OP(batch_take).set_attr<FCompute>("FCompute<gpu>", BatchTakeOpForw
 
 NNVM_REGISTER_OP(one_hot).set_attr<FCompute>("FCompute<gpu>", OneHotOpForward<gpu>);
 
-NNVM_REGISTER_OP(gather_nd).set_attr<FCompute>("FCompute<gpu>", GatherNDForwardGPU);
+NNVM_REGISTER_OP(gather_nd)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", GatherNDForwardGPU);
 
 NNVM_REGISTER_OP(scatter_nd).set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);
 

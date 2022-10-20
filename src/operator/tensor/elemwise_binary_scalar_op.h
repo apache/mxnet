@@ -441,6 +441,20 @@ class BinaryScalarOp : public UnaryOp {
   }
 };
 
+#if MXNET_USE_ONEDNN == 1
+bool PowerStorageType(const nnvm::NodeAttrs& attrs,
+                      const int dev_mask,
+                      DispatchMode* dispatch_mode,
+                      std::vector<int>* inputs,
+                      std::vector<int>* outputs);
+
+void PowerComputeExCPU(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<mxnet::NDArray>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<mxnet::NDArray>& outputs);
+#endif
+
 #define MXNET_OPERATOR_REGISTER_BINARY_SCALAR(name)                                       \
   NNVM_REGISTER_OP(name)                                                                  \
       .set_num_inputs(1)                                                                  \

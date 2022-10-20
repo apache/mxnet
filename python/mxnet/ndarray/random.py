@@ -23,8 +23,8 @@ from . import _internal
 from .ndarray import NDArray
 
 
-__all__ = ['uniform', 'normal', 'randn', 'poisson', 'exponential', 'gamma',
-           'multinomial', 'negative_binomial', 'generalized_negative_binomial',
+__all__ = ['uniform', 'normal', 'randn', 'poisson', 'exponential', 'gamma', 'binomial',
+           'categorical', 'multinomial', 'negative_binomial', 'generalized_negative_binomial',
            'shuffle', 'randint']
 
 
@@ -34,7 +34,7 @@ def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
         for i in params[1:]:
             assert isinstance(i, NDArray), \
                 "Distribution parameters must all have the same type, but got " \
-                "both %s and %s."%(type(params[0]), type(i))
+                f"both {type(params[0])} and {type(i)}."
         return sampler(*params, shape=shape, dtype=dtype, out=out, **kwargs)
     elif isinstance(params[0], numeric_types):
         if ctx is None:
@@ -44,11 +44,11 @@ def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
         for i in params[1:]:
             assert isinstance(i, numeric_types), \
                 "Distribution parameters must all have the same type, but got " \
-                "both %s and %s."%(type(params[0]), type(i))
+                f"both {type(params[0])} and {type(i)}."
         return random(*params, shape=shape, dtype=dtype, ctx=ctx, out=out, **kwargs)
 
     raise ValueError("Distribution parameters must be either NDArray or numbers, "
-                     "but got %s."%type(params[0]))
+                     f"but got {type(params[0])}.")
 
 
 def uniform(low=0, high=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
@@ -383,6 +383,59 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
                           [alpha, beta], shape, dtype, ctx, out, kwargs)
 
 
+def binomial(n=1, p=0.5, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
+    """Draw random samples from a binomial distribution.
+
+    Samples are distributed according to a binomial distribution parametrized
+    by *n* (number of trials) and *p* (success probability).
+
+    Parameters
+    ----------
+    n : float or NDArray, optional
+        Number of experiments, > 0.
+    p : float or NDArray, optional
+        Success probability in each experiment, >= 0 and <= 1.
+    shape : int or tuple of ints, optional
+        The number of samples to draw. If shape is, e.g., `(m, n)` and `n` and
+        `p` are scalars, output shape will be `(m, n)`. If `n` and `p`
+        are NDArrays with shape, e.g., `(x, y)`, then output will have shape
+        `(x, y, m, n)`, where `m*n` samples are drawn for each `[n, p)` pair.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context. Overridden by
+        `n.context` when `n` is an NDArray.
+    out : NDArray, optional
+        Store output to an existing NDArray.
+
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `n` and `p` are scalars, output
+        shape will be `(m, n)`. If `n` and `p` are NDArrays with shape, e.g.,
+        `(x, y)`, then output will have shape `(x, y, m, n)`, where `m*n` samples are
+        drawn for each `[n, p)` pair.
+
+    Examples
+    --------
+    >>> mx.nd.random.binomial(10, 0.1)
+    [ 1.]
+    <NDArray 1 @cpu(0)>
+    >>> mx.nd.random.binomial(10, 0.6, shape=(2,))
+    [ 4. 6.]
+    <NDArray 2 @cpu(0)>
+    >>> n = mx.nd.array([10,2,3])
+    >>> p = mx.nd.array([0.2,0.3,0.4])
+    >>> mx.nd.random.binomial(n, p, shape=2)
+    [[  1. 4.]
+     [  0. 2.]
+     [  1. 1.]]
+    <NDArray 3x2 @cpu(0)>
+    """
+    return _random_helper(_internal._random_binomial, _internal._sample_binomial,
+                          [n, p], shape, dtype, ctx, out, kwargs)
+
+
 def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, ctx=None,
                       out=None, **kwargs):
     """Draw random samples from a negative binomial distribution.
@@ -496,9 +549,8 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
                           _internal._sample_generalized_negative_binomial,
                           [mu, alpha], shape, dtype, ctx, out, kwargs)
 
-
-def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kwargs):
-    """Concurrent sampling from multiple multinomial distributions.
+def categorical(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kwargs):
+    """Concurrent sampling from multiple categorical distributions.
 
     .. note:: The input distribution must be normalized, i.e. `data` must sum to
               1 along its last dimension.
@@ -507,8 +559,8 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kw
     ----------
     data : NDArray
         An *n* dimensional array whose last dimension has length `k`, where
-        `k` is the number of possible outcomes of each multinomial distribution.
-        For example, data with shape `(m, n, k)` specifies `m*n` multinomial
+        `k` is the number of possible outcomes of each categorical distribution.
+        For example, data with shape `(m, n, k)` specifies `m*n` categorical
         distributions each with `k` possible outcomes.
     shape : int or tuple of ints, optional
         The number of samples to draw from each distribution. If shape is empty
@@ -530,7 +582,7 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kw
         For input `data` with `n` dimensions and shape `(d1, d2, ..., dn-1, k)`, and input
         `shape` with shape `(s1, s2, ..., sx)`, returns an NDArray with shape
         `(d1, d2, ... dn-1, s1, s2, ..., sx)`. The `s1, s2, ... sx` dimensions of the
-        returned NDArray consist of 0-indexed values sampled from each respective multinomial
+        returned NDArray consist of 0-indexed values sampled from each respective categorical
         distribution provided in the `k` dimension of `data`.
 
         For the case `n`=1, and `x`=1 (one shape dimension), returned NDArray has shape `(s1,)`.
@@ -542,24 +594,80 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kw
     Examples
     --------
     >>> probs = mx.nd.array([0, 0.1, 0.2, 0.3, 0.4])
-    >>> mx.nd.random.multinomial(probs)
+    >>> mx.nd.random.categorical(probs)
     [3]
     <NDArray 1 @cpu(0)>
     >>> probs = mx.nd.array([[0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0]])
-    >>> mx.nd.random.multinomial(probs)
+    >>> mx.nd.random.categorical(probs)
     [3 1]
     <NDArray 2 @cpu(0)>
-    >>> mx.nd.random.multinomial(probs, shape=2)
+    >>> mx.nd.random.categorical(probs, shape=2)
     [[4 4]
      [1 2]]
     <NDArray 2x2 @cpu(0)>
-    >>> mx.nd.random.multinomial(probs, get_prob=True)
+    >>> mx.nd.random.categorical(probs, get_prob=True)
     [3 2]
     <NDArray 2 @cpu(0)>
     [-1.20397282 -1.60943794]
     <NDArray 2 @cpu(0)>
     """
-    return _internal._sample_multinomial(data, shape, get_prob, out=out, dtype=dtype, **kwargs)
+    return _internal._sample_categorical(data, shape, get_prob, out=out, dtype=dtype, **kwargs)
+
+
+def multinomial(n=[1], p=[[1.0]], shape=_Null, dtype='float32', ctx=None, out=None, **kwargs):
+    """Concurrent sampling from multiple multinomial distributions.
+
+    .. note:: The input distribution must be normalized, i.e. `p` must sum to
+              1 along its last dimension.
+
+    Parameters
+    ----------
+    n : NDArray
+        An *n* dimensional array containing the number of trials of each
+        multinomial distribution.
+    p : NDArray
+        An *n+1* dimensional array containing the probabilities of each multinomial
+        distribution. Its last dimension has length `k`, where `k` is the number
+        of possible outcomes of each multinomial distribution.
+        For example, p with shape `(m, n, k)` specifies `m*n` multinomial
+        distributions each with `k` possible outcomes.
+    shape : int or tuple of ints, optional
+        The number of samples to draw from each distribution. If shape is empty
+        one sample will be drawn from each distribution.
+    out : NDArray, optional
+        Store output to an existing NDArray.
+    ctx : Context, optional
+        Device context of output. Default is current context. Overridden by
+        `n.context` when `n` is an NDArray.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `n` and `p` are a scalar and an array of length k
+        respectively, output shape will be `(m, n, k)`. If `n` and `p` are NDArrays with shape, e.g.,
+        `(x, y)` and `(x, y, k)`, then output will have shape `(x, y, m, n, k)`, where `m*n`
+        samples are drawn for each `[n, p)` pair.
+
+    Examples
+    --------
+    >>> mx.nd.random.multinomial(mx.nd.array([10]), mx.nd.array([[0.1, 0.9]]))
+    [[ 1. 9.]]
+    <NDArray 1x2 @cpu(0)>
+    >>> mx.nd.random.multinomial(mx.nd.array([10]), mx.nd.array([[0.6, 0.4]]), shape=(2,))
+    [[[ 5. 5.]
+      [ 6. 4.]]]
+    <NDArray 1x2x2 @cpu(0)>
+    >>> n = mx.nd.array([10, 2, 3])
+    >>> p = mx.nd.array([[0.2, 0.8], [0.3, 0.7], [0.4, 0.6]])
+    >>> mx.nd.random.binomial(n, p)
+    [[  2. 8.]
+     [  1. 1.]
+     [  1. 2.]]
+    <NDArray 3x2 @cpu(0)>
+    """
+    return _internal._sample_multinomial(n, p, shape=shape, out=out, ctx=ctx, dtype=dtype, **kwargs)
 
 
 def shuffle(data, **kwargs):

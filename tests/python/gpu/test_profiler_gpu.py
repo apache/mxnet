@@ -85,7 +85,7 @@ def test_gpu_memory_profiler_symbolic():
     # tensordot:in_arg:A,8388608,0,8388608,0
     # tensordot:in_arg:B,33554432,0,33554432,0
 
-    with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
+    with open(f'gpu_memory_profile-pid_{os.getpid()}.csv', mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         for row in csv_reader:
             print(",".join(list(row.values())))
@@ -160,12 +160,12 @@ def test_gpu_memory_profiler_gluon():
 
     # We are only checking for weight parameters here, also making sure that
     # there is no unknown entries in the memory profile.
-    with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
+    with open(f'gpu_memory_profile-pid_{os.getpid()}.csv', mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         for row in csv_reader:
             print(",".join(list(row.values())))
         for param in model.collect_params().values():
-            expected_arg_name = "%sin_arg:" % param.var().attr('__profiler_scope__') + \
+            expected_arg_name = f"{param.var().attr('__profiler_scope__')}in_arg:" + \
                                 param.name
             expected_arg_size = str(4 * np.prod(param.shape))
             csv_file.seek(0)

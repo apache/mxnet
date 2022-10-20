@@ -51,7 +51,7 @@ def visualize_activation(activation_fn):
 
 ### Sigmoid
 
-The sigmoid activation function, also known as the logistic function or logit function, is perhaps the most widely known activation owing to its [long history](https://web.stanford.edu/class/psych209a/ReadingsByDate/02_06/PDPVolIChapter8.pdf) in neural network training and appearance in logistic regression and kernel methods for classification.
+The sigmoid activation function, also known as the logistic function or logit function, is perhaps the most widely known activation owing to its [long history](http://www.cs.toronto.edu/~hinton/absps/pdp8.pdf) in neural network training and appearance in logistic regression and kernel methods for classification.
 
 The sigmoid activation is a non-linear function that transforms any real valued input to a value between 0 and 1, giving it a natural probabilistic interpretation. The sigmoid takes the form of the function below.
 

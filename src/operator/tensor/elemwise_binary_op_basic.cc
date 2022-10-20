@@ -21,19 +21,21 @@
  * \file elemwise_binary_op_basic.cc
  * \brief CPU Implementation of basic elementwise binary broadcast operators
  */
-#include "../nn/dnnl/dnnl_base-inl.h"
-#include "../nn/dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_copy-inl.h"
+#include "operator/nn/dnnl/dnnl_sum-inl.h"
 #include "./elemwise_binary_op-inl.h"
 #include "./elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLSum(const NDArray& input) {
-  int ndim = input.shape().ndim();
-  return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
-         (ndim >= 1 && ndim <= 4) && input.storage_type() == kDefaultStorage;
+#if MXNET_USE_ONEDNN == 1
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
+bool SupportDNNLSum(const std::vector<NDArray>& inputs) {
+  return SupportDNNL(inputs[0]) && SupportDNNL(inputs[1]);
 }
+#endif
 
 static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
@@ -43,7 +45,7 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_ONEDNN == 1
-  if (SupportDNNLSum(inputs[0]) && SupportDNNLSum(inputs[1])) {
+  if (SupportDNNLSum(inputs) && common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     DNNLRun(DNNLSumForward, attrs, ctx, inputs, req, outputs);
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage &&

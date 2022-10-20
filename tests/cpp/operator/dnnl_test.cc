@@ -32,7 +32,6 @@
 #include <set>
 
 #include "../../src/operator/nn/dnnl/dnnl_base-inl.h"
-#include "../../src/operator/nn/dnnl/dnnl_ops-inl.h"
 #include "../include/test_dnnl.h"
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
@@ -101,7 +100,7 @@ static void VerifyDefMem(const dnnl::memory& mem) {
 
 TEST(DNNL_UTIL_FUNC, MemFormat) {
   // Check whether the number of format is correct.
-  CHECK_EQ(dnnl_format_tag_last, 385);
+  CHECK_EQ(dnnl_format_tag_last, 514);
   CHECK_EQ(dnnl_nchw, 5);
   CHECK_EQ(dnnl_oihw, 5);
 }
@@ -139,7 +138,7 @@ TEST(DNNL_NDArray, GetDataReorder) {
     InitDefaultArray(&arr);
     for (auto md : mds) {
       if (s.Size() == md.get_size() / sizeof(mshadow::default_real_t)) {
-        const dnnl::memory* mem = arr.GetDNNLDataReorder(md);
+        const dnnl::memory* mem = arr.GetDNNLDataReorder(&md);
         printf("reorder from (");
         for (size_t i = 0; i < s.ndim(); i++)
           printf("%ld, ", s[i]);
@@ -171,7 +170,7 @@ TEST(DNNL_NDArray, GetDataReorder) {
         InitDNNLArray(&arr, md);
         for (auto to_md : mds) {
           if (to_md.get_size() / sizeof(mshadow::default_real_t) == s.Size()) {
-            const dnnl::memory* mem = arr.GetDNNLDataReorder(to_md);
+            const dnnl::memory* mem = arr.GetDNNLDataReorder(&to_md);
             printf("reorder from (");
             for (size_t i = 0; i < s.ndim(); i++)
               printf("%ld, ", s[i]);
@@ -189,7 +188,7 @@ TEST(DNNL_NDArray, GetDataReorder) {
   }
 }
 
-TEST(DNNL_BASE, DNNLSum) {
+TEST(DNNL_BASE, DNNLMemorySum) {
   std::vector<NDArrayAttrs> in_arrs   = GetTestInputArrays();
   std::vector<NDArrayAttrs> in_arrs2  = GetTestInputArrays(ArrayTypes::All, true);
   TestArrayShapes tas                 = GetTestArrayShapes();
@@ -211,7 +210,7 @@ TEST(DNNL_BASE, DNNLSum) {
         continue;
       auto out_mem = out_arr.arr.GetDNNLData();
       PrintVerifyMsg(in_arr, in_arr);
-      op::DNNLSum(*in_mem1, *in_mem2, *out_mem);
+      op::DNNLMemorySum(*in_mem1, *in_mem2, *out_mem);
       DNNLStream::Get()->Submit();
       VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
     }
@@ -233,7 +232,7 @@ TEST(DNNL_BASE, DNNLSum) {
     PrintVerifyMsg(orig_arr, in_arr);
     InitDNNLArray(&orig_arr.arr, input_mem->get_desc());
     orig_arr.arr.CopyFrom(*input_mem);
-    op::DNNLSum(*input_mem, *input_mem2, *input_mem);
+    op::DNNLMemorySum(*input_mem, *input_mem2, *input_mem);
     DNNLStream::Get()->Submit();
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
   }
@@ -264,7 +263,7 @@ TEST(DNNL_BASE, CreateDNNLMem) {
       PrintVerifyMsg(in_arr, out_arr);
       auto out_mem      = out_arr.arr.GetDNNLData();
       auto output_mem_t = CreateDNNLMem(out_arr.arr, out_mem->get_desc(), kWriteTo);
-      op::DNNLSum(*in_mem, *in_mem2, *output_mem_t.second);
+      op::DNNLMemorySum(*in_mem, *in_mem2, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
       VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
@@ -289,7 +288,7 @@ TEST(DNNL_BASE, CreateDNNLMem) {
     orig_arr.arr.CopyFrom(*input_mem);
     auto output_mem_t =
         CreateDNNLMem(in_arr.arr, input_mem->get_desc(), kWriteInplace, &in_arr.arr);
-    op::DNNLSum(*input_mem, *input_mem2, *output_mem_t.second);
+    op::DNNLMemorySum(*input_mem, *input_mem2, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
@@ -313,7 +312,7 @@ TEST(DNNL_BASE, CreateDNNLMem) {
       PrintVerifyMsg(in_arr, out_arr);
       auto out_mem      = out_arr.arr.GetDNNLData();
       auto output_mem_t = CreateDNNLMem(out_arr.arr, out_mem->get_desc(), kAddTo);
-      op::DNNLSum(*in_mem, *in_mem2, *output_mem_t.second);
+      op::DNNLMemorySum(*in_mem, *in_mem2, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
       VerifyAddRequest(
@@ -338,7 +337,7 @@ TEST(DNNL_BASE, CreateDNNLMem) {
     InitDNNLArray(&orig_arr.arr, input_mem->get_desc());
     orig_arr.arr.CopyFrom(*input_mem);
     auto output_mem_t = CreateDNNLMem(in_arr.arr, input_mem->get_desc(), kNullOp);
-    op::DNNLSum(*input_mem, *input_mem2, *output_mem_t.second);
+    op::DNNLMemorySum(*input_mem, *input_mem2, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
     // original and input should be the same since noop

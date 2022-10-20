@@ -24,7 +24,7 @@ import numpy as np
 
 from .base import _LIB, mx_uint, c_array, c_array_buf, c_str_array, check_call
 from .base import c_str, CudaModuleHandle, CudaKernelHandle, numeric_types, string_types
-from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, NDArray
+from .ndarray import dtype_np_to_mx, dtype_mx_to_np, NDArray
 
 _DTYPE_CPP_TO_NP = {
     'float': np.float32,
@@ -141,22 +141,23 @@ class CudaModule(object):
         is_ndarray = []
         is_const = []
         dtypes = []
-        pattern = re.compile(r"""^\s*(const)?\s*([\w_]+)\s*(\*)?\s*([\w_]+)?\s*$""")
+        pattern = re.compile(r"""^(const)?\s?([\w_]+)\s?(\*)?\s?([\w_]+)?$""")
         args = re.sub(r"\s+", " ", signature).split(",")
         for arg in args:
-            match = pattern.match(arg)
+            sanitized_arg = " ".join(arg.split())
+            match = pattern.match(sanitized_arg)
             if not match or match.groups()[1] == 'const':
                 raise ValueError(
-                    'Invalid function prototype "%s". Must be in the '
-                    'form of "(const) type (*) (name)"'%arg)
+                    f'Invalid function prototype "{sanitized_arg}". Must be in the '
+                    'form of "(const) type (*) (name)"')
             is_const.append(bool(match.groups()[0]))
             dtype = match.groups()[1]
             is_ndarray.append(bool(match.groups()[2]))
             if dtype not in _DTYPE_CPP_TO_NP:
                 raise TypeError(
-                    "Unsupported kernel argument type %s. Supported types are: %s."%(
-                        arg, ','.join(_DTYPE_CPP_TO_NP.keys())))
-            dtypes.append(_DTYPE_NP_TO_MX[_DTYPE_CPP_TO_NP[dtype]])
+                    "Unsupported kernel argument type {}. Supported types are: {}.".format(
+                        sanitized_arg, ','.join(_DTYPE_CPP_TO_NP.keys())))
+            dtypes.append(dtype_np_to_mx(_DTYPE_CPP_TO_NP[dtype]))
 
         check_call(_LIB.MXRtcCudaKernelCreate(
             self.handle,
@@ -177,7 +178,7 @@ class CudaKernel(object):
         self.handle = handle
         self._name = name
         self._is_ndarray = is_ndarray
-        self._dtypes = [_DTYPE_MX_TO_NP[i] for i in dtypes]
+        self._dtypes = [dtype_mx_to_np(i) for i in dtypes]
 
     def __del__(self):
         check_call(_LIB.MXRtcCudaKernelFree(self.handle))
@@ -204,20 +205,17 @@ class CudaKernel(object):
         assert len(grid_dims) == 3, "grid_dims must be a tuple of 3 integers"
         assert len(block_dims) == 3, "grid_dims must be a tuple of 3 integers"
         assert len(args) == len(self._dtypes), \
-            "CudaKernel(%s) expects %d arguments but got %d"%(
-                self._name, len(self._dtypes), len(args))
+            f"CudaKernel({self._name}) expects {len(self._dtypes)} arguments but got {len(args)}"
         void_args = []
         ref_holder = []
         for i, (arg, is_nd, dtype) in enumerate(zip(args, self._is_ndarray, self._dtypes)):
             if is_nd:
                 assert isinstance(arg, NDArray), \
-                    "The %d-th argument is expected to be a NDArray but got %s"%(
-                        i, type(arg))
+                    f"The {i}-th argument is expected to be a NDArray but got {type(arg)}"
                 void_args.append(arg.handle)
             else:
                 assert isinstance(arg, numeric_types), \
-                    "The %d-th argument is expected to be a number, but got %s"%(
-                        i, type(arg))
+                    f"The {i}-th argument is expected to be a number, but got {type(arg)}"
                 ref_holder.append(np.array(arg, dtype=dtype))
                 void_args.append(ref_holder[-1].ctypes.data_as(ctypes.c_void_p))
 

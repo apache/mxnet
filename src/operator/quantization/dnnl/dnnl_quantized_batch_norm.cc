@@ -19,17 +19,17 @@
 
 /*!
  * \file dnnl_quantized_batch_norm.cc
- * \brief
  * \author Yixin Bao
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/dnnl/dnnl_batch_norm-inl.h"
-#include "../quantization_utils.h"
+#include "operator/nn/dnnl/dnnl_batch_norm-inl.h"
+#include "operator/quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {
 
+template <bool fuse_relu>
 static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
                                           const OpContext& ctx,
                                           const std::vector<NDArray>& in_data,
@@ -83,7 +83,7 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
 
   dnnl::normalization_flags flags =
       dnnl::normalization_flags::use_global_stats | dnnl::normalization_flags::use_scale_shift;
-  auto& fwd                      = GetBNForward<float>(param, ctx, data_mem, flags);
+  auto& fwd                      = DNNLBNForward::GetCached(param, ctx, data_mem, fuse_relu, flags);
   const dnnl::memory& weight_mem = fwd.GetWeight();
   CHECK_EQ(weight_mem.get_desc().get_size(), channel_count * sizeof(float) * 2);
   float* weight_buf = reinterpret_cast<float*>(weight_mem.get_data_handle());
@@ -114,7 +114,8 @@ static void DNNLQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
   }
 
   const NDArray& out = outputs[batchnorm::kOut];
-  auto out_mem       = const_cast<NDArray&>(out).CreateDNNLData(fwd.GetPd().dst_desc());
+  auto fwd_dst_desc  = fwd.GetPd().dst_desc();
+  auto out_mem       = const_cast<NDArray&>(out).CreateDNNLData(&fwd_dst_desc);
   dnnl_args_map_t net_args;
   net_args[DNNL_ARG_SRC]         = *data_mem;
   net_args[DNNL_ARG_SCALE_SHIFT] = weight_mem;
@@ -131,6 +132,14 @@ inline static bool QuantizedBatchNormStorageType(const nnvm::NodeAttrs& attrs,
                                                  DispatchMode* dispatch_mode,
                                                  std::vector<int>* in_attrs,
                                                  std::vector<int>* out_attrs) {
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
+inline static bool QuantizedBatchNormWithReLUStorageType(const nnvm::NodeAttrs& attrs,
+                                                         const int dev_mask,
+                                                         DispatchMode* dispatch_mode,
+                                                         std::vector<int>* in_attrs,
+                                                         std::vector<int>* out_attrs) {
   bool dispatched = false;
   if (!dispatched) {
     dispatched = DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
@@ -140,7 +149,16 @@ inline static bool QuantizedBatchNormStorageType(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_contrib_quantized_batch_norm)
     .set_attr<FInferStorageType>("FInferStorageType", QuantizedBatchNormStorageType)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedBatchNormForward)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedBatchNormForward</*fuse_relu*/ false>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<bool>("TIsDNNL", true);
+
+NNVM_REGISTER_OP(_contrib_quantized_batch_norm_relu)
+    .set_attr<FInferStorageType>("FInferStorageType", QuantizedBatchNormWithReLUStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", DNNLQuantizedBatchNormForward</*fuse_relu*/ true>)
     .set_attr<FResourceRequest>("FResourceRequest",
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

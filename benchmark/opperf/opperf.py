@@ -193,9 +193,9 @@ def main():
                              'Valid Inputs - positive integers') 
 
     args = parser.parse_args()
-    logging.info("Running MXNet operator benchmarks with the following options: {args}".format(args=args))
+    logging.info(f"Running MXNet operator benchmarks with the following options: {args}")
     assert not os.path.isfile(args.output_file),\
-        "Output file {output_file} already exists.".format(output_file=args.output_file)
+        f"Output file {args.output_file} already exists."
 
     # 2. RUN BENCHMARKS
     ctx = _parse_mxnet_context(args.ctx)
@@ -218,7 +218,7 @@ def main():
     # 4. Generate list of MXNet operators not covered in benchmarks
     ops_not_covered = get_operators_with_no_benchmark(final_benchmark_results.keys())
     for idx, op in enumerate(ops_not_covered):
-        print("{idx}. {op}".format(idx=idx, op=op))
+        print(f"{idx}. {op}")
 
     return 0
 

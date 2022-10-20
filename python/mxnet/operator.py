@@ -32,7 +32,7 @@ from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf, mx_int, OpHandle
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
-from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR
 from .ndarray.ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray.ndarray import _STORAGE_TYPE_CSR, _STORAGE_TYPE_ROW_SPARSE
@@ -306,7 +306,7 @@ class NDArrayOp(PythonOp):
                                                         writable=False))
                 self.forward(in_data=tensors[0], out_data=tensors[1])
             except Exception:
-                print('Error in NDArrayOp.forward: %s' % traceback.format_exc())
+                print(f'Error in NDArrayOp.forward: {traceback.format_exc()}')
                 return False
             return True
 
@@ -324,7 +324,7 @@ class NDArrayOp(PythonOp):
                 self.backward(in_data=tensors[0], out_data=tensors[1],
                               in_grad=tensors[2], out_grad=tensors[3])
             except Exception:
-                print('Error in NDArrayOp.backward: %s' % traceback.format_exc())
+                print(f'Error in NDArrayOp.backward: {traceback.format_exc()}')
                 return False
             return True
 
@@ -347,7 +347,7 @@ class NDArrayOp(PythonOp):
                                             POINTER(mx_int))
                     tensor_dims[i] = len(rshape[i])
             except Exception:
-                print('Error in NDArrayOp.infer_shape: %s' % traceback.format_exc())
+                print(f'Error in NDArrayOp.infer_shape: {traceback.format_exc()}')
                 return False
             return True
 
@@ -359,7 +359,7 @@ class NDArrayOp(PythonOp):
                 ret = c_array(c_char_p, ret)
                 out[0] = cast(ret, POINTER(POINTER(c_char)))
             except Exception:
-                print('Error in NDArrayOp.list_outputs: %s' % traceback.format_exc())
+                print(f'Error in NDArrayOp.list_outputs: {traceback.format_exc()}')
                 return False
             return True
 
@@ -371,7 +371,7 @@ class NDArrayOp(PythonOp):
                 ret = c_array(c_char_p, ret)
                 out[0] = cast(ret, POINTER(POINTER(c_char)))
             except Exception:
-                print('Error in NDArrayOp.list_arguments: %s' % traceback.format_exc())
+                print(f'Error in NDArrayOp.list_arguments: {traceback.format_exc()}')
                 return False
             return True
 
@@ -386,7 +386,7 @@ class NDArrayOp(PythonOp):
                 rdeps = cast(c_array_buf(c_int, array('i', rdeps)), c_int_p)
                 deps[0] = rdeps
             except Exception:
-                print('Error in NDArrayOp.declare_backward_dependency: %s' % traceback.format_exc())
+                print(f'Error in NDArrayOp.declare_backward_dependency: {traceback.format_exc()}')
                 return False
             return True
 
@@ -565,9 +565,9 @@ class CustomOpProp(object):
         for i, stype in enumerate(in_stype):
             assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
             "Default infer_storage_type implementation doesnt allow non default stypes: " \
-            "found non default stype '%s' for in_stype[%d]. Please implement " \
+            f"found non default stype '{stype}' for in_stype[{i}]. Please implement " \
             "infer_storage_type and infer_storage_type_backward interface " \
-            "in your custom operator if you have non-default input/output stypes" % (stype, i)
+            "in your custom operator if you have non-default input/output stypes"
         return in_stype, \
                [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]*len(self.list_outputs()), \
                [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]*len(self.list_auxiliary_states())
@@ -610,17 +610,17 @@ class CustomOpProp(object):
         for i, stype in enumerate(ograd_stype):
             assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
             "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
-             "found non default stype '%s' for ograd_stype[%d]. Please implement " \
+             f"found non default stype '{stype}' for ograd_stype[{i}]. Please implement " \
              "infer_storage_type and infer_storage_type_backward interface " \
-             "in your custom operator if you have non-default output gradient stypes" % (stype, i)
+             "in your custom operator if you have non-default output gradient stypes"
         for i, stype in enumerate(igrad_stype):
             if stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_UNDEFINED]:
                 stype = _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]
             assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
             "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
-            "found non default stype '%s' for igrad_stype[%d]. Please implement " \
+            f"found non default stype '{stype}' for igrad_stype[{i}]. Please implement " \
             "infer_storage_type and infer_storage_type_backward interface " \
-            "in your custom operator if you have non-default input gradient stypes" % (stype, i)
+            "in your custom operator if you have non-default input gradient stypes"
         stype_lists = [ograd_stype, in_stype, out_stype, igrad_stype, aux_stype]
         for stype_list in stype_lists:
             stype_list[:] = len(stype_list) * [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]
@@ -762,14 +762,14 @@ def register(reg_name):
                     else:
                         raise AssertionError("infer_shape must return 2 or 3 lists")
                     assert len(oshape) == n_out, \
-                        "InferShape Error: expecting %d entries in returned output " \
-                        "shapes, got %d."%(n_out, len(oshape))
+                        f"InferShape Error: expecting {n_out} entries in returned output " \
+                        f"shapes, got {len(oshape)}."
                     assert len(ishape) == n_in, \
-                        "InferShape Error: expecting %d entries in returned input " \
-                        "shapes, got %d."%(n_in, len(ishape))
+                        f"InferShape Error: expecting {n_in} entries in returned input " \
+                        f"shapes, got {len(ishape)}."
                     assert len(ashape) == n_aux, \
-                        "InferShape Error: expecting %d entries in returned aux state " \
-                        "shapes, got %d."%(n_aux, len(ashape))
+                        f"InferShape Error: expecting {n_aux} entries in returned aux state " \
+                        f"shapes, got {len(ashape)}."
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
                         tensor_shapes[i] = cast(c_array_buf(mx_int,
@@ -779,7 +779,7 @@ def register(reg_name):
 
                     infer_shape_entry._ref_holder = [tensor_shapes]
                 except Exception:
-                    print('Error in %s.infer_shape: %s' % (reg_name, traceback.format_exc()))
+                    print(f'Error in {reg_name}.infer_shape: {traceback.format_exc()}')
                     return False
                 return True
 
@@ -804,25 +804,25 @@ def register(reg_name):
                     else:
                         raise AssertionError("infer_storage_type_backward must return 4 or 5 lists")
                     assert len(ret[0]) == len(tensors[0]), \
-                        "InferStorageTypeBackward Error: expecting == %d " \
+                        f"InferStorageTypeBackward Error: expecting == {len(tensors[0])} " \
                         "entries in returned output gradient " \
-                        "stypes, got %d."%(len(tensors[0]), len(ret[0]))
+                        f"stypes, got {len(ret[0])}."
                     assert len(ret[1]) == len(tensors[1]), \
-                        "InferStorageTypeBackward Error: expecting == %d " \
+                        f"InferStorageTypeBackward Error: expecting == {len(tensors[1])} " \
                         "entries in returned input stypes, " \
-                        "got %d."%(len(tensors[1]), len(ret[1]))
+                        f"got {len(ret[1])}."
                     assert len(ret[2]) == len(tensors[2]), \
-                        "InferStorageTypeBackward Error: expecting == %d " \
+                        f"InferStorageTypeBackward Error: expecting == {len(tensors[2])} " \
                         "entries in returned output stypes, " \
-                        "got %d."%(len(tensors[2]), len(ret[2]))
+                        f"got {len(ret[2])}."
                     assert len(ret[3]) == len(tensors[3]), \
-                        "InferStorageTypeBackward Error: expecting == %d " \
+                        f"InferStorageTypeBackward Error: expecting == {len(tensors[3])} " \
                         "entries in returned input gradient stypes, " \
-                        "got %d."%(len(tensors[3]), len(ret[3]))
+                        f"got {len(ret[3])}."
                     assert len(ret[4]) == len(tensors[4]), \
-                        "InferStorageTypeBackward Error: expecting == %d " \
+                        f"InferStorageTypeBackward Error: expecting == {len(tensors[4])} " \
                         "entries in returned aux stypes, " \
-                        "got %d."%(len(tensors[4]), len(ret[4]))
+                        f"got {len(ret[4])}."
                     rstype = []
                     for ret_list in ret:
                         rstype.extend(ret_list)
@@ -831,16 +831,15 @@ def register(reg_name):
                         assert stype != _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_UNDEFINED], \
                             "stype should not be undefined"
                         assert stype in _STORAGE_TYPE_STR_TO_ID, \
-                            "Provided stype: %s is not valid " \
-                            "valid stypes are %s, %s, %s"%(stype,
-                                                           _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT],
-                                                           _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_ROW_SPARSE],
-                                                           _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_CSR])
+                            f"Provided stype: {stype} is not valid " \
+                            "valid stypes are {}, {}, {}".format(_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT],
+                                                                 _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_ROW_SPARSE],
+                                                                 _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_CSR])
                         tensor_stypes[i] = _STORAGE_TYPE_STR_TO_ID[stype]
 
                     infer_storage_type_backward_entry._ref_holder = [tensor_stypes]
                 except Exception:
-                    print('Error in %s.infer_type: %s' % (reg_name, traceback.format_exc()))
+                    print(f'Error in {reg_name}.infer_type: {traceback.format_exc()}')
                     return False
                 return True
 
@@ -863,20 +862,20 @@ def register(reg_name):
                         raise AssertionError("infer_storage_type must return 2 or 3 lists")
 
                     assert len(ostype) == n_out, \
-                        "InferStorageType Error: expecting %d entries in returned output " \
-                        "stypes, got %d."%(n_out, len(ostype))
+                        f"InferStorageType Error: expecting {n_out} entries in returned output " \
+                        f"stypes, got {len(ostype)}."
                     assert len(istype) == n_in, \
-                        "InferStorageType Error: expecting %d entries in returned input " \
-                        "stypes, got %d."%(n_in, len(istype))
+                        f"InferStorageType Error: expecting {n_in} entries in returned input " \
+                        f"stypes, got {len(istype)}."
                     assert len(astype) == n_aux, \
-                        "InferStorageType Error: expecting %d entries in returned aux state " \
-                        "stypes, got %d."%(n_aux, len(astype))
+                        f"InferStorageType Error: expecting {n_aux} entries in returned aux state " \
+                        f"stypes, got {len(astype)}."
                     rtype = list(istype) + list(ostype) + list(astype)
                     for i, dtype in enumerate(rtype):
                         tensor_stypes[i] = _STORAGE_TYPE_STR_TO_ID[dtype]
                     infer_storage_type_entry._ref_holder = [tensor_stypes]
                 except Exception:
-                    print('Error in %s.infer_type: %s' % (reg_name, traceback.format_exc()))
+                    print(f'Error in {reg_name}.infer_type: {traceback.format_exc()}')
                     return False
                 return True
 
@@ -888,7 +887,7 @@ def register(reg_name):
                     n_aux = len(op_prop.list_auxiliary_states())
                     assert num_tensor == n_in + n_out + n_aux
 
-                    types = [_DTYPE_MX_TO_NP[tensor_types[i]] for i in range(n_in)]
+                    types = [dtype_mx_to_np(tensor_types[i]) for i in range(n_in)]
                     ret = op_prop.infer_type(types)
                     if len(ret) == 2:
                         itype, otype = ret
@@ -898,21 +897,21 @@ def register(reg_name):
                     else:
                         raise AssertionError("infer_type must return 2 or 3 lists")
                     assert len(otype) == n_out, \
-                        "InferType Error: expecting %d entries in returned output " \
-                        "types, got %d."%(n_out, len(otype))
+                        f"InferType Error: expecting {n_out} entries in returned output " \
+                        f"types, got {len(otype)}."
                     assert len(itype) == n_in, \
-                        "InferType Error: expecting %d entries in returned input " \
-                        "types, got %d."%(n_in, len(itype))
+                        f"InferType Error: expecting {n_in} entries in returned input " \
+                        f"types, got {len(itype)}."
                     assert len(atype) == n_aux, \
-                        "InferType Error: expecting %d entries in returned aux state " \
-                        "types, got %d."%(n_aux, len(atype))
+                        f"InferType Error: expecting {n_aux} entries in returned aux state " \
+                        f"types, got {len(atype)}."
                     rtype = list(itype) + list(otype) + list(atype)
                     for i, dtype in enumerate(rtype):
-                        tensor_types[i] = _DTYPE_NP_TO_MX[dtype]
+                        tensor_types[i] = dtype_np_to_mx(dtype)
 
                     infer_type_entry._ref_holder = [tensor_types]
                 except Exception:
-                    print('Error in %s.infer_type: %s' % (reg_name, traceback.format_exc()))
+                    print(f'Error in {reg_name}.infer_type: {traceback.format_exc()}')
                     return False
                 return True
 
@@ -926,7 +925,7 @@ def register(reg_name):
 
                     list_outputs_entry._ref_holder = [out]
                 except Exception:
-                    print('Error in %s.list_outputs: %s' % (reg_name, traceback.format_exc()))
+                    print(f'Error in {reg_name}.list_outputs: {traceback.format_exc()}')
                     return False
                 return True
 
@@ -940,7 +939,7 @@ def register(reg_name):
 
                     list_arguments_entry._ref_holder = [out]
                 except Exception:
-                    print('Error in %s.list_arguments: %s' % (reg_name, traceback.format_exc()))
+                    print(f'Error in {reg_name}.list_arguments: {traceback.format_exc()}')
                     return False
                 return True
 
@@ -955,7 +954,7 @@ def register(reg_name):
                     list_auxiliary_states_entry._ref_holder = [out]
                 except Exception:
                     tb = traceback.format_exc()
-                    print('Error in %s.list_auxiliary_states: %s' % (reg_name, tb))
+                    print(f'Error in {reg_name}.list_auxiliary_states: {tb}')
                     return False
                 return True
 
@@ -976,7 +975,7 @@ def register(reg_name):
                     declare_backward_dependency_entry._ref_holder = [deps]
                 except Exception:
                     tb = traceback.format_exc()
-                    print('Error in %s.declare_backward_dependency: %s' % (reg_name, tb))
+                    print(f'Error in {reg_name}.declare_backward_dependency: {tb}')
                     return False
                 return True
 
@@ -1010,7 +1009,7 @@ def register(reg_name):
                                            in_data=tensors[0], out_data=tensors[1],
                                            aux=tensors[4])
                         except Exception:
-                            print('Error in CustomOp.forward: %s' % traceback.format_exc())
+                            print(f'Error in CustomOp.forward: {traceback.format_exc()}')
                             return False
                         return True
 
@@ -1049,7 +1048,7 @@ def register(reg_name):
                                             in_grad=tensors[2], out_grad=tensors[3],
                                             aux=tensors[4])
                         except Exception:
-                            print('Error in CustomOp.backward: %s' % traceback.format_exc())
+                            print(f'Error in CustomOp.backward: {traceback.format_exc()}')
                             return False
                         return True
 
@@ -1060,7 +1059,7 @@ def register(reg_name):
                         try:
                             del _registry.ref_holder[cur]
                         except Exception:
-                            print('Error in CustomOp.delete: %s' % traceback.format_exc())
+                            print(f'Error in CustomOp.delete: {traceback.format_exc()}')
                             return False
                         return True
 
@@ -1077,7 +1076,7 @@ def register(reg_name):
                     op._ref_holder = [ret]
                     _registry.ref_holder[cur] = op
                 except Exception:
-                    print('Error in %s.create_operator: %s' % (reg_name, traceback.format_exc()))
+                    print(f'Error in {reg_name}.create_operator: {traceback.format_exc()}')
                     return False
                 return True
 
@@ -1088,7 +1087,7 @@ def register(reg_name):
                 try:
                     del _registry.ref_holder[cur]
                 except Exception:
-                    print('Error in CustomOpProp.delete: %s' % traceback.format_exc())
+                    print(f'Error in CustomOpProp.delete: {traceback.format_exc()}')
                     return False
                 return True
 

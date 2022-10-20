@@ -51,7 +51,7 @@ def run_cast_storage_synthetic():
 
         # start benchmarking
         cost = measure_cost(repeat, mx.nd.cast_storage, dns_data, stype)
-        results = '{:10.1f} {:>10} {:8d} {:8d} {:10.2f}'.format(density*100, str(ctx), m, n, cost*1000)
+        results = f'{density*100:10.1f} {str(ctx):>10} {m:8d} {n:8d} {cost * 1000:10.2f}'
         print(results)
 
     check_call(_LIB.MXSetNumOMPThreads(ctypes.c_int(args.num_omp_threads)))
@@ -82,10 +82,10 @@ def run_cast_storage_synthetic():
             stype = 'row_sparse'
             print(" cast_storage benchmark: dense to rsp, size m x n ")
         else:
-            print("invalid benchmark: %s" %b)
+            print(f"invalid benchmark: {b}")
             continue
         print("==================================================")
-        headline = '{:>10} {:>10} {:>8} {:>8} {:>10}'.format('density(%)', 'context', 'm', 'n', 'time(ms)')
+        headline = f"{'density(%)':>10} {'context':>10} {'m':>8} {'n':>8} {'time(ms)':>10}"
         print(headline)
         for i in range(len(n)):
             for ctx in contexts:

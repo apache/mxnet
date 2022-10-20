@@ -24,19 +24,16 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../tensor/elemwise_unary_op.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
-#include "./dnnl_reshape-inl.h"
+#include "operator/tensor/elemwise_unary_op.h"
+#include "dnnl_base-inl.h"
+#include "dnnl_reshape-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportDNNLReshape(const NDArray& input, const NDArray& output) {
-  const int input_ndims  = input.shape().ndim();
-  const int output_ndims = output.shape().ndim();
-  return input.shape().Size() > 0 && input_ndims >= 1 && input_ndims <= 6 && output_ndims >= 1 &&
-         output_ndims <= 6 && IsDNNLType(input.dtype());
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reorder.html
+bool SupportDNNLReshape(const NDArray& input) {
+  return SupportDNNL(input) && input.shape().Size() != 1;
 }
 
 DNNLReshapeFwd::DNNLReshapeFwd(const OpReqType& req, const NDArray& input, const NDArray& output) {
@@ -111,6 +108,7 @@ DNNLReshapeFwd& GetReshapeForward(const OpReqType& req,
   DNNLReshapeSignature key;
   key.AddSign(req);
   key.AddSign(input);
+  key.AddSign(output);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {

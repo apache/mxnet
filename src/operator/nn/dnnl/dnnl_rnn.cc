@@ -26,11 +26,14 @@
 #if MXNET_USE_ONEDNN == 1
 
 #include <numeric>
+#include <functional>
 
-#include "./dnnl_rnn-inl.h"
+#include "dnnl_rnn-inl.h"
 
 namespace mxnet {
 namespace op {
+
+DMLC_REGISTER_PARAMETER(DNNLRnnParam);
 
 inline int GetRnnGatesNum(int mode) {
   switch (mode) {
@@ -87,13 +90,28 @@ void DNNLRnnLayerParam::SetDims() {
   reserve_size = 0;
 }
 
-DNNLRnnFullParam DNNLRnnFullParamParser(const RNNParam& rnn_param,
+DNNLRnnFullParam DNNLRnnFullParamParser(const NodeAttrs& attrs,
                                         const index_t seq_len,
                                         const index_t batch_size,
                                         const index_t input_size) {
+  const RNNParam& rnn_param = nnvm::get<RNNParam>(attrs.parsed);
   DNNLRnnFullParam full_param;
   full_param.default_param = rnn_param;
-  const int state_size     = rnn_param.state_size;
+  try {
+    full_param.dnnl_param.Init(attrs.dict, dmlc::parameter::kAllowUnknown);
+  } catch (const dmlc::ParamError& e) {
+    std::ostringstream os;
+    os << e.what();
+    os << ", in operator " << attrs.op->name << "("
+       << "name=\"" << attrs.name << "\"";
+    for (const auto& k : attrs.dict) {
+      os << ", " << k.first << "=\"" << k.second << "\"";
+    }
+    os << ")";
+    throw dmlc::ParamError(os.str());
+  }
+
+  const int state_size = rnn_param.state_size;
   const int proj_size =
       rnn_param.projection_size.has_value() ? rnn_param.projection_size.value() : -1;
   const int iter_size =
@@ -134,15 +152,20 @@ DNNLRnnFullParam DNNLRnnFullParamParser(const RNNParam& rnn_param,
                                 false);
   }
 
-  // Set dims, workspace size, and state_outputs flag
+  // Set dims, workspace size, state_outputs, quantized and enable_u8_output flag
   for (auto& layer_param : layer_params) {
     layer_param.SetDims();
-    layer_param.state_outputs = rnn_param.state_outputs;
+    layer_param.state_outputs    = rnn_param.state_outputs;
+    layer_param.quantized        = full_param.dnnl_param.quantized;
+    layer_param.enable_u8_output = true;
   }
+  // Quantized RNN operator produces kFloat32 outputs.
+  if (full_param.dnnl_param.quantized)
+    layer_params.back().enable_u8_output = false;
   return full_param;
 }
 
-void DNNLRnnMemMgr::Init(dim_t size, const Context& ctx) {
+void DNNLRnnMemMgr::Init(const dim_t size, const Context& ctx) {
   workspace_ = NDArray(TShape({size}), ctx, false, mshadow::kUint8);
   if (workspace_.data().dptr_ == nullptr)
     LOG(FATAL) << "oneDNN RNN operator memory allocation error.";
@@ -177,39 +200,48 @@ dnnl::memory* DNNLRnnMemMgr::Alloc(const dnnl::memory::desc& md) {
 RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
                            const bool is_train,
                            const NDArray& data,
-                           const NDArray& params) {
+                           const NDArray& params,
+                           const shared_dnnl_attr_t attr) {
   using namespace dnnl;
-  using tag                     = dnnl::memory::format_tag;
-  const int mode                = layer_param.mode;
-  memory::data_type data_type   = get_dnnl_type(data.dtype());
-  memory::data_type weight_type = get_dnnl_type(params.dtype());
+  using tag                         = dnnl::memory::format_tag;
+  const int mode                    = layer_param.mode;
+  memory::data_type src_layer_dtype = get_dnnl_type(data.dtype());
+  memory::data_type iter_dtype      = get_dnnl_type(mshadow::kFloat32);
+  memory::data_type weight_dtype =
+      get_dnnl_type(layer_param.quantized ? mshadow::kInt8 : params.dtype());
+  memory::data_type bias_dtype = get_dnnl_type(mshadow::kFloat32);
+  memory::data_type dst_layer_dtype =
+      get_dnnl_type((layer_param.quantized && layer_param.enable_u8_output) ? mshadow::kUint8 :
+                                                                              mshadow::kFloat32);
+
   const prop_kind prop = is_train ? prop_kind::forward_training : prop_kind::forward_inference;
   const rnn_direction dnnl_rnn_direction = layer_param.bidirectional ?
                                                rnn_direction::bidirectional_concat :
                                                rnn_direction::unidirectional;
 
-  auto src_layer_desc    = memory::desc(layer_param.src_dims, data_type, tag::tnc);
-  auto weight_layer_desc = memory::desc(layer_param.weight_layer_dims, weight_type, tag::any);
-  auto weight_iter_desc  = memory::desc(layer_param.weight_iter_dims, weight_type, tag::any);
-  auto bias_desc         = memory::desc(layer_param.bias_dims, data_type, tag::ldgo);
-  auto dst_layer_desc    = memory::desc(layer_param.dst_dims, data_type, tag::tnc);
-  auto src_state_desc    = memory::desc(layer_param.state_dims, data_type, tag::ldnc);
-  auto src_cell_desc     = memory::desc(layer_param.cell_dims, data_type, tag::ldnc);
+  auto src_layer_desc    = memory::desc(layer_param.src_dims, src_layer_dtype, tag::tnc);
+  auto weight_layer_desc = memory::desc(layer_param.weight_layer_dims, weight_dtype, tag::any);
+  auto weight_iter_desc  = memory::desc(layer_param.weight_iter_dims, weight_dtype, tag::any);
+  auto bias_desc         = memory::desc(layer_param.bias_dims, bias_dtype, tag::ldgo);
+  auto dst_layer_desc    = memory::desc(layer_param.dst_dims, dst_layer_dtype, tag::tnc);
+  auto src_state_desc    = memory::desc(layer_param.state_dims, iter_dtype, tag::ldnc);
+  auto src_cell_desc     = memory::desc(layer_param.cell_dims, iter_dtype, tag::ldnc);
   auto weight_peep_desc  = memory::desc();
   auto weight_proj_desc  = layer_param.proj_size > 0 ?
-                              memory::desc(layer_param.weight_proj_dims, weight_type, tag::any) :
+                              memory::desc(layer_param.weight_proj_dims, weight_dtype, tag::any) :
                               memory::desc();
   auto dst_state_desc = layer_param.state_outputs ?
-                            memory::desc(layer_param.state_dims, data_type, tag::ldnc) :
+                            memory::desc(layer_param.state_dims, iter_dtype, tag::ldnc) :
                             memory::desc();
   auto dst_cell_desc = layer_param.state_outputs ?
-                           memory::desc(layer_param.cell_dims, data_type, tag::ldnc) :
+                           memory::desc(layer_param.cell_dims, iter_dtype, tag::ldnc) :
                            memory::desc();
 
   auto fwd = RnnPrimitive();
   switch (mode) {
     case rnn_enum::kLstm:
-      fwd = RnnPrimitive::Create<lstm_forward>(prop,
+      fwd = RnnPrimitive::Create<lstm_forward>(attr,
+                                               prop,
                                                dnnl_rnn_direction,
                                                src_layer_desc,
                                                src_state_desc,
@@ -224,7 +256,8 @@ RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
                                                dst_cell_desc);
       break;
     case rnn_enum::kGru:
-      fwd = RnnPrimitive::Create<lbr_gru_forward>(prop,
+      fwd = RnnPrimitive::Create<lbr_gru_forward>(attr,
+                                                  prop,
                                                   dnnl_rnn_direction,
                                                   src_layer_desc,
                                                   src_state_desc,
@@ -237,6 +270,7 @@ RnnPrimitive GetRnnFwdPrim(const DNNLRnnLayerParam& layer_param,
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
       fwd = RnnPrimitive::Create<vanilla_rnn_forward>(
+          attr,
           prop,
           mode == rnn_enum::kRnnTanh ? algorithm::eltwise_tanh : algorithm::eltwise_relu,
           dnnl_rnn_direction,
@@ -448,11 +482,19 @@ void DNNLRnnForward::SetNewDataMem(void* x,
   auto& cpu_engine      = CpuEngine::Get()->get_engine();
   dnnl_args_map_t& args = net_args_;
 
+  int src_dtype = dtype;
+  int dst_dtype = dtype;
+  if (param_.quantized) {
+    src_dtype = mshadow::kUint8;
+    if (param_.enable_u8_output)
+      dst_dtype = mshadow::kUint8;
+  }
+
   RNN_HANDLE_FUNC(RNN_HANDLE_FUNC_NAME);
 
   // Set various data memory
-  RNN_FWD_SET(SRC, param_.src_dims, format_tag::tnc, x, dtype);
-  RNN_FWD_SET(DST, param_.dst_dims, format_tag::tnc, y, dtype);
+  RNN_FWD_SET(SRC, param_.src_dims, format_tag::tnc, x, src_dtype);
+  RNN_FWD_SET(DST, param_.dst_dims, format_tag::tnc, y, dst_dtype);
   RNN_FWD_SET(SRC_ITER, param_.state_dims, format_tag::ldnc, hx, dtype);
 
   if (param_.state_outputs) {
@@ -494,10 +536,25 @@ inline void DNNLMemoryReorder(const dnnl::memory& src, const dnnl::memory& dst) 
  * with primitive-prefered format.
  */
 void DNNLRnnForward::ReorderWeights() {
-  DNNLMemoryReorder(*weights_layer_r_, *weights_layer_);
-  DNNLMemoryReorder(*weights_iter_r_, *weights_iter_);
-  if (param_.proj_size > 0)
-    DNNLMemoryReorder(*weights_proj_r_, *weights_proj_);
+  if (param_.quantized) {
+    const dnnl::primitive_attr& attr = this->fwd_inf_.GetPrimAttr();
+    auto ReorderWithAttr             = [&](dnnl::memory& src, dnnl::memory& dst) {
+      auto reorder_pd = dnnl::reorder::primitive_desc(src, dst, attr);
+      dnnl_args_map_t net_args;
+      net_args[DNNL_ARG_SRC] = src;
+      net_args[DNNL_ARG_DST] = dst;
+      DNNLStream::Get()->RegisterPrimArgs(dnnl::reorder(reorder_pd), net_args);
+    };
+    ReorderWithAttr(*weights_layer_r_, *weights_layer_);
+    ReorderWithAttr(*weights_iter_r_, *weights_iter_);
+    if (param_.proj_size > 0)
+      ReorderWithAttr(*weights_proj_r_, *weights_proj_);
+  } else {
+    DNNLMemoryReorder(*weights_layer_r_, *weights_layer_);
+    DNNLMemoryReorder(*weights_iter_r_, *weights_iter_);
+    if (param_.proj_size > 0)
+      DNNLMemoryReorder(*weights_proj_r_, *weights_proj_);
+  }
 }
 
 void AdjustGruGateOrder(char* weight,
@@ -572,7 +629,7 @@ inline void EmplaceNetArgs(dnnl_args_map_t* net_args, const int arg_name, const 
  */
 void DNNLRnnForward::SetWeightsMem(void* w_ptr, void* b_ptr, const bool is_train, const int dtype) {
   using format_tag         = dnnl::memory::format_tag;
-  auto dnnl_dtype          = get_dnnl_type(dtype);
+  const auto dnnl_dtype    = get_dnnl_type(dtype);
   const size_t dtype_bytes = mshadow::mshadow_sizeof(dtype);
 
   const size_t buffer_bytes =
@@ -701,7 +758,7 @@ void DNNLRnnForward::SetWeightsMem(void* w_ptr, void* b_ptr, const bool is_train
     // in forward training path, we use plain memory (ldxxx) as the space for weights and
     // their gradients. Then, forward training primitives could fetch them from the scope
     // of forward inference. And from there, we don't need to reorder the plain memory to
-    // the optimal rnn-packed memory for forward inference.
+    // the optimal rnn-packed memory for forward inference
     ReorderWeights();
     initialized_ = true;
   }
@@ -763,6 +820,19 @@ void DNNLRnnOp::Init(const OpContext& op_ctx,
                      const std::vector<NDArray>& outputs) {
   using format_tag = dnnl::memory::format_tag;
 
+  // Get the bytes of a real type
+  const NDArray& weights        = inputs[rnn_enum::kParams];
+  int dtype                     = weights.dtype();
+  size_t dtype_bytes            = mshadow::mshadow_sizeof(dtype);
+  const RNNParam& default_param = full_param_.default_param;
+  const size_t weights_size =
+      weights.data().Size() - GetRnnBiasSize(default_param.num_layers,
+                                             default_param.state_size,
+                                             default_param.bidirectional + 1,
+                                             default_param.mode);
+  char* weights_ptr = static_cast<char*>(weights.data().dptr_);
+  char* bias_ptr    = weights_ptr + weights_size * dtype_bytes;
+
   // In the `autograd.record()` context, RNNOp is required to run into
   // `forward_training` mode.
   const bool is_training  = (op_ctx.is_train || op_ctx.need_grad);
@@ -771,7 +841,7 @@ void DNNLRnnOp::Init(const OpContext& op_ctx,
   if (fwd_inf_vec_.size() < num_fusion) {
     for (auto& layer_param : full_param_.layer_params) {
       fwd_inf_vec_.emplace_back(
-          ctx, layer_param, false, inputs[rnn_enum::kData], inputs[rnn_enum::kParams]);
+          ctx, layer_param, false, inputs[rnn_enum::kData], inputs[rnn_enum::kParams], nullptr);
     }
   }
 
@@ -782,19 +852,6 @@ void DNNLRnnOp::Init(const OpContext& op_ctx,
     }
   }
 
-  // Get the bytes of a real type
-  const NDArray& weights = inputs[rnn_enum::kParams];
-  int dtype              = weights.dtype();
-  size_t dtype_bytes     = mshadow::mshadow_sizeof(dtype);
-
-  const RNNParam& default_param = full_param_.default_param;
-  char* weights_ptr             = static_cast<char*>(weights.data().dptr_);
-  char* bias_ptr =
-      weights_ptr + (weights.data().Size() - GetRnnBiasSize(default_param.num_layers,
-                                                            default_param.state_size,
-                                                            default_param.bidirectional + 1,
-                                                            default_param.mode)) *
-                        dtype_bytes;
   for (auto& fwd_layer : fwd_inf_vec_) {
     size_t single_w_bytes      = fwd_layer.GetParam().single_w_size * dtype_bytes;
     size_t single_b_bytes      = fwd_layer.GetParam().native_single_b_size * dtype_bytes;
@@ -818,7 +875,7 @@ void DNNLRnnOp::Init(const OpContext& op_ctx,
   CHECK_EQ(num_fusion, fwd_inf_vec_.size())
       << "Layer vector's size has a different value than the number of fusion.";
   if (dst_.size() < num_fusion - 1) {
-    int data_dtype           = outputs[rnn_enum::kOut].dtype();
+    const int data_dtype     = outputs[rnn_enum::kOut].dtype();
     const size_t data_dbytes = mshadow::mshadow_sizeof(data_dtype);
     mgr_.Init((outputs[rnn_enum::kOut].data().Size() * data_dbytes + kDNNLAlign) * (num_fusion - 1),
               op_ctx.run_ctx.ctx);
@@ -1120,7 +1177,7 @@ void DNNLRnnOp::Forward(const OpContext& ctx,
   }
 
   // Get data type
-  int data_dtype = inputs[rnn_enum::kData].dtype();
+  int data_dtype = outputs[rnn_enum::kOut].dtype();
   // Get temporary memory for output, state_out, statecell_out
   const int num_layers = default_param.num_layers;
   const int seq_length = default_param.seq_length_;

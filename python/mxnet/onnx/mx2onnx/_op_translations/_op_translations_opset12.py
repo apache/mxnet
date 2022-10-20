@@ -61,7 +61,7 @@ def parse_helper(attrs, attrs_name, alt_value=None):
             dims = eval(attrs_str)
             return dims
         else:
-            raise AttributeError("Malformed %s dimensions: %s" % (attrs_name, str(attrs_str)))
+            raise AttributeError(f"Malformed {attrs_name} dimensions: {str(attrs_str)}")
     return alt_value
 
 def transform_padding(pad_width):
@@ -537,7 +537,7 @@ def convert_activation(node, **kwargs):
         )
     else:
         raise AttributeError(
-            "Activation %s not implemented or recognized in the converter" % act_type
+            f"Activation {act_type} not implemented or recognized in the converter"
         )
 
     return [node]
@@ -855,7 +855,7 @@ def convert_leakyrelu(node, **kwargs):
             inputs=input_nodes,
             outputs=[name],
             name=name)
-    elif act_type in ('gelu',):
+    elif act_type in ('gelu', 'gelu_erf'):
         sqrt2 = np.float32(1.4142135623730951)
         create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs)
         create_const_scalar_node(name+"_one", np.float32(1.0), kwargs)

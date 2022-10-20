@@ -438,6 +438,38 @@ inline std::string attr_value_string(const nnvm::NodeAttrs& attrs,
   return attrs.dict.at(attr_name);
 }
 
+/*! \brief Seeks an attribute in a node and its subgraphs and invokes a function on each. */
+template <typename Fn>
+inline void attr_foreach(const nnvm::NodeAttrs& attrs, const std::string& attr_name, const Fn& fn) {
+  const auto& found_it = attrs.dict.find(attr_name);
+  if (found_it != attrs.dict.end()) {
+    fn(found_it->second);
+  }
+  for (const auto& subgraph : attrs.subgraphs) {
+    DFSVisit(subgraph->outputs,
+             [&](const nnvm::ObjectPtr& node) { attr_foreach(node->attrs, attr_name, fn); });
+  }
+}
+
+template <typename ValueType>
+inline ValueType flag_attr_accumulate(const nnvm::NodeAttrs& attrs, const std::string& attr_name) {
+  static_assert(std::is_integral<ValueType>::value, "ValueType must be an integral type.");
+
+  ValueType result = 0;
+  attr_foreach(attrs, attr_name, [&](const std::string& attr_value) {
+    std::istringstream ss(attr_value);
+    ValueType temp;
+    ss >> temp;
+    result |= temp;
+
+    if (ss.fail() || !ss.eof()) {
+      LOG(WARNING) << "Incorrect value of an attribute: " << attr_name
+                   << ". Expected an integer, while got: " << attr_value;
+    }
+  });
+  return result;
+}
+
 /*! \brief get string representation of the operator stypes */
 inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -897,7 +929,8 @@ inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
 }
 
 inline bool is_float(const int dtype) {
-  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16 ||
+         dtype == mshadow::kBfloat16;
 }
 
 inline bool is_int(const int dtype) {

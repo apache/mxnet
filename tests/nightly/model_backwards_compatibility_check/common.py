@@ -105,10 +105,10 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
     result = bucket.meta.client.list_objects(Bucket=bucket.name, Delimiter=backslash)
     folder_list = list()
     if 'CommonPrefixes' not in result:
-        logging.error('No trained models found in S3 bucket : %s for this file. '
-                      'Please train the models and run inference again' % bucket_name)
-        raise Exception("No trained models found in S3 bucket : %s for this file. "
-                        "Please train the models and run inference again" % bucket_name)
+        logging.error('No trained models found in S3 bucket : {} for this file. '
+                      'Please train the models and run inference again'.format(bucket_name))
+        raise Exception("No trained models found in S3 bucket : {} for this file. "
+                        "Please train the models and run inference again".format(bucket_name))
         return folder_list
     for obj in result['CommonPrefixes']:
         folder_name = obj['Prefix'].strip(backslash)
@@ -121,10 +121,10 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
         folder_list.append(obj['Prefix'].strip(backslash))
 
     if len(folder_list) == 0:
-        logging.error('No trained models found in S3 bucket : %s for this file. '
-                      'Please train the models and run inference again' % bucket_name)
-        raise Exception("No trained models found in S3 bucket : %s for this file. "
-                        "Please train the models and run inference again" % bucket_name)
+        logging.error('No trained models found in S3 bucket : {} for this file. '
+                      'Please train the models and run inference again'.format(bucket_name))
+        raise Exception("No trained models found in S3 bucket : {} for this file. "
+                        "Please train the models and run inference again".format(bucket_name))
     return folder_list
 
 

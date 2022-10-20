@@ -1809,6 +1809,8 @@ def check_layer_forward_withinput(net, x):
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @use_np
+@pytest.mark.skipif(mx.device.num_gpus(), reason="Temporairly disabled on gpu due to failing centos-gpu CI " +
+                                          "tracked at https://github.com/apache/incubator-mxnet/issues/20978")
 @pytest.mark.parametrize('chn_num', [16, 256])
 @pytest.mark.parametrize('kernel', [1, 3, 224])
 def test_conv2d_16c(chn_num, kernel):
@@ -1832,7 +1834,6 @@ def test_conv2d_16c(chn_num, kernel):
 @use_np
 @pytest.mark.parametrize('grp', [16])
 @pytest.mark.parametrize('kernel_size', [1, 3])
-@with_environment('MXNET_CUDNN_DISABLED_CONV_FWD_ENGINES', '5')  # eng:5 causes test failure on M60
 def test_group_conv2d_16c(grp, kernel_size):
     input_size_list = onp.random.randint(low=3, high=65, size=10).tolist()
     batch_size = 4

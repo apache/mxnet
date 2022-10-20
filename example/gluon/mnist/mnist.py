@@ -108,13 +108,13 @@ def train(epochs, ctx):
 
             if i % opt.log_interval == 0 and i > 0:
                 name, acc = metric.get()
-                print('[Epoch %d Batch %d] Training: %s=%f'%(epoch, i, name, acc))
+                print(f'[Epoch {epoch} Batch {i}] Training: {name}={acc}')
 
         name, acc = metric.get()
-        print('[Epoch %d] Training: %s=%f'%(epoch, name, acc))
+        print(f'[Epoch {epoch}] Training: {name}={acc}')
 
         name, val_acc = test(ctx)
-        print('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
+        print(f'[Epoch {epoch}] Validation: {name}={val_acc}')
 
     net.save_parameters('mnist.params')
 

@@ -17,12 +17,12 @@
 
 import os
 import sys
-import tempfile
 import math
 import numpy as np
 import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
+from mxnet.util import TemporaryDirectory
 from mxnet import gluon, nd
 from common import with_seed
 import pytest
@@ -374,7 +374,7 @@ def test_tensor():
 
     def check_load_save():
         x = create_vector(size=LARGE_X)
-        with tempfile.TemporaryDirectory() as tmp:
+        with TemporaryDirectory() as tmp:
             tmpfile = os.path.join(tmp, 'large_vector')
             nd.save(tmpfile, [x])
             y = nd.load(tmpfile)

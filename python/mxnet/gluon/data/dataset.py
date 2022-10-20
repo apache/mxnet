@@ -83,7 +83,7 @@ class Dataset(object):
         Dataset
             The result dataset.
         """
-        assert index < num_shards, 'Shard index of out bound: %d out of %d'%(index, num_shards)
+        assert index < num_shards, f'Shard index of out bound: {index} out of {num_shards}'
         assert num_shards > 0, 'Number of shards must be greater than 0'
         assert index >= 0, 'Index must be non-negative'
         length = len(self)
@@ -132,8 +132,7 @@ class Dataset(object):
         """
         from . import Sampler
         if not isinstance(sampler, Sampler):
-            raise TypeError('Invalid sampler type: %s. Expected gluon.data.Sampler instead.'%
-                            type(sampler))
+            raise TypeError(f'Invalid sampler type: {type(sampler)}. Expected gluon.data.Sampler instead.')
         return _SampledDataset(self, sampler)
 
     def transform(self, fn, lazy=True):
@@ -356,8 +355,8 @@ class ArrayDataset(Dataset):
         self._data = []
         for i, data in enumerate(args):
             assert len(data) == self._length, \
-                "All arrays must have the same length; array[0] has length %d " \
-                "while array[%d] has %d." % (self._length, i+1, len(data))
+                f"All arrays must have the same length; array[0] has length {self._length} " \
+                f"while array[{i+1}] has {len(data)}."
             if isinstance(data, ndarray.NDArray) and len(data.shape) == 1:
                 data = data.asnumpy()
             self._data.append(data)

@@ -35,8 +35,8 @@
 #include <utility>
 #include <vector>
 
-#include "../../operator_common.h"
-#include "./dnnl_base-inl.h"
+#include "operator/operator_common.h"
+#include "dnnl_base-inl.h"
 #include "dnnl_act-inl.h"
 
 namespace mxnet {
@@ -48,31 +48,26 @@ bool SupportDNNLAct(const ActivationParam& param) {
          param.act_type == activation::kSoftReLU || param.act_type == activation::kTanh;
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
 bool SupportDNNLAct(const ActivationParam& param, const NDArray& input) {
-  // DNNL Activation supports 1d, 2d, 3d, 4d and 5d data layout
-  if ((input.shape().ndim() < 1) || (input.shape().ndim() > 5) ||
-      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
-    return false;
-  return SupportDNNLAct(param);
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(input) && SupportDNNLAct(param);
 }
 
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param) {
   return param.act_type == leakyrelu::kLeakyReLU || param.act_type == leakyrelu::kELU ||
-         param.act_type == leakyrelu::kGELU;
+         param.act_type == leakyrelu::kGELU_ERF || param.act_type == leakyrelu::kGELU_TANH;
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
 bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input) {
-  // DNNL Activation supports 1d, 2d, 3d, 4d and 5d data layout
-  if ((input.shape().ndim() < 1) || (input.shape().ndim() > 5) ||
-      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
-    return false;
-  return SupportDNNLLeakyRelu(param);
+  return SupportDNNL<DNNLTypeMode::FloatTypes>(input) && SupportDNNLLeakyRelu(param);
 }
 
-bool SupportQuantizedDNNLAct(const ActivationParam& param) {
-  // TODO(zhennan): Add more activation type when dnnl supports.
-  //                Remove this when it's identity to SupportDNNLAct.
-  return param.act_type == activation::kReLU;
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_eltwise.html
+bool SupportDNNLQuantizedAct(const ActivationParam& param) {
+  // Although it is the same as SupportDNNLAct i left it here, so when new activations
+  // will be introduced it will be easier to handle.
+  return SupportDNNLAct(param);
 }
 
 dnnl::algorithm GetDNNLActAlgo(const ActivationParam& param) {
@@ -101,8 +96,10 @@ dnnl::algorithm GetDNNLActAlgo(const LeakyReLUParam& param) {
       return dnnl::algorithm::eltwise_relu;
     case leakyrelu::kELU:
       return dnnl::algorithm::eltwise_elu;
-    case leakyrelu::kGELU:
+    case leakyrelu::kGELU_ERF:
       return dnnl::algorithm::eltwise_gelu_erf;
+    case leakyrelu::kGELU_TANH:
+      return dnnl::algorithm::eltwise_gelu_tanh;
     default:
       LOG(FATAL) << "unknown activation type for LeakyReLU: " << param.act_type;
       return dnnl::algorithm::eltwise_relu;
@@ -255,8 +252,9 @@ void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
   auto input_mem       = in_buffer.GetDNNLData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
-  if (input_mem->get_desc() != diff_dst_memory->get_desc()) {
-    input_mem = in_buffer.GetDNNLDataReorder(diff_dst_memory->get_desc());
+  auto diff_dst_desc = diff_dst_memory->get_desc();
+  if (input_mem->get_desc() != diff_dst_desc) {
+    input_mem = in_buffer.GetDNNLDataReorder(&diff_dst_desc);
   }
 
   DNNLActBackward& bwd = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
@@ -264,7 +262,8 @@ void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
   dnnl_args_map_t args = {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DIFF_DST, *diff_dst_memory}};
   if (req[0] != kAddTo) {
     // req[0] is kWriteTo or kWriteInplace
-    auto diff_src_memory = const_cast<NDArray&>(in_grad).CreateDNNLData(bwd.bwd_pd.diff_src_desc());
+    auto bwd_pd_diff_src_desc = bwd.bwd_pd.diff_src_desc();
+    auto diff_src_memory      = const_cast<NDArray&>(in_grad).CreateDNNLData(&bwd_pd_diff_src_desc);
     args.insert({DNNL_ARG_DIFF_SRC, *diff_src_memory});
     stream->RegisterPrimArgs(bwd.GetBwd(), args);
     stream->Submit();
@@ -301,8 +300,9 @@ void DNNLLeakyReluBackward(const nnvm::NodeAttrs& attrs,
   auto input_mem       = in_buffer.GetDNNLData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
-  if (input_mem->get_desc() != diff_dst_memory->get_desc())
-    input_mem = in_buffer.GetDNNLDataReorder(diff_dst_memory->get_desc());
+  auto diff_dst_desc = diff_dst_memory->get_desc();
+  if (input_mem->get_desc() != diff_dst_desc)
+    input_mem = in_buffer.GetDNNLDataReorder(&diff_dst_desc);
   DNNLActBackward& bwd          = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   DNNLStream* stream            = DNNLStream::Get();
   dnnl_output_t diff_src_memory = CreateDNNLMem(output, bwd.bwd_pd.diff_src_desc(), req[0]);

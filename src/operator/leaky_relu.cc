@@ -26,8 +26,8 @@
 #include "./leaky_relu-inl.h"
 #include "../common/alm.h"
 #if MXNET_USE_ONEDNN == 1
-#include "./nn/dnnl/dnnl_base-inl.h"
-#include "./nn/dnnl/dnnl_ops-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_act-inl.h"
 #endif  // MXNET_USE_ONEDNN == 1
 
 #include <nnvm/op_attr_types.h>
@@ -157,6 +157,18 @@ static bool LRChangeLayout(nnvm::NodeAttrs* attrs,
   return false;
 }
 
+static void LeakyReLUParamParser(nnvm::NodeAttrs* attrs) {
+  // For backward compatibility, replace gelu to gelu_erf
+  auto iter = attrs->dict.find("act_type");
+  if (iter != attrs->dict.end()) {
+    auto& type = attrs->dict["act_type"];
+    if (type == "gelu") {
+      type = "gelu_erf";
+    }
+  }
+  ParamParser<LeakyReLUParam>(attrs);
+}
+
 NNVM_REGISTER_OP(LeakyReLU)
     .describe(R"code(Applies Leaky rectified linear unit activation element-wise to the input.
 
@@ -167,6 +179,9 @@ The following modified ReLU Activation functions are supported:
 
 - *elu*: Exponential Linear Unit. `y = x > 0 ? x : slope * (exp(x)-1)`
 - *gelu*: Gaussian Error Linear Unit. `y = 0.5 * x * (1 + erf(x / sqrt(2)))`
+- *gelu_erf*: Same as gelu.
+- *gelu_tanh*: Gaussian Error Linear Unit using tanh function.
+  `y = 0.5 * x * (1 + tanh((sqrt(2/pi) * (x + 0.044715*x^3))))`
 - *selu*: Scaled Exponential Linear Unit. `y = lambda * (x > 0 ? x : alpha * (exp(x) - 1))` where
   *lambda = 1.0507009873554804934193349852946* and *alpha = 1.6732632423543772848170429916717*.
 - *leaky*: Leaky ReLU. `y = x > 0 ? x : slope * x`
@@ -185,7 +200,7 @@ The following modified ReLU Activation functions are supported:
       const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
       return param.act_type == leakyrelu::kRReLU ? 2 : 1;
     })
-    .set_attr_parser(ParamParser<LeakyReLUParam>)
+    .set_attr_parser(LeakyReLUParamParser)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<FInferStorageType>("FInferStorageType", LeakyReLUStorageType)
 #endif
@@ -259,7 +274,7 @@ NNVM_REGISTER_OP(_backward_LeakyReLU)
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
-    .set_attr_parser(ParamParser<LeakyReLUParam>)
+    .set_attr_parser(LeakyReLUParamParser)
 #if MXNET_USE_ONEDNN == 1
     .set_attr<bool>("TIsDNNL", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", LeakyReLUGradComputeExCPU)

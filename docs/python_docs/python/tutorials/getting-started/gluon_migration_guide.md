@@ -19,9 +19,9 @@
 # Gluon2.0: Migration Guide
 
 ## Overview
-Since the introduction of the Gluon API in MXNet 1.x, it has superseded commonly used symbolic, module and model APIs for model development. In fact, Gluon was the first in the deep learning community to unify the flexibility of imperative programming with the performance benefits of symbolic programming, through just-in-time compilation. 
+Since the introduction of the Gluon API in MXNet 1.x, it has superseded commonly used symbolic, module and model APIs for model development. In fact, Gluon was the first in the deep learning community to unify the flexibility of imperative programming with the performance benefits of symbolic programming, through just-in-time compilation.
 
-In Gluon2.0, we extend the support to MXNet numpy and numpy extension with simplified interface and new functionalities: 
+In Gluon2.0, we extend the support to MXNet NumPy and NumPy extension with simplified interface and new functionalities:
 
 - **Simplified hybridization with deferred compute and tracing**: Deferred compute allows the imperative execution to be used for graph construction, which allows us to unify the historic divergence of NDArray and Symbol. Hybridization now works in a simplified hybrid forward interface. Users only need to specify the computation through imperative programming. Hybridization also works through tracing, i.e. tracing the data flow of the first input data to create a graph.
 
@@ -31,43 +31,43 @@ In Gluon2.0, we extend the support to MXNet numpy and numpy extension with simpl
 
 - **Gluon Probability**: parameterizable probability distributions and sampling functions to facilitate more areas of research such as Baysian methods and AutoML.
 
-- **Gluon Metrics** and **Optimizers**: refactored with MXNet numpy interface and addressed legacy issues.
+- **Gluon Metrics** and **Optimizers**: refactored with MXNet NumPy interface and addressed legacy issues.
 
-Adopting these new functionalities may or may not require modifications on your models. But don't worry, this migration guide will go through a high-level mapping from old functionality to new APIs and make Gluon2.0 migration a hassle-free experience.  
+Adopting these new functionalities may or may not require modifications on your models. But don't worry, this migration guide will go through a high-level mapping from old functionality to new APIs and make Gluon2.0 migration a hassle-free experience.
 
 ## Data Pipeline
-**What's new**: In Gluon2.0, `MultithreadingDataLoader` is introduced to speed up the data loading pipeline. It will use the pure MXNet C++ implementation of dataloader, datasets and batchify functions. So, you can use either MXNet internal multithreading mode dataloader or python multiprocessing mode dataloader in Gluon2.0. 
+**What's new**: In Gluon2.0, `MultithreadingDataLoader` is introduced to speed up the data loading pipeline. It will use the pure MXNet C++ implementation of dataloader, datasets and batchify functions. So, you can use either MXNet internal multithreading mode dataloader or python multiprocessing mode dataloader in Gluon2.0.
 
-**Migration Guide**: Users can continue with the traditional gluon.data.Dataloader and the C++ backend will be applied automatically. 
+**Migration Guide**: Users can continue with the traditional gluon.data.Dataloader and the C++ backend will be applied automatically.
 
-[Gluon2.0 dataloader](../../api/gluon/data/index.rst#mxnet.gluon.data.DataLoader) will provide a new parameter called `try_nopython`. This parameter takes a default value of None; when set to `True` the dataloader will compile the python dataloading pipeline into pure MXNet c++ implementation. The compilation is not guaranteed to support all use cases, but it will fallback to python in case of failure: 
+[Gluon2.0 dataloader](../../api/gluon/data/index.rst#mxnet.gluon.data.DataLoader) will provide a new parameter called `try_nopython`. This parameter takes a default value of None; when set to `True` the dataloader will compile the python dataloading pipeline into pure MXNet C++ implementation. The compilation is not guaranteed to support all use cases, but it will fallback to python in case of failure:
 
-- The dataset is not fully [supported by the backend](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset)(e.g., there are custom python datasets).
+- The dataset is not fully [supported by the backend](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset) (e.g., there are custom python datasets).
 
-- Transform is not fully hybridizable. 
+- Transform is not fully hybridizable.
 
-- Bachify is not fully [supported by the backend](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/data/batchify.py). 
+- Bachify is not fully [supported by the backend](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/data/batchify.py).
 
 
-You can refer to [Step5 in Crash Course](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/getting-started/crash-course/5-datasets.html#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
+You can refer to [Step 5 in Crash Course](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/getting-started/crash-course/5-datasets.html#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend.
 
 ## Modeling
-In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and the deferred compute mechanism. 
+In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and the deferred compute mechanism.
 
-- **NumPy-compatible programing experience**: users can build their models with MXNet implementation with NumPy array library, NumPy-compatible math operators and some neural network extension operators. 
+- **NumPy-compatible programing experience**: users can build their models with MXNet implementation with NumPy array library, NumPy-compatible math operators and some neural network extension operators.
 
-- **Imperative-only coding experience**: with the deferred compute and tracing being introduced, users only need to specify the computation through imperative coding but can still make hybridization work. Users will no longer need to interact with symbol APIs. 
+- **Imperative-only coding experience**: with the deferred compute and tracing being introduced, users only need to specify the computation through imperative coding but can still make hybridization work. Users will no longer need to interact with symbol APIs.
 
-To help users migrate smoothly to use these simplified interfaces, we will provide the following guidance on how to replace legacy operators with NumPy-compatible operators, how to build models with `forward` instead of `hybrid_forward` and how to use `Parameter` class to register your parameters. 
+To help users migrate smoothly to use these simplified interfaces, we will provide the following guidance on how to replace legacy operators with NumPy-compatible operators, how to build models with `forward` instead of `hybrid_forward` and how to use `Parameter` class to register your parameters.
 
 
 ### NumPy-compatible Programming Experience
 #### NumPy Arrays
-MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is a multidimensional container of items of the same type and size. Most of its properties and attributes are the same as legacy NDArrays(i.e. `mx.nd.ndarray`), so users can use the NumPy array library just as they did with legacy NDArrays. But, there are still some changes and deprecations that need attention, as mentioned below. 
+MXNet [NumPy ndarray (i.e. mx.np.ndarray)](../../api/np/arrays.ndarray.rst) is a multidimensional container of items of the same type and size. Most of its properties and attributes are the same as legacy NDArrays (i.e. `mx.nd.ndarray`), so users can use the NumPy array library just as they did with legacy NDArrays. But, there are still some changes and deprecations that need attention, as mentioned below.
 
-**Migration Guide**: 
+**Migration Guide**:
 
-1. Currently, NumPy ndarray only supports `default` storage type, other storage types, like `row_sparse`, `csr` are not supported. Also, `tostype()` attribute is deprecated. 
+1. Currently, NumPy ndarray only supports `default` storage type, other storage types, like `row_sparse`, `csr` are not supported. Also, `tostype()` attribute is deprecated.
 
 2. Users can use `as_np_ndarray` attribute to switch from a legacy NDArray to NumPy ndarray just like this:
 
@@ -125,7 +125,7 @@ np_array = nd_array.as_np_ndarray()
 
 
 #### NumPy and NumPy-extension Operators
-Most of the legacy NDArray operators(`mx.nd.op`) have the equivalent ones in np/npx namespace. Users can just replace them with `mx.np.op` or `mx.npx.op` to migrate. Some of the operators will have different inputs and behaviors as listed in the table below. 
+Most of the legacy NDArray operators (`mx.nd.op`) have the equivalent ones in np/npx namespace. Users can just replace them with `mx.np.op` or `mx.npx.op` to migrate. Some of the operators will have different inputs and behaviors as listed in the table below.
 
 **Migration Guide**:
 
@@ -229,7 +229,7 @@ class SampleBlock(HybridBlock):
             # Access constant parameters, which are not iterated during training
             self.weight = self.params.get_constant('const', const_arr)
 ```
-Now in Gluon 2.0, Block/HybridBlock objects will not maintain the parameter dictionary(`ParameterDict`). Instead, users can access these parameters via `Parameter` class and `Constant` class. These parameters will be registered automatically as part of the Block. Users will no longer need to manage the name scope for children blocks and hence can remove `with self.name_scope():` this statement. For example: 
+Now in Gluon 2.0, Block/HybridBlock objects will not maintain the parameter dictionary (`ParameterDict`). Instead, users can access these parameters via `Parameter` class and `Constant` class. These parameters will be registered automatically as part of the Block. Users will no longer need to manage the name scope for children blocks and hence can remove `with self.name_scope():` this statement. For example:
 ```{.python}
 class SampleBlock(HybridBlock):
     def __init__(self):
@@ -431,6 +431,67 @@ A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. 
 2. [StochasticBlock](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/block): support accumulating loss in the forward phase, which is useful in building Bayesian Neural Network. 
 
 3. [Transformation](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/transformation): implement invertible transformation with computable log det jacobians.
+
+##  oneDNN Integration
+### Operator Fusion
+In versions 1.x of MXNet pattern fusion in execution graph was enabled by default when using MXNet built with oneDNN library support and could have been disabled by setting 'MXNET_SUBGRAPH_BACKEND' environment flag to `None`. MXNet 2.0 introduced changes in forward inference flow which led to refactor of fusion mechanism. To fuse model in MXNet 2.0 there are two requirements:
+
+ - the model must be defined as a subclass of HybridBlock or Symbol,
+
+ - the model must have specific operator patterns which can be fused.
+
+Both HybridBlock and Symbol classes provide API to easily run fusion of operators. Adding only one line of code is needed to run fusion passes on model:
+```{.python}
+# on HybridBlock
+net.optimize_for(data, backend='ONEDNN')
+# on Symbol
+optimized_symbol = sym.optimize_for(backend='ONEDNN')
+```
+
+Controling which patterns should be fused still can be done by setting proper environment variables. See [**oneDNN Environment Variables**](#oneDNN-Environment-Variables)
+
+### INT8 Quantization / Precision reduction
+Quantization API was also refactored to be consistent with other new features and mechanisms. In comparison to MXNet 1.x releases, in MXNet 2.0 `quantize_net_v2` function has been removed and development focused mainly on `quantize_net` function to make it easier to use for end user and ultimately give him more flexibility.
+Quantization can be performed on either subclass of HybridBlock with `quantize_net` or Symbol with deprecated `quantize_model` (`quantize_model` is left only to provide backward compatibility and its usage is strongly discouraged).
+
+```{.python}
+import mxnet as mx
+from mxnet.contrib.quantization import quantize_net
+from mxnet.gluon.model_zoo.vision import resnet50_v1
+
+# load model
+net = resnet50_v1(pretrained=True)
+
+# prepare calibration data
+dummy_data = mx.nd.random.uniform(-1.0, 1.0, (batch_size, 3, 224, 224))
+calib_data_loader = mx.gluon.data.DataLoader(dummy_data, batch_size=batch_size)
+
+# quantization
+qnet = quantize_net(net, calib_mode='naive', calib_data=calib_data_loader)
+```
+`quantize_net` can be much more complex - all function attributes can be found in the [API](../../api/contrib/quantization/index.rst).
+
+### oneDNN Environment Variables
+In version 2.0 of MXNet all references to MKLDNN (former name of oneDNN) were replaced by ONEDNN. Below table lists all environment variables:
+
+|               MXNet 1.x              |                MXNet 2.0               |
+| ------------------------------------ | ---------------------------------------|
+|         MXNET_MKLDNN_ENABLED         |          MXNET_ONEDNN_ENABLED          |
+|         MXNET_MKLDNN_CACHE_NUM       |         MXNET_ONEDNN_CACHE_NUM         |
+|    MXNET_MKLDNN_FORCE_FC_AB_FORMAT   |     MXNET_ONEDNN_FORCE_FC_AB_FORMAT    |
+|         MXNET_MKLDNN_ENABLED         |          MXNET_ONEDNN_ENABLED          |
+|         MXNET_MKLDNN_DEBUG           |           MXNET_ONEDNN_DEBUG           |
+|         MXNET_USE_MKLDNN_RNN         |          MXNET_USE_ONEDNN_RNN          |
+|     MXNET_DISABLE_MKLDNN_CONV_OPT    |      MXNET_DISABLE_ONEDNN_CONV_OPT     |
+|    MXNET_DISABLE_MKLDNN_FUSE_CONV_BN |    MXNET_DISABLE_ONEDNN_FUSE_CONV_BN   |
+|  MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |   MXNET_DISABLE_ONEDNN_FUSE_CONV_RELU  |
+|  MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |   MXNET_DISABLE_ONEDNN_FUSE_CONV_SUM   |
+|      MXNET_DISABLE_MKLDNN_FC_OPT     |       MXNET_DISABLE_ONEDNN_FC_OPT      |
+| MXNET_DISABLE_MKLDNN_FUSE_FC_ELTWISE |  MXNET_DISABLE_ONEDNN_FUSE_FC_ELTWISE  |
+| MXNET_DISABLE_MKLDNN_TRANSFORMER_OPT |  MXNET_DISABLE_ONEDNN_TRANSFORMER_OPT  |
+|                  n/a                 |   MXNET_DISABLE_ONEDNN_BATCH_DOT_FUSE  |
+|                  n/a                 |      MXNET_ONEDNN_FUSE_REQUANTIZE      |
+|                  n/a                 |      MXNET_ONEDNN_FUSE_DEQUANTIZE      |
 
 ## Appendix
 ### NumPy Array Deprecated Attributes

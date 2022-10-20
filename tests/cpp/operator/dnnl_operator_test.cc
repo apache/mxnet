@@ -34,7 +34,6 @@
 #include "../../src/operator/nn/convolution-inl.h"
 #include "../../src/operator/nn/deconvolution-inl.h"
 #include "../../src/operator/nn/dnnl/dnnl_base-inl.h"
-#include "../../src/operator/nn/dnnl/dnnl_ops-inl.h"
 #include "../../src/operator/nn/dnnl/dnnl_pooling-inl.h"
 #include "../../src/operator/nn/pooling-inl.h"
 #include "../include/test_dnnl.h"

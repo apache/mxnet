@@ -24,8 +24,8 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../nn/dnnl/dnnl_fully_connected-inl.h"
-#include "../quantization_utils.h"
+#include "operator/nn/dnnl/dnnl_fully_connected-inl.h"
+#include "operator/quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -37,7 +37,10 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
                                         const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   FullyConnectedParam param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  const size_t num_inputs   = param.no_bias ? 2 : 3;
+  DNNLFCFullParam full_param;
+  full_param.default_param = param;
+  full_param.dnnl_param.Init(std::unordered_map<std::string, std::string>());
+  const size_t num_inputs = param.no_bias ? 2 : 3;
 
   CHECK_EQ(in_data.size(), static_cast<size_t>(num_inputs * 3));
   CHECK_EQ(out_data.size(), 3U);
@@ -87,18 +90,20 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   bool is_train             = false;
   dnnl::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);
   DNNLFCFlattenData(param, out_data[fullc::kOut], &data, &out_md);
-  auto& fwd =
-      GetFCFwd(param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);
+  auto& fwd = GetFCFwd(
+      full_param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);
 
-  auto data_mem                  = in_data[fullc::kData].GetDNNLDataReorder(fwd.fwd_pd.src_desc());
+  auto fwd_src_desc              = fwd.fwd_pd.src_desc();
+  auto data_mem                  = in_data[fullc::kData].GetDNNLDataReorder(&fwd_src_desc);
   const dnnl::memory* weight_mem = nullptr;
 
   if (weight.IsDefaultData()) {
     // We also need to modify the layout on the original weight array.
     // Don't switch below sequence because naive engine will executes
     // pushAsync synchronously.
-    weight.DNNLDataReorderAsync(fwd.fwd_pd.weights_desc());
-    weight_mem = GetWeights(weight, fwd.fwd_pd.weights_desc(), 1);
+    auto fwd_weight_desc = fwd.fwd_pd.weights_desc();
+    weight.DNNLDataReorderAsync(&fwd_weight_desc);
+    weight_mem = GetWeights(weight, fwd_weight_desc, 1);
   } else {
     weight_mem = weight.GetDNNLData();
     CHECK(weight_mem->get_desc() == fwd.fwd_pd.weights_desc());
@@ -113,7 +118,8 @@ void DNNLQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
 
   const dnnl::memory* bias_mem = nullptr;
   if (!param.no_bias) {
-    bias_mem            = quantized_bias.GetDNNLDataReorder(fwd.fwd_pd.bias_desc());
+    auto fwd_bias_desc  = fwd.fwd_pd.bias_desc();
+    bias_mem            = quantized_bias.GetDNNLDataReorder(&fwd_bias_desc);
     args[DNNL_ARG_BIAS] = *bias_mem;
   }
 

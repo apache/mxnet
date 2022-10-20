@@ -31,15 +31,11 @@
 #include <utility>
 #include <vector>
 
-#include "../../tensor/dot-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "operator/tensor/dot-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
-
-enum DotIn { lhs = 0, rhs, lhs_min, lhs_max, rhs_min, rhs_max };
-enum DotOut { out = 0, out_min, out_max };
 
 struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
   bool transpose_a;
@@ -48,7 +44,7 @@ struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  bool enable_float_output;
+  dmlc::optional<int> enabled_float_output;
   DMLC_DECLARE_PARAMETER(DNNLDotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
         .describe("If true then transpose the first input before dot.")
@@ -69,9 +65,7 @@ struct DNNLDotParam : public dmlc::Parameter<DNNLDotParam> {
             "The maximum scalar value in the form of float32 obtained "
             "through calibration. If present, it will be used to by "
             "quantized convolution op to calculate primitive scale");
-    DMLC_DECLARE_FIELD(enable_float_output)
-        .set_default(false)
-        .describe("Whether to enable float32 output.");
+    DNNL_DECLARE_ENABLED_FLOAT_OUTPUT_PARAMETER();
   }
 
   bool operator==(const DNNLDotParam& other) const {

@@ -273,9 +273,13 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_boolean_mask_assign_scalar)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", NumpyBooleanAssignForwardGPU);
 
 NNVM_REGISTER_OP(_npi_boolean_mask_assign_tensor)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
     .set_attr<FCompute>("FCompute<gpu>", NumpyBooleanAssignForwardGPU);
 
 }  // namespace op

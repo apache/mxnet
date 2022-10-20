@@ -61,11 +61,10 @@ def benchmark_convolution(data_shape, kernel, num_filter, pad, stride, no_bias=T
                              grad_req='null', typ='forward') * 1000
 
     print('==================================================================================================')
-    print('data=%s, kernel=%s, num_filter=%s, pad=%s, stride=%s, no_bias=%s, layout=%s, repeats=%s'
-          % (data_shape, kernel, num_filter, pad, stride, no_bias, layout, repeats))
-    print('%s , ctx=%s, time=%.2f ms' % (conv_cudnn.name + '-FP32', ctx_gpu, conv_cudnn_time))
-    print('%s, ctx=%s, time=%.2f ms' % (quantized_conv2d.name, ctx_gpu, qconv_time))
-    print('quantization speedup:               %.1fX' % (conv_cudnn_time / qconv_time))
+    print(f'data={data_shape}, kernel={kernel}, num_filter={num_filter}, pad={pad}, stride={stride}, no_bias={no_bias}, layout={layout}, repeats={repeats}')
+    print(f'{conv_cudnn.name}-FP32 , ctx={ctx_gpu}, time={conv_cudnn_time:.2f} ms')
+    print(f'{quantized_conv2d.name}, ctx={ctx_gpu}, time={qconv_time:.2f} ms')
+    print(f'quantization speedup:               {conv_cudnn_time / qconv_time:.1f}X')
     print('\n')
 
 

@@ -22,9 +22,8 @@
  * \brief Implementation of log_softmax function with DNNL support
  */
 
-#include "../softmax-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "operator/nn/softmax-inl.h"
+#include "dnnl_base-inl.h"
 
 #if MXNET_USE_ONEDNN == 1
 namespace mxnet {
@@ -52,21 +51,15 @@ static dnnl::logsoftmax_backward::primitive_desc GetLogSoftmaxBwdPd(
   return dnnl::logsoftmax_backward::primitive_desc(desc, cpu_engine, hint_fwd_pd);
 }
 
-bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& data, const NDArray& output) {
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_logsoftmax.html
+bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& data) {
   const int ndim      = data.shape().ndim();
-  const int in_dtype  = data.dtype();
-  const int out_dtype = output.dtype();
-  const int axis      = CheckAxis(param.axis, ndim);
+  const int out_dtype = param.dtype.has_value() ? param.dtype.value() : data.dtype();
   // DNNL does not support temperature argument in their log_softmax function
   // now. Need update this once they start to support it.
   // Currently, DNNL shows bad performance when log_softmax is not performed on the last dimension
-  if (param.temperature.has_value() || in_dtype != mshadow::kFloat32 || in_dtype != out_dtype ||
-      axis != (ndim - 1)) {
-    return false;
-  }
-
-  // only supports ndim = 1, 2, 3, 4 for now
-  return (ndim >= 1 && ndim <= 4);
+  return !param.temperature.has_value() && CheckAxis(param.axis, ndim) == (ndim - 1) &&
+         SupportDNNL<1, 4, DNNLTypeMode::FloatTypes>(data) && out_dtype == data.dtype();
 }
 
 class DNNLLogSoftmaxFwd {
@@ -127,9 +120,10 @@ void DNNLLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
   int axis                  = CheckAxis(param.axis, in_data.shape().ndim());
   auto fwd                  = GetLogSoftmaxFwd(param, axis, ctx.is_train, in_data, out_data);
 
-  auto in_mem        = in_data.GetDNNLData();
-  auto out_mem       = out_data.GetDNNLData(fwd.pd.dst_desc());
-  DNNLStream* stream = DNNLStream::Get();
+  auto in_mem          = in_data.GetDNNLData();
+  auto fwd_pd_dst_desc = fwd.pd.dst_desc();
+  auto out_mem         = out_data.GetDNNLData(&fwd_pd_dst_desc);
+  DNNLStream* stream   = DNNLStream::Get();
   stream->RegisterPrimArgs(fwd.GetFwd(), {{DNNL_ARG_SRC, *in_mem}, {DNNL_ARG_DST, *out_mem}});
   stream->Submit();
 }

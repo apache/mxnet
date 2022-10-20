@@ -82,7 +82,7 @@ def rand_zipfian(true_classes, num_sampled, range_max):
     >>> exp_count_sample.eval(true_cls=mx.nd.array([3]))[0].asnumpy()
     array([0.22629439, 0.12453879, 0.12453879, 0.12453879])
     """
-    assert(isinstance(true_classes, Symbol)), "unexpected type %s" % type(true_classes)
+    assert(isinstance(true_classes, Symbol)), f"unexpected type {type(true_classes)}"
     log_range = math.log(range_max + 1)
     rand = uniform(0, log_range, shape=(num_sampled,), dtype='float64')
     # make sure sampled_classes are in the range of [0, range_max)
@@ -105,8 +105,8 @@ def _flatten(args, inout_str):
         return [args], int(length)
 
     assert isinstance(args, (list, tuple)), \
-        "%s must be (nested) list of Symbol, " \
-        "but got %s of type %s"%(inout_str, str(args), str(type(args)))
+        f"{inout_str} must be (nested) list of Symbol, " \
+        f"but got {str(args)} of type {str(type(args))}"
     flat = []
     fmts = []
     for i in args:
@@ -124,7 +124,7 @@ def _regroup(args, fmt):
 
     assert isinstance(args, (list, tuple)), \
         "output must be (nested) list of Symbol, " \
-        "but got %s of type %s"%(str(args), str(type(args)))
+        f"but got {str(args)} of type {str(type(args))}"
     ret = []
     for i in fmt:
         res, args = _regroup(args, i)
@@ -345,8 +345,7 @@ def foreach(body, data, init_states, name="foreach"):
 
     remain_locs = []
     for in_name in subg_input_names:
-        assert in_name in gin_names, "The input variable %s can't be found in graph inputs: %s" \
-                % (in_name, str(gin_names))
+        assert in_name in gin_names, f"The input variable {in_name} can't be found in graph inputs: {str(gin_names)}"
         if in_name in cut_var_names:
             ordered_ins.append(cut_var_map[in_name])
             remain_locs.append(subg_input_names.index(in_name))
@@ -452,7 +451,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         try:
             inputs = type_(inputs)
         except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
+            raise ValueError(f"Cannot convert {name} to python {type_.__name__}")
         return inputs
 
     def _cond_wrapper(loop_vars):
@@ -577,7 +576,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         _union_inputs(cond_g, func_g)
     for i_th, loc in enumerate(func_var_locs, 1):
         if loc == -1:
-            raise ValueError("The %d-th loop_var doesn't involve into the computation" % i_th)
+            raise ValueError(f"The {i_th}-th loop_var doesn't involve into the computation")
     result = symbol._internal._while_loop(
         cond_g,
         func_g,

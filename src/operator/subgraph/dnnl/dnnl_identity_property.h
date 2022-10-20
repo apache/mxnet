@@ -40,6 +40,7 @@ namespace op {
 class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
  private:
   std::vector<const BiDirectedNode*> matched_list_;
+  bool pattern_found = false;
 
  public:
   bool Select(const BiDirectedNode& seed_node,
@@ -65,10 +66,11 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
   }
 
   bool SelectInput(const BiDirectedNode& n, const BiDirectedNode& input_node) override {
-    if (input_node.node->is_variable()) {
+    if (pattern_found || input_node.node->is_variable()) {
       return false;
     } else if (input_node.node->op()) {
       matched_list_.emplace_back(&input_node);
+      pattern_found = true;
       return true;
     }
     return false;
@@ -80,7 +82,8 @@ class SgDNNLIdentitySelector : public SubgraphSelectorV2 {
 
   std::vector<BiDirectedNode*> Filter(const std::vector<BiDirectedNode*>& candidates) override {
     // candidates should contain only two nodes - custom node and identity node
-    if (candidates.size() == 2 && candidates.size() == matched_list_.size()) {
+    if (pattern_found && candidates.size() == matched_list_.size()) {
+      CHECK_EQ(candidates.size(), 2);
       return candidates;
     } else {
       return std::vector<BiDirectedNode*>(0);
@@ -134,8 +137,9 @@ class SgDNNLIdentityProperty : public SubgraphProperty {
     // Create copy of original node
     nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs          = org_node->attrs;
-    CHECK(n->op());
-    n->op()->attr_parser(&(n->attrs));
+    if (n->op()->attr_parser) {
+      n->op()->attr_parser(&(n->attrs));
+    }
     return n;
   }
 

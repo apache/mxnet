@@ -30,8 +30,8 @@
 #include <string>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_base-inl.h"
-#include "../quantize-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/quantization/quantize-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -67,9 +67,6 @@ static void DNNLQuantizeComputeKer(const std::vector<NDArray>& inputs,
   attr.set_output_scales(mask, scales);
   dnnl::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
   NDArray in_buffer       = inputs[0];
-  if (inputs[0].IsView() && inputs[0].IsDNNLData())
-    in_buffer = inputs[0].Reorder2Default();
-
   auto i_mem    = in_buffer.GetDNNLData();
   auto i_desc   = i_mem->get_desc();
   size_t i_ndim = in_buffer.shape().ndim();

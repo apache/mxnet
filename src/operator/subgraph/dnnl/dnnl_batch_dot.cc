@@ -28,12 +28,11 @@
 #include <utility>
 #include <vector>
 
-#include "../../nn/dnnl/dnnl_base-inl.h"
-#include "../../nn/dnnl/dnnl_batch_dot-inl.h"
-#include "../../nn/dnnl/dnnl_ops-inl.h"
-#include "../../quantization/quantization_utils.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../common.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_batch_dot-inl.h"
+#include "operator/quantization/quantization_utils.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/subgraph/common.h"
 
 namespace mxnet {
 namespace op {
@@ -61,7 +60,7 @@ bool DNNLBatchDotShape(const nnvm::NodeAttrs& attrs,
   }
 
   out_shapes->at(DotOut::out) = base_out_shapes[DotOut::out];
-  if (param.quantized && !param.enable_float_output) {
+  if (param.quantized && !param.enabled_float_output.has_value()) {
     SHAPE_ASSIGN_CHECK(*out_shapes, DotOut::out_min, mshadow::Shape1(1));
     SHAPE_ASSIGN_CHECK(*out_shapes, DotOut::out_max, mshadow::Shape1(1));
   }
@@ -75,6 +74,11 @@ bool DNNLBatchDotType(const nnvm::NodeAttrs& attrs,
   const DNNLDotParam& param    = nnvm::get<DNNLDotParam>(attrs.parsed);
   const size_t base_num_inputs = 2;
   if (param.quantized) {
+    if (in_types->at(DotIn::lhs) == mshadow::kBfloat16 ||
+        in_types->at(DotIn::rhs) == mshadow::kBfloat16) {
+      return false;
+    }
+
     CHECK(in_types->at(DotIn::lhs) == mshadow::kInt8 || in_types->at(DotIn::lhs) == mshadow::kUint8)
         << "Quantized batch-dot lhs only supports int8/uint8 input, while "
         << in_types->at(DotIn::lhs) << " is given.";
@@ -86,8 +90,8 @@ bool DNNLBatchDotType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
     }
 
-    if (param.enable_float_output) {
-      TYPE_ASSIGN_CHECK(*out_types, DotOut::out, mshadow::kFloat32);
+    if (param.enabled_float_output.has_value()) {
+      TYPE_ASSIGN_CHECK(*out_types, DotOut::out, param.enabled_float_output.value());
     } else {
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         TYPE_ASSIGN_CHECK(*out_types, DotOut::out, mshadow::kInt8);
@@ -98,9 +102,22 @@ bool DNNLBatchDotType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*out_types, DotOut::out_max, mshadow::kFloat32);
     }
   } else {
-    TYPE_ASSIGN_CHECK(*in_types, DotIn::lhs, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*in_types, DotIn::rhs, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*out_types, DotOut::out, mshadow::kFloat32);
+    if ((*in_types)[DotIn::lhs] == mshadow::kBfloat16 ||
+        (*in_types)[DotIn::rhs] == mshadow::kBfloat16) {
+      TYPE_ASSIGN_CHECK(*in_types, DotIn::lhs, mshadow::kBfloat16);
+      TYPE_ASSIGN_CHECK(*in_types, DotIn::rhs, mshadow::kBfloat16);
+      if (param.enabled_float_output.has_value()) {
+        CHECK_EQ(param.enabled_float_output.value(), mshadow::kFloat32);
+        TYPE_ASSIGN_CHECK(*out_types, DotOut::out, mshadow::kFloat32);
+      } else {
+        TYPE_ASSIGN_CHECK(*out_types, DotOut::out, mshadow::kBfloat16);
+      }
+    } else {
+      CHECK(!param.enabled_float_output.has_value());
+      TYPE_ASSIGN_CHECK(*in_types, DotIn::lhs, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*in_types, DotIn::rhs, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*out_types, DotOut::out, mshadow::kFloat32);
+    }
   }
 
   return true;
@@ -123,7 +140,7 @@ NNVM_REGISTER_OP(_sg_onednn_batch_dot)
     })
     .set_num_outputs([](const NodeAttrs& attrs) {
       auto const& param = nnvm::get<DNNLDotParam>(attrs.parsed);
-      return (param.quantized && !param.enable_float_output) ? 3 : 1;
+      return (param.quantized && !param.enabled_float_output.has_value()) ? 3 : 1;
     })
     .set_attr_parser(ParamParser<DNNLDotParam>)
     .set_attr<nnvm::FListInputNames>(
@@ -141,7 +158,7 @@ NNVM_REGISTER_OP(_sg_onednn_batch_dot)
         "FListOutputNames",
         [](const NodeAttrs& attrs) {
           auto const& param = nnvm::get<DNNLDotParam>(attrs.parsed);
-          if (param.quantized && !param.enable_float_output) {
+          if (param.quantized && !param.enabled_float_output.has_value()) {
             return std::vector<std::string>{"output", "min_output", "max_output"};
           } else {
             return std::vector<std::string>{"output"};

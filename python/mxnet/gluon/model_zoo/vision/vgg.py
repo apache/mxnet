@@ -116,7 +116,7 @@ def get_vgg(num_layers, pretrained=False, device=cpu(),
     if pretrained:
         from ..model_store import get_model_file
         batch_norm_suffix = '_bn' if kwargs.get('batch_norm') else ''
-        net.load_parameters(get_model_file('vgg%d%s'%(num_layers, batch_norm_suffix),
+        net.load_parameters(get_model_file(f'vgg{num_layers}{batch_norm_suffix}',
                                            root=root), device=device)
     return net
 

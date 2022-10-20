@@ -45,7 +45,7 @@ def test_models(model_name):
     test_pretrain = model_name in pretrained_to_test
     model = get_model(model_name, pretrained=test_pretrain, root='model/')
     data_shape = (2, 3, 224, 224) if 'inception' not in model_name else (2, 3, 299, 299)
-    eprint('testing forward for %s' % model_name)
+    eprint(f'testing forward for {model_name}')
     print(model)
     if not test_pretrain:
         model.initialize()

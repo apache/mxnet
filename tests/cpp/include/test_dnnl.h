@@ -86,7 +86,7 @@ inline static void InitDNNLArray(NDArray* arr,
                                  bool is_rand = false,
                                  int max      = 50) {
   InitDefaultArray(arr, is_rand, max);
-  arr->DNNLDataReorderAsync(desc);
+  arr->DNNLDataReorderAsync(&desc);
   arr->WaitToRead();
 }
 

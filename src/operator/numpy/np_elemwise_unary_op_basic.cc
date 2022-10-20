@@ -22,8 +22,8 @@
  * \brief CPU Implementation of numpy elementwise unary function.
  */
 #include <mxnet/base.h>
-#include "../tensor/elemwise_unary_op.h"
-#include "../tensor/elemwise_binary_op.h"
+#include "operator/tensor/elemwise_unary_op.h"
+#include "operator/tensor/elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -297,6 +297,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_square, "x", mshadow_op::square)
 Example::
    square([2, 3, 4]) = [4, 9, 16]
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::square, false>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
 
 // sqrt
@@ -305,6 +309,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_sqrt, "x", mshadow_op::squar
 Example::
    sqrt([4, 9, 16]) = [2, 3, 4]
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::square_root, true>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_sqrt"});
 
 // cbrt
@@ -321,6 +329,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_exp, "x", mshadow_op::exp)
 Example::
    exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::exp, true>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_exp"});
 
 // log
@@ -483,6 +495,10 @@ MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_tanh, "x", mshadow_op::tanh)
 .. math::
    tanh(x) = sinh(x) / cosh(x)
 )code" ADD_FILELINE)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", EltwiseComputeExCPU<mshadow_op::tanh, true>)
+    .set_attr<FInferStorageType>("FInferStorageType", EltwiseStorageType)
+#endif  // MXNET_USE_ONEDNN
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_tanh"});
 
 // arcsinh

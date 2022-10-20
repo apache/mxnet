@@ -72,8 +72,7 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
         return ret
 
     def __repr__(self):
-        return "DataDesc[%s,%s,%s,%s]" % (self.name, self.shape, self.dtype,
-                                          self.layout)
+        return f"DataDesc[{self.name},{self.shape},{self.dtype},{self.layout}]"
 
     @staticmethod
     def get_batch_axis(layout):
@@ -643,8 +642,11 @@ class NDArrayIter(DataIter):
     @property
     def provide_label(self):
         """The name and shape of label provided by this iterator."""
+        batch_axis = self.layout.find('N')
         return [
-            DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
+            DataDesc(k, tuple(list(v.shape[:batch_axis]) + \
+                              [self.batch_size] + list(v.shape[batch_axis + 1:])),
+                     v.dtype, layout=self.layout)
             for k, v in self.label
         ]
 
@@ -952,13 +954,12 @@ def _make_io_iterator(handle):
         [py_str(arg_types[i]) for i in range(narg)],
         [py_str(arg_descs[i]) for i in range(narg)])
 
-    doc_str = ('%s\n\n' +
-               '%s\n' +
+    doc_str = (f'{desc.value}\n\n' +
+               f'{param_str}\n' +
                'Returns\n' +
                '-------\n' +
                'MXDataIter\n'+
                '    The result iterator.')
-    doc_str = doc_str % (desc.value, param_str)
 
     def creator(*args, **kwargs):
         """Create an iterator.
@@ -999,7 +1000,7 @@ def _make_io_iterator(handle):
             ctypes.byref(iter_handle)))
 
         if len(args):
-            raise TypeError('%s can only accept keyword arguments' % iter_name)
+            raise TypeError(f'{iter_name} can only accept keyword arguments')
 
         return MXDataIter(iter_handle, **kwargs)
 

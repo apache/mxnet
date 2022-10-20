@@ -371,13 +371,9 @@ class Executor:
         for name, array in arg_params.items():
             if name in self.arg_dict:
                 dst = self.arg_dict[name]
-                if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
-                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
-                    cast_array.copyto(dst)
-                else:
-                    array.astype(dst.dtype).copyto(dst)
+                array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
-                raise ValueError('Find name \"%s\" that is not in the arguments' % name)
+                raise ValueError(f'Find name \"{name}\" that is not in the arguments')
 
         if aux_params is None:
             return
@@ -385,10 +381,6 @@ class Executor:
         for name, array in aux_params.items():
             if name in self.aux_dict:
                 dst = self.aux_dict[name]
-                if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
-                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
-                    cast_array.copyto(dst)
-                else:
-                    array.astype(dst.dtype).copyto(dst)
+                array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
-                raise ValueError('Find name %s that is not in the auxiliary states' % name)
+                raise ValueError(f'Find name {name} that is not in the auxiliary states')

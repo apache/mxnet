@@ -83,12 +83,10 @@ mxnet::Tuple<int> CanonicalizeAndSortAxes(const NDArray& input,
   return axes;
 }
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_reduction.html
 bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
                            const NDArray& input,
                            const NDArray& output) {
-  int in_ndim          = input.shape().ndim();
-  int out_size         = output.shape().Size();
-  int in_size          = input.shape().Size();
   bool param_supported = true;
   if (param.axis.has_value()) {
     auto axes    = CanonicalizeAndSortAxes(input, param, param.axis.value());
@@ -111,10 +109,9 @@ bool SupportDNNLReduceImpl(const NumpyReduceAxesParam& param,
   }
   // initial value not supported by oneDNN
   param_supported = param_supported && !param.initial.has_value();
-  return param_supported &&
-         (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
-         (output.dtype() == mshadow::kFloat32 || output.dtype() == mshadow::kBfloat16) &&
-         in_ndim >= 1 && out_size > 0 && in_size > 1;
+  // oneDNN does not support reduction of tensors with size equal to 1
+  return param_supported && input.shape().Size() > 1 &&
+         SupportDNNL<DNNLTypeMode::FloatTypes>(input);
 }
 
 void DNNLReduceForwardImpl(const NumpyReduceAxesParam& param,
@@ -222,10 +219,11 @@ void DNNLReduceFwd::Execute(const Tensors& tensors) const {
   auto input_mem = tensors.data.GetDNNLData();
   if (tensors.out.shape().Size() == 1) {
     // scalar result
-    auto out_mem = dnnl::memory(reduce_pd->dst_desc(), engine, tensors.out.data().dptr<float>());
+    auto out_mem = dnnl::memory(reduce_pd->dst_desc(), engine, tensors.out.data().dptr_);
     stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, out_mem}});
   } else {
-    auto out_mem = tensors.out.GetDNNLData(reduce_pd->dst_desc());
+    auto desc    = reduce_pd->dst_desc();
+    auto out_mem = tensors.out.GetDNNLData(&desc);
     stream->RegisterPrimArgs(*reduce_fwd, {{DNNL_ARG_SRC, *input_mem}, {DNNL_ARG_DST, *out_mem}});
   }
   stream->Submit();

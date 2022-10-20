@@ -130,9 +130,9 @@ class Parameter(object):
         # sparse related storage type information
         valid_stypes = ['default', 'row_sparse', 'csr']
         assert grad_stype in valid_stypes, "grad_stype for Parameter must be " \
-            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (grad_stype)
+            f"one of 'default', 'row_sparse', or 'csr', but got '{grad_stype}'"
         assert stype in valid_stypes, "stype for Parameter must be " \
-            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (stype)
+            f"one of 'default', 'row_sparse', or 'csr', but got '{stype}'"
         self._grad_stype = grad_stype
         self._stype = stype
 
@@ -151,7 +151,7 @@ class Parameter(object):
     @grad_req.setter
     def grad_req(self, req):
         assert req in ['write', 'add', 'null'], \
-            "grad_req must be one of 'write', 'add', or 'null', but got '%s'"%req
+            f"grad_req must be one of 'write', 'add', or 'null', but got '{req}'"
         if not self._differentiable:
             req = 'null'
         if self._grad_req == req:
@@ -200,8 +200,8 @@ class Parameter(object):
 
         assert len(self._shape) == len(new_shape) and \
             all(j in (-1, 0, i) for i, j in zip(new_shape, self._shape)), \
-            "Expected shape %s is incompatible with given shape %s for Parameter %s."%(
-                str(new_shape), str(self._shape), str(self.name))  # -1 means unknown dim size in np_shape mode
+            f"Expected shape {str(new_shape)} is incompatible with given shape {str(self._shape)} for Parameter {str(self.name)}." 
+            # -1 means unknown dim size in np_shape mode
 
         self._shape = new_shape
 
@@ -210,9 +210,8 @@ class Parameter(object):
         # trainer cannot be replaced for sparse params
         if self._stype != 'default' and self._trainer and trainer and self._trainer() is not trainer:
             raise RuntimeError(
-                "Failed to set the trainer for Parameter '%s' because it was already set. " \
-                "More than one trainers for a %s Parameter is not supported." \
-                %(self.name, self._stype))
+                f"Failed to set the trainer for Parameter '{self.name}' because it was already set. " \
+                f"More than one trainers for a {self._stype} Parameter is not supported.")
         if trainer is not None:
             self._trainer = weakref.ref(trainer)
         else:
@@ -233,33 +232,32 @@ class Parameter(object):
                 if idx is not None:
                     return arr_list[idx]
             raise RuntimeError(
-                "Parameter '%s' was not initialized on device %s. "
-                "It was only initialized on %s."%(
-                    self.name, str(device), str(self._device_list)))
+                f"Parameter '{self.name}' was not initialized on device {str(device)}. "
+                f"It was only initialized on {str(self._device_list)}.")
         if self._deferred_init:
             raise DeferredInitializationError(
-                "Parameter '%s' has not been initialized yet because initialization was " \
+                f"Parameter '{self.name}' has not been initialized yet because initialization was " \
                 "deferred. Actual initialization happens during the first forward pass. " \
                 "Please pass one batch of data through the network before accessing Parameters. " \
                 "You can also avoid deferred initialization by specifying in_units, " \
-                "num_features, etc., for network layers."%(self.name))
+                "num_features, etc., for network layers.")
         raise RuntimeError(
-            "Parameter '%s' has not been initialized. Note that " \
+            f"Parameter '{self.name}' has not been initialized. Note that " \
             "you should initialize parameters and create Trainer " \
             "with Block.collect_params() instead of Block.params " \
             "because the later does not include Parameters of " \
-            "nested child Blocks"%(self.name))
+            "nested child Blocks")
 
     @wrap_ctx_to_device_func
     def _get_row_sparse(self, arr_list, device, row_id):
         """ Get row_sparse data from row_sparse parameters based on row_id. """
         # get row sparse params based on row ids
         if not isinstance(row_id, ndarray.NDArray):
-            raise TypeError("row_id must have NDArray type, but %s is given"%(type(row_id)))
+            raise TypeError(f"row_id must have NDArray type, but {type(row_id)} is given")
         trainer = self._trainer() if self._trainer else None
         if not trainer:
-            raise RuntimeError("Cannot get row_sparse data for Parameter '%s' when no " \
-                               "Trainer is created with it."%self.name)
+            raise RuntimeError(f"Cannot get row_sparse data for Parameter '{self.name}' when no " \
+                               "Trainer is created with it.")
         results = self._check_and_get(arr_list, device)
 
         # fetch row sparse params from the trainer
@@ -289,30 +287,21 @@ class Parameter(object):
             unknown_dim_size = -1 if is_np_shape() else 0
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim in (unknown_dim_size, data_dim), \
-                    "Failed loading Parameter '%s' from saved params: " \
-                    "shape incompatible expected %s vs saved %s"%(
-                        self.name, str(self.shape), str(data.shape))
+                    f"Failed loading Parameter '{self.name}' from saved params: " \
+                    f"shape incompatible expected {str(self.shape)} vs saved {str(data.shape)}"
             self.shape = tuple(i if i != unknown_dim_size else j
                                for i, j in zip(self.shape, data.shape))
         if self.dtype:
-            if cast_dtype and np.dtype(self.dtype).type != data.dtype:
+            if cast_dtype and self.dtype != data.dtype:
                 if dtype_source == 'current':
                     data = data.astype(self.dtype, copy=False)
                 elif dtype_source == 'saved':
                     self.dtype = data.dtype
             else:
-                if data.dtype == np.dtype([('bfloat16', np.uint16)]):
-                    assert np.dtype(self.dtype) == data.dtype, \
-                    "Failed loading Parameter '%s' from saved params: " \
-                    "dtype incompatible expected %s vs saved %s. " \
-                    "Set cast_dtype=True to cast the dtype of saved params."%(
-                        self.name, str(self.dtype), str(data.dtype))
-                else:
-                    assert np.dtype(self.dtype).type == data.dtype, \
-                    "Failed loading Parameter '%s' from saved params: " \
-                    "dtype incompatible expected %s vs saved %s. " \
-                    "Set cast_dtype=True to cast the dtype of saved params."%(
-                        self.name, str(self.dtype), str(data.dtype))
+                assert self.dtype == data.dtype, \
+                f"Failed loading Parameter '{self.name}' from saved params: " \
+                f"dtype incompatible expected {str(self.dtype)} vs saved {str(data.dtype)}. " \
+                "Set cast_dtype=True to cast the dtype of saved params."
         if self._stype != data.stype:
             data = data.tostype(self._stype)
         if isinstance(device, Device):
@@ -320,18 +309,16 @@ class Parameter(object):
         if self._data is None:
             if self._deferred_init:
                 assert device is None or set(device) == set(self._deferred_init[1]), \
-                    "Failed to load Parameter '%s' on %s because it was " \
-                    "previous initialized on %s."%(
-                        self.name, str(device), str(self.list_device()))
+                    f"Failed to load Parameter '{self.name}' on {str(device)} because it was " \
+                    f"previous initialized on {str(self.list_device())}."
                 device = self._deferred_init[1]
             elif device is None:
                 device = [cpu()]
             self._init_impl(data, device)
         else:
             assert device is None or set(device) == set(self.list_device()), \
-                "Failed to load Parameter '%s' on %s because it was " \
-                "previous initialized on %s."%(
-                    self.name, str(device), str(self.list_device()))
+                f"Failed to load Parameter '{self.name}' on {str(device)} because it was " \
+                f"previous initialized on {str(self.list_device())}."
             self.set_data(data)
         self._deferred_init = ()
 
@@ -343,10 +330,9 @@ class Parameter(object):
         self._deferred_init = ()
 
         assert shape_is_known(self.shape), \
-            "Cannot initialize Parameter '%s' because it has " \
-            "invalid shape: %s. Please specify in_units, " \
-            "in_channels, etc for `Block`s."%(
-                self.name, str(self.shape))
+            f"Cannot initialize Parameter '{self.name}' because it has " \
+            f"invalid shape: {str(self.shape)}. Please specify in_units, " \
+            "in_channels, etc for `Block`s."
 
         with autograd.pause(), dc.context(False):
             if data is None:
@@ -416,8 +402,8 @@ class Parameter(object):
             data = ndarray.zeros(self.shape, stype='row_sparse', ctx=device)
             trainer = self._trainer() if self._trainer else None
             if not trainer:
-                raise RuntimeError("Cannot reduce row_sparse data for Parameter '%s' when no " \
-                                   "Trainer is created with it."%self.name)
+                raise RuntimeError(f"Cannot reduce row_sparse data for Parameter '{self.name}' when no " \
+                                   "Trainer is created with it.")
             trainer._row_sparse_pull(self, data, all_row_ids, full_idx=True)
         return data
 
@@ -467,8 +453,8 @@ class Parameter(object):
         <NDArray 2x2 @gpu(1)>
         """
         if self._data is not None and not force_reinit:
-            warnings.warn("Parameter '%s' is already initialized, ignoring. " \
-                          "Set force_reinit=True to re-initialize."%self.name,
+            warnings.warn(f"Parameter '{self.name}' is already initialized, ignoring. " \
+                          "Set force_reinit=True to re-initialize.",
                           stacklevel=2)
             return
         self._data = self._grad = None
@@ -485,8 +471,8 @@ class Parameter(object):
             if self._allow_deferred_init:
                 self._deferred_init = (init, device, default_init, None)
                 return
-            raise ValueError("Cannot initialize Parameter '%s' because it has " \
-                             "invalid shape: %s."%(self.name, str(self.shape)))
+            raise ValueError(f"Cannot initialize Parameter '{self.name}' because it has " \
+                             f"invalid shape: {str(self.shape)}.")
 
         self._deferred_init = (init, device, default_init, None)
         self._finish_deferred_init()
@@ -512,8 +498,8 @@ class Parameter(object):
             init, _, default_init, data = self._deferred_init
             self._deferred_init = (init, device, default_init, data)
         else:
-            raise ValueError("Cannot reset device for Parameter '%s' because it "
-                             "has not been initialized."%self.name)
+            raise ValueError(f"Cannot reset device for Parameter '{self.name}' because it "
+                             "has not been initialized.")
 
     def reset_ctx(self, ctx):
         """This function has been deprecated. Please refer to ``Parameter.reset_device``."""
@@ -527,7 +513,7 @@ class Parameter(object):
 
         if self._data is None:
             assert self._deferred_init, \
-                "Parameter '%s' has not been initialized"%self.name
+                f"Parameter '{self.name}' has not been initialized"
             self._deferred_init = self._deferred_init[:3] + (data,)
             return
 
@@ -555,9 +541,8 @@ class Parameter(object):
         NDArray on row_id's device
         """
         if self._stype != 'row_sparse':
-            raise RuntimeError("Cannot return a copy of Parameter %s via row_sparse_data() " \
-                               "because its storage type is %s. Please use data() instead." \
-                               %(self.name, self._stype))
+            raise RuntimeError(f"Cannot return a copy of Parameter {self.name} via row_sparse_data() " \
+                               f"because its storage type is {self._stype}. Please use data() instead.")
         return self._get_row_sparse(self._data, row_id.device, row_id)
 
     def list_row_sparse_data(self, row_id):
@@ -575,9 +560,9 @@ class Parameter(object):
         list of NDArrays
         """
         if self._stype != 'row_sparse':
-            raise RuntimeError("Cannot return copies of Parameter '%s' on all devices via " \
-                               "list_row_sparse_data() because its storage type is %s. Please " \
-                               "use data() instead." % (self.name, self._stype))
+            raise RuntimeError(f"Cannot return copies of Parameter '{self.name}' on all devices via " \
+                               f"list_row_sparse_data() because its storage type is {self._stype}. Please " \
+                               "use data() instead.")
         return self._get_row_sparse(self._data, list, row_id)
 
     @wrap_ctx_to_device_func
@@ -596,9 +581,8 @@ class Parameter(object):
         NDArray on device
         """
         if self._stype != 'default':
-            raise RuntimeError("Cannot return a copy of Parameter '%s' on device %s via data() " \
-                               "because its storage type is %s. Please use row_sparse_data() " \
-                               "instead." % (self.name, str(device), self._stype))
+            raise RuntimeError(f"Cannot return a copy of Parameter '{self.name}' on device {str(device)} via data() " \
+                               f"because its storage type is {self._stype}. Please use row_sparse_data() instead.")
         data = self._check_and_get(self._data, device)
         dc.set_variable(data, self.var())
         return data
@@ -613,9 +597,9 @@ class Parameter(object):
         list of NDArrays
         """
         if self._stype != 'default':
-            raise RuntimeError("Cannot return copies of Parameter '%s' on all devices via " \
-                               "list_data() because its storage type is %s. Please use " \
-                               "row_sparse_data() instead." % (self.name, self._stype))
+            raise RuntimeError(f"Cannot return copies of Parameter '{self.name}' on all devices via " \
+                               f"list_data() because its storage type is {self._stype}. Please use " \
+                               "row_sparse_data() instead.")
         return self._check_and_get(self._data, list)
 
     def grad(self, device=None):
@@ -628,8 +612,8 @@ class Parameter(object):
         """
         if self._data is not None and self._grad is None:
             raise RuntimeError(
-                "Cannot get gradient array for Parameter '%s' " \
-                "because grad_req='null'"%(self.name))
+                f"Cannot get gradient array for Parameter '{self.name}' " \
+                "because grad_req='null'")
         return self._check_and_get(self._grad, device)
 
     def list_grad(self):
@@ -637,8 +621,8 @@ class Parameter(object):
         as :py:meth:`values`."""
         if self._data is not None and self._grad is None:
             raise RuntimeError(
-                "Cannot get gradient array for Parameter '%s' " \
-                "because grad_req='null'"%(self.name))
+                f"Cannot get gradient array for Parameter '{self.name}' " \
+                "because grad_req='null'")
         return self._check_and_get(self._grad, list)
 
     def list_ctx(self):
@@ -652,7 +636,7 @@ class Parameter(object):
         if self._data is None:
             if self._deferred_init:
                 return self._deferred_init[1]
-            raise RuntimeError("Parameter '%s' has not been initialized"%self.name)
+            raise RuntimeError(f"Parameter '{self.name}' has not been initialized")
         return self._device_list
 
     def zero_grad(self):
@@ -721,10 +705,9 @@ class Parameter(object):
                     continue
 
                 assert v is None or v == existing, \
-                    "Cannot retrieve Parameter '%s' because desired attribute " \
-                    "does not match with stored for attribute '%s': " \
-                    "desired '%s' vs stored '%s'."%(
-                        self.name, k, str(v), str(getattr(self, k)))
+                    f"Cannot retrieve Parameter '{self.name}' because desired attribute " \
+                    f"does not match with stored for attribute '{k}': " \
+                    f"desired '{str(v)}' vs stored '{str(getattr(self, k))}'."
             else:
                 setattr(self, k, v)
 

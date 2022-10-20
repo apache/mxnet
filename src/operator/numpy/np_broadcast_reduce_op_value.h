@@ -199,7 +199,6 @@ static void DNNLReduceEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
 
   if (SupportDNNLReduce<NumpyReduceAxesParam>(attrs, inputs[0], outputs[0])) {
     DNNLRun(DNNLReduceForward<NumpyReduceAxesParam, reduction_alg>,

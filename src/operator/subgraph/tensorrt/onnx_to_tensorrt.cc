@@ -103,17 +103,31 @@ onnxToTrtCtx(const std::string& onnx_model,
     }
     throw dmlc::Error("Cannot parse ONNX into TensorRT Engine");
   }
+<<<<<<< HEAD
 
   nvinfer1::IBuilderConfig* builder_config = trt_builder->createBuilderConfig();
 
   if (dmlc::GetEnv("MXNET_TENSORRT_USE_FP16", true)) {
     if (trt_builder->platformHasFastFp16()) {
       builder_config->setFlag(nvinfer1::BuilderFlag::kFP16);
+=======
+#if NV_TENSORRT_MAJOR >= 8
+  auto trt_config = InferObject(trt_builder->createBuilderConfig());
+#endif
+  if (dmlc::GetEnv("MXNET_TENSORRT_USE_FP16", true)) {
+    if (trt_builder->platformHasFastFp16()) {
+#if NV_TENSORRT_MAJOR >= 8
+      trt_config->setFlag(nvinfer1::BuilderFlag::kFP16);
+#else
+      trt_builder->setFp16Mode(true);
+#endif
+>>>>>>> upstream/master
     } else {
       LOG(WARNING) << "TensorRT can't use fp16 on this platform";
     }
   }
   trt_builder->setMaxBatchSize(max_batch_size);
+<<<<<<< HEAD
   builder_config->setMaxWorkspaceSize(max_workspace_size);
   if (debug_builder) {
     builder_config->setFlag(nvinfer1::BuilderFlag::kDEBUG);
@@ -121,6 +135,19 @@ onnxToTrtCtx(const std::string& onnx_model,
   auto trt_engine = InferObject(trt_builder->buildEngineWithConfig(*trt_network, *builder_config));
   // Is this safe?
   delete builder_config;
+=======
+#if NV_TENSORRT_MAJOR >= 8
+  trt_config->setMaxWorkspaceSize(max_workspace_size);
+  if (debug_builder) {
+    trt_config->setFlag(nvinfer1::BuilderFlag::kDEBUG);
+  }
+  auto trt_engine = InferObject(trt_builder->buildEngineWithConfig(*trt_network, *trt_config));
+#else
+  trt_builder->setMaxWorkspaceSize(max_workspace_size);
+  trt_builder->setDebugSync(debug_builder);
+  auto trt_engine = InferObject(trt_builder->buildCudaEngine(*trt_network));
+#endif
+>>>>>>> upstream/master
   return std::make_tuple(std::move(trt_engine), std::move(trt_parser), std::move(trt_logger));
 }
 

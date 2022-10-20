@@ -25,11 +25,11 @@
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
 #if MXNET_USE_ONEDNN == 1
-#include "../nn/dnnl/dnnl_base-inl.h"
-#include "../nn/dnnl/dnnl_ops-inl.h"
-#include "../nn/dnnl/dnnl_reshape-inl.h"
-#include "../nn/dnnl/dnnl_slice-inl.h"
-#include "../nn/dnnl/dnnl_transpose-inl.h"
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_reshape-inl.h"
+#include "operator/nn/dnnl/dnnl_transpose-inl.h"
+#include "operator/nn/dnnl/dnnl_split-inl.h"
+#include "operator/nn/dnnl/dnnl_stack-inl.h"
 #endif
 
 namespace mxnet {
@@ -126,7 +126,7 @@ void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // DNNL support the data type or the shape. Then convert
   // it to the output format and shape
 
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNLReshape(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -235,7 +235,7 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in DNNL format and
   // DNNL support the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNLReshape(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -316,7 +316,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportDNNLTranspose(inputs[0]) && req[0] == kWriteTo) {
+  if (SupportDNNL(inputs[0]) && req[0] == kWriteTo) {
     DNNLRun(DNNLTransposeForward<TransposeParam>, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
@@ -421,7 +421,7 @@ static void ExpandDimEx(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in DNNL format and
   // DNNL support the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportDNNLReshape(inputs[0], outputs[0])) {
+  if (SupportDNNLReshape(inputs[0])) {
     DNNLRun(DNNLReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   } else {
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -483,14 +483,6 @@ void SliceExCPU(const nnvm::NodeAttrs& attrs,
   auto in_stype           = inputs[0].storage_type();
   if (in_stype == kCSRStorage) {
     SliceCsrImpl<cpu>(param, ctx, inputs[0], req[0], outputs[0]);
-#if MXNET_USE_ONEDNN == 1
-  } else if (in_stype == kDefaultStorage) {
-    if (SupportDNNL(inputs[0])) {
-      DNNLRun(DNNLSlice, attrs, ctx, inputs[0], req[0], outputs[0]);
-    } else {
-      FallBackCompute(SliceOpForward<cpu>, attrs, ctx, inputs, req, outputs);
-    }
-#endif
   } else {
     LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
   }
@@ -554,9 +546,7 @@ Example::
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
     .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
     .set_attr<FComputeEx>("FComputeEx<cpu>", SliceExCPU)
-#if MXNET_USE_ONEDNN == 1
-    .set_attr<bool>("TIsDNNL", true)
-#endif
+    // oneDNN support removed in PR-21106 due to performance reasons
     .add_argument("data", "NDArray-or-Symbol", "Source input")
     .add_arguments(SliceParam::__FIELDS__());
 
@@ -1177,6 +1167,32 @@ Example::
     .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
     .add_arguments(DepthToSpaceParam::__FIELDS__());
 
+#if MXNET_USE_ONEDNN == 1
+static void SplitForwardEx(const nnvm::NodeAttrs& attrs,
+                           const OpContext& op_ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs) {
+  CHECK(!inputs.empty());
+  if (SupportDNNL(inputs[0])) {
+    DNNL_OPCHECK_INIT(/*is backward*/ false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLSplitForward, attrs, op_ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(SplitOpForward<cpu>, attrs, op_ctx, inputs, req, outputs);
+  }
+}
+
+inline static bool SplitInferStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  return DNNLStorageType(
+      attrs, dev_mask, /*support onednn*/ true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif  // MXNET_USE_ONEDNN == 1
+
 NNVM_REGISTER_OP(_split_v2)
     .add_alias("_npi_split")
     .add_alias("_npi_array_split")
@@ -1246,6 +1262,11 @@ Example::
                                 [](const NodeAttrs& n) {
                                   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                                 })
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<FComputeEx>("FComputeEx<cpu>", SplitForwardEx)
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FInferStorageType>("FInferStorageType", SplitInferStorageType)
+#endif
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
     .add_argument("data", "NDArray-or-Symbol", "The input")

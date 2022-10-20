@@ -72,6 +72,57 @@ def test_pos_single_conv(use_bias, data_shape):
   net = Conv()
   check_fusion(net, data_shape, attr)
 
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('use_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('module', [mx.np, mx.nd])
+def test_conv_transpose_conv(use_bias, data_shape, out_type, module):
+
+  class Conv_Transpose_Conv(nn.HybridBlock):
+    def __init__(self, **kwargs):
+        super(Conv_Transpose_Conv, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
+        self.conv1 = nn.Conv2D(channels=32, kernel_size=(5, 5), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = self.conv0(x)
+      if module == mx.nd:
+        out = out.as_nd_ndarray()
+      out = module.transpose(out, axes = [0,1,3,2])
+      out = self.conv1(out.as_np_ndarray())
+      return out
+
+  net = Conv_Transpose_Conv()
+  check_quantize(net, data_shape, out_type)
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('use_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('module', [mx.npx, mx.nd])
+def test_conv_reshape_conv(use_bias, data_shape, out_type, module):
+
+  class Conv_Reshape_Conv(nn.HybridBlock):
+    def __init__(self, **kwargs):
+        super(Conv_Reshape_Conv, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
+        self.conv1 = nn.Conv2D(channels=32, kernel_size=(5, 5), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = self.conv0(x)
+      if module == mx.npx:
+        attrs = {"newshape": (-1, int(out.shape[1]/4), out.shape[2]*2, out.shape[3]*2)}
+      else:
+        attrs = {"shape": (-1, int(out.shape[1]/4), out.shape[2]*2, out.shape[3]*2)}
+        out = out.as_nd_ndarray()
+      out = getattr(module, "reshape")(out, **attrs)
+      out = self.conv1(out.as_np_ndarray())
+      return out
+
+  net = Conv_Reshape_Conv()
+  check_quantize(net, data_shape, out_type)
+
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
@@ -91,7 +142,7 @@ def test_pos_conv_add(use_bias, data_shape):
     
   attr = {'conv': {'with_sum': 'true'}}
   net = ConvAdd(use_bias=use_bias)
-  check_fusion(net, data_shape, attr)
+  check_fusion(net, data_shape, attr, check_quantization=False)
 
 
 @mx.util.use_np
@@ -112,21 +163,61 @@ def test_pos_conv_add2(no_bias, data_shape):
 
   attr = {'conv': {'with_sum': 'true'}}
   net = ConvAdd(use_bias=True)
-  check_fusion(net, data_shape, attr)
+  check_fusion(net, data_shape, attr, check_quantization=False)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+def test_pos_conv_add3(no_bias, data_shape, out_type):
+  # conv + add fusion case 3
+  class ConvAdd(nn.HybridBlock):
+    def __init__(self, use_bias, **kwargs):
+        super(ConvAdd, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=data_shape[1], kernel_size=(1, 1), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = x + self.conv0(x)
+      return out
+
+  net = ConvAdd(use_bias=True)
+  check_quantize(net, data_shape, out_type)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+def test_pos_conv_add4(no_bias, data_shape, out_type):
+  # conv + add fusion case 4
+  class ConvAdd(nn.HybridBlock):
+    def __init__(self, use_bias, **kwargs):
+        super(ConvAdd, self).__init__(**kwargs)
+        self.conv0 = nn.Conv2D(channels=data_shape[1], kernel_size=(1, 1), strides=1, use_bias=use_bias)
+        self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
+
+    def forward(self, x):
+      out = self.conv1(x + self.conv0(x))
+      return out
+
+  net = ConvAdd(use_bias=True)
+  check_quantize(net, data_shape, out_type)
 
 
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", False), #TODO(bgawrych): investigate
-    ("sigmoid", True),
+    ("sigmoid", False),
     ("log_sigmoid", False),
     ("mish", False),
     ("tanh", False), #TODO(bgawrych): investigate
     #("softrelu", True), #TODO(bgawrych): bug in oneDNN with AVX
     ("relu6", False), #TODO(bgawrych): investigate
     ("leakyrelu", True),
-    ("gelu", True)
+    ("gelu", True),
+    ("gelu_tanh", True)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
@@ -142,10 +233,11 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
-        self.conv1.share_parameters(self.conv0.collect_params())
 
     def forward(self, x):
         out = self.act(self.conv0(x)) + self.conv1(x)
@@ -162,14 +254,15 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
-    ("sigmoid", True),
-    ("log_sigmoid", True),
-    ("mish", True),
-    ("tanh", True),
-    ("softrelu", True),
+    ("sigmoid", False),
+    ("log_sigmoid", False),
+    ("mish", False),
+    ("tanh", False),
+    ("softrelu", False),
     ("relu6", True),
     ("leakyrelu", True),
-    ("gelu", True)
+    ("gelu", True),
+    ("gelu_tanh", True)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
@@ -185,6 +278,8 @@ def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
 
@@ -200,15 +295,16 @@ def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
-    ("relu", True),
-    ("sigmoid", True),
-    ("log_sigmoid", True),
-    ("mish", True),
-    ("tanh", True),
+    ("relu", False),
+    ("sigmoid", False),
+    ("log_sigmoid", False),
+    ("mish", False),
+    ("tanh", False),
     #("softrelu", True), #TODO(bgawrych): failing fusion check - difference in random single element
-    ("relu6", True),
-    ("leakyrelu", True),
-    ("gelu", False) #TODO: for True we get assert instead of not fusing pattern
+    ("relu6", False),
+    ("leakyrelu", False),
+    ("gelu", False),
+    ("gelu_tanh", False)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
@@ -218,7 +314,6 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
         super(ConvBNSumAct, self).__init__(**kwargs)
         self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1)
-        self.conv1.share_parameters(self.conv0.collect_params())
         self.bn = nn.BatchNorm()
         if alg == "relu6":
           self.act = RELU6()
@@ -226,6 +321,8 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
 
@@ -234,7 +331,7 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
         out = self.act(out)
         return out
 
-  attr = {'conv': {'with_sum': 'true', 'with_postsum_act': 'true', 'with_bn': 'true'}}
+  attr = {'sg_onednn_conv_bn_add_act': {'with_sum': 'true', 'with_postsum_act': 'true', 'with_bn': 'true'}}
   net = ConvBNSumAct(alg, use_bias)
   check_fusion(net, data_shape, attr, check_quantization=quantize)
 
@@ -321,14 +418,15 @@ def test_pos_concat_scale_align(data_shape, out_type):
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
-    ("sigmoid", True),
-    ("log_sigmoid", True),
-    ("mish", True),
-    ("tanh", True),
-    ("softrelu", True),
+    ("sigmoid", False),
+    ("log_sigmoid", False),
+    ("mish", False),
+    ("tanh", False),
+    ("softrelu", False),
     ("relu6", True),
     ("leakyrelu", True),
-    ("gelu", True)
+    ("gelu", True),
+    ("gelu_tanh", True)
 ])
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_act(use_bias, data_shape, alg, quantize):
@@ -343,6 +441,8 @@ def test_pos_conv_act(use_bias, data_shape, alg, quantize):
           self.act = nn.LeakyReLU(0.25)
         elif alg == "gelu":
           self.act = nn.GELU()
+        elif alg == "gelu_tanh":
+          self.act = nn.GELU(approximation='tanh')
         else:
           self.act = nn.Activation(activation = alg)
 

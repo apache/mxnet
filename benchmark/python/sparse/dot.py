@@ -72,7 +72,7 @@ CRITEO = {
     'data_mini': 'criteo.t.mini',
     'data_name': 'criteo.t',
     'data_origin_name': 'criteo.t.bz2',
-    'url' : "https://s3-us-west-2.amazonaws.com/sparse-dataset/criteo.t.bz2",
+    'url': "https://s3-us-west-2.amazonaws.com/sparse-dataset/criteo.t.bz2",
     'feature_dim': 8388621,
     'm': [1, 8, 16, 32, 64],
     'batch_size': [64, 128],
@@ -148,10 +148,9 @@ def _compare_sparse_dense(data_dir, file_name, mini_file_name, feature_dim,
             last = _line_count(path) - num_batches * batch_size
             last = last if last >= 1 else 1
             start = int(rnd.uniform(1, last))
-            os.system("sed -n '%d,%dp' %r > %r"
-                      %(start, start + num_batches * batch_size, path, mini_path))
+            os.system("sed -n '{},{}p' {} > {}".format(
+                start, start + num_batches * batch_size, repr(path), repr(mini_path)))
             assert os.path.exists(mini_path)
-
 
     def run_benchmark(mini_path):
         """Run benchmarks
@@ -180,7 +179,6 @@ def _compare_sparse_dense(data_dir, file_name, mini_file_name, feature_dim,
         average_cost["sparse"] = total_cost["sparse"] / count
         average_cost["dense"] = total_cost["dense"] / count
         return (average_cost["sparse"], average_cost["dense"])
-
 
     def print_result(average_cost_sparse, average_cost_dense):
         """Print result of comparison between sparse and dense
@@ -224,17 +222,16 @@ def test_dot_real(data_dict):
     assert default_batch_size_index < len(batch_size_list)
     assert default_output_index < len(m)
     if ARGS.verbose:
-        print("Running Benchmarking on %r data") % data_dict['data_mini']
+        print(f"Running Benchmarking on {repr(data_dict['data_mini'])} data")
     print('{:>15} {:>10} {:>10} {:>10} {:>20} {:>15} {:>15} {:>10} {:>10}'.format('density(%)',
-                                                                                 'n',
-                                                                                 'm',
-                                                                                 'k',
-                                                                                 't_dense/t_sparse',
-                                                                                 't_dense(ms)',
-                                                                                 't_sparse(ms)',
-                                                                                 'is_transpose',
-                                                                                 'rhs_rsp'))
-
+                                                                                  'n',
+                                                                                  'm',
+                                                                                  'k',
+                                                                                  't_dense/t_sparse',
+                                                                                  't_dense(ms)',
+                                                                                  't_sparse(ms)',
+                                                                                  'is_transpose',
+                                                                                  'rhs_rsp'))
 
     for output_dim in m:
         _compare_sparse_dense(data_dir, data_dict['data_name'], data_dict['data_mini'],
@@ -324,8 +321,9 @@ def test_dot_synthetic(data_dict):
     def print_benchmark_info(lhs, rhs, lhs_trans, fw):
         trans_str = "^T" if lhs_trans else ""
         print("========================================================")
-        print("  %s sparse dot benchmark: dot(%s, %s) = %s  ") % (fw, lhs, rhs, rhs)
-        print("  (matrix multiplication: (m x k)%s * (k x n) = m x n)  ") % (trans_str)
+        print(f"  {fw} sparse dot benchmark: dot({lhs}, {rhs}) = {rhs}  ")
+        print(
+            f"  (matrix multiplication: (m x k){trans_str} * (k x n) = m x n)  ")
         print("========================================================")
         headline_pattern = '{:>15} {:>15} {:>10} {:>8} {:>8} {:>8} {:>13} {:>13} {:>8}'
         headline = headline_pattern.format('lhs_density(%)',
@@ -336,7 +334,6 @@ def test_dot_synthetic(data_dict):
                                            't_dense(ms)',
                                            'speedup')
         print(headline)
-
 
     def run_benchmark(ctx=None, lhs="csr", lhs_trans=False, rhs="dns", fw="mxnet", rhs_density=1,
                       distribution="uniform"):
@@ -463,4 +460,4 @@ if __name__ == "__main__":
     test_dot_synthetic(SYNTHETIC1)
     test_dot_synthetic(SYNTHETIC2)
     total_time = time.time() - begin_time
-    print("total time is %f") % total_time
+    print(f"total time is {total_time}")

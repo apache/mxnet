@@ -36,10 +36,9 @@
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
 
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "dnnl_base-inl.h"
 
-#include "../softmax-inl.h"
+#include "operator/nn/softmax-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -75,31 +74,11 @@ class DNNLSoftmaxFwd {
   DNNLSoftmaxFwd(const SoftmaxParam& param, const Tensors& tensors, const bool is_train);
   void Execute(const Tensors& tensors) const;
 
- private:
   std::shared_ptr<softmax_fwd_pd_t> softmax_pd;
   std::shared_ptr<softmax_fwd_t> softmax_fwd;
   std::shared_ptr<linear_pd_t> temperature_pd;
   std::shared_ptr<linear_t> temperature_fwd;
 };
-
-DNNLSoftmaxFwd::Tensors::Tensors(const NDArray& data, const NDArray& output)
-    : data(data), out(output) {}
-
-DNNLSoftmaxFwd::DNNLSoftmaxFwd(const SoftmaxParam& param,
-                               const Tensors& tensors,
-                               const bool is_train) {
-  const float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
-  const int axis          = CheckAxis(param.axis, tensors.data.shape().ndim());
-  const auto input_mem    = tensors.data.GetDNNLData();
-
-  softmax_pd  = std::make_shared<softmax_fwd_pd_t>(GetSoftmaxFwdPd(*input_mem, axis, is_train));
-  softmax_fwd = std::make_shared<softmax_fwd_t>(*softmax_pd);
-
-  if (temperature != 1.0f) {
-    temperature_pd  = std::make_shared<linear_pd_t>(GetTemperaturePd(*input_mem, temperature));
-    temperature_fwd = std::make_shared<linear_t>(*temperature_pd);
-  }
-}
 
 class DNNLSoftmaxBwd {
  public:
@@ -126,27 +105,35 @@ class DNNLSoftmaxBwd {
   std::shared_ptr<linear_t> temperature_fwd;
 };
 
-DNNLSoftmaxBwd::Tensors::Tensors(const std::vector<NDArray>& inputs,
-                                 const std::vector<NDArray>& outputs)
-    : out_grad(inputs[0]), out(inputs[1]), data_grad(outputs[0]) {}
+void DNNLSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const NDArray& in_data,
+                        const OpReqType& req,
+                        const NDArray& out_data);
 
-DNNLSoftmaxBwd::DNNLSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors) {
-  const float temperature   = param.temperature.has_value() ? param.temperature.value() : 1.0f;
-  const int axis            = CheckAxis(param.axis, tensors.out.shape().ndim());
-  const auto out_grad_mem   = tensors.out_grad.GetDNNLData();
-  const auto out_mem        = tensors.out.GetDNNLData();
-  const auto softmax_fwd_pd = DNNLSoftmaxFwd::GetSoftmaxFwdPd(*out_mem, axis, true);
+void DNNLSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& in_data,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& out_data);
 
-  softmax_bwd_pd = std::make_shared<softmax_bwd_pd_t>(
-      GetSoftmaxBwdPd(*out_grad_mem, *out_mem, axis, softmax_fwd_pd));
-  softmax_bwd = std::make_shared<softmax_bwd_t>(*softmax_bwd_pd);
+void DNNLLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const NDArray& in_data,
+                           const OpReqType& req,
+                           const NDArray& out_data);
 
-  if (temperature != 1.0f) {
-    temperature_pd =
-        std::make_shared<linear_pd_t>(DNNLSoftmaxFwd::GetTemperaturePd(*out_mem, temperature));
-    temperature_fwd = std::make_shared<linear_t>(*temperature_pd);
-  }
-}
+void DNNLLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& in_data,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& out_data);
+
+void DNNLMaskedSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

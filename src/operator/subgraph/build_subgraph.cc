@@ -105,7 +105,7 @@ void ResetNodeLabels(const nnvm::Graph& g,
   subgraph_nodes->clear();
 }
 
-/*
+/*!
  * \brief Prepare NodeAttr for node. NodeAttr will be used in SubgraphSelectorV2.
  */
 static const std::shared_ptr<NodeAttr> PrepareNodeAttr(const nnvm::Graph& g,
@@ -172,12 +172,12 @@ bool HasInputEntries(const nnvm::Graph& g,
  * and the outside nodes. If so, add the node that should break the loop
  * in excluded_nodes and return false. Otherwise, return true.
  * \param g the whole graph
- * \subgraph_selector determines whether the visited node should be choosen or not
- * \label the label of the current subgraph
- * \snid node id of the seed simple node
- * \simple_nodes all simple nodes in the top sorted order
- * \subgraph_nodes all the nodes belonging to the same subgraph of seed node
- * \excluded_nodes set of nodes that should be excluded from the current subgraph
+ * \param subgraph_selector determines whether the visited node should be choosen or not
+ * \param label the label of the current subgraph
+ * \param snid node id of the seed simple node
+ * \param simple_nodes all simple nodes in the top sorted order
+ * \param subgraph_nodes all the nodes belonging to the same subgraph of seed node
+ * \param excluded_nodes set of nodes that should be excluded from the current subgraph
  */
 bool LabelSubgraph(const nnvm::Graph& g,
                    SubgraphSelectorV2Ptr subgraph_selector,
@@ -749,6 +749,17 @@ void CreateSubgraphNode(nnvm::Graph* g,
         for (BiDirectedNode* dest_node : subgraph_nodes) {
           sn->outputs.erase(dest_node->node);
         }
+      }
+    }
+
+    // Set outputs according to current inputs
+    for (size_t i = 0; i < n->inputs.size(); ++i) {
+      auto& e = n->inputs[i];
+      // update input entries' source simple nodes' outputs map
+      nnvm::Node* node = e.node.get();
+      if (indexed_graph.exist(node)) {
+        const auto nid     = indexed_graph.node_id(node);
+        BiDirectedNode* sn = simple_nodes[nid].get();
         sn->outputs[n.get()].push_back(i);
       }
     }

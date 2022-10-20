@@ -244,10 +244,10 @@ def test_stack():
     for i in range(5):
         if i==1:
             continue
-        assert '%d.h2h_weight'%i in keys
-        assert '%d.h2h_bias'%i in keys
-        assert '%d.i2h_weight'%i in keys
-        assert '%d.i2h_bias'%i in keys
+        assert f'{i}.h2h_weight' in keys
+        assert f'{i}.h2h_bias' in keys
+        assert f'{i}.i2h_weight' in keys
+        assert f'{i}.i2h_bias' in keys
     assert '1.base_cell.h2h_weight' in keys
     assert '1.base_cell.h2h_bias' in keys
     assert '1.base_cell.i2h_weight' in keys
@@ -274,10 +274,10 @@ def test_hybridstack():
     for i in range(5):
         if i==1:
             continue
-        assert '%d.h2h_weight'%i in keys
-        assert '%d.h2h_bias'%i in keys
-        assert '%d.i2h_weight'%i in keys
-        assert '%d.i2h_bias'%i in keys
+        assert f'{i}.h2h_weight' in keys
+        assert f'{i}.h2h_bias' in keys
+        assert f'{i}.i2h_weight' in keys
+        assert f'{i}.i2h_bias' in keys
     assert '1.base_cell.h2h_weight' in keys
     assert '1.base_cell.h2h_bias' in keys
     assert '1.base_cell.i2h_weight' in keys
@@ -606,7 +606,8 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, device=m
 
 
 @mx.util.use_np
-def run_rnn_layers(dtype, dtype2, device=mx.cpu()):
+def run_rnn_layers(dtype, dtype2):
+    device = default_device()
 
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype), mx.np.ones((8, 3, 20), dtype=dtype), device=device)
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype), device=device)
@@ -668,15 +669,18 @@ def run_rnn_layers(dtype, dtype2, device=mx.cpu()):
         out.backward()
         out = out.asnumpy()
 
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 @pytest.mark.serial
 def test_rnn_layers_fp32():
     run_rnn_layers('float32', 'float32')
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.skipif(mx.device.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
 @pytest.mark.serial
 def test_rnn_layers_fp16():
-    run_rnn_layers('float16', 'float32', mx.gpu())
+    # Dynamic skip condition is best handled this way, rather than with pytest.mark.skipIf
+    if default_device().device_type == 'cpu':
+        pytest.skip('RNN FP16 only implemented for GPU for now')
+    run_rnn_layers('float16', 'float32')
 
 
 def check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
@@ -844,14 +848,12 @@ def test_rnn_unroll_variant_length():
                                               inputs=data_nd[i:(i+1), :ele_length, :],
                                               merge_outputs=True,
                                               layout='NTC')
-            assert_allclose(ele_out.asnumpy(), outs[i:(i+1), :ele_length, :].asnumpy(),
-                            atol=1E-4, rtol=1E-4)
+            assert_almost_equal(ele_out, outs[i:(i+1), :ele_length, :])
             if ele_length < max_length:
                 # Check the padded outputs are all zero
-                assert_allclose(outs[i:(i+1), ele_length:max_length, :].asnumpy(), 0)
+                assert_almost_equal(outs[i:(i+1), ele_length:max_length, :], 0)
             for valid_out_state, gt_state in zip(states, ele_states):
-                assert_allclose(valid_out_state[i:(i+1)].asnumpy(), gt_state.asnumpy(),
-                                atol=1E-4, rtol=1E-4)
+                assert_almost_equal(valid_out_state[i:(i+1)], gt_state)
 
         # Test for TNC layout
         data_nd = mx.np.random.normal(0, 1, size=(max_length, batch_size, 20))
@@ -864,14 +866,12 @@ def test_rnn_unroll_variant_length():
                                               inputs=data_nd[:ele_length, i:(i+1), :],
                                               merge_outputs=True,
                                               layout='TNC')
-            assert_allclose(ele_out.asnumpy(), outs[:ele_length, i:(i + 1), :].asnumpy(),
-                            atol=1E-4, rtol=1E-4)
+            assert_almost_equal(ele_out, outs[:ele_length, i:(i + 1), :])
             if ele_length < max_length:
                 # Check the padded outputs are all zero
-                assert_allclose(outs[ele_length:max_length, i:(i+1), :].asnumpy(), 0)
+                assert_almost_equal(outs[ele_length:max_length, i:(i+1), :], 0)
             for valid_out_state, gt_state in zip(states, ele_states):
-                assert_allclose(valid_out_state[i:(i+1)].asnumpy(), gt_state.asnumpy(),
-                                atol=1E-4, rtol=1E-4)
+                assert_almost_equal(valid_out_state[i:(i+1)], gt_state)
 
 
 def test_cell_fill_shape():

@@ -22,8 +22,19 @@
 
 set -ex
 
-CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-CI_CMAKE_CUDA_ARCH="5.2 7.0"
+# compute capabilities for CI instances supported by CUDA 10.x (i.e. p3, g4)
+CI_CMAKE_CUDA10_ARCH="5.2 7.5"
+
+# compute capabilities for CI instances supported by CUDA >= 11.1 (i.e. p3, g4, g5)
+CI_CMAKE_CUDA_ARCH="5.2 7.5 8.6"
+
+# On newer nvidia cuda containers, these environment variables
+#  are prefixed with NV_, so provide compatibility
+if [ ! -z "$NV_CUDNN_VERSION" ]; then
+    if [ -z "$CUDNN_VERSION" ]; then
+        export CUDNN_VERSION=$NV_CUDNN_VERSION
+    fi
+fi
 
 clean_repo() {
     set -ex
@@ -298,7 +309,7 @@ build_centos7_gpu() {
         -DUSE_BLAS=Open \
         -DUSE_ONEDNN=ON \
         -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA10_ARCH" \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -DUSE_INT64_TENSOR_SIZE=OFF \
@@ -557,6 +568,9 @@ build_ubuntu_gpu_tensorrt() {
     set -ex
 
     export ONNX_NAMESPACE=onnx
+    export PYBIN=$(which python3)
+    PYVERFULL=$($PYBIN -V | awk '{print $2}')
+    export PYVER=${PYVERFULL%.*}
 
     # Build ONNX
     pushd .
@@ -565,7 +579,7 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    cmake -DPYTHON_EXECUTABLE=$PYBIN -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
@@ -575,13 +589,13 @@ build_ubuntu_gpu_tensorrt() {
 
     # Build ONNX-TensorRT
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-11.4/targets/x86_64-linux/include/
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
     rm -rf build
     mkdir -p build
     cd build
-    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
+    cmake -DPYTHON_EXECUTABLE=$PYBIN -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
@@ -604,6 +618,7 @@ build_ubuntu_gpu_tensorrt() {
           -DBUILD_CYTHON_MODULES=ON               \
           -DUSE_CPP_PACKAGE=1                     \
           -DBUILD_CPP_EXAMPLES=1                  \
+          -DUSE_INT64_TENSOR_SIZE=1               \
           -DUSE_OPENMP=0                          \
           -DUSE_BLAS=Open                         \
           -DUSE_ONEDNN=0                          \
@@ -906,9 +921,7 @@ unittest_array_api_standardization() {
     pushd /work/array-api-tests
     git checkout c1dba80a196a03f880d2e0a998a272fb3867b720
     export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
-    # OverflowError: Python int too large to convert to C long
-    # when cython is enabled
-    export MXNET_ENABLE_CYTHON=0
+    export MXNET_ENABLE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_creation_functions.py
     python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose array_api_tests/test_indexing.py
@@ -1368,7 +1381,7 @@ build_docs() {
 
     # copy the full site for this version to versions folder
     mkdir -p html/versions/master
-    for f in 404.html api assets blog community ecosystem features trusted_by feed.xml get_started index.html; do
+    for f in 404.html api assets community ecosystem features trusted_by feed.xml get_started index.html; do
         cp -r html/$f html/versions/master/
     done
 

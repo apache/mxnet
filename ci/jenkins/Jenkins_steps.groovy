@@ -716,6 +716,22 @@ def test_unix_python3_gpu(lib_name) {
     }]
 }
 
+def test_unix_python3_ampere_gpu(lib_name) {
+    return ['Python3: Ampere-GPU': {
+      node(NODE_LINUX_GPU_G5) {
+        ws('workspace/ut-python3-gpu') {
+          try {
+            utils.unpack_and_init(lib_name, mx_lib_cython)
+            python3_gpu_ut_cython('ubuntu_gpu_cu111')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_ampere_gpu.xml')
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_python3_debug_cpu() {
     return ['Python3: CPU debug': {
       node(NODE_LINUX_CPU) {

@@ -26,6 +26,7 @@
 #include <regex>
 #include <unordered_map>
 #include <vector>
+#include <type_traits>
 #include "./profiler.h"
 #include "../common/utils.h"
 #include "../common/cuda/utils.h"
@@ -44,6 +45,19 @@ GpuDeviceStorageProfiler* GpuDeviceStorageProfiler::Get() {
   }
   return gpu_dev_storage_profiler.get();
 }
+
+#if MXNET_USE_NVML
+// Deduce the possibly versioned variant of nvmlProcessInfo_t* expected
+// as the 3rd arg of nvmlDeviceGetComputeRunningProcesses().
+template <typename F>
+struct GetArgType;
+template <typename R, typename T1, typename T2, typename T3>
+struct GetArgType<R (*)(T1, T2, T3)> {
+  typedef T3 arg3_t;
+};
+using NvmlProcessInfoPtr = GetArgType<decltype(&nvmlDeviceGetComputeRunningProcesses)>::arg3_t;
+using NvmlProcessInfo    = std::remove_pointer_t<NvmlProcessInfoPtr>;
+#endif
 
 void GpuDeviceStorageProfiler::DumpProfile() const {
   size_t current_pid = common::current_process_id();
@@ -100,14 +114,14 @@ void GpuDeviceStorageProfiler::DumpProfile() const {
   NVML_CALL(nvmlInit());
   for (std::pair<const int, size_t>& dev_id_total_alloc_pair : gpu_dev_id_total_alloc_map) {
     unsigned info_count = 0;
-    std::vector<nvmlProcessInfo_t> infos(info_count);
+    std::vector<NvmlProcessInfo> infos(info_count);
 
     NVML_CALL(nvmlDeviceGetHandleByIndex(dev_id_total_alloc_pair.first, &nvml_device));
     // The first call to `nvmlDeviceGetComputeRunningProcesses` is to set the
     // size of info. Since `NVML_ERROR_INSUFFICIENT_SIZE` will always be
     // returned, we do not wrap the function call with `NVML_CALL`.
     nvmlDeviceGetComputeRunningProcesses(nvml_device, &info_count, infos.data());
-    infos = std::vector<nvmlProcessInfo_t>(info_count);
+    infos.resize(info_count);
     NVML_CALL(nvmlDeviceGetComputeRunningProcesses(nvml_device, &info_count, infos.data()));
 
     bool amend_made = false;

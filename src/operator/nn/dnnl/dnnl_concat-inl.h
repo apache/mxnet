@@ -29,9 +29,8 @@
 #include <utility>
 #include <vector>
 
-#include "../concat-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "operator/nn/concat-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -42,6 +41,11 @@ class DNNLConcatFwd {
 
   DNNLConcatFwd(int concat_dim, const std::vector<dnnl::memory::desc>& data_md);
 
+  static DNNLConcatFwd& GetCached(int concat_dim,
+                                  const std::vector<NDArray>& in_data,
+                                  const std::vector<dnnl::memory::desc>& data_md,
+                                  int stack_axis = -1 /*used only by stack op*/);
+
   const dnnl::concat& GetFwd() const {
     return *fwd_;
   }
@@ -50,28 +54,17 @@ class DNNLConcatFwd {
   std::shared_ptr<dnnl::concat> fwd_;
 };
 
-static DNNLConcatFwd& GetConcatForward(int concat_dim,
-                                       const std::vector<NDArray>& in_data,
-                                       const std::vector<dnnl::memory::desc>& data_md,
-                                       int stack_axis = -1 /*used only by stack op*/) {
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
-#else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, DNNLConcatFwd, OpHash> fwds;
-#endif
+void DNNLConcatForward(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<NDArray>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& out_data);
 
-  OpSignature key;
-  key.AddSign(concat_dim);
-  key.AddSign(stack_axis);
-  key.AddSign(in_data);
-
-  auto it = fwds.find(key);
-  if (it == fwds.end()) {
-    DNNLConcatFwd fwd(concat_dim, data_md);
-    it = AddToCache(&fwds, key, fwd);
-  }
-  return it->second;
-}
+void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

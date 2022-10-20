@@ -45,7 +45,7 @@ def _init_data(data, allow_empty, default_name):
             data = OrderedDict([(default_name, data[0])])  # pylint: disable=redefined-variable-type
         else:
             data = OrderedDict(  # pylint: disable=redefined-variable-type
-                [('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
+                [(f'_{i}_{default_name}', d) for i, d in enumerate(data)])
     if not isinstance(data, dict):
         raise TypeError("Input must be NDArray, numpy.ndarray, h5py.Dataset " +
                         "a list of them or dict with them as values")
@@ -54,7 +54,7 @@ def _init_data(data, allow_empty, default_name):
             try:
                 data[k] = array(v)
             except:
-                raise TypeError(("Invalid type '%s' for %s, " % (type(v), k)) +
+                raise TypeError((f"Invalid type '{type(v)}' for {k}, ") +
                                 "should be NDArray, numpy.ndarray or h5py.Dataset")
 
     return list(sorted(data.items()))

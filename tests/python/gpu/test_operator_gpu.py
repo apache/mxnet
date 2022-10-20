@@ -27,7 +27,7 @@ import scipy.sparse as sps
 import mxnet.ndarray.sparse as mxsps
 from mxnet.test_utils import check_consistency, set_default_device, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_device, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
+from mxnet.test_utils import default_device, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts, get_cuda_compute_capability
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -53,6 +53,13 @@ from test_optimizer import test_adamW
 del test_custom_op_fork  #noqa
 
 set_default_device(mx.gpu(0))
+
+# For info purposes, log GPU compute cababilities.  Run serially so output appears in log.
+@pytest.mark.serial
+def test_report_compute_capabilities(capsys):
+    with capsys.disabled():
+        sys.stdout.write('= {} '.format(
+            [get_cuda_compute_capability(mx.gpu(i)) for i in range(mx.device.num_gpus())] ))
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
@@ -1973,8 +1980,8 @@ def test_kernel_error_checking():
     try:
         mpctx = mp.get_context('spawn')
     except:
-        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
-              sys.version_info[0:2], file=sys.stderr, end='')
+        print(f'SKIP: python{sys.version_info[0]}.{sys.version_info[1]} lacks the required process fork-exec support ... ',
+              file=sys.stderr, end='')
     else:
         with discard_stderr():
             for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:
@@ -1982,7 +1989,7 @@ def test_kernel_error_checking():
                 p.start()
                 p.join()
                 assert p.exitcode != 0,\
-                    "Expected a synchronous kernel error from %s(), none seen." % f.__name__
+                    f"Expected a synchronous kernel error from {f.__name__}(), none seen."
 
 def test_incorrect_gpu():
     # Try setting dev_id to a really big number

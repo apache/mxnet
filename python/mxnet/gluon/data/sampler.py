@@ -148,7 +148,7 @@ class BatchSampler(Sampler):
             else:
                 raise ValueError(
                     "last_batch must be one of 'keep', 'discard', or 'rollover', " \
-                    "but got %s"%self._last_batch)
+                    f"but got {self._last_batch}")
 
     def __len__(self):
         if self._last_batch == 'keep':
@@ -159,7 +159,7 @@ class BatchSampler(Sampler):
             return (len(self._prev) + len(self._sampler)) // self._batch_size
         raise ValueError(
             "last_batch must be one of 'keep', 'discard', or 'rollover', " \
-            "but got %s"%self._last_batch)
+            f"but got {self._last_batch}")
 
 
 class IntervalSampler(Sampler):

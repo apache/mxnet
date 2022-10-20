@@ -131,9 +131,11 @@ def get_mx_ndarray(ctx, in_tensor, dtype, initializer, attach_grad=True):
     elif isinstance(in_tensor, list):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
     elif isinstance(in_tensor, np.ndarray):
-        tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
+        tensor = nd.array(in_tensor)
+    elif isinstance(in_tensor, mx.np.ndarray):
+        tensor = in_tensor.as_nd_ndarray()
     elif isinstance(in_tensor, nd.NDArray):
-        tensor = in_tensor.as_in_context(ctx).astype(dtype=dtype)
+        tensor = in_tensor.as_in_context(ctx)
     else:
         raise ValueError("Invalid input type for creating input tensor. Input can be tuple() of shape or Numpy Array or"
                          " MXNet NDArray. Given - ", in_tensor)

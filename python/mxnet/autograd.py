@@ -360,7 +360,7 @@ def get_symbol(x):
         The retrieved Symbol.
     """
     assert isinstance(x, NDArray), \
-       "get_symbol: Invalid argument type, expecting %s, got %s"%(NDArray, type(x))
+       f"get_symbol: Invalid argument type, expecting {NDArray}, got {type(x)}"
     hdl = SymbolHandle()
     check_call(_LIB.MXAutogradGetSymbol(x.handle, ctypes.byref(hdl)))
     return Symbol(hdl)
@@ -468,12 +468,12 @@ class Function(object):
                 if isinstance(rets, array_cls):
                     rets = (rets,)
                 assert len(rets) == len(input_grads), \
-                    "%s.backward must return exactly the same number " \
+                    f"{self.__class__.name}.backward must return exactly the same number " \
                     "of NDArrays as the number of NDArrays arguments to forward." \
-                    "Expecting %d got %d"%(self.__class__.name, len(input_grads), len(rets))
+                    f"Expecting {len(input_grads)} got {len(rets)}"
                 for igrad, ret, req in zip(input_grads, rets, reqs):
                     assert isinstance(ret, array_cls), \
-                        "autograd.Function.backward must return NDArrays, not %s"%type(ret)
+                        f"autograd.Function.backward must return NDArrays, not {type(ret)}"
                     if req == 0:  # null
                         return True
                     elif req in (1, 2):  # write or inplace
@@ -481,7 +481,7 @@ class Function(object):
                     elif req == 'add':
                         igrad[:] += ret
             except Exception:  # pylint: disable=broad-except
-                print('Error in Function.backward: %s' % traceback.format_exc())
+                print(f'Error in Function.backward: {traceback.format_exc()}')
                 return False
             return True
 
@@ -490,7 +490,7 @@ class Function(object):
             try:
                 del Function._registry.ref_holder[key]
             except Exception:  # pylint: disable=broad-except
-                print('Error in autograd.Function.delete: %s' % traceback.format_exc())
+                print(f'Error in autograd.Function.delete: {traceback.format_exc()}')
                 return False
             return True
 

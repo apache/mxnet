@@ -41,8 +41,10 @@ inline int String2ActType(const std::string& s) {
     return leakyrelu::kELU;
   } else if (s == "selu") {
     return leakyrelu::kSELU;
-  } else if (s == "gelu") {
-    return leakyrelu::kGELU;
+  } else if (s == "gelu" || s == "gelu_erf") {
+    return leakyrelu::kGELU_ERF;
+  } else if (s == "gelu_tanh") {
+    return leakyrelu::kGELU_TANH;
   } else {
     LOG(FATAL) << "unknown activation type " << s;
   }

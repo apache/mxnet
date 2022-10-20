@@ -94,12 +94,12 @@ def test_dot_real(data_dict):
 
     mini_path = os.path.join(data_dir, data_dict['data_mini'])
     if not os.path.exists(mini_path):
-        os.system("head -n 2000 %r > %r" % (path, mini_path))
+        os.system(f"head -n 2000 {repr(path)} > {repr(mini_path)}")
         assert os.path.exists(mini_path)
 
-    print("Running Benchmarking on %r data" % data_dict['data_mini'])
+    print(f"Running Benchmarking on {repr(data_dict['data_mini'])} data")
     for batch_size in data_dict['batch_size']:  # iterator through different batch size of choice
-        print("batch_size is %d" % batch_size)
+        print(f"batch_size is {batch_size}")
         # model
         data_shape = (k, )
         train_iter = get_iter(mini_path, data_shape, batch_size)
@@ -129,8 +129,8 @@ def test_dot_real(data_dict):
         t_dense = costs[1]
         ratio = t_dense / t_sparse
         print('density(%)\tn\tm\tk\tt_dense/t_sparse\tt_dense\tt_sparse')
-        fmt = "%0.4f\t\t%d\t%d\t%d\t%0.2f\t\t\t%0.4f\t%0.6f"
-        print(fmt % (density * 100, batch_size, m, k, ratio, t_dense, t_sparse))
+        fmt = "{:0.4f}\t\t{}\t{}\t{}\t{:0.2f}\t\t\t{:0.4f}\t{:0.6f}"
+        print(fmt.format(density * 100, batch_size, m, k, ratio, t_dense, t_sparse))
 
 
 def test_dot_synthetic():
@@ -179,8 +179,8 @@ def test_dot_synthetic():
         cost = measure_cost_forward_baseline(repeat, sp.spmatrix.dot, lhs_csr_sp, rhs_dns_np)
         costs_baseline.append(cost)
         ratio_baseline = costs_baseline[0] / costs_baseline[1]
-        fmt = "%0.1f\t\t%s\t%d\t%d\t%d\t%0.2f\t\t\t%0.2f\t%0.5f\t\t%0.2f\t\t\t\t%0.6f\t%0.5f"
-        print(fmt % (density * 100, str(ctx), n, m, k, ratio, costs[0], costs[1],
+        fmt = "{:0.1f}\t\t{}\t{}\t{}\t{}\t{:0.2f}\t\t\t{:0.2f}\t{:0.5f}\t\t{:0.2f}\t\t\t\t{:0.6f}\t{:0.5f}"
+        print(fmt.format(density * 100, str(ctx), n, m, k, ratio, costs[0], costs[1],
                      ratio_baseline, costs_baseline[0], costs_baseline[1]))
 
     def bench_dot_backward(m, k, n, density, ctx, repeat):
@@ -208,8 +208,8 @@ def test_dot_synthetic():
         cost = measure_cost_backward_baseline(repeat, sp.spmatrix.dot, sp.spmatrix.transpose, lhs_csr_sp, rhs_dns_np)
         costs_baseline.append(cost)
         ratio_baseline = costs_baseline[0] / costs_baseline[1]
-        fmt = "%0.1f\t\t%s\t%d\t%d\t%d\t%0.2f\t\t\t%0.2f\t%0.5f\t\t%0.2f\t\t\t\t%0.6f\t%0.5f"
-        print(fmt % (density * 100, str(ctx), n, m, k, ratio, costs[0], costs[1],
+        fmt = "{:0.1f}\t\t{}\t{}\t{}\t{}\t{:0.2f}\t\t\t{:0.2f}\t{:0.5f}\t\t{:0.2f}\t\t\t\t{:0.6f}\t{:0.5f}"
+        print(fmt.format(density * 100, str(ctx), n, m, k, ratio, costs[0], costs[1],
                      ratio_baseline, costs_baseline[0], costs_baseline[1]))
 
     print("A = sparse NDArray of shape(m, k)")

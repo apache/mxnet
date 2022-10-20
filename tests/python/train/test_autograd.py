@@ -88,7 +88,7 @@ def test_autograd(tmpdir):
                 metric.update(labels, outputs)
             name, acc = metric.get()
             metric.reset()
-            print('training acc at epoch %d: %s=%f'%(i, name, acc))
+            print(f'training acc at epoch {i}: {name}={acc}')
 
 
     net1 = get_net()

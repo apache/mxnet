@@ -63,7 +63,7 @@ class LRScheduler(object):
         elif self.warmup_mode == 'constant':
             return self.warmup_begin_lr
         else:
-            raise ValueError("Invalid warmup mode %s"%self.warmup_mode)
+            raise ValueError(f"Invalid warmup mode {self.warmup_mode}")
 
     def __call__(self, num_update):
         """Return a new learning rate.

@@ -43,6 +43,11 @@
 #include "../mkl_functions-inl.h"
 #endif  // MSHADOW_USE_MKL == 1
 
+#if MXNET_USE_ONEDNN == 1
+#include "operator/nn/dnnl/dnnl_base-inl.h"
+#include "operator/nn/dnnl/dnnl_eltwise-inl.h"
+#endif
+
 namespace mxnet {
 namespace op {
 
@@ -275,7 +280,7 @@ class UnaryOp : public OpBase {
     if (mxnet::common::is_float(inputs[0].type_flag_)) {
       UnaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
-      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, DType, _, {
         MXNET_INT_TYPE_SWITCH_EXT_WITH_BOOL(inputs[0].type_flag_, IType, {
           MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
             if (inputs[0].Size() != 0) {
@@ -451,6 +456,72 @@ class UnaryOp : public OpBase {
   }
 };
 
+#if MXNET_USE_ONEDNN == 1
+inline bool EltwiseStorageType(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               DispatchMode* dispatch_mode,
+                               std::vector<int>* in_attrs,
+                               std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
+template <typename OP>
+struct DNNLAlgorithm {};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::plus> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_add;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::minus> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_sub;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::mul> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_mul;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::div> {
+  static const dnnl::algorithm value = dnnl::algorithm::binary_div;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::tanh> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_tanh;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::exp> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_exp;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::square> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_square;
+};
+template <>
+struct DNNLAlgorithm<op::mshadow_op::square_root> {
+  static const dnnl::algorithm value = dnnl::algorithm::eltwise_sqrt;
+};
+
+template <typename OP, bool computeMixed = true>
+inline void EltwiseComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<mxnet::NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<mxnet::NDArray>& outputs) {
+  auto fallBackFunction =
+      computeMixed ? UnaryOp::ComputeMixedType<cpu, OP> : UnaryOp::Compute<cpu, OP>;
+  if (SupportDNNLEltwise(inputs[0])) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(
+        DNNLEltwiseForward<DNNLAlgorithm<OP>::value>, attrs, ctx, inputs[0], req[0], outputs[0]);
+    DNNL_OPCHECK_RUN(fallBackFunction, attrs, ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(fallBackFunction, attrs, ctx, inputs, req, outputs);
+  }
+}
+#endif  // MXNET_USE_ONEDNN
+
 /*! \brief Map legacy unary_bwd to backward_grad */
 template <typename GRAD_OP>
 using unary_bwd = ::mxnet::op::mxnet_op::backward_grad_tuned<GRAD_OP>;
@@ -551,7 +622,7 @@ void HardSigmoidForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data         = outputs[0];
   const HardSigmoidParam& param = nnvm::get<HardSigmoidParam>(attrs.parsed);
   using namespace mxnet_op;
-  MSHADOW_REAL_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(out_data.type_flag_, DType, _, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<hard_sigmoid_forward<req_type>, xpu>::Launch(s,
                                                           out_data.Size(),
@@ -579,7 +650,7 @@ void HardSigmoidBackward(const nnvm::NodeAttrs& attrs,
   const TBlob& in_grad          = outputs[0];
   const HardSigmoidParam& param = nnvm::get<HardSigmoidParam>(attrs.parsed);
   using namespace mxnet_op;
-  MSHADOW_REAL_TYPE_SWITCH(in_data.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(in_data.type_flag_, DType, _, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<hard_sigmoid_backward<req_type>, xpu>::Launch(s,
                                                            in_grad.Size(),
@@ -792,7 +863,7 @@ void NumpyNanToNumOpForward(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  MSHADOW_REAL_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(out_data.type_flag_, DType, _, {
     DType defaultnan = static_cast<DType>(param.nan);
     DType posinf;
     DType neginf;

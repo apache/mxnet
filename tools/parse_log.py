@@ -66,10 +66,10 @@ if args.format == 'markdown':
     print("| epoch | " + " | ".join(['train-'+s for s in args.metric_names]) + " | " + " | ".join(['val-'+s for s in args.metric_names]) + " | time |")
     print("| --- "*(len(res)+1) + "|")
     for k, v in data.items():
-        print("| %2d | " % (k+1)\
-              + " | ".join(["%f" % (v[2*j]/v[2*j+1]) for j in range(2*len(args.metric_names))])\
-              + " | %.1f |" % (v[-2]/v[-1]))
+        print(f"| {k+1:2d} | "\
+              + " | ".join([f"{(v[2*j]/v[2*j+1])}" for j in range(2*len(args.metric_names))])\
+              + f" | {v[-2]/v[-1]:.1f} |")
 elif args.format == 'none':
     print("\t".join(['epoch'] + ['train-' + s for s in args.metric_names] + ['val-' + s for s in args.metric_names] + ['time']))
     for k, v in data.items():
-        print("\t".join(["%2d" % (k+1)] + ["%f" % (v[2*j]/v[2*j+1]) for j in range(2*len(args.metric_names))] + ["%.1f" % (v[-2]/v[-1])]))
+        print("\t".join([f"{k+1:2d}"] + [f"{v[2*j]/v[2*j+1]}" for j in range(2*len(args.metric_names))] + [f"{v[-2]/v[-1]:.1f}"]))

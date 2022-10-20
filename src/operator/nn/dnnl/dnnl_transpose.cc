@@ -25,22 +25,11 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "../../tensor/matrix_op-inl.h"
-
-#include "./dnnl_transpose-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "dnnl_transpose-inl.h"
 
 namespace mxnet {
 namespace op {
-
-bool SupportDNNLTranspose(const NDArray& data) {
-  auto data_ndim = data.shape().ndim();
-
-  if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0 ||
-      !(data.dtype() == mshadow::kFloat32 || data.dtype() == mshadow::kBfloat16))
-    return false;
-
-  return true;
-}
 
 typedef ParamOpSign<NumpyTransposeParam> DNNLTransposeSignature;
 
@@ -72,7 +61,7 @@ DNNLTransposeFwd::DNNLTransposeFwd(const NumpyTransposeParam& param, const NDArr
   }
 
   dnnl_memory_desc_t dst_fmt;
-  dnnl_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, dnnl_f32, strides);
+  dnnl_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, get_dnnl_type_t(data.dtype()), strides);
 
   dst_md_ = std::make_shared<dnnl::memory::desc>(dst_fmt);
   out_    = std::make_shared<dnnl::memory>(*dst_md_, engine, nullptr);

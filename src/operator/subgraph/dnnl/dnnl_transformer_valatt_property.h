@@ -19,28 +19,29 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_VALATT_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_TRANSFORMER_VALATT_PROPERTY_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <map>
 #include <string>
 #include <vector>
 
-#include "../../contrib/transformer-inl.h"
-#include "../../numpy/np_matrix_op-inl.h"
-#include "../../swapaxis-inl.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../common.h"
+#include "operator/contrib/transformer-inl.h"
+#include "operator/numpy/np_matrix_op-inl.h"
+#include "operator/swapaxis-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/subgraph/common.h"
 #include "dnnl_common.h"
 #include "dnnl_subgraph_base-inl.h"
 #include "dnnl_transformer-inl.h"
 
 /*
-                 custom_op
-   _________________|_________
-  |               Split      |
-  |                 |        |
-  |             _npx_reshape |
-  |                 |        |
+            custom_op
+   _____________|_____________
+  |           Split          |
+  |          /      |        |
+  | custom_op   _npx_reshape |
+  |    ...          |        |
   | custom_op    SwapAxis    |
   |      \        /          |
   |       batch_dot          |

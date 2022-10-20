@@ -362,7 +362,7 @@ def train_gluon():
 
         # Save model
         if args.save_frequency and (epoch + 1) % args.save_frequency == 0:
-            net.export('%s-%d' % (args.model, rank), epoch=epoch)
+            net.export(f'{args.model}-{rank}', epoch=epoch)
 
     # Evaluate performance at the end of training
     evaluate(epoch)

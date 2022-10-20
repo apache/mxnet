@@ -67,6 +67,11 @@ struct PoissonParam {
   float lam;
 };
 
+struct BinomialParam {
+  int n;
+  float p;
+};
+
 struct NegBinomialParam {
   int k;
   float p;
@@ -97,6 +102,7 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam>,
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
         .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -117,6 +123,7 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam>, NormalPara
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
         .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -139,6 +146,7 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam>, GammaParam, 
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
         .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -161,6 +169,7 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam>,
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
         .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -183,6 +192,30 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam>,
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
+        .set_default(-1)
+        .describe(
+            "DType of the output in case this can't be inferred. "
+            "Defaults to float32 if not defined (dtype=None).");
+  }
+};
+
+struct SampleBinomialParam : public dmlc::Parameter<SampleBinomialParam>,
+                             BinomialParam,
+                             SampleOpParam {
+  DMLC_DECLARE_PARAMETER(SampleBinomialParam) {
+    DMLC_DECLARE_FIELD(n).set_default(1).describe("number of experiments.");
+    DMLC_DECLARE_FIELD(p).set_default(1.0f).describe("success probability in each experiment.");
+    DMLC_DECLARE_FIELD(shape).set_default(mxnet::TShape()).describe("Shape of the output.");
+    DMLC_DECLARE_FIELD(ctx).set_default("").describe(
+        "Context of output, in format [cpu|gpu|cpu_pinned](n)."
+        " Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+        .add_enum("None", -1)
+        .add_enum("float32", mshadow::kFloat32)
+        .add_enum("float64", mshadow::kFloat64)
+        .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
         .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -205,6 +238,7 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam>,
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
         .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -229,6 +263,7 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bfloat16", mshadow::kBfloat16)
         .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -306,6 +341,13 @@ struct SamplePoissonLikeParam : public dmlc::Parameter<SamplePoissonLikeParam>, 
   }
 };
 
+struct SampleBinomialLikeParam : public dmlc::Parameter<SampleBinomialLikeParam>, BinomialParam {
+  DMLC_DECLARE_PARAMETER(SampleBinomialLikeParam) {
+    DMLC_DECLARE_FIELD(n).set_default(1).describe("Number of experiments.");
+    DMLC_DECLARE_FIELD(p).set_default(1.0f).describe("success probability in each experiment.");
+  }
+};
+
 struct SampleNegBinomialLikeParam : public dmlc::Parameter<SampleNegBinomialLikeParam>,
                                     NegBinomialParam {
   DMLC_DECLARE_PARAMETER(SampleNegBinomialLikeParam) {
@@ -362,7 +404,7 @@ static inline void uniform_op(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, float> low, high;
   GetSamplingTempData<xpu, float>(param.low, param.high, ctx, &low, &high);
   UniformSampler<xpu> sampler;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
     RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
     Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
     sampler.Sample(low, high, out, pgen, s);
@@ -380,7 +422,7 @@ static inline void normal_op(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, float> loc, scale;
   GetSamplingTempData<xpu, float>(param.loc, param.scale, ctx, &loc, &scale);
   NormalSampler<xpu> sampler;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
     RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
     Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
     sampler.Sample(loc, scale, out, pgen, s);
@@ -399,7 +441,7 @@ static inline void gamma_op(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, float> alpha, beta;
   GetSamplingTempData<xpu, float>(param.alpha, param.beta, ctx, &alpha, &beta);
   GammaSampler<xpu> sampler;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
     RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
     Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
     sampler.Sample(alpha, beta, out, pgen, s);
@@ -417,7 +459,7 @@ static inline void exponential_op(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, float> lam, dummy;
   GetSamplingTempData<xpu, float>(param.lam, 0, ctx, &lam, &dummy);
   ExponentialSampler<xpu> sampler;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
     RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
     Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
     sampler.Sample(lam, out, pgen, s);
@@ -435,10 +477,29 @@ static inline void poisson_op(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, float> lam, dummy;
   GetSamplingTempData<xpu, float>(param.lam, 0, ctx, &lam, &dummy);
   PoissonSampler<xpu> sampler;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
     RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
     Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
     sampler.Sample(lam, out, pgen, s);
+  });
+}
+
+template <typename xpu, typename ParamType>
+static inline void binomial_op(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const OpReqType& req,
+                               TBlob* outputs) {
+  Stream<xpu>* s             = ctx.get_stream<xpu>();
+  const BinomialParam& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_GE(param.n, 0) << "n parameter in binomial distribution has to be non-negative";
+  CHECK_GE(param.p, 0) << "p parameter in binomial distribution has to be non-negative";
+  Tensor<xpu, 1, float> n, p;
+  GetSamplingTempData<xpu, float>(param.n, param.p, ctx, &n, &p);
+  BinomialSampler<xpu> sampler;
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
+    RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
+    Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
+    sampler.Sample(n, p, out, pgen, s);
   });
 }
 
@@ -454,7 +515,7 @@ static inline void neg_binomial_op(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, float> k, p;
   GetSamplingTempData<xpu, float>(param.k, param.p, ctx, &k, &p);
   NegativeBinomialSampler<xpu> sampler;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
     RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
     Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
     sampler.Sample(k, p, out, pgen, s);
@@ -475,7 +536,7 @@ static inline void gen_neg_binomial_op(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, float> mu, alpha;
   GetSamplingTempData<xpu, float>(param.mu, param.alpha, ctx, &mu, &alpha);
   GeneralizedNegativeBinomialSampler<xpu> sampler;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(outputs[0].type_flag_, OType, _, {
     RandGenerator<xpu, OType>* pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
     Tensor<xpu, 1, OType> out       = outputs->FlatTo1D<xpu, OType>(s);
     sampler.Sample(mu, alpha, out, pgen, s);
@@ -604,6 +665,26 @@ struct SampleMaster<xpu, SamplePoissonLikeParam> {
 };
 
 template <typename xpu>
+struct SampleMaster<xpu, SampleBinomialParam> {
+  static inline void op(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const OpReqType& req,
+                        TBlob* outputs) {
+    binomial_op<xpu, SampleBinomialParam>(attrs, ctx, req, outputs);
+  }
+};
+
+template <typename xpu>
+struct SampleMaster<xpu, SampleBinomialLikeParam> {
+  static inline void op(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const OpReqType& req,
+                        TBlob* outputs) {
+    binomial_op<xpu, SampleBinomialLikeParam>(attrs, ctx, req, outputs);
+  }
+};
+
+template <typename xpu>
 struct SampleMaster<xpu, SampleNegBinomialParam> {
   static inline void op(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
@@ -726,11 +807,11 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
       dtype = mxnet::common::GetDefaultDtype();
     }
   }
-  bool dtype_ok =
-      (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) || (dtype == mshadow::kFloat64);
-  CHECK(dtype_ok) << "Output type must be float16, float32, float64: dtype is " << dtype_out
-                  << " vs " << mshadow::kFloat16 << " or " << mshadow::kFloat32 << " or "
-                  << mshadow::kFloat64;
+  bool dtype_ok = dtype == mshadow::kBfloat16 || dtype == mshadow::kFloat16 ||
+                  dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64;
+  CHECK(dtype_ok) << "Output type must be bfloat16, float16, float32, float64: dtype is "
+                  << dtype_out << " vs " << mshadow::kBfloat16 << " or " << mshadow::kFloat16
+                  << " or " << mshadow::kFloat32 << " or " << mshadow::kFloat64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;
 }

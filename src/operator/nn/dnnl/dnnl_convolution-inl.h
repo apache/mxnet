@@ -30,9 +30,8 @@
 #include <utility>
 #include <vector>
 
-#include "../convolution-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "operator/nn/convolution-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -47,6 +46,7 @@ struct DNNLConvParam : public dmlc::Parameter<DNNLConvParam> {
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  dmlc::optional<int> enabled_float_output;
 
   DMLC_DECLARE_PARAMETER(DNNLConvParam) {
     DMLC_DECLARE_FIELD(with_bn).set_default(false).describe("Add post batchnorm.");
@@ -69,6 +69,7 @@ struct DNNLConvParam : public dmlc::Parameter<DNNLConvParam> {
             "The maximum scalar value in the form of float32 obtained "
             "through calibration. If present, it will be used to by "
             "quantized convolution op to calculate primitive scale");
+    DNNL_DECLARE_ENABLED_FLOAT_OUTPUT_PARAMETER();
   }
 };
 
@@ -163,6 +164,18 @@ class DNNLConvBackward {
   std::shared_ptr<dnnl::convolution_backward_data> bwd_data_;
   std::shared_ptr<dnnl::convolution_backward_weights> bwd_weight_;
 };
+
+void DNNLConvolutionForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& in_data,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& out_data);
+
+void DNNLConvolutionBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<NDArray>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

@@ -28,11 +28,17 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_eigvals).set_attr<FCompute>("FCompute<gpu>", EigvalsOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_eigvals)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", EigvalsOpForward<gpu>);
 
 #if MXNET_USE_CUSOLVER == 1
 
-NNVM_REGISTER_OP(_npi_eigvalsh).set_attr<FCompute>("FCompute<gpu>", EigvalshOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_eigvalsh)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool) { return false; })
+    .set_attr<FCompute>("FCompute<gpu>", EigvalshOpForward<gpu>);
 
 #endif
 

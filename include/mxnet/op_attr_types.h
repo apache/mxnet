@@ -58,7 +58,7 @@ enum OpReqType {
 };
 
 /*!
- * \brief All the possible information needed by Operator.Forward and Backward
+ * \brief All the possible information needed by Operator.
  *  This is the superset of RunContext.
  *  We use this data structure to bookkeep everything needed by Forward and Backward.
  * \sa Resource
@@ -345,6 +345,19 @@ using FAvoidQuantizeInput = std::function<
 
 /*!
  * \brief Register a function to determine if the input of a quantized operator
+ * needs to be quantized asymmetrically.
+ */
+using FNeedAsymQuantizeInput = std::function<bool(const NodeAttrs& attrs, const size_t index)>;
+
+/*!
+ * \brief Register a function to determine if the output of a quantized operator
+ * needs to be dequantized. This is usually used for the quantized operators
+ * which can produce fp32 outputs directly.
+ */
+using FAvoidDequantizeOutput = std::function<bool(const NodeAttrs& attrs, const size_t index)>;
+
+/*!
+ * \brief Register a function to determine if the input of a quantized operator
  * needs to be calibrated. This is usually used for the quantized operators
  * which need calibration on its input.
  */
@@ -356,6 +369,19 @@ using FNeedCalibrateInput = std::function<std::vector<int>(const NodeAttrs& attr
  * which need calibration on its output.
  */
 using FNeedCalibrateOutput = std::function<std::vector<int>(const NodeAttrs& attrs)>;
+
+#if MXNET_USE_CUDA
+
+/*!
+ * \brief Register a function to determine if
+ * the operator implementation is compatible
+ * with CUDA graphs. This requires the execution
+ * to stay the same as long as the shape and type
+ * of input stays the same.
+ */
+using FIsCUDAGraphsCompatible = std::function<bool(const NodeAttrs& attrs, const bool is_train)>;
+
+#endif
 
 }  // namespace mxnet
 

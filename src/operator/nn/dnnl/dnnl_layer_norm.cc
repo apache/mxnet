@@ -24,11 +24,12 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "./dnnl_layer_norm-inl.h"
+#include "dnnl_layer_norm-inl.h"
 
 namespace mxnet {
 namespace op {
 
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_layer_normalization.html
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs) {
   const mxnet::TShape& shape = inputs[layernorm::kData].shape();
 
@@ -40,13 +41,10 @@ bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray
     return shape.Size() / shape[0] >= shapeLimit && shape[0] >= shapeLimit;
   };
 
-  return (ShapeBetterForDNNL(shape) &&
-          (GetRealAxis(param.axis, shape.ndim()) == shape.ndim() - 1) && (shape.ndim() >= 2) &&
-          (shape.ndim() <= 5) &&
-          (inputs[layernorm::kData].dtype() == mshadow::kFloat32 ||
-           inputs[layernorm::kData].dtype() == mshadow::kBfloat16) &&
-          inputs[layernorm::kGamma].dtype() == mshadow::kFloat32 &&
-          inputs[layernorm::kBeta].dtype() == mshadow::kFloat32);
+  return (ShapeBetterForDNNL(shape) && GetRealAxis(param.axis, shape.ndim()) == shape.ndim() - 1) &&
+         SupportDNNL<2, 5, DNNLTypeMode::FloatTypes>(inputs[layernorm::kData]) &&
+         inputs[layernorm::kGamma].dtype() == mshadow::kFloat32 &&
+         inputs[layernorm::kBeta].dtype() == mshadow::kFloat32;
 }
 
 void DNNLLayerNormForward(const nnvm::NodeAttrs& attrs,
@@ -134,10 +132,11 @@ void DNNLLayerNormFwd::Execute(const LayerNormParam& param,
                                const std::vector<NDArray>& outputs) const {
   auto mean_var_md = GetMeanVarDesc(get_dnnl_type(outputs[layernorm::kMean].dtype()),
                                     outputs[layernorm::kMean].shape());
-  auto mean_mem    = dnnl_output_t(
-      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(mean_var_md));
+  auto mean_mem =
+      dnnl_output_t(OutDataOp::Noop,
+                    const_cast<NDArray&>(outputs[layernorm::kMean]).CreateDNNLData(&mean_var_md));
   auto variance_mem = dnnl_output_t(
-      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kStd]).CreateDNNLData(mean_var_md));
+      OutDataOp::Noop, const_cast<NDArray&>(outputs[layernorm::kStd]).CreateDNNLData(&mean_var_md));
 
   auto output_mem      = CreateDNNLMem(outputs[layernorm::kOut], fwd_pd->dst_desc(), req);
   auto scale_shift_mem = GetScaleShiftMem(inputs[layernorm::kGamma], inputs[layernorm::kBeta]);
@@ -183,7 +182,8 @@ void DNNLLayerNormBwd::Execute(const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req) const {
   auto scale_shift_mem =
       GetScaleShiftMem(inputs[layernorm::kBwdGamma], inputs[layernorm::kBwdBeta]);
-  auto diff_weights_ndarray = NDArray(scale_shift_mem.get_desc());
+  auto scale_shift_mem_desc = scale_shift_mem.get_desc();
+  auto diff_weights_ndarray = NDArray(&scale_shift_mem_desc);
   const auto bytes          = inputs[layernorm::kBwdGamma].shape()[0] *
                      mshadow::mshadow_sizeof(inputs[layernorm::kBwdGamma].dtype());
   const auto diff_weights_ndaray_data_ptr_plus_bytes = reinterpret_cast<void*>(

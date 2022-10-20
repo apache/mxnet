@@ -971,194 +971,59 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
-// helper function to add mapping of node_name -> dtype map
-// for the given indexed graph and inferred_dtypes
-static void _SetInputDTypes(const nnvm::IndexedGraph& idx,
-                            const nnvm::DTypeVector& inferred_dtypes,
-                            std::unordered_map<std::string, int>* node_name_dtype_map,
-                            std::unordered_map<std::string, int>* node_without_dtype_map) {
-  const std::string dtype_keyword = "__dtype__";
-  for (uint32_t nid : idx.input_nodes()) {
-    const auto& node            = idx[nid].source;
-    const auto& node_with_dtype = node->attrs.dict.find(dtype_keyword);
-    // input nodes classified into nodes_with_dtype, nodes_without_dtype
-    // This classification required because if param_names not provided
-    // we want to update dtypes of only those nodes which have dtypes set
-    // inferred_dtypes are obtained for the nodes, if unknown
-    // dtype is set to fp32
-    if (node_with_dtype != node->attrs.dict.end()) {
-      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-        (*node_name_dtype_map)[node->attrs.name] = 0;
-      } else {
-        (*node_name_dtype_map)[node->attrs.name] = inferred_dtypes[idx.entry_id(nid, 0)];
-      }
-    } else {
-      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-        (*node_without_dtype_map)[node->attrs.name] = 0;
-      } else {
-        (*node_without_dtype_map)[node->attrs.name] = inferred_dtypes[idx.entry_id(nid, 0)];
-      }
-    }
-  }
-}
-
-// helper function update the node dtype attrs for a vector of nodeptrs
-// given the node name to dtype information and the names of model_params
-// if model_params is provided the function will dtype of only model params.
-// if model_params is empty, the function will dtype of all nodes which had
-// a prior dtype set.
-// args is a const_reference vector of ObjectPtrs. ObjectPtrs are immutable but
-// the Nodes they are pointing will be mutated in this function
-static void _UpdateSymDTypeAttrs(const std::unordered_map<std::string, int>& node_name_dtype_map,
-                                 const std::unordered_map<std::string, int>& node_without_dtype_map,
-                                 const std::unordered_set<std::string>& model_params,
-                                 const std::vector<nnvm::ObjectPtr>& args) {
-  const std::string dtype_keyword = "__dtype__";
-
-  // Update args to have the right dtype attrs
-  if (model_params.size() > 0) {
-    // if model params provided, set dtype only for model params
-    for (const auto& arg : args) {
-      const std::string& node_name = arg->attrs.name;
-      auto it_model_params         = model_params.find(node_name);
-      auto it_with_dtype           = node_name_dtype_map.find(node_name);
-      auto it_without_dtype        = node_without_dtype_map.find(node_name);
-      if (it_model_params != model_params.end()) {
-        // need to update __dtype__ attribute if already set, else set it
-        if (it_with_dtype != node_name_dtype_map.end()) {
-          arg->attrs.dict[dtype_keyword] = std::to_string(it_with_dtype->second);
-        } else {
-          CHECK(it_without_dtype != node_without_dtype_map.end())
-              << "make sure all nodes without dtype have properly been added "
-                 "in node_without_dtype_map";
-          arg->attrs.dict[dtype_keyword] = std::to_string(it_without_dtype->second);
-        }
-      }
-    }
-  } else {
-    // if model params not provided, update __dtype__ for all inputs,
-    // which already had it set, don't touch the rest
-    for (const auto& arg : args) {
-      auto it = node_name_dtype_map.find(arg->attrs.name);
-      if (it != node_name_dtype_map.end()) {
-        if (arg->attrs.dict.find(dtype_keyword) != arg->attrs.dict.end()) {
-          arg->attrs.dict[dtype_keyword] = std::to_string(it->second);
-        }
-      }
-    }
-  }
-}
-
 int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             SymbolHandle* ret_sym_handle,
-                            uint32_t num_args,
-                            const int* arg_type_data,
-                            uint32_t num_ind_ptr,
-                            const int* ind_ptr,
-                            const int* target_dtype,
-                            const int cast_optional_params,
-                            const uint32_t num_target_dtype_op_names,
-                            const uint32_t num_fp32_op_names,
-                            const uint32_t num_widest_dtype_op_names,
-                            const uint32_t num_conditional_fp32_op_names,
-                            const uint32_t num_excluded_symbols,
-                            const uint32_t num_model_params,
-                            const char** target_dtype_op_names,
-                            const char** fp32_op_names,
-                            const char** widest_dtype_op_names,
-                            const char** conditional_fp32_op_names,
-                            const char** excluded_symbols,
-                            const char** param_names,
-                            const char** param_vals,
-                            const char** model_param_names,
-                            const char** arg_names) {
+                            const int target_dtype,
+                            const int cast_params_offline,
+                            const char* const offline_param_cast_attr_p,
+                            const uint32_t num_inputs,
+                            const char** const input_names_p,
+                            const uint32_t num_all_args,
+                            const char** const all_arg_names_p,
+                            const int* all_arg_types_p,
+                            const uint32_t num_target_dtype_ops,
+                            const char** const target_dtype_ops_p,
+                            const uint32_t num_fp32_ops,
+                            const char** const fp32_ops_p,
+                            const uint32_t num_widest_dtype_ops,
+                            const char** const widest_dtype_ops_p) {
   nnvm::Symbol* result_sym = new nnvm::Symbol();
   API_BEGIN();
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
-  nnvm::Graph g     = Symbol2Graph(*sym);
-  std::unordered_set<std::string> target_dtype_ops;
-  std::unordered_set<std::string> fp32_ops;
-  std::unordered_set<std::string> widest_dtype_ops;
-  std::unordered_set<std::string> excluded_syms;
-  std::unordered_set<std::string> model_params;
+  nnvm::Symbol* sym                   = static_cast<nnvm::Symbol*>(sym_handle);
+  nnvm::Graph g                       = Symbol2Graph(*sym);
+  std::string offline_param_cast_attr = offline_param_cast_attr_p;
+  CHECK_EQ(num_all_args, g.indexed_graph().input_nodes().size());
 
-  // conditional_fp32_ops contains the mapping of op_name -> (map of param_name -> param_values)
-  // which need to be conditionally selected to be casted to FP32
-  std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>>
-      conditional_fp32_ops;
-  int target_dt = *target_dtype;
+  std::unordered_set<std::string> input_names(input_names_p, input_names_p + num_inputs);
+  std::unordered_set<std::string> target_dtype_ops(target_dtype_ops_p,
+                                                   target_dtype_ops_p + num_target_dtype_ops);
+  std::unordered_set<std::string> fp32_ops(fp32_ops_p, fp32_ops_p + num_fp32_ops);
+  std::unordered_set<std::string> widest_dtype_ops(widest_dtype_ops_p,
+                                                   widest_dtype_ops_p + num_widest_dtype_ops);
 
-  for (size_t i = 0; i < num_target_dtype_op_names; ++i) {
-    target_dtype_ops.emplace(target_dtype_op_names[i]);
+  nnvm::DTypeVector arg_types(num_all_args);
+  std::unordered_map<std::string, int> node_name_to_type_map;
+  for (int i = 0; i < num_all_args; ++i) {
+    node_name_to_type_map[all_arg_names_p[i]] = all_arg_types_p[i];
   }
-  for (size_t i = 0; i < num_fp32_op_names; ++i) {
-    fp32_ops.emplace(fp32_op_names[i]);
-  }
-  for (size_t i = 0; i < num_widest_dtype_op_names; ++i) {
-    widest_dtype_ops.emplace(widest_dtype_op_names[i]);
-  }
-  for (size_t i = 0; i < num_excluded_symbols; ++i) {
-    excluded_syms.emplace(excluded_symbols[i]);
-  }
-  for (size_t i = 0; i < num_model_params; ++i) {
-    model_params.emplace(model_param_names[i]);
-  }
-
-  for (size_t i = 0; i < num_ind_ptr - 1; ++i) {
-    for (int j = ind_ptr[i]; j < ind_ptr[i + 1]; ++j) {
-      conditional_fp32_ops[conditional_fp32_op_names[i]][param_names[i]].emplace_back(
-          std::string(param_vals[j]));
-    }
-  }
-
-  std::unordered_map<std::string, int> kwargs;
-  std::unordered_map<std::string, int> node_name_dtype_map, node_without_dtype_map;
-  nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
-  for (uint32_t i = 0; i < num_args; ++i) {
-    kwargs[arg_names[i]]              = arg_type_data[i];
-    node_name_dtype_map[arg_names[i]] = arg_type_data[i];
-  }
-  mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
-
-  g.attrs["target_dtype_ops"]     = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
-  g.attrs["fp32_ops"]             = std::make_shared<nnvm::any>(std::move(fp32_ops));
-  g.attrs["widest_dtype_ops"]     = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
-  g.attrs["conditional_fp32_ops"] = std::make_shared<nnvm::any>(std::move(conditional_fp32_ops));
-  g.attrs["excluded_syms"]        = std::make_shared<nnvm::any>(std::move(excluded_syms));
-  g.attrs["target_dtype"]         = std::make_shared<nnvm::any>(target_dt);
-  g.attrs["data_name_types"]      = std::make_shared<nnvm::any>(kwargs);
-  g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
-
-  g = ApplyPass(std::move(g), "ReducePrecision");
-  // Need to run type inference since it is possible that inferred
-  // type of some inputs has changed
+  mxnet::MatchArguments(g.indexed_graph(), node_name_to_type_map, &arg_types, "InferType");
   g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");
-  const nnvm::DTypeVector& inferred_dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
 
-  g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(inferred_dtypes);
-  g.attrs["target_dtype"]    = std::make_shared<nnvm::any>(target_dt);
-
-  if (cast_optional_params) {
-    g = ApplyPass(std::move(g), "AMPInferUnknown");
-    const nnvm::DTypeVector& inferred_dtype_result =
-        g.GetAttr<nnvm::DTypeVector>("inferred_dtype_result");
-    const nnvm::IndexedGraph& idx = g.indexed_graph();
-    // set node name -> input dtype mapping using infer dtype
-    _SetInputDTypes(idx, inferred_dtype_result, &node_name_dtype_map, &node_without_dtype_map);
-  } else {
-    const nnvm::IndexedGraph& idx = g.indexed_graph();
-    // set node name -> input dtype mapping using infer dtype
-    _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
-  }
+  // InferType sets the "dtype" attribute with all infered types
+  g.attrs["target_dtype"]        = std::make_shared<nnvm::any>(target_dtype);
+  g.attrs["cast_params_offline"] = std::make_shared<nnvm::any>(cast_params_offline);
+  g.attrs["offline_param_cast_attr"] =
+      std::make_shared<nnvm::any>(std::move(offline_param_cast_attr));
+  g.attrs["input_names"]      = std::make_shared<nnvm::any>(std::move(input_names));
+  g.attrs["target_dtype_ops"] = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
+  g.attrs["fp32_ops"]         = std::make_shared<nnvm::any>(std::move(fp32_ops));
+  g.attrs["widest_dtype_ops"] = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
+  g                           = ApplyPass(std::move(g), "ReducePrecision");
 
   result_sym->outputs                      = g.outputs;
   *ret_sym_handle                          = result_sym;
   nnvm::Symbol* ret_sym                    = static_cast<nnvm::Symbol*>(*ret_sym_handle);
   const std::vector<nnvm::ObjectPtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
-
-  // update symbol dtype attrs using the node name -> dtype mapping, if dtype is already set
-  // in the symbol, else set dtype for the model_params
-  _UpdateSymDTypeAttrs(node_name_dtype_map, node_without_dtype_map, model_params, args);
 
   API_END_HANDLE_ERROR(delete result_sym);
 }
@@ -1205,6 +1070,7 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle,
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+    g                            = ApplyPass(std::move(g), "EliminateCommonNodesPass");
     g                            = ApplyPass(std::move(g), "BuildSubgraph");
     property->RemoveAttr("graph");
     g.attrs.erase("subgraph_property");
@@ -1286,7 +1152,12 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   NDArray** in_aux_ptr    = reinterpret_cast<NDArray**>(in_aux_handle);
 
   auto init_graph = [&](auto s) {
-    nnvm::Graph g                        = Symbol2Graph(*s);
+    nnvm::Graph g = Symbol2Graph(*s);
+
+    // EliminateCommonNodesPass must be performed before first call to the indexed graph,
+    // because otherwise changing graph via other passes will result in an error, due to the fact
+    // that once indexed_graph is created, it cannot be changed.
+    g                                    = ApplyPass(std::move(g), "EliminateCommonNodesPass");
     const auto& indexed_graph            = g.indexed_graph();
     const auto& mutable_nodes            = indexed_graph.mutable_input_nodes();
     std::vector<std::string> input_names = s->ListInputNames(nnvm::Symbol::kAll);
@@ -1402,6 +1273,14 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
         mxnet::op::SubgraphBackendRegistry ::Get()->GetSubgraphBackend(backend_name);
     const auto& subgraph_prop_list = backend->GetSubgraphProperties();
     for (auto property : subgraph_prop_list) {
+      if (property->HasAttr("disable") && property->GetAttr<bool>("disable") == true) {
+        auto full_name = property->HasAttr("property_name") ?
+                             property->GetAttr<std::string>("property_name") :
+                             std::string();
+        LOG(INFO) << "subgraph property " << full_name << " from backend " << backend_name
+                  << " is disabled.";
+        continue;
+      }
       nnvm::Graph g = init_graph(s);
       property->PrePartition(g, options_map);
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);

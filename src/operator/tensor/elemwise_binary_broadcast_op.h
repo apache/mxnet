@@ -38,11 +38,9 @@
 
 namespace mxnet {
 namespace op {
-inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
-                                 mxnet::ShapeVector* in_attrs,
-                                 mxnet::ShapeVector* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
+static inline bool BinaryBroadcastShapeCommon(const nnvm::NodeAttrs& attrs,
+                                              mxnet::ShapeVector* in_attrs,
+                                              mxnet::ShapeVector* out_attrs) {
   mxnet::TShape& lhs = (*in_attrs)[0];
   mxnet::TShape& rhs = (*in_attrs)[1];
 
@@ -79,6 +77,14 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(lhs) && shape_is_known(rhs) && shape_is_known(out);
 }
 
+inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
+                                 mxnet::ShapeVector* in_attrs,
+                                 mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return BinaryBroadcastShapeCommon(attrs, in_attrs, out_attrs);
+}
+
 inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
                                           const int dev_mask,
                                           DispatchMode* dispatch_mode,
@@ -91,8 +97,14 @@ inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype      = out_attrs->at(0);
   bool dispatched     = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+#if MXNET_USE_ONEDNN == 1
+    if (dev_mask == mshadow::cpu::kDevMask && DNNLEnvSet())
+      dispatched = storage_type_assign(
+          &out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
+#else
     dispatched =
         storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+#endif  // MXNET_USE_ONEDNN == 1
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) {
     dispatched =
@@ -116,8 +128,14 @@ inline bool BinaryBroadcastAddStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype      = out_attrs->at(0);
   bool dispatched     = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+#if MXNET_USE_ONEDNN == 1
+    if (dev_mask == mshadow::cpu::kDevMask && DNNLEnvSet())
+      dispatched = storage_type_assign(
+          &out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFComputeEx);
+#else
     dispatched =
         storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+#endif  // MXNET_USE_ONEDNN == 1
   }
   if (!dispatched && ((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
                       (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage))) {
@@ -787,6 +805,15 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     });
   }
 }
+
+#if MXNET_USE_ONEDNN == 1
+template <dnnl::algorithm alg>
+void DNNLBinaryOpForward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs);
+#endif  // MXNET_USE_ONEDNN == 1
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                                            \
   NNVM_REGISTER_OP(name)                                                                          \

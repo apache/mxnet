@@ -48,12 +48,12 @@ class EnumType:
             for i in range(0, len(self.enumValues)):
                 self.enumValues[i] = self.enumValues[i].strip().strip("'")
         else:
-            logging.warn("trying to parse none-enum type as enum: %s" % typeString)
+            logging.warn(f"trying to parse none-enum type as enum: {typeString}")
     def GetDefinitionString(self, indent = 0):
         indentStr = ' ' * indent
-        ret = indentStr + 'enum class %s {\n' % self.name
+        ret = indentStr + 'enum class {} {{\n'.format(self.name)
         for i in range(0, len(self.enumValues)):
-            ret = ret + indentStr + '  %s = %d' % (gen_enum_value(self.enumValues[i]), i)
+            ret = ret + indentStr + f'  {gen_enum_value(self.enumValues[i])} = {i}'
             if (i != len(self.enumValues) -1):
                 ret = ret + ","
             ret = ret + "\n"
@@ -63,16 +63,16 @@ class EnumType:
         return self.name + "::" + gen_enum_value(value)
     def GetEnumStringArray(self, indent = 0):
         indentStr = ' ' * indent
-        ret = indentStr + 'static const char *%sValues[] = {\n' % self.name
+        ret = indentStr + 'static const char *{}Values[] = {{\n'.format(self.name)
         for i in range(0, len(self.enumValues)):
-            ret = ret + indentStr + '  "%s"' % self.enumValues[i]
+            ret = ret + indentStr + f'  "{self.enumValues[i]}"'
             if (i != len(self.enumValues) -1):
                 ret = ret + ","
             ret = ret + "\n"
         ret = ret + indentStr + "};\n"
         return ret
     def GetConvertEnumVariableToString(self, variable=''):
-        return "%sValues[int(%s)]" % (self.name, variable)
+        return f"{self.name}Values[int({variable})]"
 
 
 class Arg:
@@ -120,7 +120,7 @@ class Arg:
             try:
                 self.type = self.typeDict[typeString.split(',')[0]]
             except:
-                print('argument "%s" of operator "%s" has unknown type "%s"' % (argName, opName, typeString))
+                print(f'argument "{argName}" of operator "{opName}" has unknown type "{typeString}"')
                 pass
         if typeString.find('default=') != -1:
             self.hasDefault = True
@@ -244,7 +244,7 @@ class Op:
         ret = ret + " * \\return new symbol\n"
         ret = ret + " */\n"
         # create function header
-        declFirstLine = indentStr + 'inline Symbol %s(' % self.name
+        declFirstLine = indentStr + f'inline Symbol {self.name}('
         ret = ret + declFirstLine
         argIndentStr = ' ' * len(declFirstLine)
         arg_start = 0 if use_name else 1
@@ -260,7 +260,7 @@ class Op:
             if arg.isEnum:
                 ret = ret + arg.enum.GetEnumStringArray(indent + 2)
         # now generate code
-        ret = ret + indentStr + '  return Operator(\"%s\")\n' % self.name
+        ret = ret + indentStr + f'  return Operator(\"{self.name}\")\n'
         for arg in self.args:   # set params
             if arg.type == 'Symbol' or \
                 arg.type == 'const std::string&' or \
@@ -270,7 +270,7 @@ class Op:
             if arg.isEnum:
                 v = arg.enum.GetConvertEnumVariableToString(v)
             ret = ret + indentStr + ' ' * 11 + \
-                '.SetParam(\"%s\", %s)\n' % (arg.name, v)
+                f'.SetParam(\"{arg.name}\", {v})\n'
         #ret = ret[:-1]  # get rid of the last \n
         symbols = ''
         inputAlreadySet = False
@@ -282,15 +282,15 @@ class Op:
             #    symbols = symbols + ', '
             #symbols = symbols + arg.name
             ret = ret + indentStr + ' ' * 11 + \
-                '.SetInput(\"%s\", %s)\n' % (arg.name, arg.name)
+                f'.SetInput(\"{arg.name}\", {arg.name})\n'
         for arg in self.args:   # set input arrays vector<Symbol>
             if arg.type != 'const std::vector<Symbol>&':
                 continue
             if (inputAlreadySet):
-                logging.error("op %s has both Symbol[] and Symbol inputs!" % self.name)
+                logging.error(f"op {self.name} has both Symbol[] and Symbol inputs!")
             inputAlreadySet = True
             symbols = arg.name
-            ret = ret + '(%s)\n' % symbols
+            ret = ret + f'({symbols})\n'
         ret = ret + indentStr + ' ' * 11
         if use_name:
             ret = ret + '.CreateSymbol(symbol_name);\n'
@@ -300,7 +300,7 @@ class Op:
         return ret
 
     def GetArgString(self, arg):
-        ret = '%s %s' % (arg.type, arg.name)
+        ret = f'{arg.type} {arg.name}'
         if arg.hasDefault:
             ret = ret + ' = ' + arg.defaultString
         return ret
@@ -412,12 +412,12 @@ if __name__ == "__main__":
                       "#include \"dmlc/optional.h\"\n"
                       "#include \"nnvm/tuple.h\"\n"
                       "\n"
-                      "namespace mxnet {\n"
-                      "namespace cpp {\n"
+                      "namespace mxnet {{\n"
+                      "namespace cpp {{\n"
                       "\n"
-                      "%s"
-                      "} //namespace cpp\n"
-                      "} //namespace mxnet\n"
+                      "{}"
+                      "}} //namespace cpp\n"
+                      "}} //namespace mxnet\n"
                       "#endif  // MXNET_CPP_OP_H_\n")
 
         # Generate a temporary file name
@@ -425,7 +425,7 @@ if __name__ == "__main__":
         temp_file_name = tf.name
         tf.close()
         with codecs.open(temp_file_name, 'w', 'utf-8') as f:
-            f.write(patternStr % ParseAllOps())
+            f.write(patternStr.format(ParseAllOps()))
     except Exception as e:
       if (os.path.exists(output_file)):
         os.remove(output_file)

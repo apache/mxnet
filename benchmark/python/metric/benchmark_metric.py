@@ -75,12 +75,10 @@ def run_metric(name, data_gen_cls, i, n, c, pred_ctx, label_ctx, **kwargs):
         metric.update([label] * i, [pred] * i)
         mx.nd.waitall()
         elapsed = time.time() - before
-        elapsed_str = "{:<.5}".format(elapsed)
+        elapsed_str = f"{elapsed:<.5}"
     except mx.MXNetError:
         elapsed_str = "FAILED"
-    print("{metric:<15}{pctx:<10}{lctx:<12}{niter:<12}{bs:<15}{out_dim:<15}{elapsed:<}".format(
-        metric=name, pctx=str(pred_ctx), lctx=str(label_ctx), niter=i * n, bs=data_gen.batch_size,
-        out_dim=data_gen.output_dim, elapsed=elapsed_str), file=sys.stderr)
+    print(f"{name:<15}{pred_ctx:<10}{label_ctx:<12}{i * n:<12}{data_gen.batch_size:<15}{data_gen.output_dim:<15}{elapsed_str:<}", file=sys.stderr)
 
 
 def test_metric_performance():
@@ -107,14 +105,12 @@ def test_metric_performance():
 
     print("\nmx.gluon.metric benchmarks", file=sys.stderr)
     print(
-        "{:15}{:10}{:12}{:12}{:15}{:15}{}".format(
-            'Metric', 'Data-Ctx', 'Label-Ctx', 'Data Size', 'Batch Size', 'Output Dim', 'Elapsed Time'),
+        f"{'Metric':15}{'Data-Ctx':10}{'Label-Ctx':12}{'Data Size':12}{'Batch Size':15}{'Output Dim':15}{'Elapsed Time'}",
         file=sys.stderr)
-    print("{:-^90}".format(''), file=sys.stderr)
+    print(f"{'':-^90}", file=sys.stderr)
     for k, v in metrics:
         for c in output_dims:
             for n in batch_sizes:
                 for pred_ctx, label_ctx in itertools.product(ctxs, ctxs):
-                    run_metric(k, v[1], (data_size * 128)//(n * c), n, c, pred_ctx, label_ctx, **v[0])
-                print("{:-^90}".format(''), file=sys.stderr)
-
+                    run_metric(k, v[1], (data_size * 128), (n * c), n, c, pred_ctx, label_ctx, **v[0])
+                print(f"{'':-^90}", file=sys.stderr)

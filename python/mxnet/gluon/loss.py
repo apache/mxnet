@@ -510,9 +510,9 @@ class CTCLoss(Loss):
 
     def __init__(self, layout='NTC', label_layout='NT', weight=None, **kwargs):
         assert layout in ['NTC', 'TNC'],\
-            "Only 'NTC' and 'TNC' layouts for pred are supported. Got: %s" % layout
+            f"Only 'NTC' and 'TNC' layouts for pred are supported. Got: {layout}"
         assert label_layout in ['NT', 'TN'],\
-            "Only 'NT' and 'TN' layouts for label are supported. Got: %s" % label_layout
+            f"Only 'NT' and 'TN' layouts for label are supported. Got: {label_layout}"
         self._layout = layout
         self._label_layout = label_layout
         batch_axis = label_layout.find('N')
@@ -713,8 +713,7 @@ class LogisticLoss(Loss):
         super(LogisticLoss, self).__init__(weight, batch_axis, **kwargs)
         self._label_format = label_format
         if self._label_format not in ["signed", "binary"]:
-            raise ValueError("label_format can only be signed or binary, received %s."
-                             % label_format)
+            raise ValueError(f"label_format can only be signed or binary, received {label_format}.")
 
     def forward(self, pred, label, sample_weight=None):
         label = npx.reshape_like(label, pred)

@@ -24,7 +24,7 @@
 namespace mxnet {
 namespace op {
 
-/*
+/*!
  * This selects nodes for a subgraph that only contains static shape operators
  * and it visits nodes via both input and output links.
  */
@@ -58,7 +58,7 @@ class StaticShapeOpSelector : public SubgraphSelector {
   std::unordered_set<std::string> unsupported_op_names_{"_npi_dstack", "_npi_hstack"};
 };
 
-/*
+/*!
  * This subgraph property finds a subgraph whose nodes have only static shape operators.
  * The operators in the subgraph will be executed by _CachedOp.
  */

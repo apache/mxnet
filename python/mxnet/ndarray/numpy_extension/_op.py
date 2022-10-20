@@ -22,6 +22,7 @@ import numpy as _np
 from .._internal import NDArrayBase
 from . import _api_internal
 from ...util import set_module
+from ..ndarray import get_dtype_name
 
 
 __all__ = ['softmax', 'log_softmax', 'masked_softmax', 'masked_log_softmax',
@@ -77,7 +78,7 @@ def softmax(data, axis=-1, length=None, temperature=None, use_length=False, dtyp
         [0.33333334, 0.33333334, 0.33333334]])
     """
     if dtype and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if use_length:
         assert length is not None, "Missing length input"
         return _api_internal.softmax(data, length, axis, temperature, True, dtype)
@@ -124,7 +125,7 @@ def log_softmax(data, axis=-1, length=None, temperature=None, use_length=False, 
         [-1.2411538 , -0.6931472 , -0.34115386]])
     """
     if dtype and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     if use_length:
         assert length is not None, "Missing length input"
         return _api_internal.log_softmax(data, length, axis, temperature, True, dtype)
@@ -883,7 +884,7 @@ def one_hot(data, depth=None, on_value=1.0, off_value=0.0, dtype="float32"):
     """
     assert depth is not None, "Please provide the depth of one hot dimension."
     if not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = get_dtype_name(dtype)
     return _api_internal.one_hot(data, depth, on_value, off_value, dtype)
 
 
@@ -917,7 +918,7 @@ def rnn(data=None, parameters=None, state=None, state_cell=None, sequence_length
         h_t = \tanh(W_{ih} * x_t + b_{ih}  +  W_{hh} * h_{(t-1)} + b_{hh})
 
     Reference paper: Finding structure in time - Elman, 1988.
-    https://crl.ucsd.edu/~elman/Papers/fsit.pdf
+    https://axon.cs.byu.edu/~martinez/classes/678/Papers/Elman_time.pdf
 
     **LSTM**
 

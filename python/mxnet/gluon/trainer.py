@@ -86,7 +86,7 @@ class Trainer(object):
         if not isinstance(params, (list, tuple)):
             raise ValueError(
                 "First argument must be a list or dict of Parameters, " \
-                "got %s."%(type(params)))
+                f"got {type(params)}.")
         self._params = []
         # parameters to initialize on the kvstore
         self._contains_sparse_weight = False
@@ -96,7 +96,7 @@ class Trainer(object):
             if not isinstance(param, Parameter):
                 raise ValueError(
                     "First argument must be a list or dict of Parameters, " \
-                    "got list of %s."%(type(param)))
+                    f"got list of {type(param)}.")
             if param._uuid in self._param2idx:
                 # Shared parameters have same uuid; only need to store one of the shared versions
                 continue
@@ -138,8 +138,8 @@ class Trainer(object):
             device = param.list_device()
             assert devices is None or devices == device, \
                 "All Parameters must be initialized on the same set of devices, " \
-                "but Parameter %s is initialized on %s while previous Parameters " \
-                "are initialized on %s."%(param.name, str(device), str(devices))
+                f"but Parameter {param.name} is initialized on {str(device)} while previous Parameters " \
+                f"are initialized on {str(devices)}."
             devices = device
         return devices
 
@@ -464,13 +464,12 @@ class Trainer(object):
                 for data in param._check_and_get(param._data, list):
                     if not data._fresh_grad:
                         raise UserWarning(
-                            "Gradient of Parameter `%s` on device %s has not been updated "
+                            f"Gradient of Parameter `{param.name}` on device {str(data.device)} has not been updated "
                             "by backward since last `step`. This could mean a bug in your "
                             "model that made it only use a subset of the Parameters (Blocks) "
                             "for this iteration. If you are intentionally only using a subset, "
                             "call step with ignore_stale_grad=True to suppress this "
-                            "warning and skip updating of Parameters with stale gradient" \
-                            %(param.name, str(data.device)))
+                            "warning and skip updating of Parameters with stale gradient")
 
             if self._kvstore and self._update_on_kvstore:
                 continue

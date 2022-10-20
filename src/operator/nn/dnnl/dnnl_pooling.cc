@@ -25,7 +25,7 @@
 
 #if MXNET_USE_ONEDNN == 1
 
-#include "./dnnl_pooling-inl.h"
+#include "dnnl_pooling-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -70,7 +70,8 @@ void DNNLPoolingFwd::Init(const mxnet::NDArray& input,
 void DNNLPoolingFwd::Execute(const NDArray& in_data,
                              const OpReqType req,
                              const NDArray& out_data,
-                             const NDArray* workspace) {
+                             const NDArray* workspace,
+                             const bool use_adaptive_pooling) {
   NDArray in_buffer = in_data;
   if (in_data.IsView() && in_data.IsDNNLData())
     in_buffer = in_data.Reorder2Default();
@@ -83,7 +84,7 @@ void DNNLPoolingFwd::Execute(const NDArray& in_data,
       {DNNL_ARG_DST, *(output_mem_t_.second)},
   };
 
-  if (this->with_workspace_) {
+  if (this->with_workspace_ && !use_adaptive_pooling) {
     auto engine = CpuEngine::Get()->get_engine();
 
     if (workspace == nullptr) {
@@ -233,17 +234,30 @@ void InitPoolingPrimitiveParams(const PoolingParam& param,
 dnnl::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& param,
                                                          const bool is_train,
                                                          const dnnl::memory::desc& data_md,
-                                                         const dnnl::memory::desc& out_md) {
-  CHECK(param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3)
+                                                         const dnnl::memory::desc& out_md,
+                                                         const bool use_adaptive_pooling) {
+  CHECK((param.kernel.ndim() >= 1 && param.kernel.ndim() <= 3) || use_adaptive_pooling)
       << "Not Implemented";
 
-  const int kernel_ndims = param.kernel.ndim();
+  const int kernel_ndims =
+      use_adaptive_pooling ? mxnet::TShape(data_md.dims()).ndim() : param.kernel.ndim();
   dnnl::memory::dims kernel(kernel_ndims);
   dnnl::memory::dims strides(kernel_ndims);
   dnnl::memory::dims pad_l(kernel_ndims);
   dnnl::memory::dims pad_r(kernel_ndims);
 
-  InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+  const mxnet::TShape input_shape  = mxnet::TShape(data_md.dims());
+  const mxnet::TShape output_shape = mxnet::TShape(out_md.dims());
+
+  if (use_adaptive_pooling) {
+    UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, input_shape, output_shape);
+    dnnl::memory::validate_dims(kernel);
+    dnnl::memory::validate_dims(strides);
+    dnnl::memory::validate_dims(pad_l);
+    dnnl::memory::validate_dims(pad_r);
+  } else {
+    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+  }
 
   const dnnl::algorithm alg = GetDNNLPoolingAlgorithm(param);
   dnnl::prop_kind kind      = dnnl::prop_kind::forward_scoring;
@@ -292,7 +306,7 @@ DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
     dnnl::memory::dims pad_r(kernel_ndims);
 
     if (use_adaptive_pooling) {
-      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data, output);
+      UseAdaptivePaddingKernel(&kernel, &strides, &pad_l, &pad_r, data.shape(), output.shape());
       dnnl::memory::validate_dims(kernel);
       dnnl::memory::validate_dims(strides);
       dnnl::memory::validate_dims(pad_l);
@@ -310,17 +324,6 @@ DNNLPoolingFwd& GetPoolingFwd(const PoolingParam& param,
   return it->second;
 }
 
-void DNNLPoolingCompute(const OpContext& ctx,
-                        const PoolingParam& param,
-                        const NDArray& in_data,
-                        const OpReqType req,
-                        const NDArray& out_data,
-                        const NDArray* workspace,
-                        const bool use_adaptive_pooling) {
-  auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data, use_adaptive_pooling);
-  fwd.Execute(in_data, req, out_data, workspace);
-}
-
 DNNLPoolingBwd::DNNLPoolingBwd(const dnnl::pooling_backward::primitive_desc& pdesc, bool with_ws)
     : with_workspace(with_ws), pd(pdesc) {
   bwd = std::make_shared<dnnl::pooling_backward>(pd);
@@ -333,7 +336,8 @@ const dnnl::pooling_backward& DNNLPoolingBwd::GetBwd() {
 DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
                               const NDArray& in_data,
                               const NDArray& in_grad,
-                              const NDArray& out_grad) {
+                              const NDArray& out_grad,
+                              const bool use_adaptive_pooling) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DNNLPoolingSignature, DNNLPoolingBwd, OpHash> pooling_bwds;
 #else
@@ -341,11 +345,14 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
       pooling_bwds;
 #endif
 
-  bool with_workspace = DNNLRequireWorkspace(param);
+  const bool with_workspace = DNNLRequireWorkspace(param);
   DNNLPoolingSignature key(param);
   key.AddSign(in_data);
   key.AddSign(in_grad);
   key.AddSign(out_grad);
+  if (use_adaptive_pooling) {
+    key.AddSign(use_adaptive_pooling);
+  }
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
@@ -357,21 +364,30 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto dst_md   = dnnl::memory::desc(dst_dims, get_data_type(data_md), any);
 
     // fwd hint
-    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md);
+    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md, use_adaptive_pooling);
 
-    // creat bwd desc
+    // create bwd desc
     auto diff_src_dims = dnnl::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
     auto diff_src_md   = dnnl::memory::desc(diff_src_dims, get_data_type(data_md), any);
     auto cpu_engine    = CpuEngine::Get()->get_engine();
-    auto alg           = GetDNNLPoolingAlgorithm(param);
+    auto alg = use_adaptive_pooling ? dnnl::algorithm::pooling_avg : GetDNNLPoolingAlgorithm(param);
 
-    const int kernel_ndims = param.kernel.ndim();
+    const int kernel_ndims = use_adaptive_pooling ? in_grad.shape().ndim() : param.kernel.ndim();
     dnnl::memory::dims kernel(kernel_ndims);
     dnnl::memory::dims strides(kernel_ndims);
     dnnl::memory::dims pad_l(kernel_ndims);
     dnnl::memory::dims pad_r(kernel_ndims);
 
-    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+    if (use_adaptive_pooling) {
+      UseAdaptivePaddingKernel(
+          &kernel, &strides, &pad_l, &pad_r, in_grad.shape(), out_grad.shape());
+      dnnl::memory::validate_dims(kernel);
+      dnnl::memory::validate_dims(strides);
+      dnnl::memory::validate_dims(pad_l);
+      dnnl::memory::validate_dims(pad_r);
+    } else {
+      InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+    }
 
     // use dst_md as diff_dst_md with any format
     auto bwd_desc =
@@ -384,23 +400,42 @@ DNNLPoolingBwd& GetPoolingBwd(const PoolingParam& param,
   return it->second;
 }
 
-void DNNLPoolingGradCompute(const OpContext& ctx,
-                            const PoolingParam& param,
-                            const NDArray& out_grad,
-                            const NDArray& in_data,
-                            const NDArray* workspace,
-                            const OpReqType req,
-                            const NDArray& in_grad) {
-  if (req == kNullOp) {
+void DNNLPoolingGradCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs) {
+  if (req[0] == kNullOp) {
     return;
   }
 
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+
+  const NDArray& out_grad  = inputs[0];
+  const NDArray* workspace = nullptr;
+  const NDArray* in_data   = nullptr;
+  if (DNNLRequireWorkspace(param)) {
+    // The first two elements are the gradients of the outputs in forward.
+    // The third is the input of forward.
+    // The fourth and the fifth are the outputs of forward.
+    CHECK_EQ(inputs.size(), 5U);
+    in_data   = &inputs[2];
+    workspace = &inputs[4];
+  } else if (!param.IsAdaptivePooling()) {
+    CHECK_EQ(inputs.size(), 3U);
+    in_data = &inputs[1];
+  } else {
+    in_data = &inputs[0];
+  }
+  const NDArray& in_grad = outputs[0];
+
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
-  auto& bwd            = GetPoolingBwd(param, in_data, in_grad, out_grad);
-  auto diff_dst_mem    = out_grad.GetDNNLDataReorder(bwd.pd.diff_dst_desc());
-  auto diff_src_mem    = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req);
-  dnnl_args_map_t args = {
+  auto& bwd = GetPoolingBwd(param, *in_data, in_grad, out_grad, param.IsAdaptivePooling());
+  auto bwd_diff_dst_desc = bwd.pd.diff_dst_desc();
+  auto diff_dst_mem      = out_grad.GetDNNLDataReorder(&bwd_diff_dst_desc);
+  auto diff_src_mem      = CreateDNNLMem(in_grad, bwd.pd.diff_src_desc(), req[0]);
+  dnnl_args_map_t args   = {
       {DNNL_ARG_DIFF_DST, *diff_dst_mem},
       {DNNL_ARG_DIFF_SRC, *diff_src_mem.second},
   };
@@ -411,6 +446,22 @@ void DNNLPoolingGradCompute(const OpContext& ctx,
   DNNLStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);
   CommitOutput(in_grad, diff_src_mem);
   DNNLStream::Get()->Submit();
+}
+
+void DNNLPoolingCompute(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& in_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& out_data) {
+  const PoolingParam& param      = nnvm::get<PoolingParam>(attrs.parsed);
+  const NDArray* workspace       = nullptr;
+  const bool is_adaptive_pooling = param.IsAdaptivePooling();
+  if (DNNLRequireWorkspace(param) && !is_adaptive_pooling) {
+    CHECK_GT(out_data.size(), 1U);
+    workspace = &out_data[1];
+  }
+  auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0], is_adaptive_pooling);
+  fwd.Execute(in_data[0], req[0], out_data[0], workspace, is_adaptive_pooling);
 }
 
 }  // namespace op

@@ -21,13 +21,13 @@ from .common import *
 
 def test_lenet_gluon_load_params_api():
     model_name = 'lenet_gluon_save_params_api'
-    logging.info('Performing inference for model/API %s' % model_name)
+    logging.info(f'Performing inference for model/API {model_name}')
 
     for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-        logging.info('Fetching files for MXNet version : %s and model %s' % (folder, model_name))
+        logging.info(f'Fetching files for MXNet version : {folder} and model {model_name}')
         model_files = download_model_files_from_s3(model_name, folder)
         if len(model_files) == 0:
-            logging.warn('No training files found for %s for MXNet version : %s' % (model_name, folder))
+            logging.warn(f'No training files found for {model_name} for MXNet version : {folder}')
             continue
 
         data = mx.npx.load(''.join([model_name, '-data']))
@@ -40,18 +40,18 @@ def test_lenet_gluon_load_params_api():
         assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy(), rtol=rtol_default, atol=atol_default)
         clean_model_files(model_files, model_name)
         logging.info('=================================')
-    logging.info('Assertion passed for model : %s' % model_name)
+    logging.info(f'Assertion passed for model : {model_name}')
 
 
 def test_lenet_gluon_hybrid_imports_api():
     model_name = 'lenet_gluon_hybrid_export_api'
-    logging.info('Performing inference for model/API %s' % model_name)
+    logging.info(f'Performing inference for model/API {model_name}')
 
     for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-        logging.info('Fetching files for MXNet version : %s and model %s' % (folder, model_name))
+        logging.info(f'Fetching files for MXNet version : {folder} and model {model_name}')
         model_files = download_model_files_from_s3(model_name, folder)
         if len(model_files) == 0:
-            logging.warn('No training files found for %s for MXNet version : %s' % (model_name, folder))
+            logging.warn(f'No training files found for {model_name} for MXNet version : {folder}')
             continue
             # Load the model and perform inference
         data = mx.npx.load(''.join([model_name, '-data']))
@@ -63,7 +63,7 @@ def test_lenet_gluon_hybrid_imports_api():
         assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy(), rtol=rtol_default, atol=atol_default)
         clean_model_files(model_files, model_name)
         logging.info('=================================')
-    logging.info('Assertion passed for model : %s' % model_name)
+    logging.info(f'Assertion passed for model : {model_name}')
 
 
 def test_lstm_gluon_load_parameters_api():
@@ -71,18 +71,18 @@ def test_lstm_gluon_load_parameters_api():
     # since it uses save_parameters and load_parameters API
 
     if compare_versions(str(mxnet_version), '1.2.1') < 0:
-        logging.warn('Found MXNet version %s and exiting because this version does not contain save_parameters'
-                     ' and load_parameters functions' % str(mxnet_version))
+        logging.warn(f'Found MXNet version {str(mxnet_version)} and exiting because this version does not contain save_parameters'
+                     ' and load_parameters functions')
         return
 
     model_name = 'lstm_gluon_save_parameters_api'
-    logging.info('Performing inference for model/API %s and model' % model_name)
+    logging.info(f'Performing inference for model/API {model_name} and model')
 
     for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-        logging.info('Fetching files for MXNet version : %s' % folder)
+        logging.info(f'Fetching files for MXNet version : {folder}')
         model_files = download_model_files_from_s3(model_name, folder)
         if len(model_files) == 0:
-            logging.warn('No training files found for %s for MXNet version : %s' % (model_name, folder))
+            logging.warn(f'No training files found for {model_name} for MXNet version : {folder}')
             continue
 
         data = mx.npx.load(''.join([model_name, '-data']))
@@ -95,7 +95,7 @@ def test_lstm_gluon_load_parameters_api():
         assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy(), rtol=rtol_default, atol=atol_default)
         clean_model_files(model_files, model_name)
         logging.info('=================================')
-    logging.info('Assertion passed for model : %s' % model_name)
+    logging.info(f'Assertion passed for model : {model_name}')
 
 
 if __name__ == '__main__':

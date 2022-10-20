@@ -19,17 +19,17 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_DNNL_DNNL_CONV_PROPERTY_H_
+
 #if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
 
-#include "../../leaky_relu-inl.h"
-#include "../../nn/activation-inl.h"
-#include "../../nn/convolution-inl.h"
-#include "../../nn/dnnl/dnnl_ops-inl.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../common.h"
+#include "operator/leaky_relu-inl.h"
+#include "operator/nn/activation-inl.h"
+#include "operator/nn/convolution-inl.h"
+#include "operator/tensor/matrix_op-inl.h"
+#include "operator/subgraph/common.h"
 #include "dnnl_subgraph_base-inl.h"
 
 namespace mxnet {
@@ -37,7 +37,7 @@ namespace op {
 class SgDNNLConvSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status_ */
-  enum SelectStatus {
+  enum SelectStatusConv {
     kFail = 0,
     kStart,
     kBN,
@@ -51,7 +51,7 @@ class SgDNNLConvSelector : public SubgraphSelector {
   bool disable_conv_act_;
   bool disable_conv_sum_;
   bool quantize_;
-  SelectStatus status_;
+  SelectStatusConv status_;
   std::vector<const nnvm::Node*> matched_list_;
 
  public:
@@ -114,7 +114,7 @@ class SgDNNLConvSelector : public SubgraphSelector {
       default:
         if ((!disable_conv_act_) && node_name == "Activation") {
           const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
-          if ((quantize_ && SupportQuantizedDNNLAct(param)) ||
+          if ((quantize_ && SupportDNNLQuantizedAct(param)) ||
               (!quantize_ && SupportDNNLAct(param))) {
             matched_list_.push_back(&new_node);
             // not support conv+relu+sum yet.
@@ -123,7 +123,8 @@ class SgDNNLConvSelector : public SubgraphSelector {
           }
         } else if ((!disable_conv_act_) && node_name == "LeakyReLU") {
           const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
-          if (param.act_type == leakyrelu::kLeakyReLU || param.act_type == leakyrelu::kGELU) {
+          if (param.act_type == leakyrelu::kLeakyReLU || param.act_type == leakyrelu::kGELU_ERF ||
+              param.act_type == leakyrelu::kGELU_TANH) {
             matched_list_.push_back(&new_node);
             // not support conv+relu+sum yet.
             status_ = kSuccess;

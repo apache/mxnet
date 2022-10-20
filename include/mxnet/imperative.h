@@ -35,6 +35,15 @@
 #include "./ndarray.h"
 
 namespace mxnet {
+
+constexpr char OPT_CONSTRAINT_ATTR[] = "__opt_constraint__";
+enum class OptConstraint : unsigned int {
+  None       = 0,
+  DisableAMP = 1 << 0
+  // DisableQuantization = 1 << 1
+};
+using OptConstraint_int_t = std::underlying_type_t<OptConstraint>;
+
 /*! \brief there are three numpy shape flags based on priority.
  * GlobalOn
  *   turn on numpy shape flag globally, it includes thread local.
@@ -47,6 +56,7 @@ namespace mxnet {
  * */
 enum NumpyShape { Off, ThreadLocalOn, GlobalOn };
 typedef NumpyShape NumpyDefaultDtype;
+
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
@@ -237,6 +247,16 @@ class Imperative {
     }
     return old;
   }
+  /*! \brief return current optimization constraints. */
+  OptConstraint get_opt_constraints() const {
+    return opt_constraints_;
+  }
+  /*! \brief set optimization constraints. */
+  OptConstraint set_opt_constraints(OptConstraint constraints) {
+    OptConstraint old = opt_constraints_;
+    opt_constraints_  = constraints;
+    return old;
+  }
   /*! \brief to record operator, return corresponding node. */
   void RecordOp(nnvm::NodeAttrs&& attrs,
                 const std::vector<NDArray*>& inputs,
@@ -321,6 +341,7 @@ class Imperative {
   static thread_local bool is_train_;
   static thread_local bool is_recording_;
   static thread_local bool is_deferred_compute_;
+  static thread_local OptConstraint opt_constraints_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static thread_local bool is_np_shape_thread_local_;
@@ -328,6 +349,7 @@ class Imperative {
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
   static MX_THREAD_LOCAL bool is_deferred_compute_;
+  static MX_THREAD_LOCAL OptConstraint opt_constraints_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;

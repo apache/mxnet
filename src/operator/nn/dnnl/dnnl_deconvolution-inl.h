@@ -41,9 +41,8 @@
 #include <utility>
 #include <vector>
 
-#include "../deconvolution-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+#include "operator/nn/deconvolution-inl.h"
+#include "dnnl_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -82,7 +81,8 @@ inline void IOLogicalSwapDNNLMem(const NDArray& arr, const uint32_t num_group) {
         temp.data_type(),
         static_cast<dnnl::memory::format_tag>(GetDefaultFormat(temp.data.ndims)));
   }
-  const_cast<NDArray&>(arr).UpdateDNNLMemDesc(IOLogicalSwapDesc(desc, num_group));
+  auto iOLogicalSwapDesc = IOLogicalSwapDesc(desc, num_group);
+  const_cast<NDArray&>(arr).UpdateDNNLMemDesc(&iOLogicalSwapDesc);
 }
 
 // Version of GetWeightsDesc for deconvolution (with swap)
@@ -129,27 +129,9 @@ class DNNLDeconvFwd {
   std::shared_ptr<deconv_fwd_pd_t> fwd_pd;
 };
 
-DNNLDeconvFwd::Tensors::Tensors(const bool no_bias,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<NDArray>& outputs)
-    : data(inputs[deconv::kData]),
-      weights(inputs[deconv::kWeight]),
-      bias(no_bias ? nullptr : &inputs[deconv::kBias]),
-      out(outputs[deconv::kOut]) {}
-
-DNNLDeconvFwd::Tensors::Tensors(const NDArray& data,
-                                const NDArray& weights,
-                                const NDArray* const bias,
-                                const NDArray& out)
-    : data(data), weights(weights), bias(bias), out(out) {}
-
-DNNLDeconvFwd::DNNLDeconvFwd(const DeconvolutionParam& param, const Tensors& tensors)
-    : fwd_pd(CreatePrimitiveDesc(param, tensors)) {
-  fwd = std::make_shared<deconv_fwd_t>(*fwd_pd);
-}
-
 inline const dnnl::memory* DNNLDeconvFwd::DataMem(const NDArray& data) const {
-  return data.GetDNNLDataReorder(fwd_pd->src_desc());
+  auto fwd_src_desc = fwd_pd->src_desc();
+  return data.GetDNNLDataReorder(&fwd_src_desc);
 }
 
 inline const dnnl::memory* DNNLDeconvFwd::WeightsMem(const uint32_t num_group,
@@ -240,28 +222,6 @@ class DNNLDeconvBwd {
   std::shared_ptr<deconv_bwd_weights_t> bwd_weights;
 };
 
-DNNLDeconvBwd::ReadTensors::ReadTensors(const bool no_bias, const std::vector<NDArray>& inputs)
-    : data(inputs[deconv::kData + 1]),
-      weights(inputs[deconv::kWeight + 1]),
-      bias(no_bias ? nullptr : &inputs[deconv::kBias + 1]),
-      out_grad(inputs[deconv::kOut]) {}
-
-DNNLDeconvBwd::WriteTensors::WriteTensors(const bool no_bias, const std::vector<NDArray>& outputs)
-    : data_grad(outputs[deconv::kData]),
-      weights_grad(outputs[deconv::kWeight]),
-      bias_grad(no_bias ? nullptr : &outputs[deconv::kBias]) {}
-
-DNNLDeconvBwd::DNNLDeconvBwd(const DeconvolutionParam& param, const ReadTensors& read_tensors) {
-  const auto& fwd_pd = DNNLDeconvFwd::CreatePrimitiveDesc(
-      param,
-      DNNLDeconvFwd::Tensors(
-          read_tensors.data, read_tensors.weights, read_tensors.bias, read_tensors.out_grad));
-  bwd_data_pd    = CreateDataPrimitiveDesc(param, read_tensors, *fwd_pd);
-  bwd_weights_pd = CreateWeightsPrimitiveDesc(param, read_tensors, *fwd_pd);
-  bwd_data       = std::make_shared<deconv_bwd_data_t>(*bwd_data_pd);
-  bwd_weights    = std::make_shared<deconv_bwd_weights_t>(*bwd_weights_pd);
-}
-
 inline void DNNLDeconvBwd::IOSwapWeightsTensors(const uint32_t num_group,
                                                 const std::vector<OpReqType>& req,
                                                 const NDArray& weights,
@@ -275,7 +235,8 @@ inline void DNNLDeconvBwd::IOSwapWeightsTensors(const uint32_t num_group,
 }
 
 inline const dnnl::memory* DNNLDeconvBwd::DataMem(const NDArray& data) const {
-  return data.GetDNNLDataReorder(bwd_weights_pd->src_desc());
+  auto bwd_weight_src_desc = bwd_weights_pd->src_desc();
+  return data.GetDNNLDataReorder(&bwd_weight_src_desc);
 }
 
 inline const dnnl::memory* DNNLDeconvBwd::WeightsMem(const uint32_t num_group,
@@ -284,14 +245,16 @@ inline const dnnl::memory* DNNLDeconvBwd::WeightsMem(const uint32_t num_group,
 }
 
 inline const dnnl::memory* DNNLDeconvBwd::OutGradMem(const NDArray& out_grad) const {
-  return out_grad.GetDNNLDataReorder(bwd_data_pd->diff_dst_desc());
+  auto bwd_data_diff_desc = bwd_data_pd->diff_dst_desc();
+  return out_grad.GetDNNLDataReorder(&bwd_data_diff_desc);
 }
 
 inline const dnnl::memory* DNNLDeconvBwd::OutGradMem(const NDArray& out_grad,
                                                      const dnnl::memory* const out_grad_mem) const {
-  return (out_grad_mem && out_grad_mem->get_desc() == bwd_weights_pd->diff_dst_desc()) ?
+  auto bwd_weight_diff_desc = bwd_weights_pd->diff_dst_desc();
+  return (out_grad_mem && out_grad_mem->get_desc() == bwd_weight_diff_desc) ?
              out_grad_mem :
-             out_grad.GetDNNLDataReorder(bwd_weights_pd->diff_dst_desc());
+             out_grad.GetDNNLDataReorder(&bwd_weight_diff_desc);
 }
 
 inline dnnl_output_t DNNLDeconvBwd::DataGradMem(const OpReqType req,
@@ -308,7 +271,7 @@ inline dnnl_output_t DNNLDeconvBwd::WeightsGradMem(const uint32_t num_group,
   // swap, weights_md will have a default format
   const auto& weights_md = bwd_weights_pd->diff_weights_desc();
   if (req == OpReqType::kWriteTo && IsDefaultFormat(IOLogicalSwapDesc(weights_md, num_group))) {
-    return {OutDataOp::Noop, const_cast<NDArray&>(weights_grad).CreateDNNLData(weights_md)};
+    return {OutDataOp::Noop, const_cast<NDArray&>(weights_grad).CreateDNNLData(&weights_md)};
   }
   return CreateDNNLWeightGrad(weights_grad, weights_md, req);
 }
@@ -403,6 +366,18 @@ inline deconv_bwd_weights_t::desc DeconvDescCreator::CreateBwdWeightsDesc() cons
                                     padding,
                                     padding);
 }
+
+void DNNLDeconvolutionForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& in_data,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& out_data);
+
+void DNNLDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

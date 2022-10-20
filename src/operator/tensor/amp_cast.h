@@ -61,18 +61,19 @@ struct AMPMultiCastParam : public dmlc::Parameter<AMPMultiCastParam> {
 inline bool AMPCastType(const nnvm::NodeAttrs& attrs,
                         std::vector<int>* in_attrs,
                         std::vector<int>* out_attrs) {
-  using mshadow::kBfloat16;
-  using mshadow::kFloat16;
-  using mshadow::kFloat32;
   const AMPCastParam& param = nnvm::get<AMPCastParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*in_attrs)[0] == kFloat32 || (*in_attrs)[0] == kFloat16 || (*in_attrs)[0] == kBfloat16) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
-  } else {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  switch (in_attrs->at(0)) {
+    case mshadow::kFloat32:
+    case mshadow::kFloat16:
+    case mshadow::kBfloat16:
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
+      break;
+    default:
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   }
-  return (*in_attrs)[0] != -1;
+  return in_attrs->at(0) != -1;
 }
 
 inline bool AMPMultiCastType(const nnvm::NodeAttrs& attrs,

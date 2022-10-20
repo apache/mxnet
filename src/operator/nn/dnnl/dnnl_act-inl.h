@@ -30,8 +30,8 @@
 #include <utility>
 #include <vector>
 
-#include "../../leaky_relu-inl.h"
-#include "../activation-inl.h"
+#include "operator/leaky_relu-inl.h"
+#include "operator/nn/activation-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -95,6 +95,31 @@ class DNNLActBackward {
  private:
   std::shared_ptr<dnnl::eltwise_backward> bwd_prim_;
 };
+
+void DNNLActivationForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const NDArray& in_data,
+                           const OpReqType& req,
+                           const NDArray& out_data);
+
+void DNNLActivationBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs);
+
+void DNNLLeakyReluForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const NDArray& in_data,
+                          const OpReqType& req,
+                          const NDArray& out_data);
+
+void DNNLLeakyReluBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs);
+
 }  // namespace op
 }  // namespace mxnet
 

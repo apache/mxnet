@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_QUANTIZATION_QUANTIZED_ELEMWISE_ADD_INL_H_
 
 #include "../tensor/elemwise_unary_op.h"
+#include "../tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
@@ -49,10 +50,24 @@ struct QuantizeElemwiseAddParam : public dmlc::Parameter<QuantizeElemwiseAddPara
   }
 };
 
-namespace quantized_elemwise_add_enum {
+namespace q_elemwise_add {
 enum QuantizedElemwiseAddOutputs { kOut, kMin, kMax };
 enum QuantizedElemwiseAddInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax };
-}  // namespace quantized_elemwise_add_enum
+}  // namespace q_elemwise_add
+
+inline bool QuantizedBinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
+                                          mxnet::ShapeVector* in_attrs,
+                                          mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 6U);
+  CHECK_EQ(out_attrs->size(), 3U);
+  SHAPE_ASSIGN_CHECK(*in_attrs, 2, TShape{1});
+  SHAPE_ASSIGN_CHECK(*in_attrs, 3, TShape{1});
+  SHAPE_ASSIGN_CHECK(*in_attrs, 4, TShape{1});
+  SHAPE_ASSIGN_CHECK(*in_attrs, 5, TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape{1});
+  return BinaryBroadcastShapeCommon(attrs, in_attrs, out_attrs);
+}
 
 }  // namespace op
 }  // namespace mxnet

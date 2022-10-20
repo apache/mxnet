@@ -20,6 +20,8 @@
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
+import enum
+import ctypes
 import copy
 import warnings
 import weakref
@@ -36,7 +38,7 @@ from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, 
     profiler as _profiler, device as _device
 from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol, fromjson
-from ..ndarray import NDArray
+from ..ndarray import NDArray, get_dtype_name
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays, _check_block_input_np_ndarrays
@@ -57,7 +59,7 @@ def _block_scope(block):
     if counter is not None:
         count = counter.get(name, 0)
         counter[name] = count + 1
-        name = '%s%d'%(name, count)
+        name = f'{name}{count}'
     counter_token = _naming_counter.set({})
     prefix_token = _prefix.set(_prefix.get() + name + '_')
     with _name.Prefix(_prefix.get()):
@@ -462,7 +464,7 @@ class Block:
         else:
             filename = None
         params = self.collect_params()
-        error_str = "file: %s" % (filename) if filename else "param_dict"
+        error_str = f"file: {filename}" if filename else "param_dict"
         loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
                   for k, v in param_dict.items()}
 
@@ -473,18 +475,16 @@ class Block:
 
             for name, param in params.items():
                 assert any(p in loaded for p in params_inv[param]), \
-                    "Parameter '%s' is missing in '%s', which contains parameters: %s. " \
-                    "Set allow_missing=True to ignore missing parameters."%(
-                        name, error_str, _brief_print_list(loaded.keys()))
+                f"Parameter '{name}' is missing in '{error_str}', which contains parameters: {_brief_print_list(loaded.keys())}. " \
+                    "Set allow_missing=True to ignore missing parameters."
 
         if device is None:
             device = _device.current_device()
         for name in loaded:
             if not ignore_extra and name not in params:
                 raise ValueError(
-                    "Parameter '%s' loaded from '%s' is not present in Dict, " \
-                    "which contains parameters %s. Set ignore_extra=True to ignore. "%(
-                        name, error_str, _brief_print_list(params.keys())))
+                    f"Parameter '{name}' loaded from '{error_str}' is not present in Dict, " \
+                    f"which contains parameters {_brief_print_list(params.keys())}. Set ignore_extra=True to ignore. ")
             if name in params:
                 param = loaded[name]
                 if isinstance(param, np.ndarray):
@@ -946,7 +946,7 @@ class Block:
                 class_name = block.__class__.__name__
                 block_idx = len(summary) - 1
 
-                m_key = '%s-%i' % (class_name, block_idx+1)
+                m_key = f'{class_name}-{block_idx+1}'
                 summary[m_key] = OrderedDict()
                 summary[m_key]['output_shape'] = _get_shape_str(outputs)
 
@@ -1045,6 +1045,32 @@ class HybridBlock(Block):
         `Hybridize - A Hybrid of Imperative and Symbolic Programming
         <https://mxnet.apache.org/versions/master/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html>`_
     """
+    class OptConstraint:
+        class Flag(enum.Flag):
+            DisableAMP = enum.auto()
+
+        def __init__(self, flag) -> None:
+            self.flag = flag
+            self.enter_state = None
+
+        def __enter__(self):
+            self.enter_state = HybridBlock.OptConstraint.Flag(get_optimization_constraints())
+            target_state = self.enter_state | self.flag
+            set_optimization_constraints(target_state)
+
+        def __exit__(self, ptype, value, trace):
+            set_optimization_constraints(self.enter_state)
+
+        @staticmethod
+        def disable_all():
+            opt_flag = HybridBlock.OptConstraint.Flag()
+            for flag in HybridBlock.OptConstraint.Flag:
+                opt_flag |= flag
+
+        @staticmethod
+        def disable_amp():
+            return HybridBlock.OptConstraint(HybridBlock.OptConstraint.Flag.DisableAMP)
+
     def __init__(self):
         super(HybridBlock, self).__init__()
         assert hasattr(self, "hybrid_forward") is False, (
@@ -1074,6 +1100,10 @@ class HybridBlock(Block):
                 self._active = False
             self._clear_cached_op()
 
+    @staticmethod
+    def generate_arg_names(arg_num):
+        return ['data'] if arg_num == 1 else ['data{}'.format(i) for i in range(arg_num)]
+
     def _get_graph(self, *args):
         if not self._cached_graph:
             flatten_args, self._in_format = _flatten(args, "input")
@@ -1082,10 +1112,7 @@ class HybridBlock(Block):
             if len(real_args) == 0:
                 raise ValueError('All args are None and we do not support such a case.'
                                  ' Received args={}'.format(args))
-            if len(real_args) == 1:
-                arg_names = ['data']
-            else:
-                arg_names = ['data{}'.format(i) for i, ele in enumerate(real_args)]
+            arg_names = HybridBlock.generate_arg_names(len(real_args))
             symbol_inputs = [
                 symbol.var(name).as_np_ndarray()
                 if isinstance(arg, _mx_np.ndarray) else symbol.var(name)
@@ -1111,20 +1138,20 @@ class HybridBlock(Block):
         expected_names = set(input_names)
         for name in expected_names:
             assert name in param_names or name in data_names, \
-                "Unknown input to HybridBlock: %s" %name
+                f"Unknown input to HybridBlock: {name}"
 
         used_data_names = [i for i in data_names if i in expected_names]
         if len(used_data_names) != len(data_names):
-            unused = ', '.join(['%d-th'%i for name, i in data_names.items()
+            unused = ', '.join([f'{i}-th' for name, i in data_names.items()
                                 if name not in expected_names])
-            warnings.warn("The %s input to HybridBlock is not used by any "
-                          "computation. Is this intended?"%unused, stacklevel=4)
+            warnings.warn(f"The {unused} input to HybridBlock is not used by "
+                          "any computation. Is this intended?", stacklevel=4)
 
         used_param_names = [i for i in param_names if i in expected_names]
         if len(used_param_names) != len(param_names):
             unused = ', '.join(list(param_names - set(used_param_names)))
-            warnings.warn("Parameter %s is not used by any computation. "
-                          "Is this intended?"%unused, stacklevel=4)
+            warnings.warn(f"Parameter {unused} is not used by any computation. "
+                          "Is this intended?", stacklevel=4)
 
         args, _ = _flatten(args, "input")
         try:
@@ -1375,9 +1402,8 @@ class HybridBlock(Block):
         if not isinstance(block, HybridBlock):
             raise ValueError(
                 "Children of HybridBlock must also be HybridBlock, " \
-                "but %s has type %s. If you are using Sequential, " \
-                "please try HybridSequential instead."%(
-                    str(block), str(type(block))))
+                f"but {str(block)} has type {str(type(block))}. If you are using Sequential, " \
+                "please try HybridSequential instead.")
         super(HybridBlock, self).register_child(block, name)
         if self._active:
             warnings.warn("Currently the model has been hybridized. Automatically deactivate the hybridization \
@@ -1520,8 +1546,9 @@ class HybridBlock(Block):
         for var in sym.get_inputs():
             if var.name in rename_map:
                 var._set_attr(name=rename_map[var.name])
-
-        sym_filename = '%s-symbol.json' % (path if path is not None else "")
+        
+        path_string = path if path is not None else ""
+        sym_filename = f'{path_string}-symbol.json'
         if path is not None:
             sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
@@ -1537,8 +1564,8 @@ class HybridBlock(Block):
                         warnings.warn('Parameter "{name}" is not found in the graph. '
                                       .format(name=name), stacklevel=3)
                     else:
-                        arg_dict['aux:%s'%name] = param._reduce()
-        params_filename = '%s-%04d.params'%((path if path is not None else ""), epoch)
+                        arg_dict[f'aux:{name}'] = param._reduce()
+        params_filename = f'{path_string}-{epoch:04d}.params'
 
         if path is not None:
             if is_np_array():
@@ -1549,7 +1576,6 @@ class HybridBlock(Block):
 
         if remove_amp_cast:
             handle = SymbolHandle()
-            import ctypes
             check_call(_LIB.MXSymbolRemoveAmpCast(sym.handle, ctypes.byref(handle)))
             sym = type(sym)(handle)
         return sym, arg_dict
@@ -1570,7 +1596,6 @@ class HybridBlock(Block):
         """
         def c_callback(name, op_name, array):
             """wrapper for user callback"""
-            import ctypes
             array = ctypes.cast(array, NDArrayHandle)
             array = NDArray(array, writable=False)
             name = py_str(name)
@@ -1761,7 +1786,7 @@ class SymbolBlock(HybridBlock):
         input_names = set()
         for i in syms:
             assert len(i.get_internals().list_outputs()) == 1, \
-                "Input symbols must be variable, but %s is an output of operators"%str(i)
+                f"Input symbols must be variable, but {str(i)} is an output of operators"
             input_names.add(i.name)
 
         # check if any symbol is row_sparse
@@ -1770,8 +1795,8 @@ class SymbolBlock(HybridBlock):
         for i in out:
             for j in i.get_internals():
                 assert(j.attr("__storage_type__") != str(row_sparse_storage)), \
-                    "SymbolBlock doesn't support Parameter '%s' because its storage " \
-                    "type is 'row_sparse'." % j.name
+                    f"SymbolBlock doesn't support Parameter '{j.name}' because its storage " \
+                    "type is 'row_sparse'."
         if len(out) > 1:
             out = symbol.Group(out, _check_same_symbol_type(out))
         else:
@@ -1819,12 +1844,12 @@ class SymbolBlock(HybridBlock):
     def __call__(self, x, *args):
         """Calls forward. Only accepts positional arguments."""
         for hook in self._forward_pre_hooks.values():
-            hook(self, [x] + args)
+            hook(self, [x, *args])
 
         out = self.forward(x, *args)
 
         for hook in self._forward_hooks.values():
-            hook(self, [x] + args, out)
+            hook(self, [x, *args], out)
 
         return out
 
@@ -1839,7 +1864,7 @@ class SymbolBlock(HybridBlock):
 
         assert isinstance(x, Symbol), \
             "HybridBlock requires the first argument to forward be either " \
-            "Symbol or NDArray, but got %s"%type(x)
+            f"Symbol or NDArray, but got {type(x)}"
         args, in_fmt = _flatten([x] + list(args), "input")
         assert in_fmt == self._in_format, "Invalid input format"
         ret = copy.copy(self._cached_graph[1])
@@ -1854,7 +1879,7 @@ class SymbolBlock(HybridBlock):
     def cast(self, dtype):
         self._clear_cached_op()
         super(SymbolBlock, self).cast(dtype)
-        if np.dtype(dtype).name == 'float16':
+        if get_dtype_name(dtype) == 'float16':
             # correct BatchNorm types back to float32 due to its special requirement
             out = self._cached_graph[1]
             params_list = out.get_internals().list_inputs()
@@ -1942,3 +1967,15 @@ def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dt
             aux_types.append(default_dtype)
 
     return (arg_types, aux_types)
+
+
+def set_optimization_constraints(state):
+    prev_state = ctypes.c_uint()
+    check_call(_LIB.MXSetOptimizationConstraints(ctypes.c_uint(state.value), ctypes.byref(prev_state)))
+    return HybridBlock.OptConstraint.Flag(prev_state.value)
+
+
+def get_optimization_constraints():
+    curr = ctypes.c_uint()
+    check_call(_LIB.MXGetOptimizationConstraints(ctypes.byref(curr)))
+    return HybridBlock.OptConstraint.Flag(curr.value)

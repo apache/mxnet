@@ -22,19 +22,27 @@ oneDNN
 
    .. card::
       :title: oneDNN Installation and Verification
-      :link: dnnl_readme
+      :link: dnnl_readme.html
 
       A guide on using oneDNN with MXNet.
 
    .. card::
       :title: oneDNN Quantization
-      :link: dnnl_quantization
+      :link: dnnl_quantization.html
 
       How to perform quantization with oneDNN
+
+   .. card::
+      :title: Intel® Neural Compressor
+      :link: dnnl_quantization_inc.html
+
+      How to improve accuracy of quantization with oneDNN
 
 .. toctree::
    :hidden:
    :maxdepth: 1
    :glob:
 
-   *
+   dnnl_readme
+   dnnl_quantization
+   dnnl_quantization_inc

@@ -35,6 +35,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <map>
+#include <set>
 
 #include "dnnl.hpp"
 #include "mxnet/graph_attr_types.h"
@@ -55,6 +57,15 @@
     default:                                      \
       LOG(FATAL) << "Unknown type enum " << type; \
   }
+
+// TODO(PawelGlomski-Intel): add bfloat16 for quantized ops
+#define DNNL_DECLARE_ENABLED_FLOAT_OUTPUT_PARAMETER()                                            \
+  DMLC_DECLARE_FIELD(enabled_float_output)                                                       \
+      .set_default(dmlc::optional<int>())                                                        \
+      .add_enum("float32", mshadow::kFloat32)                                                    \
+      .describe(                                                                                 \
+          "Imposed float output. Used to change the output dtype when the operator operates on " \
+          "low precision data - (u)int8 or lp16.")
 
 namespace mxnet {
 
@@ -114,36 +125,88 @@ struct data_type_enum<uint8_t> {
   enum { type = static_cast<unsigned int>(dnnl::memory::data_type::u8) };
 };
 
-static inline bool SupportDNNLArray(int dtype, const mxnet::TShape& shape) {
-  int ndim     = shape.ndim();
-  bool support = ndim == 1 || ndim == 2 || ndim == 4;
-  support      = support &&
-            (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32 || dtype == mshadow::kInt8 ||
-             dtype == mshadow::kUint8 || dtype == mshadow::kBfloat16);
-  return support;
+// SupportDNNL variant that is used to check tensor's dimensions.
+template <int MinNdim, int MaxNdim>
+static inline bool SupportDNNLShape(const mxnet::TShape& shape) {
+  const int ndim = shape.ndim();
+  return ndim >= MinNdim && ndim <= MaxNdim && shape.Size() != 0;
 }
 
-static inline bool SupportStorageDNNL(int stype) {
-  return stype == kDefaultStorage;
+// SupportDNNL variant that is used to check defined type combinations.
+// If any other combination is necessary new variant should be implemented.
+enum DNNLTypeMode { AllTypes, NoInt32, IntTypes, FloatTypes, ByteTypes };
+
+// Mapping of DNNLTypeMode variant into set of desired type combinations.
+// clang-format off
+static std::map<DNNLTypeMode, std::set<int>> DNNLTypeModeMap = {
+    {DNNLTypeMode::AllTypes,
+      {mshadow::kBfloat16, mshadow::kFloat32, mshadow::kInt32, mshadow::kInt8, mshadow::kUint8}},
+    {DNNLTypeMode::NoInt32,
+      {mshadow::kBfloat16, mshadow::kFloat32, mshadow::kInt8, mshadow::kUint8}},
+    {DNNLTypeMode::IntTypes,
+      {mshadow::kInt32, mshadow::kInt8, mshadow::kUint8}},
+    {DNNLTypeMode::FloatTypes,
+      {mshadow::kBfloat16, mshadow::kFloat32}},
+    {DNNLTypeMode::ByteTypes,
+      {mshadow::kInt8, mshadow::kUint8}}};
+// clang-format on
+
+template <DNNLTypeMode TypeMode>
+inline bool SupportDNNLType(int dtype) {
+  return DNNLTypeModeMap[TypeMode].count(dtype);
 }
 
-static inline bool SupportDNNL(int dtype, const mxnet::TShape& shape) {
-  int ndim = shape.ndim();
-  if (ndim == 0 || shape.Size() == 0) {
-    // DNNL currently does not support 0-dim Tensor and 0-size Tensor
+// SupportDNNL variants:
+// Default variant used to check widest dimension possible
+// and all possible data types for given tensor.
+static inline bool SupportDNNL(const NDArray& tensor) {
+  return SupportDNNLType<AllTypes>(tensor.dtype()) && SupportDNNLShape<1, 12>(tensor.shape());
+}
+
+// Variant checking default shape (1,12) but gives possiblity to check
+// any implemented type combination.
+template <DNNLTypeMode TypeMode>
+static inline bool SupportDNNL(const NDArray& tensor) {
+  return SupportDNNLType<TypeMode>(tensor.dtype()) && SupportDNNLShape<1, 12>(tensor.shape());
+}
+
+// Variant with possiblity to check arbitrary shapes and type combination.
+template <int MinNdim, int MaxNdim, DNNLTypeMode TypeMode>
+static inline bool SupportDNNL(const NDArray& tensor) {
+  return SupportDNNLType<TypeMode>(tensor.dtype()) &&
+         SupportDNNLShape<MinNdim, MaxNdim>(tensor.shape());
+}
+
+// Variant checking multiple inputs at the same time
+// with possibility to check their types independantly
+// or check if those types are the same.
+enum DNNLTensorsDtypes { AllSame = 0, Mixed = 1 };
+
+template <int MinNdim, int MaxNdim, DNNLTypeMode TypeMode, DNNLTensorsDtypes MixedTensors>
+static inline bool SupportDNNL(const std::vector<NDArray>& inputs) {
+  if (!SupportDNNLType<TypeMode>(inputs[0].dtype())) {
     return false;
   }
-  return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
-         (ndim == 1 || ndim == 2 || ndim == 4);
+  int dtype = MixedTensors ? -1 : inputs[0].dtype();
+  for (NDArray input : inputs) {
+    if (dtype == -1) {
+      if (!SupportDNNL<MinNdim, MaxNdim, TypeMode>(input))
+        return false;
+    } else {
+      if (input.dtype() != dtype || !SupportDNNLShape<MinNdim, MaxNdim>(input.shape()))
+        return false;
+    }
+  }
+  return true;
 }
 
-static inline bool IsDNNLType(int dtype) {
-  return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 || dtype == mshadow::kUint8 ||
-         dtype == mshadow::kBfloat16;
+template <DNNLTypeMode TypeMode, DNNLTensorsDtypes MixedTensors>
+static inline bool SupportDNNL(const std::vector<NDArray>& inputs) {
+  return SupportDNNL<1, 12, TypeMode, MixedTensors>(inputs);
 }
 
-static inline bool SupportDNNL(const NDArray& input) {
-  return SupportDNNL(input.dtype(), input.shape()) && SupportStorageDNNL(input.storage_type());
+static inline bool SupportDNNLQuantize(const int out_type) {
+  return out_type == mshadow::kUint8 || out_type == mshadow::kInt8;
 }
 
 static inline bool DNNLEnvSet() {
@@ -176,33 +239,44 @@ void* AlignMem(void* mem, size_t size, size_t alignment, size_t* space);
 
 namespace op {
 struct ActivationParam;
-struct LeakyReLUParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
+struct LayerNormParam;
+struct LeakyReLUParam;
+struct MaskedSoftmaxParam;
+struct ReshapeParam;
+struct SliceParam;
 struct SoftmaxParam;
 struct SoftmaxOutputParam;
-struct ReshapeParam;
-struct LayerNormParam;
 bool SupportDNNLAct(const ActivationParam& param);
 bool SupportDNNLAct(const ActivationParam& param, const NDArray& input);
-bool SupportDNNLLeakyRelu(const LeakyReLUParam& param);
-bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input);
-bool SupportQuantizedDNNLAct(const ActivationParam& param);
+bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs);
+bool SupportDNNLBinary(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs);
+bool SupportDNNLConcat(const std::vector<NDArray>& arrs);
 bool SupportDNNLConv(const ConvolutionParam& params, const NDArray& input);
 bool SupportDNNLDeconv(const DeconvolutionParam& params, const NDArray& input);
-bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& input, const NDArray& output);
-bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& input, const NDArray& output);
-bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param);
-bool SupportDNNLTranspose(const NDArray& data);
-bool SupportDNNLBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
+bool SupportDNNLDot(const std::vector<NDArray>& inputs);
+bool SupportDNNLEltwise(const NDArray& input);
+bool SupportDNNLFC(const NDArray& input);
 bool SupportDNNLLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs);
-bool SupportDNNLReshape(const NDArray& input, const NDArray& output);
+bool SupportDNNLLeakyRelu(const LeakyReLUParam& param);
+bool SupportDNNLLeakyRelu(const LeakyReLUParam& param, const NDArray& input);
+bool SupportDNNLLogSoftmax(const SoftmaxParam& param, const NDArray& input);
+bool SupportDNNLMaskedSoftmax(const MaskedSoftmaxParam& param, const std::vector<NDArray>& input);
+bool SupportDNNLQuantizedAct(const ActivationParam& param);
+bool SupportDNNLReshape(const NDArray& input);
+bool SupportDNNLSlice(const SliceParam& param, const NDArray& input, const NDArray& output);
+bool SupportDNNLSoftmax(const SoftmaxParam& param, const NDArray& input);
+bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param, const NDArray& input);
 bool SupportDNNLStack(const std::vector<NDArray>& inputs);
+bool SupportDNNLSum(const std::vector<NDArray>& inputs);
+
+void DNNLMemorySum(const dnnl::memory& arr1, const dnnl::memory& arr2, const dnnl::memory& out);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
   int size = -1;
-  MSHADOW_TYPE_SWITCH(dtype, DType, { size = sizeof(DType); });
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, { size = sizeof(DType); });
   return size;
 }
 
@@ -224,6 +298,7 @@ static inline dnnl::memory::data_type get_dnnl_type(int dtype) {
     case mshadow::kInt8:
       return dnnl::memory::data_type::s8;
     case mshadow::kUint8:
+    case mshadow::kBool:
       return dnnl::memory::data_type::u8;
     default:
       LOG(FATAL) << "unknown type for oneDNN :" << static_cast<int>(dtype);
@@ -286,13 +361,6 @@ inline static dnnl::memory::desc GetMemDesc(const NDArray& arr, int dtype = -1) 
   return dnnl::memory::desc{dims, get_dnnl_type(dtype), dnnl::memory::format_tag::any};
 }
 
-inline static bool ChooseBRGEMMImpl(const dnnl::memory::dims& weight_dims, size_t batch_size) {
-  // Conditions based on measurement results done on CLX8280
-  // https://github.com/apache/incubator-mxnet/pull/20533
-  return weight_dims[0] >= 1024 && weight_dims[1] >= 1024 && batch_size >= 16384 &&
-         weight_dims[0] % 64 == 0 && weight_dims[1] % 64 == 0;
-}
-
 inline static dnnl::memory::desc GetFCWeightDesc(const NDArray& arr,
                                                  size_t batch_size,
                                                  int dtype = -1) {
@@ -305,7 +373,7 @@ inline static dnnl::memory::desc GetFCWeightDesc(const NDArray& arr,
   // for batch 256 alexnet benchmark test
   const bool force_fc_ab_format = dmlc::GetEnv("MXNET_ONEDNN_FORCE_FC_AB_FORMAT", false);
   if (dims.size() == 2) {
-    if (force_fc_ab_format || !ChooseBRGEMMImpl(dims, batch_size)) {
+    if (force_fc_ab_format || dtype != mshadow::kInt8) {
       format = dnnl::memory::format_tag::ab;
     }
   }
@@ -431,9 +499,9 @@ class TmpMemMgr {
 
 typedef std::unordered_map<int, dnnl::memory> dnnl_args_map_t;
 class DNNLStream {
-  std::vector<std::pair<dnnl::primitive, dnnl_args_map_t> > net_prim_args;
+  std::vector<std::pair<dnnl::primitive, dnnl_args_map_t>> net_prim_args;
   // Here we hold all memory related to the operators in the stream.
-  std::vector<std::shared_ptr<const dnnl::memory> > mem_holder;
+  std::vector<std::shared_ptr<const dnnl::memory>> mem_holder;
   dnnl::stream s;
 
  public:
@@ -533,6 +601,7 @@ bool IsDNNL(const dnnl::memory::desc& desc);
 
 dnnl_format_tag_t GetDefaultFormat(const dnnl::memory::desc& md);
 dnnl_format_tag_t GetDefaultFormat(int num_dims);
+dnnl_format_tag_t GetPermutedFormat(int num_dims);
 dnnl::memory::desc GetDesc(const dnnl::memory::desc& md, const dnnl_format_tag_t& format);
 
 inline bool same_shape(const mxnet::TShape& shape, const dnnl_dims_t dims, int ndims) {
@@ -701,6 +770,11 @@ struct DNNLPostEltwiseParam {
   float scale         = 1.f;
   float alpha         = 0.f;
   float beta          = 1.f;
+
+  bool operator==(const DNNLPostEltwiseParam& other) const {
+    return this->alg == other.alg && this->scale == other.scale && this->alpha == other.alpha &&
+           this->beta == other.beta;
+  }
 };
 
 void DNNLRun(mxnet::FComputeEx fn,
@@ -724,5 +798,20 @@ void DNNLRun(FComputeExUnary fn,
              const mxnet::NDArray& outputs_);
 
 }  // namespace mxnet
+
+namespace std {
+template <>
+struct hash<mxnet::DNNLPostEltwiseParam> {
+  size_t operator()(const mxnet::DNNLPostEltwiseParam& val) {
+    size_t ret = dmlc::HashCombine(0, static_cast<int>(val.alg));
+    ret        = dmlc::HashCombine(ret, val.scale);
+    ret        = dmlc::HashCombine(ret, val.alpha);
+    ret        = dmlc::HashCombine(ret, val.beta);
+
+    return ret;
+  }
+};
+}  // namespace std
+
 #endif
 #endif  // MXNET_OPERATOR_NN_DNNL_DNNL_BASE_INL_H_

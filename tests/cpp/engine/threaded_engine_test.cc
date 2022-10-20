@@ -51,8 +51,6 @@ struct Workload {
   int time;
 };
 
-static uint32_t seed_ = 0xdeadbeef;
-
 /**
  * generate a list of workloads
  */

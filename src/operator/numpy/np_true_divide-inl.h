@@ -95,7 +95,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
     if (common::is_float(lhs.type_flag_)) {
       // If both are the same floats, normal launch
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, DType, {
+        MSHADOW_REAL_TYPE_SWITCH_EX(lhs.type_flag_, DType, _, {
           Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
               s, out.Size(), out.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>());
         });
@@ -115,7 +115,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs& attrs,
     }
   } else {
     // Case when types of the 2 input tensors are different
-    if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+    if ((common::is_float(lhs.type_flag_)) && (common::is_float(rhs.type_flag_))) {
       // both lhs and rhs are float types, output type is the more precise one
       TBlob temp_tblob;
       if (lhs.type_flag_ == out.type_flag_) {
@@ -238,7 +238,7 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
           });
         }
       } else {
-        if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+        if ((common::is_float(lhs.type_flag_)) && (common::is_float(rhs.type_flag_))) {
           // lhs and rhs have different float types, the output is the more precise one
           TBlob temp_tblob;
           if (lhs.type_flag_ == out.type_flag_) {

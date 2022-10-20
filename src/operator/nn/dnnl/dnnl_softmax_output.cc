@@ -24,9 +24,10 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../softmax_output-inl.h"
-#include "./dnnl_base-inl.h"
-#include "./dnnl_ops-inl.h"
+
+#include "operator/softmax_output-inl.h"
+#include "dnnl_base-inl.h"
+
 namespace mxnet {
 namespace op {
 
@@ -89,9 +90,9 @@ static DNNLSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam& p
   return it->second;
 }
 
-//  This is only used for forward. For backward ,need double check compatibility
-bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param) {
-  return param.multi_output ? false : true;
+// Support for https://oneapi-src.github.io/oneDNN/v2.6/dev_guide_softmax.html
+bool SupportDNNLSoftmaxOutput(const SoftmaxOutputParam& param, const NDArray& input) {
+  return SupportDNNL(input) && !param.multi_output;
 }
 
 void DNNLSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,

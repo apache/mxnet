@@ -22,7 +22,10 @@
  * \brief CPU Implementation of numpy-compatible dot
  */
 
-#include "./np_dot-inl.h"
+#include "np_dot-inl.h"
+#if MXNET_USE_ONEDNN == 1
+#include "operator/nn/dnnl/dnnl_dot-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -101,6 +104,32 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
+#if MXNET_USE_ONEDNN == 1
+static void NumpyDotComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+  if (SupportDNNLDot(inputs)) {
+    DNNL_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    DNNLRun(DNNLDotForward<true>, attrs, ctx, inputs, req, outputs);
+    DNNL_OPCHECK_RUN(NumpyDotForward<cpu>, attrs, ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(NumpyDotForward<cpu>, attrs, ctx, inputs, req, outputs);
+  }
+}
+
+inline static bool NumpyDotStorageType(const nnvm::NodeAttrs& attrs,
+                                       const int dev_mask,
+                                       DispatchMode* dispatch_mode,
+                                       std::vector<int>* in_attrs,
+                                       std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return DNNLStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif
+
 NNVM_REGISTER_OP(_npi_dot)
     .describe(R"doc(Dot product of two arrays. Specifically,
 
@@ -134,6 +163,11 @@ NNVM_REGISTER_OP(_npi_dot)
                                 })
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
     .set_attr<FCompute>("FCompute<cpu>", NumpyDotForward<cpu>)
+#if MXNET_USE_ONEDNN == 1
+    .set_attr<bool>("TIsDNNL", true)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", NumpyDotComputeExCPU)
+    .set_attr<FInferStorageType>("FInferStorageType", NumpyDotStorageType)
+#endif
     .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_dot"})
     .add_argument("a", "NDArray-or-Symbol", "First input")
     .add_argument("b", "NDArray-or-Symbol", "Second input");

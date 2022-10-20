@@ -37,7 +37,7 @@ import warnings
 import numpy as _np
 from .. import _deferred_compute as dc
 from ..autograd import is_recording
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
+from ..ndarray import NDArray, dtype_np_to_mx, _GRAD_REQ_MAP
 from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_code,\
                       get_oshape_of_gather_nd_op
 from ..ndarray._internal import _set_np_ndarray_class
@@ -132,7 +132,7 @@ def _new_alloc_handle(shape, device, delay_alloc, dtype=mx_real_t):  # pylint: d
             ctypes.c_int(device.device_typeid),
             ctypes.c_int(device.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[_np.dtype(dtype).type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             ctypes.byref(hdl)))
     else:
         # When shape is larger than uint32 then there is an overflow error at python end itself.
@@ -144,17 +144,13 @@ def _new_alloc_handle(shape, device, delay_alloc, dtype=mx_real_t):  # pylint: d
             raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
                             "larger than 2^31 elements. Please build with flag " +
                             "USE_INT64_TENSOR_SIZE=1")
-        if _np.dtype(dtype) == _np.dtype([('bfloat16', _np.uint16)]):
-            dtype_type = _np.dtype(dtype)
-        else:
-            dtype_type = _np.dtype(dtype).type
         check_call(_LIB.MXNDArrayCreate(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(device.device_typeid),
             ctypes.c_int(device.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
+            ctypes.c_int(int(dtype_np_to_mx(dtype))),
             ctypes.byref(hdl)))
     return hdl
 
@@ -642,7 +638,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         elif isinstance(value, ndarray):
             _npi.boolean_mask_assign_tensor(data=self, mask=key, value=value, start_axis=0, out=self)
         else:
-            raise NotImplementedError('type %s is not supported.'%(type(value)))
+            raise NotImplementedError(f'type {type(value)} is not supported.')
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
@@ -4522,7 +4518,7 @@ def arcsin(x, out=None, **kwargs):
        The inverse sine is also known as `asin` or sin^{-1}.
        The output `ndarray` has the same `device` as the input `ndarray`.
        This function differs from the original `numpy.arcsin
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.arcsin.html>`_ in
        the following aspects:
 
        * Only support ndarray or scalar now.
@@ -4571,7 +4567,7 @@ asin.__doc__ = """
 
     .. note::
        `asin` is a alias for `arcsin`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asin-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.asin.html
        instead of an official NumPy operator.
        
        `asin` is a multivalued function: for each `x` there are infinitely
@@ -4583,7 +4579,7 @@ asin.__doc__ = """
        The inverse sine is also known as `asin` or sin^{-1}.
        The output `ndarray` has the same `ctx` as the input `ndarray`.
        This function differs from the original `numpy.arcsin
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.arcsin.html>`_ in
        the following aspects:
 
        * Only support ndarray or scalar now.
@@ -4662,7 +4658,7 @@ acos.__doc__ = """
     Notes
     ----------
     `acos` is a alias for `arccos`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acos-x
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.acos.html
     instead of an official NumPy operator.
     
     acos is a multivalued function: for each x there are infinitely many numbers z such that
@@ -4749,7 +4745,7 @@ atan.__doc__ = """
     Notes
     -----
     `atan` is a alias for `arctan`. It is a standard API in
-    https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan-x
+    https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.atan.html
     instead of an official NumPy operator.
     
     `atan` is a multi-valued function: for each `x` there are infinitely
@@ -5751,7 +5747,7 @@ asinh.__doc__ = """
 
     .. note::
        `asinh` is a alias for `arcsinh`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#asinh-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.asinh.html
        instead of an official NumPy operator.
        
        `asinh` is a multivalued function: for each `x` there are infinitely
@@ -5848,7 +5844,7 @@ acosh.__doc__ = """
 
     .. note::
        `acosh` is a alias for `arccosh`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#acosh-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.acosh.html
        instead of an official NumPy operator.
        
        `acosh` is a multivalued function: for each `x` there are infinitely
@@ -5944,7 +5940,7 @@ atanh.__doc__ = """
 
     .. note::
        `atanh` is a alias for `arctanh`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atanh-x
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.atanh.html
        instead of an official NumPy operator.
     
        `atanh` is a multivalued function: for each `x` there are infinitely
@@ -8076,14 +8072,14 @@ def argmax(a, axis=None, out=None, keepdims=False):
 
     .. note::
        ``keepdims`` param is part of request in data-api-standard
-       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmax-x-axis-none-keepdims-false>`_,
+       <https://data-apis.org/array-api/latest/API_specification/generated/signatures.searching_functions.argmax.html>`_,
        which is not the parameter in official NumPy
 
        In case of multiple occurrences of the maximum values, the indices
        corresponding to the first occurrence are returned.
 
        This function differs from the original `numpy.argmax
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.argmax.html>`_ in
        the following aspects:
 
        * Input type does not support Python native iterables(list, tuple, ...).
@@ -8154,14 +8150,14 @@ def argmin(a, axis=None, out=None, keepdims=False):
 
     .. note::
        ``keepdims`` param is part of request in data-api-standard
-       <https://data-apis.org/array-api/latest/API_specification/searching_functions.html#argmin-x-axis-none-keepdims-false>`_,
+       <https://data-apis.org/array-api/latest/API_specification/generated/signatures.searching_functions.argmin.html>`_,
        which is not the parameter in official NumPy
 
        In case of multiple occurrences of the minimum values, the indices
        corresponding to the first occurrence are returned.
 
        This function differs from the original `numpy.argmin
-       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmin.html>`_ in
+       <https://numpy.org/doc/stable/reference/generated/numpy.argmin.html>`_ in
        the following aspects:
 
        * Input type does not support Python native iterables(list, tuple, ...).
@@ -9563,7 +9559,7 @@ atan2.__doc__ = """
 
     .. notes::
        `atan2` is a alias for `arctan2`. It is a standard API in
-       https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html#atan2-x1-x2
+       https://data-apis.org/array-api/latest/API_specification/generated/signatures.elementwise_functions.atan2.html
        instead of an official NumPy operator.
        
        *atan2* is identical to the ``atan2`` function of the underlying

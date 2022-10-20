@@ -36,7 +36,7 @@ from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int6
 from ..base import NDArrayHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..device import Device, current_device
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from ..ndarray import NDArray, dtype_np_to_mx, dtype_mx_to_np, is_mx_dtype
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
 from ..executor import Executor
 from . import _internal
@@ -77,9 +77,9 @@ class Symbol(SymbolBase):
             name = self.name
             if name is None:
                 name = ', '.join([i.name for i in self])
-                return '<%s group [%s]>' % (self.__class__.__name__, name)
+                return f'<{self.__class__.__name__} group [{name}]>'
             else:
-                return '<%s %s>' % (self.__class__.__name__, name)
+                return f'<{self.__class__.__name__} {name}>'
         else:
             return '<FREED {}>'.format(self.__class__.__name__)
 
@@ -120,7 +120,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._PlusScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __bool__(self):
         raise NotImplementedForSymbol(self.__bool__, 'bool')
@@ -143,7 +143,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._MinusScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __isub__(self, other):
         raise NotImplementedForSymbol(self.__isub__, '-=', other)
@@ -166,7 +166,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._RMinusScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x*y
@@ -178,7 +178,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._MulScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __imul__(self, other):
         raise NotImplementedForSymbol(self.__imul__, '*=', other)
@@ -196,7 +196,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._DivScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __rdiv__(self, other):
         """x.__rdiv__(y) <=> y/x
@@ -216,7 +216,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._RDivScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __mod__(self, other):
         """x.__mod__(y) <=> x%y
@@ -228,7 +228,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._ModScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y%x
@@ -248,7 +248,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._RModScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __idiv__(self, other):
         raise NotImplementedForSymbol(self.__idiv__, '/=', other)
@@ -272,7 +272,7 @@ class Symbol(SymbolBase):
         if isinstance(other, Number):
             return _internal._PowerScalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
@@ -281,7 +281,7 @@ class Symbol(SymbolBase):
         elif isinstance(other, Number):
             return _internal._rpower_scalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __neg__(self):
         """x.__neg__() <=> -x
@@ -340,7 +340,7 @@ class Symbol(SymbolBase):
         if isinstance(other, numeric_types):
             return _internal._equal_scalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __ne__(self, other):
         """x.__ne__(y) <=> x!=y
@@ -352,7 +352,7 @@ class Symbol(SymbolBase):
         if isinstance(other, numeric_types):
             return _internal._not_equal_scalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __gt__(self, other):
         """x.__gt__(y) <=> x>y
@@ -364,7 +364,7 @@ class Symbol(SymbolBase):
         if isinstance(other, numeric_types):
             return _internal._greater_scalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __ge__(self, other):
         """x.__ge__(y) <=> x>=y
@@ -376,7 +376,7 @@ class Symbol(SymbolBase):
         if isinstance(other, numeric_types):
             return _internal._greater_equal_scalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __lt__(self, other):
         """x.__lt__(y) <=> x<y
@@ -388,7 +388,7 @@ class Symbol(SymbolBase):
         if isinstance(other, numeric_types):
             return _internal._lesser_scalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __le__(self, other):
         """x.__le__(y) <=> x<=y
@@ -400,7 +400,7 @@ class Symbol(SymbolBase):
         if isinstance(other, numeric_types):
             return _internal._lesser_equal_scalar(self, scalar=other)
         else:
-            raise TypeError('type %s not supported' % str(type(other)))
+            raise TypeError(f'type {str(type(other))} not supported')
 
     def __getstate__(self):
         handle = self.handle
@@ -544,10 +544,10 @@ class Symbol(SymbolBase):
             for i, name in enumerate(output_names):
                 if name == index:
                     if idx is not None:
-                        raise ValueError('There are multiple outputs with name \"%s\"' % index)
+                        raise ValueError(f'There are multiple outputs with name \"{index}\"')
                     idx = i
             if idx is None:
-                raise ValueError('Cannot find output that matches name \"%s\"' % index)
+                raise ValueError(f'Cannot find output that matches name \"{index}\"')
             index = idx
 
         if not isinstance(index, int):
@@ -950,7 +950,7 @@ class Symbol(SymbolBase):
                         if len(unknowns) >= 10:
                             unknowns.append('...')
                             break
-                        unknowns.append('%s: %s' % (name, str(dtype)))
+                        unknowns.append(f'{name}: {str(dtype)}')
                 warnings.warn(
                     "Cannot decide type for the following arguments. " +
                     "Consider providing them as input:\n\t" +
@@ -959,9 +959,9 @@ class Symbol(SymbolBase):
         except MXNetError:
             print("infer_type error. Arguments:")
             for i, arg in enumerate(args):
-                print("  #%d: %s" % (i, arg))
+                print(f"  #{i}: {arg}")
             for k, v in kwargs.items():
-                print("  %s: %s" % (k, v))
+                print(f"  {k}: {v}")
             raise
 
     def infer_type_partial(self, *args, **kwargs):
@@ -1023,19 +1023,16 @@ class Symbol(SymbolBase):
             keys = c_array(ctypes.c_char_p, [])
             for s in args:
                 if s is not None:
-                    s = _numpy.dtype(s).type
-                    if s not in _DTYPE_NP_TO_MX:
-                        raise TypeError('Argument need to be one of ' + str(_DTYPE_NP_TO_MX))
-                    sdata.append(_DTYPE_NP_TO_MX[s])
+                    sdata.append(dtype_np_to_mx(s))
                 else:
                     sdata.append(-1)
         else:
             str_keys = []
             for k, v in kwargs.items():
-                v = _numpy.dtype(v).type
-                if v in _DTYPE_NP_TO_MX:
+                if is_mx_dtype(v):
+                    v = dtype_np_to_mx(v)
                     str_keys.append(k)
-                    sdata.append(_DTYPE_NP_TO_MX[v])
+                    sdata.append(v)
             keys = c_str_array(str_keys)
         arg_type_size = mx_uint()
         arg_type_data = ctypes.POINTER(ctypes.c_int)()
@@ -1061,12 +1058,9 @@ class Symbol(SymbolBase):
             ctypes.byref(aux_type_data),
             ctypes.byref(complete)))
         if complete.value != 0:
-            arg_types = [
-                _DTYPE_MX_TO_NP[arg_type_data[i]] for i in range(arg_type_size.value)]
-            out_types = [
-                _DTYPE_MX_TO_NP[out_type_data[i]] for i in range(out_type_size.value)]
-            aux_types = [
-                _DTYPE_MX_TO_NP[aux_type_data[i]] for i in range(aux_type_size.value)]
+            arg_types = [dtype_mx_to_np(arg_type_data[i]) for i in range(arg_type_size.value)]
+            out_types = [dtype_mx_to_np(out_type_data[i]) for i in range(out_type_size.value)]
+            aux_types = [dtype_mx_to_np(aux_type_data[i]) for i in range(aux_type_size.value)]
             return (arg_types, out_types, aux_types)
         else:
             return (None, None, None)
@@ -1143,7 +1137,7 @@ class Symbol(SymbolBase):
                         if len(unknowns) >= 10:
                             unknowns.append('...')
                             break
-                        unknowns.append('%s: %s' % (name, str(shape)))
+                        unknowns.append(f'{name}: {str(shape)}')
                 warnings.warn(
                     "Cannot decide shape for the following arguments " +
                     "(0s in shape means unknown dimensions). " +
@@ -1153,9 +1147,9 @@ class Symbol(SymbolBase):
         except MXNetError:
             print("infer_shape error. Arguments:")
             for i, arg in enumerate(args):
-                print("  #%d: %s" % (i, arg))
+                print(f"  #{i}: {arg}")
             for k, v in kwargs.items():
-                print("  %s: %s" % (k, v))
+                print(f"  {k}: {v}")
             raise
 
     def infer_shape_partial(self, *args, **kwargs):
@@ -1221,7 +1215,7 @@ class Symbol(SymbolBase):
                 if s is not None:
                     if not isinstance(s, tuple):
                         raise TypeError("Arguments need to be shapes (tuple), "
-                                        "but argument %d is %s." % (i, type(s)))
+                                        f"but argument {i} is {type(s)}.")
                     sdata.extend(s)
                 indptr.append(len(sdata))
         else:
@@ -1229,7 +1223,7 @@ class Symbol(SymbolBase):
             for k, v in kwargs.items():
                 if not isinstance(v, tuple):
                     raise TypeError("Arguments need to be shapes (tuple), "
-                                    "but '%s' is %s." % (k, type(v)))
+                                    f"but '{k}' is {type(v)}.")
                 str_keys.append(k)
                 sdata.extend(v)
                 indptr.append(len(sdata))
@@ -1443,7 +1437,7 @@ class Symbol(SymbolBase):
         arg_arrays = []
         if isinstance(args, list):
             if len(args) != len(arg_names):
-                raise ValueError('Length of %s does not match the number of arguments' % arg_key)
+                raise ValueError(f'Length of {arg_key} does not match the number of arguments')
             for narr in args:
                 if narr is None and allow_missing:
                     arg_handles.append(None)
@@ -1465,7 +1459,7 @@ class Symbol(SymbolBase):
                         arg_handles.append(None)
                         arg_arrays.append(None)
                     else:
-                        raise ValueError('key `%s` is missing in `%s`' % (name, arg_key))
+                        raise ValueError(f'key `{name}` is missing in `{arg_key}`')
         else:
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
@@ -1570,12 +1564,9 @@ class Symbol(SymbolBase):
             input_type_names = []
             input_type_data = []
             for k, v in type_dict.items():
-                v = _numpy.dtype(v).type
-                if v in _DTYPE_NP_TO_MX:
-                    input_type_names.append(k)
-                    input_type_data.append(_DTYPE_NP_TO_MX[v])
-                else:
-                    raise ValueError(str(v) + " is not a MXNet type.")
+                v = dtype_np_to_mx(v)
+                input_type_names.append(k)
+                input_type_data.append(v)
 
             num_input_types = mx_uint(len(input_type_names))
             input_type_names = c_str_array(input_type_names)
@@ -2741,11 +2732,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
-        np_dtype = _numpy.dtype(dtype)
-        if np_dtype == _numpy.dtype([('bfloat16', _numpy.uint16)]):
-            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[np_dtype])
-        else:
-            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+        attr['__dtype__'] = str(dtype_np_to_mx(dtype))
     if init is not None:
         if not isinstance(init, string_types):
             init = init.dumps()
@@ -2760,9 +2747,9 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)
         else:
-            raise ValueError('Attribute name=%s is not supported.'
+            raise ValueError(f'Attribute name={k} is not supported.'
                              ' Additional attributes must start and end with double underscores,'
-                             ' e.g, __yourattr__' % k)
+                             ' e.g, __yourattr__')
     ret._set_attr(**attr)
     return ret
 
@@ -2911,7 +2898,7 @@ def pow(base, exp):
     if isinstance(base, Number) and isinstance(exp, Number):
         return base**exp
     else:
-        raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
+        raise TypeError(f'types ({str(type(base))}, {str(type(exp))}) not supported')
 
 
 def power(base, exp):
@@ -2992,7 +2979,7 @@ def maximum(left, right):
     if isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
-        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+        raise TypeError(f'types ({str(type(left))}, {str(type(right))}) not supported')
 
 
 # pylint: disable=no-member
@@ -3036,7 +3023,7 @@ def minimum(left, right):
     if isinstance(left, Number) and isinstance(right, Number):
         return left if left < right else right
     else:
-        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+        raise TypeError(f'types ({str(type(left))}, {str(type(right))}) not supported')
 
 
 # pylint: disable=no-member
@@ -3081,7 +3068,7 @@ def hypot(left, right):
     if isinstance(left, Number) and isinstance(right, Number):
         return _numpy.hypot(left, right)
     else:
-        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+        raise TypeError(f'types ({str(type(left))}, {str(type(right))}) not supported')
 
 
 def eye(N, M=0, k=0, dtype=None, **kwargs):

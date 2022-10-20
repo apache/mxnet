@@ -279,11 +279,11 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
 
     def train_end(self, estimator, *args, **kwargs):
         train_time = time.time() - self.train_start
-        msg = 'Train finished using total %ds with %d epochs. ' % (train_time, self.current_epoch)
+        msg = f'Train finished using total {train_time}s with {self.current_epoch} epochs. '
         # log every result in train stats including train/validation loss & metrics
         for metric in self.metrics:
             name, value = metric.get()
-            msg += '%s: %.4f, ' % (name, value)
+            msg += f'{name}: {value:.4f}, '
         estimator.logger.info(msg.rstrip(', '))
 
     def batch_begin(self, estimator, *args, **kwargs):
@@ -293,17 +293,17 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     def batch_end(self, estimator, *args, **kwargs):
         if isinstance(self.log_interval, int):
             batch_time = time.time() - self.batch_start
-            msg = '[Epoch %d][Batch %d]' % (self.current_epoch, self.batch_index)
+            msg = f'[Epoch {self.current_epoch}][Batch {self.batch_index}]'
             self.processed_samples += kwargs['batch'][0].shape[0]
-            msg += '[Samples %s] ' % (self.processed_samples)
+            msg += f'[Samples {self.processed_samples}] '
             self.log_interval_time += batch_time
             if self.batch_index % self.log_interval == 0:
-                msg += 'time/interval: %.3fs ' % self.log_interval_time
+                msg += f'time/interval: {self.log_interval_time:.3f}s '
                 self.log_interval_time = 0
                 for metric in self.metrics:
                     # only log current training loss & metric after each interval
                     name, value = metric.get()
-                    msg += '%s: %.4f, ' % (name, value)
+                    msg += f'{name}: {value:.4f}, '
                 estimator.logger.info(msg.rstrip(', '))
         self.batch_index += 1
 
@@ -324,10 +324,10 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     def epoch_end(self, estimator, *args, **kwargs):
         if isinstance(self.log_interval, int) or self.log_interval == 'epoch':
             epoch_time = time.time() - self.epoch_start
-            msg = '[Epoch %d] Finished in %.3fs, ' % (self.current_epoch, epoch_time)
+            msg = f'[Epoch {self.current_epoch}] Finished in {epoch_time:.3f}s, '
             for monitor in self.metrics:
                 name, value = monitor.get()
-                msg += '%s: %.4f, ' % (name, value)
+                msg += f'{name}: {value:.4f}, '
             estimator.logger.info(msg.rstrip(', '))
         self.current_epoch += 1
         self.batch_index = 0
@@ -404,10 +404,10 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         self.saved_checkpoints = []
         if self.save_best:
             if mode not in ['auto', 'min', 'max']:
-                warnings.warn('ModelCheckpoint mode %s is unknown, '
+                warnings.warn(f'ModelCheckpoint mode {mode} is unknown, '
                               'fallback to auto mode. CheckpointHandler will use'
                               'max mode for f1 and accuracy metric comparison and '
-                              'use min mode other wise' % (mode),
+                              'use min mode other wise',
                               RuntimeWarning)
                 mode = 'auto'
 
@@ -477,12 +477,11 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         else:
             save_epoch_number = self.current_epoch
             save_batch_number = self.current_batch
-        prefix = "%s-epoch%dbatch%d" % (self.model_prefix, save_epoch_number, save_batch_number)
+        prefix = f"{self.model_prefix}-epoch{save_epoch_number}batch{save_batch_number}"
         self._save_params_and_trainer(estimator, prefix)
         if self.verbose > 0:
-            estimator.logger.info('[Epoch %d] CheckpointHandler: trained total %d batches, '
-                                  'saving model at %s with prefix: %s',
-                                  self.current_epoch, self.current_batch + 1, self.model_dir, prefix)
+            estimator.logger.info(f'[Epoch {self.current_epoch}] CheckpointHandler: trained total {self.current_batch + 1} batches, '
+                                  f'saving model at {self.model_dir} with prefix: {prefix}')
 
         if self.save_best:
             monitor_name, monitor_value = self.monitor.get()
@@ -557,35 +556,33 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         if self.trained_epoch == -1:
             msg = "CheckpointHandler: No checkpoint found, training from scratch for "
             if estimator.max_batch:
-                msg += "%d batches" % estimator.max_batch
+                msg += f"{estimator.max_batch} batches"
             else:
-                msg += "%d epochs" % estimator.max_epoch
+                msg += f"{estimator.max_epoch} epochs"
             estimator.logger.info(msg)
         else:
-            msg = "CheckpointHandler: Checkpoint resumed from epoch %d batch %d, " \
-                  "continue to train for " % (self.trained_epoch, self.trained_batch)
+            msg = f"CheckpointHandler: Checkpoint resumed from epoch {self.trained_epoch} batch {self.trained_batch}, " \
+                  "continue to train for "
             # change maximum number of epoch or batch to train if resumed from epoch checkpoint
             if estimator.max_epoch:
                 if self.trained_epoch >= estimator.max_epoch - 1:
-                    raise ValueError("Found checkpoint with maximum number of epoch %d reached, please specify "
-                                     "resume_from_checkpoint=False (default value) if you wan to train from scratch."
-                                     % estimator.max_epoch)
+                    raise ValueError(f"Found checkpoint with maximum number of epoch {estimator.max_epoch} reached, please specify "
+                                     "resume_from_checkpoint=False (default value) if you wan to train from scratch.")
                 estimator.max_epoch = estimator.max_epoch - self.trained_epoch - 1
-                msg += "%d epochs " % estimator.max_epoch
+                msg += f"{estimator.max_epoch} epochs "
             if estimator.max_batch:
                 if self.trained_batch >= estimator.max_batch - 1:
-                    raise ValueError("Found checkpoint with maximum number of batch %d reached, please specify"
-                                     "resume_from_checkpoint=False (default value) if you wan to train from scratch."
-                                     % self.trained_batch)
+                    raise ValueError(f"Found checkpoint with maximum number of batch {self.trained_batch} reached, please specify"
+                                     "resume_from_checkpoint=False (default value) if you wan to train from scratch.")
                 estimator.max_batch = estimator.max_batch - self.trained_batch - 1
-                msg += "%d batches " % estimator.max_batch
+                msg += f"{estimator.max_batch} batches "
             # load checkpoint
-            param_file = "%s-epoch%dbatch%d.params" % (self.model_prefix, self.trained_epoch, self.trained_batch)
+            param_file = "{}-epoch{}batch{}.params".format(self.model_prefix, self.trained_epoch, self.trained_batch)
             param_file = os.path.join(self.model_dir, param_file)
-            trainer_file = "%s-epoch%dbatch%d.states" % (self.model_prefix, self.trained_epoch, self.trained_batch)
+            trainer_file = "{}-epoch{}batch{}.states".format(self.model_prefix, self.trained_epoch, self.trained_batch)
             trainer_file = os.path.join(self.model_dir, trainer_file)
-            assert os.path.exists(param_file), "Failed to load checkpoint, %s does not exist" % param_file
-            assert os.path.exists(trainer_file), "Failed to load checkpoint, %s does not exist" % trainer_file
+            assert os.path.exists(param_file), f"Failed to load checkpoint, {param_file} does not exist"
+            assert os.path.exists(trainer_file), f"Failed to load checkpoint, {trainer_file} does not exist"
             estimator.net.load_parameters(param_file, ctx=estimator.device)
             estimator.trainer.load_states(trainer_file)
             estimator.logger.warning(msg)
@@ -655,10 +652,10 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         self.stop_training = False
 
         if mode not in ['auto', 'min', 'max']:
-            warnings.warn('EarlyStopping mode %s is unknown, '
+            warnings.warn(f'EarlyStopping mode {mode} is unknown, '
                           'fallback to auto mode. CheckpointHandler will use'
                           'max mode for f1 and accuracy metric comparison and '
-                          'use min mode other wise' % (mode),
+                          'use min mode other wise',
                           RuntimeWarning)
             mode = 'auto'
 
