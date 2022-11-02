@@ -81,6 +81,7 @@ header:
     - 'include/nnvm' # symlinks to 3rdparty/tvm/nnvm/include/nnvm
     - 'example/automatic-mixed-precision/common' # symlinks to example/image-classification/common
     - 'example/quantization/common' # symlinks to example/image-classification/common
+    - 'scala-package/packageTest/core/scripts' # symlinks to scala-package/core/scripts
     # test/build data
     - 'contrib/clojure-package/examples/imclassification/test/test-symbol.json.ref'
     - 'example/speech_recognition/resources/unicodemap_en_baidu.csv'
