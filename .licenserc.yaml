@@ -82,6 +82,7 @@ header:
     - 'example/automatic-mixed-precision/common' # symlinks to example/image-classification/common
     - 'example/quantization/common' # symlinks to example/image-classification/common
     - 'scala-package/packageTest/core/scripts' # symlinks to scala-package/core/scripts
+    - 'scala-package/packageTest/examples/scripts' # symlinks to scala-package/examples/scripts
     # test/build data
     - 'contrib/clojure-package/examples/imclassification/test/test-symbol.json.ref'
     - 'example/speech_recognition/resources/unicodemap_en_baidu.csv'
