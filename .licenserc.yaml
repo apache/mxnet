@@ -79,6 +79,7 @@ header:
     - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
     - 'include/mkldnn' # symlinks to 3rdparty/mkldnn
     - 'example/automatic-mixed-precision/common' # symlinks to ../image-classification/common
+    - 'example/quantization/common' # symlinks to ../image-classification/common
     # test/build data
     - 'contrib/clojure-package/examples/imclassification/test/test-symbol.json.ref'
     - 'example/speech_recognition/resources/unicodemap_en_baidu.csv'
