@@ -17,7 +17,7 @@
 
 Implementing  CNN + Highway Network for Chinese Text Classification in MXNet
 ============
-Sentiment classification forked from [incubator-mxnet/cnn_text_classification/](https://github.com/apache/incubator-mxnet/tree/master/example/cnn_text_classification), i've implemented the [Highway Networks](https://arxiv.org/pdf/1505.00387.pdf) architecture.The final train model is CNN + Highway Network structure, and this version can achieve a best dev accuracy of 94.75% with the Chinese corpus.
+Sentiment classification forked from [mxnet/cnn_text_classification/](https://github.com/apache/mxnet/tree/master/example/cnn_text_classification), i've implemented the [Highway Networks](https://arxiv.org/pdf/1505.00387.pdf) architecture.The final train model is CNN + Highway Network structure, and this version can achieve a best dev accuracy of 94.75% with the Chinese corpus.
 
 It is a slightly simplified implementation of Kim's [Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1408.5882) paper in MXNet.
 

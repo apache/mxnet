@@ -992,7 +992,7 @@ function test_power()
     @test copy(x .^ π) ≈ A .^ π
   end
 
-  # TODO: Float64: wait for https://github.com/apache/incubator-mxnet/pull/8012
+  # TODO: Float64: wait for https://github.com/apache/mxnet/pull/8012
 
   @info("NDArray::broadcast_power")
   let

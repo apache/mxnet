@@ -44,7 +44,7 @@ By far the best way to get involved with this project is to install the Clojure 
 There are two main ways of reaching out to other users and the package maintainers:
 
 - If you have a question or general feedback, or you encountered a problem but are not sure if it's a bug or a misunderstanding, then the *Apache Slack* (channels `#mxnet` and `#mxnet-scala`) is the best place to turn check out. To join, [ask for an invitation](https://mxnet.apache.org/community/contribute.html#slack) at `dev@mxnet.apache.org`.
-- If you found a bug, miss an important feature or want to give feedback directly relevant for development, please head over to the MXNet [GitHub issue page](https://github.com/apache/incubator-mxnet/issues) and create a new issue. If the issue is specific to the Clojure package, consider using a title starting with `[Clojure]` to make it easily discoverable among the many other, mostly generic issues.
+- If you found a bug, miss an important feature or want to give feedback directly relevant for development, please head over to the MXNet [GitHub issue page](https://github.com/apache/mxnet/issues) and create a new issue. If the issue is specific to the Clojure package, consider using a title starting with `[Clojure]` to make it easily discoverable among the many other, mostly generic issues.
 
 Of course, contributions to code or documentation are also more than welcome! Please check out the [Clojure Package Contribution Needs](https://cwiki.apache.org/confluence/display/MXNET/Clojure+Package+Contribution+Needs) to get an idea about where and how to contribute code.
 
@@ -93,7 +93,7 @@ sudo apt-get update
 sudo apt install libopencv-imgcodecs3.4 libopenblas-base libatlas3-base libcurl3
 ```
 
-Note: `libcurl3` may conflict with other packages on your system. [Here](https://github.com/apache/incubator-mxnet/issues/12822) is a possible workaround.
+Note: `libcurl3` may conflict with other packages on your system. [Here](https://github.com/apache/mxnet/issues/12822) is a possible workaround.
 
 ##### Linux (Arch)
 
@@ -129,7 +129,7 @@ brew install opencv
 
 You can find the latest version out on [maven central- clojure-mxnet latest](https://search.maven.org/search?q=clojure-mxnet)
 
-After making this change and running `lein deps`, you should be able to run example code like this [NDArray Tutorial](https://github.com/apache/incubator-mxnet/blob/master/contrib/clojure-package/examples/tutorial/src/tutorial/ndarray.clj).
+After making this change and running `lein deps`, you should be able to run example code like this [NDArray Tutorial](https://github.com/apache/mxnet/blob/master/contrib/clojure-package/examples/tutorial/src/tutorial/ndarray.clj).
 
 ### Option 2: Clojure package from Source, Scala Package from Jar
 
@@ -140,7 +140,7 @@ With this option, you will install a Git revision of the Clojure package source 
 - Recursively clone the MXNet repository and checkout the desired version, (example 1.4.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and a clone into the `~/mxnet` directory:
 
   ```bash
-  git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
+  git clone --recursive https://github.com/apache/mxnet.git ~/mxnet
   cd ~/mxnet
   git tag --list  # Find the tag that matches the Scala package version
 
@@ -177,7 +177,7 @@ With this option, you will compile the core MXNet C++ package and jars for both 
 The first step is to recursively clone the MXNet repository and checkout the desired version, (example 1.4.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and clone into the `~/mxnet` directory:
 
   ```bash
-  git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
+  git clone --recursive https://github.com/apache/mxnet.git ~/mxnet
   cd ~/mxnet
   git checkout tags/version -b my_mxnet  # this is optional
   git submodule update --init --recursive
@@ -219,10 +219,10 @@ To run examples, you can now use `lein run` in any of the example directories, e
 There are Dockerfiles available as well.
 
 - [Community Provided by Magnet](https://hub.docker.com/u/magnetcoop/)
-- [MXNet CI](https://github.com/apache/incubator-mxnet/blob/master/ci/docker/Dockerfile.build.ubuntu_cpu) and the install scripts
-  - [Ubuntu core](https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh)
-  - [Ubuntu Scala](https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_scala.sh)
-  - [Ubuntu Clojure](https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_clojure.sh)
+- [MXNet CI](https://github.com/apache/mxnet/blob/master/ci/docker/Dockerfile.build.ubuntu_cpu) and the install scripts
+  - [Ubuntu core](https://github.com/apache/mxnet/blob/master/ci/docker/install/ubuntu_core.sh)
+  - [Ubuntu Scala](https://github.com/apache/mxnet/blob/master/ci/docker/install/ubuntu_scala.sh)
+  - [Ubuntu Clojure](https://github.com/apache/mxnet/blob/master/ci/docker/install/ubuntu_clojure.sh)
 
 ## Need Help?
 
@@ -230,7 +230,7 @@ If you are having trouble getting started or have a question, feel free to reach
 
 - Clojurian Slack #mxnet channel. To join, go to [http://clojurians.net/](http://clojurians.net/).
 - Apache Slack #mxnet and #mxnet-scala channel. To join this slack send an email to dev@mxnet.apache.org.
-- Create an Issue on [https://github.com/apache/incubator-mxnet/issues](https://github.com/apache/incubator-mxnet/issues).
+- Create an Issue on [https://github.com/apache/mxnet/issues](https://github.com/apache/mxnet/issues).
 
 
 ## Examples

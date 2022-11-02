@@ -333,7 +333,7 @@ assert metric.get()[1] < 1, "Achieved MSE (%f) is larger than expected (1.0)" % 
 ### Training the model with multiple machines or multiple devices
 
 Distributed training with `row_sparse` weights and gradients are supported in MXNet, which significantly reduces communication cost for large models. To train a sparse model with multiple machines, you need to call `prepare` before `forward`, or `save_checkpoint`.
-Please refer to the example in [mxnet/example/sparse/linear_classification](https://github.com/apache/incubator-mxnet/tree/master/example/sparse/linear_classification)
+Please refer to the example in [mxnet/example/sparse/linear_classification](https://github.com/apache/mxnet/tree/master/example/sparse/linear_classification)
 for more details.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

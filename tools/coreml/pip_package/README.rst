@@ -18,11 +18,11 @@
 MXNET -> CoreML Converter
 =========================
 
-`Apache MXNet <https://github.com/apache/incubator-mxnet>`_ (incubating) is a deep learning framework designed for both efficiency and flexibility. It allows you to mix `symbolic and imperative programming <https://mxnet.apache.org/api/architecture/program_model>`_ to maximize efficiency and productivity. At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly. A graph optimization layer on top of that makes symbolic execution fast and memory efficient. MXNet is portable and lightweight, scaling effectively to multiple GPUs and multiple machines.
+`Apache MXNet <https://github.com/apache/mxnet>`_ (incubating) is a deep learning framework designed for both efficiency and flexibility. It allows you to mix `symbolic and imperative programming <https://mxnet.apache.org/api/architecture/program_model>`_ to maximize efficiency and productivity. At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly. A graph optimization layer on top of that makes symbolic execution fast and memory efficient. MXNet is portable and lightweight, scaling effectively to multiple GPUs and multiple machines.
 
 `Core ML <http://developer.apple.com/documentation/coreml>`_ is an Apple framework which allows developers to simply and easily integrate machine learning (ML) models into apps running on Apple devices (including iOS, watchOS, macOS, and tvOS). Core ML introduces a public file format (.mlmodel) for a broad set of ML methods including deep neural networks (both convolutional and recurrent), tree ensembles with boosting, and generalized linear models. Models in this format can be directly integrated into apps through Xcode.
 
-This tool helps convert `MXNet models <https://github.com/apache/incubator-mxnet>`_ into `Apple CoreML <https://developer.apple.com/documentation/coreml>`_ format which can then be run on Apple devices. You can find more information about this tool on our `github <https://github.com/apache/incubator-mxnet/tree/master/tools/coreml>`_ page.
+This tool helps convert `MXNet models <https://github.com/apache/mxnet>`_ into `Apple CoreML <https://developer.apple.com/documentation/coreml>`_ format which can then be run on Apple devices. You can find more information about this tool on our `github <https://github.com/apache/mxnet/tree/master/tools/coreml>`_ page.
 
 Prerequisites
 -------------
@@ -34,7 +34,7 @@ The method for installing this tool follows the `standard python package install
 
   pip install mxnet-to-coreml
 
-The package `documentation <https://github.com/apache/incubator-mxnet/tree/master/tools/coreml>`_ contains more details on how to use coremltools.
+The package `documentation <https://github.com/apache/mxnet/tree/master/tools/coreml>`_ contains more details on how to use coremltools.
 
 Dependencies
 ------------
@@ -56,6 +56,6 @@ In order to convert, say a `Squeezenet model <http://data.mxnet.io/models/imagen
 
 More Information
 ----------------
-* `On Github <https://github.com/apache/incubator-mxnet/tree/master/tools/coreml>`_
-* `MXNet framework <https://github.com/apache/incubator-mxnet>`_
+* `On Github <https://github.com/apache/mxnet/tree/master/tools/coreml>`_
+* `MXNet framework <https://github.com/apache/mxnet>`_
 * `Apple CoreML <https://developer.apple.com/documentation/coreml>`_

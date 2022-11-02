@@ -53,7 +53,7 @@ def test_download_retries():
 def _download_successful(tmp):
     """ internal use for testing download successfully """
     mx.gluon.utils.download(
-        "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
+        "https://raw.githubusercontent.com/apache/mxnet/master/README.md",
         path=tmp)
 
 

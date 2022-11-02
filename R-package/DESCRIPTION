@@ -5,13 +5,13 @@ Version: 1.9.1
 Date: 2017-06-27
 Author: Tianqi Chen, Qiang Kou, Tong He, Anirudh Acharya <https://github.com/anirudhacharya>
 Maintainer: Qiang Kou <qkou@qkou.info>
-Repository: apache/incubator-mxnet
+Repository: apache/mxnet
 Description: MXNet is a deep learning framework designed for both efficiency
     and flexibility. It allows you to mix the flavours of deep learning programs
     together to maximize the efficiency and your productivity.
 License: Apache License (== 2.0)
-URL: https://github.com/apache/incubator-mxnet/tree/master/R-package
-BugReports: https://github.com/apache/incubator-mxnet/issues
+URL: https://github.com/apache/mxnet/tree/master/R-package
+BugReports: https://github.com/apache/mxnet/issues
 Imports:
     methods,
     Rcpp (>= 0.12.1),

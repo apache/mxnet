@@ -179,7 +179,7 @@ mvn deploy -Pstaging
 
 Examples & Usage
 -------
-Assuming you use `mvn install`, you can find the `mxnet-full_scala_version-INTERNAL.jar` e.g. `mxnet-full_2.11-INTERNAL.jar` under the path `incubator-mxnet/scala-package/assembly/target`.
+Assuming you use `mvn install`, you can find the `mxnet-full_scala_version-INTERNAL.jar` e.g. `mxnet-full_2.11-INTERNAL.jar` under the path `mxnet/scala-package/assembly/target`.
 
 Adding the following configuration in `pom.xml`
 ```HTML
@@ -211,7 +211,7 @@ Caused by: java.lang.ClassNotFoundException: org.apache.mxnet.NDArray
 Please make sure your $CLASSPATH contains `mxnet-full_scala_version-INTERNAL.jar`.
 
 - To set up the Scala Project using IntelliJ IDE on macOS follow the instructions [here](https://mxnet.apache.org/tutorials/scala/mxnet_scala_on_intellij.html).
-- Several examples on using the Scala APIs are provided in the [Scala Examples Folder](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
+- Several examples on using the Scala APIs are provided in the [Scala Examples Folder](https://github.com/apache/mxnet/tree/master/scala-package/examples/)
 
 Scala Training APIs
 -------
@@ -229,21 +229,21 @@ Other available Scala APIs for training can be found [here](https://mxnet.apache
 
 Scala Inference APIs
 -------
-The [Scala Inference APIs](https://mxnet.apache.org/api/scala/infer.html) provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.apache.org/api/scala/docs/index.html#org.apache.mxnet.infer.package).  
+The [Scala Inference APIs](https://mxnet.apache.org/api/scala/infer.html) provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/mxnet/tree/master/scala-package/infer) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.apache.org/api/scala/docs/index.html#org.apache.mxnet.infer.package).  
 
 Java Inference APIs
 -------
-The [Java Inference APIs](https://mxnet.apache.org/api/java/index.html) also provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/javaapi) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.apache.org/api/java/docs/index.html#org.apache.mxnet.infer.package).
+The [Java Inference APIs](https://mxnet.apache.org/api/java/index.html) also provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/mxnet/tree/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/javaapi) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.apache.org/api/java/docs/index.html#org.apache.mxnet.infer.package).
 More APIs will be added to the Java Inference APIs soon.
 
 JVM Memory Management
 -------
 The Scala/Java APIs also provide an automated resource management system, thus making it easy to manage the native memory footprint without any degradation in performance.
-More details about JVM Memory Management are available [here](https://github.com/apache/incubator-mxnet/blob/master/scala-package/memory-management.md).
+More details about JVM Memory Management are available [here](https://github.com/apache/mxnet/blob/master/scala-package/memory-management.md).
 
 License
 -------
-MXNet Scala Package is licensed under [Apache-2](https://github.com/apache/incubator-mxnet/blob/master/scala-package/LICENSE) license.
+MXNet Scala Package is licensed under [Apache-2](https://github.com/apache/mxnet/blob/master/scala-package/LICENSE) license.
 
 MXNet uses some 3rd party softwares. Following 3rd party license files are bundled inside Scala jar file:
 * cub/LICENSE.TXT

@@ -19,7 +19,7 @@
 
 This folder contains examples that use mx2onnx module to export MXNet models to ONNX format.
 
-Please refer to [this link](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#onnx-export-support-for-mxnet)
+Please refer to [this link](https://github.com/apache/mxnet/tree/v1.x/python/mxnet/onnx#onnx-export-support-for-mxnet)
 for more details.
 
 - cv_model_inference.py.

@@ -39,11 +39,11 @@ jekyll_fork=ThomasDelteil
 
 setup_mxnet_site_repo() {
    fork=$1
-   if [ ! -d "incubator-mxnet-site" ]; then
-     git clone https://$APACHE_USERNAME:$APACHE_PASSWORD@github.com/aaronmarkham/incubator-mxnet-site.git
+   if [ ! -d "mxnet-site" ]; then
+     git clone https://$APACHE_USERNAME:$APACHE_PASSWORD@github.com/aaronmarkham/mxnet-site.git
    fi
 
-   cd incubator-mxnet-site
+   cd mxnet-site
    git checkout asf-site
    rm -rf *
    git rm -r *
@@ -66,14 +66,14 @@ setup_jekyll_repo() $jekyll_fork
 
 # Copy in the main jekyll website artifacts
 web_artifacts=mxnet.io-v2/release
-web_dir=incubator-mxnet-site
+web_dir=mxnet-site
 cp -a $web_artifacts/* $web_dir
 
 
 fetch_artifacts() {
     api=$1
     artifacts=https://mxnet-public.s3.us-east-2.amazonaws.com/docs/$version/$api-artifacts.tgz
-    dir=incubator-mxnet-site/api/
+    dir=mxnet-site/api/
     wget -q $artifacts
     mkdir -p $dir
     tar xf $api-artifacts.tgz -C $dir
@@ -86,7 +86,7 @@ do
 done
 
 # Commit the updates
-cd incubator-mxnet-site
+cd mxnet-site
 pwd
 git branch
 git add .

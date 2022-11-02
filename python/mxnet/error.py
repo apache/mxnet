@@ -47,7 +47,7 @@ class InternalError(MXNetError):
         # Patch up additional hint message.
         if "MXNet hint:" not in msg:
             msg += ("\nMXNet hint: You hit an internal error. Please open an issue in "
-                    "https://github.com/apache/incubator-mxnet/issues/new/choose"
+                    "https://github.com/apache/mxnet/issues/new/choose"
                     " to report it.")
         super(InternalError, self).__init__(msg)
 

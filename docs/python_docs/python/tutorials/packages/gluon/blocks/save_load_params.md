@@ -252,8 +252,8 @@ net.export("lenet", epoch=1)
 ### From a different frontend
 
 One of the main reasons to serialize model architecture into a JSON file is to load it from a different frontend like C, C++ or Scala. Here is a couple of examples:
-1. [Loading serialized Hybrid networks from C](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/predict-cpp/image-classification-predict.cc)
-2. [Loading serialized Hybrid networks from Scala](https://github.com/apache/incubator-mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/ImageClassifier.scala)
+1. [Loading serialized Hybrid networks from C](https://github.com/apache/mxnet/blob/master/example/image-classification/predict-cpp/image-classification-predict.cc)
+2. [Loading serialized Hybrid networks from Scala](https://github.com/apache/mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/ImageClassifier.scala)
 
 ### From Python
 

@@ -16,4 +16,4 @@
 <!--- under the License. -->
 
 
-Please refer to : https://github.com/apache/incubator-mxnet/blob/master/docs/static_site/src/pages/api/cpp/docs/tutorials/multi_threaded_inference.md for detailed tutorial.
+Please refer to : https://github.com/apache/mxnet/blob/master/docs/static_site/src/pages/api/cpp/docs/tutorials/multi_threaded_inference.md for detailed tutorial.

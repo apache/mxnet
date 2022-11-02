@@ -38,7 +38,7 @@ import scala.collection.mutable.ListBuffer
 /**
   * <p>
   * Example inference showing usage of the Infer package on a resnet-152 model.
-  * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier" target="_blank">Instructions to run this example</a>
+  * @see <a href="https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier" target="_blank">Instructions to run this example</a>
   */
 // scalastyle:on
 object ImageClassifierExample {

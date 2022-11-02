@@ -2129,7 +2129,7 @@ def test_convolution_grouping():
                 np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14052")
+@unittest.skip("Flaky test https://github.com/apache/mxnet/issues/14052")
 @with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
@@ -2176,9 +2176,9 @@ def test_depthwise_convolution():
 
 @with_seed()
 def test_convolution_independent_gradients():
-    # NOTE(zixuanweeei): Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/15603.
+    # NOTE(zixuanweeei): Flaky test tracked by https://github.com/apache/mxnet/issues/15603.
     # GPU context will be enabled after figuring out the possible issue tracked at
-    # https://github.com/apache/incubator-mxnet/issues/15638.
+    # https://github.com/apache/mxnet/issues/15638.
     ctx = mx.cpu()
     atol = 1.0e-3
     rtol = 1.0e-3
@@ -3970,7 +3970,7 @@ def test_norm():
                                                         [np.ones(npy_out.shape).astype(out_dtype)],
                                                         [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
                                                         dtype=backward_dtype)
-                                # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
+                                # Disable numeric gradient https://github.com/apache/mxnet/issues/11509
                                 # check gradient
                                 if dtype is not np.float16 and not skip_backward:
                                     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
@@ -4097,7 +4097,7 @@ def check_sequence_func(ftype, mask_value=0, axis=0):
 
 
 @with_seed()
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11395")
+@unittest.skip("Flaky test: https://github.com/apache/mxnet/issues/11395")
 def test_sequence_last():
     check_sequence_func("last", axis=0)
     check_sequence_func("last", axis=1)
@@ -6062,11 +6062,11 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x, np.ones(shape=(10, 10), dtype=np.float32))
 
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/17467")
+@unittest.skip("Flaky test, tracked at https://github.com/apache/mxnet/issues/17467")
 @with_seed()
 def test_custom_op_fork():
     # test custom operator fork
-    # see https://github.com/apache/incubator-mxnet/issues/14396
+    # see https://github.com/apache/mxnet/issues/14396
     class AdditionOP(mx.operator.CustomOp):
         def __init__(self):
             super(AdditionOP, self).__init__()
@@ -6130,7 +6130,7 @@ def _build_dot_custom(fun_forward, name):
 @with_seed()
 def test_custom_op_exc():
     # test except handling
-    # see https://github.com/apache/incubator-mxnet/pull/14693
+    # see https://github.com/apache/mxnet/pull/14693
     # 1. error in python code
     def custom_exc1():
         def f(in_data, out_data):
@@ -6327,7 +6327,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
 
     return output_offset
 
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/11713")
+@unittest.skip("Flaky test, tracked at https://github.com/apache/mxnet/issues/11713")
 @with_seed()
 def test_deformable_psroipooling():
     sample_per_part = 4
@@ -6532,7 +6532,7 @@ def _make_triangle_symm(a, ndims, m, lower, dtype=np.float32):
     return mx.sym.broadcast_mul(a, lt_mask)
 
 # @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
-# tracked at https://github.com/apache/incubator-mxnet/issues/11718
+# tracked at https://github.com/apache/mxnet/issues/11718
 @with_seed()
 def test_laop():
     dtype = np.float64
@@ -6894,7 +6894,7 @@ def test_laop_3():
 
 
 # @piyushghai - Removing the fixed seed for this test.
-# Issue for flakiness is tracked at - https://github.com/apache/incubator-mxnet/issues/11721
+# Issue for flakiness is tracked at - https://github.com/apache/mxnet/issues/11721
 @with_seed()
 def test_laop_4():
     # Currently disabled on GPU as syevd needs cuda8
@@ -6970,7 +6970,7 @@ def test_laop_5():
 
 # Tests for linalg.inverse
 @with_seed()
-@unittest.skip("Test crashes https://github.com/apache/incubator-mxnet/issues/15975")
+@unittest.skip("Test crashes https://github.com/apache/mxnet/issues/15975")
 def test_laop_6():
     dtype = np.float64
     rtol_fw = 1e-7
@@ -7036,7 +7036,7 @@ def test_stack():
 
 
 ## TODO: test fails intermittently when cudnn on. temporarily disabled cudnn until gets fixed.
-## tracked at https://github.com/apache/incubator-mxnet/issues/14288
+## tracked at https://github.com/apache/mxnet/issues/14288
 @with_seed()
 def test_dropout():
     def zero_count(array, ratio):
@@ -7207,7 +7207,7 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/mxnet/issues/11290")
 @with_seed()
 def test_scatter_gather_nd():
     def check(data, idx):
@@ -7729,7 +7729,7 @@ def test_slice_partial_infer():
 
 @with_seed()
 def test_float16_min_max():
-    """Test for issue: https://github.com/apache/incubator-mxnet/issues/9007"""
+    """Test for issue: https://github.com/apache/mxnet/issues/9007"""
     a = mx.nd.array([np.finfo('float16').min, np.finfo('float16').max], dtype='float16')
     assert a.dtype == np.float16
     assert np.finfo('float16').min == mx.nd.min(a).asscalar()
@@ -8453,7 +8453,7 @@ def test_monitor_with_variable_input_shape():
         del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 @with_seed()
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/mxnet/issues/13915")
 def test_activation():
     shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
     dtype_l = [np.float64, np.float32, np.float16]
@@ -9462,7 +9462,7 @@ def test_transpose_infer_shape_mixed():
 
 @with_seed()
 def test_sample_normal_default_shape():
-    # Test case from https://github.com/apache/incubator-mxnet/issues/16135
+    # Test case from https://github.com/apache/mxnet/issues/16135
     s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]))
     assert s.shape == (1,)
     s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=())
@@ -10059,7 +10059,7 @@ def test_scalarop_locale_invariance():
 
 @with_seed()
 def test_take_grads():
-    # Test for https://github.com/apache/incubator-mxnet/issues/19817
+    # Test for https://github.com/apache/mxnet/issues/19817
     from mxnet.gluon.nn import HybridBlock, Conv1D, HybridSequential, HybridLambda, Dense
     from mxnet import autograd, nd
     from mxnet.gluon.loss import L2Loss

@@ -26,7 +26,7 @@
 
 #set -ex
 
-export MXNET_GITPATH="https://github.com/apache/incubator-mxnet"
+export MXNET_GITPATH="https://github.com/apache/mxnet"
 
 
 if [ -z ${MXNET_TAG} ];

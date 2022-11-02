@@ -140,9 +140,9 @@ uploadShadow {
                 }
 
                 scm {
-                    connection 'scm:git:git://github.com:apache/incubator-mxnet.git'
-                    developerConnection 'scm:git:git@github.com:apache/incubator-mxnet.git'
-                    url 'https://github.com/apache/incubator-mxnet.git'
+                    connection 'scm:git:git://github.com:apache/mxnet.git'
+                    developerConnection 'scm:git:git@github.com:apache/mxnet.git'
+                    url 'https://github.com/apache/mxnet.git'
                 }
             }
         }
