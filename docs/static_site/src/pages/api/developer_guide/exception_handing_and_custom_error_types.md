@@ -88,7 +88,7 @@ Note that as of writing this document, the following Python error types are supp
 * `IndexError`
 * `NotImplementedError`
 
-Check [this](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/error.py) resource for more details
+Check [this](https://github.com/apache/mxnet/blob/master/python/mxnet/error.py) resource for more details
 about Python supported error types that MXNet supports.
 
 ## How to register a custom error type

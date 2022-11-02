@@ -131,8 +131,8 @@ Click "Import Changes" in this prompt.
 **Step 5.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
-**Step 6.** Navigate to the App.java class in the project and paste the code in `main` method from HelloWorld.java from [Java Demo project](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo/java-demo/src/main/java/mxnet/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
-You can also grab the entire [Java Demo project](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo/java-demo) and run it by following the instructions on the [README](https://github.com/apache/incubator-mxnet/blob/master/scala-package/mxnet-demo/java-demo/README.md).
+**Step 6.** Navigate to the App.java class in the project and paste the code in `main` method from HelloWorld.java from [Java Demo project](https://github.com/apache/mxnet/tree/master/scala-package/mxnet-demo/java-demo/src/main/java/mxnet/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
+You can also grab the entire [Java Demo project](https://github.com/apache/mxnet/tree/master/scala-package/mxnet-demo/java-demo) and run it by following the instructions on the [README](https://github.com/apache/mxnet/blob/master/scala-package/mxnet-demo/java-demo/README.md).
 
 **Step 7.** Now run the App.java.
 
@@ -184,5 +184,5 @@ java -cp "target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/*" mxnet.App
 For more information about MXNet Java resources, see the following:
 
 * [Java Inference API]({{'/api/java'|relative_url}})
-* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
+* [Java Inference Examples](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 * [MXNet Tutorials Index]({{'/api'|relative_url}})

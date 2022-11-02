@@ -379,7 +379,7 @@ Allowing mutation mitigates these issues.
 
 
 ## Source Code of the Generic Dependency Engine
-[MXNet](https://github.com/apache/incubator-mxnet) provides an implementation
+[MXNet](https://github.com/apache/mxnet) provides an implementation
 of the generic dependency engine described in this page.
 We welcome your contributions.
 
