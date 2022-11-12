@@ -1005,7 +1005,7 @@ def test_unix_cpp_gpu() {
 
 def test_unix_cpp_mkldnn_gpu() {
     return ['Cpp: MKLDNN+GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-cpp-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
