@@ -23,9 +23,9 @@ In this article, I will cover how to create a new layer from scratch, how to use
 
 ## The simplest custom layer
 
-To create a new layer in Gluon API, one must create a class that inherits from [Block](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L123) class. This class provides the most basic functionality, and all pre-defined layers inherit from it directly or via other subclasses. Because each layer in Apache MxNet inherits from `Block`  words “layer” and “block” are used interchangeable inside of the Apache MxNet community.
+To create a new layer in Gluon API, one must create a class that inherits from [Block](https://github.com/apache/mxnet/blob/master/python/mxnet/gluon/block.py#L123) class. This class provides the most basic functionality, and all pre-defined layers inherit from it directly or via other subclasses. Because each layer in Apache MxNet inherits from `Block`  words “layer” and “block” are used interchangeable inside of the Apache MxNet community.
 
-The only instance method needed to be implemented is [forward(self, x)](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L415) which defines what exactly your layer is going to do during forward propagation. Notice, that it doesn’t require to provide what the block should do during back propogation. Back propogation pass for blocks is done by Apache MxNet for you.
+The only instance method needed to be implemented is [forward(self, x)](https://github.com/apache/mxnet/blob/master/python/mxnet/gluon/block.py#L415) which defines what exactly your layer is going to do during forward propagation. Notice, that it doesn’t require to provide what the block should do during back propogation. Back propogation pass for blocks is done by Apache MxNet for you.
 
 In the example below, we define a new layer and implement `forward()`  method to normalize input data by fitting it into a range of [0, 1].
 
@@ -47,11 +47,11 @@ class NormalizationLayer(gluon.Block):
         return (x - nd.min(x)) / (nd.max(x) - nd.min(x))
 ```
 
-The rest of methods of the `Block` class are already implemented, and majority of them are used to work with parameters of a block. There is one very special method named [hybridize()](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L384), though, which I am going to cover before moving to a more complex example of a custom layer.
+The rest of methods of the `Block` class are already implemented, and majority of them are used to work with parameters of a block. There is one very special method named [hybridize()](https://github.com/apache/mxnet/blob/master/python/mxnet/gluon/block.py#L384), though, which I am going to cover before moving to a more complex example of a custom layer.
 
 ## Hybridization and the difference between Block and HybridBlock
 
-Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
+Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
 
 The reason for that is that `HybridBlock` allows to write custom layers that can be used in imperative programming as well as in symbolic programming. It is convenient to support both ways, because the imperative programming eases the debugging of the code and the symbolic one provides faster execution speed. You can learn more about the difference between symbolic vs. imperative programming from this [deep learning programming paradigm](/api/architecture/program_model) article.
 
@@ -127,7 +127,7 @@ net(input)
 
 Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass.
 
-All parameters of a block are stored and accessed via [ParameterDict](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/parameter.py#L508) class. This class helps with initialization, updating, saving and loading of the parameters. Each layer can have multiple set of parameters, and all of them can be stored in a single instance of the `ParameterDict` class. On a block level, the instance of the `ParameterDict` class is accessible via `self.params` field, and outside of a block one can access all parameters of the network via [collect_params()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.collect_params) method called on a `container`. `ParamterDict` uses [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class to represent parameters inside of Apache MxNet neural network. If parameter doesn’t exist, trying to get a parameter via `self.params` will create it automatically.
+All parameters of a block are stored and accessed via [ParameterDict](https://github.com/apache/mxnet/blob/master/python/mxnet/gluon/parameter.py#L508) class. This class helps with initialization, updating, saving and loading of the parameters. Each layer can have multiple set of parameters, and all of them can be stored in a single instance of the `ParameterDict` class. On a block level, the instance of the `ParameterDict` class is accessible via `self.params` field, and outside of a block one can access all parameters of the network via [collect_params()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.collect_params) method called on a `container`. `ParamterDict` uses [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class to represent parameters inside of Apache MxNet neural network. If parameter doesn’t exist, trying to get a parameter via `self.params` will create it automatically.
 
 ```python
 class NormalizationHybridLayer(gluon.HybridBlock):

@@ -17,7 +17,7 @@
 
 # Autograd for NDArray
 # this is a port of Python's autograd module
-# https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/autograd.py
+# https://github.com/apache/mxnet/blob/master/python/mxnet/autograd.py
 
 ###############################################################################
 #  Private util functions

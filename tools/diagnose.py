@@ -31,7 +31,7 @@ except ImportError:
 import argparse
 
 URLS = {
-    'MXNet': 'https://github.com/apache/incubator-mxnet',
+    'MXNet': 'https://github.com/apache/mxnet',
     'Gluon Tutorial(en)': 'http://gluon.mxnet.io',
     'Gluon Tutorial(cn)': 'https://zh.gluon.ai',
     'FashionMNIST': 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/fashion-mnist/train-labels-idx1-ubyte.gz',

@@ -584,7 +584,7 @@ def _test_bulking(test_bulking_func):
         .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/mxnet/issues/14970')
 def test_bulking_gluon_gpu():
     _test_bulking(_test_bulking_in_process)
 

@@ -17,7 +17,7 @@
 
 # Image Classification
 
-This folder contains an example for image classification with the [MXNet Scala Infer API](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer).
+This folder contains an example for image classification with the [MXNet Scala Infer API](https://github.com/apache/mxnet/tree/master/scala-package/infer).
 The goal of image classification is to identify the objects contained in images.
 The following example shows recognized object classes with corresponding probabilities using a pre-trained model.
 
@@ -86,16 +86,16 @@ The available arguments are as follows:
 
 ## Pretrained Models
 
-The MXNet project repository provides several [pre-trained models on various datasets](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification#pre-trained-models) and examples on how to train them. You may use the [modelzoo.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/common/modelzoo.py) helper script to download these models. Many ImageNet models may be also be downloaded directly from [http://data.mxnet.io/models/imagenet/](http://data.mxnet.io/models/imagenet/).
+The MXNet project repository provides several [pre-trained models on various datasets](https://github.com/apache/mxnet/tree/master/example/image-classification#pre-trained-models) and examples on how to train them. You may use the [modelzoo.py](https://github.com/apache/mxnet/blob/master/example/image-classification/common/modelzoo.py) helper script to download these models. Many ImageNet models may be also be downloaded directly from [http://data.mxnet.io/models/imagenet/](http://data.mxnet.io/models/imagenet/).
 
 
 ## Infer API Details
 
-This example uses the [ImageClassifier](https://github.com/apache/incubator-mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/ImageClassifier.scala)
-class provided by the [MXNet Scala Infer API](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer).
+This example uses the [ImageClassifier](https://github.com/apache/mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/ImageClassifier.scala)
+class provided by the [MXNet Scala Infer API](https://github.com/apache/mxnet/tree/master/scala-package/infer).
 It provides methods to load the images, create a NDArray out of a `BufferedImage`, and run prediction using the following Infer APIs:
-* [Classifier](https://github.com/apache/incubator-mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/Classifier.scala)
-* [Predictor](https://github.com/apache/incubator-mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/Predictor.scala)
+* [Classifier](https://github.com/apache/mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/Classifier.scala)
+* [Predictor](https://github.com/apache/mxnet/blob/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/Predictor.scala)
 
 
 ## Next Steps

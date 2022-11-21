@@ -67,7 +67,7 @@ If you are using images and DataLoader, you can also use a [Cast transform](/api
 optimizer = mx.optimizer.create('sgd', multi_precision=True, lr=0.01)
 ```
 
-You can play around with mixed precision using the image classification [example](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_imagenet.py). We suggest using the Caltech101 dataset option in that example and using a ResNet50V1 network so you can quickly see the performance improvement and how the accuracy is unaffected. Here's the starter command to run this example.
+You can play around with mixed precision using the image classification [example](https://github.com/apache/mxnet/blob/master/example/image-classification/train_imagenet.py). We suggest using the Caltech101 dataset option in that example and using a ResNet50V1 network so you can quickly see the performance improvement and how the accuracy is unaffected. Here's the starter command to run this example.
 
 ```bash
 python image_classification.py --model resnet50_v1 --dataset caltech101 --gpus 0 --num-worker 30 --dtype float16
@@ -116,7 +116,7 @@ Training a network in float16 with the Symbolic API involves the following steps
 optimizer = mx.optimizer.create('sgd', multi_precision=True, lr=0.01)
 ```
 
-For a full example, please refer to [resnet.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/symbols/resnet.py) file on GitHub. A small, relevant excerpt from that file is presented below.
+For a full example, please refer to [resnet.py](https://github.com/apache/mxnet/blob/master/example/image-classification/symbols/resnet.py) file on GitHub. A small, relevant excerpt from that file is presented below.
 
 ```python
 data = mx.sym.Variable(name="data")
@@ -133,7 +133,7 @@ if dtype == 'float16':
 output = mx.sym.SoftmaxOutput(data=net_out, name='softmax')
 ```
 
-If you would like to train ResNet50 model on ImageNet using float16 precision, you can find the full script [here](https://github.com/apache/incubator-mxnet/blob/master/docs/static_site/src/pages/api/faq/float16.md)
+If you would like to train ResNet50 model on ImageNet using float16 precision, you can find the full script [here](https://github.com/apache/mxnet/blob/master/docs/static_site/src/pages/api/faq/float16.md)
 
 If you don't have ImageNet dataset at your disposal, you can still run the script above using synthetic float16 data by providing the following command:
 
@@ -141,13 +141,13 @@ If you don't have ImageNet dataset at your disposal, you can still run the scrip
 python train_imagenet.py --network resnet-v1 --num-layers 50 --benchmark 1 --gpus 0 --batch-size 256 --dtype float16
 ```
 
-There's a similar example for float16 fine tuning [here](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/fine-tune.py) of selected models: Inception v3, Inception v4, ResNetV1, ResNet50, ResNext or VGG. The command below shows how to use that script to fine-tune a Resnet50 model trained on Imagenet for the Caltech 256 dataset using float16.
+There's a similar example for float16 fine tuning [here](https://github.com/apache/mxnet/tree/master/example/image-classification/fine-tune.py) of selected models: Inception v3, Inception v4, ResNetV1, ResNet50, ResNext or VGG. The command below shows how to use that script to fine-tune a Resnet50 model trained on Imagenet for the Caltech 256 dataset using float16.
 
 ```bash
 python fine-tune.py --network resnet --num-layers 50 --pretrained-model imagenet1k-resnet-50 --data-train ~/.mxnet/dataset/caltech-256/caltech256-train.rec --data-val ~/data/caltech-256/caltech256-val.rec --num-examples 15420 --num-classes 256 --gpus 0 --batch-size 64 --dtype float16
 ```
 
-If you don't have the `Caltech256` dataset, you can download it using the script below, and convert it into .rec file format using [im2rec utility file](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py)
+If you don't have the `Caltech256` dataset, you can download it using the script below, and convert it into .rec file format using [im2rec utility file](https://github.com/apache/mxnet/blob/master/tools/im2rec.py)
 
 ```python
 import os

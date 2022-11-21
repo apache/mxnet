@@ -91,7 +91,7 @@ class _WikiText(_LanguageModelDataset):
 
         data, label = self._read_batch(path)
 
-        # https://github.com/apache/incubator-mxnet/issues/18886 breaks this unless array size is
+        # https://github.com/apache/mxnet/issues/18886 breaks this unless array size is
         # multiple of self._seq_len. Truncating the source is consistent with pre #18886 outcome
         seq_len_mult = len(data) // self._seq_len * self._seq_len
         self._data = nd.array(data, dtype=data.dtype)[:seq_len_mult].reshape((-1, self._seq_len))

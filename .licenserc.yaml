@@ -18,7 +18,6 @@ header:
     - '.gitmodules'
     - '.licenserc.yaml'
     - 'CODEOWNERS'
-    - 'DISCLAIMER'
     - 'KEYS'
     - 'python/mxnet/_cy3/README'
     - 'tools/dependencies/LICENSE.binary.dependencies'
@@ -78,6 +77,11 @@ header:
     - 'include/dmlc' # symlink to 3rdparty/dmlc-core/include/dmlc
     - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
     - 'include/mkldnn' # symlinks to 3rdparty/mkldnn
+    - 'include/nnvm' # symlinks to 3rdparty/tvm/nnvm/include/nnvm
+    - 'example/automatic-mixed-precision/common' # symlinks to example/image-classification/common
+    - 'example/quantization/common' # symlinks to example/image-classification/common
+    - 'scala-package/packageTest/core/scripts' # symlinks to scala-package/core/scripts
+    - 'scala-package/packageTest/examples/scripts' # symlinks to scala-package/examples/scripts
     # test/build data
     - 'contrib/clojure-package/examples/imclassification/test/test-symbol.json.ref'
     - 'example/speech_recognition/resources/unicodemap_en_baidu.csv'

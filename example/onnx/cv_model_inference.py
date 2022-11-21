@@ -76,7 +76,7 @@ mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_types, onnx_file)
 
 # download and process the input image
 img_dir = './images'
-img_url = 'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/car.jpg'
+img_url = 'https://github.com/apache/mxnet-ci/raw/master/test-data/images/car.jpg'
 fname = os.path.join(img_dir, os.path.basename(urlparse(img_url).path))
 mx.test_utils.download(img_url, fname=fname)
 img_data = preprocess_image(fname)

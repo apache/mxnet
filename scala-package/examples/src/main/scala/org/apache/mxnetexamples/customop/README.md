@@ -36,4 +36,4 @@ Then you need to define the arguments that you would like to pass in the model:
 --data-path <location of your downloaded file>
 ```
  
-you can find more in [here](https://github.com/apache/incubator-mxnet/blob/scala-package/examples/src/main/scala/org/apache/mxnet/examples/customop/ExampleCustomOp.scala#L218-L221)
+you can find more in [here](https://github.com/apache/mxnet/blob/scala-package/examples/src/main/scala/org/apache/mxnet/examples/customop/ExampleCustomOp.scala#L218-L221)

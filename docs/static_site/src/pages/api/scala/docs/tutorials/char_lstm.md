@@ -40,10 +40,10 @@ There are three ways to use this tutorial:
 
 2) Reuse the code by making changes to relevant parameters and running it from command line.
 
-3) [Run the source code directly](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/rnn) by running the [provided scripts](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/scripts/rnn).
+3) [Run the source code directly](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/rnn) by running the [provided scripts](https://github.com/apache/mxnet/tree/master/scala-package/examples/scripts/rnn).
 
 To run the scripts:
-- Build and train the model with the [run_train_charrnn.sh script](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/scripts/rnn/run_train_charrnn.sh). Edit the script as follows:
+- Build and train the model with the [run_train_charrnn.sh script](https://github.com/apache/mxnet/tree/master/scala-package/examples/scripts/rnn/run_train_charrnn.sh). Edit the script as follows:
 
 Edit the CLASS_PATH variable in the script to include your operating system-specific folder (e.g., linux-x86_64-cpu/linux-x86_64-gpu/osx-x86_64-cpu) in the path. Run the script with the following command:
 
@@ -198,7 +198,7 @@ Now, create a multi-layer LSTM model.
 To create the model:
 
 1) Load the helper files (`Lstm.scala`, `BucketIo.scala` and `RnnModel.scala`).
-`Lstm.scala` contains the definition of the LSTM cell. `BucketIo.scala` creates a sentence iterator. `RnnModel.scala` is used for model inference. The helper files are available on the [MXNet site](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/rnn).
+`Lstm.scala` contains the definition of the LSTM cell. `BucketIo.scala` creates a sentence iterator. `RnnModel.scala` is used for model inference. The helper files are available on the [MXNet site](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/rnn).
 To load them, at the Scala command prompt type:
 
 ```scala

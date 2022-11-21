@@ -213,5 +213,5 @@ setup(name=package_name,
           'Topic :: Software Development :: Libraries',
           'Topic :: Software Development :: Libraries :: Python Modules',
       ],
-      url='https://github.com/apache/incubator-mxnet')
+      url='https://github.com/apache/mxnet')
 

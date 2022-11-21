@@ -86,7 +86,7 @@ the configuration file described below.
 Clone the repository:
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+git clone --recursive https://github.com/apache/mxnet.git mxnet
 cd mxnet
 cp config/darwin.cmake config.cmake
 ```
@@ -162,7 +162,7 @@ Refer to the [C++ Package setup guide](c_plus_plus).
 
 ### Install the MXNet Package for Clojure
 
-Refer to the [Clojure setup guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package).
+Refer to the [Clojure setup guide](https://github.com/apache/mxnet/tree/master/contrib/clojure-package).
 <hr>
 
 

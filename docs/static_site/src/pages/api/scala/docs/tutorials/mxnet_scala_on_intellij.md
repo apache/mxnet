@@ -71,7 +71,7 @@ brew install opencv
 **Step 1.**: Download the MXNet source.
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+git clone --recursive https://github.com/apache/mxnet.git mxnet
 cd mxnet
 ```
 
@@ -410,14 +410,14 @@ If you chose to "Build from Source" when following the [install instructions]({{
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core_${scala.version}-${platform}-sources</artifactId>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.9.0-SNAPSHOT-sources.jar</systemPath>
+      <systemPath>/PathToMXNetSource/mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.9.1-SNAPSHOT-sources.jar</systemPath>
     </dependency>
 
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_${scala.version}-${platform}</artifactId>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.9.0-SNAPSHOT.jar</systemPath>
+      <systemPath>/PathToMXNetSource/mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.9.1-SNAPSHOT.jar</systemPath>
     </dependency>
 ```
 
@@ -451,5 +451,5 @@ The build generates a new jar file in the `target` folder called `scalaInference
 For more information about MXNet Scala resources, see the following:
 
 * [Scala API]({{'/api/scala'|relative_url}})
-* [Scala Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
+* [Scala Examples](https://github.com/apache/mxnet/tree/master/scala-package/examples/)
 * [MXNet Tutorials Index]({{'/api'|relative_url}})

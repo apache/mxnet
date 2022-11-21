@@ -163,7 +163,7 @@ if !libmxnet_detected
       @build_steps begin
         BinDeps.DirectoryRule(_mxdir, @build_steps begin
           ChangeDirectory(_srcdir)
-          `git clone https://github.com/apache/incubator-mxnet mxnet`
+          `git clone https://github.com/apache/mxnet mxnet`
         end)
         @build_steps begin
           ChangeDirectory(_mxdir)
@@ -192,13 +192,13 @@ if !libmxnet_detected
           if HAS_CUDA
             @build_steps begin
               `sed -i -s 's/USE_CUDA = 0/USE_CUDA = 1/' config.mk`
-              # address https://github.com/apache/incubator-mxnet/pull/7856
+              # address https://github.com/apache/mxnet/pull/7856
               `sed -i -s "s/ADD_LDFLAGS =\(.*\)/ADD_LDFLAGS =\1 -lcublas -lcusolver -lcurand -lcudart/" config.mk`
               if haskey(ENV, "CUDA_HOME")
                 `sed -i -s "s@USE_CUDA_PATH = NONE@USE_CUDA_PATH = $(ENV["CUDA_HOME"])@" config.mk`
               end
               if haskey(ENV, "CUDA_HOME")
-                # address https://github.com/apache/incubator-mxnet/pull/7838
+                # address https://github.com/apache/mxnet/pull/7838
                 flag = "-L$(ENV["CUDA_HOME"])/lib64 -L$(ENV["CUDA_HOME"])/lib"
                 `sed -i -s "s@ADD_LDFLAGS =\(.*\)@ADD_LDFLAGS =\1 $flag@" config.mk`
               end

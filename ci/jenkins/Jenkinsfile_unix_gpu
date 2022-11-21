@@ -63,7 +63,7 @@ core_logic: {
     custom_steps.test_static_python_gpu_cmake(),
     custom_steps.test_unix_capi_cpp_package(),
 
-    // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
+    // Disabled due to: https://github.com/apache/mxnet/issues/11407
     //custom_steps.test_unix_caffe_gpu()
   ]) 
 }

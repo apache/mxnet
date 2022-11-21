@@ -33,7 +33,7 @@
              [org.apache.clojure-mxnet.module :as m])
   (:gen-class))
 
-;;https://github.com/apache/incubator-mxnet/blob/master/example/rnn/old/char-rnn.ipynb
+;;https://github.com/apache/mxnet/blob/master/example/rnn/old/char-rnn.ipynb
 
 (when-not (.exists (clojure.java.io/file "data"))
   (do (println "Retrieving data...") (sh "./get_data.sh")))
