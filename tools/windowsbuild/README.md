@@ -16,4 +16,4 @@
 <!--- under the License. -->
 
 Due to dll size limitation under windows. Split dll into different dlls according to arch
-Reference https://github.com/apache/incubator-mxnet/pull/16980
+Reference https://github.com/apache/mxnet/pull/16980

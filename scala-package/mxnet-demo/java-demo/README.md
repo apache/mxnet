@@ -29,7 +29,7 @@ You are required to use Maven to build the package with the following commands u
 ```
 mvn package
 ```
-This command will pick the default values specified in the [pom](https://github.com/apache/incubator-mxnet/blob/master/scala-package/mxnet-demo/java-demo/pom.xml) file.
+This command will pick the default values specified in the [pom](https://github.com/apache/mxnet/blob/master/scala-package/mxnet-demo/java-demo/pom.xml) file.
 
 Note: If you are planning to use GPU, please add `-Dmxnet.profile=linux-x86_64-gpu`
 

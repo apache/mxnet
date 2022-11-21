@@ -63,8 +63,8 @@ core_logic: {
     custom_steps.test_static_python_cpu(),
     custom_steps.test_static_python_cpu_cmake(),
     /*  Disabled due to master build failure:
-     *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1221/pipeline/
-     *  https://github.com/apache/incubator-mxnet/issues/11801
+     *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/mxnet/detail/master/1221/pipeline/
+     *  https://github.com/apache/mxnet/issues/11801
     custom_steps.test_unix_distributed_kvstore_cpu()
     */
     custom_steps.test_unix_python3_cpu_no_tvm_op(),

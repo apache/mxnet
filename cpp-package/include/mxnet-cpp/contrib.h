@@ -58,13 +58,13 @@ namespace details {
 namespace contrib {
 
   // needs to be same with
-  //   https://github.com/apache/incubator-mxnet/blob/1c874cfc807cee755c38f6486e8e0f4d94416cd8/src/operator/subgraph/tensorrt/tensorrt-inl.h#L190
+  //   https://github.com/apache/mxnet/blob/1c874cfc807cee755c38f6486e8e0f4d94416cd8/src/operator/subgraph/tensorrt/tensorrt-inl.h#L190
   static const std::string TENSORRT_SUBGRAPH_PARAM_IDENTIFIER = "subgraph_params_names";
   // needs to be same with
-  //   https://github.com/apache/incubator-mxnet/blob/master/src/operator/subgraph/tensorrt/tensorrt.cc#L244
+  //   https://github.com/apache/mxnet/blob/master/src/operator/subgraph/tensorrt/tensorrt.cc#L244
   static const std::string TENSORRT_SUBGRAPH_PARAM_PREFIX = "subgraph_param_";
   /*!
-   * this is a mimic to https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/contrib/tensorrt.py#L37
+   * this is a mimic to https://github.com/apache/mxnet/blob/master/python/mxnet/contrib/tensorrt.py#L37
    * @param symbol symbol that already called subgraph api
    * @param argParams original arg params, params needed by tensorrt will be removed after calling this function
    * @param auxParams original aux params, params needed by tensorrt will be removed after calling this function

@@ -17,14 +17,14 @@
 
 # Exporting to ONNX format
 
-[Open Neural Network Exchange (ONNX)](https://github.com/onnx/onnx) provides an open source format for AI models. It defines an extensible computation graph model, as well as definitions of built-in operators and standard data types. In the MXNet 1.9 release, the MXNet-to-ONNX export module (mx2onnx) has received a major update with new features such as dynamic input shapes and better operator and model coverages. Please visit the [ONNX Export Support for MXNet](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#onnx-export-support-for-mxnet) page for more information.
+[Open Neural Network Exchange (ONNX)](https://github.com/onnx/onnx) provides an open source format for AI models. It defines an extensible computation graph model, as well as definitions of built-in operators and standard data types. In the MXNet 1.9 release, the MXNet-to-ONNX export module (mx2onnx) has received a major update with new features such as dynamic input shapes and better operator and model coverages. Please visit the [ONNX Export Support for MXNet](https://github.com/apache/mxnet/tree/v1.x/python/mxnet/onnx#onnx-export-support-for-mxnet) page for more information.
 
 In this tutorial, we will learn how to use the mx2onnx exporter on pre-trained models.
 
 ## Prerequisites
 
 To run the tutorial we will need to have installed the following python modules:
-- [MXNet >= 1.9.0](/get_started) _OR_ an earlier MXNet version + [the mx2onnx wheel](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#installation)
+- [MXNet >= 1.9.0](/get_started) _OR_ an earlier MXNet version + [the mx2onnx wheel](https://github.com/apache/mxnet/tree/v1.x/python/mxnet/onnx#installation)
 - [onnx >= 1.7.0](https://github.com/onnx/onnx#installation)
 
 *Note:* The latest mx2onnx exporting module is tested with ONNX op set version 12 or later, which corresponds to ONNX version 1.7 or later. Use of ealier ONNX versions may still work on some simple models, but again this is not tested.
@@ -67,7 +67,7 @@ export_model(sym, params, in_shapes=None, in_types=<class 'numpy.float32'>, onnx
     Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage -
-    https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix
+    https://github.com/apache/mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix
     
     Parameters
     ----------
@@ -139,7 +139,7 @@ We have defined the input parameters required for the `export_model` API. Now, w
 converted_model_path = mx.onnx.export_model(sym, params, in_shapes, in_types, onnx_file)
 ```
 
-This API returns the path of the converted model which you can later use to run inference with or import the model into other frameworks. Please refer to [mx2onnx](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#apis) for more details about the API.
+This API returns the path of the converted model which you can later use to run inference with or import the model into other frameworks. Please refer to [mx2onnx](https://github.com/apache/mxnet/tree/v1.x/python/mxnet/onnx#apis) for more details about the API.
 
 ## Dynamic input shapes
 The mx2onnx module also supports dynamic input shapes. We can set `dynamic=True` to turn it on. Note that even with dynamic shapes, a set of static input shapes still need to be specified in `in_shapes`; on top of that, we'll also need to specify which dimensions of the input shapes are dynamic in `dynamic_input_shapes`. We can simply set the dynamic dimensions as `None`, e.g. `(1, 3, None, None)`, or use strings in place of the `None`'s for better understandability in the exported onnx graph, e.g. `(1, 3, 'Height', 'Width')`

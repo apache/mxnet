@@ -37,4 +37,4 @@ I used the SLIM version, you can try with the full version to see if the accurac
 https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/CNN/GoogleNews-vectors-negative300-SLIM.bin
 ```
 ### Train the model
-Please configure the [args](https://github.com/apache/incubator-mxnet/blob/scala-package/examples/src/main/scala/org/apache/mxnet/examples/cnntextclassification/CNNTextClassification.scala#L299-L312) required for the model here and then run it.
+Please configure the [args](https://github.com/apache/mxnet/blob/scala-package/examples/src/main/scala/org/apache/mxnet/examples/cnntextclassification/CNNTextClassification.scala#L299-L312) required for the model here and then run it.

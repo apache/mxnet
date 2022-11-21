@@ -329,7 +329,7 @@ def test_amp_conversion():
                            batch_end_callback=mx.callback.Speedometer(batch_size, 1))
 
         # AMP conversion with cast_optional_params set to true
-        # Flaky test when cast_optional_params set to True : https://github.com/apache/incubator-mxnet/issues/16030
+        # Flaky test when cast_optional_params set to True : https://github.com/apache/mxnet/issues/16030
         '''
         result_model = amp.convert_bucketing_module(model, cast_optional_params=True)
         result_model.bind(data_val.provide_data, data_val.provide_label, for_training=False)

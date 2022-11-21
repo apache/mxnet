@@ -134,7 +134,7 @@ CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNV
 LDFLAGS = -pthread -ldl $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 # please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
-# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
+# you can find more information here https://github.com/apache/mxnet/issues/15971
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage
@@ -429,7 +429,7 @@ endef
 
 $(warning WARNING: Archive utility: ar version being used is less than 2.27.0. $n \
 		   Note that with USE_CUDA=1 flag and USE_CUDNN=1 this is known to cause problems. $n \
-		   For more info see: https://github.com/apache/incubator-mxnet/issues/15084)
+		   For more info see: https://github.com/apache/mxnet/issues/15084)
 $(shell sleep 5)
 endif
 endif

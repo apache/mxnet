@@ -2173,7 +2173,7 @@ def test_batchnorm_fallback():
 @with_seed()
 def test_mkldnn_sparse():
     # This test is trying to create a race condition describedd in
-    # https://github.com/apache/incubator-mxnet/issues/10189
+    # https://github.com/apache/mxnet/issues/10189
     arr = mx.nd.random.uniform(shape=(10, 10, 32, 32))
     weight1 = mx.nd.random.uniform(shape=(10, 10, 3, 3))
     arr = mx.nd.Convolution(data=arr, weight=weight1, no_bias=True, kernel=(3, 3), num_filter=10)

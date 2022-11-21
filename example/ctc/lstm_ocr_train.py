@@ -68,7 +68,7 @@ def main():
         font_paths=get_fonts(args.font_path), h=hp.seq_length, w=30,
         num_digit_min=3, num_digit_max=4, num_processes=args.num_proc, max_queue_size=hp.batch_size * 2)
     try:
-        # Must call start() before any call to mxnet module (https://github.com/apache/incubator-mxnet/issues/9213)
+        # Must call start() before any call to mxnet module (https://github.com/apache/mxnet/issues/9213)
         mp_captcha.start()
 
         if args.gpu:

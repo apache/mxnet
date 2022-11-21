@@ -497,10 +497,10 @@ See #396.
 
 * Update `libmxnet` to
     * On Windows: v0.12.0.
-    (See https://github.com/apache/incubator-mxnet/releases/tag/0.12.0)
+    (See https://github.com/apache/mxnet/releases/tag/0.12.0)
 
     * On Linux/macOS: v0.12.1.
-    (See https://github.com/apache/incubator-mxnet/releases/tag/0.12.1)
+    (See https://github.com/apache/mxnet/releases/tag/0.12.1)
 
 * Drop 0.5 support. ([#300][300])
 

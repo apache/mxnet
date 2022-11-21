@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-Contributors of Apache MXNet (incubating)
+Contributors of Apache MXNet
 =========================================
 MXNet has been developed by a community of people who are interested in large-scale machine learning and deep learning.
 Everyone is more than welcomed to is a great way to make the project better and more accessible to more users.
@@ -86,7 +86,7 @@ New committers will be proposed by current committers, with support from more th
 
 List of Contributors
 --------------------
-* [Full List of Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
+* [Full List of Contributors](https://github.com/apache/mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Feng Wang](https://github.com/happynear)
   - Feng makes MXNet compatible with Windows Visual Studio.
@@ -267,5 +267,5 @@ Label Bot
     - @mxnet-label-bot update [specify comma separated labels here]  
       (i.e. @mxnet-label-bot update [Bug, Python])
 
-  - Available label names which are supported: [Labels](https://github.com/apache/incubator-mxnet/labels)
+  - Available label names which are supported: [Labels](https://github.com/apache/mxnet/labels)
   - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)

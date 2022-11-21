@@ -101,7 +101,7 @@ insanely slow. Using CUDNN is optional, but highly recommended.
 
 * Run
 ```
-# cd /path/to/incubator-mxnet/example/ssd
+# cd /path/to/mxnet/example/ssd
 # download the test images
 python data/demo/download_demo_images.py
 # run the demo
@@ -143,12 +143,12 @@ The suggested directory structure is to store `VOC2007` and `VOC2012` directorie
 in the same `VOCdevkit` folder.
 * Then link `VOCdevkit` folder to `data/VOCdevkit` by default:
 ```
-ln -s /path/to/VOCdevkit /path/to/incubator-mxnet/example/ssd/data/VOCdevkit
+ln -s /path/to/VOCdevkit /path/to/mxnet/example/ssd/data/VOCdevkit
 ```
 Use hard link instead of copy could save us a bit disk space.
 * Create packed binary file for faster training:
 ```
-# cd /path/to/incubator-mxnet/example/ssd
+# cd /path/to/mxnet/example/ssd
 bash tools/prepare_pascal.sh
 # or if you are using windows
 python tools/prepare_dataset.py --dataset pascal --year 2007,2012 --set trainval --target ./data/train.lst
@@ -156,7 +156,7 @@ python tools/prepare_dataset.py --dataset pascal --year 2007 --set test --target
 ```
 * Start training:
 ```
-# cd /path/to/incubator-mxnet/example/ssd
+# cd /path/to/mxnet/example/ssd
 python train.py
 ```
 * By default, this example will use `batch-size=32` and `learning_rate=0.002`.
@@ -182,12 +182,12 @@ unzip annotations_trainval2014.zip
 * We are going to use `train2014,valminusminival2014` set in COCO2014 for training and `minival2014` for evaluation as a common strategy.
 * Then link `COCO2014` folder to `data/coco` by default:
 ```
-ln -s /path/to/COCO2014 /path/to/incubator-mxnet/example/ssd/data/coco
+ln -s /path/to/COCO2014 /path/to/mxnet/example/ssd/data/coco
 ```
 Use hard link instead of copy could save us a bit disk space.
 * Create packed binary file for faster training:
 ```
-# cd /path/to/incubator-mxnet/example/ssd
+# cd /path/to/mxnet/example/ssd
 bash tools/prepare_coco.sh
 # or if you are using windows
 python tools/prepare_dataset.py --dataset coco --set train2014,valminusminival2014 --target ./data/train.lst --root ./data/coco
@@ -195,14 +195,14 @@ python tools/prepare_dataset.py --dataset coco --set minival2014 --target ./data
 ```
 * Start training:
 ```
-# cd /path/to/incubator-mxnet/example/ssd
+# cd /path/to/mxnet/example/ssd
 python train.py --label-width=560 --num-class=80 --class-names=./dataset/names/coco_label --pretrained="" --num-example=117265 --batch-size=64
 ```
 
 ### Evalute trained model
 Make sure you have val.rec as validation dataset. It's the same one as used in training. Use:
 ```
-# cd /path/to/incubator-mxnet/example/ssd
+# cd /path/to/mxnet/example/ssd
 python evaluate.py --gpus 0,1 --batch-size 128 --epoch 0
 
 # Evaluate on COCO dataset
@@ -211,9 +211,9 @@ python evaluate.py --gpus 0,1 --batch-size 128 --epoch 0 --num-class=80 --class-
 
 ### Quantize model
 
-To quantize a model on VOC dataset, follow the [Train instructions](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model-on-VOC) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our [SSD-VGG16 pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-dd479559.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd-val-fc19a535.zip). Create `model` and `data` directories if they're not exist, extract the zip files, then rename the uncompressed files as follows (eg, rename `ssd-val-fc19a535.idx` to `val.idx`, `ssd-val-fc19a535.lst` to `val.lst`, `ssd-val-fc19a535.rec` to `val.rec`, `ssd_vgg16_reduced_300-dd479559.params` to `ssd_vgg16_reduced_300-0000.params`, `ssd_vgg16_reduced_300-symbol-dd479559.json` to `ssd_vgg16_reduced_300-symbol.json`.)
+To quantize a model on VOC dataset, follow the [Train instructions](https://github.com/apache/mxnet/tree/master/example/ssd#train-the-model-on-VOC) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our [SSD-VGG16 pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-dd479559.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd-val-fc19a535.zip). Create `model` and `data` directories if they're not exist, extract the zip files, then rename the uncompressed files as follows (eg, rename `ssd-val-fc19a535.idx` to `val.idx`, `ssd-val-fc19a535.lst` to `val.lst`, `ssd-val-fc19a535.rec` to `val.rec`, `ssd_vgg16_reduced_300-dd479559.params` to `ssd_vgg16_reduced_300-0000.params`, `ssd_vgg16_reduced_300-symbol-dd479559.json` to `ssd_vgg16_reduced_300-symbol.json`.)
 
-To quantize a model on COCO dataset, follow the [Train instructions](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model-on-COCO) to train a FP32 `SSD-VGG16_reduced_300x300` model based on COCO dataset. You can also download our [SSD-VGG16 pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-7fedd4ad.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd_coco-val-e91096e8.zip). Create `model` and `data` directories if they're not exist, extract the zip files, then rename the uncompressed files as follows (eg, rename `ssd_coco-val-e91096e8.idx` to `val.idx`, `ssd_coco-val-e91096e8.lst` to `val.lst`, `ssd_coco-val-e91096e8.rec` to `val.rec`, `ssd_vgg16_reduced_300-7fedd4ad.params` to `ssd_vgg16_reduced_300-0000.params`, `ssd_vgg16_reduced_300-symbol-7fedd4ad.json` to `ssd_vgg16_reduced_300-symbol.json`.)
+To quantize a model on COCO dataset, follow the [Train instructions](https://github.com/apache/mxnet/tree/master/example/ssd#train-the-model-on-COCO) to train a FP32 `SSD-VGG16_reduced_300x300` model based on COCO dataset. You can also download our [SSD-VGG16 pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-7fedd4ad.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd_coco-val-e91096e8.zip). Create `model` and `data` directories if they're not exist, extract the zip files, then rename the uncompressed files as follows (eg, rename `ssd_coco-val-e91096e8.idx` to `val.idx`, `ssd_coco-val-e91096e8.lst` to `val.lst`, `ssd_coco-val-e91096e8.rec` to `val.rec`, `ssd_vgg16_reduced_300-7fedd4ad.params` to `ssd_vgg16_reduced_300-0000.params`, `ssd_vgg16_reduced_300-symbol-7fedd4ad.json` to `ssd_vgg16_reduced_300-symbol.json`.)
 
 ```
 data/
@@ -257,16 +257,16 @@ python benchmark_score.py --deploy --prefix=./model/cqssd_
 This simply removes all loss layers, and attach a layer for merging results and non-maximum suppression.
 Useful when loading python symbol is not available.
 ```
-# cd /path/to/incubator-mxnet/example/ssd
+# cd /path/to/mxnet/example/ssd
 python deploy.py --num-class 20
 ```
 
 ### Convert caffe model
-Converter from caffe is available at `/path/to/incubator-mxnet/example/ssd/tools/caffe_converter`
+Converter from caffe is available at `/path/to/mxnet/example/ssd/tools/caffe_converter`
 
 This is specifically modified to handle custom layer in caffe-ssd. Usage:
 ```
-cd /path/to/incubator-mxnet/example/ssd/tools/caffe_converter
+cd /path/to/mxnet/example/ssd/tools/caffe_converter
 make
 python convert_model.py deploy.prototxt name_of_pretrained_caffe_model.caffemodel ssd_converted
 # you will use this model in deploy mode without loading from python symbol(layer names inconsistent)

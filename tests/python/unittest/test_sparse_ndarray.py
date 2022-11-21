@@ -557,7 +557,7 @@ def test_sparse_nd_pickle():
 
 
 # @kalyc: Getting rid of fixed seed as flakiness could not be reproduced
-# tracked at https://github.com/apache/incubator-mxnet/issues/11741
+# tracked at https://github.com/apache/mxnet/issues/11741
 @with_seed()
 def test_sparse_nd_save_load():
     repeat = 1

@@ -36,7 +36,7 @@ description: >- # this means to ignore newlines until "baseurl:"
   A flexible and efficient library for deep learning.
 url: https://mxnet.apache.org
 twitter_username: apachemxnet
-github_username:  apache/incubator-mxnet
+github_username:  apache/mxnet
 youtube_username: apachemxnet
 baseurl: /versions/1.9.1
 versions: 

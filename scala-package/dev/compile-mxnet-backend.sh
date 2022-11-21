@@ -32,7 +32,7 @@ MXNETDIR=$2
 
 
 # below routine shamelessly copied from
-# https://github.com/apache/incubator-mxnet/blob/master/setup-utils/install-mxnet-osx-python.sh
+# https://github.com/apache/mxnet/blob/master/setup-utils/install-mxnet-osx-python.sh
 # This routine executes a command,
 # prints error message on the console on non-zero exit codes and
 # returns the exit code to the caller.

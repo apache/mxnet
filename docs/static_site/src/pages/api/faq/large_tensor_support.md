@@ -148,7 +148,7 @@ Not supported:
 
 
 ## Other known Issues:
-Randint operator is flaky: https://github.com/apache/incubator-mxnet/issues/16172
+Randint operator is flaky: https://github.com/apache/mxnet/issues/16172
 dgemm operations using BLAS libraries currently don’t support int64.
 linspace() is not supported.
 
@@ -162,7 +162,7 @@ texec.reshape(allow_up_sizing=True, **new_shape)
 
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
-  File "/home/ubuntu/incubator-mxnet/python/mxnet/executor.py", line 449, in reshape
+  File "/home/ubuntu/mxnet/python/mxnet/executor.py", line 449, in reshape
     py_array('i', provided_arg_shape_data)),
 OverflowError: signed integer is greater than maximum}
 ```
@@ -179,7 +179,7 @@ texec.reshape(allow_up_sizing=True, **new_shape)
 
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
-  File "/home/ubuntu/incubator-mxnet/python/mxnet/executor.py", line 449, in reshape
+  File "/home/ubuntu/mxnet/python/mxnet/executor.py", line 449, in reshape
     py_array('i', provided_arg_shape_data)),
 OverflowError: signed integer is greater than maximum
 ```

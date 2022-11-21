@@ -20,7 +20,7 @@
 A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
 In the following sections, you will find build instructions for MXNet with Intel MKL-DNN on Linux, MacOS and Windows.
 
-Please find MKL-DNN optimized operators and other features in the [MKL-DNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md).
+Please find MKL-DNN optimized operators and other features in the [MKL-DNN operator list](https://github.com/apache/mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md).
 
 The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.apache.org/api/faq/perf#intel-cpu).
 
@@ -51,8 +51,8 @@ sudo apt-get install -y graphviz
 ### Clone MXNet sources
 
 ```
-git clone --recursive https://github.com/apache/incubator-mxnet.git
-cd incubator-mxnet
+git clone --recursive https://github.com/apache/mxnet.git
+cd mxnet
 ```
 
 ### Build MXNet with MKL-DNN
@@ -103,8 +103,8 @@ brew install llvm
 ### Clone MXNet sources
 
 ```
-git clone --recursive https://github.com/apache/incubator-mxnet.git
-cd incubator-mxnet
+git clone --recursive https://github.com/apache/mxnet.git
+cd mxnet
 ```
 
 ### Build MXNet with MKL-DNN
@@ -131,9 +131,9 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Start a Visual Studio command prompt by click windows Start menu>>Visual Studio 2015>>VS2015 X64 Native Tools Command Prompt, and download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet) by the command:
+1. Start a Visual Studio command prompt by click windows Start menu>>Visual Studio 2015>>VS2015 X64 Native Tools Command Prompt, and download the MXNet source code from [GitHub](https://github.com/apache/mxnet) by the command:
 ```
-git clone --recursive https://github.com/apache/incubator-mxnet.git
+git clone --recursive https://github.com/apache/mxnet.git
 cd C:\incubator-mxent
 ```
 2. Enable Intel MKL-DNN by -DUSE_MKLDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the
@@ -170,7 +170,7 @@ User can follow the same steps of Visual Studio 2015 to build MXNET with MKL-DNN
 Preinstall python and some dependent modules:
 ```
 pip install numpy graphviz
-set PYTHONPATH=[workdir]\incubator-mxnet\python
+set PYTHONPATH=[workdir]\mxnet\python
 ```
 or install mxnet
 ```
@@ -295,7 +295,7 @@ This limitations of this experimental feature are:
 
 Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
 
-- [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
+- [CNN Quantization Examples](https://github.com/apache/mxnet/tree/master/example/quantization).
 
 - [Model Quantization for Production-Level Neural Network Inference](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
 
@@ -305,4 +305,4 @@ Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding
 
 - For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn) website.
 
-- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).
+- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/mxnet/labels/MKLDNN).

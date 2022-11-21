@@ -107,7 +107,7 @@ python3-pip`. After installing cmake with `pip3`, it is usually available at
 Clone the repository:
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+git clone --recursive https://github.com/apache/mxnet.git mxnet
 cd mxnet
 cp config/linux.cmake config.cmake  # or config/linux_gpu.cmake for build with CUDA
 ```
@@ -192,7 +192,7 @@ Refer to the [C++ Package setup guide](c_plus_plus).
 
 ### Install the MXNet Package for Clojure
 
-Refer to the [Clojure setup guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package).
+Refer to the [Clojure setup guide](https://github.com/apache/mxnet/tree/master/contrib/clojure-package).
 <hr>
 
 
@@ -262,14 +262,14 @@ To use the Julia binding with an existing `libmxnet` installation, set the `MXNE
 MXNet source root. For example:
 
 ```bash
-export MXNET_HOME=$HOME/incubator-mxnet
+export MXNET_HOME=$HOME/mxnet
 ```
 
 Now set the `LD_LIBRARY_PATH` environment variable to where `libmxnet.so` is found. If you can't find it, you might
 have skipped the building MXNet step. Go back and [build MXNet](#build-the-shared-library) first. For example:
 
 ```bash
-export LD_LIBRARY_PATH=$HOME/incubator-mxnet/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/mxnet/lib:$LD_LIBRARY_PATH
 ```
 
 Verify the location of `libjemalloc.so` and set the `LD_PRELOAD` environment variable.
@@ -283,8 +283,8 @@ or `.bash_profile`.
 ```
 export PATH=$HOME/bin:$HOME/.local/bin:$HOME/julia/julia-1.0.3/bin:$PATH
 export JULIA_DEPOT_PATH=$HOME/julia/julia-depot
-export MXNET_HOME=$HOME/incubator-mxnet
-export LD_LIBRARY_PATH=$HOME/incubator-mxnet/lib:$LD_LIBRARY_PATH
+export MXNET_HOME=$HOME/mxnet
+export LD_LIBRARY_PATH=$HOME/mxnet/lib:$LD_LIBRARY_PATH
 export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so:$LD_PRELOAD
 ```
 

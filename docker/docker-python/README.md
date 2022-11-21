@@ -52,12 +52,12 @@ Refer: https://pypi.org/project/mxnet/
 `./build_python_dockerfile.sh <mxnet_version> <pip_tag> <path_to_cloned_mxnet_repo>`
 
 For example: 
-`./build_python_dockerfile.sh 1.3.0 1.3.0.post0 ~/build-docker/incubator-mxnet`
+`./build_python_dockerfile.sh 1.3.0 1.3.0.post0 ~/build-docker/mxnet`
 
 ### Tests run
-* [test_conv.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/train/test_conv.py)
-* [train_mnist.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py)
-* [test_mxnet.py](https://github.com/apache/incubator-mxnet/blob/master/docker/docker-python/test_mxnet.py): This script is used to make sure that the docker image builds the expected mxnet version. That is, the version picked by pip is the same as as the version passed as a parameter.
+* [test_conv.py](https://github.com/apache/mxnet/blob/master/tests/python/train/test_conv.py)
+* [train_mnist.py](https://github.com/apache/mxnet/blob/master/example/image-classification/train_mnist.py)
+* [test_mxnet.py](https://github.com/apache/mxnet/blob/master/docker/docker-python/test_mxnet.py): This script is used to make sure that the docker image builds the expected mxnet version. That is, the version picked by pip is the same as as the version passed as a parameter.
 
 ### Dockerhub Credentials
 Dockerhub credentials will be required to push images at the end of this script.

@@ -27,7 +27,7 @@ setup(
     description='Module to convert MXNet models to the ONNX format',
     author='',
     author_email='',
-    url='https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx',
+    url='https://github.com/apache/mxnet/tree/v1.x/python/mxnet/onnx',
     install_requires=[
         'onnx >= 1.7.0',
     ],

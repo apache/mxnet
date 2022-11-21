@@ -47,7 +47,7 @@ We have prepared a utility file to help you download and organize your data into
 ```python
 import mxnet as mx
 data_util_file = "oxford_102_flower_dataset.py"
-base_url = "https://raw.githubusercontent.com/apache/incubator-mxnet/master/docs/tutorial_utils/data/{}?raw=true"
+base_url = "https://raw.githubusercontent.com/apache/mxnet/master/docs/tutorial_utils/data/{}?raw=true"
 mx.test_utils.download(base_url.format(data_util_file), fname=data_util_file)
 import oxford_102_flower_dataset
 
@@ -313,7 +313,7 @@ probability=9.798435, class=lotus
 You can continue to the [next tutorial](/api/cpp/docs/tutorials/cpp_inference) on how to load the model we just trained and run inference using MXNet C++ API.
 
 You can also find more ways to run inference and deploy your models here:
-1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
+1. [Java Inference examples](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 2. [Scala Inference examples](/api/scala/docs/tutorials/infer)
 4. [MXNet Model Server Examples](https://github.com/awslabs/mxnet-model-server/tree/master/examples)
 
@@ -323,4 +323,4 @@ You can also find more ways to run inference and deploy your models here:
 2. [Gluon book on fine-tuning](https://www.d2l.ai/chapter_computer-vision/fine-tuning.html)
 3. [Gluon CV transfer learning tutorial](https://gluon-cv.mxnet.io/build/examples_classification/transfer_learning_minc.html)
 4. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
-5. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
+5. [Gluon CPP inference example](https://github.com/apache/mxnet/blob/master/cpp-package/example/inference/)
