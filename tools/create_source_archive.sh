@@ -49,7 +49,7 @@ TARBALL=$SRCDIR.tar.gz
 # clone the repo and checkout the tag
 echo "Cloning the MXNet repository..."
 git clone -b $MXNET_TAG --depth 1 --recurse-submodules \
-	--shallow-submodules https://github.com/apache/incubator-mxnet.git \
+	--shallow-submodules https://github.com/apache/mxnet.git \
 	$SRCDIR
 pushd $SRCDIR
 

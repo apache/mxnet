@@ -165,8 +165,8 @@ Clone the MXNet source code repository using the following `git` command in your
 directory:
 
 {% highlight bash %}
-git clone https://github.com/apache/incubator-mxnet.git --recursive
-cd incubator-mxnet
+git clone https://github.com/apache/mxnet.git --recursive
+cd mxnet
 {% endhighlight %}
 
 Build:

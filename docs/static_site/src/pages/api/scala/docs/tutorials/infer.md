@@ -33,7 +33,7 @@ To use the Infer API you must first install the MXNet Scala package. Instruction
 * [Installing the MXNet Scala for Linux]({{'get_started/ubuntu_setup.html#install-the-mxnet-package-for-scala'|relative_url}})
 
 ## Inference
-The Scala Infer API includes both single image and batch modes. Here is an example of running inference on a single image by using the `ImageClassifier` class. A complete [image classification example](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier/ImageClassifierExample.scala) using ResNet-152 is provided in the [Scala package's example folder](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples). This example also demonstrates inference with batches of images.
+The Scala Infer API includes both single image and batch modes. Here is an example of running inference on a single image by using the `ImageClassifier` class. A complete [image classification example](https://github.com/apache/mxnet/blob/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier/ImageClassifierExample.scala) using ResNet-152 is provided in the [Scala package's example folder](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples). This example also demonstrates inference with batches of images.
 
 ```scala
 def runInferenceOnSingleImage(modelPathPrefix: String, inputImagePath: String,
@@ -61,5 +61,5 @@ IndexedSeq[IndexedSeq[(String, Float)]] = {
 
 ## Related Resources
 * [Infer API Scaladocs]({{'/api/scala/docs/api/#org.apache.mxnet.infer.package'|relative_url}})
-* [Single Shot Detector Inference Example](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector)
-* [Image Classification Example](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier)
+* [Single Shot Detector Inference Example](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector)
+* [Image Classification Example](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier)

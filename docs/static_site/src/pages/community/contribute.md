@@ -25,7 +25,7 @@ permalink: /community/contribute
 
 # Contributing to Apache MXNet
 
-Apache MXNet (incubating) is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on Apache MXNet best practices and processes.
+Apache MXNet is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on Apache MXNet best practices and processes.
 
 
 ## Getting Started
@@ -126,10 +126,10 @@ The process for setting up MXNet for development depends on several factors, and
 
 ## Your First Contribution
 
-**Step 1**: Visit the project on GitHub and review the [calls for contribution](https://github.com/apache/incubator-mxnet/labels/Call%20for%20Contribution). Click the GitHub button:
-<a class="github-button" href="https://github.com/apache/incubator-mxnet/labels/Call%20for%20Contribution" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a>
+**Step 1**: Visit the project on GitHub and review the [calls for contribution](https://github.com/apache/mxnet/labels/Call%20for%20Contribution). Click the GitHub button:
+<a class="github-button" href="https://github.com/apache/mxnet/labels/Call%20for%20Contribution" data-size="large" data-show-count="true" aria-label="Issue apache/mxnet on GitHub">Call for Contribution</a>
 
-**Step 2**: Tackle a smaller issue or improve documentation to get familiar with the process. As part of your pull request, add your name to [CONTRIBUTORS.md](https://github.com/apache/incubator-mxnet/blob/master/CONTRIBUTORS.md).
+**Step 2**: Tackle a smaller issue or improve documentation to get familiar with the process. As part of your pull request, add your name to [CONTRIBUTORS.md](https://github.com/apache/mxnet/blob/master/CONTRIBUTORS.md).
 
 **Step 3**: Follow the [formal pull request (PR) process](#formal-pull-request-process) to submit your PR for review.
 
@@ -140,14 +140,14 @@ The process for setting up MXNet for development depends on several factors, and
 
 Please let us know if you experienced a problem with MXNet. Please provide detailed information about the problem you encountered and, if possible, add a description that helps to reproduce the problem. You have two alternatives for filing a bug report:
 <p><a href="http://issues.apache.org/jira/browse/MXNet"><i class="fas fa-bug"></i> JIRA</a></p>
-<p><a href="https://github.com/apache/incubator-mxnet/issues"><i class="fab fa-github"></i> GitHub</a></p>
+<p><a href="https://github.com/apache/mxnet/issues"><i class="fab fa-github"></i> GitHub</a></p>
 
 
 ## Minor Fixes
 
 If you have found an issue and would like to contribute a bug fix or documentation update, follow these guidelines:
 
-* If it is trivial, just create a [pull request](https://github.com/apache/incubator-mxnet/pulls).
+* If it is trivial, just create a [pull request](https://github.com/apache/mxnet/pulls).
 * If it is non-trivial, you should follow the [formal pull request process](#formal-pull-request-process) described in the next section.
 
 
@@ -157,7 +157,7 @@ Any new features of improvements that are non-trivial should follow the complete
 
 1. [Review the contribution standards](https://cwiki.apache.org/confluence/display/MXNET/Development+Process) for your type of submission.
 1. [Create a JIRA issue](https://issues.apache.org/jira/secure/CreateIssue!default.jspa).
-1. [Create the PR on GitHub](https://github.com/apache/incubator-mxnet/pulls) and add the JIRA issue ID to the PR's title.
+1. [Create the PR on GitHub](https://github.com/apache/mxnet/pulls) and add the JIRA issue ID to the PR's title.
 
 Further details on this process can be found on the [Wiki](https://cwiki.apache.org/confluence/display/MXNET/Development).
 
@@ -176,7 +176,7 @@ Detailed information is also required, if you plan to contribute the improvement
 
 Apache MXNet is evolving fast. To see what's next and what the community is currently working on, check out the Roadmap issues on GitHub and the JIRA Boards:
 
-<a class="github-button" href="https://github.com/apache/incubator-mxnet/labels/Roadmap" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Roadmap</a>
+<a class="github-button" href="https://github.com/apache/mxnet/labels/Roadmap" data-size="large" data-show-count="true" aria-label="Issue apache/mxnet on GitHub">Roadmap</a>
 <br/>
 [JIRA boards](https://issues.apache.org/jira/secure/RapidBoard.jspa) <i class="fas fa-lock"></i>
 
@@ -194,4 +194,4 @@ Apache MXNet is evolving fast. To see what's next and what the community is curr
 ## Contributors
 Apache MXNet has been developed by and is used by a group of active community members. Contribute to improving it!
 
-<i class="fab fa-github"></i> [Contributors and Committers](https://github.com/apache/incubator-mxnet/blob/master/CONTRIBUTORS.md)
+<i class="fab fa-github"></i> [Contributors and Committers](https://github.com/apache/mxnet/blob/master/CONTRIBUTORS.md)

@@ -52,7 +52,7 @@ setup(name='mxnet-to-coreml',
         'Topic :: Software Development :: Libraries :: Python Modules'
       ],
       keywords='Apache MXNet Apple CoreML Converter Deep Learning',
-      url='https://github.com/apache/incubator-mxnet/tree/master/tools/coreml',
+      url='https://github.com/apache/mxnet/tree/master/tools/coreml',
       author='pracheer',
       author_email='pracheer_gupta@hotmail.com',
       license='Apache 2.0',

@@ -68,7 +68,7 @@ unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ### Use Pre-installed EC2 GPU Instance
 The [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB?qid=1475211685369&sr=0-1&ref_=srh_res_product_title) is an Amazon Linux image
 supported and maintained by Amazon Web Services for use on Amazon Elastic Compute Cloud (Amazon EC2).
-It contains [MXNet-v0.9.3 tag](https://github.com/apache/incubator-mxnet) and the necessary components to get going with deep learning,
+It contains [MXNet-v0.9.3 tag](https://github.com/apache/mxnet) and the necessary components to get going with deep learning,
 including Nvidia drivers, CUDA, cuDNN, Anaconda, Python2 and Python3.   
 The AMI IDs are the following:
 

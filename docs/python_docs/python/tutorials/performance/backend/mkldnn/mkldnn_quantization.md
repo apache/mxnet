@@ -19,7 +19,7 @@
 
 This document is to introduce how to quantize the customer models from FP32 to INT8 with Apache/MXNet toolkit and APIs under Intel CPU.
 
-If you are not familiar with Apache/MXNet quantization flow, please reference [quantization blog](https://medium.com/apache-mxnet/model-quantization-for-production-level-neural-network-inference-f54462ebba05) first, and the performance data is shown in [Apache/MXNet C++ interface](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) and [GluonCV](https://gluon-cv.mxnet.io/build/examples_deployment/int8_inference.html). 
+If you are not familiar with Apache/MXNet quantization flow, please reference [quantization blog](https://medium.com/apache-mxnet/model-quantization-for-production-level-neural-network-inference-f54462ebba05) first, and the performance data is shown in [Apache/MXNet C++ interface](https://github.com/apache/mxnet/tree/master/cpp-package/example/inference) and [GluonCV](https://gluon-cv.mxnet.io/build/examples_deployment/int8_inference.html). 
 
 ## Installation and Prerequisites
 
@@ -35,7 +35,7 @@ pip install --pre "mxnet<2" -f https://dist.mxnet.io/python
 
 ## Image Classification Demo
 
-A quantization script [imagenet_gen_qsym_mkldnn.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization/imagenet_gen_qsym_mkldnn.py) has been designed to launch quantization for image-classification models. This script is  integrated with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html), so that all pre-trained models can be downloaded from Gluon-CV and then converted for quantization. For details, you can refer [Model Quantization with Calibration Examples](https://github.com/apache/incubator-mxnet/blob/master/example/quantization/README.md).
+A quantization script [imagenet_gen_qsym_mkldnn.py](https://github.com/apache/mxnet/blob/master/example/quantization/imagenet_gen_qsym_mkldnn.py) has been designed to launch quantization for image-classification models. This script is  integrated with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html), so that all pre-trained models can be downloaded from Gluon-CV and then converted for quantization. For details, you can refer [Model Quantization with Calibration Examples](https://github.com/apache/mxnet/blob/master/example/quantization/README.md).
 
 ## Integrate Quantization Flow to Your Project
 
@@ -256,7 +256,7 @@ BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON
 
 ## Deploy with Python/C++
 
-MXNet also supports deploy quantized models with C++. Refer [MXNet C++ Package](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/README.md) for more details.
+MXNet also supports deploy quantized models with C++. Refer [MXNet C++ Package](https://github.com/apache/mxnet/blob/master/cpp-package/README.md) for more details.
 
 # Improving accuracy with Intel® Neural Compressor
 
@@ -498,7 +498,7 @@ def native_quantization(model, calib_dataloader, dev_dataloader):
     return quantized_model
 ```
 
-For complete code, see this example on the [official GitHub repository](https://github.com/apache/incubator-mxnet/tree/v1.x/example/quantization_inc/BERT_MRPC).
+For complete code, see this example on the [official GitHub repository](https://github.com/apache/mxnet/tree/v1.x/example/quantization_inc/BERT_MRPC).
 
 #### Results:
 

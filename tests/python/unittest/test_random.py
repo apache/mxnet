@@ -896,7 +896,7 @@ def test_zipfian_generator():
     assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)
     assert_almost_equal(exp_cnt_true, exp_cnt[true_classes], rtol=1e-1, atol=1e-2)
 
-# Issue #10277 (https://github.com/apache/incubator-mxnet/issues/10277) discusses this test.
+# Issue #10277 (https://github.com/apache/mxnet/issues/10277) discusses this test.
 @with_seed()
 def test_shuffle():
     def check_first_axis_shuffle(arr):

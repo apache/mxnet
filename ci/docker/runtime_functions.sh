@@ -151,7 +151,6 @@ gather_licenses() {
     cp tools/dependencies/LICENSE.binary.dependencies licenses/
     cp NOTICE licenses/
     cp LICENSE licenses/
-    cp DISCLAIMER licenses/
 }
 
 build_ubuntu_cpu_release() {
@@ -989,7 +988,7 @@ cd_unittest_ubuntu() {
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
-    # https://github.com/apache/incubator-mxnet/issues/11801
+    # https://github.com/apache/mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
         # integrationtest_ubuntu_cpu_dist_kvstore
     # fi
@@ -1004,7 +1003,7 @@ cd_unittest_ubuntu() {
 
     if [[ ${mxnet_variant} = *mkl ]]; then
         # skipping python 2 testing
-        # https://github.com/apache/incubator-mxnet/issues/14675
+        # https://github.com/apache/mxnet/issues/14675
         if [[ ${python_cmd} = "python3" ]]; then
             $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/mkl
         fi
@@ -1250,7 +1249,7 @@ integrationtest_ubuntu_cpu_onnx() {
     COV_ARG="--cov=./ --cov-report=xml --cov-append"
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_operators.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/mxnet_export_test.py
-    # Skip this as https://github.com/apache/incubator-mxnet/pull/19914 breaks import
+    # Skip this as https://github.com/apache/mxnet/pull/19914 breaks import
     #pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
     #pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
     pytest $COV_ARG -v -m integration tests/python-pytest/onnx/test_onnxruntime_cv.py
@@ -1961,7 +1960,7 @@ create_repo() {
    git clone $mxnet_url $repo_folder --recursive
    echo "Adding MXNet upstream repo..."
    cd $repo_folder
-   git remote add upstream https://github.com/apache/incubator-mxnet
+   git remote add upstream https://github.com/apache/mxnet
    cd ..
 }
 

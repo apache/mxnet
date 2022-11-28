@@ -31,7 +31,7 @@ Policy](http://www.apache.org/legal/release-policy.html).
 
 If you would like to actively participate in the Apache MXNet development, you are
 encouraged to contribute to our development version on
-[GitHub](https://github.com/apache/incubator-mxnet).
+[GitHub](https://github.com/apache/mxnet).
 
 | Version | Source                                                                                                      | PGP                                                                                                             | SHA                                                                                                                |
 |---------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|

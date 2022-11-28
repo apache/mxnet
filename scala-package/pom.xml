@@ -29,7 +29,7 @@
   <artifactId>mxnet-parent</artifactId>
   <version>INTERNAL</version>
   <name>MXNet Scala Package - Parent</name>
-  <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
+  <url>https://github.com/apache/mxnet/tree/master/scala-package</url>
   <description>
     Scala Package for Apache MXNet (Incubating) - flexible and efficient library for deep learning.
   </description>
@@ -46,9 +46,9 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git@github.com:apache/incubator-mxnet.git</connection>
-    <developerConnection>scm:git:git@github.com:apache/incubator-mxnet.git</developerConnection>
-    <url>https://github.com/apache/incubator-mxnet</url>
+    <connection>scm:git:git@github.com:apache/mxnet.git</connection>
+    <developerConnection>scm:git:git@github.com:apache/mxnet.git</developerConnection>
+    <url>https://github.com/apache/mxnet</url>
     <tag>HEAD</tag>
   </scm>
 

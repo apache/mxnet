@@ -48,7 +48,7 @@ The following describes how to install with pip for computers with CPUs, Intel C
 * Python 2.7 or 3.6
 * pip
 
-<sup id="fn1">1. There are [known issues](https://github.com/apache/incubator-mxnet/issues?utf8=%E2%9C%93&q=is%3Aissue+windows7+label%3AWindows+) with Windows 7. <a href="#ref1" title="Return to source text.">↩</a></sup>
+<sup id="fn1">1. There are [known issues](https://github.com/apache/mxnet/issues?utf8=%E2%9C%93&q=is%3Aissue+windows7+label%3AWindows+) with Windows 7. <a href="#ref1" title="Return to source text.">↩</a></sup>
 
 ### Recommended System Requirements
 
@@ -100,7 +100,7 @@ When using supported NVIDIA GPU hardware, inference and training can be vastly f
 
 The following steps will setup MXNet with CUDA. cuDNN can be enabled only when building from source.
 1. Install [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
-1. Download and install [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). CUDA versions 9.2 or 9.0 are recommended. Some [issues with CUDA 9.1](https://github.com/apache/incubator-mxnet/labels/CUDA) have been identified in the past.
+1. Download and install [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). CUDA versions 9.2 or 9.0 are recommended. Some [issues with CUDA 9.1](https://github.com/apache/mxnet/labels/CUDA) have been identified in the past.
 1. Download and install [NVIDIA_CUDA_DNN](https://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows)
 1. Install MXNet with CUDA support with pip:
 
@@ -147,7 +147,7 @@ You also have the option to install MXNet with MKL or MKL-DNN. In this case it i
 
 **Option 1: Build with Microsoft Visual Studio 2017 (VS2017)**
 
-To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/downloads/), you need the following dependencies. You may try a newer version of a particular dependency, but please open a pull request or [issue](https://github.com/apache/incubator-mxnet/issues/new) to update this guide if a newer version is validated.
+To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/downloads/), you need the following dependencies. You may try a newer version of a particular dependency, but please open a pull request or [issue](https://github.com/apache/mxnet/issues/new) to update this guide if a newer version is validated.
 
 1. Install or update VS2017.
     - If [VS2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
@@ -177,17 +177,17 @@ After you have installed all of the required dependencies, build the MXNet sourc
 2. Download the MXNet source code from GitHub by using following command:
 ```
 cd C:\
-git clone https://github.com/apache/incubator-mxnet.git --recursive
+git clone https://github.com/apache/mxnet.git --recursive
 ```
-3. Verify that the `DCUDNN_INCLUDE` and `DCUDNN_LIBRARY` environment variables are pointing to the `include` folder and `cudnn.lib` file of your CUDA installed location, and `C:\incubator-mxnet` is the location of the source code you just cloned in the previous step.
+3. Verify that the `DCUDNN_INCLUDE` and `DCUDNN_LIBRARY` environment variables are pointing to the `include` folder and `cudnn.lib` file of your CUDA installed location, and `C:\mxnet` is the location of the source code you just cloned in the previous step.
 4. Create a build dir using the following command and go to the directory, for example:
 ```
-mkdir C:\incubator-mxnet\build
-cd C:\incubator-mxnet\build
+mkdir C:\mxnet\build
+cd C:\mxnet\build
 ```
 5. Compile the MXNet source code with `cmake` by using following command:
 ```
-cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
+cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\mxnet"
 ```
 * Make sure you set the environment variables correctly (OpenBLAS_HOME, OpenCV_DIR) and change the version of the Visual studio 2017 to v14.11 before enter above command.
 6. After the CMake successfully completed, compile the MXNet source code by using following command:
@@ -198,7 +198,7 @@ msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 
 **Option 2: Build with Visual Studio 2015**
 
-To build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), you need the following dependencies. You may try a newer version of a particular dependency, but please open a pull request or [issue](https://github.com/apache/incubator-mxnet/issues/new) to update this guide if a newer version is validated.
+To build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), you need the following dependencies. You may try a newer version of a particular dependency, but please open a pull request or [issue](https://github.com/apache/mxnet/issues/new) to update this guide if a newer version is validated.
 
 1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition. At least Update 3 of Microsoft Visual Studio 2015 is required to build MXNet from source. Upgrade via it's ```Tools -> Extensions and Updates... | Product Updates``` menu.
 2. Download and install [CMake](https://cmake.org/) if it is not already installed.
@@ -213,7 +213,7 @@ To build and install MXNet yourself using [Microsoft Visual Studio 2015](https:/
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet) (make sure you also download third parties submodules e.g. ```git clone --recurse-submodules```).
+1. Download the MXNet source code from [GitHub](https://github.com/apache/mxnet) (make sure you also download third parties submodules e.g. ```git clone --recurse-submodules```).
 2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
@@ -293,7 +293,7 @@ For CPU-only package:
 
 1. Clone the MXNet github repo.
 ```sh
-git clone --recursive https://github.com/apache/incubator-mxnet
+git clone --recursive https://github.com/apache/mxnet
 ```
 The `--recursive` is to clone all the submodules used by MXNet. You will be editing the ```"/mxnet/R-package"``` folder.
 
@@ -331,7 +331,7 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
 
 7. Also make sure that Rtools is installed and the executable is added to your ```PATH``` in the environment variables.
 
-8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in [R-package/src/mxnet.cc](https://github.com/apache/incubator-mxnet/blob/master/R-package/src/mxnet.cc) as shown below.
+8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in [R-package/src/mxnet.cc](https://github.com/apache/mxnet/blob/master/R-package/src/mxnet.cc) as shown below.
 ```
 #include "./kvstore.h"
 #include "./export.h"
@@ -403,7 +403,7 @@ Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently,
 After you have installed above software, continue with the following steps to build MXNet-R:
 1. Clone the MXNet github repo.
 ```sh
-git clone --recursive https://github.com/apache/incubator-mxnet
+git clone --recursive https://github.com/apache/mxnet
 ```
 The `--recursive` is to clone all the submodules used by MXNet. You will be editing the ```"/mxnet/R-package"``` folder.
 2. Download prebuilt GPU-enabled MXNet libraries for Windows from https://github.com/yajiedesign/mxnet/releases. You will need `mxnet_x64_vc14_gpu_cuX.7z` and `prebuildbase_win10_x64_vc14.7z` where X stands for your CUDA toolkit version
@@ -434,7 +434,7 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
 ```
 6. Make sure that R executable is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
 7. Also make sure that Rtools is installed and the executable is added to your ```PATH``` in the environment variables.
-8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in [R-package/src/mxnet.cc](https://github.com/apache/incubator-mxnet/blob/master/R-package/src/mxnet.cc) as shown below.
+8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in [R-package/src/mxnet.cc](https://github.com/apache/mxnet/blob/master/R-package/src/mxnet.cc) as shown below.
 ```bash
 #include "./kvstore.h"
 #include "./export.h"

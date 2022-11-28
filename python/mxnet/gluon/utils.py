@@ -83,7 +83,7 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
                 end = div_points[i + 1]
                 slices.append(ndarray.slice_axis(data, axis=batch_axis, begin=st, end=end))
         else:
-            # Fixes issue: https://github.com/apache/incubator-mxnet/issues/19268
+            # Fixes issue: https://github.com/apache/mxnet/issues/19268
             slices = [data[div_points[i]:div_points[i + 1]] if i < num_slice - 1 else data[div_points[i]:size]
                       for i in range(num_slice)]
     return slices

@@ -157,7 +157,7 @@ function broadcast_hypot(x::NDArray, y::NDArray)
   hypot.(x, y)
 end
 
-# Introduced by https://github.com/apache/incubator-mxnet/pull/12845
+# Introduced by https://github.com/apache/mxnet/pull/12845
 import Base: sum, maximum, minimum, prod, cat
 @deprecate sum(x::NDArray, dims) sum(x, dims = dims)
 @deprecate maximum(x::NDArray, dims) maximum(x, dims = dims)

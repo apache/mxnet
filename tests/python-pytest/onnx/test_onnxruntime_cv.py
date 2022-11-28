@@ -100,16 +100,16 @@ def obj_class_test_images(tmpdir_factory):
     tmpdir = tmpdir_factory.mktemp("obj_class_data")
     from urllib.parse import urlparse
     test_image_urls = [
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/bikers.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/car.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/dancer.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/duck.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/flower.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/shark.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/soccer2.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/tree.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/bikers.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/car.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/dancer.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/duck.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/flower.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/runners.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/shark.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/soccer2.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/tree.jpg',
     ]
     paths = []
     for url in test_image_urls:
@@ -233,12 +233,12 @@ def obj_detection_test_images(tmpdir_factory):
     tmpdir = tmpdir_factory.mktemp("obj_det_data")
     from urllib.parse import urlparse
     test_image_urls = [
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/flower.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/shark.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/soccer2.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/tree.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/flower.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/runners.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/shark.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/soccer2.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/tree.jpg',
     ]
     paths = []
     for url in test_image_urls:
@@ -375,16 +375,16 @@ def img_segmentation_test_images(tmpdir_factory):
     tmpdir = tmpdir_factory.mktemp("img_seg_data")
     from urllib.parse import urlparse
     test_image_urls = [
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/bikers.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/car.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/dancer.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/duck.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/flower.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/shark.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/soccer2.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/tree.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/bikers.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/car.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/dancer.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/duck.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/flower.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/runners.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/shark.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/soccer2.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/tree.jpg',
     ]
     paths = []
     for url in test_image_urls:
@@ -450,11 +450,11 @@ def pose_estimation_test_images(tmpdir_factory):
     tmpdir = tmpdir_factory.mktemp("pose_est_data")
     from urllib.parse import urlparse
     test_image_urls = [
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/bikers.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/dancer.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/soccer2.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/bikers.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/dancer.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/runners.jpg',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/images/soccer2.jpg',
     ]
     paths = []
     for url in test_image_urls:
@@ -513,10 +513,10 @@ def act_recognition_test_data(tmpdir_factory):
     tmpdir = tmpdir_factory.mktemp("act_rec_data")
     from urllib.parse import urlparse
     test_image_urls = [
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/actions/biking.rec',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/actions/diving.rec',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/actions/golfing.rec',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/actions/sledding.rec',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/actions/biking.rec',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/actions/diving.rec',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/actions/golfing.rec',
+        'https://github.com/apache/mxnet-ci/raw/master/test-data/actions/sledding.rec',
     ]
     paths = []
     for url in test_image_urls:

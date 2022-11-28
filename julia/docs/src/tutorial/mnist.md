@@ -23,7 +23,7 @@ multi-layer perceptron and then a convolutional neural network (the
 LeNet architecture) on the [MNIST handwritten digit
 dataset](http://yann.lecun.com/exdb/mnist/). The code for this tutorial
 could be found in
-[examples/mnist](https://github.com/apache/incubator-mxnet/tree/master/julia/examples/mnist).  There are also two Jupyter notebooks that expand a little more on the [MLP](https://github.com/ultradian/julia_notebooks/blob/master/mxnet/mnistMLP.ipynb) and the [LeNet](https://github.com/ultradian/julia_notebooks/blob/master/mxnet/mnistLenet.ipynb), using the more general `ArrayDataProvider`. 
+[examples/mnist](https://github.com/apache/mxnet/tree/master/julia/examples/mnist).  There are also two Jupyter notebooks that expand a little more on the [MLP](https://github.com/ultradian/julia_notebooks/blob/master/mxnet/mnistMLP.ipynb) and the [LeNet](https://github.com/ultradian/julia_notebooks/blob/master/mxnet/mnistLenet.ipynb), using the more general `ArrayDataProvider`. 
 
 Simple 3-layer MLP
 ------------------

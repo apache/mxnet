@@ -29,7 +29,7 @@ tag: cpp
 ## Overview
 MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily.
 Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Python](/api/python/docs/api/), [Java](/api/java/docs/api/#package), [Scala](/api/scala/docs/api), and [C++](/api/cpp/docs/api/) APIs.
-We will focus on the MXNet C++ API. We have slightly modified the code in [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) for our use case.
+We will focus on the MXNet C++ API. We have slightly modified the code in [C++ Inference Example](https://github.com/apache/mxnet/tree/master/cpp-package/example/inference) for our use case.
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ After you complete [the previous tutorial](/api/python/docs/tutorials/getting-st
 
 
 Now we need to write the C++ code to load them and run prediction on a test image.
-The full code is available in the [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference), we will walk you through it and point out the necessary changes to make for our use case.
+The full code is available in the [C++ Inference Example](https://github.com/apache/mxnet/tree/master/cpp-package/example/inference), we will walk you through it and point out the necessary changes to make for our use case.
 
 
 
@@ -106,7 +106,7 @@ class Predictor {
 
 ### Load the model, synset file, and normalization values
 
-In the Predictor constructor, you need to provide paths to saved json and param files. After that, add the following methods `LoadModel` and `LoadParameters` to load the network and its parameters. This part is the same as [the example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/imagenet_inference.cpp).
+In the Predictor constructor, you need to provide paths to saved json and param files. After that, add the following methods `LoadModel` and `LoadParameters` to load the network and its parameters. This part is the same as [the example](https://github.com/apache/mxnet/blob/master/cpp-package/example/inference/imagenet_inference.cpp).
 
 Next, we need to load synset file, and normalization values. We have made the following change since our synset file contains flower names and we used both mean and standard deviation for image normalization.
 
@@ -190,7 +190,7 @@ NDArray Predictor::LoadInputImage(const std::string& image_file) {
 
 ### Predict the image
 
-Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe. Calling it in multi-threaded environments was not tested. To utilize multi-threaded prediction, you need to use the C predict API. Please follow the [C predict example](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp).
+Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe. Calling it in multi-threaded environments was not tested. To utilize multi-threaded prediction, you need to use the C predict API. Please follow the [C predict example](https://github.com/apache/mxnet/tree/master/example/image-classification/predict-cpp).
 
 An additional step is to normalize the image NDArrays values to `(0, 1)` and apply mean and standard deviation we just loaded.
 
@@ -249,14 +249,14 @@ void Predictor::PredictImage(const std::string& image_file) {
 
 ### Compile and run the inference code
 
-You can find the [full code for the inference example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) in the `cpp-package` folder of the project
-, and to compile it use this [Makefile](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/Makefile).
+You can find the [full code for the inference example](https://github.com/apache/mxnet/tree/master/cpp-package/example/inference) in the `cpp-package` folder of the project
+, and to compile it use this [Makefile](https://github.com/apache/mxnet/blob/master/cpp-package/example/inference/Makefile).
 
 Make a copy of the example code, rename it to `flower_inference` and apply the changes we mentioned above. Now you will be able to compile and run inference. Run `make all`. Once this is complete, run inference with the following parameters. Remember to set your `LD_LIBRARY_PATH` to point to MXNet library if you have not done so.
 
 ```bash
 make all
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH=:path/to/incubator-mxnet/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH=:path/to/mxnet/lib
 ./flower_inference --symbol flower-recognition-symbol.json --params flower-recognition-0040.params --synset synset.txt --mean mean_std_224.nd --image ./data/test/lotus/image_01832.jpg
 ```
 
@@ -280,13 +280,13 @@ Then it will predict your image:
 ## What's next
 
 Now you can explore more ways to run inference and deploy your models:
-1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
-2. [Scala Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer)
+1. [Java Inference examples](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
+2. [Scala Inference examples](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer)
 3. [ONNX model inference examples](/api/python/docs/tutorials/packages/onnx/inference_on_onnx_model.html)
 4. [MXNet Model Server Examples](https://github.com/awslabs/mxnet-model-server/tree/master/examples)
 
 ## References
 
 1. [Gluon end to end tutorial](/api/python/docs/tutorials/getting-started/gluon_from_experiment_to_deployment.html)
-2. [Gluon C++ inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
-3. [Gluon C++ package](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
+2. [Gluon C++ inference example](https://github.com/apache/mxnet/blob/master/cpp-package/example/inference/)
+3. [Gluon C++ package](https://github.com/apache/mxnet/tree/master/cpp-package)

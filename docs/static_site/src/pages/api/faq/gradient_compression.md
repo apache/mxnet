@@ -102,7 +102,7 @@ Gradient compression is a run-time configuration parameter to be enabled during 
 ```python
 trainer = gluon.Trainer(..., compression_params={'type’:'2bit', 'threshold':0.5})
 ```
-A reference `gluon` implementation with a gradient compression option can be found in the [train.py script from a word-level language modeling RNN example](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/word_language_model/train.py).
+A reference `gluon` implementation with a gradient compression option can be found in the [train.py script from a word-level language modeling RNN example](https://github.com/apache/mxnet/blob/master/example/gluon/word_language_model/train.py).
 
 **Module API**:
 
@@ -110,7 +110,7 @@ A reference `gluon` implementation with a gradient compression option can be fou
 mod = mx.mod.Module(..., compression_params={'type’:'2bit', 'threshold':0.5})
 ```
 
-A `module` example is provided with [this guide for setting up MXNet with distributed training](/api/faq/distributed_training). It comes with the option of turning on gradient compression as an argument to the [train_mnist.py script](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py).
+A `module` example is provided with [this guide for setting up MXNet with distributed training](/api/faq/distributed_training). It comes with the option of turning on gradient compression as an argument to the [train_mnist.py script](https://github.com/apache/mxnet/blob/master/example/image-classification/train_mnist.py).
 
 ### Configuration Details
 

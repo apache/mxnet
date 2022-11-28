@@ -164,7 +164,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
 
     Note: when run_performance_test is called on the nd.Embedding operator with run_backward=True, an error will
-    be thrown. Track issue here: https://github.com/apache/incubator-mxnet/issues/11314
+    be thrown. Track issue here: https://github.com/apache/mxnet/issues/11314
     """
     kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
 
@@ -183,11 +183,11 @@ def run_performance_test(ops, inputs, run_backward=True,
 
 def run_op_benchmarks(ops, dtype, ctx, profiler, warmup, runs):
     # Running SoftmaxOutput backwards on GPU results in errors
-    # track issue here: https://github.com/apache/incubator-mxnet/issues/880
+    # track issue here: https://github.com/apache/mxnet/issues/880
     gpu_backwards_disabled_ops = ['SoftmaxOutput']
 
     # Running im2col either forwards or backwards on GPU results in errors
-    # track issue here: https://github.com/apache/incubator-mxnet/issues/17493
+    # track issue here: https://github.com/apache/mxnet/issues/17493
     gpu_disabled_ops = ['im2col']
 
     # For each operator, run benchmarks

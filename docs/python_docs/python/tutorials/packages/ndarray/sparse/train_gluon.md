@@ -467,7 +467,7 @@ Memory Allocation for Weight Gradient:
 
 ### Advanced: Sparse `weight`
 
-You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [contrib.SparseEmbedding](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
+You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [contrib.SparseEmbedding](https://github.com/apache/mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
 
 ## Conclusion
 

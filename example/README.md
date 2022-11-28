@@ -58,7 +58,7 @@ Do not forget to udpdate the `docs/tutorials/index.md` for your tutorial to show
 
 #### Tutorial formatting
 
-The site expects the format to be markdown, so export your notebook as a .md via the Jupyter web interface menu (File > Download As > Markdown). Then, to enable the download notebook button in the web site's UI ([example](https://mxnet.apache.org/tutorials/python/linear-regression.html)), add the following as the last line of the file ([example](https://github.com/apache/incubator-mxnet/blame/master/docs/tutorials/python/linear-regression.md#L194)):
+The site expects the format to be markdown, so export your notebook as a .md via the Jupyter web interface menu (File > Download As > Markdown). Then, to enable the download notebook button in the web site's UI ([example](https://mxnet.apache.org/tutorials/python/linear-regression.html)), add the following as the last line of the file ([example](https://github.com/apache/mxnet/blame/master/docs/tutorials/python/linear-regression.md#L194)):
 
 ```
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
@@ -85,7 +85,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 ### <a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
 * [MXNet C++ API](https://mxnet.apache.org/api/c++/index.html)
-   - [C++ examples](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
+   - [C++ examples](https://github.com/apache/mxnet/tree/master/example/image-classification/predict-cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [MXNet Python API](https://mxnet.apache.org/api/python/index.html)
 * [MXNet Java API](https://mxnet.apache.org/api/java/index.html)
 * [MXNet Scala API](https://mxnet.apache.org/api/scala/index.html)

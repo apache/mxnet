@@ -404,7 +404,7 @@ def test_module_switch_bucket():
 
 
 # roywei: Getting rid of fixed seed as flakiness could not be reproduced,
-# tracked at: https://github.com/apache/incubator-mxnet/issues/11705
+# tracked at: https://github.com/apache/mxnet/issues/11705
 @with_seed()
 def test_module_set_params():
     # data iter

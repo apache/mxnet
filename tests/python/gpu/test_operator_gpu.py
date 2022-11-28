@@ -637,7 +637,7 @@ def check_consistency_NxM(sym_list, ctx_list):
     check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list), scale=0.5)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/mxnet/issues/10141")
 @with_seed()
 def test_convolution_options():
     # 1D convolution
@@ -2248,7 +2248,7 @@ def kernel_error_check_symbolic():
             f.forward()
             g = f.outputs[0].asnumpy()
 
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/20011')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/mxnet/issues/20011')
 def test_kernel_error_checking():
     # Running tests that may throw exceptions out of worker threads will stop CI testing
     # if not run in a separate process (with its own address space for CUDA compatibility).
@@ -2428,12 +2428,12 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/mxnet/issues/16517')
 def test_bulking_operator_gpu():
     _test_bulking(_test_bulking_in_process)
 
 
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]

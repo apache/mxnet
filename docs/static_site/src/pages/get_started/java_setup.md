@@ -55,7 +55,7 @@ sudo apt-get install openjdk-8-jdk maven
 
 **Step 2.** Run the demo MXNet-Java project.
 
-Go to the [MXNet-Java demo project's README](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo/java-demo) and follow the directions to test the MXNet-Java package installation.
+Go to the [MXNet-Java demo project's README](https://github.com/apache/mxnet/tree/master/scala-package/mxnet-demo/java-demo) and follow the directions to test the MXNet-Java package installation.
 
 #### Maven Repository
 
@@ -108,7 +108,7 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 |---|---|---|
 |macOS | [Shared Library for macOS](osx_setup.html#build-the-shared-library) | [Scala Package for macOS](osx_setup.html#install-the-mxnet-package-for-scala) |
 | Ubuntu | [Shared Library for Ubuntu](ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](ubuntu_setup.html#install-the-mxnet-package-for-scala) |
-| Windows | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub"> | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a> |
+| Windows | <a class="github-button" href="https://github.com/apache/mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/mxnet on GitHub"> | <a class="github-button" href="https://github.com/apache/mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/mxnet on GitHub">Call for Contribution</a> |
 
 
 #### Build Java from an Existing MXNet Installation
@@ -124,7 +124,7 @@ This will install both the Java Inference API and the required MXNet-Scala packa
 
 Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API]({{'/api/java'|relative_url}}) section of the website or by going to the [scaladocs output]({{'/api/scala/docs/api/#org.apache.mxnet.package'|relative_url}}) directly.
 
-To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/README.md).
+To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/mxnet/tree/master/docs/README.md).
 
 <hr>
 

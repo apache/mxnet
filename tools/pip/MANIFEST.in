@@ -17,7 +17,6 @@
 
 include README
 include LICENSE
-include DISCLAIMER
 include NOTICE
 include mxnet/COMMIT_HASH
 recursive-include mxnet/tools *

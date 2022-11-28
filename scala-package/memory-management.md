@@ -24,7 +24,7 @@ Allocating native memory is straight forward and is done during the construction
 MXNet Scala provides a few easy modes of operation which are explained in detail below.
 
 ## Memory Management in Scala 
-### 1.  [ResourceScope.using](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L106) (Recommended)
+### 1.  [ResourceScope.using](https://github.com/apache/mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L106) (Recommended)
 `ResourceScope.using` provides the familiar Java try-with-resources primitive in Scala and will automatically manage the memory of all the MXNet objects created in the associated code block (`body`). It works by tracking the allocations performed inside the code block deallocating when exiting the block. 
 Passing MXNet objects out of a using block can be easily accomplished by simply returning an object or an iterable containing multiple MXNet objects. If you have nested using blocks, then the returned objects will be moved into the parent scope as well.
 
@@ -106,7 +106,7 @@ def showDispose(): Unit = {
 ```
 
 ## Memory Management in Java
-Memory Management in MXNet Java is similar to Scala. We recommend you use [ResourceScope](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L32) in a `try-with-resources` block or in a `try-finally` block.
+Memory Management in MXNet Java is similar to Scala. We recommend you use [ResourceScope](https://github.com/apache/mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L32) in a `try-with-resources` block or in a `try-finally` block.
 The [try-with-resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) tracks the resources declared in the try block and automatically closes them upon exiting (supported from Java 7 onwards). 
 The ResourceScope discussed above implements AutoCloseable and tracks all MXNet Objects created at a Thread Local scope level. 
 

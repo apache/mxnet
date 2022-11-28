@@ -154,4 +154,4 @@ You should see the following output:
 
 ### Scala
 
-Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
+Run the <a href="https://github.com/apache/mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
