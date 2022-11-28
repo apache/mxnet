@@ -326,7 +326,7 @@ You can initiate the profiling directly from inside Visual Profiler or from the 
 
 `==11588== NVPROF is profiling process 11588, command: python my_profiler_script.py`
 
-`==11588== Generated result file: /home/user/Development/incubator-mxnet/ci/my_profile.nvvp`
+`==11588== Generated result file: /home/user/Development/mxnet/ci/my_profile.nvvp`
 
 We specified an output file called `my_profile.nvvp` and this will be annotated with NVTX ranges (for MXNet operations) that will be displayed alongside the standard NVProf timeline. This can be very useful when you're trying to find patterns between operators run by MXNet, and their associated CUDA kernel calls.
 
@@ -352,7 +352,7 @@ Nsight Compute is available in CUDA 10 toolkit, but can be used to profile code 
 
 ## Further reading
 
-- [Examples using MXNet profiler.](https://github.com/apache/incubator-mxnet/tree/master/example/profiler)
+- [Examples using MXNet profiler.](https://github.com/apache/mxnet/tree/master/example/profiler)
 - [Some tips for improving MXNet performance.](https://mxnet.apache.org/api/faq/perf)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

@@ -113,12 +113,12 @@ will launch two instances for throughput benchmark and each instance will use 24
 The following models have been tested on Linux systems. Accuracy is collected on Intel XEON Cascade Lake CPU. For CPU with Skylake Lake or eariler architecture, the accuracy may not be the same.
 | Model | Source | Dataset | FP32 Accuracy (top-1/top-5)| INT8 Accuracy (top-1/top-5)|
 |:---|:---|---|:---:|:---:|
-| ResNet18-V1  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |70.45%/89.55%|70.22%/89.38%|
-| ResNet50-V1  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |76.36%/93.49%|76.04%/93.30%|
-| ResNet101-V1  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |78.23%/93.99%|77.85%/93.69%|
-| MobileNet v2 1.0  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |71.72%/90.28%|71.22%/89.92%|
-| VGG16 | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |72.83%/91.11%|72.81%/91.10%|
-| VGG19  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |73.67%/91.63%|73.67%/91.67%|
+| ResNet18-V1  | [MXNet ModelZoo](https://github.com/apache/mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |70.45%/89.55%|70.22%/89.38%|
+| ResNet50-V1  | [MXNet ModelZoo](https://github.com/apache/mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |76.36%/93.49%|76.04%/93.30%|
+| ResNet101-V1  | [MXNet ModelZoo](https://github.com/apache/mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |78.23%/93.99%|77.85%/93.69%|
+| MobileNet v2 1.0  | [MXNet ModelZoo](https://github.com/apache/mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |71.72%/90.28%|71.22%/89.92%|
+| VGG16 | [MXNet ModelZoo](https://github.com/apache/mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |72.83%/91.11%|72.81%/91.10%|
+| VGG19  | [MXNet ModelZoo](https://github.com/apache/mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |73.67%/91.63%|73.67%/91.67%|
 *Measured on validation ImageNet (ILSVRC2012) with batch-size=64,  num-calib-batches=10 and calib-mode=entropy*
 
 <h3>Pre-trained Model</h3>

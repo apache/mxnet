@@ -37,7 +37,7 @@ description: >- # this means to ignore newlines until "baseurl:"
 baseurl: /mxnet.io-v2 # the subpath of your site, e.g. /blog
 url: https://thomasdelteil.github.io
 twitter_username: apachemxnet
-github_username:  apache/incubator-mxnet
+github_username:  apache/mxnet
 youtube_username: apachemxnet
 baseurl: /versions/master
 versions:

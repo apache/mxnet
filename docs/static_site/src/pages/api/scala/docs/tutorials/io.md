@@ -107,7 +107,7 @@ First, explicitly specify the kind of data (MNIST, ImageRecord, etc.) to fetch. 
 ## How to Get Data
 
 
-We provide [scripts](https://github.com/apache/incubator-mxnet/tree/master/scala-package/core/scripts) to download MNIST data and CIFAR10 ImageRecord data. If you want to create your own dataset, we recommend using the Image RecordIO data format.
+We provide [scripts](https://github.com/apache/mxnet/tree/master/scala-package/core/scripts) to download MNIST data and CIFAR10 ImageRecord data. If you want to create your own dataset, we recommend using the Image RecordIO data format.
 
 ## Create a Dataset Using RecordIO
 
@@ -117,7 +117,7 @@ RecordIO implements a file format for a sequence of records. We recommend storin
 * Packing data together allows continuous reading on the disk.
 * RecordIO has a simple way to partition, simplifying distributed setting. We provide an example later.
 
-We provide the [im2rec tool](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.cc) so you can create an Image RecordIO dataset by yourself. The following walkthrough shows you how.
+We provide the [im2rec tool](https://github.com/apache/mxnet/blob/master/tools/im2rec.cc) so you can create an Image RecordIO dataset by yourself. The following walkthrough shows you how.
 
 ### Prerequisites
 Download the data. You don't need to resize the images manually. You can use `im2rec` to resize them automatically. For details, see "Extension: Using Multiple Labels for a Single Image," later in this topic.

@@ -532,7 +532,7 @@ def check_consistency_NxM(sym_list, ctx_list):
     check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list), scale=0.5)
 
 
-@pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
+@pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/mxnet/issues/10141")
 @pytest.mark.serial
 def test_convolution_options():
     # 1D convolution

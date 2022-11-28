@@ -1123,7 +1123,7 @@ def test_np_multinomial():
                 freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
                 assert freq.size == 0
     # test small experiment for github issue
-    # https://github.com/apache/incubator-mxnet/issues/15383
+    # https://github.com/apache/mxnet/issues/15383
     small_exp, total_exp = 20, 10000
     for pvals_mx_np_array in [False, True]:
         for pvals in pvals_list:

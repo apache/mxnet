@@ -186,7 +186,7 @@ for batch in train_data:
 
 ## Final Step: Launching the distributed training
 
-Note that there are several processes that needs to be launched on multiple machines to do distributed training. One worker and one parameter server needs to be launched on each host. Scheduler needs to be launched on one of the hosts. While this can be done manually, MXNet provides the [`launch.py`](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py) tool to make this easy.
+Note that there are several processes that needs to be launched on multiple machines to do distributed training. One worker and one parameter server needs to be launched on each host. Scheduler needs to be launched on one of the hosts. While this can be done manually, MXNet provides the [`launch.py`](https://github.com/apache/mxnet/blob/master/tools/launch.py) tool to make this easy.
 
 For example, the following command launches distributed training on two machines:
 

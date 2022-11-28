@@ -191,7 +191,7 @@ inline std::map<std::string, std::string> Symbol::ListAttributes() const {
     std::map<std::string, std::string> attributes;
     for (mx_uint i = 0; i < size; ++i) {
         // pairs is 2 * size with key, value pairs according to
-        //   https://github.com/apache/incubator-mxnet/blob/master/include/mxnet/c_api.h#L1428
+        //   https://github.com/apache/mxnet/blob/master/include/mxnet/c_api.h#L1428
         attributes[pairs[2 * i]] = pairs[2 * i + 1];
     }
     return attributes;

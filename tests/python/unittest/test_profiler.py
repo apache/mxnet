@@ -84,7 +84,7 @@ def test_profile_create_domain():
     profiler.set_state('stop')
 
 
-@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/mxnet/issues/15406")
 def test_profile_create_domain_dept():
     profiler.set_config(profile_symbolic=True, filename='test_profile_create_domain_dept.json')
     profiler.set_state('run')
@@ -281,7 +281,7 @@ def test_aggregate_stats_sorting():
     profiler.set_state('stop')
 
 
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
+@pytest.mark.skip(reason='https://github.com/apache/mxnet/issues/18564')
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
     enable_profiler(profile_filename=file_name, run=True, continuous_dump=True, \
@@ -440,19 +440,19 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     profiler.set_state('stop')
 
 
-@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_symbolic():
     custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 
-@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_imperative():
     custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
 
-@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
     run_in_spawned_process(test_custom_operator_profiling, \

@@ -116,20 +116,20 @@ The multi threaded inference example (`multi_threaded_inference.cc`) involves th
 
 ### Step 1: Parse arguments and load input image into ndarray
 
-[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L299-L341](multi_threaded_inference.cc#L299-L341)
+[https://github.com/apache/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L299-L341](multi_threaded_inference.cc#L299-L341)
 
 The above code parses arguments, loads the image file into a ndarray with a specific shape. There are a few things that are set by default and not configurable. For example, `static_alloc` and `static_shape` are by default set to true.
 
 
 ### Step 2: Prepare input data and load parameters, copying data to a specific context
 
-[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L147-L205](multi_threaded_inference.cc#L147-L205)
+[https://github.com/apache/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L147-L205](multi_threaded_inference.cc#L147-L205)
 
 The above code loads params and copies input data and params to specific context.
 
 ### Step 3: Preparing arguments to pass to the CachedOp and calling C API to create cached op
 
-[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L207-L233](multi_threaded_inference.cc#L207-233)
+[https://github.com/apache/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L207-L233](multi_threaded_inference.cc#L207-233)
 
 The above code prepares `flag_key_cstrs` and `flag_val_cstrs` to be passed the Cached op.
 The C API call is made with `MXCreateCachedOp`. This will lead to creation of thread safe cached
@@ -139,7 +139,7 @@ true. When this is set to false, it will invoke CachedOp instead of CachedOpThre
 
 ### Step 4: Prepare lambda function which will run in spawned threads
 
-[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L248-L262](multi_threaded_inference.cc#L248-262)
+[https://github.com/apache/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L248-L262](multi_threaded_inference.cc#L248-262)
 
 The above creates the lambda function taking the thread number as the argument.
 If `random_sleep` is set it will sleep for a random number (secs) generated between 0 to 5 seconds.
@@ -148,14 +148,14 @@ When this is set to false, it will invoke CachedOp instead of CachedOpThreadSafe
 
 ### Step 5: Spawn multiple threads and wait for all threads to complete
 
-[https://github.com/anirudh2290/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L264-L276](multi_threaded_inference.cc#L264-L276)
+[https://github.com/anirudh2290/apache/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L264-L276](multi_threaded_inference.cc#L264-L276)
 
 Spawns multiple threads, joins and waits to wait for all ops to complete.
 The other alternative is to wait in the thread on the output ndarray and remove the WaitAll after join.
 
 ### Step 6: Post process data to obtain inference results and cleanup
 
-[https://github.com/apache/incubator-/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L286-L293](multi_threaded_inference.cc#L286-293)
+[https://github.com/apache/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L286-L293](multi_threaded_inference.cc#L286-293)
 
 The above code outputs results for different threads and cleans up the thread safe cached op.
 
@@ -185,4 +185,4 @@ the CPP frontend to run multi-threaded inference as of today.
 ## Future Work
 
 Future work includes Increasing model coverage and addressing most of the limitations mentioned under Current Limitations except the training use case.
-For more updates, please subscribe to discussion activity on RFC: https://github.com/apache/incubator-mxnet/issues/16431.
+For more updates, please subscribe to discussion activity on RFC: https://github.com/apache/mxnet/issues/16431.

@@ -154,7 +154,7 @@ def test_ndarray_setitem():
         assert x.shape == trivial_shape
         assert same(x.asnumpy(), x_np)
 
-    # test https://github.com/apache/incubator-mxnet/issues/16647
+    # test https://github.com/apache/mxnet/issues/16647
     dst = mx.nd.zeros((1, 3, 1))  # destination array
     src = [1, 2, 3]
     dst[0, :len(src), 0] = src
@@ -232,7 +232,7 @@ def test_ndarray_reshape():
     assert same(tensor.reshape(-1, 15).reshape(0, -4, 3, -1).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
     assert same(tensor.reshape(-1, 0).asnumpy(), true_res.reshape(10, 3).asnumpy())
     assert same(tensor.reshape(-1, 0, reverse=True).asnumpy(), true_res.reshape(6, 5).asnumpy())
-    # https://github.com/apache/incubator-mxnet/issues/18886
+    # https://github.com/apache/mxnet/issues/18886
     assertRaises(ValueError, tensor.reshape, (2, 3))
 
 def test_ndarray_flatten():
@@ -1666,7 +1666,7 @@ def test_ndarray_indexing():
 
 
 def test_assign_float_value_to_ndarray():
-    """Test case from https://github.com/apache/incubator-mxnet/issues/8668"""
+    """Test case from https://github.com/apache/mxnet/issues/8668"""
     a = np.array([47.844944], dtype=np.float32)
     b = mx.nd.zeros(1, dtype=np.float32)
     b[0] = a
@@ -1675,7 +1675,7 @@ def test_assign_float_value_to_ndarray():
     assert same(a, b.asnumpy())
 
 def test_assign_large_int_to_ndarray():
-    """Test case from https://github.com/apache/incubator-mxnet/issues/11639"""
+    """Test case from https://github.com/apache/mxnet/issues/11639"""
     a = mx.nd.zeros((4, 1), dtype=np.int32)
     a[1,0] = int(16800001)
     a[2,0] = int(16800002)
@@ -1686,7 +1686,7 @@ def test_assign_large_int_to_ndarray():
     assert same(b[1,0], 16800000)
 
 def test_assign_a_row_to_ndarray():
-    """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
+    """Test case from https://github.com/apache/mxnet/issues/9976"""
     H, W = 10, 10
     dtype = np.float32
     a_np = np.random.random((H, W)).astype(dtype)
@@ -2015,7 +2015,7 @@ def test_update_ops_mutation():
 
 
 # Problem :
-# https://github.com/apache/incubator-mxnet/pull/15768#issuecomment-532046408
+# https://github.com/apache/mxnet/pull/15768#issuecomment-532046408
 @pytest.mark.seed(412298777)
 @pytest.mark.serial
 def test_update_ops_mutation_failed_seed():

@@ -38,7 +38,7 @@ If you plan to contribute changes to the documentation or website, please submit
 
 MXNet's Python documentation is built with [Sphinx](https://www.sphinx-doc.org) and a variety of plugins including [pandoc](https://pandoc.org/), and [recommonmark](https://github.com/rtfd/recommonmark).
 
-More information on the dependencies can be found in the [CI folder's installation scripts](https://github.com/apache/incubator-mxnet/tree/master/ci/docker/install/ubuntu_docs.sh).
+More information on the dependencies can be found in the [CI folder's installation scripts](https://github.com/apache/mxnet/tree/master/ci/docker/install/ubuntu_docs.sh).
 
 You can run just the Python docs by following the instructions in the Python API guide.
 
@@ -56,7 +56,7 @@ If you only need to make changes to tutorials or other pages that are not genera
 
 ### Ubuntu Setup
 
-As this is maintained for CI, Ubuntu is recommended. Refer to [ubuntu_doc.sh](https://github.com/apache/incubator-mxnet/tree/master/ci/docker/install/ubuntu_docs.sh) for the latest install script.
+As this is maintained for CI, Ubuntu is recommended. Refer to [ubuntu_doc.sh](https://github.com/apache/mxnet/tree/master/ci/docker/install/ubuntu_docs.sh) for the latest install script.
 
 ### Caveat for Rendering Outputs
 
@@ -158,11 +158,11 @@ The `-W` Sphinx option enforces "warnings as errors". This will help you debug y
 
 ## Production Website Deployment Process
 
-[Apache Jenkins MXNet website building job](https://builds.apache.org/job/incubator-mxnet-build-site/) is used to build MXNet website.
+[Apache Jenkins MXNet website building job](https://builds.apache.org/job/mxnet-build-site/) is used to build MXNet website.
 
-The Jenkins docs build job will fetch MXNet repository, build MXNet website and push all static files to [host repository](https://github.com/apache/incubator-mxnet-site.git).
+The Jenkins docs build job will fetch MXNet repository, build MXNet website and push all static files to [host repository](https://github.com/apache/mxnet-site.git).
 
-The host repo is hooked with [Apache gitbox](https://gitbox.apache.org/repos/asf?p=incubator-mxnet-site.git;a=summary) to host website.
+The host repo is hooked with [Apache gitbox](https://gitbox.apache.org/repos/asf?p=mxnet-site.git;a=summary) to host website.
 
 ### Processes for Running the Docs Build Jobs
 

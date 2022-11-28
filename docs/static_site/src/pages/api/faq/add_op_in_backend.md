@@ -713,11 +713,11 @@ using nnvm. Congratulations! You now know how to add operators.
 We welcome your contributions to MXNet.
 
 **Note**: Source code in the tutorial can be found in
-[quadratic_op-inl.h](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op-inl.h),
-[quadratic_op.cc](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cc),
-[quadratic_op.cu](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cu),
+[quadratic_op-inl.h](https://github.com/apache/mxnet/blob/master/src/operator/contrib/quadratic_op-inl.h),
+[quadratic_op.cc](https://github.com/apache/mxnet/blob/master/src/operator/contrib/quadratic_op.cc),
+[quadratic_op.cu](https://github.com/apache/mxnet/blob/master/src/operator/contrib/quadratic_op.cu),
 and
-[test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L6514).
+[test_operator.py](https://github.com/apache/mxnet/blob/master/tests/python/unittest/test_operator.py#L6514).
 
 ## Additional Resources
 - [Use TensorInspector to Help Debug Operators](./tensor_inspector_tutorial)

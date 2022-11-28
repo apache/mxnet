@@ -163,7 +163,7 @@ There are also some default utility handlers that will be added to your estimato
 `ValidationHandler` is used to validate your model on test data at each epoch's end and then calculate validation metrics.
 You can create these utility handlers with different configurations and pass to estimator. This will override the default handler configuration.
 You can create a custom handler by inheriting one or multiple
-[base event handlers](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/estimator/event_handler.py#L32)
+[base event handlers](https://github.com/apache/mxnet/blob/master/python/mxnet/gluon/contrib/estimator/event_handler.py#L32)
  including: `TrainBegin`, `TrainEnd`, `EpochBegin`, `EpochEnd`, `BatchBegin`, `BatchEnd`.
 
 

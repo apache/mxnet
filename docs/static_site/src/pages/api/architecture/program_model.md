@@ -619,7 +619,7 @@ to create more interesting and intelligent deep learning libraries.
 
 This document is part of our effort to provide [open-source system design notes](overview)
 for deep learning libraries. If you're interested in contributing to Apache MXNet or its
-documentation, [fork us on GitHub](http://github.com/apache/incubator-mxnet).
+documentation, [fork us on GitHub](http://github.com/apache/mxnet).
 
 ## Next Steps
 
