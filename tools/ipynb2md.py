@@ -31,6 +31,9 @@ import io
 import os
 import argparse
 import nbformat
+import mslex
+import shlex
+import subprocess
 
 
 def remove_outputs(nb):
@@ -68,7 +71,17 @@ def main():
 
 
     clear_notebook(old_ipynb, new_ipynb)
-    os.system('jupyter nbconvert ' + new_ipynb + ' --to markdown --output ' + md_file)
+    
+    cmd = 'jupyter nbconvert' + new_ipynb, + '--to markdown' + '--output' + md_file
+    if os.name == 'posix':
+        escaped_cmd = shlex.quote(cmd)
+        subprocess.run(escaped_cmd)
+    elif os.name == 'nt':
+        escaped_cmd = mslex.quote(cmd)
+        subprocess.run(escaped_cmd)
+    else:
+        print("Could not determine operating system")
+
     with open(md_file, 'a') as f:
         f.write('<!-- INSERT SOURCE DOWNLOAD BUTTONS -->')
     os.system('rm ' + new_ipynb)
