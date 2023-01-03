@@ -50,7 +50,7 @@ mx.np.random.seed(42)
 
 ```{.python .input}
 # Download dataset
-url = 'https://md-datasets-cache-zipfiles-prod.s3.eu-west-1.amazonaws.com/hb74ynkjcn-1.zip'
+url = 'https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/hb74ynkjcn-1.zip'
 zip_file_path = mx.gluon.utils.download(url)
 
 os.makedirs('plants', exist_ok=True)
