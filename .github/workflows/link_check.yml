@@ -37,7 +37,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libopenblas-dev ninja-build ccache python3-sphinx \
-              pandoc gcc-7 g++-7 libopencv-dev protobuf-compiler libprotobuf-dev
+              pandoc gcc g++ libopencv-dev protobuf-compiler libprotobuf-dev
           ccache -M 500M  # Limit the ccache size; Github's overall cache limit is 5GB
           python -m pip install pandoc-attributes==0.1.7
           python -m pip install -r docs/python_docs/requirements
@@ -46,8 +46,8 @@ jobs:
 
       - name: Build project
         env:
-          CC: gcc-7
-          CXX: g++-7
+          CC: gcc
+          CXX: g++
         run: |
           git submodule update --init --recursive
           mkdir build; cd build
