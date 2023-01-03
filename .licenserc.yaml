@@ -27,7 +27,6 @@ header:
     - 'tools/dependencies/LICENSE.binary.dependencies'
     # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
     - 'docs'
-    - 'R-package'
     # files licensed under apache-2.0 license but do not include full license headers recognized by skywalking-eyes
     - '**/*.ipynb'
     - 'src/operator/deformable_convolution-inl.h'
