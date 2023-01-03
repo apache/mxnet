@@ -80,7 +80,8 @@ def main():
         escaped_cmd = mslex.quote(cmd)
         subprocess.run(escaped_cmd)
     else:
-        print("Could not determine operating system")
+        print("Could not determine operating system, exiting.")
+        return
 
     with open(md_file, 'a') as f:
         f.write('<!-- INSERT SOURCE DOWNLOAD BUTTONS -->')
