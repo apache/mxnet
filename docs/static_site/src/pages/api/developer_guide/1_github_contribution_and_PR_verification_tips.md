@@ -29,12 +29,12 @@ Use this page for general git workflow tips.
 
 It is recommended that you fork the MXNet repo, and then set the original repo as an upstream remote repo. 
 
-Fork [https://github.com/apache/incubator-mxnet](https://github.com/apache/incubator-mxnet) then:
+Fork [https://github.com/apache/mxnet](https://github.com/apache/mxnet) then:
 
 ```
-git clone --recursive https://github.com/your_username/incubator-mxnet
+git clone --recursive https://github.com/your_username/mxnet
 cd mxnet
-git remote add upstream https://github.com/apache/incubator-mxnet
+git remote add upstream https://github.com/apache/mxnet
 ```
 
 Once `upstream` was added, then create a branch for your contribution.

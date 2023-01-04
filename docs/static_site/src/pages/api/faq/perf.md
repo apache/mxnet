@@ -267,7 +267,7 @@ To reduce the communication cost, we can consider:
 - Exploring different `--kv-store` options.
 - Increasing the batch size to improve the computation to communication ratio.
 
-Finally, MXNet is integrated with other distributed training frameworks, including [horovod](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training-horovod) and [BytePS](https://github.com/bytedance/byteps#use-byteps-in-your-code).
+Finally, MXNet is integrated with other distributed training frameworks, including [horovod](https://github.com/apache/mxnet/tree/master/example/distributed_training-horovod) and [BytePS](https://github.com/bytedance/byteps#use-byteps-in-your-code).
 
 ## Input Data
 

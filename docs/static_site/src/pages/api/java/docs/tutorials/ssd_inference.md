@@ -26,7 +26,7 @@ tag: java
 
 This tutorial shows how to use MXNet Java Inference APIs to run inference on a pre-trained Single Shot Detector (SSD) Model.
 
-The SSD model is trained on the Pascal VOC 2012 dataset. The network is a SSD model built on Resnet50 as the base network to extract image features. The model is trained to detect the following entities (classes): ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']. For more details about the model, you can refer to the [MXNet SSD example](https://github.com/apache/incubator-mxnet/tree/master/example/ssd).
+The SSD model is trained on the Pascal VOC 2012 dataset. The network is a SSD model built on Resnet50 as the base network to extract image features. The model is trained to detect the following entities (classes): ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']. For more details about the model, you can refer to the [MXNet SSD example](https://github.com/apache/mxnet/tree/master/example/ssd).
 
 ## Prerequisites
 
@@ -52,7 +52,7 @@ wget https://cloud.githubusercontent.com/assets/3307514/20012567/cbb60336-a27d-1
 wget https://cloud.githubusercontent.com/assets/3307514/20012563/cbb41382-a27d-11e6-92a9-18dab4fd1ad3.jpg -O person.jpg
 ```
 
-Alternately, you can get the entire SSD Model artifacts + images in one single script from the MXNet Repository by running [get_ssd_data.sh script](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/scripts/infer/objectdetector/get_ssd_data.sh)
+Alternately, you can get the entire SSD Model artifacts + images in one single script from the MXNet Repository by running [get_ssd_data.sh script](https://github.com/apache/mxnet/blob/master/scala-package/examples/scripts/infer/objectdetector/get_ssd_data.sh)
 
 ## Time to code!
 1\. Following the [MXNet Java Setup on IntelliJ IDEA](mxnet_java_on_intellij) tutorial, in the same project `JavaMXNet`, create a new empty class called : `ObjectDetectionTutorial.java`.
@@ -206,5 +206,5 @@ The results returned by the inference call translate into the regions in the ima
 For more information about MXNet Java resources, see the following:
 
 * [Java Inference API]({{'/api/java'|relative_url}})
-* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
+* [Java Inference Examples](https://github.com/apache/mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 * [MXNet Tutorials Index]({{'/api'|relative_url}})

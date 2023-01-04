@@ -24,7 +24,7 @@ The Jenkins pipelines for continuous delivery of the PyPI MXNet packages.
 The pipelines for each variant are run, and fail, independently. Each depends
 on a successful build of the statically linked libmxet library.
 
-The pipeline relies on the scripts and resources located in [tools/pip](https://github.com/apache/incubator-mxnet/tree/master/tools/pip)
+The pipeline relies on the scripts and resources located in [tools/pip](https://github.com/apache/mxnet/tree/master/tools/pip)
 to build the PyPI packages.
 
 ## Credentials

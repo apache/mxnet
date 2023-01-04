@@ -490,9 +490,9 @@ Settings for controlling OMP tuning
    -            0=disable all
    -            1=enable all
    -            float32, float16, float32=list of types to enable, and disable those not listed
-   - refer : https://github.com/apache/incubator-mxnet/blob/master/src/operator/operator_tune-inl.h#L444
+   - refer : https://github.com/apache/mxnet/blob/master/src/operator/operator_tune-inl.h#L444
 
 - Set ```MXNET_USE_NUM_CORES_OPERATOR_TUNING``` to define num_cores to be used by operator tuning code.
   - This reduces operator tuning overhead when there are multiple instances of mxnet running in the system and we know that
     each mxnet will take only partial num_cores available with system.
-  - refer: https://github.com/apache/incubator-mxnet/pull/13602
+  - refer: https://github.com/apache/mxnet/pull/13602

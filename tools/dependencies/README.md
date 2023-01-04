@@ -107,7 +107,7 @@ sudo apt-get install -y git \
 
 ### MKL, oneDNN
 
-@pengzhao-intel (https://github.com/apache/incubator-mxnet/commits?author=pengzhao-intel) and his team are tracking and updating these versions. Kudos to them!
+@pengzhao-intel (https://github.com/apache/mxnet/commits?author=pengzhao-intel) and his team are tracking and updating these versions. Kudos to them!
 
 ### CUDA, cuDNN, NCCL
 
@@ -184,8 +184,8 @@ sudo apt install libnccl2 libnccl-dev
 We will build MXNet with statically linked dependencies.
 ```
 # Clone MXNet repo
-git clone --recursive https://github.com/apache/incubator-mxnet.git
-cd incubator-mxnet
+git clone --recursive https://github.com/apache/mxnet.git
+cd mxnet
 # Make sure you pin to specific commit for all the performance sanity check to make fair comparison
 # Make corresponding change on tools/setup_gpu_build_tools.sh
 # to upgrade CUDA version, please refer to PR #14887.
@@ -195,7 +195,7 @@ cd incubator-mxnet
 # Build PyPi package
 tools/staticbuild/build.sh cu100mkl
 
-# Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+# Wait for 10 - 30 mins, you will find libmxnet.so under the mxnet/lib
 
 # Install python frontend
 pip install -e python
@@ -219,14 +219,14 @@ OK
 Please run performance test aginast the MXNet you build before raising the PR.
 
 #### 4. Raise a PR
-1. Update the tools/setup_gpu_build_tools.sh please refer to PR [#14988](https://github.com/apache/incubator-mxnet/pull/14988), [#14887](https://github.com/apache/incubator-mxnet/pull/14887/files)
-2. (optional) Update the CI-related configuration/shell script/Dockerfile. Please refer to PR [#14986](https://github.com/apache/incubator-mxnet/pull/14986/files), [#14950](https://github.com/apache/incubator-mxnet/pull/14950/files)
+1. Update the tools/setup_gpu_build_tools.sh please refer to PR [#14988](https://github.com/apache/mxnet/pull/14988), [#14887](https://github.com/apache/mxnet/pull/14887/files)
+2. (optional) Update the CI-related configuration/shell script/Dockerfile. Please refer to PR [#14986](https://github.com/apache/mxnet/pull/14986/files), [#14950](https://github.com/apache/mxnet/pull/14950/files)
 
 #### 5. CI Test
 1. Our CI would test PyPi and Scala publish of latest CUDA version i.e. mxnet-cu101mkl
 
 ### numpy, requests, graphviz (python dependencies)
-1. Please refer to [#14588](https://github.com/apache/incubator-mxnet/pull/14588/files) and make sure the version have both of upper bound and lower bound
+1. Please refer to [#14588](https://github.com/apache/mxnet/pull/14588/files) and make sure the version have both of upper bound and lower bound
 #### Checklist
 - [ ] Python/setup.py
 - [ ] tools/pip/setup.py
@@ -283,7 +283,7 @@ sudo apt-get install -y git \
 # Update the dependency under tools/dependencies, then
 tools/staticbuild/build.sh mkl
 
-# Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+# Wait for 10 - 30 mins, you will find libmxnet.so under the mxnet/lib
 
 # Install python frontend
 pip install -e python
@@ -332,7 +332,7 @@ sudo apt-get install -y git \
 # Update the dependency under tools/dependencies, then
 tools/staticbuild/build.sh mkl
 
-# Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+# Wait for 10 - 30 mins, you will find libmxnet.so under the mxnet/lib
 
 # Install python frontend
 pip install -e python

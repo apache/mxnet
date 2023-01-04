@@ -17,7 +17,6 @@
 
 include README
 include LICENSE
-include DISCLAIMER
 include NOTICE
 recursive-include mxnet/tools *
 recursive-include mxnet *.py

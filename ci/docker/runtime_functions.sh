@@ -107,7 +107,6 @@ gather_licenses() {
     cp tools/dependencies/LICENSE.binary.dependencies licenses/
     cp NOTICE licenses/
     cp LICENSE licenses/
-    cp DISCLAIMER licenses/
 }
 
 # Compiles the dynamic mxnet library
@@ -818,7 +817,7 @@ cd_unittest_ubuntu() {
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --verbose tests/python/unittest
 
-    # https://github.com/apache/incubator-mxnet/issues/11801
+    # https://github.com/apache/mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
         # integrationtest_ubuntu_cpu_dist_kvstore
     # fi
@@ -1394,7 +1393,7 @@ create_repo() {
    git clone $mxnet_url $repo_folder --recursive
    echo "Adding MXNet upstream repo..."
    cd $repo_folder
-   git remote add upstream https://github.com/apache/incubator-mxnet
+   git remote add upstream https://github.com/apache/mxnet
    cd ..
 }
 

@@ -304,7 +304,7 @@ def test_simple_bind_gradient_graph_possible_with_cycle():
     are the outputs of the same node. Therefore, adding a node to the
     control_deps of itself must be skipped.
     See GitHub issue:
-    https://github.com/apache/incubator-mxnet/issues/8029
+    https://github.com/apache/mxnet/issues/8029
     for more details."""
     data = mx.symbol.Variable('data')
     res = data + data + data + data + data + data + data + data

@@ -114,7 +114,7 @@ Distributed Training
 
    .. card::
       :title: MXNet with Horovod
-      :link: https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training-horovod
+      :link: https://github.com/apache/mxnet/tree/master/example/distributed_training-horovod
 
       A set of example scripts demonstrating MNIST and ImageNet training with Horovod as the distributed training backend.
 

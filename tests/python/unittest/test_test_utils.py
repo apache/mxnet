@@ -29,6 +29,6 @@ def test_download_retries():
 def test_download_successful(tmpdir):
     tmp = str(tmpdir)
     tmpfile = os.path.join(tmp, 'README.md')
-    mx.test_utils.download("https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
+    mx.test_utils.download("https://raw.githubusercontent.com/apache/mxnet/master/README.md",
                            fname=tmpfile)
     assert os.path.getsize(tmpfile) > 100

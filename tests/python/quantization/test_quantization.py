@@ -242,7 +242,7 @@ def test_quantized_conv():
             print('skipped testing quantized_conv for native cpu since it is not supported yet')
             return
         elif is_test_for_dnnl():
-            # (TODO)Xinyu: https://github.com/apache/incubator-mxnet/issues/16830
+            # (TODO)Xinyu: https://github.com/apache/mxnet/issues/16830
             print('skipped testing quantized_conv for oneDNN cpu since it is a flaky case')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():

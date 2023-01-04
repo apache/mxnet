@@ -939,7 +939,7 @@ def test_zipfian_generator():
     assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)
     assert_almost_equal(exp_cnt_true, exp_cnt[true_classes], rtol=1e-1, atol=1e-2)
 
-# Issue #10277 (https://github.com/apache/incubator-mxnet/issues/10277) discusses this test.
+# Issue #10277 (https://github.com/apache/mxnet/issues/10277) discusses this test.
 @pytest.mark.serial
 def test_shuffle():
     def check_first_axis_shuffle(arr):
@@ -1082,7 +1082,7 @@ def test_sample_categorical_num_outputs():
 @use_np
 def test_dirichlet_zero_size_dim():
     """ Tests for no error when dealing with zero-size array in calculating PDF of Poisson distribution
-    Issue: https://github.com/apache/incubator-mxnet/issues/18936
+    Issue: https://github.com/apache/mxnet/issues/18936
     """
 
     def test_valid_zero_dim():
@@ -1110,7 +1110,7 @@ def test_dirichlet_zero_size_dim():
 @use_np
 def test_poisson_zero_size_dim():
     """ Tests for no error when dealing with zero-size array in calculating PDF of Poisson distribution
-    Issue: https://github.com/apache/incubator-mxnet/issues/18937
+    Issue: https://github.com/apache/mxnet/issues/18937
     """
 
     def test_valid_zero_dim():

@@ -29,7 +29,7 @@
     <asfext:pmc rdf:resource="https://incubator.apache.org" />
     <shortdesc>Apache MXNet is a deep learning framework designed for both efficiency and flexibility.</shortdesc>
     <description>Apache MXNet is a deep learning framework designed for both efficiency and flexibility. It's lightweight, Portable, Flexible Distributed/Mobile Deep Learning with dynamic, mutation-aware data-flow dependency scheduler; for Python, R, Julia, Scala, Go, Javascript and more</description>
-    <bug-database rdf:resource="https://github.com/apache/incubator-mxnet/labels/Bug" />
+    <bug-database rdf:resource="https://github.com/apache/mxnet/labels/Bug" />
     <mailing-list rdf:resource="https://lists.apache.org/list.html?dev@mxnet.apache.org" />
     <download-page rdf:resource="https://mxnet.apache.org/get_started/download" />
     <programming-language>C++</programming-language>
@@ -43,8 +43,8 @@
     </release>
     <repository>
       <GitRepository>
-        <location rdf:resource="https://github.com/apache/incubator-mxnet"/>
-        <browse rdf:resource="https://github.com/apache/incubator-mxnet"/>
+        <location rdf:resource="https://github.com/apache/mxnet"/>
+        <browse rdf:resource="https://github.com/apache/mxnet"/>
       </GitRepository>
     </repository>
     <maintainer>

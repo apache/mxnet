@@ -46,7 +46,7 @@ We have prepared a utility file to help you download and organize your data into
 ```{.python .input}
 import mxnet as mx
 data_util_file = "oxford_102_flower_dataset.py"
-base_url = "https://raw.githubusercontent.com/apache/incubator-mxnet/master/docs/tutorial_utils/data/{}?raw=true"
+base_url = "https://raw.githubusercontent.com/apache/mxnet/master/docs/tutorial_utils/data/{}?raw=true"
 mx.test_utils.download(base_url.format(data_util_file), fname=data_util_file)
 import oxford_102_flower_dataset
 
@@ -271,4 +271,4 @@ You can find more ways to run inference and deploy your models here:
 2. [Gluon book on fine-tuning](https://www.d2l.ai/chapter_computer-vision/fine-tuning.html)
 3. [Gluon CV transfer learning tutorial](https://cv.gluon.ai/build/examples_classification/transfer_learning_minc.html)
 4. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
-5. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
+5. [Gluon CPP inference example](https://github.com/apache/mxnet/blob/master/cpp-package/example/inference/)

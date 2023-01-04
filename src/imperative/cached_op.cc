@@ -1271,7 +1271,7 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
   // If it is, we need to copy data back.
   // For example, when the inputs and outputs share the same NDArrays,
   // the outputs will be replaced by inputs.
-  // https://github.com/apache/incubator-mxnet/blob/v1.2.0/src/imperative/cached_op.cc#L385
+  // https://github.com/apache/mxnet/blob/v1.2.0/src/imperative/cached_op.cc#L385
   for (size_t i = 0; i < out_bufs.size(); i++)
     if (!out_bufs[i].IsSame(outputs[i]))
       CopyFromTo(out_bufs[i], outputs[i]);

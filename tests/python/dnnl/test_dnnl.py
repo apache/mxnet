@@ -526,7 +526,7 @@ def test_conv_transpose():
         np.allclose(t.asnumpy(), n)
 
 
-# This test case is contributed by @awsbillz in https://github.com/apache/incubator-mxnet/issues/14766
+# This test case is contributed by @awsbillz in https://github.com/apache/mxnet/issues/14766
 @use_np
 def test_reshape_transpose_6d():
     class Reshape2D(gluon.HybridBlock):

@@ -1245,7 +1245,7 @@ def test_activations():
     prelu_multichannel.initialize()
     assert_almost_equal(prelu_multichannel(x).asnumpy(), onp.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
 
-    # https://github.com/apache/incubator-mxnet/issues/18381
+    # https://github.com/apache/mxnet/issues/18381
     # gelu = mx.gluon.nn.GELU()
     # def gelu_test(x):
     #     CUBE_CONSTANT = 0.044715
@@ -1810,7 +1810,7 @@ def check_layer_forward_withinput(net, x):
 
 @use_np
 @pytest.mark.skipif(mx.device.num_gpus(), reason="Temporairly disabled on gpu due to failing centos-gpu CI " +
-                                          "tracked at https://github.com/apache/incubator-mxnet/issues/20978")
+                                          "tracked at https://github.com/apache/mxnet/issues/20978")
 @pytest.mark.parametrize('chn_num', [16, 256])
 @pytest.mark.parametrize('kernel', [1, 3, 224])
 def test_conv2d_16c(chn_num, kernel):
@@ -1857,7 +1857,7 @@ def test_group_conv2d_16c(grp, kernel_size):
         check_layer_forward_withinput(net, x)
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_deconv2d_16c():
     in_chn_list = [1024, 512, 256, 128, 64, 32, 16]
     out_chn_list = [512, 256, 128, 64, 32, 16, 3]
@@ -1880,7 +1880,7 @@ def test_deconv2d_16c():
 
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_batchnorm_16c():
     chn_list = [16, 1024]
     shape = onp.random.randint(low=1, high=300, size=10)
@@ -1994,7 +1994,7 @@ def test_reshape_conv():
 
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_reshape_conv_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -2050,7 +2050,7 @@ def test_slice_conv_slice_conv():
 
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_slice_conv_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -2222,7 +2222,7 @@ def test_reshape_dense_slice_dense():
 
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2267,7 +2267,7 @@ def test_slice_batchnorm():
 
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_slice_batchnorm_slice_batchnorm():
     class Net(gluon.HybridBlock):
@@ -2293,7 +2293,7 @@ def test_slice_batchnorm_slice_batchnorm():
 
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_reshape_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2344,7 +2344,7 @@ def test_slice_batchnorm_reshape_batchnorm():
     check_layer_forward_withinput(net, x)
 
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_reshape_batchnorm_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2369,7 +2369,7 @@ def test_reshape_batchnorm_slice_batchnorm():
     net = Net(shape, slice)
     check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_reshape_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2433,7 +2433,7 @@ def test_slice_pooling2d():
             net = Net(slice, pooling_layers[i])
             check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_reshape_pooling2d_reshape_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 2), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2501,7 +2501,7 @@ def test_slice_pooling2d_slice_pooling2d():
             net = Net(slice, pooling_layers[i], pooling_layers[j])
             check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 def test_slice_pooling2d_reshape_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2536,7 +2536,7 @@ def test_slice_pooling2d_reshape_pooling2d():
             net = Net(shape, slice, pooling_layers[i], pooling_layers[j])
             check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_reshape_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
@@ -2574,7 +2574,7 @@ def test_reshape_pooling2d_slice_pooling2d():
             net = Net(shape, slice, pooling_layers[i], pooling_layers[j])
             check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_reshape_deconv():
     class Net(gluon.HybridBlock):
@@ -2592,7 +2592,7 @@ def test_reshape_deconv():
     net = Net(shape)
     check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_slice_deconv():
     class Net(gluon.HybridBlock):
@@ -2610,7 +2610,7 @@ def test_slice_deconv():
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_reshape_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
@@ -2632,7 +2632,7 @@ def test_reshape_deconv_reshape_deconv():
     net = Net(shape)
     check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_slice_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
@@ -2654,7 +2654,7 @@ def test_slice_deconv_slice_deconv():
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_reshape_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
@@ -2678,7 +2678,7 @@ def test_reshape_deconv_slice_deconv():
     net = Net(shape, slice)
     check_layer_forward_withinput(net, x)
 
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/mxnet/issues/11164')
 @pytest.mark.serial
 def test_slice_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):

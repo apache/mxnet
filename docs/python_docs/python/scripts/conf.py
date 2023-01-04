@@ -32,7 +32,7 @@ needs_sphinx = '1.5.6'
 project = 'Apache MXNet'
 author = f'{project} developers'
 copyright = f'2015-2020, {author}'
-github_doc_root = 'https://github.com/apache/incubator-mxnet/tree/master/docs/'
+github_doc_root = 'https://github.com/apache/mxnet/tree/master/docs/'
 doc_root = 'https://mxnet.apache.org/'
 
 # add markdown parser
