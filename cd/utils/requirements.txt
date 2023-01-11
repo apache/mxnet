@@ -14,5 +14,5 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-boto3==1.9.114
+boto3==1.26.48
 PyYAML==5.1
