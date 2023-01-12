@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the License.
 boto3==1.26.48
-PyYAML==5.1
+PyYAML==5.4
