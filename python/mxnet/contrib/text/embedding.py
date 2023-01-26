@@ -226,7 +226,26 @@ class _TokenEmbedding(vocab.Vocabulary):
                     zf.extractall(embedding_dir)
             elif ext == '.gz':
                 with tarfile.open(downloaded_file_path, 'r:gz') as tar:
-                    tar.extractall(path=embedding_dir)
+                    def is_within_directory(directory, target):
+                        
+                        abs_directory = os.path.abspath(directory)
+                        abs_target = os.path.abspath(target)
+                    
+                        prefix = os.path.commonprefix([abs_directory, abs_target])
+                        
+                        return prefix == abs_directory
+                    
+                    def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                    
+                        for member in tar.getmembers():
+                            member_path = os.path.join(path, member.name)
+                            if not is_within_directory(path, member_path):
+                                raise Exception("Attempted Path Traversal in Tar File")
+                    
+                        tar.extractall(path, members, numeric_owner=numeric_owner) 
+                        
+                    
+                    safe_extract(tar, path=embedding_dir)
         return pretrained_file_path
 
     def _load_embedding(self, pretrained_file_path, elem_delim, init_unknown_vec, encoding='utf8'):
