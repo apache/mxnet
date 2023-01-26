@@ -5,7 +5,7 @@ components with more restrictive licenses than the Apache License and you'll
 need to decide whether they are appropriate for your usage. The packages linked
 here contain proprietary parts of the NVidia CUDA SDK and GPL GCC Runtime
 Library components. Like all Apache Releases, the official Apache MXNet
-(incubating) releases consist of source code only and are found at the [Download
+releases consist of source code only and are found at the [Download
 page](https://mxnet.apache.org/get_started/download).
 
 Docker images with *MXNet* are available at [DockerHub](https://hub.docker.com/r/mxnet/).

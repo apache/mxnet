@@ -102,7 +102,7 @@ Gradient compression is a run-time configuration parameter to be enabled during 
 ```python
 trainer = gluon.Trainer(..., compression_params={'type’:'2bit', 'threshold':0.5})
 ```
-A reference `gluon` implementation with a gradient compression option can be found in the [train.py script from a word-level language modeling RNN example](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/word_language_model/train.py).
+A reference `gluon` implementation with a gradient compression option can be found in the [train.py script from a word-level language modeling RNN example](https://github.com/apache/mxnet/blob/master/example/gluon/word_language_model/train.py).
 
 ### Configuration Details
 

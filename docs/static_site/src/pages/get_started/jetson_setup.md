@@ -70,12 +70,12 @@ These steps are optional, but some of the following instructions expect MXNet so
 Clone the MXNet source code repository using the following `git` command in your home directory:
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+git clone --recursive https://github.com/apache/mxnet.git mxnet
 ```
 
 You can also checkout a particular branch of MXNet. For example, to install MXNet v1.6:
 ```bash
-git clone --recursive -b v1.6.x https://github.com/apache/incubator-mxnet.git mxnet
+git clone --recursive -b v1.6.x https://github.com/apache/mxnet.git mxnet
 ```
 
 Setup your environment variables for MXNet and CUDA in your `.profile` file in your home directory.

@@ -37,17 +37,17 @@ The cpp-package directory contains the implementation of C++ API. Users are requ
 1.  Building the MXNet C++ package requires building MXNet from source.
 2.  Clone the MXNet GitHub repository **recursively** to ensure the code in submodules is available for building MXNet.
 	```
-	git clone --recursive https://github.com/apache/incubator-mxnet mxnet
+	git clone --recursive https://github.com/apache/mxnet
 	```
 
 3.  Install the [recommended dependencies](https://mxnet.apache.org/versions/master/get_started/build_from_source.html#installing-mxnet's-recommended-dependencies) and [optional dependencies](https://mxnet.apache.org/versions/master/get_started/build_from_source.html#overview-of-optional-dependencies-and-optional-features) for building MXNet from source.
-4.  There is a configuration file for cmake, [config/*.cmake](<https://github.com/apache/incubator-mxnet/tree/master/config>) that contains all the compilation options. You can edit this file and set the appropriate options prior to running the **cmake** command.
-5.  Please refer to  [cmake configuration files](https://github.com/apache/incubator-mxnet/blob/970a2cfbe77d09ee610fdd70afca1a93247cf4fb/config/linux_gpu.cmake#L18-L37) for more details on how to configure and compile MXNet.
+4.  There is a configuration file for cmake, [config/*.cmake](<https://github.com/apache/mxnet/tree/master/config>) that contains all the compilation options. You can edit this file and set the appropriate options prior to running the **cmake** command.
+5.  Please refer to  [cmake configuration files](https://github.com/apache/mxnet/blob/970a2cfbe77d09ee610fdd70afca1a93247cf4fb/config/linux_gpu.cmake#L18-L37) for more details on how to configure and compile MXNet.
 6.  For enabling the build of C++ Package, set the **-DUSE\_CPP\_PACKAGE = 1** in cmake options.
 
 ### Cross-Compilation steps:
 1.  Build the C++ package for the **host** platform to generate op.h file.
-2.  Remove the following line in [CMakeLists.txt](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/CMakeLists.txt#L15>).
+2.  Remove the following line in [CMakeLists.txt](<https://github.com/apache/mxnet/blob/master/cpp-package/CMakeLists.txt#L15>).
     ```
 	COMMAND python OpWrapperGenerator.py $<TARGET_FILE:mxnet>
 	``` 
@@ -58,7 +58,7 @@ The cpp-package directory contains the implementation of C++ API. Users are requ
 In order to consume the C++ API please follow the steps below.
 
 1. Ensure that the MXNet shared library is built from source with the **USE\_CPP\_PACKAGE = 1**.
-2. Include the [MxNetCpp.h](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/include/mxnet-cpp/MxNetCpp.h>) in the program that is going to consume MXNet C++ API.
+2. Include the [MxNetCpp.h](<https://github.com/apache/mxnet/blob/master/cpp-package/include/mxnet-cpp/MxNetCpp.h>) in the program that is going to consume MXNet C++ API.
 	```c++
 	#include <mxnet-cpp/MxNetCpp.h>
 	```

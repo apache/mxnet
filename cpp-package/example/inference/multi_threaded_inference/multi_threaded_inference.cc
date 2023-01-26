@@ -38,7 +38,7 @@
 const float DEFAULT_MEAN = 117.0;
 
 // Code to load image, PrintOutput results, helper functions for the same obtained from:
-// https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/predict-cpp/
+// https://github.com/apache/mxnet/blob/master/example/image-classification/predict-cpp/
 
 static std::string trim(const std::string& input) {
   auto not_space = [](int ch) { return !std::isspace(ch); };

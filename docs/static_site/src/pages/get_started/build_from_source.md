@@ -44,12 +44,12 @@ page](/api) for an overview of all supported languages and their APIs.
 
 ## Obtaining the source code
 
-To obtain the source code of the latest Apache MXNet (incubating) release,
+To obtain the source code of the latest Apache MXNet release,
 please access the [Download page](/get_started/download) and download the
 `.tar.gz` source archive corresponding to the release you wish to build.
 
 Developers can also obtain the unreleased development code from the git
-repository via `git clone --recursive https://github.com/apache/incubator-mxnet mxnet`
+repository via `git clone --recursive https://github.com/apache/mxnet`
 
 Building a MXNet 1.x release from source requires a C++11 compliant compiler.
 
@@ -206,11 +206,11 @@ the Python package manager `pip` with `python3 -m pip install --user --upgrade
 `~/.local/bin/cmake` or directly as `cmake`.
 
 Please see the [`cmake configuration
-files`](https://github.com/apache/incubator-mxnet/tree/v1.x/config) files for
+files`](https://github.com/apache/mxnet/tree/v1.x/config) files for
 instructions on how to configure and build MXNet with cmake.
 
 Up to the MXNet 1.6 release, please follow the instructions in the
-[`make/config.mk`](https://github.com/apache/incubator-mxnet/blob/v1.x/make/config.mk)
+[`make/config.mk`](https://github.com/apache/mxnet/blob/v1.x/make/config.mk)
 file on how to configure and compile MXNet. This method is supported on all 1.x
 releases.
 

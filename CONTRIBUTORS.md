@@ -18,7 +18,7 @@
   ~
 -->
 
-Contributors of Apache MXNet (incubating)
+Contributors of Apache MXNet
 =========================================
 Apache MXNet adopts the Apache way and governs by merit. We believe that it is important to create
 an inclusive community where everyone can use, contribute to, and influence the direction of
@@ -143,7 +143,7 @@ healthy project. The PPMC actively seeks to appoint new committers from the list
 
 List of Contributors
 --------------------
-* [Top-100 Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
+* [Top-100 Contributors](https://github.com/apache/mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Aditya Trivedi](https://github.com/iadi7ya)
 * [Feng Wang](https://github.com/happynear)
@@ -314,5 +314,5 @@ Label Bot
     - @mxnet-label-bot update [specify comma separated labels here]
       (i.e. @mxnet-label-bot update [Bug, Python])
 
-  - Available label names which are supported: [Labels](https://github.com/apache/incubator-mxnet/labels)
+  - Available label names which are supported: [Labels](https://github.com/apache/mxnet/labels)
   - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)

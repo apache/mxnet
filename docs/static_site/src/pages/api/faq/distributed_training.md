@@ -95,7 +95,7 @@ Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator](/
 If you are using a different iterator, you can look at how the above iterators implement this.
 We can use the kvstore object to get the number of workers (`kv.num_workers`) and rank of the current worker (`kv.rank`).
 These can be passed as arguments to the iterator.
-You can look at [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)
+You can look at [example/gluon/image_classification.py](https://github.com/apache/mxnet/blob/master/example/gluon/image_classification.py)
 to see an example usage.
 
 ### Updating weights
@@ -182,15 +182,15 @@ sudo mkdir efs && sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,
 Tip: You might find it helpful to store large datasets on S3 for easy access from all machines in the cluster. Refer [Using data from S3 for training]({{'/api/faq/s3_integration'|relative_url}}) for more information.
 
 ### Using Launch.py
-MXNet provides a script [tools/launch.py](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py) to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`.
+MXNet provides a script [tools/launch.py](https://github.com/apache/mxnet/blob/master/tools/launch.py) to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`.
 You can fetch this script by cloning the mxnet repository.
 
 ```
-git clone --recursive https://github.com/apache/incubator-mxnet
+git clone --recursive https://github.com/apache/mxnet
 ```
 
 #### Example
-Let us consider training a VGG11 model on the CIFAR10 dataset using [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py).
+Let us consider training a VGG11 model on the CIFAR10 dataset using [example/gluon/image_classification.py](https://github.com/apache/mxnet/blob/master/tools/launch.py).
 ```
 cd example/gluon/
 ```

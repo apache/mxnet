@@ -39,7 +39,7 @@ Currently, below variants are supported. All of these variants except native hav
 * *cu110*: CUDA 11.0
 * *cu112*: CUDA 11.2
 
-*For more on variants, see [here](https://github.com/apache/incubator-mxnet/issues/8671)*
+*For more on variants, see [here](https://github.com/apache/mxnet/issues/8671)*
 
 ## Framework Components
 

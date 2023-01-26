@@ -57,7 +57,7 @@ Note:
 2. To install MXNet, refer [Installing MXNet page](https://mxnet.apache.org/versions/master/install/index.html)
 
 ```
-export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
+export PYTHONPATH=$PYTHONPATH:/path/to/mxnet/
 ```
 
 ## Usecase 1 - Run benchmarks for all the operators
@@ -65,7 +65,7 @@ export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
 Below command runs all the MXNet operators (NDArray) benchmarks with default inputs and saves the final result as JSON in the given file.
 
 ```
-python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-file mxnet_operator_benchmark_results.json
+python mxnet/benchmark/opperf/opperf.py --output-format json --output-file mxnet_operator_benchmark_results.json
 ```
 
 **Other Supported Options:**
@@ -260,7 +260,7 @@ See `utils/op_registry_utils.py` for more details.
 Optionally, you could use the python time package as the profiler engine to caliberate runtime in each operator.
 To use python timer for all operators, use the argument --profiler 'python':
 ```
-python incubator-mxnet/benchmark/opperf/opperf.py --profiler='python'
+python mxnet/benchmark/opperf/opperf.py --profiler='python'
 ```
 
 To use python timer for a specific operator, pass the argument profiler to the run_performance_test method:

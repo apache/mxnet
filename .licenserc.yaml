@@ -22,6 +22,11 @@ header:
     - '.gitmodules'
     - '.licenserc.yaml'
     - '.asf.yaml'
+    - 'CODEOWNERS'
+    - 'python/mxnet/_cy3/README.md'
+    - 'tools/dependencies/LICENSE.binary.dependencies'
+    # files not distributed in source archive (listed in tools/source-exclude-artifacts.txt)
+    - 'docs'
     # files licensed under apache-2.0 license but do not include full license headers recognized by skywalking-eyes
     - '**/*.ipynb'
     - 'src/operator/deformable_convolution-inl.h'
@@ -68,6 +73,7 @@ header:
     - 'include/dmlc' # symlink to 3rdparty/dmlc-core/include/dmlc
     - 'include/mshadow' # symlink to 3rdparty/mshadow/mshadow
     - 'include/onednn' # symlinks to 3rdparty/onednn
+    - 'include/nnvm' # symlinks to 3rdparty/tvm/nnvm/include/nnvm
     # test/build data
     - 'tests/python/dnnl/data/test_dnnl_test_dnnl_model_model1.json'
 

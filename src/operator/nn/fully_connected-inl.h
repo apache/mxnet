@@ -509,7 +509,7 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
 // w_grad_grad : o_y.T * o_x_grad
 // b_grad_grad: if param.no_bias is false
 //
-// For implementation details see this PR: https://github.com/apache/incubator-mxnet/pull/14779
+// For implementation details see this PR: https://github.com/apache/mxnet/pull/14779
 
 /**
  * Second order gradient for Fully Connected

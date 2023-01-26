@@ -239,7 +239,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
 
     Note: when run_performance_test is called on the nd.Embedding operator with run_backward=True, an error will
-    be thrown. Track issue here: https://github.com/apache/incubator-mxnet/issues/11314
+    be thrown. Track issue here: https://github.com/apache/mxnet/issues/11314
     """
     if not isinstance(ops, list):
         ops = [ops]
@@ -282,7 +282,7 @@ def run_benchmark_operator(name, size = (128,128), additional_inputs = {},
 
 def run_op_benchmarks(ops, dtype, ctx, profiler, int64_tensor, warmup, runs):
     # Running im2col either forwards or backwards on GPU results in errors
-    # track issue here: https://github.com/apache/incubator-mxnet/issues/17493
+    # track issue here: https://github.com/apache/mxnet/issues/17493
     gpu_disabled_ops = ['im2col']
 
     # For each operator, run benchmarks

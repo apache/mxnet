@@ -487,9 +487,9 @@ def get_all_indexing_routines():
     """Gets all indexing routines registered with MXNet.
 
     # @ChaiBapchya unravel_index errors out on certain inputs
-    # tracked here https://github.com/apache/incubator-mxnet/issues/16771
+    # tracked here https://github.com/apache/mxnet/issues/16771
     # @ChaiBapchya scatter_nd errors with core dump
-    # tracked here https://github.com/apache/incubator-mxnet/issues/17480
+    # tracked here https://github.com/apache/mxnet/issues/17480
 
     Returns
     -------

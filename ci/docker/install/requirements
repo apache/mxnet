@@ -51,7 +51,7 @@ packaging
 decorator==4.4.0
 
 # Used in examples
-boto3==1.9.229
+boto3==1.26.48
 h5py==2.10.0
 
 # Array API Standardization requirements

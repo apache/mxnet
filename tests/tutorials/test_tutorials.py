@@ -114,7 +114,7 @@ def test_gluon_save_load_params():
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
-# https://github.com/apache/incubator-mxnet/issues/16181
+# https://github.com/apache/mxnet/issues/16181
 """
 def test_gluon_performance():
     assert _test_tutorial_nb('gluon/performance')
@@ -184,7 +184,7 @@ def test_module_to_gluon():
 
 def test_python_types_of_data_augmentation():
     assert _test_tutorial_nb('python/types_of_data_augmentation')
-#https://github.com/apache/incubator-mxnet/issues/16181
+#https://github.com/apache/mxnet/issues/16181
 """
 def test_python_profiler():
     assert _test_tutorial_nb('python/profiler')
@@ -218,7 +218,7 @@ def test_control_flow():
 
 def test_amp():
     assert _test_tutorial_nb('amp/amp_tutorial')
-# https://github.com/apache/incubator-mxnet/issues/16181
+# https://github.com/apache/mxnet/issues/16181
 """
 def test_dnnl_quantization():
     assert _test_tutorial_nb('dnnl/dnnl_quantization')

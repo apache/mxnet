@@ -26,7 +26,7 @@ An MXNet artifact is defined as the following set of files:
 
 * The compiled libmxnet.so
 * License files for dependencies that required their licenses to be shipped with the binary
-* Dependencies that should be shipped together with the binary. For instance, for packaging the python wheel files, some dependencies that cannot be statically linked to the library need to also be included, see here (https://github.com/apache/incubator-mxnet/blob/master/tools/pip/setup.py#L142).
+* Dependencies that should be shipped together with the binary. For instance, for packaging the python wheel files, some dependencies that cannot be statically linked to the library need to also be included, see here (https://github.com/apache/mxnet/blob/master/tools/pip/setup.py#L142).
 
 The artifact_repository.py script automates the upload and download of the specified files with the appropriate S3 object keys by taking explicitly set, or automatically derived, values for the different characteristics of the artifact.
 

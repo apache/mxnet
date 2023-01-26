@@ -1553,10 +1553,10 @@ Apache MXNet (incubating) 1.5.1 is a maintenance release incorporating important
 #### Automatic Mixed Precision(experimental)
 Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing numbers of layers and parameters, which slow down training. Fortunately, software optimizations and new generations of training hardware make it a feasible task.
 However, most of the hardware and software optimization opportunities exist in exploiting lower precision (e.g. FP16) to, for example, utilize Tensor Cores available on new Volta and Turing GPUs. While training in FP16 showed great success in image classification tasks, other more complicated neural networks typically stayed in FP32 due to difficulties in applying the FP16 training guidelines.
-That is where AMP (Automatic Mixed Precision) comes into play. It automatically applies the guidelines of FP16 training, using FP16 precision where it provides the most benefit, while conservatively keeping in full FP32 precision operations unsafe to do in FP16. To learn more about AMP, check out this [tutorial](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/amp/amp_tutorial.md).
+That is where AMP (Automatic Mixed Precision) comes into play. It automatically applies the guidelines of FP16 training, using FP16 precision where it provides the most benefit, while conservatively keeping in full FP32 precision operations unsafe to do in FP16. To learn more about AMP, check out this [tutorial](https://github.com/apache/mxnet/blob/master/docs/tutorials/amp/amp_tutorial.md).
 
 #### MKL-DNN Reduced precision inference and RNN API support
-Two advanced features, fused computation and reduced-precision kernels, are introduced by MKL-DNN in the recent version. These features can significantly speed up the inference performance on CPU for a broad range of deep learning topologies. MXNet MKL-DNN backend provides optimized implementations for various operators covering a broad range of applications including image classification, object detection, and natural language processing. Refer to the [MKL-DNN operator documentation](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for more information.
+Two advanced features, fused computation and reduced-precision kernels, are introduced by MKL-DNN in the recent version. These features can significantly speed up the inference performance on CPU for a broad range of deep learning topologies. MXNet MKL-DNN backend provides optimized implementations for various operators covering a broad range of applications including image classification, object detection, and natural language processing. Refer to the [MKL-DNN operator documentation](https://github.com/apache/mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for more information.
 
 #### Dynamic Shape(experimental)
 MXNet now supports Dynamic Shape in both imperative and symbolic mode. MXNet used to require that operators statically infer the output shapes from the input shapes. However, there exist some operators that don't meet this requirement. Examples are:
@@ -2096,7 +2096,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Fixes installation nightly test by filtering out the git commands (#14144)
 * fix nightly test on tutorials (#14036)
 * Fix MXNet R package build (#13952)
-* re-enable test after issue fixed https://github.com/apache/incubator-mxnet/issues/10973 (#14032)
+* re-enable test after issue fixed https://github.com/apache/mxnet/issues/10973 (#14032)
 * Add back R tests and fix typo around R and perl tests (#13940)
 * Fix document build (#13927)
 * Temporarily disables windows pipeline to unblock PRs (#14261)
@@ -2109,7 +2109,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Rearrange tests written only for update_on_kvstore = True (#13514)
 * add batch norm test (#13625)
 * Adadelta optimizer test (#13443)
-* Skip flaky test https://github.com/apache/incubator-mxnet/issues/13446 (#13480)
+* Skip flaky test https://github.com/apache/mxnet/issues/13446 (#13480)
 * Comment out test_unix_python3_tensorrt_gpu step (#14642)
 * Enable bulking test on windows (#14392)
 * rewrote the concat test to avoid flaky failures (#14049)
@@ -2547,11 +2547,11 @@ For distributed training, the `Reduce` communication patterns used by NCCL and M
   * multiple trees (bandwidth-optimal for large messages) to handle `Reduce` on large messages
 
 More details can be found here: [Topology-aware AllReduce](https://cwiki.apache.org/confluence/display/MXNET/Single+machine+All+Reduce+Topology-aware+Communication)
-Note: This is an experimental feature and has known problems - see [13341](https://github.com/apache/incubator-mxnet/issues/13341). Please help to contribute to improve the robustness of the feature.
+Note: This is an experimental feature and has known problems - see [13341](https://github.com/apache/mxnet/issues/13341). Please help to contribute to improve the robustness of the feature.
 
 #### MKLDNN backend: Graph optimization and Quantization (experimental)
 
-Two advanced features, graph optimization (operator fusion) and reduced-precision (INT8) computation, are introduced to MKLDNN backend in this release ([#12530](https://github.com/apache/incubator-mxnet/pull/12530), [#13297](https://github.com/apache/incubator-mxnet/pull/13297), [#13260](https://github.com/apache/incubator-mxnet/pull/13260)).
+Two advanced features, graph optimization (operator fusion) and reduced-precision (INT8) computation, are introduced to MKLDNN backend in this release ([#12530](https://github.com/apache/mxnet/pull/12530), [#13297](https://github.com/apache/mxnet/pull/13297), [#13260](https://github.com/apache/mxnet/pull/13260)).
 These features significantly boost the inference performance on CPU (up to 4X) for a broad range of deep learning topologies. Currently, this feature is only available for inference on platforms with [supported Intel CPUs](https://github.com/intel/mkl-dnn#system-requirements).
 
 ##### Graph Optimization
@@ -2560,7 +2560,7 @@ MKLDNN backend takes advantage of MXNet subgraph to implement the most of possib
 ##### Quantization
 Performance of reduced-precision (INT8) computation is also dramatically improved after the graph optimization feature is applied on CPU Platforms. Various models are supported and can benefit from reduced-precision computation, including symbolic models, Gluon models and even custom models. Users can run most of the pre-trained models with only a few lines of commands and a new quantization script imagenet_gen_qsym_mkldnn.py. The observed accuracy loss is less than 0.5% for popular CNN networks, like ResNet-50, Inception-BN, MobileNet, etc.
 
-Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html), [quantization README](https://github.com/apache/incubator-mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
+Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html), [quantization README](https://github.com/apache/mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
 
 ### New Operators
 
@@ -2683,7 +2683,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-1026] [Perl] Sync with recent changes in Python's API (#12739)
 
 #### Julia
-* Import Julia binding (#10149), how to use is available at https://github.com/apache/incubator-mxnet/tree/master/julia
+* Import Julia binding (#10149), how to use is available at https://github.com/apache/mxnet/tree/master/julia
 
 ### Performance benchmarks and improvements
 * Update mshadow for omp acceleration when nvcc is not present  (#12674)
@@ -2991,15 +2991,15 @@ Submodule@commit ID::Last updated by MXNet:: Last update in submodule
 
 ### Bug fixes
 
-* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)
+* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/mxnet/pull/13118)
 Simple bugfix addressing an out-of-bounds memory read.
 
 
-* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)
+* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/mxnet/pull/13119)
 This fixes an buffer overflow detected by ASAN.
 
 
-* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)
+* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/mxnet/pull/13123)
   This PR improves the MXNet's use of cudnnFind() to address a few issues:
   1. With the gluon imperative style, cudnnFind() is called during forward(), and so might have its timings perturbed by other GPU activity (including potentially other cudnnFind() calls).
   2. With some cuda drivers versions, care is needed to ensure that the large I/O and workspace cudaMallocs() performed by cudnnFind() are immediately released and available to MXNet.
@@ -3012,24 +3012,24 @@ This fixes an buffer overflow detected by ASAN.
   4. Increased training performance based on being able to consistently run with models that approach the GPU's full global memory footprint.
   5. Adds a unittest for and solves issue #12662.
 
-* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)
+* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/mxnet/pull/13120)
   Fix a memleak reported locally by ASAN during a normal inference test.
 
-* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)
+* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/mxnet/pull/13124)
   Fixes multi_worker data loader when record file is used. The MXRecordIO instance needs to require a new file handler after fork to be safely manipulated simultaneously.
 
   This fix also safely voids the previous temporary fixes #12093 #11370.
 
-* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)
+* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/mxnet/pull/13158)
   This fixes #12783, by assigning all nodes in hybrid_forward a unique name. Some operations were in fact performed without attaching the appropriate (time) prefix to the name, which makes serialized graphs non-deserializable.
 
-* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)
+* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/mxnet/pull/13157)
   Fixed `__setattr__` method
 
-* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)
+* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/mxnet/pull/13151)
   Fix #12470. With this change, outs shape can be inferred correctly.
 
-* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)
+* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/mxnet/pull/13117)
   Fix for the issue - #11849
   Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,
   In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.
@@ -3037,14 +3037,14 @@ This fixes an buffer overflow detected by ASAN.
 
 ### Documentation fixes
 
-* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)
-  Document the env variable: MXNET_ENFORCE_DETERMINISM added in PR: [#12992](https://github.com/apache/incubator-mxnet/pull/12992)
+* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/mxnet/pull/13156)
+  Document the env variable: MXNET_ENFORCE_DETERMINISM added in PR: [#12992](https://github.com/apache/mxnet/pull/12992)
 
-* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)
+* fix broken links (v1.3.x) / [#13155](https://github.com/apache/mxnet/pull/13155)
   This PR fixes broken links on the website.
 
-* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)
-  Fixes [#12854: Data Iterators documentation is broken](https://github.com/apache/incubator-mxnet/issues/12854)
+* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/mxnet/pull/13154)
+  Fixes [#12854: Data Iterators documentation is broken](https://github.com/apache/mxnet/issues/12854)
 
   This PR manually specifies members of the IO module so that the docs will render as expected. This is workaround in the docs to deal with a bug introduced in the Python code/structure since v1.3.0. See the comments for more info.
 
@@ -3052,7 +3052,7 @@ This fixes an buffer overflow detected by ASAN.
 
   This is important for any future modules - that they recognize this issue and make efforts to map the params and other elements.
 
-* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)
+* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/mxnet/pull/13153)
   This PR adds or updates the docs for the infer_range feature.
 
   Clarifies the param in the C op docs
@@ -3063,20 +3063,20 @@ This fixes an buffer overflow detected by ASAN.
 
 ### Other Improvements
 
-* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)
+* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/mxnet/pull/13152)
   Some of the CUDNN convolution algorithms are non-deterministic (see issue #11341). This PR adds an env variable to enforce determinism in the convolution operators. If set to true, only deterministic CUDNN algorithms will be used. If no deterministic algorithm is available, MXNet will error out.
 
 
 ### Submodule updates
 
-* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)
+* update mshadow (v1.3.x) / [#13122](https://github.com/apache/mxnet/pull/13122)
   Update mshadow for omp acceleration when nvcc is not present
 
 ### Known issues
 
 The test test_operator.test_dropout has issues and has been disabled on the branch:
 
-* Disable flaky test test_operator.test_dropout (v1.3.x) / [#13200](https://github.com/apache/incubator-mxnet/pull/13200)
+* Disable flaky test test_operator.test_dropout (v1.3.x) / [#13200](https://github.com/apache/mxnet/pull/13200)
 
 
 
@@ -3086,14 +3086,14 @@ For more information and examples, see [full release notes](https://cwiki.apache
 ## 1.3.0
 
 ### New Features - Gluon RNN layers are now HybridBlocks
-- In this release, Gluon RNN layers such as `gluon.rnn.RNN`, `gluon.rnn.LSTM`, `gluon.rnn.GRU` becomes `HybridBlock`s as part of [gluon.rnn improvements project](https://github.com/apache/incubator-mxnet/projects/11) (#11482).
-- This is the result of newly available fused RNN operators added for CPU: LSTM([#10104](https://github.com/apache/incubator-mxnet/pull/10104)), vanilla RNN([#11399](https://github.com/apache/incubator-mxnet/pull/11399)), GRU([#10311](https://github.com/apache/incubator-mxnet/pull/10311))
+- In this release, Gluon RNN layers such as `gluon.rnn.RNN`, `gluon.rnn.LSTM`, `gluon.rnn.GRU` becomes `HybridBlock`s as part of [gluon.rnn improvements project](https://github.com/apache/mxnet/projects/11) (#11482).
+- This is the result of newly available fused RNN operators added for CPU: LSTM([#10104](https://github.com/apache/mxnet/pull/10104)), vanilla RNN([#11399](https://github.com/apache/mxnet/pull/11399)), GRU([#10311](https://github.com/apache/mxnet/pull/10311))
 - Now many dynamic networks that are based on Gluon RNN layers can now be completely hybridized, exported, and used in the inference APIs in other language bindings such as R, Scala, etc.
 
 ### MKL-DNN improvements
 - Introducing more functionality support for MKL-DNN as follows:
-  - Added support for more activation functions like, "sigmoid", "tanh", "softrelu". ([#10336](https://github.com/apache/incubator-mxnet/pull/10336))
-  - Added Debugging functionality: Result check ([#12069](https://github.com/apache/incubator-mxnet/pull/12069)) and Backend switch ([#12058](https://github.com/apache/incubator-mxnet/pull/12058)).
+  - Added support for more activation functions like, "sigmoid", "tanh", "softrelu". ([#10336](https://github.com/apache/mxnet/pull/10336))
+  - Added Debugging functionality: Result check ([#12069](https://github.com/apache/mxnet/pull/12069)) and Backend switch ([#12058](https://github.com/apache/mxnet/pull/12058)).
 
 ### New Features - Gluon Model Zoo Pre-trained Models
 - Gluon Vision Model Zoo now provides MobileNetV2 pre-trained models (#10879) in addition to
@@ -3102,7 +3102,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Updated pre-trained models provide state-of-the-art performance on all resnetv1, resnetv2, and vgg16, vgg19, vgg16_bn, vgg19_bn models (#11327 #11860 #11830).
 
 ### New Features - Clojure package (experimental)
-- MXNet now supports the Clojure programming language. The MXNet Clojure package brings flexible and efficient GPU computing and state-of-art deep learning to Clojure. It enables you to write seamless tensor/matrix computation with multiple GPUs in Clojure. It also lets you construct and customize the state-of-art deep learning models in Clojure, and apply them to tasks, such as image classification and data science challenges.([#11205](https://github.com/apache/incubator-mxnet/pull/11205))
+- MXNet now supports the Clojure programming language. The MXNet Clojure package brings flexible and efficient GPU computing and state-of-art deep learning to Clojure. It enables you to write seamless tensor/matrix computation with multiple GPUs in Clojure. It also lets you construct and customize the state-of-art deep learning models in Clojure, and apply them to tasks, such as image classification and data science challenges.([#11205](https://github.com/apache/mxnet/pull/11205))
 - Checkout examples and API documentation [here](https://mxnet.apache.org/api/clojure/index.html).
 
 ### New Features - Synchronized Cross-GPU Batch Norm (experimental)
@@ -3110,16 +3110,16 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - This enables stable training on large-scale networks with high memory consumption such as FCN for image segmentation.
 
 ### New Features - Sparse Tensor Support for Gluon (experimental)
-- Sparse gradient support is added to `gluon.nn.Embedding`. Set `sparse_grad=True` to enable when constructing the Embedding block. ([#10924](https://github.com/apache/incubator-mxnet/pull/10924))
-- Gluon Parameter now supports "row_sparse" storage type, which reduces communication cost and memory consumption for multi-GPU training for large models. `gluon.contrib.nn.SparseEmbedding` is an example empowered by this. ([#11001](https://github.com/apache/incubator-mxnet/pull/11001), [#11429](https://github.com/apache/incubator-mxnet/pull/11429))
-- Gluon HybridBlock now supports hybridization with sparse operators ([#11306](https://github.com/apache/incubator-mxnet/pull/11306)).
+- Sparse gradient support is added to `gluon.nn.Embedding`. Set `sparse_grad=True` to enable when constructing the Embedding block. ([#10924](https://github.com/apache/mxnet/pull/10924))
+- Gluon Parameter now supports "row_sparse" storage type, which reduces communication cost and memory consumption for multi-GPU training for large models. `gluon.contrib.nn.SparseEmbedding` is an example empowered by this. ([#11001](https://github.com/apache/mxnet/pull/11001), [#11429](https://github.com/apache/mxnet/pull/11429))
+- Gluon HybridBlock now supports hybridization with sparse operators ([#11306](https://github.com/apache/mxnet/pull/11306)).
 
 ### New Features - Control flow operators (experimental)
 - This is the first step towards optimizing dynamic neural networks with variable computation graphs, by adding symbolic and imperative control flow operators. [Proposal](https://cwiki.apache.org/confluence/display/MXNET/Optimize+dynamic+neural+network+models+with+control+flow+operators).
-- New operators introduced: foreach([#11531](https://github.com/apache/incubator-mxnet/pull/11531)), while_loop([#11566](https://github.com/apache/incubator-mxnet/pull/11566)), cond([#11760](https://github.com/apache/incubator-mxnet/pull/11760)).
+- New operators introduced: foreach([#11531](https://github.com/apache/mxnet/pull/11531)), while_loop([#11566](https://github.com/apache/mxnet/pull/11566)), cond([#11760](https://github.com/apache/mxnet/pull/11760)).
 
 ### New Features - Scala API Improvements (experimental)
-- Improvements to MXNet Scala API usability([#10660](https://github.com/apache/incubator-mxnet/pull/10660), [#10787](https://github.com/apache/incubator-mxnet/pull/10787), [#10991](https://github.com/apache/incubator-mxnet/pull/10991))
+- Improvements to MXNet Scala API usability([#10660](https://github.com/apache/mxnet/pull/10660), [#10787](https://github.com/apache/mxnet/pull/10787), [#10991](https://github.com/apache/mxnet/pull/10991))
 - Symbol.api and NDArray.api would bring new set of functions that have complete definition for all arguments.
 - Please see this [Type safe API design document](https://cwiki.apache.org/confluence/display/MXNET/Scala+Type-safe+API+Design+Doc) for more details.
 
@@ -3128,21 +3128,21 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Unlike the default memory pool requires exact size match to reuse released memory chunks, this new memory pool uses exponential-linear rounding so that similar sized memory chunks can all be reused, which is more suitable for all the workloads with dynamic-shape inputs and outputs. Set environment variable `MXNET_GPU_MEM_POOL_TYPE=Round` to enable.
 
 ### New Features - Topology-aware AllReduce (experimental)
-- This features uses trees to perform the Reduce and Broadcast. It uses the idea of minimum spanning trees to do a binary tree Reduce communication pattern to improve it. This topology aware approach reduces the existing limitations for single machine communication shown by mehods like parameter server and NCCL ring reduction. It is an experimental feature ([#11591](https://github.com/apache/incubator-mxnet/pull/11591)).
+- This features uses trees to perform the Reduce and Broadcast. It uses the idea of minimum spanning trees to do a binary tree Reduce communication pattern to improve it. This topology aware approach reduces the existing limitations for single machine communication shown by mehods like parameter server and NCCL ring reduction. It is an experimental feature ([#11591](https://github.com/apache/mxnet/pull/11591)).
 - Paper followed for implementation: [Optimal message scheduling for aggregation](https://www.sysml.cc/doc/178.pdf).
 - Set environment variable `MXNET_KVSTORE_USETREE=1` to enable.
 
 ### New Features - Export MXNet models to ONNX format (experimental)
-- With this feature, now MXNet models can be exported to ONNX format([#11213](https://github.com/apache/incubator-mxnet/pull/11213)). Currently, MXNet supports ONNX v1.2.1. [API documentation](https://mxnet.apache.org/api/python/contrib/onnx.html).
+- With this feature, now MXNet models can be exported to ONNX format([#11213](https://github.com/apache/mxnet/pull/11213)). Currently, MXNet supports ONNX v1.2.1. [API documentation](https://mxnet.apache.org/api/python/contrib/onnx.html).
 - Checkout this [tutorial](https://mxnet.apache.org/tutorials/onnx/export_mxnet_to_onnx.html) which shows how to use MXNet to ONNX exporter APIs. ONNX protobuf so that those models can be imported in other frameworks for inference.
 
 ### New Features - TensorRT Runtime Integration (experimental)
 - [TensorRT](https://developer.nvidia.com/tensorrt) provides significant acceleration of model inference on NVIDIA GPUs compared to running the full graph in MxNet using unfused GPU operators. In addition to faster fp32 inference, TensorRT optimizes fp16 inference, and is capable of int8 inference (provided the quantization steps are performed). Besides increasing throughput, TensorRT significantly reduces inference latency, especially for small batches.
-- This feature in MXNet now introduces runtime integration of TensorRT into MXNet, in order to accelerate inference.([#11325](https://github.com/apache/incubator-mxnet/pull/11325))
+- This feature in MXNet now introduces runtime integration of TensorRT into MXNet, in order to accelerate inference.([#11325](https://github.com/apache/mxnet/pull/11325))
 - Currently, its in contrib package.
 
 ### New Examples - Scala
-- Refurnished Scala Examples with improved API, documentation and CI test coverage. ([#11753](https://github.com/apache/incubator-mxnet/pull/11753), [#11621](https://github.com/apache/incubator-mxnet/pull/11621) )
+- Refurnished Scala Examples with improved API, documentation and CI test coverage. ([#11753](https://github.com/apache/mxnet/pull/11753), [#11621](https://github.com/apache/mxnet/pull/11621) )
 - Now all Scala examples have:
   - No bugs block in the middle
   - Good Readme to start with
@@ -3150,11 +3150,11 @@ For more information and examples, see [full release notes](https://cwiki.apache
   - monitored in CI in each PR runs
 
 ### Maintenance - Flaky Tests improvement effort
-- Fixed 130 flaky tests on CI. Tracked progress of the project [here](https://github.com/apache/incubator-mxnet/projects/9).
+- Fixed 130 flaky tests on CI. Tracked progress of the project [here](https://github.com/apache/mxnet/projects/9).
 - Add flakiness checker (#11572)
 
 ### Maintenance - MXNet Model Backwards Compatibility Checker
-- This tool ([#11626](https://github.com/apache/incubator-mxnet/pull/11626)) helps in ensuring consistency and sanity while performing inference on the latest version of MXNet using models trained on older versions of MXNet.
+- This tool ([#11626](https://github.com/apache/mxnet/pull/11626)) helps in ensuring consistency and sanity while performing inference on the latest version of MXNet using models trained on older versions of MXNet.
 - This tool will help in detecting issues earlier in the development cycle which break backwards compatibility on MXNet and would contribute towards ensuring a healthy and stable release of MXNet.
 
 ### Maintenance - Integrated testing for "the Straight Dope"
@@ -3195,7 +3195,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Improve performance of broadcast ops backward pass (#11252)
 - Improved numerical stability as a result of using stable L2 norm (#11573)
 - Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input)
-- Support for dot(dns, csr) = dns and dot(dns, csr.T) = dns on CPU ([#11113](https://github.com/apache/incubator-mxnet/pull/11113))
+- Support for dot(dns, csr) = dns and dot(dns, csr.T) = dns on CPU ([#11113](https://github.com/apache/mxnet/pull/11113))
 - Performance improvement for Batch Dot on CPU from mshadow ([mshadow PR#342](https://github.com/dmlc/mshadow/pull/342))
 
 ### API Changes
@@ -3279,10 +3279,10 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Implemented new [Scala Inference APIs](https://cwiki.apache.org/confluence/display/MXNET/MXNetScalaInferenceAPI) which offer an easy-to-use, Scala Idiomatic and thread-safe high level APIs for performing predictions with deep learning models trained with MXNet (#9678). Implemented a new ImageClassifier class which provides APIs for classification tasks on a Java BufferedImage using a pre-trained model you provide (#10054). Implemented a new ObjectDetector class which provides APIs for object and boundary detections on a Java BufferedImage using a pre-trained model you provide (#10229).
 
 ### New Features - Added a Module to Import ONNX models into MXNet
-- Implemented a new ONNX module in MXNet which offers an easy to use API to import ONNX models into MXNet's symbolic interface (#9963). Checkout the [example](https://github.com/apache/incubator-mxnet/blob/master/example/onnx/super_resolution.py) on how you could use this [API](https://cwiki.apache.org/confluence/display/MXNET/ONNX-MXNet+API+Design) to import ONNX models and perform inference on MXNet. Currently, the ONNX-MXNet Import module is still experimental. Please use it with caution.
+- Implemented a new ONNX module in MXNet which offers an easy to use API to import ONNX models into MXNet's symbolic interface (#9963). Checkout the [example](https://github.com/apache/mxnet/blob/master/example/onnx/super_resolution.py) on how you could use this [API](https://cwiki.apache.org/confluence/display/MXNET/ONNX-MXNet+API+Design) to import ONNX models and perform inference on MXNet. Currently, the ONNX-MXNet Import module is still experimental. Please use it with caution.
 
 ### New Features - Added Support for Model Quantization with Calibration
-- Implemented model quantization by adopting the [TensorFlow approach](https://www.tensorflow.org/performance/quantization) with calibration by borrowing the idea from Nvidia's [TensorRT](http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf). The focus of this work is on keeping quantized models (ConvNets for now) inference accuracy loss under control when compared to their corresponding FP32 models. Please see the [example](https://github.com/apache/incubator-mxnet/tree/master/example/quantization) on how to quantize a FP32 model with or without calibration (#9552). Currently, the Quantization support is still experimental. Please use it with caution.
+- Implemented model quantization by adopting the [TensorFlow approach](https://www.tensorflow.org/performance/quantization) with calibration by borrowing the idea from Nvidia's [TensorRT](http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf). The focus of this work is on keeping quantized models (ConvNets for now) inference accuracy loss under control when compared to their corresponding FP32 models. Please see the [example](https://github.com/apache/mxnet/tree/master/example/quantization) on how to quantize a FP32 model with or without calibration (#9552). Currently, the Quantization support is still experimental. Please use it with caution.
 
 ### New Features - MKL-DNN Integration
 - MXNet now integrates with Intel MKL-DNN to accelerate neural network operators: Convolution, Deconvolution, FullyConnected, Pooling, Batch Normalization, Activation, LRN, Softmax, as well as some common operators: sum and concat (#9677). This integration allows NDArray to contain data with MKL-DNN layouts and reduces data layout conversion to get the maximal performance from MKL-DNN. Currently, the MKL-DNN integration is still experimental. Please use it with caution.
@@ -3301,7 +3301,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Changed API for the Pooling operator from `mxnet.symbol.Pooling(data=None, global_pool=_Null, cudnn_off=_Null, kernel=_Null, pool_type=_Null, pooling_convention=_Null, stride=_Null, pad=_Null, name=None, attr=None, out=None, **kwargs)` to  `mxnet.symbol.Pooling(data=None,  kernel=_Null, pool_type=_Null, global_pool=_Null, cudnn_off=_Null, pooling_convention=_Null, stride=_Null, pad=_Null, name=None, attr=None, out=None, **kwargs)`. This is a breaking change when kwargs are not provided since the new api expects the arguments starting from `global_pool` at the fourth position instead of the second position. (#10000).
 
 ### Bug Fixes
-- Fixed tests - Flakiness/Bugs - (#9598, #9951, #10259, #10197, #10136, #10422). Please see: [Tests Improvement Project](https://github.com/apache/incubator-mxnet/projects/9)
+- Fixed tests - Flakiness/Bugs - (#9598, #9951, #10259, #10197, #10136, #10422). Please see: [Tests Improvement Project](https://github.com/apache/mxnet/projects/9)
 - Fixed `cudnn_conv` and `cudnn_deconv` deadlock (#10392).
 - Fixed a race condition in `io.LibSVMIter` when batch size is large (#10124).
 - Fixed a race condition in converting data layouts in MKL-DNN (#9862).
@@ -3398,7 +3398,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - [DevGuide.md](https://github.com/google/googletest/blob/ec44c6c1675c25b9827aacd08c02433cccde7780/googlemock/docs/DevGuide.md) in the 3rdparty submodule googletest licensed under CC-BY-2.5.
 - Incompatibility in the behavior of MXNet Convolution operator for certain unsupported use cases: Raises an exception when MKLDNN is enabled, fails silently when it is not.
 - MXNet convolution generates wrong results for 1-element strides (#10689).
-- [Tutorial on fine-tuning an ONNX model](https://github.com/apache/incubator-mxnet/blob/v1.2.0/docs/tutorials/onnx/fine_tuning_gluon.md) fails when using cpu context.
+- [Tutorial on fine-tuning an ONNX model](https://github.com/apache/mxnet/blob/v1.2.0/docs/tutorials/onnx/fine_tuning_gluon.md) fails when using cpu context.
 - CMake build ignores the `USE_MKLDNN` flag and doesn't build with MKLDNN support even with `-DUSE_MKLDNN=1`. To workaround the issue please see: #10801.
 - Linking the dmlc-core library fails with CMake build when building with `USE_OPENMP=OFF`. To workaround the issue, please use the updated CMakeLists in dmlc-core unit tests directory: https://github.com/dmlc/dmlc-core/pull/396. You can also workaround the issue by using make instead of cmake when building with `USE_OPENMP=OFF`.
 
@@ -3471,7 +3471,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
   - Added Lambda block for wrapping a user defined function as a block.
   - Generalized `gluon.data.ArrayDataset` to support arbitrary number of arrays.
 ### New Features - ARM / Raspberry Pi support [Experimental]
-  - MXNet now compiles and runs on ARMv6, ARMv7, ARMv64 including Raspberry Pi devices. See https://github.com/apache/incubator-mxnet/tree/master/docker_multiarch for more information.
+  - MXNet now compiles and runs on ARMv6, ARMv7, ARMv64 including Raspberry Pi devices. See https://github.com/apache/mxnet/tree/master/docker_multiarch for more information.
 ### New Features - NVIDIA Jetson support [Experimental]
   - MXNet now compiles and runs on NVIDIA Jetson TX2 boards with GPU acceleration.
   - You can install the python MXNet package on a Jetson board by running - `$ pip install mxnet-jetson-tx2`.

@@ -60,7 +60,7 @@ cp /work/build/cpp-package/example/test_score .
 cp /work/build/cpp-package/example/test_ndarray_copy .
 ./test_ndarray_copy
 
-# skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/20011
+# skippping temporarily, tracked by https://github.com/apache/mxnet/issues/20011
 cp /work/build/cpp-package/example/test_regress_label .
 ./test_regress_label
 
