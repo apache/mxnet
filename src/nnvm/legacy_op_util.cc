@@ -280,6 +280,19 @@ std::vector<std::pair<int, int>> OpPropInplaceOption(const NodeAttrs& attrs) {
   return forward_inplace;
 }
 
+std::vector<bool> OpPropInplaceIdentity(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  auto forward_inplace = OpPropInplaceOption(attrs);
+  auto forward_inplace_identity = prop.ptr->ForwardInplaceIdentity();
+  if (forward_inplace_identity.size() == 0UL) {
+    for (auto i = 0UL; i < forward_inplace.size(); ++i) {
+      forward_inplace_identity.push_back(false);
+    }
+  }
+  CHECK_EQ(forward_inplace.size(), forward_inplace_identity.size());
+  return forward_inplace_identity;
+}
+
 std::vector<ResourceRequest> OpPropResourceRequest(const NodeAttrs& attrs) {
   mxnet::ShapeVector ishape;
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
@@ -409,6 +422,19 @@ std::vector<std::pair<int, int>> OpBackInplaceOption(const NodeAttrs& attrs) {
   return remap;
 }
 
+std::vector<bool> OpBackInplaceIdentity(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  auto backward_inplace = OpBackInplaceOption(attrs);
+  auto backward_inplace_identity = prop.ptr->BackwardInplaceIdentity();
+  if (backward_inplace_identity.size() == 0UL) {
+    for (auto i = 0UL; i < backward_inplace.size(); ++i) {
+      backward_inplace_identity.push_back(false);
+    }
+  }
+  CHECK_EQ(backward_inplace.size(), backward_inplace_identity.size());
+  return backward_inplace_identity;
+}
+
 inline ExecType OpExecType(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return prop.ptr->exec_type();
@@ -442,6 +468,7 @@ void RegisterLegacyOpProp() {
     op.set_attr<nnvm::FInferType>("FInferType", OpPropInferType);
     op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpPropMutateInputs);
     op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpPropInplaceOption);
+    op.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity", OpPropInplaceIdentity);
     op.set_attr<FResourceRequest>("FResourceRequest", OpPropResourceRequest);
     op.set_attr<FExecType>("FExecType", OpExecType);
     op.set_attr<FCreateOpState>("FCreateOpState", OpPropCreateLayerOp);
@@ -463,6 +490,7 @@ void RegisterLegacyOpProp() {
     back_op.set_attr<nnvm::FListOutputNames>("FListOutputNames", OpBackListOutputNames);
     back_op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpBackMutateInputs);
     back_op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpBackInplaceOption);
+    back_op.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity", OpBackInplaceIdentity);
     back_op.set_attr<FResourceRequest>("FResourceRequest", OpBackResourceRequest);
     back_op.set_attr<bool>("TIsLayerOpBackward", true);
     back_op.set_attr<bool>("TIsBackward", true);
