@@ -279,7 +279,7 @@ void ElemwiseBinaryRTCBwdUseNone::operator()(const nnvm::NodeAttrs& attrs,
                                                  (req[0] == kWriteInplace && LOP != "identity"));
 
   bool write_right_output = req[1] != kNullOp && (req[1] != kWriteInplace ||
-                                                  (req[1] == kWriteInplace && LOP != "identity"));
+                                                  (req[1] == kWriteInplace && ROP != "identity"));
 
   const std::string code = std::string("const OpReqType lreq = ") + util::to_string(req[0]) +
                            ";\n"
