@@ -89,7 +89,7 @@ def train(epochs, ctx):
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
     for epoch in range(epochs):
-        # reset data iterator and metric at begining of epoch.
+        # reset data iterator and metric at beginning of epoch.
         metric.reset()
         for i, (data, label) in enumerate(train_data):
             # Copy data to ctx if necessary

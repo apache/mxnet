@@ -315,7 +315,7 @@ int main(int argc, char* argv[]) {
   }
   std::string model_name = std::string(argv[1]);
   bool is_gpu            = std::atoi(argv[2]);
-  CHECK(argc >= 4) << "Number of files provided should be atleast 1";
+  CHECK(argc >= 4) << "Number of files provided should be at least 1";
   int num_threads = argc - 3;
   std::vector<std::string> test_files;
   for (size_t i = 0; i < argc - 3; ++i) {

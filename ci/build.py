@@ -131,7 +131,7 @@ def container_run(platform: str,
     os.makedirs(local_ccache_dir, exist_ok=True)
     logging.info("Using ccache directory: %s", local_ccache_dir)
 
-    # Log enviroment
+    # Log environment
     logging.info("environment ---> {0}".format(environment))
 
     # Build docker command

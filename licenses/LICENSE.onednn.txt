@@ -214,7 +214,7 @@ terms. This third party software, even if included with the distribution of
 the Intel software, may be governed by separate license terms, including
 without limitation, third party license terms, other Intel software license
 terms, and open source software license terms. These separate license terms
-govern your use of the third party programs as set forth in in the
+govern your use of the third party programs as set forth in the
 "THIRD-PARTY-PROGRAMS" file.
 
 Third party programs and their corresponding required notices and/or license

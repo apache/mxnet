@@ -735,7 +735,7 @@ def test_negative_binomial_generator():
 def test_categorical_generator():
     # This test fails with dtype float16 if the probabilities themselves cannot be
     # well-represented in float16.  When the float16 random picks are assigned to buckets,
-    # only certain bucket-probabilities are possible.  Here we map the desired probabilites
+    # only certain bucket-probabilities are possible.  Here we map the desired probabilities
     # (e.g. 0.1) to nearby float16 probabilities (e.g. 0.10009766) that are achievable.
     def quantize_probs(probs, dtype):
         if dtype == 'float16':
