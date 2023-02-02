@@ -491,6 +491,9 @@ class CachedOp {
   const std::unordered_set<uint32_t>& mutable_input_nodes() const {
     return fwd_graph_.indexed_graph().mutable_input_nodes();
   }
+  void set_nleafs(const std::vector<NDArray*>& nleafs) {
+    nleafs_ = nleafs;
+  }
   virtual std::vector<nnvm::NodeEntry> Gradient(const nnvm::ObjectPtr& node,
                                                 const std::vector<nnvm::NodeEntry>& ograds) const;
   virtual OpStatePtr Forward(const std::shared_ptr<CachedOp>& op_ptr,
@@ -649,6 +652,7 @@ class CachedOp {
   std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
   std::vector<bool> save_inputs_, save_outputs_;
   std::vector<OpReqType> bwd_output_reqs_;
+  std::vector<NDArray*> nleafs_;
 
   std::function<void(const char*, const char*, NDArrayHandle)> monitor_callback_{nullptr};
   bool monitor_all_{false};

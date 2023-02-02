@@ -351,6 +351,8 @@ class NDArray {
   bool fresh_out_grad() const;
   /*! \return updated grad state in autograd_entry_ */
   void set_fresh_out_grad(bool state) const;
+  /*! \brief copy the autograd_entry_ from src NDArray */
+  void copy_autograd_entry_(const NDArray* src);
   /*! \brief Returns true if a sparse ndarray's aux_data and storage are initialized
    * Throws an exception if the indices array shape is inconsistent
    * Returns false if the indices array is empty(nnz = 0) for csr/row_sparse

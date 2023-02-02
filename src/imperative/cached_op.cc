@@ -801,7 +801,8 @@ OpStatePtr CachedOp::DynamicForward(const Context& default_ctx,
              recording && inlining_,
              nullptr,
              monitor_callback_,
-             monitor_all_);
+             monitor_all_,
+             nleafs_);
   } else {
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     NaiveRunGraph(false,
@@ -1063,6 +1064,7 @@ void CachedOp::StaticBackward(const bool retain_graph,
       if (!idx.exist(entry.node.get()))
         continue;
       auto eid = idx.entry_id(entry);
+      state.array_reqs[eid] = reqs[iter->second];
       // An input and an output may share the same array.
       INIT_DETACHED(outputs[iter->second], arrays[eid]);
       arrays[eid] = outputs[iter->second];
@@ -1073,6 +1075,7 @@ void CachedOp::StaticBackward(const bool retain_graph,
       if (!idx.exist(entry.node.get()))
         continue;
       auto eid = idx.entry_id(entry);
+      state.array_reqs[eid] = reqs[i];
       // An input and an output may share the same array.
       INIT_DETACHED(outputs[i], arrays[eid]);
       arrays[eid] = outputs[i];

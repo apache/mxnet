@@ -1386,7 +1386,8 @@ void RunGraph(const bool retain_graph,
               bool recording,
               mxnet::ShapeVector* shapes          = nullptr,
               const CachedOpMonCallback& callback = nullptr,
-              const bool monitor_all_             = false);
+              const bool monitor_all_             = false,
+              const std::vector<NDArray*>& nleafs = std::vector<NDArray*>());
 
 void NaiveRunGraph(const bool retain_graph,
                    const Context& default_ctx,

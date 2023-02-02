@@ -171,6 +171,18 @@ void Imperative::MarkVariables(const std::vector<NDArray*>& variables,
   }
 }
 
+void Imperative::MarkDCVariables(const std::vector<NDArray*>& nleafs, int cnt_vars) {
+  for (NDArray* nleaf : nleafs) {
+    if (Imperative::DCInfo::IsNone(*nleaf)) {
+      LOG(WARNING) << "The marked node doesn't have deferred compute history.";
+    } else {
+      nnvm::ObjectPtr node        = nleaf->deferredcompute_entry_.node;
+      node->attrs.dict["mark_id"] = std::to_string(cnt_vars);
+    }
+    cnt_vars++;
+  }
+}
+
 // Unmark the variables to free the memory.
 void Imperative::DropGrads(const std::vector<NDArray*>& variables) {
   for (auto variable : variables) {

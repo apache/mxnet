@@ -513,6 +513,10 @@ void NDArray::set_fresh_out_grad(bool state) const {
   info.fresh_out_grad      = state;
 }
 
+void NDArray::copy_autograd_entry_(const NDArray* src) {
+  autograd_entry_ = nnvm::NodeEntry{src->autograd_entry_.node, 0, 0};
+}
+
 #if MXNET_USE_ONEDNN == 1
 
 bool NDArray::Chunk::IsDNNL() const {

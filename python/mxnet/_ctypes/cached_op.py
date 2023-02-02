@@ -77,6 +77,7 @@ class CachedOp(object):
         if not default_device:
             default_device = kwargs.pop('default_ctx', None)
         out = kwargs.pop('out', None)
+        nleaf_vars = [container.data() for container in kwargs.pop('_nleaf_vars', [])]
         if kwargs:
             raise TypeError(
                 "CachedOp.__call__ got unexpected keyword argument(s): " + \
@@ -93,7 +94,10 @@ class CachedOp(object):
                 *args,
                 type_id,
                 device_id,
-                *out_arg
+                len(out_arg),
+                *out_arg,
+                len(nleaf_vars),
+                *nleaf_vars
             )
             if out is not None:
                 return out
