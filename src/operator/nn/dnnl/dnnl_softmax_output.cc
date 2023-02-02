@@ -43,7 +43,7 @@ static dnnl::softmax_forward::primitive_desc GetSoftmaxOutputFwdDescImpl(
   return dnnl::softmax_forward::primitive_desc(desc, cpu_engine);
 }
 
-typedef ParamOpSign<SoftmaxOutputParam> DNNLSoftmaxOuputSignature;
+typedef ParamOpSign<SoftmaxOutputParam> DNNLSoftmaxOutputSignature;
 
 class DNNLSoftmaxOutputFwd {
   std::shared_ptr<dnnl::softmax_forward> fwd_;
@@ -68,13 +68,13 @@ static DNNLSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam& p
                                                      const OpContext& ctx,
                                                      const NDArray& in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
+  static thread_local std::unordered_map<DNNLSoftmaxOutputSignature, DNNLSoftmaxOutputFwd, OpHash>
       fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxOuputSignature, DNNLSoftmaxOutputFwd, OpHash>
+  static MX_THREAD_LOCAL std::unordered_map<DNNLSoftmaxOutputSignature, DNNLSoftmaxOutputFwd, OpHash>
       fwds;
 #endif
-  DNNLSoftmaxOuputSignature key(param);
+  DNNLSoftmaxOutputSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(in_data);
 

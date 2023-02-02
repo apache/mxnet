@@ -468,7 +468,7 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
       ctx2id[kv.second] = static_cast<int>(ctx_list.size());  // assign device id to ctx
       ctx_list.push_back(kv.second);                          // save ctx to the list
     }
-    // assign device id to to the arg name with the corresponding ctx
+    // assign device id to the arg name with the corresponding ctx
     device_map[kv.first] = ctx2id.at(kv.second);
   }
 

@@ -1439,7 +1439,7 @@ inline void GetSliceAxisParams(const SliceAxisParam& param,
     *axis += ishape.ndim();
   }
   CHECK(*axis < ishape.ndim() && *axis >= 0)
-      << "Transformed axis must be smaller than the source ndim and larger than zero! Recieved "
+      << "Transformed axis must be smaller than the source ndim and larger than zero! Received "
          "axis="
       << param.axis << ", src_ndim=" << ishape.ndim() << ", transformed axis=" << *axis;
   index_t axis_size = static_cast<index_t>(ishape[*axis]);

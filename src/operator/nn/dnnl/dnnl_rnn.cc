@@ -467,7 +467,7 @@ static void ConcatWeights(const dnnl::memory& dst,
  * Set new src data handler to Forward memory. The memory primitives are
  * not initialized until SetNewDataMem is first invoked. Src data handler
  * must not be nullptr, except for cx with LSTM mode. If either hy, cy is
- * nullptr, it may run with non-state_ouput or non-LSTM mode. Thus, the
+ * nullptr, it may run with non-state_output or non-LSTM mode. Thus, the
  * corresponding memory should be a empty dnnl::memory().
  */
 void DNNLRnnForward::SetNewDataMem(void* x,

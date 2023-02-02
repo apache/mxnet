@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file regression_ouput-inl.h
+ * \file regression_output-inl.h
  * \brief Regression output operator.
  */
 #ifndef MXNET_OPERATOR_REGRESSION_OUTPUT_INL_H_

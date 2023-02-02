@@ -283,7 +283,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*,
       sumGradOut += *gradOut_data;
     });
 
-    // dot product of the Q(X) and gradOuput
+    // dot product of the Q(X) and gradOutput
     AccReal dotp = 0;
     ForEachFast(inputData,
                 gradOut,

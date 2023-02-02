@@ -153,7 +153,7 @@ struct ImageDetRecParserParam : public dmlc::Parameter<ImageDetRecParserParam> {
   std::string path_imglist;
   /*! \brief path to image recordio */
   std::string path_imgrec;
-  /*! \brief a sequence of names of image augmenters, seperated by , */
+  /*! \brief a sequence of names of image augmenters, separated by , */
   std::string aug_seq;
   /*! \brief label-width, use -1 for variable width */
   int label_width;
@@ -186,7 +186,7 @@ struct ImageDetRecParserParam : public dmlc::Parameter<ImageDetRecParserParam> {
         .set_default("det_aug_default")
         .describe(
             "Augmentation Param: the augmenter names to represent"
-            " sequence of augmenters to be applied, seperated by comma."
+            " sequence of augmenters to be applied, separated by comma."
             " Additional keyword parameters will be seen by these augmenters."
             " Make sure you don't use normal augmenters for detection tasks.");
     DMLC_DECLARE_FIELD(label_width)

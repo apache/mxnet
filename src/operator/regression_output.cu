@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file regression_ouput.cu
+ * \file regression_output.cu
  * \brief Regression output operator.
  */
 #include "./regression_output-inl.h"

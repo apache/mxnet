@@ -42,7 +42,7 @@ namespace mxnet {
 namespace op {
 namespace fft {
 enum fftOpInputs { kData };
-enum fftOpOutputs { kOutComplex };  // seperate the image and real parts at the moment
+enum fftOpOutputs { kOutComplex };  // separate the image and real parts at the moment
 enum fftOpResource { kTempSpace };  // might be requiered as we need to pad the real matrices
 }  // namespace fft
 

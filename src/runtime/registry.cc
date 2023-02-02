@@ -108,7 +108,7 @@ std::vector<std::string> Registry::ListNames() {
 }  // namespace runtime
 }  // namespace mxnet
 
-/*! \brief entry to to easily hold returning information */
+/*! \brief entry to easily hold returning information */
 struct MXNetFuncThreadLocalEntry {
   /*! \brief result holder for returning strings */
   std::vector<std::string> ret_vec_str;

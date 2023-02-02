@@ -40,7 +40,7 @@ inline bool NumpyTraceOpShape(const nnvm::NodeAttrs& attrs,
   const NumpyTraceParam& param = nnvm::get<NumpyTraceParam>(attrs.parsed);
   int x1                       = CheckAxis(param.axis1, (*in_attrs)[0].ndim());
   int x2                       = CheckAxis(param.axis2, (*in_attrs)[0].ndim());
-  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
+  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the same axis " << x1;
   for (int i = 0, j = 0; i < ndim; ++i) {
     if (i != x1 && i != x2) {
       oshape[j++] = (*in_attrs)[0][i];

@@ -619,7 +619,7 @@ inline void SymbolInferShape(const char** keys,
  * \param in_shape_size input shape size
  * \param in_shape_ndim input shape number of dims
  * \param in_shape_data input shape data
- * \param out_shape_size ouput shape size
+ * \param out_shape_size output shape size
  * \param out_shape_ndim output shape number of dims
  * \param out_shape_data output shape data
  * \param aux_shape_size shape size of auxiliary states
@@ -677,7 +677,7 @@ int MXSymbolInferShape(SymbolHandle sym,
  * \param in_shape_size input shape size
  * \param in_shape_ndim input shape number of dims
  * \param in_shape_data input shape data
- * \param out_shape_size ouput shape size
+ * \param out_shape_size output shape size
  * \param out_shape_ndim output shape number of dims
  * \param out_shape_data output shape data
  * \param aux_shape_size shape size of auxiliary states
@@ -735,7 +735,7 @@ int MXSymbolInferShape64(SymbolHandle sym,
  * \param in_shape_size input shape size
  * \param in_shape_ndim input shape number of dims
  * \param in_shape_data input shape data
- * \param out_shape_size ouput shape size
+ * \param out_shape_size output shape size
  * \param out_shape_ndim output shape number of dims
  * \param out_shape_data output shape data
  * \param aux_shape_size shape size of auxiliary states
@@ -790,7 +790,7 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
  * \param in_shape_size input shape size
  * \param in_shape_ndim input shape number of dims
  * \param in_shape_data input shape data
- * \param out_shape_size ouput shape size
+ * \param out_shape_size output shape size
  * \param out_shape_ndim output shape number of dims
  * \param out_shape_data output shape data
  * \param aux_shape_size shape size of auxiliary states
