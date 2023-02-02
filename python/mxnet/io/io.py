@@ -593,7 +593,7 @@ class NDArrayIter(DataIter):
     last_batch_handle : str, optional
         How to handle the last batch. This parameter can be 'pad', 'discard' or
         'roll_over'.
-        If 'pad', the last batch will be padded with data starting from the begining
+        If 'pad', the last batch will be padded with data starting from the beginning
         If 'discard', the last batch will be discarded
         If 'roll_over', the remaining elements will be rolled over to the next iteration and
         note that it is intended for training and can cause problems if used for prediction.

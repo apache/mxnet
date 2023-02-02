@@ -465,7 +465,7 @@ def pick(data, index, axis=-1, mode='clip', keepdims=False):
     array([1., 4., 5.])
 
     picks elements with specified indices along axis 1 using 'wrap' mode
-    to place indicies that would normally be out of bounds
+    to place indices that would normally be out of bounds
 
     >>> npx.pick(x, np.array([2, -1, -2]), 1, mode='wrap')
     array([1., 4., 5.])

@@ -4109,7 +4109,7 @@ def convert_gather_nd(node, **kwargs):
                   [name+'_slice1_out']),
         make_node('Concat', [name+'_slice1_out', name+'_slice0_out'], [name+'_concat1_out'], axis=0),
         make_node('Reshape', [name+'_transpose0_output', name+'_concat1_out'], [name+'_reshape0_out']),
-        # Cast data type for indicies
+        # Cast data type for indices
         make_node('Cast', [name+'_reshape0_out'], [name+'_cast0_out'], to=int(onnx.TensorProto.INT64)),
         make_node('GatherND', [data, name+'_cast0_out'], [name], name=name)
     ]

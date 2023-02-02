@@ -1286,7 +1286,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=None, atol=
         - if type is dict of str to np.ndarray
             Contains the mapping between argument names and their values.
     out_grads : None or list of np.ndarray or dict of str to np.ndarray
-        NumPys arrays corresponding to sym.outputs for incomming gradient.
+        NumPys arrays corresponding to sym.outputs for incoming gradient.
 
         - if type is list of np.ndarray
             Contains arrays corresponding to ``exe.outputs``.
