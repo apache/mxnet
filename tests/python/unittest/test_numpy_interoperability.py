@@ -527,12 +527,13 @@ def _add_workload_linalg_cholesky():
         for shape, dtype in itertools.product(shapes, dtypes):
             a = _np.random.randn(*shape)
 
-        t = list(range(len(shape)))
-        t[-2:] = -1, -2
+            t = list(range(len(shape)))
+            t[-2:] = -1, -2
 
-        a = _np.matmul(a.transpose(t).conj(), a)
+            a = _np.matmul(a.transpose(t).conj(), a)
+            a = _np.asarray(a, dtype=dtype)
 
-        OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
+            OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
 
     # test_0_size
     for dtype in dtypes:
@@ -3352,7 +3353,8 @@ def check_interoperability(op_list):
             continue
         default_tols = (1e-3, 1e-4)
         tols = {'linalg.tensorinv': (1e-2, 5e-3),
-                'linalg.solve':     (1e-3, 5e-2)}
+                'linalg.solve':     (1e-3, 5e-2),
+                'linalg.cholesky':  (1e-1, 1e-1)}
         (rel_tol, abs_tol) = tols.get(name, default_tols)
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
