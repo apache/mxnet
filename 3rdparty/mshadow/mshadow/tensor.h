@@ -494,7 +494,7 @@ struct Stream {
    */
   inline void Wait(void) {}
   /*!
-   * \brief query whether the the stream is idle
+   * \brief query whether the stream is idle
    * \return true if the stream is idle and all the jobs have been completed
    */
   inline bool CheckIdle(void) {

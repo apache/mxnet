@@ -33,7 +33,7 @@
 USE_CUDA = 1
 
 # add the path to CUDA libary to link and compile flag
-# if you have already add them to enviroment variable, leave it as NONE
+# if you have already add them to environment variable, leave it as NONE
 USE_CUDA_PATH = NONE
 
 #
@@ -42,7 +42,7 @@ USE_CUDA_PATH = NONE
 USE_BLAS = openblas
 #
 # add path to intel library, you may need it
-# for MKL, if you did not add the path to enviroment variable
+# for MKL, if you did not add the path to environment variable
 #
 USE_INTEL_PATH = NONE
 

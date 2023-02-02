@@ -107,7 +107,7 @@ pool(const Exp<SrcExp, DType, etype> &src,
 /*!
  * \brief same as pool, except the output shape is specified by pshape
  * \param src source image
- * \param pshape ouput shape
+ * \param pshape output shape
  * \param ksize_y kernel size in y
  * \param ksize_x kernel size in x
  * \param kstride_y stride in y directory

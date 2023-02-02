@@ -504,7 +504,7 @@ class LocalModel : public ISharedModel<xpu, DType> {
     std::vector<bool> copied;
     // number of data copied in
     int num_copied;
-    // version number of data used to hold incomming data in push
+    // version number of data used to hold incoming data in push
     int copyin_version;
     // use pinned memory
     bool pin_memory;

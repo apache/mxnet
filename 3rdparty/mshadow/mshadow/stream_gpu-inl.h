@@ -90,7 +90,7 @@ struct Stream<gpu> {
     MSHADOW_CUDA_CALL(cudaStreamSynchronize(stream_));
   }
   /*!
-   * \brief query whether the the stream is idle
+   * \brief query whether the stream is idle
    * \return true if the stream is idle and all the job have been completed
    */
   inline bool CheckIdle(void) {

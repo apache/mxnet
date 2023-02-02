@@ -66,7 +66,7 @@ inline index_t GetAlignStride(index_t xsize) {
   if (xsize >= MSHADOW_MIN_PAD_RATIO * 32) {
     return ((xsize  + kMemUnit - 1) >> kMemUnitBits) << kMemUnitBits;
   } else {
-    // if originally space is not aligned, no necessary to to alligned thread allocation
+    // if the original space is not aligned, not necessary to align thread allocation
     return xsize;
   }
 }

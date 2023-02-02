@@ -106,7 +106,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The type of CPU memory pool.
   - Choices:
     - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_CPU_MEM_POOL_PAGE_SIZE (or MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_CPU_MEM_POOL_PAGE_SIZE is bigger than MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
-    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_MEM_POOL_ROUND_LINEAR_CUTOFF, the the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_MEM_POOL_ROUND_LINEAR_CUTOFF, the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
     - *Unpooled*: No memory pool is used.
 * MXNET_CPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
@@ -125,7 +125,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The type of CPU_PINNED memory pool.
   - Choices:
     - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_CPU_PINNED_MEM_POOL_PAGE_SIZE (or MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_CPU_PINNED_MEM_POOL_PAGE_SIZE is bigger than MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
-    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_PINNED_MEM_POOL_ROUND_LINEAR_CUTOFF, the the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_PINNED_MEM_POOL_ROUND_LINEAR_CUTOFF, the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
     - *Unpooled*: No memory pool is used.
 * MXNET_CPU_PINNED_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```

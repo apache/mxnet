@@ -108,7 +108,7 @@ In the first API, `ValueChecker checker` is a bool lambda function that takes in
 [] (DType x) {return x == 0};
 ```
 
-This checker is called on every value within the tensor. The return of the API is a `vector` of all the coordinates where the checker evaluates to `true`. The coordinates are themselves represented by `vector<int>`. If you set `interactive` to true, you will set a "break point" and enter a loop that asks for commands. This is similar to `interactive_print()`. You can type "p" to print the coordinates, "b" to break from the loop, and "s" to skip all future "break points" in `interactive_print()`. You can also specify a coordinate to print only a part of the tensor or type "e" to print out the entire tensor.  Just like `interactive_print()`, this this interactive screen is also properly locked.
+This checker is called on every value within the tensor. The return of the API is a `vector` of all the coordinates where the checker evaluates to `true`. The coordinates are themselves represented by `vector<int>`. If you set `interactive` to true, you will set a "break point" and enter a loop that asks for commands. This is similar to `interactive_print()`. You can type "p" to print the coordinates, "b" to break from the loop, and "s" to skip all future "break points" in `interactive_print()`. You can also specify a coordinate to print only a part of the tensor or type "e" to print out the entire tensor.  Just like `interactive_print()`, this interactive screen is also properly locked.
 
 ![tensor_inspector_value_check](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_value_check.png)
 

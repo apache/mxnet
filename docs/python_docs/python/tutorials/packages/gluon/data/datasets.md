@@ -206,7 +206,7 @@ for epoch in range(epochs):
 
 Gluon has a number of different [Dataset](../../../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset) classes for working with your own image data straight out-of-the-box. You can get started quickly using the [mxnet.gluon.data.vision.datasets.ImageFolderDataset](../../../../api/gluon/data/vision/datasets/index.rst#mxnet.gluon.data.vision.datasets.ImageFolderDataset) which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folders.
 
-We will run through an example for image classification, but a similar process applies for other vision tasks. If you already have your own collection of images to work with you should partition your data into training and test sets, and place all objects of the same class into seperate folders. Similar to:
+We will run through an example for image classification, but a similar process applies for other vision tasks. If you already have your own collection of images to work with you should partition your data into training and test sets, and place all objects of the same class into separate folders. Similar to:
 ```
     ./images/train/car/abc.jpg
     ./images/train/car/efg.jpg

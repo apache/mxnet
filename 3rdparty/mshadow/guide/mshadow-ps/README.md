@@ -63,7 +63,7 @@ The following documents provides a way
 ### Getting Sum from Multiple GPUs
 We first get familiar with the interface of mshadow-mshadow_ps. Through the following
 program in [local_sum-inl.h](local_sum-inl.h). You can compile the program
-by setup the [config.mk](config.mk) according to your computers's enviroment, and type make.
+by setup the [config.mk](config.mk) according to your computers's environment, and type make.
 
 In the following program, each thread first does some computation locally, then tries to get the sum
 of ```data``` through mshadow-ps interface.
