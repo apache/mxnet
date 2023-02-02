@@ -36,6 +36,9 @@
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 
+#ifdef __linux__
+#include <sys/mman.h>
+#endif
 #include <memory>
 #include <vector>
 #include <type_traits>
@@ -1105,9 +1108,21 @@ inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
   if (*ptr == nullptr)
     return false;
 #else
-  int res = posix_memalign(ptr, alignment, size);
-  if (res != 0)
+  int res                       = posix_memalign(ptr, alignment, size);
+#if __linux__
+  constexpr size_t gHugePage2MB = 1 << 21;
+  if (size >= gHugePage2MB) {
+    // TODO(mozga-intel): Enable MacOS Huge Pages if desired
+    res = posix_memalign(ptr, gHugePage2MB, size);
+    if (res == 0) {
+      madvise(ptr, size, MADV_HUGEPAGE);
+      return true;
+    }
+  }
+#endif
+  if (res != 0) {
     return false;
+  }
 #endif
   return true;
 }

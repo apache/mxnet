@@ -542,7 +542,11 @@ inline std::ostream& operator<<(std::ostream& out, const Context& ctx) {
 #define ADD_FILELINE        "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
 #if MXNET_USE_ONEDNN == 1 || MXNET_USE_INTGEMM == 1
-constexpr size_t kDNNLAlign = 64;
+#ifdef __linux__
+constexpr size_t kDNNLAlign = 1 << 21;
+#else
+constexpr size_t kDNNLAlign = 4096ul;
+#endif
 #endif
 
 }  // namespace mxnet
