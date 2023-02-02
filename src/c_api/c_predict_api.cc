@@ -201,7 +201,9 @@ int _CreatePartialOut(const char* symbol_json_str,
   std::unordered_map<std::string, size_t> key2arg;
   for (size_t i = 0; i < arg_names.size(); ++i) {
     std::string key = arg_names[i];
-    key2arg[key] = i;
+    auto emplace_res = key2arg.emplace(key, i);
+    CHECK(emplace_res.second)
+      << "Input parameter name appears more than once";
   }
 
   try {
