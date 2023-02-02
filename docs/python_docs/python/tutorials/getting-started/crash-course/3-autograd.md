@@ -217,7 +217,7 @@ c.backward()
 ```
 
 You can see that `b` is a linear function of `a`, and `c` is chosen from `b`.
-The gradient with respect to `a` be will be either `[c/a[0], 0]` or `[0,
+The gradient with respect to `a` will be either `[c/a[0], 0]` or `[0,
 c/a[1]]`, depending on which element from `b` is picked. You see the results of
 this example with this code:
 
@@ -233,7 +233,7 @@ along this axis is the same as summing that axis and multiplying by `1/3`.
 You can control gradients for different ndarray operations. For instance,
 perhaps you want to check that the gradients are propagating properly?
 the `attach_grad()` method automatically detaches itself from the gradient.
-Therefore, the input up until y will no longer look like it has `x`. To
+Therefore, the input up until `y` will no longer look like it has `x`. To
 illustrate this notice that `x.grad` and `y.grad` is not the same in the second
 example.
 
