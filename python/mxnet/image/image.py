@@ -646,7 +646,7 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     expanded = False
     if src.ndim == 3:
         expanded = True
-        src = _mx_np.expand_dims(src, 0) if is_np_array() else src.expand_dims(axis=0)
+        src = _mx_np.expand_dims(src, axis=0) if is_np_array() else src.expand_dims(axis=0)
         if not isinstance(rotation_degrees, Number):
             raise TypeError("When a single image is passed the rotation angle is "
                             "required to be a scalar.")

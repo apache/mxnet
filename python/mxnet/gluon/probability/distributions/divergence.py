@@ -269,7 +269,7 @@ def _kl_dirichlet_dirichlet(p, q):
     t1 = lgamma(sum_p_concentration) - lgamma(sum_q_concentration)
     t2 = (lgamma(p.alpha) - lgamma(q.alpha)).sum(-1)
     t3 = p.alpha - q.alpha
-    t4 = dgamma(p.alpha) - np.expand_dims(dgamma(sum_p_concentration), -1)
+    t4 = dgamma(p.alpha) - np.expand_dims(dgamma(sum_p_concentration), axis=-1)
     return t1 - t2 + (t3 * t4).sum(-1)
 
 

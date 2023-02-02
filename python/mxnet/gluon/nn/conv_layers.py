@@ -1743,7 +1743,7 @@ class PixelShuffle1D(HybridBlock):
         """Perform pixel-shuffling on the input."""
         f = self._factor                                             # (N, C*f, W)
         x = npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
-        x = np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
+        x = np.transpose(x, axes=(0, 1, 3, 2))     # (N, C, W, f)
         x = npx.reshape(x, (-2, -2, -5))         # (N, C, W*f)
         return x
 
@@ -1806,7 +1806,7 @@ class PixelShuffle2D(HybridBlock):
                                                       # (N, f1*f2*C, H, W)
         x = npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
         x = npx.reshape(x, (-2, -2, -6, f1, f2, -2, -2))    # (N, C, f1, f2, H, W)
-        x = np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+        x = np.transpose(x, axes=(0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
         x = npx.reshape(x, (-2, -2, -5, -5))              # (N, C, H*f1, W*f2)
         return x
 

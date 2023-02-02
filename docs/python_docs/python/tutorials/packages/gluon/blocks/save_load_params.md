@@ -182,14 +182,14 @@ def verify_loaded_model(net):
     for data, label in sample_data:
 
         # Display the images
-        img = np.transpose(data, (1,0,2,3))
+        img = np.transpose(data, axes=(1,0,2,3))
         img = npx.reshape(img, (28,10*28,1))
         imtiles = np.tile(img, (1,1,3))
         plt.imshow(imtiles.asnumpy())
         plt.show()
 
         # Display the predictions
-        data = np.transpose(data, (0, 3, 1, 2))
+        data = np.transpose(data, axes=(0, 3, 1, 2))
         out = net(data.to_device(device))
         predictions = np.argmax(out, axis=1)
         print('Model predictions: ', predictions.asnumpy())

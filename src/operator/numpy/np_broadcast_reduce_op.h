@@ -661,7 +661,7 @@ struct NumpyMomentsParam : public dmlc::Parameter<NumpyMomentsParam> {
   dmlc::optional<mxnet::Tuple<int>> axis;
   dmlc::optional<int> dtype;
   bool keepdims;
-  int ddof;
+  double ddof;
   DMLC_DECLARE_PARAMETER(NumpyMomentsParam) {
     DMLC_DECLARE_FIELD(axis)
         .set_default(dmlc::optional<mxnet::Tuple<int>>())

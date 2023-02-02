@@ -239,7 +239,7 @@ def show_batch(batch, columns=4, fig_size=(9, 5), pad=1):
     rows = int(size / columns)
     fig, axes = plt.subplots(rows, columns, figsize=fig_size)
     for ax, img, label in zip(axes.flatten(), batch, labels):
-        ax.imshow(np.transpose(img, (1, 2, 0)))
+        ax.imshow(np.transpose(img, axes=(1, 2, 0)))
         ax.set(title=f"Label: {label}")
     fig.tight_layout(h_pad=pad, w_pad=pad)
     plt.show()

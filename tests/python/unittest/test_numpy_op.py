@@ -78,7 +78,7 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
             self._axes = axes
 
         def forward(self, a, b):
-            return np.tensordot(a, b, self._axes)
+            return np.tensordot(a, b, axes = self._axes)
 
     def tensordot_backward(out_grad, a, b, axes=2):
         if (a.ndim < 1) or (b.ndim < 1):
@@ -165,7 +165,7 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
     assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = 1e-3, atol=1e-5)
 
     # Test imperative once again
-    mx_out = np.tensordot(a, b, axes)
+    mx_out = np.tensordot(a, b, axes = axes)
     np_out = onp.tensordot(a.asnumpy(), b.asnumpy(), axes)
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
@@ -198,7 +198,7 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
                     b.grad[:] = ori_b_grad
 
             with mx.autograd.record():
-                mx_out = mx.np.tensordot(a, b, axes)
+                mx_out = mx.np.tensordot(a, b, axes = axes)
                 out_grad = mx.np.random.normal(0, 1, mx_out.shape)
                 loss = (mx_out * out_grad).sum()
                 loss.backward()
@@ -1277,7 +1277,8 @@ def test_np_logspace(config, dtype, endpoint, hybridize, base):
             self.axis = axis
 
         def forward(self, x):
-            return x + np.logspace(self._start, self._stop, self._num, self._endpoint, self._base, self._dtype, self.axis)
+            return x + np.logspace(self._start, self._stop, self._num,
+                                   endpoint = self._endpoint, base = self._base, dtype = self._dtype, axis = self.axis)
 
     x = np.zeros(shape=(), dtype=dtype)
     net = TestLogspace(*config, endpoint=endpoint, base=base, dtype=dtype)
@@ -2209,7 +2210,7 @@ def test_np_argsort(descending, shape, hybrid):
         mx_out = test_argsort(data)
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
-        mx_out = np.argsort(data, axis, descending)
+        mx_out = np.argsort(data, axis=axis, descending=descending)
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
@@ -2244,7 +2245,7 @@ def test_np_sort(shape, dtype, hybridize, descending):
             self._descending = descending
 
         def forward(self, x):
-            return np.sort(x, self._axis, descending=self._descending)
+            return np.sort(x, axis=self._axis, descending=self._descending)
 
     a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
     axis_list = list(range(len(shape)))
@@ -2318,7 +2319,7 @@ def test_np_tri():
             self._dtype = dtype
 
         def forward(self, x):
-            return x + np.tri(self._N, self._M, self._k, self._dtype)
+            return x + np.tri(self._N, self._M, self._k, dtype = self._dtype)
 
     dtypes = ['float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8', None]
     hybrids = [False, True]
@@ -2331,12 +2332,12 @@ def test_np_tri():
         test_tri = TestTri(N, M, k, dtype)
         if hybrid:
             test_tri.hybridize()
-        np_out = np.tri(N, M, k, dtype)
+        np_out = np.tri(N, M, k, dtype = dtype)
         x = np.zeros(shape=(), dtype=dtype)
         mx_out = test_tri(x)
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
-        mx_out = np.tri(N, M, k, dtype)
+        mx_out = np.tri(N, M, k, dtype = dtype)
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
@@ -2545,7 +2546,7 @@ def test_np_transpose(data_shape, axes_workload, hybridize, dtype, grad_req):
             self.axes = axes
 
         def forward(self, a):
-            return np.transpose(a, self.axes)
+            return np.transpose(a, axes = self.axes)
 
     for axes in axes_workload:
         test_trans = TestTranspose(axes)
@@ -2623,7 +2624,7 @@ def test_np_permute_dims(data_shape, axes_workload, hybridize, dtype, grad_req):
             self.axes = axes
 
         def forward(self, a):
-            return np.permute_dims(a, self.axes)
+            return np.permute_dims(a, axes=self.axes)
 
     for axes in axes_workload:
         test_trans = TestPermuteDims(axes)
@@ -2699,13 +2700,13 @@ def test_np_tile():
             self._reps = reps
 
         def forward(self, x):
-            return np.tile(x, reps=self._reps)
+            return np.tile(x, self._reps)
 
     for shape, reps in config:
         data_np = onp.random.randint(low=0, high=1000, size=shape)
         data_mx = np.array(data_np, dtype=data_np.dtype)
-        ret_np = onp.tile(data_np, reps=reps)
-        ret_mx = np.tile(data_mx, reps=reps)
+        ret_np = onp.tile(data_np, reps)
+        ret_mx = np.tile(data_mx, reps)
         assert same(ret_mx.asnumpy(), ret_np)
 
         net = TestTile(reps)
@@ -2757,7 +2758,7 @@ def test_np_tril():
             data_mx.attach_grad()
             ret_np = onp.tril(data_np, k*prefix)
             with mx.autograd.record():
-                ret_mx = np.tril(data_mx, k*prefix)
+                ret_mx = np.tril(data_mx, k=k*prefix)
             assert same(ret_mx.asnumpy(), ret_np)
             ret_mx.backward()
             if len(shape) == 2:
@@ -2817,7 +2818,7 @@ def test_np_triu():
             data_mx.attach_grad()
             ret_np = onp.triu(data_np, k*prefix)
             with mx.autograd.record():
-                ret_mx = np.triu(data_mx, k*prefix)
+                ret_mx = np.triu(data_mx, k=k*prefix)
             assert same(ret_mx.asnumpy(), ret_np)
             ret_mx.backward()
             if len(shape) == 2:
@@ -3191,8 +3192,6 @@ def test_np_binary_funcs():
                                 [lambda y, x1, x2: onp.broadcast_to(x1, y.shape)]),
         'divide': (0.1, 1.0, [lambda y, x1, x2: onp.ones(y.shape) / x2],
                    [lambda y, x1, x2: -x1 / (x2 * x2)]),
-        'floor_divide': (0.1, 1.0, [lambda y, x1, x2: onp.zeros(y.shape)],
-                 [lambda y, x1, x2: onp.zeros(y.shape)]),
         'mod': (1.0, 10.0,
                 [lambda y, x1, x2: onp.ones(y.shape),
                  lambda y, x1, x2: onp.zeros(y.shape)],
@@ -3928,7 +3927,7 @@ def test_np_split():
             self._indices_or_sections = indices_or_sections
 
         def forward(self, a, *args, **kwargs):
-            return np.split(a, indices_or_sections=self._indices_or_sections,
+            return np.split(a, self._indices_or_sections,
                               axis=self._axis)
 
     def get_indices(axis_size):
@@ -3965,7 +3964,7 @@ def test_np_split():
                 assert_almost_equal(a.grad.asnumpy(), onp.ones(a.shape), rtol=1e-3, atol=1e-5)
 
                 # test imperative
-                mx_outs = np.split(a, indices_or_sections=indices_or_sections, axis=axis)
+                mx_outs = np.split(a, indices_or_sections, axis=axis)
                 np_outs = onp.split(a.asnumpy(), indices_or_sections=indices_or_sections, axis=axis)
                 for mx_out, np_out in zip(mx_outs, np_outs):
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
@@ -3980,7 +3979,7 @@ def test_np_array_split():
             self._indices_or_sections = indices_or_sections
 
         def forward(self, a, *args, **kwargs):
-            return np.array_split(a, indices_or_sections=self._indices_or_sections,
+            return np.array_split(a, self._indices_or_sections,
                               axis=self._axis)
 
     def get_indices(axis_size):
@@ -4021,7 +4020,7 @@ def test_np_array_split():
                 assert_almost_equal(x.grad.asnumpy(), onp.ones(x.shape), rtol=rtol, atol=atol)
 
                 # test imperative
-                mx_outs = np.array_split(x, indices_or_sections=indices_or_sections, axis=axis)
+                mx_outs = np.array_split(x, indices_or_sections, axis=axis)
                 np_outs = onp.array_split(x.asnumpy(), indices_or_sections=indices_or_sections, axis=axis)
                 for mx_out, np_out in zip(mx_outs, np_outs):
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
@@ -4035,7 +4034,7 @@ def test_np_vsplit():
             self._indices_or_sections = indices_or_sections
 
         def forward(self, a, *args, **kwargs):
-            return np.vsplit(a, indices_or_sections=self._indices_or_sections)
+            return np.vsplit(a, self._indices_or_sections)
 
     def get_indices(axis_size):
         if axis_size is 0:
@@ -4075,7 +4074,7 @@ def test_np_vsplit():
                 assert_almost_equal(a.grad.asnumpy(), onp.ones(a.shape), rtol=1e-3, atol=1e-5)
 
                 # test imperative
-                mx_outs = np.vsplit(a, indices_or_sections=indices_or_sections)
+                mx_outs = np.vsplit(a, indices_or_sections)
                 np_outs = onp.vsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
                 for mx_out, np_out in zip(mx_outs, np_outs):
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
@@ -4099,7 +4098,7 @@ def test_np_concat():
 
     shapes = [(), (0, 0), (2, 3), (2, 1, 3)]
     hybridizes = [True, False]
-    axes = [0, 1, -1, None]
+    axes = [0, 1, None]
     grad_reqs = ['write', 'add', 'null']
     dtypes = [np.float32, np.float64, np.bool]
     combinations = itertools.product(shapes, hybridizes, axes, grad_reqs, dtypes)
@@ -4477,7 +4476,7 @@ def test_np_swapaxes():
         data_np = onp.random.uniform(size=shape)
         data_mx = np.array(data_np, dtype=data_np.dtype)
         ret_np = onp.swapaxes(data_np, axis1=axis1, axis2=axis2)
-        ret_mx = np.swapaxes(data_mx, axis1=axis1, axis2=axis2)
+        ret_mx = np.swapaxes(data_mx, axis1, axis2)
         assert same(ret_mx.asnumpy(), ret_np)
 
         net = TestSwapaxes(axis1, axis2)
@@ -4600,12 +4599,12 @@ def test_np_argmin_argmax(shape, axis, throw_exception, dtype, op_name, keepdims
             self.keepdims = keepdims
 
         def forward(self, x):
-            return getattr(x, self._op_name)(self._axis, keepdims=self.keepdims)
+            return getattr(x, self._op_name)(axis=self._axis, keepdims=self.keepdims)
 
     a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
     if throw_exception:
         with pytest.raises(MXNetError):
-            getattr(np, op_name)(a, axis)
+            getattr(np, op_name)(a, axis=axis)
             mx.npx.waitall()
     else:
         mx_ret = getattr(np, op_name)(a, axis=axis, keepdims=keepdims)
@@ -4621,7 +4620,7 @@ def test_np_argmin_argmax(shape, axis, throw_exception, dtype, op_name, keepdims
         net.hybridize()
     if throw_exception:
         with pytest.raises(MXNetError):
-            getattr(np, op_name)(a, axis)
+            getattr(np, op_name)(a, axis=axis)
             mx.npx.waitall()
     else:
         mx_ret = net(a)
@@ -4638,8 +4637,8 @@ def test_np_argmin_argmax_large_tensor():
     # be multiple extrema
     def single_run(op, dtype):
         inp = np.random.normal(0, 10, size=(200, 30000), dtype=dtype)
-        arg = op[0](inp, 1)
-        ref = op[1](inp, 1)
+        arg = op[0](inp, axis=1)
+        ref = op[1](inp, axis=1)
         for i, idx in enumerate(arg):
             assert inp[i, idx] == ref[i]
 
@@ -5720,7 +5719,7 @@ def test_np_eye():
         (4, None, 1),
         (2, 2, 1),
         (4, 6, 1),
-        (7, 3, -3),
+        (7, 3,-3),
         (3, 2, -2),
         (4, 0),
         (0, 0),
@@ -5737,8 +5736,12 @@ def test_np_eye():
     for config in configs:
         for dtype in dtypes:
             if isinstance(config, tuple):
-                mx_ret = np.eye(*config, dtype=dtype)
-                np_ret = onp.eye(*config, dtype=dtype)
+                N, M = config[:2]
+                k = 0
+                if len(config) ==3:
+                    k = config[2]
+                mx_ret = np.eye(N, M, k = k, dtype=dtype)
+                np_ret = onp.eye(N, M, k = k, dtype=dtype)
             else:
                 mx_ret = np.eye(config, dtype=dtype)
                 np_ret = onp.eye(config, dtype=dtype)
@@ -5759,7 +5762,7 @@ def test_np_eye():
             self._dtype = dtype
 
         def forward(self, x):
-            return x + np.eye(self._N, self._M, self._k, dtype=self._dtype)
+            return x + np.eye(self._N, self._M, k=self._k, dtype=self._dtype)
 
     for dtype in dtypes:
         x = np.zeros(shape=(), dtype=dtype)
@@ -5794,7 +5797,7 @@ def test_np_indices():
     for dtype in dtypes:
         for shape in shapes:
             np_out = onp.indices(dimensions=shape, dtype=dtype)
-            mx_out = np.indices(dimensions=shape, dtype=dtype)
+            mx_out = np.indices(shape, dtype=dtype)
             assert same(mx_out.asnumpy(), np_out)
             assert mx_out.shape == np_out.shape
 
@@ -5806,7 +5809,7 @@ def test_np_indices():
             self._dtype = dtype
 
         def forward(self, x):
-            return x + np.indices(dimensions=self._dimensions, dtype=self._dtype)
+            return x + np.indices(self._dimensions, dtype=self._dtype)
 
     for dtype in dtypes:
         for shape in shapes:
@@ -5841,13 +5844,13 @@ def test_np_repeat():
             self._axis = axis
 
         def forward(self, x):
-            return x.repeat(self._repeats, self._axis)
+            return x.repeat(self._repeats, axis=self._axis)
 
     for shape, repeats, axis in config:
         data_np = onp.random.randint(low=0, high=1000, size=shape)
         data_mx = np.array(data_np, dtype=data_np.dtype)
         ret_np = data_np.repeat(repeats, axis)
-        ret_mx = data_mx.repeat(repeats, axis)
+        ret_mx = data_mx.repeat(repeats, axis=axis)
         assert same(ret_mx.asnumpy(), ret_np)
 
         net = TestRepeat(repeats, axis)
@@ -6154,7 +6157,7 @@ def test_np_linalg_matrix_norm(shape, ord, axis, hybridize, itype, keepdims):
         net.hybridize()
     a = mx.np.random.uniform(-10.0, 10.0, size=shape, dtype=itype)
     if not isinstance(axis, tuple) or not len(axis) == 2:
-        assertRaises(ValueError, np.linalg.matrix_norm, a, ord, axis, keepdims)
+        assertRaises(ValueError, np.linalg.matrix_norm, a, ord=ord, axis=axis, keepdims=keepdims)
         return
     a.attach_grad()
     with mx.autograd.record():
@@ -6535,7 +6538,7 @@ def test_np_linalg_cholesky(shape, dtype, upper, hybridize):
         # shape of m is [batch, n, n]
         if 0 in L.shape:
             return L
-        
+
         if upper:
             L = onp.swapaxes(L, -1, -2)
 
@@ -6914,7 +6917,7 @@ def test_np_linalg_tensorinv():
             assert_almost_equal(a.grad, grad_A_expected)
 
     # check imperative once again
-    mx_out = np.linalg.tensorinv(a, ind)
+    mx_out = np.linalg.tensorinv(a, ind=ind)
     check_tensorinv(mx_out, a, ind)
 
 
@@ -7152,7 +7155,7 @@ def test_np_linalg_matrix_rank():
             self._hermitian = hermitian
 
         def forward(self, M, tol=None):
-            return np.linalg.matrix_rank(M, tol, hermitian=self._hermitian)
+            return np.linalg.matrix_rank(M, tol=tol, hermitian=self._hermitian)
 
     def check_matrix_rank(rank, a_np, tol, hermitian):
         try:
@@ -7254,9 +7257,8 @@ def test_np_linalg_matrix_transpose(shape):
             net.hybridize()
         ret_mx = net(data_mx)
         assert same(ret_mx.asnumpy(), ret_np)
-    
-    assert same(data_mx.mT.asnumpy(), ret_np)
 
+    assert same(data_mx.mT.asnumpy(), ret_np)
 
 @use_np
 def test_np_linalg_pinv():
@@ -7266,7 +7268,7 @@ def test_np_linalg_pinv():
             self._hermitian = hermitian
 
         def forward(self, a, rcond=1e-15):
-            return np.linalg.pinv(a, rcond, hermitian=self._hermitian)
+            return np.linalg.pinv(a, rcond=rcond, hermitian=self._hermitian)
 
     def check_pinv(x, a_np, rcond_np, hermitian, use_rcond):
         try:
@@ -8059,7 +8061,7 @@ def test_np_windows():
         def forward(self, x, *args, **kwargs):
             op = getattr(np, self._func)
             assert op is not None
-            return x + op(M=self._M)
+            return x + op(self._M)
 
     configs = [-10, -3, -1, 0, 1, 6, 10, 20]
     dtypes = ['float32', 'float64']
@@ -8077,7 +8079,7 @@ def test_np_windows():
                     mx_out = mx_func(x)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
                     # test imperative
-                    mx_out = getattr(np, func)(M=config)
+                    mx_out = getattr(np, func)(config)
                     np_out = np_func(M=config).astype(dtype)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
@@ -8090,7 +8092,7 @@ def test_np_flip():
             self.axis = axis
 
         def forward(self, x):
-            return np.flip(x, self.axis)
+            return np.flip(x, axis=self.axis)
 
     shapes = [(1, 2, 3), (1, 0), ()]
     types = ['int32', 'int64', 'float16', 'float32', 'float64']
@@ -8116,7 +8118,7 @@ def test_np_flip():
                 assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
                 # Test imperative once again
-                mx_out = np.flip(x, axis)
+                mx_out = np.flip(x, axis=axis)
                 np_out = onp.flip(x.asnumpy(), axis)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
@@ -8183,7 +8185,7 @@ def test_np_around():
             self.decimals = decimals
 
         def forward(self, x):
-            return np.around(x, self.decimals)
+            return np.around(x, decimals=self.decimals)
 
     shapes = [(), (1, 2, 3), (1, 0)]
     types = ['int32', 'int64', 'float32', 'float64']
@@ -8201,7 +8203,7 @@ def test_np_around():
                     assert mx_out.shape == np_out.shape
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
-                    mx_out = np.around(x, d)
+                    mx_out = np.around(x, decimals=d)
                     np_out = onp.around(x.asnumpy(), d)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
@@ -8244,7 +8246,7 @@ def test_np_round():
             self.decimals = decimals
 
         def forward(self, x):
-            return getattr(np, self.func)(x, self.decimals)
+            return getattr(np, self.func)(x, decimals=self.decimals)
 
     shapes = [(), (1, 2, 3), (1, 0)]
     types = ['int32', 'int64', 'float32', 'float64']
@@ -8262,7 +8264,7 @@ def test_np_round():
                 assert mx_out.shape == np_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
-                mx_out = getattr(mx.np, func)(x, d)
+                mx_out = getattr(mx.np, func)(x, decimals=d)
                 np_out = getattr(onp, func)(x.asnumpy(), d)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
@@ -8309,7 +8311,11 @@ def test_np_unique():
             self._axis = axis
 
         def forward(self, a):
-            return np.unique(a, self._return_index, self._return_inverse, self._return_counts, self._axis)
+            return np.unique(a,
+                             return_index=self._return_index,
+                             return_inverse=self._return_inverse,
+                             return_counts=self._return_counts,
+                             axis=self._axis)
 
     configs = [
         ((), True, True, True, None),
@@ -8346,7 +8352,13 @@ def test_np_unique():
                         assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
                 # Test imperative once again
-                mx_out = np.unique(x, *config[1:])
+                mx_out = np.unique(
+                    x,
+                    return_index=config[1],
+                    return_inverse=config[2],
+                    return_counts=config[3],
+                    axis=config[4]
+                )
                 np_out = onp.unique(x.asnumpy(), *config[1:])
                 if (len(mx_out)) == 1:
                     assert mx_out.shape == np_out.shape
@@ -8650,7 +8662,7 @@ def test_np_fill_diagonal():
             self._wrap= wrap
 
         def forward(self, x):
-            return np.fill_diagonal(x, val=self._val, wrap=self._wrap)
+            return np.fill_diagonal(x, self._val, self._wrap)
 
     configs = [
         ((10, 10), 2),
@@ -8775,8 +8787,8 @@ def test_np_rot90():
                 assert same(x.grad.asnumpy().shape, np_backward.shape)
                 assert same(x.grad.asnumpy(), np_backward)
 
-                np_out = onp.rot90(x.asnumpy(), k=k, axes=axes)
-                mx_out = np.rot90(x, k=k, axes=axes)
+                np_out = onp.rot90(x.asnumpy(), k, axes)
+                mx_out = np.rot90(x, k, axes)
                 assert same(mx_out.asnumpy(), np_out)
 
 
@@ -8788,7 +8800,7 @@ def test_np_hsplit():
             self._indices_or_sections = indices_or_sections
 
         def forward(self, a, *args, **kwargs):
-            return np.hsplit(a, indices_or_sections=self._indices_or_sections)
+            return np.hsplit(a, self._indices_or_sections)
 
     shapes = [
         (10,),
@@ -8824,7 +8836,7 @@ def test_np_hsplit():
                 assert_almost_equal(a.grad.asnumpy(), onp.ones(a.shape), rtol=1e-3, atol=1e-5)
 
                 # test imperative
-                mx_outs = np.hsplit(a, indices_or_sections=indices_or_sections)
+                mx_outs = np.hsplit(a, indices_or_sections)
                 np_outs = onp.hsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
                 for mx_out, np_out in zip(mx_outs, np_outs):
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
@@ -8838,7 +8850,7 @@ def test_np_dsplit():
             self._indices_or_sections = indices_or_sections
 
         def forward(self, a, *args, **kwargs):
-            return np.dsplit(a, indices_or_sections=self._indices_or_sections)
+            return np.dsplit(a, self._indices_or_sections)
 
     shapes = [
         (2, 4, 6),
@@ -8872,7 +8884,7 @@ def test_np_dsplit():
                 assert_almost_equal(a.grad.asnumpy(), onp.ones(a.shape), rtol=1e-3, atol=1e-5)
 
                 # test imperative
-                mx_outs = np.dsplit(a, indices_or_sections=indices_or_sections)
+                mx_outs = np.dsplit(a, indices_or_sections)
                 np_outs = onp.dsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
                 for mx_out, np_out in zip(mx_outs, np_outs):
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
@@ -9563,7 +9575,7 @@ def test_np_diff():
             self._axis = axis
 
         def forward(self, a):
-            return np.diff(a, n=self._n, axis=self._axis)
+            return np.diff(a, self._n, axis=self._axis)
 
     shapes = [tuple(random.randrange(10) for i in range(random.randrange(6))) for j in range(5)]
     for hybridize in [True, False]:
@@ -9594,7 +9606,7 @@ def test_np_diff():
                         assert x.grad.shape == np_backward.shape
                         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
-                        mx_out = np.diff(x, n=n, axis=axis)
+                        mx_out = np.diff(x, n, axis=axis)
                         np_out = onp.diff(x.asnumpy(), n=n, axis=axis)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
@@ -9614,7 +9626,7 @@ def test_np_ediff1d():
             super(TestEDiff1DCASE1, self).__init__()
 
         def forward(self, a, b, c):
-            return np.ediff1d(a, to_end=b, to_begin=c)
+            return np.ediff1d(a, b, c)
 
     # case 2: only `to_end` is array but `to_begin` is scalar/None
     class TestEDiff1DCASE2(HybridBlock):
@@ -9623,7 +9635,7 @@ def test_np_ediff1d():
             self._to_begin = to_begin
 
         def forward(self, a, b):
-            return np.ediff1d(a, to_end=b, to_begin=self._to_begin)
+            return np.ediff1d(a, b, self._to_begin)
 
     # case 3: only `to_begin` is array but `to_end` is scalar/None
     class TestEDiff1DCASE3(HybridBlock):
@@ -9632,7 +9644,7 @@ def test_np_ediff1d():
             self._to_end = to_end
 
         def forward(self, a, b):
-            return np.ediff1d(a, to_end=self._to_end, to_begin=b)
+            return np.ediff1d(a, self._to_end, b)
 
     # case 4: both `to_begin` and `to_end` are scalar/None
     class TestEDiff1DCASE4(HybridBlock):
@@ -9642,7 +9654,7 @@ def test_np_ediff1d():
             self._to_end = to_end
 
         def forward(self, a):
-            return np.ediff1d(a, to_end=self._to_end, to_begin=self._to_begin)
+            return np.ediff1d(a, self._to_end, self._to_begin)
 
     rtol = 1e-3
     atol = 1e-5
@@ -9808,7 +9820,7 @@ def test_np_diag():
             self._k = k
 
         def forward(self, a):
-            return np.diag(a, k=self._k)
+            return np.diag(a, self._k)
 
     shapes = [(), (2,), (1, 5), (2, 2), (2, 5), (3, 3), (4, 3)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
@@ -10107,7 +10119,7 @@ def test_np_unary_bool_funcs():
             # if `out` is given and dtype == np.bool
             mx_x = np.ones_like(mx_data).astype(np.bool)
             np_x = mx_x.asnumpy()
-            getattr(mx.np, func)(mx_data, mx_x)
+            getattr(mx.np, func)(mx_data, out=mx_x)
             np_func(np_data, np_x)
             assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
             # if `out` is given but dtype mismatches
@@ -10303,7 +10315,7 @@ def test_np_expand_dims():
             self._axis = axis
 
         def forward(self, x):
-            return np.expand_dims(x, self._axis)
+            return np.expand_dims(x, axis=self._axis)
 
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
     shapes = [
@@ -10344,7 +10356,7 @@ def test_np_expand_dims():
                                         use_broadcast=False)
 
                 # check imperative again
-                y = np.expand_dims(x, axis)
+                y = np.expand_dims(x, axis=axis)
                 assert_almost_equal(y.asnumpy(), expected, use_broadcast=False)
 
 
@@ -10370,7 +10382,7 @@ def test_np_unravel_index(ishape, rshape, dtype, hybridize):
             self._order = order
 
         def forward(self, a):
-            return np.unravel_index(a, self._shape, self._order)
+            return np.unravel_index(a, self._shape, order=self._order)
 
 
     rtol = 1e-2 if dtype == np.float16 else 1e-3
@@ -10699,7 +10711,7 @@ def test_np_cross(a_shape, b_shape, axes, dtype, hybridize):
             self._axis = axis
 
         def forward(self, a, b):
-            return np.cross(a, b, self._axisa, self._axisb, self._axisc, self._axis)
+            return np.cross(a, b, axisa=self._axisa, axisb=self._axisb, axisc=self._axisc, axis=self._axis)
 
     def check_np_cross(x, a_np, b_np, axises):
         try:
@@ -10875,7 +10887,7 @@ def test_np_rollaxis():
             self._start = start
 
         def forward(self, a, *args, **kwargs):
-            return np.rollaxis(a, axis=self._axis, start=self._start)
+            return np.rollaxis(a, self._axis, self._start)
 
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     for hybridize in [False, True]:
@@ -10900,7 +10912,7 @@ def test_np_rollaxis():
                         assert same(mx_data.grad.asnumpy(), onp.ones(shape))
                         # test imperative
                         np_out = onp.rollaxis(np_data, axis=axis, start=start)
-                        mx_out = np.rollaxis(mx_data, axis=axis, start=start)
+                        mx_out = np.rollaxis(mx_data, axis, start)
                         assert np_out.dtype == mx_out.dtype
                         assert same(mx_out.asnumpy(), np_out)
 

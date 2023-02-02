@@ -221,7 +221,7 @@ def test_identity():
             self._dtype = dtype
 
         def forward(self, x):
-            return x * np.identity(self._n, self._dtype)
+            return x * np.identity(self._n, dtype=self._dtype)
 
     class TestIdentityOutputType(HybridBlock):
         def forward(self, x):
@@ -229,7 +229,7 @@ def test_identity():
 
     def check_identity_array_creation(shape, dtype):
         np_out = _np.identity(n=n, dtype=dtype)
-        mx_out = np.identity(n=n, dtype=dtype)
+        mx_out = np.identity(n, dtype=dtype)
         assert same(mx_out.asnumpy(), np_out)
         if dtype is None:
             assert mx_out.dtype == _np.float32

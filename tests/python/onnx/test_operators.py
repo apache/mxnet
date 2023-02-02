@@ -24,7 +24,7 @@ import pytest
 import tempfile
 
 
-def def_model(namespace, op_name, dummy_input=False, **params):
+def def_model(namespace, op_name, dummy_input=False, *args, **kwargs): # pylint: disable=keyword-arg-before-vararg
     class Model(HybridBlock):
         def __init__(self, **kwargs):
             super(Model, self).__init__(**kwargs)
@@ -33,9 +33,9 @@ def def_model(namespace, op_name, dummy_input=False, **params):
             names = op_name.split('.')
             func = getattr(namespace, names[-1])
             if dummy_input:
-                return func(**params), inputs[0]
+                return func(*args, **kwargs), inputs[0]
             else:
-                return func(*inputs, **params)
+                return func(*inputs, *args, **kwargs)
     return Model
 
 def def_model_from_func(func, dummy_input=False, **params):
@@ -104,7 +104,7 @@ def test_onnx_export_np_abs(tmp_path):
                                     [(0, 0, 0), (None, 4, 5), (None, 1, 2)]])
 def test_onnx_export_npx_slice(tmp_path, dtype, params):
     M = def_model(mx.npx, 'slice', begin=params[0], end=params[1], step=params[2])
-    x = mx.np.arange(start=0, stop=60, dtype=dtype).reshape((3, 4, 5))
+    x = mx.np.arange(0, stop=60, dtype=dtype).reshape((3, 4, 5))
     op_export_test('slice', M, [x], tmp_path)
 
 
@@ -170,7 +170,7 @@ def test_onnx_export_np_arange(tmp_path, dtype, params):
         step = int(step)
         if step == 0:
             step = 1
-    M = def_model(mx.np, 'arange', dummy_input=True, start=start, stop=stop, step=step, dtype=dtype)
+    M = def_model(mx.np, 'arange', True, start, stop=stop, step=step, dtype=dtype)
     x = mx.np.array([1], dtype='float32')
     op_export_test('arange', M, [x], tmp_path, dummy_input=True)
 
@@ -1854,7 +1854,7 @@ def test_onnx_export_random_normal(tmp_path, dtype, loc, scale, shape):
 @pytest.mark.parametrize("spatial_scale", [0.7, 1.0])
 def test_onnx_export_npx_roi_pooling(tmp_path, dtype, spatial_scale):
     M = def_model(mx.npx, 'roi_pooling', pooled_size=(2,2), spatial_scale=spatial_scale)
-    x = mx.np.arange(start=0, stop=48, dtype=dtype).reshape((1,1,8,6))
+    x = mx.np.arange(0, stop=48, dtype=dtype).reshape((1,1,8,6))
     y = mx.np.array([[0,0,0,4,4]], dtype=dtype)
     op_export_test('roi_pooling', M, [x, y], tmp_path)
 

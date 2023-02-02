@@ -111,7 +111,7 @@ def ndarray_from_dlpack(array_cls):
     def from_dlpack(dlpack):
         tp = type(dlpack)
         if tp.__module__ == "builtins" and tp.__name__ == "PyCapsule":
-            dlpack = ctypes.py_object(dlpack)        
+            dlpack = ctypes.py_object(dlpack)
         elif hasattr(dlpack, "__dlpack__"):
             device, device_id = dlpack.__dlpack_device__()
             if device != DLDeviceType.DLGPU:

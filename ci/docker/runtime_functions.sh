@@ -725,7 +725,6 @@ sanity_check() {
 
 sanity_cmakelint() {
     set -exu
-    
     git ls-files -z -- bootstrap '*.cmake' '*.cmake.in' '*CMakeLists.txt' | grep -E -z -v '^(3rdparty)|cmake/Modules/|cmake/upstream/' | xargs -0 cmakelint --config=.cmakelintrc --quiet
 }
 
@@ -912,6 +911,9 @@ unittest_array_api_standardization() {
         array_api_tests/test_type_promotion.py::test_operator_two_arg_promoted_promotion
     python3 -m pytest --reruns 3 --durations=50 --cov-report xml:tests_api.xml --verbose \
         array_api_tests/test_type_promotion.py::test_operator_inplace_two_arg_promoted_promotion
+    python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
+        -k '(not einsum and not linalg and not __dlpack__)' array_api_tests/test_signatures.py
+    # Need to upgrade array_api_tests to run test for einsum, linalg-funcs and __dlpack__.
     popd
 }
 

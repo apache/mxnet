@@ -156,7 +156,7 @@ We transform the dataset images using the following operations:
 def transform(image, label):
     resized = mx.image.resize_short(image, EDGE)
     cropped, crop_info = mx.image.center_crop(resized, SIZE)
-    transposed = np.transpose(cropped, (2,0,1))
+    transposed = np.transpose(cropped, axes=(2,0,1))
     return transposed, label
 ```
 

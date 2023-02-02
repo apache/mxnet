@@ -124,13 +124,13 @@ class Binomial(Distribution):
         else:
             logit = self.logit
         expanded_logit = np.repeat(
-            np.expand_dims(logit, -1), int(self.n), -1)
+            np.expand_dims(logit, axis=-1), int(self.n), axis=-1)
         return npx.random.bernoulli(logit=expanded_logit).sum(-1)
 
     def sample_n(self, size=None):
         logit = self.logit
         expanded_logit = np.repeat(
-            np.expand_dims(logit, -1), int(self.n), -1)
+            np.expand_dims(logit, axis=-1), int(self.n), axis=-1)
         return npx.random.bernoulli(
             logit=expanded_logit,
             size=sample_n_shape_converter(size)

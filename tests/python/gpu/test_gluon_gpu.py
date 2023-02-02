@@ -184,9 +184,9 @@ def check_layer_bidirectional(size, in_size, proj_size):
 
         def forward(self, inpt):
             fwd = self._lstm_fwd(inpt)
-            bwd_inpt = mx.np.flip(inpt, 0)
+            bwd_inpt = mx.np.flip(inpt, axis=0)
             bwd = self._lstm_bwd(bwd_inpt)
-            bwd = mx.np.flip(bwd, 0)
+            bwd = mx.np.flip(bwd, axis=0)
             return mx.np.concatenate([fwd, bwd], axis=2)
     weights = {}
     for d in ['l', 'r']:
