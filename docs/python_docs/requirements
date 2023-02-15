@@ -29,5 +29,5 @@ notedown==1.5.1
 pypandoc==1.4
 breathe==4.13.1
 mock==3.0.5
-awscli==1.16.266
+awscli==1.27.48
 autodocsumm==0.1.12
