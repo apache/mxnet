@@ -645,7 +645,7 @@ class Block:
         with open(prefix+'-model.json', 'w') as fp:
             json.dump(model, fp)
         # save params
-        self.save_parameters('MyModel-model.params')
+        self.save_parameters(prefix-'model.params')
 
     def load(self, prefix):
         """Load a model saved using the `save` API
