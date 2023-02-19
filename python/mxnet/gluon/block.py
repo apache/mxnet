@@ -645,7 +645,7 @@ class Block:
         with open(prefix+'-model.json', 'w') as fp:
             json.dump(model, fp)
         # save params
-        self.save_parameters('MyModel-model.params')
+        self.save_parameters(prefix+'-model.params')
 
     def load(self, prefix):
         """Load a model saved using the `save` API
@@ -711,7 +711,7 @@ class Block:
         # load top-level block
         _load_cached_graphs(self, model)
         # load params
-        self.load_parameters('MyModel-model.params')
+        self.load_parameters(prefix+'-model.params')
 
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
