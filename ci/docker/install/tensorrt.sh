@@ -26,7 +26,7 @@ pushd .
 cd ..
 apt-get update
 apt-get install -y automake libtool zip
-git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git
+git clone --recursive -b v3.5.1.1 https://github.com/google/protobuf.git
 cd protobuf
 ./autogen.sh
 ./configure --disable-shared CXXFLAGS=-fPIC
