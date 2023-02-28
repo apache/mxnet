@@ -426,6 +426,9 @@ class ThreadedEngine : public Engine {
     return bulk_size;
   }
 
+  /*! \brief whether it is during shutdown phase*/
+  std::atomic<bool> shutdown_phase_{false};
+
  private:
   /*! \brief structure for holding bulk execution status */
   struct BulkStatus {
@@ -555,8 +558,6 @@ class ThreadedEngine : public Engine {
   std::atomic<int> pending_{0};
   /*! \brief whether we want to kill the waiters */
   std::atomic<bool> kill_{false};
-  /*! \brief whether it is during shutdown phase*/
-  std::atomic<bool> shutdown_phase_{false};
   /*!\brief show more information from engine actions */
   bool engine_info_{false};
   /*! \brief debug information about wait for var. */

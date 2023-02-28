@@ -46,7 +46,7 @@ class StreamManager {
   }
   RunContext GetRunContext(Context const& ctx);
   RunContext GetIORunContext(Context const& ctx);
-  void Finalize();
+  void Finalize(bool shutdown_phase = false);
  private:
   std::mutex mutex_;
 #if MXNET_USE_CUDA
@@ -146,16 +146,20 @@ StreamManager<kNumGpus, kStreams>::StreamManager() {
 }
 
 template <std::size_t kNumGpus, std::size_t kStreams>
-void StreamManager<kNumGpus, kStreams>::Finalize() {
+void StreamManager<kNumGpus, kStreams>::Finalize(bool shutdown_phase) {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
-      for (auto&& primary_stream : gpu_streams_.at(i)) {
-        // Catch exception for CUDA driver shutdown
-        MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(primary_stream));
-      }
-      for (auto&& aux_stream : gpu_aux_streams_.at(i)) {
-        delete aux_stream;
+      // If the main Python process is exiting (shutdown_phase == true),
+      // there's no need to explicitly release CUDA resources.
+      if (!shutdown_phase) {
+        for (auto&& primary_stream : gpu_streams_.at(i)) {
+          // Catch exception for CUDA driver shutdown
+          MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(primary_stream));
+        }
+        for (auto&& aux_stream : gpu_aux_streams_.at(i)) {
+          delete aux_stream;
+        }
       }
       gpu_cnt_.at(i) = -1;
     }

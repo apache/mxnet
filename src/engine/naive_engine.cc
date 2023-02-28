@@ -73,14 +73,20 @@ class NaiveEngine final : public Engine {
     LOG(INFO) << "Engine shutdown";
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
-        // Catch exception for CUDA driver shutdown
-        MSHADOW_CATCH_ERROR(mshadow::DeleteStream(streams_[i]));
+        // If the main Python process is exiting (shutdown_phase_ == true),
+        // there's no need to explicitly release CUDA resources.
+        if (!shutdown_phase_) {
+          // Catch exception for CUDA driver shutdown
+          MSHADOW_CATCH_ERROR(mshadow::DeleteStream(streams_[i]));
+        }
         streams_[i] = nullptr;
       }
     }
     for (size_t i = 0; i < aux_streams_.size(); ++i) {
       if (aux_streams_[i] != nullptr) {
-        delete aux_streams_[i];
+        if (!shutdown_phase_) {
+          delete aux_streams_[i];
+        }
         aux_streams_[i] = nullptr;
       }
     }

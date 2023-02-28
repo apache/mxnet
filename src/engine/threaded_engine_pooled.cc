@@ -54,7 +54,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
   }
 
   void StopNoWait() {
-    streams_->Finalize();
+    streams_->Finalize(shutdown_phase_);
     task_queue_->SignalForKill();
     io_task_queue_->SignalForKill();
     task_queue_ = nullptr;
