@@ -2632,6 +2632,24 @@ fixed-size items.
     def _fresh_grad(self, state):
         check_call(_LIB.MXNDArraySetGradState(self.handle, ctypes.c_int(state)))
 
+    def asbytes(self):
+        """Returns a `bytes` object with value copied from this array.
+
+        Examples
+        --------
+        >>> x = mx.nd.arange(1, 5)
+        >>> x.asbytes()
+        b'\x00\x00\x80?\x00\x00\x00@\x00\x00@@\x00\x00\x80@'
+        >>> type(x.asbytes())
+        <class 'bytes'>
+        """
+        data = bytes(np.dtype(self.dtype).itemsize * self.size)
+        check_call(_LIB.MXNDArraySyncCopyToCPU(
+            self.handle,
+            ctypes.cast(data, ctypes.c_void_p),
+            ctypes.c_size_t(self.size)))
+        return data
+
     def asnumpy(self):
         """Returns a ``numpy.ndarray`` object with value copied from this array.
 
