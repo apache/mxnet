@@ -4943,18 +4943,18 @@ def empty(shape, ctx=None, dtype=None):
 
 
 def from_buffer(buffer, dtype=mx_real_t, shape=None, zero_copy=True):
-    """Convert raw byte memory buffer to MXNet's ndarray.
+    """Convert raw byte memory buffer to mxnet.ndarray.NDarray.
 
     Parameters
     ----------
     buffer: bytes or bytearray or buffer_like object
-        The raw byte memory buffer.
+        The raw byte memory buffer we would like to copy from.
     dtype : str or numpy.dtype, optional
         The data type of the `NDArray`. The default datatype is `np.float32`.
     shape : int or tuple of int
         The shape of the returned array.
     zero_copy: bool
-        Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
+        Whether we use DLPack's zero-copy conversion to convert to mxnet.ndarray.NDArray.
 
     Returns
     -------
