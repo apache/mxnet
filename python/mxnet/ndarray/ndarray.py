@@ -54,7 +54,7 @@ __all__ = ["NDArray", "concatenate", "dtype_np_to_mx", "dtype_mx_to_np", "_GRAD_
            "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
            "from_numpy", "zeros", "indexing_key_expand_implicit_axes", "get_indexing_dispatch_code",
            "get_oshape_of_gather_nd_op", "bfloat16", "get_dtype_type", "is_mx_dtype",
-           "get_dtype_name"]
+           "get_dtype_name", "from_buffer"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -2632,6 +2632,24 @@ fixed-size items.
     def _fresh_grad(self, state):
         check_call(_LIB.MXNDArraySetGradState(self.handle, ctypes.c_int(state)))
 
+    def asbytes(self):
+        """Returns a ``bytes`` object with value copied from this array.
+
+        Examples
+        --------
+        >>> x = mx.nd.arange(1, 5)
+        >>> x.asbytes()
+        b'\x00\x00\x80?\x00\x00\x00@\x00\x00@@\x00\x00\x80@'
+        >>> type(x.asbytes())
+        <class 'bytes'>
+        """
+        data = bytes(self.size * np.dtype(self.dtype).itemsize)
+        check_call(_LIB.MXNDArraySyncCopyToCPU(
+            self.handle,
+            ctypes.cast(data, ctypes.c_void_p),
+            ctypes.c_size_t(self.size)))
+        return data
+
     def asnumpy(self):
         """Returns a ``numpy.ndarray`` object with value copied from this array.
 
@@ -5006,6 +5024,44 @@ def split_v2(ary, indices_or_sections, axis=0, squeeze_axis=False):
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
     return _internal._split_v2(ary, indices, axis, squeeze_axis)
+
+def from_buffer(buffer, dtype=mx_real_t, shape=None, zero_copy=True):
+    """Convert raw byte memory buffer to mxnet.ndarray.NDarray.
+
+    Parameters
+    ----------
+    buffer: bytes or bytearray or buffer_like object
+        The raw byte memory buffer we would like to copy from.
+    dtype : str or numpy.dtype, optional
+        The data type of the `NDArray`. The default datatype is `np.float32`.
+    shape : int or tuple of int
+        The shape of the returned array.
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to mxnet.ndarray.NDArray.
+
+    Returns
+    -------
+    NDArray
+        A created array.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones(shape=(2,2))
+    >>> y = x.asbytes()
+    >>> type(y)
+    <class 'bytes'>
+    >>> z = mx.nd.from_buffer(y, dtype=x.dtype)
+    >>> z
+    [1. 1. 1. 1.]
+    <NDArray 4 @cpu(0)>
+    >>> mx.nd.from_buffer(y, dtype=x.dtype, shape=(2,2))
+    [[1. 1.]
+     [1. 1.]]
+    <NDArray 2x2 @cpu(0)>
+    """
+    if shape is None:
+        shape = (len(buffer) // np.dtype(dtype).itemsize, )
+    return from_numpy(np.ndarray(shape, dtype, buffer), zero_copy)
 
 from_dlpack = ndarray_from_dlpack(NDArray)
 from_dlpack_doc = """Returns a NDArray backed by a dlpack tensor.
