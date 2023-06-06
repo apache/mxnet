@@ -81,59 +81,88 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
                   DeprecationWarning, stacklevel=2)
     return get_logger(name, filename, filemode, level)
 
-def get_logger(name=None, filename=None, filemode=None, level=WARNING):
-    """Gets a customized logger.
+class get_logger:
+    def __init__(self, name=None, filename=None, filemode=None, level=WARNING):
+        """Gets a customized logger.
 
-    Parameters
-    ----------
-    name: str, optional
-        Name of the logger.
-    filename: str, optional
-        The filename to which the logger's output will be sent.
-    filemode: str, optional
-        The file mode to open the file (corresponding to `filename`),
-        default is 'a' if `filename` is not ``None``.
-    level: int, optional
-        The `logging` level for the logger.
-        See: https://docs.python.org/2/library/logging.html#logging-levels
+        Parameters
+        ----------
+        name: str, optional
+            Name of the logger.
+        filename: str, optional
+            The filename to which the logger's output will be sent.
+        filemode: str, optional
+            The file mode to open the file (corresponding to `filename`),
+            default is 'a' if `filename` is not ``None``.
+        level: int, optional
+            The `logging` level for the logger.
+            See: https://docs.python.org/2/library/logging.html#logging-levels
+    
+        Returns
+        -------
+        Logger
+            A customized `Logger` object.
+    
+        Example
+        -------
+        ## get_logger call with default parameters.
+        >>> from mxnet.log import get_logger
+        >>> logger = get_logger("Test")
+        >>> logger.warn("Hello World")
+        W0505 00:29:47 3525 <stdin>:<module>:1] Hello World
 
-    Returns
-    -------
-    Logger
-        A customized `Logger` object.
+        ## get_logger call with WARNING level.
+        >>> import logging
+        >>> logger = get_logger("Test2", level=logging.WARNING)
+        >>> logger.warn("Hello World")
+        W0505 00:30:50 3525 <stdin>:<module>:1] Hello World
+        >>> logger.debug("Hello World") # This doesn't return anything as the level is logging.WARNING.
 
-    Example
-    -------
-    ## get_logger call with default parameters.
-    >>> from mxnet.log import get_logger
-    >>> logger = get_logger("Test")
-    >>> logger.warn("Hello World")
-    W0505 00:29:47 3525 <stdin>:<module>:1] Hello World
+        ## get_logger call with DEBUG level.
+        >>> logger = get_logger("Test3", level=logging.DEBUG)
+        >>> logger.debug("Hello World") # Logs the debug output as the level is logging.DEBUG.
+        D0505 00:31:30 3525 <stdin>:<module>:1] Hello World
+        """
+        self.filename = filename
+        self.filemode = filemode
+        self.level = level
+        self.logger = logging.getLogger(name)
 
-    ## get_logger call with WARNING level.
-    >>> import logging
-    >>> logger = get_logger("Test2", level=logging.WARNING)
-    >>> logger.warn("Hello World")
-    W0505 00:30:50 3525 <stdin>:<module>:1] Hello World
-    >>> logger.debug("Hello World") # This doesn't return anything as the level is logging.WARNING.
-
-    ## get_logger call with DEBUG level.
-    >>> logger = get_logger("Test3", level=logging.DEBUG)
-    >>> logger.debug("Hello World") # Logs the debug output as the level is logging.DEBUG.
-    D0505 00:31:30 3525 <stdin>:<module>:1] Hello World
-    """
-    logger = logging.getLogger(name)
-    if name is not None and not getattr(logger, '_init_done', None):
-        logger._init_done = True
-        if filename:
-            mode = filemode if filemode else 'a'
-            hdlr = logging.FileHandler(filename, mode)
+    def logger_set(self, msg, level):
+        if self.filename:
+            mode = self.filemode if self.filemode else 'a'
+            hdlr = logging.FileHandler(self.filename, mode)
+            formatter = logging.Formatter('%(asctime)s %(pathname)s-%(funcName)s:%(lineno)s loginfo:%(message)s')
+            hdlr.setFormatter(formatter)
         else:
             hdlr = logging.StreamHandler() # pylint: disable=redefined-variable-type
             # the `_Formatter` contain some escape character to
             # represent color, which is not suitable for FileHandler,
             # (TODO) maybe we can add another Formatter for FileHandler.
             hdlr.setFormatter(_Formatter())
-        logger.addHandler(hdlr)
-        logger.setLevel(level)
-    return logger
+        self.logger.addHandler(hdlr)
+        self.logger.setLevel(self.level)
+
+        if level == 'DEBUG':
+            self.logger.debug(msg)
+        elif level == 'INFO':
+            self.logger.info(msg)
+        elif level == 'WARNING':
+            self.logger.warning(msg)
+        elif level == 'ERROR':
+            self.logger.error(msg)
+        elif level == 'CRITICAL':
+            self.logger.critical(msg)
+
+        self.logger.removeHandler(hdlr)
+
+    def debug(self, msg):
+        self.logger_set(msg, 'DEBUG')
+    def info(self, msg):
+        self.logger_set(msg, 'INFO')
+    def warn(self, msg):
+        self.logger_set(msg, 'WARNING')
+    def error(self, msg):
+        self.logger_set(msg, 'ERROR')
+    def critical(self, msg):
+        self.logger_set(msg, 'CRITICAL')
