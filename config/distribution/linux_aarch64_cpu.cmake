@@ -19,7 +19,7 @@ set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
 set(CFLAGS "-march=armv8-a+crc+crypto -moutline-atomics" CACHE STRING "CFLAGS")
 set(CXXFLAGS "-march=armv8-a" CACHE STRING "CXXFLAGS")
 
-set(USE_BLAS ArmPL CACHE STRING "BLAS")
+set(USE_BLAS Open CACHE STRING "BLAS")
 set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
 set(USE_OPENMP ON CACHE BOOL "Build with Openmp support")
@@ -36,10 +36,10 @@ set(USE_MKLDNN ON CACHE BOOL "Build with MKL-DNN support")
 # from <acl_root>/lib/<binaries_folder_for_your_arch> to <acl_root>/build
 # The resulting acl root folder should look something like:
 # LICENSE README.md arm_compute build examples include lib scripts support utils
-set(ENV{ACL_ROOT_DIR} "")
-set(MKLDNN_USE_ACL OFF CACHE BOOL "Integrate MKLDNN with Arm Compute Library")
+set(ENV{ACL_ROOT_DIR} "/work/deps/acl/ComputeLibrary")
+set(MKLDNN_USE_ACL ON CACHE BOOL "Integrate MKLDNN with Arm Compute Library")
 # APL can be downloaded from https://developer.arm.com/tools-and-software/server-and-hpc/downloads/arm-performance-libraries
 # Note that APL needs to be added to LD_LIBRARY_PATH
-set(MKLDNN_USE_APL ON CACHE BOOL "Integrate MKLDNN with Arm Performance Libraries")
+set(MKLDNN_USE_APL OFF CACHE BOOL "Integrate MKLDNN with Arm Performance Libraries")
 # Due to a MKLDNN bug we will need to manually set the ArmPL header
-set(BLAS_INCLUDE_DIR "/opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp" CACHE STRING "Specifies BLAS include dir")
+# set(BLAS_INCLUDE_DIR "/opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp" CACHE STRING "Specifies BLAS include dir")

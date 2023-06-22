@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,25 +16,19 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
 
-boto3==1.9.229
-cpplint==1.3.0
-Cython
-decorator==4.4.0
-h5py<3; platform_machine != 'aarch64'
-mock==2.0.0
-nose==1.3.7
-nose-timer==0.7.3
-# Allow numpy version as advanced as 1.19.5 to avoid CVE-2021-41495 and CVE-2021-41496 affecting <1.19.1.
-numpy>=1.16.0,<1.20.0
-pylint==2.3.1  # pylint and astroid need to be aligned
-astroid==2.3.3  # pylint and astroid need to be aligned
-requests<2.19.0,>=2.18.4
-scipy<1.7.0 # Restrict scipy version due to https://github.com/apache/mxnet/issues/20389
-setuptools
-coverage
-packaging
-scons; platform_machine == 'aarch64'
+set -ex
+
+pushd .
+
+yum install -y git
+
+mkdir -p /work/deps/acl
+cd /work/deps/acl
+
+git clone https://github.com/ARM-software/ComputeLibrary.git
+cd ComputeLibrary
+git checkout v23.05
+scons Werror=1 -j8 debug=0 neon=1 opencl=0 os=linux openmp=1 cppthreads=0 arch=armv8.2-a multi_isa=1 build=native
+
+popd

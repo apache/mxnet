@@ -45,6 +45,12 @@ RUN yum -y check-update || true && \
         devtoolset-10-gcc-c++ \
         devtoolset-10-gcc-gfortran \
         # Libraries
+        # protobuf-compiler \
+        # protobuf-devel \
+        # atlas-devel \
+        # lapack-devel \
+        # opencv-devel \
+        # zeromq-devel \
         hdf5-devel && \
     yum clean all
 
@@ -58,19 +64,14 @@ RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
 COPY install/centos7_cmake.sh /work/
 RUN /work/centos7_cmake.sh
 
-# Arm Performance Libraries 21.0
-RUN cd /usr/local/src && \
-    wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/RHEL7/arm-performance-libraries_21.0_RHEL-7_gcc-8.2.tar && \
-    tar -xvf arm-performance-libraries_21.0_RHEL-7_gcc-8.2.tar && \
-    arm-performance-libraries_21.0_RHEL-7_gcc-8.2/arm-performance-libraries_21.0_RHEL-7.sh -a && \
-    rm -rf arm-performance-libraries_21.0_RHEL-7_gcc-8.2.tar arm-performance-libraries_21.0_RHEL-7_gcc-8.2
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib
-
 # Install Python and dependency packages
 COPY install/centos7_python.sh /work/
 RUN /work/centos7_python.sh
 COPY install/requirements /work/
 RUN pip3 install -r /work/requirements
+
+COPY install/centos7_acl.sh /work/
+RUN /work/centos7_acl.sh
 
 ARG USER_ID=0
 COPY install/centos7_adduser.sh /work/
