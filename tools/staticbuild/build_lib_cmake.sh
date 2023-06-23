@@ -45,6 +45,9 @@ if [[ $PLATFORM == 'linux' ]]; then
     cp -L build/libmxnet.so lib/libmxnet.so
     cp -L $(ldd lib/libmxnet.so | grep libgfortran | awk '{print $3}') lib/
     cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
+if [[ $ARCH == 'aarch64' ]]; then
+    cp -L /work/deps/acl/ComputeLibrary/build/libarm_compute.so lib/libarm_compute.so
+fi
 elif [[ $PLATFORM == 'darwin' ]]; then
     cp -L build/libmxnet.dylib lib/libmxnet.dylib
 fi

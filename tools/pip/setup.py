@@ -89,6 +89,9 @@ if platform.system() == 'Linux':
     if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
         shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
         package_data['mxnet'].append('mxnet/libopenblas.so.0')
+    if os.path.exists(os.path.join(libdir, 'libarm_compute.so')):
+        shutil.copy(os.path.join(libdir, 'libarm_compute.so'), mxdir)
+        package_data['mxnet'].append('mxnet/libarm_compute.so')
 
 # copy license and notice
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/licenses'),
