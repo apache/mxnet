@@ -77,8 +77,6 @@ TEST(CORE_OP_RUNNER, Multibox_prior) {
   assert(resultShapeDim1==1048576);
   assert(resultShapeDim2==4);
 
-  //TODO: Assert these results!
-
   float *anchorFloatArray = anchors.dptr<DType>();
   std::stringstream stream;
   stream << std::fixed << std::setprecision(8) << anchorFloatArray[0];
