@@ -23,13 +23,13 @@
 // https://github.com/deepjavalibrary/djl/blob/master/integration/src/main/java/ai/djl/integration/tests/modality/cv/MultiBoxPriorTest.java
 //
 
-#include "../include/test_op_runner.h"
-#include "operator/contrib/multibox_prior-inl.h"
-#include "mxnet/operator.h"
-
 #include <vector>
 #include <iomanip>
 #include <sstream>
+
+#include "../include/test_op_runner.h"
+#include "operator/contrib/multibox_prior-inl.h"
+#include "mxnet/operator.h"
 
 using namespace mxnet;
 using DType = float;
@@ -58,7 +58,7 @@ TEST(CORE_OP_RUNNER, Multibox_prior) {
 
   Context ctx = Context();
 
-  long arrangeVal     = 3.0f * 512.0f * 512.0f;
+  int arrangeVal     = 3.0f * 512.0f * 512.0f;
   TShape arrangeShape = TShape({arrangeVal});
 
   NDArray arangeNdArray = NDArray(arrangeShape, ctx);
