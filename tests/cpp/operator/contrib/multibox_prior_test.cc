@@ -58,7 +58,7 @@ TEST(CORE_OP_RUNNER, Multibox_prior) {
 
   Context ctx = Context();
 
-  int arrangeVal     = 3.0f * 512.0f * 512.0f;
+  int arrangeVal      = 3.0f * 512.0f * 512.0f;
   TShape arrangeShape = TShape({arrangeVal});
 
   NDArray arangeNdArray = NDArray(arrangeShape, ctx);
