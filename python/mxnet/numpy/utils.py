@@ -23,7 +23,7 @@ import numpy as onp
 
 __all__ = ['float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64',
            'int16', 'uint16', 'uint32', 'uint64',
-           'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis',
+           'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis',
            'e', 'NINF', 'PINF', 'NAN', 'NaN',
            '_STR_2_DTYPE_', '_DTYPE_2_STR_', '_type_promotion_table',
            'integer_dtypes', 'floating_dtypes', 'boolean_dtypes', 'numeric_dtypes']
@@ -38,7 +38,6 @@ int32 = onp.dtype(onp.int32)
 int8 = onp.dtype(onp.int8)
 int64 = onp.dtype(onp.int64)
 bool_ = onp.dtype(onp.bool_)
-bool = onp.dtype(onp.bool)
 int16 = onp.dtype(onp.int16)
 uint16 = onp.dtype(onp.uint16)
 uint32 = onp.dtype(onp.uint32)
