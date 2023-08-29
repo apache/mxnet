@@ -26,7 +26,7 @@
     <license rdf:resource="https://spdx.org/licenses/Apache-2.0" />
     <name>Apache MXNet</name>
     <homepage rdf:resource="https://mxnet.apache.org" />
-    <asfext:pmc rdf:resource="https://incubator.apache.org" />
+    <asfext:pmc rdf:resource="https://mxnet.apache.org" />
     <shortdesc>Apache MXNet is a deep learning framework designed for both efficiency and flexibility.</shortdesc>
     <description>Apache MXNet is a deep learning framework designed for both efficiency and flexibility. It's lightweight, Portable, Flexible Distributed/Mobile Deep Learning with dynamic, mutation-aware data-flow dependency scheduler; for Python, R, Julia, Scala, Go, Javascript and more</description>
     <bug-database rdf:resource="https://github.com/apache/mxnet/labels/Bug" />
