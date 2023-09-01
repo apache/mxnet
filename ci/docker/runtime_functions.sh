@@ -746,8 +746,7 @@ sanity_cpp() {
 }
 
 sanity_python_prospector() {
-    set -e
-    set +x
+    set -ex
 
     # Run Prospector
     python3 -m prospector --profile prospector.yaml | tee prospector-output.txt
@@ -761,8 +760,7 @@ sanity_python_prospector() {
 }
 
 sanity_clang() {
-    set -e
-    set +x
+    set -ex
     # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
     BASE_SHA="${GITHUB_PR_BASE_SHA}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
