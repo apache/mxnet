@@ -111,7 +111,7 @@ gather_licenses() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu101, cu102, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu112, cu118, etc.
 build_dynamic_libmxnet() {
     set -ex
 
@@ -1504,10 +1504,10 @@ build_static_python_cpu() {
     popd
 }
 
-build_static_python_cu102() {
+build_static_python_cu118() {
     set -ex
     pushd .
-    export mxnet_variant=cu102
+    export mxnet_variant=cu118
     source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.

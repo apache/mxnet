@@ -304,7 +304,7 @@ def compile_centos7_gpu(lib_name) {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu102', 'build_centos7_gpu', false)
+            utils.docker_run('centos7_gpu_cu118', 'build_centos7_gpu', false)
             utils.pack_lib(lib_name, mx_lib)
           }
         }
@@ -633,7 +633,7 @@ def compile_static_python_gpu() {
         ws('workspace/ut-publish-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu102', 'build_static_python_cu102')
+            utils.docker_run('centos7_gpu_cu118', 'build_static_python_cu118')
           }
         }
     }
@@ -646,7 +646,7 @@ def compile_static_cd_gpu(lib_name) {
         ws('workspace/build-cd-static/gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu102', 'build_static_libmxnet cu102', false)
+            utils.docker_run('centos7_gpu_cu118', 'build_static_libmxnet cu118', false)
             utils.pack_lib(lib_name, mx_cd_lib)
           }
         }
@@ -982,7 +982,7 @@ def test_centos7_python3_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               utils.unpack_and_init(lib_name, mx_lib)
-              utils.docker_run('centos7_gpu_cu102', 'unittest_centos7_gpu', true)
+              utils.docker_run('centos7_gpu_cu118', 'unittest_centos7_gpu', true)
               utils.publish_test_coverage()
             } finally {
               utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_centos7_gpu.xml')
@@ -999,7 +999,7 @@ def test_centos7_python3_cd_gpu(lib_name) {
         ws('workspace/test-cd-static/gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cd_lib)
-            utils.docker_run('centos7_gpu_cu102', 'cd_unittest_ubuntu cu102', true)
+            utils.docker_run('centos7_gpu_cu118', 'cd_unittest_ubuntu cu118', true)
           }
         }
       }
@@ -1012,7 +1012,7 @@ def test_centos7_pypi_package_cd_gpu(lib_name) {
         ws('workspace/test-cd-pypi/gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cd_lib)
-            utils.docker_run('centos7_gpu_cu102', 'ci_package_pypi cu102', true)
+            utils.docker_run('centos7_gpu_cu118', 'ci_package_pypi cu118', true)
           }
         }
       }
