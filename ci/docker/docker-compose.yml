@@ -200,13 +200,6 @@ services:
   ###################################################################################################
   # Miscellaneous containers
   ###################################################################################################
-  jetson:
-    image: ${DOCKER_CACHE_REGISTRY}/build.jetson:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.build.jetson
-      cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.jetson:latest
   ubuntu_cpu_jekyll:
     image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_jekyll:latest
     build:
