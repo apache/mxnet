@@ -1,6 +1,13 @@
 name: link check
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
 
 defaults:
   run:

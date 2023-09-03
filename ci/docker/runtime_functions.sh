@@ -111,7 +111,7 @@ gather_licenses() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu101, cu102, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu112, cu118, etc.
 build_dynamic_libmxnet() {
     set -ex
 
@@ -746,8 +746,7 @@ sanity_cpp() {
 }
 
 sanity_python_prospector() {
-    set -e
-    set +x
+    set -ex
 
     # Run Prospector
     python3 -m prospector --profile prospector.yaml | tee prospector-output.txt
@@ -761,8 +760,7 @@ sanity_python_prospector() {
 }
 
 sanity_clang() {
-    set -e
-    set +x
+    set -ex
     # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
     BASE_SHA="${GITHUB_PR_BASE_SHA}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
@@ -1504,10 +1502,10 @@ build_static_python_cpu() {
     popd
 }
 
-build_static_python_cu102() {
+build_static_python_cu118() {
     set -ex
     pushd .
-    export mxnet_variant=cu102
+    export mxnet_variant=cu118
     source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python38/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
