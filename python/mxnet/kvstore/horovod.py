@@ -19,6 +19,7 @@
 """ Key value store interface of MXNet for Horovod """
 from __future__ import absolute_import
 from .base import KVStoreBase
+from ..ndarray import empty
 
 __all__ = ['Horovod']
 
@@ -159,3 +160,16 @@ class Horovod(KVStoreBase):
     def num_workers(self):
         import horovod.mxnet as hvd
         return hvd.size()
+
+    def _barrier(self):
+        """Invokes global barrier among all worker nodes.
+
+        For example, assume there are `n` machines. We would like machine `0` to first
+        `init` the values and then have all the workers `pull` the initialized value.
+        Before pulling, we can place invoke `_barrier()` to guarantee that the
+        initialization is finished.
+        """
+        import horovod.mxnet as hvd
+        request = empty(0)
+        hvd.allreduce_(request, name='_barrier')
+        request.wait_to_read()
