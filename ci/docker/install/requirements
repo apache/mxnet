@@ -28,7 +28,7 @@ contextvars;python_version<"3.7"
 onnx==1.8.0
 onnxruntime==1.7.0
 protobuf==3.14.0
-scipy==1.4.1
+scipy==1.11.3
 tabulate==0.7.5
 Cython==0.29.24
 
