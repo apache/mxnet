@@ -1334,7 +1334,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         return ret
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
-        dtype = _np.bool if dtype is None else dtype
+        dtype = bool if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
 
