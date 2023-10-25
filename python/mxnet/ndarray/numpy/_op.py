@@ -391,7 +391,7 @@ def full(shape, fill_value, dtype=None, order='C', device=None, out=None):  # py
         device = str(device)
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
-        dtype = _np.bool if dtype is None else dtype
+        dtype = bool if dtype is None else dtype
     elif isinstance(fill_value, numeric_types):
         if dtype is None or dtype is float:
             dtype = dtype_from_number(fill_value)
@@ -526,7 +526,7 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
     dtype_list = {_np.float16: 'float16', _np.float32: 'float32', _np.float64: 'float64',
                   float: 'float64', _np.int8: 'int8', _np.int16: 'int16', _np.int32: 'int32',
                   _np.int64: 'int64', int:'int64', _np.uint8: 'uint8', _np.uint16: 'uint16',
-                  _np.uint32: 'uint32', _np.uint64: 'uint64', _np.bool: 'bool',
+                  _np.uint32: 'uint32', _np.uint64: 'uint64', bool: 'bool',
                   _np.bool_: 'bool_', bool: 'bool', None: 'None'}
     if order != 'C':
         raise NotImplementedError("Only support C-order at this moment")
@@ -8969,7 +8969,7 @@ def isposinf(x, out=None, **kwargs):
     >>> np.isposinf(np.array([-np.inf, 0., np.inf]))
     array([False, False,  True])
     >>> x = np.array([-np.inf, 0., np.inf])
-    >>> y = np.array([True, True, True], dtype=np.bool)
+    >>> y = np.array([True, True, True], dtype=bool)
     >>> np.isposinf(x, y)
     array([False, False,  True])
     >>> y
@@ -9015,7 +9015,7 @@ def isneginf(x, out=None, **kwargs):
     >>> np.isneginf(np.array([-np.inf, 0., np.inf]))
     array([ True, False, False])
     >>> x = np.array([-np.inf, 0., np.inf])
-    >>> y = np.array([True, True, True], dtype=np.bool)
+    >>> y = np.array([True, True, True], dtype=bool)
     >>> np.isneginf(x, y)
     array([ True, False, False])
     >>> y
@@ -9070,7 +9070,7 @@ def isfinite(x, out=None, **kwargs):
     >>> np.isfinite(np.array([np.log(-1.),1.,np.log(0)]))
     array([False,  True, False])
     >>> x = np.array([-np.inf, 0., np.inf])
-    >>> y = np.array([True, True, True], dtype=np.bool)
+    >>> y = np.array([True, True, True], dtype=bool)
     >>> np.isfinite(x, y)
     array([False,  True, False])
     >>> y

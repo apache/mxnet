@@ -1497,8 +1497,8 @@ def _add_workload_gcd():
 
 
 def _add_workload_bitwise_or():
-    OpArgMngr.add_workload('bitwise_or', np.array([False, False, True, True], dtype=np.bool),
-                           np.array([False, True, False, True], dtype=np.bool))
+    OpArgMngr.add_workload('bitwise_or', np.array([False, False, True, True], dtype=bool),
+                           np.array([False, True, False, True], dtype=bool))
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
@@ -1509,8 +1509,8 @@ def _add_workload_bitwise_or():
 
 
 def _add_workload_bitwise_and():
-    OpArgMngr.add_workload('bitwise_and', np.array([False, False, True, True], dtype=np.bool),
-                           np.array([False, True, False, True], dtype=np.bool))
+    OpArgMngr.add_workload('bitwise_and', np.array([False, False, True, True], dtype=bool),
+                           np.array([False, True, False, True], dtype=bool))
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
@@ -1521,8 +1521,8 @@ def _add_workload_bitwise_and():
 
 
 def _add_workload_bitwise_xor():
-    OpArgMngr.add_workload('bitwise_xor', np.array([False, False, True, True], dtype=np.bool),
-                           np.array([False, True, False, True], dtype=np.bool))
+    OpArgMngr.add_workload('bitwise_xor', np.array([False, False, True, True], dtype=bool),
+                           np.array([False, True, False, True], dtype=bool))
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
@@ -1834,11 +1834,11 @@ def _add_workload_floor(array_pool):
 def _add_workload_logical_not(array_pool):
     OpArgMngr.add_workload('logical_not', np.ones(10, dtype=np.int32))
     OpArgMngr.add_workload('logical_not', array_pool['4x1'])
-    OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=np.bool))
+    OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=bool))
 
 
 def _add_workload_bitwise_not():
-    OpArgMngr.add_workload('bitwise_not', np.array([True, False, True, False], dtype=np.bool))
+    OpArgMngr.add_workload('bitwise_not', np.array([True, False, True, False], dtype=bool))
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
@@ -1847,7 +1847,7 @@ def _add_workload_bitwise_not():
 
 
 def _add_workload_invert():
-    OpArgMngr.add_workload('invert', np.array([True, False, True, False], dtype=np.bool))
+    OpArgMngr.add_workload('invert', np.array([True, False, True, False], dtype=bool))
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
@@ -2045,19 +2045,19 @@ def _add_workload_less_equal(array_pool):
 
 def _add_workload_logical_and(array_pool):
     OpArgMngr.add_workload('logical_and', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
-    OpArgMngr.add_workload('logical_and', np.array([False, False, True, True], dtype=np.bool),
-                           np.array([False, True, False, True], dtype=np.bool))
+    OpArgMngr.add_workload('logical_and', np.array([False, False, True, True], dtype=bool),
+                           np.array([False, True, False, True], dtype=bool))
 
 def _add_workload_logical_or(array_pool):
-    OpArgMngr.add_workload('logical_or', np.array([0, 1, 2, 4, 2], dtype=np.bool), np.array([-2, 5, 1, 4, 3], dtype=np.bool))
-    OpArgMngr.add_workload('logical_or', np.array([False, False, True, True], dtype=np.bool),
-                           np.array([False, True, False, True], dtype=np.bool))
+    OpArgMngr.add_workload('logical_or', np.array([0, 1, 2, 4, 2], dtype=bool), np.array([-2, 5, 1, 4, 3], dtype=bool))
+    OpArgMngr.add_workload('logical_or', np.array([False, False, True, True], dtype=bool),
+                           np.array([False, True, False, True], dtype=bool))
 
 
 def _add_workload_logical_xor(array_pool):
     OpArgMngr.add_workload('logical_xor', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
-    OpArgMngr.add_workload('logical_xor', np.array([False, False, True, True], dtype=np.bool),
-                           np.array([False, True, False, True], dtype=np.bool))
+    OpArgMngr.add_workload('logical_xor', np.array([False, False, True, True], dtype=bool),
+                           np.array([False, True, False, True], dtype=bool))
 
 
 def _add_workload_where():
@@ -2910,7 +2910,7 @@ def _add_workload_select():
     condlist = np.array([[ True,  True,  True, False, False,
                            False, False, False, False, False],
                          [ False, False, False, False, False,
-                           False,  True,  True,  True, True]], dtype=np.bool)
+                           False,  True,  True,  True, True]], dtype=bool)
     choicelist = np.array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9],
                            [ 0,  1,  4,  9, 16, 25, 36, 49, 64, 81]])
     OpArgMngr.add_workload('select', condlist, choicelist)

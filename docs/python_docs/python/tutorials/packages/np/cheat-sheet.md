@@ -108,7 +108,7 @@ npx.load('my_arrays')
 # np.int64    # Signed 64-bit integer types
 # np.float32  # Standard double-precision floating point
 # np.complex  # Complex numbers represented by 128 floats
-# np.bool     # Boolean type storing TRUE and FALSE values
+# bool        # Boolean type storing TRUE and FALSE values (formerly `np.bool`)
 # np.object   # Python object type
 # np.string_  # Fixed-length string type
 # np.unicode_ # Fixed-length unicode type

@@ -51,7 +51,7 @@ class MultiHeadAttention(nn.HybridBlock):
       value = mx.np.reshape(value, (-2, -2, self._num_heads, -1))
       scores = mx.npx.batch_dot(mx.np.swapaxes(query, 1, 2), mx.np.swapaxes(key, 1, 2),
                                 transpose_b=True)
-      mask = mx.np.expand_dims(mask, axis=1).astype(np.bool)
+      mask = mx.np.expand_dims(mask, axis=1).astype(bool)
       attn_weights = mx.npx.masked_softmax(scores, mask=mask, axis=-1, temperature=self._scale)
       attn_weights = mx.npx.dropout(attn_weights, p=0.1)
       context_vec = mx.npx.batch_dot(attn_weights,

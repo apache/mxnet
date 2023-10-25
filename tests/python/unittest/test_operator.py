@@ -5075,7 +5075,7 @@ def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, norma
 
     np_data = mx_data.asnumpy()
     np_mask = np.random.randint(0, 2, shape_mask)
-    mx_mask = mx.nd.array(np_mask, dtype=np.bool)
+    mx_mask = mx.nd.array(np_mask, dtype=bool)
     mx_grad = rand_ndarray(shape, dtype=dtype)
     np_grad = mx_grad.asnumpy()
 
@@ -5094,7 +5094,7 @@ def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, norma
     check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol,
                            dtype="asnumpy", equal_nan=True)
     check_symbolic_backward(mx_sym, location, [mx_grad],
-                            [np_grad_out, np.zeros(shape, dtype=np.bool)],
+                            [np_grad_out, np.zeros(shape, dtype=bool)],
                             rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3,
                             dtype="asnumpy", equal_nan=True)
 
@@ -5107,7 +5107,7 @@ def test_masked_log_softmax(dtype, ndims):
     mx_data = rand_ndarray(shape, dtype=dtype)
     np_data = mx_data.asnumpy()
     np_mask = np.random.randint(0, 2, shape)
-    mx_mask = mx.nd.array(np_mask, dtype=np.bool)
+    mx_mask = mx.nd.array(np_mask, dtype=bool)
     mx_grad = rand_ndarray(shape, dtype=dtype)
     np_grad = mx_grad.asnumpy()
     np_out = np.log(np_masked_softmax(np_data, np_mask, axis)+1e-20) * np_mask
@@ -5121,7 +5121,7 @@ def test_masked_log_softmax(dtype, ndims):
     atol = 1e-4 if dtype == np.float16 else 1e-5
     check_symbolic_forward(mx_sym, location, [np_out_inf], rtol=rtol, atol=atol, dtype="asnumpy")
     check_symbolic_backward(mx_sym, location, [mx_grad],
-                            [np_grad_out, np.zeros(shape, dtype=np.bool)],
+                            [np_grad_out, np.zeros(shape, dtype=bool)],
                             rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3,
                             dtype="asnumpy", equal_nan=True)
 

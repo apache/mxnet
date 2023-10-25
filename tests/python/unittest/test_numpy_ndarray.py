@@ -43,7 +43,7 @@ def test_np_empty():
         (np.float32, np.float32),
         (np.float64, np.float64),
         (np.bool_, np.bool_),
-        (np.bool, np.bool_),
+        (bool, np.bool_),
         ('int8', np.int8),
         ('int32', np.int32),
         ('float16', np.float16),
@@ -80,7 +80,7 @@ def test_np_empty():
 
 @use_np
 def test_np_array_creation():
-    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, _np.bool, _np.bool_,
+    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, bool, _np.bool_,
               'int8', 'int32', 'float16', 'float32', 'float64', 'bool', None]
     objects = [
         [],
@@ -154,7 +154,7 @@ def test_np_zeros():
                 assert type(y[1]) == np.ndarray
 
     for shape in shapes:
-        for dtype in [_np.bool, bool, _np.bool, 'bool']:
+        for dtype in [bool, 'bool']:
             check_zero_array_creation(shape, dtype)
 
 
@@ -207,7 +207,7 @@ def test_np_ones():
                 assert type(y[1]) == np.ndarray
 
     for shape in shapes:
-        for dtype in [_np.bool, bool, _np.bool, 'bool']:
+        for dtype in [bool, 'bool']:
             check_ones_array_creation(shape, dtype)
 
 
@@ -575,7 +575,7 @@ def test_np_ndarray_astype():
             assert id(mx_ret) == id(mx_data)
             assert id(np_ret) == id(np_data)
 
-    dtypes = [np.int8, np.uint8, np.int32, np.float16, np.float32, np.float64, np.bool, np.bool_,
+    dtypes = [np.int8, np.uint8, np.int32, np.float16, np.float32, np.float64, bool, np.bool_,
               'int8', 'uint8', 'int32', 'float16', 'float32', 'float64', 'bool']
 
     for itype, otype in itertools.product(dtypes, dtypes):
@@ -1218,7 +1218,7 @@ def test_boolean_index_tuple():
                   [[4, 5],
                    [6, 7]]], dtype=np.int32)
     b = np.array([[False,True],
-                  [True,False]],dtype=np.bool)
+                  [True,False]],dtype=bool)
     _np_a = a.asnumpy()
     _np_b = b.asnumpy()
     assert same(a[:, b].asnumpy(), _np_a[:, _np_b])
@@ -1252,7 +1252,7 @@ def test_boolean_index_assign():
     # test boolean indexing assign
     shape = (3, 2, 3)
     mx_data = np.random.uniform(size=shape)
-    mx_mask = np.array([[False,True], [True,False], [True,False]],dtype=np.bool)
+    mx_mask = np.array([[False,True], [True,False], [True,False]],dtype=bool)
     np_data = mx_data.asnumpy()
     np_mask = mx_mask.asnumpy()
 
@@ -1271,7 +1271,7 @@ def test_boolean_index_assign():
     mx_data[mx_mask, :] = 3
     assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-    mx_mask = np.array([[False,True, True],[False, True,False]],dtype=np.bool)
+    mx_mask = np.array([[False,True, True],[False, True,False]],dtype=bool)
     np_mask = mx_mask.asnumpy()
 
     np_data[0, np_mask] = 5
@@ -1310,7 +1310,7 @@ def test_boolean_index_autograd():
 
 @use_np
 def test_np_get_dtype():
-    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, _np.bool, _np.bool_,
+    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, bool, _np.bool_,
               'int8', 'int32', 'float16', 'float32', 'float64', 'bool', None]
     objects = [
         [],

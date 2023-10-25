@@ -192,7 +192,7 @@ def _as_mx_np_array(object, device=None, zero_copy=False):
         return from_numpy(object, zero_copy and object.flags['C_CONTIGUOUS'])
     elif isinstance(object, (integer_types, numeric_types)):
         return object
-    elif isinstance(object, (_np.bool_, _np.bool)):
+    elif isinstance(object, (_np.bool_, bool)):
         return array(object, dtype=_np.bool_, device=device)
     elif isinstance(object, (list, tuple)):
         tmp = [_as_mx_np_array(arr, device=device, zero_copy=zero_copy) for arr in object]
@@ -782,7 +782,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         ndim = self.ndim  # pylint: disable=redefined-outer-name
         shape = self.shape  # pylint: disable=redefined-outer-name
         if isinstance(key, bool): # otherwise will be treated as 0 and 1
-            key = array(key, dtype=_np.bool, device=self.device)
+            key = array(key, dtype=bool, device=self.device)
         if isinstance(key, list):
             try:
                 new_key = _np.array(key)
@@ -966,13 +966,13 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
         if isinstance(key, bool): # otherwise will be treated as 0 and 1
-            key = array(key, dtype=_np.bool)
+            key = array(key, dtype=bool)
 
         # Handle single boolean assign of matching dimensionality and size first for higher speed
         # If the boolean array is mixed with other idices, it is instead expanded into (multiple)
         # integer array indices and will be handled by advanced assign.
         # Come before the check self.dim == 0 as it also handle the 0-dim case.
-        if isinstance(key, ndarray) and key.dtype == _np.bool:
+        if isinstance(key, ndarray) and key.dtype == bool:
             return self._set_np_boolean_indexing(key, value)
 
         # handle basic and advanced indexing
@@ -12123,7 +12123,7 @@ def isposinf(x, out=None, **kwargs):
     >>> np.isposinf(np.array([-np.inf, 0., np.inf]))
     array([False, False,  True])
     >>> x = np.array([-np.inf, 0., np.inf])
-    >>> y = np.array([True, True, True], dtype=np.bool)
+    >>> y = np.array([True, True, True], dtype=bool)
     >>> np.isposinf(x, y)
     array([False, False,  True])
     >>> y
@@ -12169,7 +12169,7 @@ def isneginf(x, out=None, **kwargs):
     >>> np.isneginf(np.array([-np.inf, 0., np.inf]))
     array([ True, False, False])
     >>> x = np.array([-np.inf, 0., np.inf])
-    >>> y = np.array([True, True, True], dtype=np.bool)
+    >>> y = np.array([True, True, True], dtype=bool)
     >>> np.isneginf(x, y)
     array([ True, False, False])
     >>> y
@@ -12224,7 +12224,7 @@ def isfinite(x, out=None, **kwargs):
     >>> np.isfinite(np.array([np.log(-1.),1.,np.log(0)]))
     array([False,  True, False])
     >>> x = np.array([-np.inf, 0., np.inf])
-    >>> y = np.array([True, True, True], dtype=np.bool)
+    >>> y = np.array([True, True, True], dtype=bool)
     >>> np.isfinite(x, y)
     array([False,  True, False])
     >>> y

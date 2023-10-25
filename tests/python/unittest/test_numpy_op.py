@@ -763,7 +763,7 @@ def test_np_sum(shape, axis, keepdims, itype, acc_type, dtype, hybridize):
 @pytest.mark.parametrize('axis', [True, False])
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('keepdim', [True, False])
-@pytest.mark.parametrize('dtype', [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool])
+@pytest.mark.parametrize('dtype', [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, bool])
 def test_np_bool_agg(bool_agg, shape, axis, keepdim, dtype, hybridize):
     class TestOp(HybridBlock):
         def __init__(self, axis=None, keepdims=False) :
@@ -2090,11 +2090,11 @@ def test_npi_boolean_assign():
             test_data = np.random.uniform(size=dshape)
             valid_num = 0
             while valid_num == 0:
-                mx_mask = np.random.choice(np.array([False, True], dtype=np.bool), size=mshape)
+                mx_mask = np.random.choice(np.array([False, True], dtype=bool), size=mshape)
                 if test_data.size == 0:
                     break
                 valid_num = int(mx_mask.asnumpy().sum())
-            np_mask = mx_mask.asnumpy().astype(onp.bool)
+            np_mask = mx_mask.asnumpy().astype(bool)
             vshape = []
             vshape_broadcast = []
             for i in range(len(dshape)):
@@ -3263,7 +3263,7 @@ def test_np_binary_funcs():
 
 @use_np
 def test_np_mixed_precision_binary_funcs():
-    itypes = [np.bool, np.int8, np.int32, np.int64]
+    itypes = [bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
     def check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, ltype, rtype):
         class TestMixedBinary(HybridBlock):
@@ -3371,7 +3371,7 @@ def test_np_mixed_precision_binary_funcs():
                    ((2, 3), ()),
                    ((), (2, 3))]
 
-    itypes = [np.bool, np.int8, np.int32, np.int64]
+    itypes = [bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
     for func, func_data in funcs.items():
         low, high, lgrad, rgrad = func_data
@@ -4101,7 +4101,7 @@ def test_np_concat():
     hybridizes = [True, False]
     axes = [0, 1, -1, None]
     grad_reqs = ['write', 'add', 'null']
-    dtypes = [np.float32, np.float64, np.bool]
+    dtypes = [np.float32, np.float64, bool]
     combinations = itertools.product(shapes, hybridizes, axes, grad_reqs, dtypes)
 
     for shape, hybridize, axis, grad_req, dtype in combinations:
@@ -5587,7 +5587,7 @@ def test_np_cumsum():
     for shape in shapes:
         for axis in [None] + [i for i in range(0, len(shape))]:
             for otype in [None, onp.int32, onp.int64]:
-                for itype in [onp.bool, onp.int8, onp.int32, onp.int64]:
+                for itype in [bool, onp.int8, onp.int32, onp.int64]:
                     x = rand_ndarray(shape).astype(itype).as_np_ndarray()
                     np_out = onp.cumsum(x.asnumpy(), axis=axis, dtype=otype)
                     mx_out = np.cumsum(x, axis=axis, dtype=otype)
@@ -9212,14 +9212,14 @@ def test_np_true_divide():
         [(2, 3, 1), (1, 4)],
         [(2, 1, 4, 1), (3, 1, 5)],
     ]
-    dtypes = [np.bool, np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
-    itypes = [np.bool, np.int8, np.uint8, np.int32, np.int64]
+    dtypes = [bool, np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    itypes = [bool, np.int8, np.uint8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
     for shape_pair, dtype in itertools.product(shapes, dtypes):
         a = np.random.uniform(3, 50, size=shape_pair[0]).astype(dtype)
         b = np.random.uniform(3, 50, size=shape_pair[-1]).astype(dtype)
         out_mx = a / b
-        if onp.issubdtype(dtype, onp.integer) or (dtype is np.bool):
+        if onp.issubdtype(dtype, onp.integer) or (dtype is bool):
             assert out_mx.dtype == np.float32
         else:
             assert out_mx.dtype == dtype
@@ -10104,8 +10104,8 @@ def test_np_unary_bool_funcs():
             # test imperative
             mx_out_imperative = getattr(mx.np, func)(mx_data)
             assert_almost_equal(mx_out_imperative.asnumpy(), np_out, rtol, atol)
-            # if `out` is given and dtype == np.bool
-            mx_x = np.ones_like(mx_data).astype(np.bool)
+            # if `out` is given and dtype == bool
+            mx_x = np.ones_like(mx_data).astype(bool)
             np_x = mx_x.asnumpy()
             getattr(mx.np, func)(mx_data, mx_x)
             np_func(np_data, np_x)
@@ -10224,7 +10224,7 @@ def test_np_where():
         def forward(self, cond, x, y):
             return np.where(cond, x, y)
 
-    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, bool]
     shape_configs = [
         [(), (2, 3), (4, 1, 3)],
         [(), (4, 1, 3), (2, 3)],
@@ -10305,7 +10305,7 @@ def test_np_expand_dims():
         def forward(self, x):
             return np.expand_dims(x, self._axis)
 
-    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, bool]
     shapes = [
         (),
         (0,),

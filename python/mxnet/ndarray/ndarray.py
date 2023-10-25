@@ -3078,7 +3078,7 @@ def indexing_key_expand_implicit_axes(key, shape):
     (slice(None, 2, None), None, 0, slice(None, None, None))
     >>> bool_array = np.array([[True, False, True, False],
                                [False, True, False, True],
-                               [True, False, True, False]], dtype=np.bool)
+                               [True, False, True, False]], dtype=bool)
     >>> indexing_key_expand_implicit_axes(np.s_[bool_array, None, 0:2], shape)
     (array([0, 0, 1, 1, 2, 2], dtype=int64), array([0, 2, 1, 3, 0, 2], dtype=int64), None, slice(None, 2, None))
     """
@@ -3109,7 +3109,7 @@ def indexing_key_expand_implicit_axes(key, shape):
                 )
             ell_idx = i
         else:
-            # convert primitive type boolean value to mx.np.bool type
+            # convert primitive type boolean value to bool (formerly mx.np.bool) type
             # otherwise will be treated as 1/0
             if isinstance(idx, bool):
                 idx = array(idx, dtype=np.bool_)
